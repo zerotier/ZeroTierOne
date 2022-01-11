@@ -245,7 +245,7 @@ impl<'e, S: Store + 'static> Link<'e, S> {
                         MESSAGE_TYPE_OBJECTS => self.do_objects(message_buf).await?,
                         MESSAGE_TYPE_HAVE_OBJECTS => self.do_have_objects(&mut tmp_buf, message_buf).await?,
                         MESSAGE_TYPE_WANT_OBJECTS => self.do_want_objects(message_buf).await?,
-                        MESSAGE_TYPE_SYNC_REQUEST => self.do_sync_request(decode_msgpack(message_buf)?).await?,
+                        MESSAGE_TYPE_STATE => self.do_sync_request(decode_msgpack(message_buf)?).await?,
                         MESSAGE_TYPE_IBLT_SYNC_DIGEST => self.do_iblt_sync_digest(decode_msgpack(message_buf)?).await?,
                         _ => {},
                     }
@@ -336,7 +336,7 @@ impl<'e, S: Store + 'static> Link<'e, S> {
         }
     }
 
-    async fn do_sync_request(&self, sr: SyncRequest<'_>) -> smol::io::Result<()> {
+    async fn do_sync_request(&self, sr: State<'_>) -> smol::io::Result<()> {
         Ok(())
     }
 

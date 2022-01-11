@@ -8,7 +8,6 @@
 
 use std::ptr::NonNull;
 use std::sync::{Arc, Weak};
-use std::sync::atomic::{AtomicIsize, Ordering};
 
 use parking_lot::Mutex;
 

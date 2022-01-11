@@ -8,41 +8,28 @@
 
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+use zerotier_core_crypto::hash::SHA384_HASH_SIZE;
 
 use crate::vl1::{Address, MAC};
 use crate::vl1::inetaddress::InetAddress;
 use crate::util::buffer::Buffer;
 
-const TYPE_NIL: u8 = 0;
-const TYPE_ZEROTIER: u8 = 1;
-const TYPE_ETHERNET: u8 = 2;
-const TYPE_WIFIDIRECT: u8 = 3;
-const TYPE_BLUETOOTH: u8 = 4;
-const TYPE_IP: u8 = 5;
-const TYPE_IPUDP: u8 = 6;
-const TYPE_IPTCP: u8 = 7;
-const TYPE_HTTP: u8 = 8;
-const TYPE_WEBRTC: u8 = 9;
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum Type {
-    Nil = TYPE_NIL,
-    ZeroTier = TYPE_ZEROTIER,
-    Ethernet = TYPE_ETHERNET,
-    WifiDirect = TYPE_WIFIDIRECT,
-    Bluetooth = TYPE_BLUETOOTH,
-    Ip = TYPE_IP,
-    IpUdp = TYPE_IPUDP,
-    IpTcp = TYPE_IPTCP,
-    Http = TYPE_HTTP,
-    WebRTC = TYPE_WEBRTC,
-}
+pub const TYPE_NIL: u8 = 0;
+pub const TYPE_ZEROTIER: u8 = 1;
+pub const TYPE_ETHERNET: u8 = 2;
+pub const TYPE_WIFIDIRECT: u8 = 3;
+pub const TYPE_BLUETOOTH: u8 = 4;
+pub const TYPE_IP: u8 = 5;
+pub const TYPE_IPUDP: u8 = 6;
+pub const TYPE_IPTCP: u8 = 7;
+pub const TYPE_HTTP: u8 = 8;
+pub const TYPE_WEBRTC: u8 = 9;
+pub const TYPE_ZEROTIER_ENCAP: u8 = 10;
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Endpoint {
     Nil,
-    ZeroTier(Address),
+    ZeroTier(Address, [u8; SHA384_HASH_SIZE]),
     Ethernet(MAC),
     WifiDirect(MAC),
     Bluetooth(MAC),
@@ -51,6 +38,7 @@ pub enum Endpoint {
     IpTcp(InetAddress),
     Http(String),
     WebRTC(Vec<u8>),
+    ZeroTierEncap(Address, [u8; SHA384_HASH_SIZE]),
 }
 
 impl Default for Endpoint {
@@ -60,28 +48,28 @@ impl Default for Endpoint {
 
 impl Endpoint {
     #[inline(always)]
-    pub fn ep_type(&self) -> Type {
+    pub fn ip(&self) -> Option<(&InetAddress, u8)> {
         match self {
-            Endpoint::Nil => Type::Nil,
-            Endpoint::ZeroTier(_) => Type::ZeroTier,
-            Endpoint::Ethernet(_) => Type::Ethernet,
-            Endpoint::WifiDirect(_) => Type::WifiDirect,
-            Endpoint::Bluetooth(_) => Type::Bluetooth,
-            Endpoint::Ip(_) => Type::Ip,
-            Endpoint::IpUdp(_) => Type::IpUdp,
-            Endpoint::IpTcp(_) => Type::IpTcp,
-            Endpoint::Http(_) => Type::Http,
-            Endpoint::WebRTC(_) => Type::WebRTC,
+            Endpoint::Ip(ip) => Some((&ip, TYPE_IP)),
+            Endpoint::IpUdp(ip) => Some((&ip, TYPE_IPUDP)),
+            Endpoint::IpTcp(ip) => Some((&ip, TYPE_IPTCP)),
+            _ => None
         }
     }
 
-    #[inline(always)]
-    pub fn ip(&self) -> Option<(&InetAddress, Type)> {
+    pub fn type_id(&self) -> u8 {
         match self {
-            Endpoint::Ip(ip) => Some((&ip, Type::Ip)),
-            Endpoint::IpUdp(ip) => Some((&ip, Type::IpUdp)),
-            Endpoint::IpTcp(ip) => Some((&ip, Type::IpTcp)),
-            _ => None
+            Endpoint::Nil => TYPE_NIL,
+            Endpoint::ZeroTier(_, _) => TYPE_ZEROTIER,
+            Endpoint::Ethernet(_) => TYPE_ETHERNET,
+            Endpoint::WifiDirect(_) => TYPE_WIFIDIRECT,
+            Endpoint::Bluetooth(_) => TYPE_BLUETOOTH,
+            Endpoint::Ip(_) => TYPE_IP,
+            Endpoint::IpUdp(_) => TYPE_IPUDP,
+            Endpoint::IpTcp(_) => TYPE_IPTCP,
+            Endpoint::Http(_) => TYPE_HTTP,
+            Endpoint::WebRTC(_) => TYPE_WEBRTC,
+            Endpoint::ZeroTierEncap(_, _) => TYPE_ZEROTIER_ENCAP,
         }
     }
 
@@ -90,9 +78,10 @@ impl Endpoint {
             Endpoint::Nil => {
                 buf.append_u8(TYPE_NIL)
             }
-            Endpoint::ZeroTier(a) => {
+            Endpoint::ZeroTier(a, h) => {
                 buf.append_u8(16 + TYPE_ZEROTIER)?;
-                buf.append_bytes_fixed(&a.to_bytes())
+                buf.append_bytes_fixed(&a.to_bytes())?;
+                buf.append_bytes_fixed(h)
             }
             Endpoint::Ethernet(m) => {
                 buf.append_u8(16 + TYPE_ETHERNET)?;
@@ -134,6 +123,11 @@ impl Endpoint {
                 buf.append_varint(b.len() as u64)?;
                 buf.append_bytes(b)
             }
+            Endpoint::ZeroTierEncap(a, h) => {
+                buf.append_u8(16 + TYPE_ZEROTIER_ENCAP)?;
+                buf.append_bytes_fixed(&a.to_bytes())?;
+                buf.append_bytes_fixed(h)
+            }
         }
     }
 
@@ -164,7 +158,8 @@ impl Endpoint {
                 TYPE_ZEROTIER => {
                     let zt = Address::unmarshal(buf, cursor)?;
                     if zt.is_some() {
-                        Ok(Endpoint::ZeroTier(zt.unwrap()))
+                        let h = buf.read_bytes_fixed::<SHA384_HASH_SIZE>(cursor)?;
+                        Ok(Endpoint::ZeroTier(zt.unwrap(), h.clone()))
                     } else {
                         Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid ZeroTier address"))
                     }
@@ -177,6 +172,15 @@ impl Endpoint {
                 TYPE_IPTCP => Ok(Endpoint::IpTcp(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_HTTP => Ok(Endpoint::Http(String::from_utf8_lossy(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?).to_string())),
                 TYPE_WEBRTC => Ok(Endpoint::WebRTC(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?.to_vec())),
+                TYPE_ZEROTIER_ENCAP => {
+                    let zt = Address::unmarshal(buf, cursor)?;
+                    if zt.is_some() {
+                        let h = buf.read_bytes_fixed::<SHA384_HASH_SIZE>(cursor)?;
+                        Ok(Endpoint::ZeroTierEncap(zt.unwrap(), h.clone()))
+                    } else {
+                        Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid ZeroTier address"))
+                    }
+                },
                 _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream"))
             }
         }
@@ -189,7 +193,7 @@ impl Hash for Endpoint {
             Endpoint::Nil => {
                 state.write_u8(TYPE_NIL);
             }
-            Endpoint::ZeroTier(a) => {
+            Endpoint::ZeroTier(a, _) => {
                 state.write_u8(TYPE_ZEROTIER);
                 state.write_u64(a.to_u64())
             }
@@ -225,6 +229,29 @@ impl Hash for Endpoint {
                 state.write_u8(TYPE_WEBRTC);
                 offer.hash(state);
             }
+            Endpoint::ZeroTierEncap(a, _) => {
+                state.write_u8(TYPE_ZEROTIER_ENCAP);
+                state.write_u64(a.to_u64())
+            }
+        }
+    }
+}
+
+impl Ord for Endpoint {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Endpoint::Nil, Endpoint::Nil) => Ordering::Equal,
+            (Endpoint::ZeroTier(a, ah), Endpoint::ZeroTier(b, bh)) => a.cmp(b).then_with(|| ah.cmp(bh)),
+            (Endpoint::Ethernet(a), Endpoint::Ethernet(b)) => a.cmp(b),
+            (Endpoint::WifiDirect(a), Endpoint::WifiDirect(b)) => a.cmp(b),
+            (Endpoint::Bluetooth(a), Endpoint::Bluetooth(b)) => a.cmp(b),
+            (Endpoint::Ip(a), Endpoint::Ip(b)) => a.cmp(b),
+            (Endpoint::IpUdp(a), Endpoint::IpUdp(b)) => a.cmp(b),
+            (Endpoint::IpTcp(a), Endpoint::IpTcp(b)) => a.cmp(b),
+            (Endpoint::Http(a), Endpoint::Http(b)) => a.cmp(b),
+            (Endpoint::WebRTC(a), Endpoint::WebRTC(b)) => a.cmp(b),
+            (Endpoint::ZeroTierEncap(a, ah), Endpoint::ZeroTierEncap(b, bh)) => a.cmp(b).then_with(|| ah.cmp(bh)),
+            _ => self.type_id().cmp(&other.type_id())
         }
     }
 }
@@ -234,117 +261,11 @@ impl PartialOrd for Endpoint {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
-// We manually implement Ord and PartialOrd to ensure that ordering is always the same, since I'm not
-// sure if Rust's derivations for this are guaranteed to remain constant forever. Endpoint ordering
-// is important in the reproducibility of digital signatures any time one is signing a vector of them.
-impl Ord for Endpoint {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match self {
-            Endpoint::Nil => {
-                match other {
-                    Endpoint::Nil => Ordering::Equal,
-                    _ => Ordering::Greater,
-                }
-            }
-            Endpoint::ZeroTier(a) => {
-                match other {
-                    Endpoint::Nil => Ordering::Less,
-                    Endpoint::ZeroTier(b) => a.cmp(b),
-                    _ => Ordering::Greater,
-                }
-            }
-            Endpoint::Ethernet(a) => {
-                match other {
-                    Endpoint::Nil => Ordering::Less,
-                    Endpoint::ZeroTier(_) => Ordering::Less,
-                    Endpoint::Ethernet(b) => a.cmp(b),
-                    _ => Ordering::Greater,
-                }
-            }
-            Endpoint::WifiDirect(a) => {
-                match other {
-                    Endpoint::Nil => Ordering::Less,
-                    Endpoint::ZeroTier(_) => Ordering::Less,
-                    Endpoint::Ethernet(_) => Ordering::Less,
-                    Endpoint::WifiDirect(b) => a.cmp(b),
-                    _ => Ordering::Greater,
-                }
-            }
-            Endpoint::Bluetooth(a) => {
-                match other {
-                    Endpoint::Nil => Ordering::Less,
-                    Endpoint::ZeroTier(_) => Ordering::Less,
-                    Endpoint::Ethernet(_) => Ordering::Less,
-                    Endpoint::WifiDirect(_) => Ordering::Less,
-                    Endpoint::Bluetooth(b) => a.cmp(b),
-                    _ => Ordering::Greater,
-                }
-            }
-            Endpoint::Ip(a) => {
-                match other {
-                    Endpoint::Nil => Ordering::Less,
-                    Endpoint::ZeroTier(_) => Ordering::Less,
-                    Endpoint::Ethernet(_) => Ordering::Less,
-                    Endpoint::WifiDirect(_) => Ordering::Less,
-                    Endpoint::Bluetooth(_) => Ordering::Less,
-                    Endpoint::Ip(b) => a.cmp(b),
-                    _ => Ordering::Greater,
-                }
-            }
-            Endpoint::IpUdp(a) => {
-                match other {
-                    Endpoint::Nil => Ordering::Less,
-                    Endpoint::ZeroTier(_) => Ordering::Less,
-                    Endpoint::Ethernet(_) => Ordering::Less,
-                    Endpoint::WifiDirect(_) => Ordering::Less,
-                    Endpoint::Bluetooth(_) => Ordering::Less,
-                    Endpoint::Ip(_) => Ordering::Less,
-                    Endpoint::IpUdp(b) => a.cmp(b),
-                    _ => Ordering::Greater,
-                }
-            }
-            Endpoint::IpTcp(a) => {
-                match other {
-                    Endpoint::Nil => Ordering::Less,
-                    Endpoint::ZeroTier(_) => Ordering::Less,
-                    Endpoint::Ethernet(_) => Ordering::Less,
-                    Endpoint::WifiDirect(_) => Ordering::Less,
-                    Endpoint::Bluetooth(_) => Ordering::Less,
-                    Endpoint::Ip(_) => Ordering::Less,
-                    Endpoint::IpUdp(_) => Ordering::Less,
-                    Endpoint::IpTcp(b) => a.cmp(b),
-                    _ => Ordering::Greater,
-                }
-            }
-            Endpoint::Http(a) => {
-                match other {
-                    Endpoint::Nil => Ordering::Less,
-                    Endpoint::ZeroTier(_) => Ordering::Less,
-                    Endpoint::Ethernet(_) => Ordering::Less,
-                    Endpoint::WifiDirect(_) => Ordering::Less,
-                    Endpoint::Bluetooth(_) => Ordering::Less,
-                    Endpoint::Ip(_) => Ordering::Less,
-                    Endpoint::IpUdp(_) => Ordering::Less,
-                    Endpoint::IpTcp(_) => Ordering::Less,
-                    Endpoint::Http(b) => a.cmp(b),
-                    _ => Ordering::Greater,
-                }
-            }
-            Endpoint::WebRTC(a) => {
-                match other {
-                    Endpoint::WebRTC(b) => a.cmp(b),
-                    _ => Ordering::Less,
-                }
-            }
-        }
-    }
-}
-
 impl ToString for Endpoint {
     fn to_string(&self) -> String {
         match self {
             Endpoint::Nil => format!("nil"),
-            Endpoint::ZeroTier(a) => format!("zt:{}", a.to_string()),
+            Endpoint::ZeroTier(a, ah) => format!("zt:{}-{}", a.to_string(), base64::encode_config(ah, base64::URL_SAFE_NO_PAD)),
             Endpoint::Ethernet(m) => format!("eth:{}", m.to_string()),
             Endpoint::WifiDirect(m) => format!("wifip2p:{}", m.to_string()),
             Endpoint::Bluetooth(m) => format!("bt:{}", m.to_string()),
@@ -352,7 +273,8 @@ impl ToString for Endpoint {
             Endpoint::IpUdp(ip) => format!("udp:{}", ip.to_string()),
             Endpoint::IpTcp(ip) => format!("tcp:{}", ip.to_string()),
             Endpoint::Http(url) => url.clone(),
-            Endpoint::WebRTC(offer) => format!("webrtc:{}", base64::encode(offer.as_slice())),
+            Endpoint::WebRTC(offer) => format!("webrtc:{}", base64::encode_config(offer.as_slice(), base64::URL_SAFE_NO_PAD)),
+            Endpoint::ZeroTierEncap(a, ah) => format!("zte:{}-{}", a.to_string(), base64::encode_config(ah, base64::URL_SAFE_NO_PAD)),
         }
     }
 }

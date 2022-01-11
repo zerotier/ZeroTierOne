@@ -63,8 +63,8 @@ pub const MESSAGE_TYPE_HAVE_OBJECTS: u8 = 3;
 /// A series of identity hashes concatenated together of objects being requested.
 pub const MESSAGE_TYPE_WANT_OBJECTS: u8 = 4;
 
-/// Request IBLT synchronization, payload is IBLTSyncRequest.
-pub const MESSAGE_TYPE_SYNC_REQUEST: u8 = 5;
+/// Report state, requesting possible sync response.
+pub const MESSAGE_TYPE_STATE: u8 = 5;
 
 /// IBLT sync digest, payload is IBLTSyncDigest.
 pub const MESSAGE_TYPE_IBLT_SYNC_DIGEST: u8 = 6;
@@ -93,13 +93,13 @@ pub struct Hello<'a> {
 /// Sent in response to Hello and contains an acknowledgement HMAC for the shared key.
 #[derive(Deserialize, Serialize)]
 pub struct HelloAck<'a> {
-    /// HMAC-SHA384(KBKDF(key, KBKDF_LABEL_HELLO_ACK_HMAC), SHA384(original raw Hello))
+    /// HMAC-SHA384(KBKDF(ack key, KBKDF_LABEL_HELLO_ACK_HMAC), SHA384(original raw Hello))
     pub ack: &'a [u8],
     /// Value of clock in original hello, for measuring latency.
     pub clock_echo: u64,
 }
 
-/// Request an IBLT set digest to assist with synchronization.
+/// Report the state of the sender's data set.
 ///
 /// The peer may respond in one of three ways:
 ///
@@ -121,14 +121,8 @@ pub struct HelloAck<'a> {
 /// simple calculation to be made with the sending node's total count to
 /// estimate set difference density across the entire hash range.
 #[derive(Deserialize, Serialize)]
-pub struct SyncRequest<'a> {
-    /// Start of range. Right-pad with zeroes if too short.
-    pub range_start: &'a [u8],
-    /// End of range. Right-pad with zeroes if too short.
-    pub range_end: &'a [u8],
-    /// Total number of hashes in range.
-    pub count: u64,
-    /// Total number of hashes in entire data set.
+pub struct State<'a> {
+    /// Total number of hashes in the entire data set.
     pub total_count: u64,
     /// Our clock to use as a reference time for filtering the data set (if applicable).
     pub reference_time: u64,

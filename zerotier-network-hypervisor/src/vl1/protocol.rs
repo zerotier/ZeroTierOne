@@ -180,7 +180,7 @@ pub const IDENTITY_V0_POW_THRESHOLD: u8 = 17;
 /// Proof of work difficulty (threshold) for new v1 identities.
 /// This is lower than the V0 threshold, causing the V0 part of V1 identities to
 /// verify on old nodes.
-pub const IDENTITY_V1_POW_THRESHOLD: u8 = 5;
+pub const IDENTITY_V1_POW_THRESHOLD: u8 = 9;
 
 #[derive(Clone, Copy)]
 #[repr(u8)]

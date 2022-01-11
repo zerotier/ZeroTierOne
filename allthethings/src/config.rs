@@ -27,7 +27,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            max_message_size: 1024 * 1024, // 1MiB
+            max_message_size: 1024 * 256, // 256KiB
             tcp_port: 19993,
             io_timeout: 300, // 5 minutes
             domain: String::new(),

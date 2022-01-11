@@ -220,14 +220,14 @@ impl<const L: usize> Buffer<L> {
         let end = ptr + 2;
         if end <= L {
             self.0 = end;
-            unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u16>() = i };
+            unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u16>() = i.to_be() };
             Ok(())
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
     #[inline(always)]
     pub fn append_u16(&mut self, i: u16) -> std::io::Result<()> {
         let ptr = self.0;
@@ -241,21 +241,21 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
     #[inline(always)]
     pub fn append_u32(&mut self, i: u32) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + 4;
         if end <= L {
             self.0 = end;
-            unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u32>() = i };
+            unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u32>() = i.to_be() };
             Ok(())
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
     #[inline(always)]
     pub fn append_u32(&mut self, i: u32) -> std::io::Result<()> {
         let ptr = self.0;
@@ -269,21 +269,21 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
     #[inline(always)]
     pub fn append_u64(&mut self, i: u64) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + 8;
         if end <= L {
             self.0 = end;
-            unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u64>() = i };
+            unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u64>() = i.to_be() };
             Ok(())
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
     #[inline(always)]
     pub fn append_u64(&mut self, i: u64) -> std::io::Result<()> {
         let ptr = self.0;
@@ -409,13 +409,13 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok((unsafe { *self.1.as_ptr().add(ptr).cast::<u16>() }).to_be())
+            Ok(u16::from_be(unsafe { *self.1.as_ptr().add(ptr).cast::<u16>() }))
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
     #[inline(always)]
     pub fn read_u16(&self, cursor: &mut usize) -> std::io::Result<u16> {
         let ptr = *cursor;
@@ -429,7 +429,7 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
     #[inline(always)]
     pub fn read_u32(&self, cursor: &mut usize) -> std::io::Result<u32> {
         let ptr = *cursor;
@@ -437,13 +437,13 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok((unsafe { *self.1.as_ptr().add(ptr).cast::<u32>() }).to_be())
+            Ok(u32::from_be(unsafe { *self.1.as_ptr().add(ptr).cast::<u32>() }))
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
     #[inline(always)]
     pub fn read_u32(&self, cursor: &mut usize) -> std::io::Result<u16> {
         let ptr = *cursor;
@@ -457,7 +457,7 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
     #[inline(always)]
     pub fn read_u64(&self, cursor: &mut usize) -> std::io::Result<u64> {
         let ptr = *cursor;
@@ -465,13 +465,13 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok((unsafe { *self.1.as_ptr().add(ptr).cast::<u64>() }).to_be())
+            Ok(u64::from_be(unsafe { *self.1.as_ptr().add(ptr).cast::<u64>() }))
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
     #[inline(always)]
     pub fn read_u64(&self, cursor: &mut usize) -> std::io::Result<u16> {
         let ptr = *cursor;
@@ -485,6 +485,13 @@ impl<const L: usize> Buffer<L> {
         }
     }
 }
+
+impl<const L: usize> PartialEq for Buffer<L> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool { self.1[0..self.0].eq(&other.1[0..other.0]) }
+}
+
+impl<const L: usize> Eq for Buffer<L> {}
 
 impl<const L: usize> Write for Buffer<L> {
     #[inline(always)]

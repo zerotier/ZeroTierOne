@@ -9,6 +9,7 @@
 use std::alloc::{alloc, dealloc, Layout};
 use std::cmp::Ordering;
 use std::convert::TryInto;
+use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::mem::MaybeUninit;
 use std::ops::Deref;
@@ -63,6 +64,9 @@ pub const IDENTITY_CIPHER_SUITE_EC_NIST_P521: u8 = 0x03;
 
 /// Mask for functions that take a cipher mask to use all available ciphers or the best available cipher.
 pub const IDENTITY_CIPHER_SUITE_INCLUDE_ALL: u8 = 0xff;
+
+/// Current sanity limit for the size of a marshaled Identity (can be increased if needed).
+pub const MAX_MARSHAL_SIZE: usize = ADDRESS_SIZE + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + 16;
 
 #[derive(Clone)]
 pub struct IdentityP521Secret {
@@ -150,13 +154,16 @@ impl Identity {
         let p521_ecdh_pub = p521_ecdh.public_key_bytes().clone();
         let p521_ecdsa_pub = p521_ecdsa.public_key_bytes().clone();
 
-        let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 1 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + 1 + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE);
+        let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE);
         let _ = self_sign_buf.write_all(&address.to_bytes());
-        self_sign_buf.push(IDENTITY_CIPHER_SUITE_X25519 | IDENTITY_CIPHER_SUITE_EC_NIST_P521);
+        self_sign_buf.push(IDENTITY_CIPHER_SUITE_X25519);
         let _ = self_sign_buf.write_all(&c25519_pub);
         let _ = self_sign_buf.write_all(&ed25519_pub);
+        self_sign_buf.push(IDENTITY_CIPHER_SUITE_X25519);
+        self_sign_buf.push(IDENTITY_CIPHER_SUITE_EC_NIST_P521);
         let _ = self_sign_buf.write_all(&p521_ecdh_pub);
         let _ = self_sign_buf.write_all(&p521_ecdsa_pub);
+        self_sign_buf.push(IDENTITY_CIPHER_SUITE_EC_NIST_P521);
 
         Self {
             address,
@@ -166,7 +173,7 @@ impl Identity {
                 ecdh: p521_ecdh_pub,
                 ecdsa: p521_ecdsa_pub,
                 ecdsa_self_signature: p521_ecdsa.sign(self_sign_buf.as_slice()).expect("NIST P-521 signature failed in identity generation"),
-                ed25519_self_signature: ed25519.sign(self_sign_buf.as_slice())
+                ed25519_self_signature: ed25519.sign(self_sign_buf.as_slice()),
             }),
             secret: Some(IdentitySecret {
                 c25519,
@@ -194,7 +201,7 @@ impl Identity {
     pub fn hash(&self) -> [u8; SHA384_HASH_SIZE] {
         let mut sha = SHA384::new();
         sha.update(&self.address.to_bytes());
-        // don't prefix x25519 with cipher suite 0 for backward compatibility
+        // don't prefix x25519 with cipher suite for backward compatibility
         sha.update(&self.c25519);
         sha.update(&self.ed25519);
         let _ = self.p521.as_ref().map(|p521| {
@@ -202,6 +209,7 @@ impl Identity {
             sha.update(&p521.ecdh);
             sha.update(&p521.ecdsa);
             sha.update(&p521.ecdsa_self_signature);
+            sha.update(&[IDENTITY_CIPHER_SUITE_EC_NIST_P521]);
         });
         sha.finish()
     }
@@ -212,13 +220,16 @@ impl Identity {
     pub fn validate_identity(&self) -> bool {
         let pow_threshold = if self.p521.is_some() {
             let p521 = self.p521.as_ref().unwrap();
-            let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 1 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE);
+            let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE);
             let _ = self_sign_buf.write_all(&self.address.to_bytes());
-            self_sign_buf.push(IDENTITY_CIPHER_SUITE_X25519 | IDENTITY_CIPHER_SUITE_EC_NIST_P521);
+            self_sign_buf.push(IDENTITY_CIPHER_SUITE_X25519);
             let _ = self_sign_buf.write_all(&self.c25519);
             let _ = self_sign_buf.write_all(&self.ed25519);
+            self_sign_buf.push(IDENTITY_CIPHER_SUITE_X25519);
+            self_sign_buf.push(IDENTITY_CIPHER_SUITE_EC_NIST_P521);
             let _ = self_sign_buf.write_all(&p521.ecdh);
             let _ = self_sign_buf.write_all(&p521.ecdsa);
+            self_sign_buf.push(IDENTITY_CIPHER_SUITE_EC_NIST_P521);
 
             if !P521PublicKey::from_bytes(&p521.ecdsa).map_or(false, |ecdsa_pub| ecdsa_pub.verify(self_sign_buf.as_slice(), &p521.ecdsa_self_signature)) {
                 return false;
@@ -292,6 +303,13 @@ impl Identity {
         }
     }
 
+    #[inline(always)]
+    pub fn to_bytes(&self, include_cipher_suites: u8, include_private: bool) -> Buffer<MAX_MARSHAL_SIZE> {
+        let mut b: Buffer<MAX_MARSHAL_SIZE> = Buffer::new();
+        self.marshal(&mut b, include_cipher_suites, include_private).expect("internal error marshaling Identity");
+        b
+    }
+
     pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_cipher_suites: u8, include_private: bool) -> std::io::Result<()> {
         let cipher_suites = self.cipher_suites() & include_cipher_suites;
         let secret = self.secret.as_ref();
@@ -362,11 +380,11 @@ impl Identity {
                     } else if sec_size != 0 {
                         return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid x25519 secret"));
                     }
-                },
+                }
                 IDENTITY_CIPHER_SUITE_EC_NIST_P521 => {
                     let size = buf.read_u16(cursor)?;
                     if size < (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE) as u16 {
-                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p521 key"));
+                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p521 public key"));
                     }
                     let a = buf.read_bytes_fixed::<P521_PUBLIC_KEY_SIZE>(cursor)?;
                     let b = buf.read_bytes_fixed::<P521_PUBLIC_KEY_SIZE>(cursor)?;
@@ -375,13 +393,13 @@ impl Identity {
                     let _ = p521_ecdh_ecdsa_public.replace((a.clone(), b.clone(), c.clone(), d.clone()));
                     if size > (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE) as u16 {
                         if size != (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE) as u16 {
-                            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p521 key"));
+                            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p521 secret key"));
                         }
                         let a = buf.read_bytes_fixed::<P521_SECRET_KEY_SIZE>(cursor)?;
                         let b = buf.read_bytes_fixed::<P521_SECRET_KEY_SIZE>(cursor)?;
                         let _ = p521_ecdh_ecdsa_secret.replace((a.clone(), b.clone()));
                     }
-                },
+                }
                 _ => {
                     // Skip any unrecognized cipher suites, all of which will be prefixed by a size.
                     *cursor += buf.read_u16(cursor)? as usize;
@@ -406,7 +424,7 @@ impl Identity {
                     ecdh: p521_ecdh_ecdsa_public.0.clone(),
                     ecdsa: p521_ecdh_ecdsa_public.1.clone(),
                     ecdsa_self_signature: p521_ecdh_ecdsa_public.2.clone(),
-                    ed25519_self_signature: p521_ecdh_ecdsa_public.3.clone()
+                    ed25519_self_signature: p521_ecdh_ecdsa_public.3.clone(),
                 })
             } else {
                 None
@@ -431,15 +449,15 @@ impl Identity {
                         }
                         Some(IdentityP521Secret {
                             ecdh: p521_ecdh_secret.unwrap(),
-                            ecdsa: p521_ecdsa_secret.unwrap()
+                            ecdsa: p521_ecdsa_secret.unwrap(),
                         })
                     } else {
                         None
-                    }
+                    },
                 })
             } else {
                 None
-            }
+            },
         })
     }
 
@@ -506,12 +524,12 @@ impl FromStr for Identity {
                         return Err(InvalidFormatError);
                     }
                     state = 1;
-                },
+                }
                 1 | 2 => {
                     let _ = keys[key_ptr].replace(fields[ptr]);
                     key_ptr += 1;
                     state = (state + 1) % 3;
-                },
+                }
                 _ => {
                     return Err(InvalidFormatError);
                 }
@@ -584,26 +602,18 @@ impl FromStr for Identity {
                                     return Err(InvalidFormatError);
                                 }
                                 tmp.unwrap()
-                            }
+                            },
                         })
-                    }
+                    },
                 })
-            }
+            },
         })
     }
 }
 
 impl PartialEq for Identity {
-    fn eq(&self, other: &Self) -> bool {
-        self.address == other.address &&
-            self.c25519 == other.c25519 &&
-            self.ed25519 == other.ed25519 &&
-            self.p521.as_ref().map_or(other.p521.is_none(), |p521| {
-                other.p521.as_ref().map_or(false, |other_p521| {
-                    p521.ecdh == other_p521.ecdh && p521.ecdsa == other_p521.ecdsa
-                })
-            })
-    }
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool { self.address == other.address && self.c25519 == other.c25519 }
 }
 
 impl Eq for Identity {}
@@ -621,6 +631,11 @@ impl Ord for Identity {
 impl PartialOrd for Identity {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+}
+
+impl Hash for Identity {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) { state.write_u64(self.address.to_u64()) }
 }
 
 const ADDRESS_DERIVATION_HASH_MEMORY_SIZE: usize = 2097152;
@@ -665,8 +680,6 @@ fn zt_address_derivation_memory_intensive_hash(digest: &mut [u8; 64], genmem_poo
 #[repr(transparent)]
 struct AddressDerivationMemory(*mut u8);
 
-struct AddressDerivationMemoryFactory;
-
 impl AddressDerivationMemory {
     #[inline(always)]
     fn get_memory(&mut self) -> *mut u8 { self.0 }
@@ -676,6 +689,8 @@ impl Drop for AddressDerivationMemory {
     #[inline(always)]
     fn drop(&mut self) { unsafe { dealloc(self.0, Layout::from_size_align(ADDRESS_DERIVATION_HASH_MEMORY_SIZE, 8).unwrap()) }; }
 }
+
+struct AddressDerivationMemoryFactory;
 
 impl PoolFactory<AddressDerivationMemory> for AddressDerivationMemoryFactory {
     #[inline(always)]
@@ -699,22 +714,62 @@ pub(crate) fn purge_verification_memory_pool() {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+    use std::time::{Duration, SystemTime};
     use crate::vl1::Identity;
+    use crate::vl1::identity::IDENTITY_CIPHER_SUITE_INCLUDE_ALL;
+
+    const GOOD_V1_IDENTITIES: [&'static str; 10] = [
+        "f0beef83d5:0:c770a89f8b4c389bbbfbb15f3efa38be12aed830500b12c6b14d235ce4cd976477706b78cc649eae282e590c2bff0a00c2bcd48c6a2e11f75bd447e5c460e6c1:200152c9bc35d6ce4984e67a508cb255a984a47f377747a12465a7f18759904a84e5ef259eb8aa1988e1e3e40317c4ec72445d2c8731f12c3c0f71025beb28e5:1:AHFabiyRt7hZM3UHLQPR3ZnqUDwIsbYINPegBuwazzH6ARy8ajtaDNg8bZn6Y2TEKb7ov1DiedkLEkLwpEnbfqwfAE0BiJebWrTDqcZMGjY0OGbDIeT0U0ZH4cmxWGbn-DRjNuiVqltMxwAQCjahhIXkhLueYj3YOHvKPXBykm4m_5sGAKQog2m-4N7WHpO3dIi0HFbPkaibsSGYk4_ZE7Z4R_j8mxHeQhqnm97krXWMJec6MSzXIXnfQ9-aVSaRSa0ZXBCcALVbWN-N3vMMiEHK0I2DUP1UAFec9FUjxsqEAXGGLJ0dtVTO8dO-fTpi5REsblxdapjiNbMUmwNYuK8iBkV_kYnbAP2Zv5ndxZlXhr5wPsKudP_LGpuGS1BltS8gZDELq8zhOa7U7L3qvFiK68OJWZGgrZZrYjO-tU1UU18qxtgT_VZBAQWNnr6nWVq7eIL4kvASAgttNNe0_9Qb6iOvzEvvXobf0ZgsWUy4NRyFlHKIYH6dOWMZdMekMKAgGSZmLn07RhYKUCe6JqfjI-UQR49tr-JB-H_t1OKYO2wFiKixpdZKh33erUvkxBcVfHOwvJmlykedkQNiCQpHcWInCSzkV19VCw:AF6BKY6fEVmNyg4UxSuUPnG5p011f3-vGF2V3SZjNg6qAI2GIzk-d_DNpeUjAz9u2NQX4gCKb9Xgr1JePQwaSvmCAPiBW5GX3JwJXbYu025q36yFA1e93DEMGnITHjbzIc7jiDk_pZ7n5B_LDUjjqpHQcokl9b5qjr3d0riF-9PQ8-8k",
+        "26d8a4c162:0:666dcd76f39de286f7d816af1feeb54ba327874472cfcd88d717e0e551048a78d342a06aee4c6766bd41c54a5bf7b44153aaa4329846988f807146459cd62d6c:90461e88fec66b82b00745840f1f304bee25d442ebf93b21033a3000219f6f6bfd5604557ca27a9bcc6f7f5c10db15262d7145a1884adfce32eae4c5cb77d1c4:1:AdHlp0cmj4KRWQN3oOM6AQjLJSv3_KSXSOftv0TVIUrdtFmAPGf6Duecb9Vtu5WaWOwoN-3WY_YmDES-sfJveioBAJhZhuyqS-wj-pQ0ppQ5u_HP9eAtuDtUIrrtF6wDGNrNsNc9F9SATZho6jVEan7ccjZFeLBd-HOmErj_LfVC66ptAWmAn18CHjNxPUcn-E9D2nVpIN34mM_mHyc2uMLm80aRjqndFll8MPKkYZGz1TPEUjJUfwNT9SdecbBSvqK7gPdzAKY8kohNau9j27vMaUGcf-TTkfHBSmOmoz-X-C_GSGwD7KIyyVQe1xMfKQjdjqPRlK94AWAuX3L5Gb_ywdGjR6_SACDCdVisQFP0HzSWkHVPxbY5Ab1yJme73hlbpm64vK5htiSmdC5JxXGSiQuAIdjWMH_pfL4LgFCmZQjTWLEX0-n_AAjk9A3DjZDkQeBn8gP9z2xlpPKzOAOlqFoVlxSlyRc7Sra--go947886vBN3dpcm8fhTuO4HtlnPdiKdk1NsvyzuvZ4XIvTa6pGV4zhYZRIpn7rn9yDVOLYskEx2I6SxHrovuG--_Yn5pERP4jdA6oGMKR3ZSIROTCTyUuCkQMXBw:AK-hGoppimiEx-4-9up25uWcnSeD4lIl8VL_ufIJGv41NsLFgJkRQ7EQ-4zd_NrB_E42ju24ZKIR-eJOn-eOKTUzAJmuBUCsMXzCzgTPwbW3OBRhCHjDbaz27JDV4HWVRM_bbhQLF6rzJTBioDex-E74HOTIDKS87vTCZ2qujRjhw07V",
+        "7e94a163bd:0:72a1fa41c906c7c111798b2f062a695316a41e9e8043ca14c1f7878f20f0ba170d0a2c8442a6eddbe4ba6c29847d8460a2754ca6c5c465cf756619749fd18460:989c4bb4719bc7cc4d1f59810a6a64746d04b3a46d894844c1bfe01d359e086a7cd0f5aafc1936bc4475937b14f02ccf25ca78b77c65d0b34be0aa8bc138f45a:1:ATvs4irZ_1FjoYJojInI5DPuqDMrk8Ost4r41QaqSiTgCONEHRiNtSoQJXgcsfhsbz5AWaG5S0H1Q0irHHF2paAYABBQ8C8DJLG_IQWnZYYH2OOdcMVdA1llQRr1odUDJdwv862fO0dUzMct1qmB7RZiiZW_DyIhmv5ZPayeeyQ0NBDeAEeCvA_J0hvBSDeBPxUr5meAzVizAArotFO58JwvqKjfXin99heJFXnBemlJx1Ec-v3WGcbRN6ikLZYw6uetXS0HAOt3hJlu1-MQXXpUMSQ2fNeE6HrM_bH-JDmFu5jTzpls2end1u6fKtVPW2TCs1pHc8nC6Km3J6Kb60_rqgtESVo4AazOlfiwaC40t-kEDXPbNTxOfAHgm9NimCkEmh4FwTYXTv7hD7koTU5ZtFVBCospRcW5A2Q39keKDawM67isFMnrAcd4CEx5FLvNmJ9aoItyeBzjcP6Nn8RWmEFYObMqNlEH1d2KSGFYYFKp8fWi4zNnEe41H5qQ5xj-fFEiP9bod1g0sV8Vbyo3uj7VoCeabZ96KQwAhWFe-TEdc393Aha65sjoXNEuOeCq7XMtfIrQ2rmMBcMhymy_K89WN1E_iuNRAQ:AcjIXa4COvSKkaU517m3eKzAvmEjTHMWcLN-6gFY9h2-1nNJO6bazeq5jyWqdifOsllksAyKlp4lgFmuvb5oUTdAAFTfsfMwo8eH9K6zvzgbuyxud4ldX3wlZv18brdJW7C05QNM3qYNPWTB1bCwbEBbBmtNR4Qdfe7YDJAqDiSo9t6i",
+        "8d7f396a1e:0:5486bc9a8c092fbbc4c447d44ab7e07419ea926cd606af45c3333dc65956261dba09d1160975c4f3a536664c00cfca3a54219a47254831e084b7edbf3251295a:7006dd1e43e7bc362ddd00f6f495dac4c5655f7e2c27abf133b3e9995b78605b1f8dcceaf8a3b3c98fff103f3d7a0a4af35ee59b34be229f434928523d39d879:1:AXUfrrngWX0AKkrDljhBpAGzYnCgap1Y3mnS-BccP5ipIUx6PWDxCZIZQ_H0PTCWP4sysDjZA7KcgmmOlrKVr9hRAJgWy1ljt-Vr-ybYm65xG70jV4dR_q_y8u5fYH9g6_FhFKn-ef8npze5SNKfDbroi_1RtIG8IIqACBTEMm5r8pfsAJ_U9SlPxpDlg6R8VO7sKt8kGwQtVytXsXuZ-Kxvnb_8crYAg5ObaJYVlJlsRvHbpwk6f5FRp_KoNMAE5LNIdvMrAKoTSLa_H37Tb42JraVpRRvj2D04NsNrp9AOus9mDMfrn9XZXX677sbCfN507KdWEQnYd24njnCSGIktEf4bhOmQALXUiArWmEm6g08skjyKs6_ukmsxnZHMaWih6FCkoU04oc2qSOmSC_LsnDjBhqQ7qo6_EkJnX5roiVGv2BjWZSfkAFPRxdxqNVJyNVXoCl-ZJlBXePipjH1Rk3yVuX2WfAMXQ2MoL8eP7vnfHUpBrzJmfImOqYgLZx2dstj-f_X6m1UZ4N9E4xYvyqo3vyzdFDI_YSFJZOZNk4Vz9CBE-WxOGPOklHgCNU2xcewysAw-jTHiHQ-lhoXWfxIBiMwE06nnCw:AYjHjcdewyL08Q3ddXFzdhrTijiAQYnbkbL5oC87GKkZ1S62p5Ny-UrHnOt37F0k65aDOwtvldGVvU8VHVDZAti5AIfl7mNhf6b4MF1LoROulO2j-Ygoc5ixbTuEQaJGSD-NumLvdbZbv2Ik0pJUc61izpwCxVHoYOkUlc167eD1G2li",
+        "9eb06e21bb:0:76a7f820f7af06d10a42bd7369b9e4cc96318e535909eb9840d064b1a21cf967826a3da6c0950d5ad68e095af6d2dd648fbef052b13e7876926cde591f5007c4:202df0941105495c8e482e2ebc5551c6fd23f668b387bc0bdcaa8ddc6ad03f5c2871a4263b5ba5bf3ed1cea348fdb88f706f3f2a628926a22828f7209b5fc7c1:1:AcUH-dmXHK75fjCV32witg1HZSj4M27N6w4BF9hnWXY8lSYdgbeN3AuMGnYqQcqu7vPoqrpT2AkIJ-gJI7fGe9jOAO9CcyfSieBeDgaFDW9oAmtJGNRdL-E32-K8kqlmyhkt-r0In-eOYuBWAe0hcQR0pXbTaAvBUB-WNa2Hab2JKVnTAThDvqzCmV57BecsfTtP-TS-Kz3BqZuQfIF0o5EOqDdP0Jib8G8TM7huXO6qrd2JZLGQzZ0uAF2ex6hmdD_obZJfAIpuhUgrgvVB9LFApQWE7Ys5aJXMrYYEtXAuqutGS9NV8yLsshD6uV0OzwqU8R2L-KPNsrOBccwj6E1Cyy7v22XMAPhMWA4oUlwZXuWWVPzYPq8lh-YxPlOFq583AZa2LZC0NUL0jkmzEQwvylctTVjhgaybqtRasM5PRyoRQWg5xAyKALASLfqRw5f1tJksf1JR7bz-WZH_Pngot8YOQLGjdjFxYwZD0CTXoV3v9Muc8bNEByiVTk_MXgeghi4ZWuV5N3jcy58eIbgS_GK_HNFRDDDS5_DtxFoQRxI5vL__wtej5Xl2Iqh0-4rmuUxbAP8fv_fhq9SFK3zoul-uy2cseQbeBw:AUwxKKt2MFKRzzWWwqMOcXBj23hUFZGjoO25vnMsEWTb8RT04oQc3ChRc13WrEGIPUOHuRXoRxSYVbfW7WIFhj1uAJY5zDiN9blmxKHmTj0UB84QMYlFnjok-AT3r8FB8Pj09HTborzJQqwgOtZ54G-UZ-Cn5RYzyWMQnERxQLiC525G",
+        "6362ad160b:0:9ea5ae5ecf18e8048e3f425845b12e462f3c6111e6078e97e17c56592cbc5d65e7ac6b2906739f8d6632e2a4323763ca4f33d7357efbbca0a6a7cec783067154:9078565f47bcfc7e4487f70b6c57e30e2863ce737a7997ae4f7a0f3a28e62971b1d42c4b0a7bf8008a18efd820fe40d5083809fbd5c1f63c83efb432b2c469b3:1:ACSRqDRinlje3ob1z2Uied0SyhSJ72KgGWaczFtk5pgR8lFA3OwIQT2UeqVVEwNuFyizM0vVA6eARJtM0fYY4OtlADMuUgs20w-nSHyPpWaYiZpGzIJT1QloiiuMnLaPA4XFPRQ8kNq3zBwVQHCsCTgAp92Y16_Yjkc4wCF4DZkFB_ROAObyJ-tzrC4VdNQKrbPFmTinyyhx0vroRBinX71KTHCL1MvNZK4ubSmgf0MSqjs-DLUo-dBjUvTC6u2F3P-6j60OAACKc3Vf6hVVlaivjeINVY-9W1rv2YfeIVF_EZQooDnZr8ZEn-T0DUq17apsacppvAQ5zLc1WtKYRhYI1ZRhUNI7AUtVCOdph5oHlmlP1a9xLWAiahTzb2Jo55KJ5kaF7DyRkcZCV3Kv6IUNZP4sZ6KO7_g7jLTq5kw57utzA7ntcBu4APl3hahoPWXqxTlbzwaKVb5a4yDV_enbeP04NvoEbR2M6F67olmrO_1-WJP3IpNP9-jYvw6l25qzdMhuiRBfoWD-amN1m9CptAta1zHhNKD4Q24M9_0sxA5brph76tIZEISHIMT7wzWY4S4lT35ZztHuXdWlcAo2sU4pbeItff7BBw:ATBDv_-t-jYfiTgk0nLNo7W4glfaFkig42HUeerp6k6Hi3OJ7OGv6ZPKbBefa8by8weJBgkBX0PK5seL-3IypJ_vAXm9q9xbAP7GHreku8ZSOnwZACDvlJgGXRrPGhjP672lC-t8kFScyttjruyfyXNme1M1nKux8mq2hwtt-JyajlPj",
+        "68cc2f8e77:0:14db37ff42c15aa305951911d3ac65748367d1c284ce18c5ba400899d6ce333f9c35ad162464935ab6f4fe94715a8c4f27706f6270a44f46aa46d2539d2e7334:d0c6e6e8779e7a4b2462e74ff097070f8cf325c38de09eac3c5fe7a8216afa7b44f92a6bc9bd38af780b2ec529f80cddb1f733a805a05a89f7149b873dfc98d0:1:AKAzMbwTh1QxdqHB8_TlY7ulKqRCp05PgYxtFPDH-m38mOFHBH4q2kcw7BMbsbODfiNDG8UUmKvW1BJhk1muvA2XAHjiPjWY8jVXHJAXWp1iqmguj93BBDoCJJoSAp7fXthTz5TPViB8_EcnOedfASJUMMODn6iECE80vy_N7sxQQzBJAYAiSD6PGcO8lxHiS2clee1Twbf2PJU35CTaDPOy7yoEi8y8HMpDB8i-FYNrcDuWhO506r8JSNvAgttFmsUHyPB6AAOVEQQHqTnidrpqXnI4pDJXFhopjXkO2WtTub8zjFLwHA73Rgw0U54Q8Ya8uWm2bnhoLOTVgQ51sfV1VP4orH5ZAVo_p_s5_tl-X5PeIc1mGbfXIq5EZ4Cu7D-Gu08gDqxajJov51p1gi9A36NPoxDcDPZrvfhin122VkFrs1NN-ThzAZLqZWHeX7CNAZ_jbD110l-gxP8FkfPpGSmVB9dsXqj_LQxVzEEie13CZSovd0BIscfNcQvPAQn9lD4X-ZtY5DIXluHcve-kFDzNGu15NYQCD5qxDmy8paFigJ83Ad8V1ScsEISR3DNeNocB0uBP6aVlQUNwtaTo20EH1I_gE0oBDQ:AE0E5BpSDnLWor443T0RrfMx0Shel5C73P9ZdFZR58-txJYser1Qn_GFAzsN9wVjHZSSgbks6JAAucNF62S75rbTAbEBtbdm6AhyLveV2LsJ_GxnK1eA2q3DpG97gVCdaLm-6P_b7bRDKhKV0xqbEFCG4rdSjNPI55Nst76IdfRC-YUw",
+        "a8dca71e98:0:ae3174d41b37ffcd575be3fedfbbb7014622b61afdae1b4fbbbc880427f7e34841117d09883b575f11aa9b0069a188b9ab496b1fd72dbb95e2b347c07f360174:70ce0bb0899196c1794660266bac0b06c50aca60de42410f12152e5395b7c6717d2acf315f19bbe360ffc94fbac9e59cb1386ecf3ad7a655498caba5dda4d4e8:1:AZUGXrLYWPIDJDbieUC0KIyR4s3Ny3MetrlC72y8LEo7AOAq-B2Zl7qf9G8ECV7pzbjNtOsRl_br6gemO8ju-Y4-AHSVyu3EZJIA-_ff8aqGWO7Qrn7R7BVmGwEPsEIVdIA1p1wNPcRquacSmGVteOMLNXViFDJsEnZbuixFoqwaHOniAfkWV2AX0riULmS83Td89ov3MwWDegRtJHhEBRJEUTGbA0-Lgm6_c1Qsl1ZmOns0rGyQDPu2UY60NTUtNrI-6GS3AL_JcuI8ILqB53F4TNXlDx3kHpwOUQgcipJFYgwaCyRj9CDIah5I3kyfayn09gznro6DsQCQq0QZ_7IYw0nglcTYAI0s8XTChwmz9Sp9yAsbnHnwVLJJWKIpflD2tPxBu4Dmuw-zsMv2mZvF8aSyz6McbaPTVqrFPtqsWbhGrymkDfV_AB2Os-9eoQawvF0Jlu3e8HESXMd7Hm7o68WttF88eIiQoQbwnyQfroiDAb9SkLhPlkO3b6lHH0rUo1cVPtrv7kUx6q2dr1vdrOItINTDFQD8StMEWRWiOyfNw9qDRUF2vj2iYpyi8bQ4z_MlUeAm4pHwg2lK1cfa7W949UbeaNDpAQ:AMudL3SxwtAYlrM8yir2dfOXjcBCe5UaVvW5geQGGUS3CQUgTyyAix_mKCnIHsc2_Sa5wc7tCd8Or2WawPcYjYDuAbTQbuXB1ZZtucGnze_vPRP4yJ9mlSRWlyu10bzBlOAuKofiCd_WYmQwmhLgGhDrun8AIu3_7yx5xOv5VQB_pvJM",
+        "ef9bf07932:0:debf307a91682f407ef0656db48beed39edff72280549f2188148fca1320c60efdff2f3279033a67ad6c8fbf10836d992e17f1796b690f715c8f74b286210e36:0016b7da07340bdd71e3922b29feae47884c4d42fa4e41997d9a6f2f6186775321250d014baa16a6c440960189493d1f61d5637ef2bf52f1bc4699b10b70394a:1:AZk47482_xHQyM-4zBVMyDeyPtzXKpuCRtCEc6qr6Nvycqw1LsKwaBxZIVW0S072c33BN7bDBJq3j0FssGVUK2mIAFDQa1BQfEexXkn3BU078B3TOuMLNIWS9SEyixt4jDKeELU8nh9QgIrMH9eL_6Pl-QABF2F8xgb2AJX-Q3zzcdvdAS-Bz4OeCkn1q2h8q9pKUPS8JOVdzByUqP3WPcYfYHA6PY1FumohaEgqjnuIwYFdHg7yFqX2MQBfPZD-j42Efjo2AP1hiR_WOJKjRIMYA63UPjFFk6i5Zr7TipsT473a1rDjLxoniJlsH2Ss7m79Rckq3R89wbWHcZ-MhpW4NpSeOeYQAQHv8jjPeApQE9bq88WOKQ_JbygYhlHv2gOTQdiMjzL9TMDkFJAIkw1RvWa6xOxi4aZzAsk0ns2MM51b2HPwNesmAPYVZd33eXTT7carfOo3g-MvvE3aXyKica7lDGa2mi8fAb5OwmIOBa3U-NhzpjNzwgrCsMx7dRxm7fZKqaMLe2gitFdpqWK0McLowM8S3Ft7CRyHGhm9w9wB4-TAHcepplR3Ahrl-VCn2DzCBJsnSpgWVFzfXYq2uZMlSc6J6InMDg:AT4JX87uzP1OOxkq7eHpEpBItbtIFkC8_X7QjFF5R-cclN64DJAR9RuKYoAOnYc2wmbFdQ-NgYQR2PXgA-sPBJxtAPPpSw0PSg36cbtESzKemq03QLcDg6F9hh0N0stM3uJsgbRApPI-HQN4RNM1AI9-zmezJDzR8hREvLiQoY6DDxua",
+        "3710a2e191:0:d4d3f16f6a59b758895b50bd540e68535a3b7803b61a217f437a096937763f7e3537c475bfd107b7ca8c39e3bf37f33e078cecc2fcebc2a66abfd474e47a8acc:e025c2a133160c77cdfdb0b9a8f408bc9d99882da8f2854f9ddf8bfd36cb7a7de72d71edf6d2f5f37e313e700f27550c9b2a5a2c5e226ca8a14797eebb95c34c:1:AVUSQxAMkXFHeAlu_ZLQHUHoXi2zeYd0OqUaY88IJfUwyhZuuJUB1i4l9YAmxRCmvA4W9-0zBMs5VIaRe4BLZwgAAO0ww08FS4mWLwcH-NptOTy8eCitJ89MN6Zt0EQHifyOzxxLWIgY6OZJiKiSeRLrWr1_ZRpeHJJLcF7Zdnr_8f7MAPtBybUcan4kIdL5yI91FpE8CgmjM5Pmx4EWiJC33C3Iu4aV2GEdxPWutP8-XRGNpADwnHqE3XaNV_6rstC9Fu7kALdEb3WgqszTsf_elgCJbZ6IunXZBZrF8FGoAqeGWvV86lUw3vp7hwCUEQ52X4r8imKuqCtIdeYegoBfcEcyq3zDAJEScanA8YjU0y4k2FLyVBCrRjxsZDkyP9ZJXM2p3_5m27NhjzxDDLcb75Sb8Pn9K_CgwOafZw8yGIIK5OTkuEKQAGH6yMdspiUHTYTiEGSVAlJyRWz-Ifo9skohOlV6aQp1LufpNhonjbR3zXcAHo1s0yIkqivM_RXbVfe3QViNx3xeBpBLuxSj05hoiFrGEUuA-Q3tTtnGgbgtEEgzaiKeTu3Sclfd6EaZJc3T35DMl3U9wLlx6_BJsVS3SpfKIZv8AA:AePjhNHvnJr-FqsiI7y7QCI1OXUbG9iK98U8caTUb9VcezhHtMbEjzFehucOrafEnAZXROT6noHrztYxDEzJIfGmAEfPrbP6VYrCGo2fk6MsyzyCK24OJfFU3Z7mnSNZHpN55_P1LBlHoGQUyCAwcKzp8WCY_ceQkxTNNjdkAdq1zB4o"
+    ];
 
     #[test]
-    fn v0() {
-    }
+    fn v0() {}
 
     #[test]
     fn v1() {
+        for id_str in GOOD_V1_IDENTITIES {
+            let id = Identity::from_str(id_str).unwrap();
+            assert!(id.validate_identity());
+            assert!(id.p521.is_some());
+            let idb = id.to_bytes(IDENTITY_CIPHER_SUITE_INCLUDE_ALL, true);
+            let mut cursor = 0;
+            let id_unmarshal = Identity::unmarshal(&idb, &mut cursor).expect("unmarshal failed");
+            assert!(id == id_unmarshal);
+            assert!(id_unmarshal.secret.is_some());
+            let idb2 = id_unmarshal.to_bytes(IDENTITY_CIPHER_SUITE_INCLUDE_ALL, true);
+            assert!(idb == idb2);
+            let sig = id.sign(&[1, 2, 3, 4, 5], IDENTITY_CIPHER_SUITE_INCLUDE_ALL).unwrap();
+            assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
+        }
     }
 
     #[test]
-    fn generate() {
-        let count = 64;
-        for _ in 0..count {
+    fn benchmark_generate() {
+        let mut count = 0;
+        let run_time = Duration::from_secs(5);
+        let start = SystemTime::now();
+        let mut end;
+        let mut duration;
+        loop {
             let id = Identity::generate();
-            println!("{}", id.to_secret_string());
+            //println!("{}", id.to_secret_string());
+            end = SystemTime::now();
+            duration = end.duration_since(start).unwrap();
+            count += 1;
+            if duration >= run_time {
+                break;
+            }
         }
+        println!("benchmark: V1 identity generation: {} ms / identity (average)", (duration.as_millis() as f64) / (count as f64));
     }
 }
