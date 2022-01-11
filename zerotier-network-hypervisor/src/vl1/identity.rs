@@ -11,10 +11,11 @@ use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
-use std::mem::MaybeUninit;
+use std::mem::{MaybeUninit, size_of};
 use std::ops::Deref;
 use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 use std::str::FromStr;
+use highway::HighwayHash;
 
 use lazy_static::lazy_static;
 
@@ -26,7 +27,7 @@ use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
 use crate::error::InvalidFormatError;
-use crate::util::array_range;
+use crate::util::{array_range, highwayhasher};
 use crate::util::buffer::Buffer;
 use crate::util::pool::{Pool, Pooled, PoolFactory};
 use crate::vl1::Address;
@@ -92,6 +93,7 @@ pub struct IdentitySecret {
 #[derive(Clone)]
 pub struct Identity {
     pub address: Address,
+    fast_eq_hash: u128, // highwayhash used internally for very fast eq()
     pub c25519: [u8; C25519_PUBLIC_KEY_SIZE],
     pub ed25519: [u8; ED25519_PUBLIC_KEY_SIZE],
     pub p521: Option<IdentityP521Public>,
@@ -165,8 +167,16 @@ impl Identity {
         let _ = self_sign_buf.write_all(&p521_ecdsa_pub);
         self_sign_buf.push(IDENTITY_CIPHER_SUITE_EC_NIST_P521);
 
+        let mut hh = highwayhasher();
+        Hasher::write_u64(&mut hh, address.to_u64());
+        Hasher::write(&mut hh, &c25519_pub);
+        Hasher::write(&mut hh, &ed25519_pub);
+        Hasher::write(&mut hh, &p521_ecdh_pub);
+        Hasher::write(&mut hh, &p521_ecdsa_pub);
+
         Self {
             address,
+            fast_eq_hash: u128::from_ne_bytes(unsafe { *hh.finalize128().as_ptr().cast() }),
             c25519: c25519_pub,
             ed25519: ed25519_pub,
             p521: Some(IdentityP521Public {
@@ -414,8 +424,19 @@ impl Identity {
             return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "x25519 key missing"));
         }
         let x25519_public = x25519_public.unwrap();
+
+        let mut hh = highwayhasher();
+        Hasher::write_u64(&mut hh, address.to_u64());
+        Hasher::write(&mut hh, &x25519_public.0);
+        Hasher::write(&mut hh, &x25519_public.1);
+        let _ = p521_ecdh_ecdsa_public.as_ref().map(|p521| {
+            Hasher::write(&mut hh, &p521.0);
+            Hasher::write(&mut hh, &p521.1);
+        });
+
         Ok(Identity {
             address,
+            fast_eq_hash: u128::from_ne_bytes(unsafe { *hh.finalize128().as_ptr().cast() }),
             c25519: x25519_public.0.clone(),
             ed25519: x25519_public.1.clone(),
             p521: if p521_ecdh_ecdsa_public.is_some() {
@@ -541,8 +562,17 @@ impl FromStr for Identity {
         if keys[0].len() != C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE {
             return Err(InvalidFormatError);
         }
+
+        let mut hh = highwayhasher();
+        Hasher::write_u64(&mut hh, address.to_u64());
+        Hasher::write(&mut hh, keys[0].as_slice());
+        if !keys[2].is_empty() {
+            Hasher::write(&mut hh, &keys[2].as_slice()[0..264]);
+        }
+
         Ok(Identity {
             address,
+            fast_eq_hash: u128::from_ne_bytes(unsafe { *hh.finalize128().as_ptr().cast() }),
             c25519: keys[0].as_slice()[0..32].try_into().unwrap(),
             ed25519: keys[0].as_slice()[32..64].try_into().unwrap(),
             p521: if keys[2].is_empty() {
@@ -613,18 +643,30 @@ impl FromStr for Identity {
 
 impl PartialEq for Identity {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool { self.address == other.address && self.c25519 == other.c25519 }
+    fn eq(&self, other: &Self) -> bool { self.address == other.address && self.fast_eq_hash == other.fast_eq_hash }
 }
 
 impl Eq for Identity {}
 
 impl Ord for Identity {
     fn cmp(&self, other: &Self) -> Ordering {
-        let addr_ord = self.address.cmp(&other.address);
-        match addr_ord {
-            Ordering::Equal => self.c25519.cmp(&other.c25519),
-            _ => addr_ord
-        }
+        self.address.cmp(&other.address).then_with(|| self.c25519.cmp(&other.c25519).then_with(|| self.ed25519.cmp(&other.ed25519).then_with(|| {
+            if self.p521.is_some() {
+                if other.p521.is_some() {
+                    let p521_a = self.p521.as_ref().unwrap();
+                    let p521_b = other.p521.as_ref().unwrap();
+                    p521_a.ecdh.cmp(&p521_b.ecdh).then_with(|| p521_a.ecdsa.cmp(&p521_b.ecdsa))
+                } else {
+                    Ordering::Greater
+                }
+            } else {
+                if other.p521.is_none() {
+                    Ordering::Equal
+                } else {
+                    Ordering::Less
+                }
+            }
+        })))
     }
 }
 
@@ -759,6 +801,7 @@ mod tests {
             assert!(idb == idb2);
             let sig = id.sign(&[1, 2, 3, 4, 5], IDENTITY_CIPHER_SUITE_INCLUDE_ALL).unwrap();
             assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
+            assert!(Identity::from_str(id.to_string().as_str()).unwrap().eq(&id));
             good_identities.push(id);
         }
         for id_str in GOOD_V1_IDENTITIES {
@@ -774,6 +817,7 @@ mod tests {
             assert!(idb == idb2);
             let sig = id.sign(&[1, 2, 3, 4, 5], IDENTITY_CIPHER_SUITE_INCLUDE_ALL).unwrap();
             assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
+            assert!(Identity::from_str(id.to_string().as_str()).unwrap().eq(&id));
             good_identities.push(id);
         }
         for i in 0..good_identities.len() {
