@@ -271,7 +271,9 @@ int getdefaultgateway(in_addr_t *addr)
   rtm.rtm_addrs = rtm_addrs;
 
   so_dst.sa_family = AF_INET;
+  so_dst.sa_len = sizeof(struct sockaddr);
   so_mask.sa_family = AF_INET;
+  so_mask.sa_len = sizeof(struct sockaddr);
 
   NEXTADDR(RTA_DST, so_dst);
   NEXTADDR(RTA_NETMASK, so_mask);
