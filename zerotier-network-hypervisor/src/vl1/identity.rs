@@ -716,9 +716,20 @@ pub(crate) fn purge_verification_memory_pool() {
 mod tests {
     use std::str::FromStr;
     use std::time::{Duration, SystemTime};
-    use crate::vl1::Identity;
-    use crate::vl1::identity::IDENTITY_CIPHER_SUITE_INCLUDE_ALL;
+    use crate::vl1::identity::{Identity, IDENTITY_CIPHER_SUITE_INCLUDE_ALL};
 
+    const GOOD_V0_IDENTITIES: [&'static str; 10] = [
+        "51ef313c3a:0:79fee239cf79833be3a9068565661dc33e04759fa0f7e2218d10f1a51d441f1bf71332eba26dfc3755ce60e14650fe68dede66cf145e429972a7f51e026374de:6d12b1c5e0eae3983a5ee5872fa9061963d9e2f8cdd85adab54bdec4bd67f538cafc91b8b5b93fca658a630aab030ec10d66235f2443ccf362c55c41ae01b46e%",
+        "9532db97eb:0:86a2c3a7d08be09f794188ef86014f54b699577536db1ded58537c9159020b48c962ff7f25501ada8ef20b604dd29fb1a915966aaffe1ef6a589527525599f10:06ab13d2704583451bb326feb5c3d9bfe7879aa327669ff33150a42c04464aa5435cec79d952e0af970142e9d8c8a0dd26deadf9b9ba2f1cb454bf2ac22e53e6%",
+        "361d9b8016:0:5935e0d38e690a992d22fdbb587b873e9b6de4de4a45d161c47f249a2dbeed44e917da80736c8c3b61cdcc5a3f0a2c77fc8fa41c1302fa7bb871fe5833f9995f:7cfb67189c36e2588682a065db769a3827f423d099a84c61f30b5ad41c2e51a4c750235820441a524a011facad4555869042750684b01d6eca4b86223e816569%",
+        "77f925e5e3:0:161678a69aa19d1de096cd9cd7801745f038f74c3680f28da0890c995ecf56408c1f6022a02ab20c68e21b1afc587a0038f1405cbd3167877a69926788e92620:2e1a73ffb750f201451f5c35693179cfa0de14404c8d55e6bb5749787e7e220b292f9193f454b2e97404c5d136cff665874373e9a6d5139efa1b904f19efc7d3%",
+        "e32e883ac6:0:29e41f935cf419d41103a748938ab0dcc978b6fde9fbb82d6f34ef124538f93dc680c8b26ba03f0c66d15be1a3895ef73dc6879843f3720095fa144d33369195:3654e04cac0beb98a94b97bca2b9a0aea4c7001e13c3ebe813fe8096395ecb69b824d3b6ee2d5b149077abd73cff61dd9ee04811c30b0c7f964b59c67eefa799%",
+        "6f66865615:0:11443c5c0a6a096245f9790240e15d3b8ea228397447f118bd8b44030b24191f97e11bf704807561cd6d54f627d57d599ca7983547c6d4db52597dbd1c86114b:1d1cb5bbced28b11f2f61ddcbc9693d0233485fc8fe0825c090a7309fe94fd26e8e89d137071ef7567b80cce60672a31da4c1677fa1c37237b0713456788dc81%",
+        "c5bdb4a6a6:0:e0a8575bc0277ecf59aaa4a2724acc55554151fff510c8211b0b863398a04224ed918c16405552336ad4c4da3b98eb6224574f1cacaa69e19cdfde184fd9292d:0d45f17d73337cc1898f7be6aae54a050b39ed0259b608b80619c3f898caf8a3a48ae56e51c3d7d8426ef295c0628d81b1a99616a3ed28da49bf8f81e1bec863%",
+        "c622dedbe4:0:0cfec354be26b4b2fa9ea29166b4acaf9476d169d51fd741d7e4cd9de93f321c6b80628c50da566d0a6b07d58d651eba8af63e0edc36202c05c3f97c828788ad:31a75d2b46c1b0f33228d3869bc807b42b371bbcef4c96f7232a27c62f56397568558f115d9cff3d6f7b8efb726a1ea49a591662d9aacd1049e295cbb0cf3197%",
+        "e28829ab3c:0:8e36c4f6cb524cae6bbea5f26dadb601a76f2a3793961779317365effb17ac6cde4ff4149a1b3480fbdbdbabfe62e1f264e764f95540b63158d1ea8b1eb0df5b:957508a7546df18784cd285da2e6216e4265906c6c7fba9a895f29a724d63a2e0268128c0c9c2cc304c8c3304863cdfe437a7b93b12dc778c0372a116088e9cd%",
+        "aec623e59d:0:d7b1a715d95490611b8d467bbee442e3c88949f677371d3692da92f5b23d9e01bb916596cc1ddd2d5e0e5ecd6c750bb71ad2ba594b614b771c6f07b39dbe4126:ae4e4759d67158dcc54ede8c8ddb08acac49baf8b816883fc0ac5b6e328d17ced5f05ee0b4cd20b03bc5005471795c29206b835081b873fef26d3941416bd626%"
+    ];
     const GOOD_V1_IDENTITIES: [&'static str; 10] = [
         "f0beef83d5:0:c770a89f8b4c389bbbfbb15f3efa38be12aed830500b12c6b14d235ce4cd976477706b78cc649eae282e590c2bff0a00c2bcd48c6a2e11f75bd447e5c460e6c1:200152c9bc35d6ce4984e67a508cb255a984a47f377747a12465a7f18759904a84e5ef259eb8aa1988e1e3e40317c4ec72445d2c8731f12c3c0f71025beb28e5:1:AHFabiyRt7hZM3UHLQPR3ZnqUDwIsbYINPegBuwazzH6ARy8ajtaDNg8bZn6Y2TEKb7ov1DiedkLEkLwpEnbfqwfAE0BiJebWrTDqcZMGjY0OGbDIeT0U0ZH4cmxWGbn-DRjNuiVqltMxwAQCjahhIXkhLueYj3YOHvKPXBykm4m_5sGAKQog2m-4N7WHpO3dIi0HFbPkaibsSGYk4_ZE7Z4R_j8mxHeQhqnm97krXWMJec6MSzXIXnfQ9-aVSaRSa0ZXBCcALVbWN-N3vMMiEHK0I2DUP1UAFec9FUjxsqEAXGGLJ0dtVTO8dO-fTpi5REsblxdapjiNbMUmwNYuK8iBkV_kYnbAP2Zv5ndxZlXhr5wPsKudP_LGpuGS1BltS8gZDELq8zhOa7U7L3qvFiK68OJWZGgrZZrYjO-tU1UU18qxtgT_VZBAQWNnr6nWVq7eIL4kvASAgttNNe0_9Qb6iOvzEvvXobf0ZgsWUy4NRyFlHKIYH6dOWMZdMekMKAgGSZmLn07RhYKUCe6JqfjI-UQR49tr-JB-H_t1OKYO2wFiKixpdZKh33erUvkxBcVfHOwvJmlykedkQNiCQpHcWInCSzkV19VCw:AF6BKY6fEVmNyg4UxSuUPnG5p011f3-vGF2V3SZjNg6qAI2GIzk-d_DNpeUjAz9u2NQX4gCKb9Xgr1JePQwaSvmCAPiBW5GX3JwJXbYu025q36yFA1e93DEMGnITHjbzIc7jiDk_pZ7n5B_LDUjjqpHQcokl9b5qjr3d0riF-9PQ8-8k",
         "26d8a4c162:0:666dcd76f39de286f7d816af1feeb54ba327874472cfcd88d717e0e551048a78d342a06aee4c6766bd41c54a5bf7b44153aaa4329846988f807146459cd62d6c:90461e88fec66b82b00745840f1f304bee25d442ebf93b21033a3000219f6f6bfd5604557ca27a9bcc6f7f5c10db15262d7145a1884adfce32eae4c5cb77d1c4:1:AdHlp0cmj4KRWQN3oOM6AQjLJSv3_KSXSOftv0TVIUrdtFmAPGf6Duecb9Vtu5WaWOwoN-3WY_YmDES-sfJveioBAJhZhuyqS-wj-pQ0ppQ5u_HP9eAtuDtUIrrtF6wDGNrNsNc9F9SATZho6jVEan7ccjZFeLBd-HOmErj_LfVC66ptAWmAn18CHjNxPUcn-E9D2nVpIN34mM_mHyc2uMLm80aRjqndFll8MPKkYZGz1TPEUjJUfwNT9SdecbBSvqK7gPdzAKY8kohNau9j27vMaUGcf-TTkfHBSmOmoz-X-C_GSGwD7KIyyVQe1xMfKQjdjqPRlK94AWAuX3L5Gb_ywdGjR6_SACDCdVisQFP0HzSWkHVPxbY5Ab1yJme73hlbpm64vK5htiSmdC5JxXGSiQuAIdjWMH_pfL4LgFCmZQjTWLEX0-n_AAjk9A3DjZDkQeBn8gP9z2xlpPKzOAOlqFoVlxSlyRc7Sra--go947886vBN3dpcm8fhTuO4HtlnPdiKdk1NsvyzuvZ4XIvTa6pGV4zhYZRIpn7rn9yDVOLYskEx2I6SxHrovuG--_Yn5pERP4jdA6oGMKR3ZSIROTCTyUuCkQMXBw:AK-hGoppimiEx-4-9up25uWcnSeD4lIl8VL_ufIJGv41NsLFgJkRQ7EQ-4zd_NrB_E42ju24ZKIR-eJOn-eOKTUzAJmuBUCsMXzCzgTPwbW3OBRhCHjDbaz27JDV4HWVRM_bbhQLF6rzJTBioDex-E74HOTIDKS87vTCZ2qujRjhw07V",
@@ -733,23 +744,44 @@ mod tests {
     ];
 
     #[test]
-    fn v0() {}
-
-    #[test]
-    fn v1() {
-        for id_str in GOOD_V1_IDENTITIES {
+    fn marshal_unmarshal_sign_verify_agree() {
+        let mut good_identities: Vec<Identity> = Vec::with_capacity(10);
+        for id_str in GOOD_V0_IDENTITIES {
             let id = Identity::from_str(id_str).unwrap();
             assert!(id.validate_identity());
-            assert!(id.p521.is_some());
+            assert!(id.p521.is_none());
             let idb = id.to_bytes(IDENTITY_CIPHER_SUITE_INCLUDE_ALL, true);
             let mut cursor = 0;
-            let id_unmarshal = Identity::unmarshal(&idb, &mut cursor).expect("unmarshal failed");
+            let id_unmarshal = Identity::unmarshal(&idb, &mut cursor).expect("unmarshal v0 failed");
             assert!(id == id_unmarshal);
             assert!(id_unmarshal.secret.is_some());
             let idb2 = id_unmarshal.to_bytes(IDENTITY_CIPHER_SUITE_INCLUDE_ALL, true);
             assert!(idb == idb2);
             let sig = id.sign(&[1, 2, 3, 4, 5], IDENTITY_CIPHER_SUITE_INCLUDE_ALL).unwrap();
             assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
+            good_identities.push(id);
+        }
+        for id_str in GOOD_V1_IDENTITIES {
+            let id = Identity::from_str(id_str).unwrap();
+            assert!(id.validate_identity());
+            assert!(id.p521.is_some());
+            let idb = id.to_bytes(IDENTITY_CIPHER_SUITE_INCLUDE_ALL, true);
+            let mut cursor = 0;
+            let id_unmarshal = Identity::unmarshal(&idb, &mut cursor).expect("unmarshal v1 failed");
+            assert!(id == id_unmarshal);
+            assert!(id_unmarshal.secret.is_some());
+            let idb2 = id_unmarshal.to_bytes(IDENTITY_CIPHER_SUITE_INCLUDE_ALL, true);
+            assert!(idb == idb2);
+            let sig = id.sign(&[1, 2, 3, 4, 5], IDENTITY_CIPHER_SUITE_INCLUDE_ALL).unwrap();
+            assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
+            good_identities.push(id);
+        }
+        for i in 0..good_identities.len() {
+            for j in 0..good_identities.len() {
+                let k0 = good_identities.get(i).unwrap().agree(good_identities.get(j).unwrap()).unwrap();
+                let k1 = good_identities.get(j).unwrap().agree(good_identities.get(i).unwrap()).unwrap();
+                assert!(k0 == k1);
+            }
         }
     }
 
