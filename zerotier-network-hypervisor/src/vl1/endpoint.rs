@@ -8,6 +8,7 @@
 
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+
 use zerotier_core_crypto::hash::SHA384_HASH_SIZE;
 
 use crate::vl1::{Address, MAC};
@@ -26,18 +27,44 @@ pub const TYPE_HTTP: u8 = 8;
 pub const TYPE_WEBRTC: u8 = 9;
 pub const TYPE_ZEROTIER_ENCAP: u8 = 10;
 
+/// A communication endpoint on the network where some ZeroTier node can be reached.
+///
+/// Currently only a few of these are supported. The rest are reserved for future use.
 #[derive(Clone, PartialEq, Eq)]
 pub enum Endpoint {
+    /// A null endpoint.
     Nil,
+
+    /// Via another node using unencapsulated relaying (e.g. via a root)
+    /// Hash is a full hash of the identity for strong verification.
     ZeroTier(Address, [u8; SHA384_HASH_SIZE]),
+
+    /// Direct L2 Ethernet
     Ethernet(MAC),
+
+    /// Direct L2 Ethernet over WiFi-Direct (P2P WiFi)
     WifiDirect(MAC),
+
+    /// Local bluetooth
     Bluetooth(MAC),
+
+    /// Raw IP without a UDP or other header
     Ip(InetAddress),
+
+    /// Raw UDP, the default and usually preferred transport mode
     IpUdp(InetAddress),
+
+    /// Raw TCP with each packet prefixed by a varint size
     IpTcp(InetAddress),
+
+    /// HTTP streaming
     Http(String),
+
+    /// WebRTC data channel
     WebRTC(Vec<u8>),
+
+    /// Via another node using inner encapsulation via VERB_ENCAP.
+    /// Hash is a full hash of the identity for strong verification.
     ZeroTierEncap(Address, [u8; SHA384_HASH_SIZE]),
 }
 
@@ -47,6 +74,7 @@ impl Default for Endpoint {
 }
 
 impl Endpoint {
+    /// Get the IP address (and port if applicable) if this is an IP-based transport.
     #[inline(always)]
     pub fn ip(&self) -> Option<(&InetAddress, u8)> {
         match self {
@@ -72,6 +100,9 @@ impl Endpoint {
             Endpoint::ZeroTierEncap(_, _) => TYPE_ZEROTIER_ENCAP,
         }
     }
+
+    #[inline(always)]
+    pub fn is_nil(&self) -> bool { matches!(self, Endpoint::Nil) }
 
     pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         match self {
@@ -239,6 +270,7 @@ impl Hash for Endpoint {
 
 impl Ord for Endpoint {
     fn cmp(&self, other: &Self) -> Ordering {
+        // Manually implement Ord to ensure that sort order is known and consistent.
         match (self, other) {
             (Endpoint::Nil, Endpoint::Nil) => Ordering::Equal,
             (Endpoint::ZeroTier(a, ah), Endpoint::ZeroTier(b, bh)) => a.cmp(b).then_with(|| ah.cmp(bh)),
@@ -274,7 +306,7 @@ impl ToString for Endpoint {
             Endpoint::IpTcp(ip) => format!("tcp:{}", ip.to_string()),
             Endpoint::Http(url) => url.clone(),
             Endpoint::WebRTC(offer) => format!("webrtc:{}", base64::encode_config(offer.as_slice(), base64::URL_SAFE_NO_PAD)),
-            Endpoint::ZeroTierEncap(a, ah) => format!("zte:{}-{}", a.to_string(), base64::encode_config(ah, base64::URL_SAFE_NO_PAD)),
+            Endpoint::ZeroTierEncap(a, ah) => format!("ztzt:{}-{}", a.to_string(), base64::encode_config(ah, base64::URL_SAFE_NO_PAD)),
         }
     }
 }

@@ -62,14 +62,11 @@ pub const VERSION_STR: &'static str = "1.99.1";
  * 11 - 1.6.0 ... 2.0.0
  *    + Supports AES-GMAC-SIV symmetric crypto, backported from v2 tree.
  * 20 - 2.0.0 ... CURRENT
- *    + New more WAN-efficient P2P-assisted multicast algorithm
  *    + HELLO and OK(HELLO) include an extra HMAC to harden authentication
  *    + HELLO and OK(HELLO) carry meta-data in a dictionary that's encrypted
  *    + Forward secrecy, key lifetime management
  *    + Old planet/moon stuff is DEAD! Independent roots are easier.
  *    + AES encryption with the SIV construction AES-GMAC-SIV
- *    + New combined Curve25519/NIST P-384 identity type (type 1)
- *    + Short probe packets to reduce probe bandwidth
- *    + More aggressive NAT traversal techniques for IPv4 symmetric NATs
+ *    + New combined Curve25519/NIST P-384 identity
  */
 pub const VERSION_PROTO: u8 = 20;

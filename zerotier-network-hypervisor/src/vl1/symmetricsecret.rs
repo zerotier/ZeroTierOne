@@ -6,8 +6,6 @@
  * https://www.zerotier.com/
  */
 
-use parking_lot::Mutex;
-
 use zerotier_core_crypto::aes_gmac_siv::AesGmacSiv;
 use zerotier_core_crypto::hash::SHA384_HASH_SIZE;
 use zerotier_core_crypto::kbkdf::zt_kbkdf_hmac_sha384;
@@ -38,7 +36,7 @@ pub(crate) struct SymmetricSecret {
     pub packet_hmac_key: Secret<SHA384_HASH_SIZE>,
 
     /// A key used as input to the ephemeral key ratcheting mechanism.
-    pub next_ephemeral_ratchet_key: Secret<SHA384_HASH_SIZE>,
+    pub ephemeral_ratchet_key: Secret<SHA384_HASH_SIZE>,
 
     /// A pool of reusable keyed and initialized AES-GMAC-SIV ciphers.
     pub aes_gmac_siv: Pool<AesGmacSiv, AesGmacSivPoolFactory>,
@@ -62,7 +60,7 @@ impl SymmetricSecret {
         SymmetricSecret {
             key: base_key,
             packet_hmac_key: usage_packet_hmac,
-            next_ephemeral_ratchet_key: usage_ephemeral_ratchet,
+            ephemeral_ratchet_key: usage_ephemeral_ratchet,
             aes_gmac_siv: Pool::new(2, aes_factory),
         }
     }

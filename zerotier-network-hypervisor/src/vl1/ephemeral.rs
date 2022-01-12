@@ -118,14 +118,14 @@ impl EphemeralKeyPairSet {
     pub fn agree(self, time_ticks: i64, static_secret: &SymmetricSecret, previous_ephemeral_secret: Option<&EphemeralSymmetricSecret>, other_public_bytes: &[u8]) -> Option<EphemeralSymmetricSecret> {
         let (mut key, mut c25519_ratchet_count, mut sidhp751_ratchet_count, mut nistp521_ratchet_count) = previous_ephemeral_secret.map_or_else(|| {
             (
-                static_secret.next_ephemeral_ratchet_key.clone(),
+                static_secret.ephemeral_ratchet_key.clone(),
                 0,
                 0,
                 0
             )
         }, |previous_ephemeral_secret| {
             (
-                Secret(SHA384::hmac(&static_secret.next_ephemeral_ratchet_key.0, &previous_ephemeral_secret.secret.next_ephemeral_ratchet_key.0)),
+                previous_ephemeral_secret.secret.ephemeral_ratchet_key.clone(),
                 previous_ephemeral_secret.c25519_ratchet_count,
                 previous_ephemeral_secret.sidhp751_ratchet_count,
                 previous_ephemeral_secret.nistp521_ratchet_count
@@ -167,8 +167,10 @@ impl EphemeralKeyPairSet {
                     if other_public_bytes.len() < C25519_PUBLIC_KEY_SIZE || key_len != C25519_PUBLIC_KEY_SIZE {
                         return None;
                     }
+
                     let c25519_secret = self.c25519.agree(&other_public_bytes[0..C25519_PUBLIC_KEY_SIZE]);
                     other_public_bytes = &other_public_bytes[C25519_PUBLIC_KEY_SIZE..];
+
                     key.0 = SHA384::hmac(&key.0, &c25519_secret.0);
                     it_happened = true;
                     fips_compliant_exchange = false;
@@ -179,19 +181,20 @@ impl EphemeralKeyPairSet {
                     if other_public_bytes.len() < (SIDH_P751_PUBLIC_KEY_SIZE + 1) || key_len != (SIDH_P751_PUBLIC_KEY_SIZE + 1) {
                         return None;
                     }
+
                     let _ = match self.sidhp751.as_ref() {
                         Some(SIDHEphemeralKeyPair::Alice(_, seck)) => {
                             if other_public_bytes[0] != 0 { // Alice can't agree with Alice
-                                None
-                            } else {
                                 Some(Secret(seck.shared_secret(&SIDHPublicKeyBob::from_bytes(&other_public_bytes[1..(SIDH_P751_PUBLIC_KEY_SIZE + 1)]))))
+                            } else {
+                                None
                             }
                         },
                         Some(SIDHEphemeralKeyPair::Bob(_, seck)) => {
                             if other_public_bytes[0] != 1 { // Bob can't agree with Bob
-                                None
-                            } else {
                                 Some(Secret(seck.shared_secret(&SIDHPublicKeyAlice::from_bytes(&other_public_bytes[1..(SIDH_P751_PUBLIC_KEY_SIZE + 1)]))))
+                            } else {
+                                None
                             }
                         },
                         None => None,
@@ -208,15 +211,18 @@ impl EphemeralKeyPairSet {
                     if other_public_bytes.len() < P521_PUBLIC_KEY_SIZE || key_len != P521_PUBLIC_KEY_SIZE {
                         return None;
                     }
+
                     let p521_public = P521PublicKey::from_bytes(&other_public_bytes[0..P521_PUBLIC_KEY_SIZE]);
                     other_public_bytes = &other_public_bytes[P521_PUBLIC_KEY_SIZE..];
                     if p521_public.is_none() {
                         return None;
                     }
+
                     let p521_key = self.p521.agree(p521_public.as_ref().unwrap());
                     if p521_key.is_none() {
                         return None;
                     }
+
                     key.0 = SHA384::hmac(&key.0, &p521_key.unwrap().0);
                     it_happened = true;
                     fips_compliant_exchange = true;
@@ -257,7 +263,7 @@ impl EphemeralKeyPairSet {
 pub(crate) struct EphemeralSymmetricSecret {
     /// Current ephemeral secret key.
     pub secret: SymmetricSecret,
-    /// First 16 bytes of SHA384(current ephemeral secret).
+    /// An identifier used to check negotiation of the ratchet.
     ratchet_state: [u8; 16],
     /// Time at or after which we should start trying to re-key.
     rekey_time: i64,
@@ -290,10 +296,12 @@ impl EphemeralSymmetricSecret {
         &self.secret
     }
 
+    #[inline(always)]
     pub fn should_rekey(&self, time_ticks: i64) -> bool {
         time_ticks >= self.rekey_time || self.encrypt_uses.load(Ordering::Relaxed).max(self.decrypt_uses.load(Ordering::Relaxed)) >= EPHEMERAL_SECRET_REKEY_AFTER_USES
     }
 
+    #[inline(always)]
     pub fn expired(&self, time_ticks: i64) -> bool {
         time_ticks >= self.expire_time || self.encrypt_uses.load(Ordering::Relaxed).max(self.decrypt_uses.load(Ordering::Relaxed)) >= EPHEMERAL_SECRET_REJECT_AFTER_USES
     }
@@ -344,15 +352,38 @@ mod tests {
     use zerotier_core_crypto::secret::Secret;
 
     #[test]
-    fn ephemeral_agreement() {
+    fn ratchet() {
         let static_secret = SymmetricSecret::new(Secret([1_u8; 48]));
-        let alice = EphemeralKeyPairSet::new(Address::from_u64(0xdeadbeef00).unwrap(), Address::from_u64(0xbeefdead00).unwrap(), None);
-        let bob = EphemeralKeyPairSet::new(Address::from_u64(0xbeefdead00).unwrap(), Address::from_u64(0xdeadbeef00).unwrap(), None);
-        let alice_public_bytes = alice.public_bytes();
-        let bob_public_bytes = bob.public_bytes();
-        let alice_key = alice.agree(2, &static_secret, None, bob_public_bytes.as_slice()).unwrap();
-        let bob_key = bob.agree(2, &static_secret, None, alice_public_bytes.as_slice()).unwrap();
-        assert_eq!(&alice_key.secret.key.0, &bob_key.secret.key.0);
-        //println!("ephemeral_agreement secret: {}", zerotier_core_crypto::hex::to_string(&alice_key.secret.key.0));
+        let alice_address = Address::from_u64(0xdeadbeef00).unwrap();
+        let bob_address = Address::from_u64(0xbeefdead00).unwrap();
+        let mut alice = EphemeralKeyPairSet::new(alice_address, bob_address, None);
+        let mut bob = EphemeralKeyPairSet::new(bob_address, alice_address, None);
+        let mut prev_alice_key = None;
+        let mut prev_bob_key = None;
+        let ratchets = 16;
+        for t in 1..ratchets+1 {
+            let alice_public = alice.public_bytes();
+            let bob_public = bob.public_bytes();
+            let alice_key = alice.agree(1, &static_secret, prev_alice_key.as_ref(), bob_public.as_slice());
+            let bob_key = bob.agree(1, &static_secret, prev_bob_key.as_ref(), alice_public.as_slice());
+            assert!(alice_key.is_some());
+            assert!(bob_key.is_some());
+            let alice_key = alice_key.unwrap();
+            let bob_key = bob_key.unwrap();
+            assert_eq!(&alice_key.secret.key.0, &bob_key.secret.key.0);
+            //println!("alice: c25519={} p521={} sidh={} | bob: c25519={} p521={} sidh={}", alice_key.c25519_ratchet_count, alice_key.nistp521_ratchet_count, alice_key.sidhp751_ratchet_count, bob_key.c25519_ratchet_count, bob_key.nistp521_ratchet_count, bob_key.sidhp751_ratchet_count);
+            alice = EphemeralKeyPairSet::new(alice_address, bob_address, Some(&alice_key));
+            bob = EphemeralKeyPairSet::new(bob_address, alice_address, Some(&bob_key));
+            prev_alice_key = Some(alice_key);
+            prev_bob_key = Some(bob_key);
+        }
+        let last_alice_key = prev_alice_key.unwrap();
+        let last_bob_key = prev_bob_key.unwrap();
+        assert_eq!(last_alice_key.c25519_ratchet_count, ratchets);
+        assert_eq!(last_bob_key.c25519_ratchet_count, ratchets);
+        assert_eq!(last_alice_key.nistp521_ratchet_count, ratchets);
+        assert_eq!(last_bob_key.nistp521_ratchet_count, ratchets);
+        assert_eq!(last_alice_key.sidhp751_ratchet_count, last_bob_key.sidhp751_ratchet_count);
+        assert!(last_alice_key.sidhp751_ratchet_count >= 1);
     }
 }

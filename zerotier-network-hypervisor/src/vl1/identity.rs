@@ -12,9 +12,9 @@ use std::convert::TryInto;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::mem::MaybeUninit;
-
 use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 use std::str::FromStr;
+
 use highway::HighwayHash;
 
 use lazy_static::lazy_static;
