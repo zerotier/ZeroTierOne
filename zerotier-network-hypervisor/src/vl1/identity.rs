@@ -264,22 +264,52 @@ impl Identity {
     /// Sign a message with this identity.
     ///
     /// A return of None happens if we don't have our secret key(s) or some other error occurs.
-    pub fn sign(&self, msg: &[u8], use_algorithms: u8) -> Option<Vec<u8>> {
-        self.secret.as_ref().and_then(|secret| {
-            if (use_algorithms & IDENTITY_ALGORITHM_EC_NIST_P521) != 0 && secret.p521.is_some() {
-                secret.p521.as_ref().unwrap().ecdsa.sign(msg).map(|sig| sig.to_vec())
-            } else {
+    pub fn sign(&self, msg: &[u8], legacy_compatibility: bool) -> Option<Vec<u8>> {
+        if self.secret.is_some() {
+            let secret = self.secret.as_ref().unwrap();
+            if legacy_compatibility {
                 Some(secret.ed25519.sign_zt(msg).to_vec())
+            } else if secret.p521.is_some() {
+                let p521 = secret.p521.as_ref().unwrap();
+                let p521_sig = p521.ecdsa.sign(msg).unwrap();
+                let ed25519_sig = secret.ed25519.sign(msg);
+                let mut tmp: Vec<u8> = Vec::with_capacity(1 + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE);
+                tmp.push(IDENTITY_ALGORITHM_X25519 | IDENTITY_ALGORITHM_EC_NIST_P521);
+                let _ = tmp.write_all(&ed25519_sig);
+                let _ = tmp.write_all(&p521_sig);
+                Some(tmp)
+            } else {
+                let ed25519_sig = secret.ed25519.sign(msg);
+                let mut tmp: Vec<u8> = Vec::with_capacity(1 + ED25519_SIGNATURE_SIZE);
+                tmp.push(IDENTITY_ALGORITHM_X25519);
+                let _ = tmp.write_all(&ed25519_sig);
+                Some(tmp)
             }
-        })
+        } else {
+            None
+        }
     }
 
     /// Verify a signature against this identity.
-    pub fn verify(&self, msg: &[u8], signature: &[u8]) -> bool {
-        if signature.len() == 64 || signature.len() == 96 {
+    pub fn verify(&self, msg: &[u8], mut signature: &[u8]) -> bool {
+        if signature.len() == 96 { // legacy ed25519-only signature with hash included
             ed25519_verify(&self.ed25519, signature, msg)
-        } else if signature.len() == P521_ECDSA_SIGNATURE_SIZE && self.p521.is_some() {
-            P521PublicKey::from_bytes(&self.p521.as_ref().unwrap().ecdsa).map_or(false, |p521_public| p521_public.verify(msg, signature))
+        } else if signature.len() > 1 {
+            let algorithms = signature[0];
+            signature = &signature[1..];
+            let mut ok = true;
+            let mut checked = false;
+            if ok && (algorithms & IDENTITY_ALGORITHM_X25519) != 0 && signature.len() >= ED25519_SIGNATURE_SIZE {
+                ok = ed25519_verify(&self.ed25519, &signature[..ED25519_SIGNATURE_SIZE], msg);
+                signature = &signature[ED25519_SIGNATURE_SIZE..];
+                checked = true;
+            }
+            if ok && (algorithms & IDENTITY_ALGORITHM_EC_NIST_P521) != 0 && signature.len() >= P521_ECDSA_SIGNATURE_SIZE && self.p521.is_some() {
+                ok = P521PublicKey::from_bytes(&self.p521.as_ref().unwrap().ecdsa).map_or(false, |p521| p521.verify(msg, &signature[..P521_ECDSA_SIGNATURE_SIZE]));
+                signature = &signature[P521_ECDSA_SIGNATURE_SIZE..];
+                checked = true;
+            }
+            checked && ok
         } else {
             false
         }
@@ -814,7 +844,9 @@ mod tests {
             assert!(id_unmarshal.secret.is_some());
             let idb2 = id_unmarshal.to_bytes(IDENTITY_ALGORITHM_ALL, true);
             assert!(idb == idb2);
-            let sig = id.sign(&[1, 2, 3, 4, 5], IDENTITY_ALGORITHM_ALL).unwrap();
+            let sig = id.sign(&[1, 2, 3, 4, 5], false).unwrap();
+            assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
+            let sig = id.sign(&[1, 2, 3, 4, 5], true).unwrap();
             assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
             assert!(Identity::from_str(id.to_string().as_str()).unwrap().eq(&id));
             good_identities.push(id);
@@ -830,7 +862,9 @@ mod tests {
             assert!(id_unmarshal.secret.is_some());
             let idb2 = id_unmarshal.to_bytes(IDENTITY_ALGORITHM_ALL, true);
             assert!(idb == idb2);
-            let sig = id.sign(&[1, 2, 3, 4, 5], IDENTITY_ALGORITHM_ALL).unwrap();
+            let sig = id.sign(&[1, 2, 3, 4, 5], false).unwrap();
+            assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
+            let sig = id.sign(&[1, 2, 3, 4, 5], true).unwrap();
             assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
             assert!(Identity::from_str(id.to_string().as_str()).unwrap().eq(&id));
             good_identities.push(id);
