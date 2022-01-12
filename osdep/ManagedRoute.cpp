@@ -526,14 +526,13 @@ bool ManagedRoute::sync()
 
 #ifdef __LINUX__ // ----------------------------------------------------------
 
-	const char *const devptr = (_via) ? (const char *)0 : _device;
-	if ((leftt)&&(!LinuxNetLink::getInstance().routeIsSet(leftt,_via,_src,devptr))) {
+	if ((leftt)&&(!LinuxNetLink::getInstance().routeIsSet(leftt,_via,_src,_device))) {
 		_applied[leftt] = false; // boolean unused
-		LinuxNetLink::getInstance().addRoute(leftt, _via, _src, devptr);
+		LinuxNetLink::getInstance().addRoute(leftt, _via, _src, _device);
 	}
-	if ((rightt)&&(!LinuxNetLink::getInstance().routeIsSet(rightt,_via,_src,devptr))) {
+	if ((rightt)&&(!LinuxNetLink::getInstance().routeIsSet(rightt,_via,_src,_device))) {
 		_applied[rightt] = false; // boolean unused
-		LinuxNetLink::getInstance().addRoute(rightt, _via, _src, devptr);
+		LinuxNetLink::getInstance().addRoute(rightt, _via, _src, _device);
 	}
 
 #endif // __LINUX__ ----------------------------------------------------------
