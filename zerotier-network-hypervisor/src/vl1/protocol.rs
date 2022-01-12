@@ -38,8 +38,8 @@ pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0: u8 = b'0';
 /// KBKDF usage label for the second AES-GMAC-SIV key.
 pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1: u8 = b'1';
 
-/// KBKDF usage label for acknowledgement of a shared secret.
-pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET: u8 = b'e';
+/// KBKDF usage label for the key used to advance the ratchet.
+pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_NEXT_KEY: u8 = b'e';
 
 /// KBKDF usage label for generating the ratchet state ID (which is not actually a key).
 pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_STATE_ID: u8 = b'E';
@@ -178,8 +178,7 @@ pub const WHOIS_MAX_WAITING_PACKETS: usize = 64;
 pub const IDENTITY_V0_POW_THRESHOLD: u8 = 17;
 
 /// Proof of work difficulty (threshold) for new v1 identities.
-/// This is lower than the V0 threshold, causing the V0 part of V1 identities to
-/// verify on old nodes.
+/// This is lower than the V0 threshold, causing the V0 part of V1 identities to verify on old nodes.
 pub const IDENTITY_V1_POW_THRESHOLD: u8 = 9;
 
 #[derive(Clone, Copy)]
@@ -187,13 +186,13 @@ pub const IDENTITY_V1_POW_THRESHOLD: u8 = 9;
 pub enum EphemeralKeyAgreementAlgorithm {
     C25519 = 1,
     SIDHP751 = 2,
-    NistP521ECDH = 3
+    NISTP521ECDH = 3
 }
 
 impl EphemeralKeyAgreementAlgorithm {
     pub fn is_fips_compliant(&self) -> bool {
         match self {
-            Self::NistP521ECDH => true,
+            Self::NISTP521ECDH => true,
             _ => false
         }
     }
@@ -207,7 +206,7 @@ impl TryFrom<u8> for EphemeralKeyAgreementAlgorithm {
         match value {
             1 => Ok(Self::C25519),
             2 => Ok(Self::SIDHP751),
-            3 => Ok(Self::NistP521ECDH),
+            3 => Ok(Self::NISTP521ECDH),
             _ => Err(())
         }
     }

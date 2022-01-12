@@ -100,7 +100,7 @@ impl EphemeralKeyPairSet {
         // FIPS point of view. Final key must be HKDF(salt, a FIPS-compliant algorithm secret). There is zero
         // actual security implication to the order.
 
-        b.push(EphemeralKeyAgreementAlgorithm::NistP521ECDH as u8);
+        b.push(EphemeralKeyAgreementAlgorithm::NISTP521ECDH as u8);
         let _ = varint::write(&mut b, P521_PUBLIC_KEY_SIZE as u64);
         let _ = b.write_all(self.p521.public_key_bytes());
 
@@ -204,7 +204,7 @@ impl EphemeralKeyPairSet {
                     other_public_bytes = &other_public_bytes[(SIDH_P751_PUBLIC_KEY_SIZE + 1)..];
                 },
 
-                Ok(EphemeralKeyAgreementAlgorithm::NistP521ECDH) => {
+                Ok(EphemeralKeyAgreementAlgorithm::NISTP521ECDH) => {
                     if other_public_bytes.len() < P521_PUBLIC_KEY_SIZE || key_len != P521_PUBLIC_KEY_SIZE {
                         return None;
                     }

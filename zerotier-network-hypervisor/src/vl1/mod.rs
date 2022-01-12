@@ -8,7 +8,6 @@
 
 pub mod inetaddress;
 pub mod endpoint;
-pub mod rootset;
 pub mod identity;
 
 #[allow(unused)]

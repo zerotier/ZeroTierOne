@@ -55,7 +55,7 @@ impl SymmetricSecret {
     /// Create a new symmetric secret, deriving all sub-keys and such.
     pub fn new(base_key: Secret<SHA384_HASH_SIZE>) -> SymmetricSecret {
         let usage_packet_hmac = zt_kbkdf_hmac_sha384(&base_key.0, KBKDF_KEY_USAGE_LABEL_PACKET_HMAC, 0, 0);
-        let usage_ephemeral_ratchet = zt_kbkdf_hmac_sha384(&base_key.0, KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET, 0, 0);
+        let usage_ephemeral_ratchet = zt_kbkdf_hmac_sha384(&base_key.0, KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_NEXT_KEY, 0, 0);
         let aes_factory = AesGmacSivPoolFactory(
             zt_kbkdf_hmac_sha384(&base_key.0, KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0, 0, 0),
             zt_kbkdf_hmac_sha384(&base_key.0, KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1, 0, 0));

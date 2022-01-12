@@ -9,18 +9,13 @@
 use std::convert::TryInto;
 use std::mem::MaybeUninit;
 use std::num::NonZeroI64;
-use std::ptr::copy_nonoverlapping;
+
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
-use libc::uname;
 
 use parking_lot::Mutex;
 
-use zerotier_core_crypto::aes_gmac_siv::{AesCtr, AesGmacSiv};
-use zerotier_core_crypto::c25519::C25519KeyPair;
 use zerotier_core_crypto::hash::{SHA384, SHA384_HASH_SIZE};
-use zerotier_core_crypto::kbkdf::zt_kbkdf_hmac_sha384;
-use zerotier_core_crypto::p521::P521KeyPair;
 use zerotier_core_crypto::poly1305::Poly1305;
 use zerotier_core_crypto::random::next_u64_secure;
 use zerotier_core_crypto::salsa::Salsa;
@@ -29,39 +24,12 @@ use zerotier_core_crypto::secret::Secret;
 use crate::{PacketBuffer, VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
 use crate::util::{array_range, u64_as_bytes};
 use crate::util::buffer::Buffer;
-use crate::util::pool::{Pool, PoolFactory};
-use crate::vl1::{Dictionary, Endpoint, Identity, InetAddress, Path};
+use crate::vl1::{Endpoint, Identity, InetAddress, Path};
 use crate::vl1::ephemeral::EphemeralSymmetricSecret;
-use crate::vl1::identity::{IDENTITY_CIPHER_SUITE_INCLUDE_ALL, IDENTITY_CIPHER_SUITE_X25519};
+use crate::vl1::identity::{IDENTITY_ALGORITHM_ALL, IDENTITY_ALGORITHM_X25519};
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
 use crate::vl1::symmetricsecret::SymmetricSecret;
-
-struct AesGmacSivPoolFactory(Secret<48>, Secret<48>);
-
-impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
-    #[inline(always)]
-    fn create(&self) -> AesGmacSiv { AesGmacSiv::new(&self.0.0[0..32], &self.1.0[0..32]) }
-
-    #[inline(always)]
-    fn reset(&self, obj: &mut AesGmacSiv) { obj.reset(); }
-}
-
-/// A secret key with all its derived forms and initialized ciphers.
-struct PeerSecret {
-    // Time secret was created in ticks for ephemeral secrets, or -1 for static secrets.
-    create_time_ticks: i64,
-
-    // Number of times secret has been used to encrypt something during this session.
-    encrypt_count: AtomicU64,
-
-    // Raw secret itself.
-    secret: Secret<48>,
-
-    // Reusable AES-GMAC-SIV ciphers initialized with secret.
-    // These can't be used concurrently so they're pooled to allow low-contention concurrency.
-    aes: Pool<AesGmacSiv, AesGmacSivPoolFactory>,
-}
 
 /// A remote peer known to this node.
 /// Sending-related and receiving-related fields are locked separately since concurrent
@@ -432,8 +400,8 @@ impl Peer {
             hello_fixed_headers.timestamp = (time_ticks as u64).to_be_bytes();
         }
 
-        assert!(self.identity.marshal(&mut packet, IDENTITY_CIPHER_SUITE_INCLUDE_ALL, false).is_ok());
-        if self.identity.cipher_suites() == IDENTITY_CIPHER_SUITE_X25519 {
+        assert!(self.identity.marshal(&mut packet, IDENTITY_ALGORITHM_ALL, false).is_ok());
+        if self.identity.algorithms() == IDENTITY_ALGORITHM_X25519 {
             // LEGACY: append an extra zero when marshaling identities containing only
             // x25519 keys. This is interpreted as an empty InetAddress by old nodes.
             // This isn't needed if a NIST P-521 key or other new key types are present.
@@ -459,7 +427,8 @@ impl Peer {
         // Add full HMAC for strong authentication with newer nodes.
         assert!(packet.append_bytes_fixed(&SHA384::hmac_multipart(&self.static_secret.packet_hmac_key.0, &[u64_as_bytes(&message_id), &packet.as_bytes()[PACKET_HEADER_SIZE..]])).is_ok());
 
-        // LEGACY: set MAC field in header to poly1305 for older nodes.
+        // LEGACY: set MAC field in header with poly1305 for older nodes.
+        // Newer nodes use the HMAC for stronger verification.
         let (_, mut poly) = salsa_poly_create(&self.static_secret, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
         poly.update(packet.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap());
         packet.as_mut_range_fixed::<HEADER_MAC_FIELD_INDEX, { HEADER_MAC_FIELD_INDEX + 8 }>().copy_from_slice(&poly.finish()[0..8]);

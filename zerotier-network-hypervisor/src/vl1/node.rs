@@ -25,7 +25,6 @@ use crate::vl1::{Address, Endpoint, Identity};
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
-use crate::vl1::rootset::RootSet;
 use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
 
 /// Trait implemented by external code to handle events and provide an interface to the system or application.
@@ -133,7 +132,6 @@ pub struct Node {
     paths: DashMap<u128, Arc<Path>>,
     peers: DashMap<Address, Arc<Peer>>,
     roots: Mutex<Vec<Arc<Peer>>>,
-    root_sets: Mutex<Vec<RootSet>>,
     whois: WhoisQueue,
     buffer_pool: Arc<PacketBufferPool>,
     secure_prng: SecureRandom,
@@ -170,7 +168,6 @@ impl Node {
             paths: DashMap::new(),
             peers: DashMap::new(),
             roots: Mutex::new(Vec::new()),
-            root_sets: Mutex::new(Vec::new()),
             whois: WhoisQueue::new(),
             buffer_pool: Arc::new(PacketBufferPool::new(64, PacketBufferFactory::new())),
             secure_prng: SecureRandom::get(),
