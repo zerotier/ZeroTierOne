@@ -9,6 +9,10 @@
 #[macro_use]
 extern crate lazy_static;
 
+pub const VERSION_MAJOR: u8 = 1;
+pub const VERSION_MINOR: u8 = 99;
+pub const VERSION_REVISION: u8 = 1;
+
 pub mod util;
 pub mod error;
 pub mod vl1;
@@ -25,11 +29,6 @@ pub type PacketBufferFactory = crate::util::buffer::PooledBufferFactory<{ crate:
 
 /// Source for instances of PacketBuffer
 pub type PacketBufferPool = crate::util::pool::Pool<crate::util::buffer::Buffer<{ crate::vl1::protocol::PACKET_SIZE_MAX }>, crate::PacketBufferFactory>;
-
-pub const VERSION_MAJOR: u8 = 1;
-pub const VERSION_MINOR: u8 = 99;
-pub const VERSION_REVISION: u8 = 1;
-pub const VERSION_STR: &'static str = "1.99.1";
 
 /*
  * Protocol versions
@@ -60,13 +59,13 @@ pub const VERSION_STR: &'static str = "1.99.1";
  * 10 - 1.4.0 ... 1.4.6
  *    + Contained early pre-alpha versions of multipath, which are deprecated
  * 11 - 1.6.0 ... 2.0.0
- *    + Supports AES-GMAC-SIV symmetric crypto, backported from v2 tree.
+ *    + Supports and prefers AES-GMAC-SIV symmetric crypto, backported.
+ *
  * 20 - 2.0.0 ... CURRENT
+ *    + Forward secrecy with cryptographic ratchet! Finally!!!
+ *    + New identity format including both x25519 and NIST P-521 keys.
+ *    + AES-GMAC-SIV, a FIPS-compliant SIV construction using AES.
  *    + HELLO and OK(HELLO) include an extra HMAC to harden authentication
- *    + HELLO and OK(HELLO) carry meta-data in a dictionary that's encrypted
- *    + Forward secrecy, key lifetime management
- *    + Old planet/moon stuff is DEAD! Independent roots are easier.
- *    + AES encryption with the SIV construction AES-GMAC-SIV
- *    + New combined Curve25519/NIST P-384 identity
+ *    + HELLO and OK(HELLO) use a dictionary for better extensibilit.
  */
 pub const VERSION_PROTO: u8 = 20;

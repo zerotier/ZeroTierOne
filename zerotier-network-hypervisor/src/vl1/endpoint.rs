@@ -27,7 +27,7 @@ pub const TYPE_HTTP: u8 = 8;
 pub const TYPE_WEBRTC: u8 = 9;
 pub const TYPE_ZEROTIER_ENCAP: u8 = 10;
 
-/// A communication endpoint on the network where some ZeroTier node can be reached.
+/// A communication endpoint on the network where a ZeroTier node can be reached.
 ///
 /// Currently only a few of these are supported. The rest are reserved for future use.
 #[derive(Clone, PartialEq, Eq)]
