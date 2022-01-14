@@ -13,7 +13,7 @@ use crate::vl1::node::VL1VirtualInterface;
 use crate::vl1::{Peer, Path, Identity};
 use crate::vl1::protocol::*;
 
-pub trait SwitchInterface {
+pub trait SwitchInterface: Sync + Send {
 }
 
 pub struct Switch {

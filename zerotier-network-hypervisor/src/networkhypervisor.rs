@@ -11,11 +11,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::error::InvalidParameterError;
-use crate::vl1::{Address, Identity, Endpoint, VL1SystemInterface, Node};
+use crate::vl1::{Address, Identity, Endpoint, SystemInterface, Node};
 use crate::vl2::{Switch, SwitchInterface};
 use crate::{PacketBuffer, PacketBufferPool};
 
-pub trait Interface: VL1SystemInterface + SwitchInterface {}
+pub trait Interface: SystemInterface + SwitchInterface {}
 
 pub struct NetworkHypervisor {
     vl1: Node,
@@ -36,22 +36,18 @@ impl NetworkHypervisor {
     #[inline(always)]
     pub fn get_packet_buffer(&self) -> PacketBuffer { self.vl1.get_packet_buffer() }
 
-    /// Get a direct reference to the packet buffer pool.
     #[inline(always)]
-    pub fn packet_buffer_pool(&self) -> &Arc<PacketBufferPool> { self.vl1.packet_buffer_pool() }
+    pub fn address(&self) -> Address { self.vl1.identity.address }
 
     #[inline(always)]
-    pub fn address(&self) -> Address { self.vl1.address() }
-
-    #[inline(always)]
-    pub fn identity(&self) -> &Identity { self.vl1.identity() }
+    pub fn identity(&self) -> &Identity { &self.vl1.identity }
 
     pub fn do_background_tasks<CI: Interface>(&self, ci: &CI) -> Duration {
         self.vl1.do_background_tasks(ci)
     }
 
     #[inline(always)]
-    pub fn wire_receive<CI: VL1SystemInterface>(&self, ci: &CI, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
+    pub fn wire_receive<CI: SystemInterface>(&self, ci: &CI, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
         self.vl1.wire_receive(ci, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data)
     }
 }

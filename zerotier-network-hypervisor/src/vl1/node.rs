@@ -8,13 +8,11 @@
 
 use std::num::NonZeroI64;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use std::time::Duration;
 
 use dashmap::DashMap;
 use parking_lot::Mutex;
-
-use zerotier_core_crypto::random::{next_u64_secure, SecureRandom};
 
 use crate::{PacketBuffer, PacketBufferFactory, PacketBufferPool};
 use crate::error::InvalidParameterError;
@@ -28,7 +26,10 @@ use crate::vl1::protocol::*;
 use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
 
 /// Trait implemented by external code to handle events and provide an interface to the system or application.
-pub trait VL1SystemInterface {
+///
+/// These methods are basically callbacks that the core calls to request or transmit things. They are called
+/// during calls to things like wire_recieve() and do_background_tasks().
+pub trait SystemInterface: Sync + Send {
     /// Node is up and ready for operation.
     fn event_node_is_up(&self);
 
@@ -84,21 +85,12 @@ pub trait VL1SystemInterface {
     fn time_clock(&self) -> i64;
 }
 
-/// Trait implemented by VL2 to handle messages after they are unwrapped by VL1.
+/// Interface between VL1 and higher/inner protocol layers.
 ///
-/// This normally isn't used from outside this crate except for testing or if you want to harness VL1
-/// for some entirely unrelated purpose.
-pub trait VL1VirtualInterface {
-    /// Handle a packet, returning true if it belonged to VL2.
-    ///
-    /// If this is a VL2 packet, this must return true. True must be returned even if subsequent
-    /// logic determines that the VL2 packet is not valid or if it is rejected due to lack of
-    /// security credentials.
-    ///
-    /// That's because VL1 calls this before matching the packet's verb against VL1 verbs. This
-    /// is done to reduce the number of CPU branches between packet receive and the performance
-    /// critical handling of virtual network frames. A return value of true here indicates that
-    /// the packet was handled, and false means it may be a VL1 packet.
+/// This is implemented by Switch in VL2. It's usually not used outside of VL2 in the core but
+/// it could also be implemented for testing or "off label" use of VL1.
+pub trait VL1VirtualInterface: Sync + Send {
+    /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
     /// The return values of these must follow the same semantic of returning true if the message
@@ -126,20 +118,34 @@ struct BackgroundTaskIntervals {
 }
 
 pub struct Node {
-    pub(crate) instance_id: u64,
-    identity: Identity,
+    /// A random ID generated to identify this particular running instance.
+    pub instance_id: u64,
+
+    /// This node's identity and permanent keys.
+    pub identity: Identity,
+
+    /// Interval latches for periodic background tasks.
     intervals: Mutex<BackgroundTaskIntervals>,
-    paths: DashMap<u128, Arc<Path>>,
+
+    /// Canonicalized network paths, held as Weak<> to be automatically cleaned when no longer in use.
+    paths: DashMap<u128, Weak<Path>>,
+
+    /// Peers with which we are currently communicating.
     peers: DashMap<Address, Arc<Peer>>,
+
+    /// This node's trusted roots, sorted in descending order of preference.
     roots: Mutex<Vec<Arc<Peer>>>,
+
+    /// Identity lookup queue, also holds packets waiting on a lookup.
     whois: WhoisQueue,
+
+    /// Reusable network buffer pool.
     buffer_pool: Arc<PacketBufferPool>,
-    secure_prng: SecureRandom,
 }
 
 impl Node {
     /// Create a new Node.
-    pub fn new<I: VL1SystemInterface>(ci: &I, auto_generate_identity: bool) -> Result<Self, InvalidParameterError> {
+    pub fn new<I: SystemInterface>(ci: &I, auto_generate_identity: bool) -> Result<Self, InvalidParameterError> {
         let id = {
             let id_str = ci.load_node_identity();
             if id_str.is_none() {
@@ -162,29 +168,20 @@ impl Node {
         };
 
         Ok(Self {
-            instance_id: next_u64_secure(),
+            instance_id: zerotier_core_crypto::random::next_u64_secure(),
             identity: id,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
-            paths: DashMap::new(),
-            peers: DashMap::new(),
+            paths: DashMap::with_capacity(128),
+            peers: DashMap::with_capacity(128),
             roots: Mutex::new(Vec::new()),
             whois: WhoisQueue::new(),
             buffer_pool: Arc::new(PacketBufferPool::new(64, PacketBufferFactory::new())),
-            secure_prng: SecureRandom::get(),
         })
     }
 
+    /// Get a packet buffer that will automatically check itself back into the pool on drop.
     #[inline(always)]
     pub fn get_packet_buffer(&self) -> PacketBuffer { self.buffer_pool.get() }
-
-    #[inline(always)]
-    pub fn packet_buffer_pool(&self) -> &Arc<PacketBufferPool> { &self.buffer_pool }
-
-    #[inline(always)]
-    pub fn address(&self) -> Address { self.identity.address }
-
-    #[inline(always)]
-    pub fn identity(&self) -> &Identity { &self.identity }
 
     /// Get a peer by address.
     pub fn peer(&self, a: Address) -> Option<Arc<Peer>> { self.peers.get(&a).map(|peer| peer.value().clone()) }
@@ -200,19 +197,19 @@ impl Node {
     }
 
     /// Run background tasks and return desired delay until next call in milliseconds.
-    pub fn do_background_tasks<I: VL1SystemInterface>(&self, ci: &I) -> Duration {
+    ///
+    /// This should only be called periodically from a single thread, but that thread can be
+    /// different each time. Calling it concurrently won't crash but won't accomplish anything.
+    pub fn do_background_tasks<I: SystemInterface>(&self, ci: &I) -> Duration {
         let mut intervals = self.intervals.lock();
         let tt = ci.time_ticks();
 
-        if intervals.whois.gate(tt) {
-            self.whois.call_every_interval(self, ci, tt);
-        }
-
         if intervals.paths.gate(tt) {
             self.paths.retain(|_, path| {
-                path.call_every_interval(ci, tt);
-                todo!();
-                true
+                path.upgrade().map_or(false, |p| {
+                    p.call_every_interval(ci, tt);
+                    true
+                })
             });
         }
 
@@ -224,18 +221,18 @@ impl Node {
             });
         }
 
-        Duration::from_millis(1000)
+        if intervals.whois.gate(tt) {
+            self.whois.call_every_interval(self, ci, tt);
+        }
+
+        Duration::from_millis(WhoisQueue::INTERVAL.min(Path::CALL_EVERY_INTERVAL_MS).min(Peer::CALL_EVERY_INTERVAL_MS) as u64 / 4)
     }
 
     /// Called when a packet is received on the physical wire.
-    pub fn wire_receive<I: VL1SystemInterface, PH: VL1VirtualInterface>(&self, ci: &I, ph: &PH, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
-        let fragment_header = data.struct_mut_at::<FragmentHeader>(0);
-        if fragment_header.is_ok() {
-            let fragment_header = fragment_header.unwrap();
-            let dest = Address::from_bytes(&fragment_header.dest);
-            if dest.is_some() {
+    pub fn wire_receive<I: SystemInterface, PH: VL1VirtualInterface>(&self, ci: &I, ph: &PH, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
+        if let Ok(fragment_header) = data.struct_mut_at::<FragmentHeader>(0) {
+            if let Some(dest) = Address::from_bytes(&fragment_header.dest) {
                 let time_ticks = ci.time_ticks();
-                let dest = dest.unwrap();
                 if dest == self.identity.address {
                     // Handle packets addressed to this node.
 
@@ -244,37 +241,28 @@ impl Node {
 
                     if fragment_header.is_fragment() {
 
-                        let _ = path.receive_fragment(u64::from_ne_bytes(fragment_header.id), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks).map(|assembled_packet| {
-                            if assembled_packet.frags[0].is_some() {
-                                let frag0 = assembled_packet.frags[0].as_ref().unwrap();
+                        if let Some(assembled_packet) = path.receive_fragment(u64::from_ne_bytes(fragment_header.id), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks) {
+                            if let Some(frag0) = assembled_packet.frags[0].as_ref() {
                                 let packet_header = frag0.struct_at::<PacketHeader>(0);
                                 if packet_header.is_ok() {
                                     let packet_header = packet_header.unwrap();
-                                    let source = Address::from_bytes(&packet_header.src);
-                                    if source.is_some() {
-                                        let source = source.unwrap();
-                                        let peer = self.peer(source);
-                                        if peer.is_some() {
-                                            peer.unwrap().receive(self, ci, ph, time_ticks, source_endpoint, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]);
+                                    if let Some(source) = Address::from_bytes(&packet_header.src) {
+                                        if let Some(peer) = self.peer(source) {
+                                            peer.receive(self, ci, ph, time_ticks, source_endpoint, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]);
                                         } else {
                                             self.whois.query(self, ci, source, Some(QueuedPacket::Fragmented(assembled_packet)));
                                         }
                                     }
                                 }
                             }
-                        });
+                        }
 
                     } else {
 
-                        let packet_header = data.struct_at::<PacketHeader>(0);
-                        if packet_header.is_ok() {
-                            let packet_header = packet_header.unwrap();
-                            let source = Address::from_bytes(&packet_header.src);
-                            if source.is_some() {
-                                let source = source.unwrap();
-                                let peer = self.peer(source);
-                                if peer.is_some() {
-                                    peer.unwrap().receive(self, ci, ph, time_ticks, source_endpoint, &path, &packet_header, data.as_ref(), &[]);
+                        if let Ok(packet_header) = data.struct_at::<PacketHeader>(0) {
+                            if let Some(source) = Address::from_bytes(&packet_header.src) {
+                                if let Some(peer) = self.peer(source) {
+                                    peer.receive(self, ci, ph, time_ticks, source_endpoint, &path, &packet_header, data.as_ref(), &[]);
                                 } else {
                                     self.whois.query(self, ci, source, Some(QueuedPacket::Unfragmented(data)));
                                 }
@@ -292,24 +280,24 @@ impl Node {
                             return;
                         }
                     } else {
-                        let packet_header = data.struct_mut_at::<PacketHeader>(0);
-                        if packet_header.is_ok() {
-                            if packet_header.unwrap().increment_hops() > FORWARD_MAX_HOPS {
+                        if let Ok(packet_header) = data.struct_mut_at::<PacketHeader>(0) {
+                            if packet_header.increment_hops() > FORWARD_MAX_HOPS {
                                 return;
                             }
                         } else {
                             return;
                         }
                     }
-                    let _ = self.peer(dest).map(|peer| peer.forward(ci, time_ticks, data.as_ref()));
-
+                    if let Some(peer) = self.peer(dest) {
+                        peer.forward(ci, time_ticks, data.as_ref());
+                    }
                 }
             };
         }
     }
 
     /// Get the current best root peer that we should use for WHOIS, relaying, etc.
-    pub fn root(&self) -> Option<Arc<Peer>> { self.roots.lock().first().map(|p| p.clone()) }
+    pub fn root(&self) -> Option<Arc<Peer>> { self.roots.lock().first().cloned() }
 
     /// Return true if a peer is a root.
     pub fn is_peer_root(&self, peer: &Peer) -> bool { self.roots.lock().iter().any(|p| Arc::as_ptr(p) == (peer as *const Peer)) }
@@ -320,10 +308,14 @@ impl Node {
     /// of endpoint, local socket, and local interface.
     pub fn path(&self, ep: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Arc<Path> {
         let key = Path::local_lookup_key(ep, local_socket, local_interface);
-        self.paths.get(&key).map_or_else(|| {
+        let mut path_entry = self.paths.entry(key).or_insert_with(|| Weak::new());
+        if let Some(path) = path_entry.value().upgrade() {
+            path
+        } else {
             let p = Arc::new(Path::new(ep.clone(), local_socket, local_interface));
-            self.paths.insert(key, p.clone()).unwrap_or(p) // if another thread added one, return that instead
-        }, |path| path.value().clone())
+            *path_entry.value_mut() = Arc::downgrade(&p);
+            p
+        }
     }
 }
 

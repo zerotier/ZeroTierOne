@@ -32,16 +32,21 @@ impl FragmentedPacket {
         }
     }
 
-    /// Add a fragment to this fragment set and return true if the packet appears complete.
+    /// Add a fragment to this fragment set and return true if all fragments are present.
     #[inline(always)]
     pub fn add_fragment(&mut self, frag: PacketBuffer, no: u8, expecting: u8) -> bool {
-        if no < PACKET_FRAGMENT_COUNT_MAX as u8 {
-            if self.frags[no as usize].replace(frag).is_none() {
-                self.have = self.have.wrapping_add(1);
-                self.expecting |= expecting; // in valid streams expecting is either 0 or the (same) total
-                return self.have == self.expecting && self.have < PACKET_FRAGMENT_COUNT_MAX as u8;
+        self.frags.get_mut(no as usize).map_or(false, |entry| {
+            // Note that a duplicate fragment just gets silently replaced. This shouldn't happen
+            // unless a dupe occurred at the network level, in which case this is usually a
+            // no-op event. There is no security implication since the whole packet gets MAC'd
+            // after assembly.
+            if entry.replace(frag).is_none() {
+                self.have += 1;
+                self.expecting |= expecting; // expecting is either 0 or the expected total
+                self.have == self.expecting
+            } else {
+                false
             }
-        }
-        false
+        })
     }
 }

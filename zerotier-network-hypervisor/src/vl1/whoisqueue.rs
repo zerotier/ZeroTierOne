@@ -13,7 +13,7 @@ use parking_lot::Mutex;
 use crate::util::gate::IntervalGate;
 use crate::vl1::Address;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
-use crate::vl1::node::{Node, VL1SystemInterface};
+use crate::vl1::node::{Node, SystemInterface};
 use crate::vl1::protocol::{WHOIS_RETRY_INTERVAL, WHOIS_MAX_WAITING_PACKETS, WHOIS_RETRY_MAX};
 use crate::PacketBuffer;
 
@@ -36,7 +36,7 @@ impl WhoisQueue {
     pub fn new() -> Self { Self(Mutex::new(HashMap::new())) }
 
     /// Launch or renew a WHOIS query and enqueue a packet to be processed when (if) it is received.
-    pub fn query<CI: VL1SystemInterface>(&self, node: &Node, ci: &CI, target: Address, packet: Option<QueuedPacket>) {
+    pub fn query<CI: SystemInterface>(&self, node: &Node, ci: &CI, target: Address, packet: Option<QueuedPacket>) {
         let mut q = self.0.lock();
 
         let qi = q.entry(target).or_insert_with(|| WhoisQueueItem {
@@ -64,7 +64,7 @@ impl WhoisQueue {
     }
 
     /// Called every INTERVAL during background tasks.
-    pub fn call_every_interval<CI: VL1SystemInterface>(&self, node: &Node, ci: &CI, time_ticks: i64) {
+    pub fn call_every_interval<CI: SystemInterface>(&self, node: &Node, ci: &CI, time_ticks: i64) {
         let mut targets: Vec<Address> = Vec::new();
         self.0.lock().retain(|target, qi| {
             if qi.retry_count < WHOIS_RETRY_MAX {
@@ -82,7 +82,7 @@ impl WhoisQueue {
         }
     }
 
-    fn send_whois<CI: VL1SystemInterface>(&self, node: &Node, ci: &CI, targets: &[Address]) {
+    fn send_whois<CI: SystemInterface>(&self, node: &Node, ci: &CI, targets: &[Address]) {
         todo!()
     }
 }

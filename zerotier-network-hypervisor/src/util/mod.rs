@@ -42,6 +42,9 @@ lazy_static! {
 #[inline(always)]
 pub(crate) fn highwayhasher() -> highway::HighwayHasher { highway::HighwayHasher::new(highway::Key(HIGHWAYHASHER_KEY.clone())) }
 
+#[inline(always)]
+pub(crate) fn u128_from_2xu64_ne(x: [u64; 2]) -> u128 { unsafe { std::mem::transmute(x) } }
+
 /// Non-cryptographic 64-bit bit mixer for things like local hashing.
 #[inline(always)]
 pub(crate) fn hash64_noncrypt(mut x: u64) -> u64 {

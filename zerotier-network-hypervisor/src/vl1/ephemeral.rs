@@ -32,7 +32,7 @@ pub const ALGORITHM_NISTP521ECDH: u8 = 0x02;
 pub const ALGORITHM_SIDHP751: u8 = 0x04;
 
 pub enum EphemeralKeyAgreementError {
-    OldPublic,
+    OutdatedPublic,
     StateMismatch,
     InvalidData,
     NoCompatibleAlgorithms
@@ -41,7 +41,7 @@ pub enum EphemeralKeyAgreementError {
 impl Display for EphemeralKeyAgreementError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            EphemeralKeyAgreementError::OldPublic => f.write_str("old (replayed?) public key data from remote"),
+            EphemeralKeyAgreementError::OutdatedPublic => f.write_str("old (replayed?) public key data from remote"),
             EphemeralKeyAgreementError::StateMismatch => f.write_str("ratchet state mismatch"),
             EphemeralKeyAgreementError::InvalidData => f.write_str("invalid public key data"),
             EphemeralKeyAgreementError::NoCompatibleAlgorithms => f.write_str("no compatible algorithms in public key data")
@@ -110,9 +110,9 @@ impl EphemeralKeyPairSet {
 
         let _ = varint::write(&mut b, self.previous_ratchet_count);
 
-        if self.state_hmac.is_some() {
+        if let Some(state_hmac) = self.state_hmac.as_ref() {
             b.push(EPHEMERAL_PUBLIC_FLAG_HAVE_RATCHET_STATE_HMAC);
-            let _ = b.write_all(self.state_hmac.as_ref().unwrap());
+            let _ = b.write_all(state_hmac);
         } else {
             b.push(0);
         }
@@ -121,7 +121,7 @@ impl EphemeralKeyPairSet {
         let _ = varint::write(&mut b, C25519_PUBLIC_KEY_SIZE as u64);
         let _ = b.write_all(&self.c25519.public_bytes());
 
-        let _ = self.sidhp751.as_ref().map(|sidhp751| {
+        if let Some(sidhp751) = self.sidhp751.as_ref() {
             b.push(ALGORITHM_SIDHP751);
             let _ = varint::write(&mut b, (SIDH_P751_PUBLIC_KEY_SIZE + 1) as u64);
             b.push(sidhp751.role());
@@ -130,7 +130,7 @@ impl EphemeralKeyPairSet {
                 SIDHEphemeralKeyPair::Bob(b, _) => b.to_bytes()
             };
             let _ = b.write_all(&pk);
-        });
+        }
 
         // FIPS note: any FIPS compliant ciphers must be last or the exchange will not be FIPS compliant. That's
         // because we chain/ratchet using KHDF and non-FIPS ciphers are considered "salt" inputs for HKDF from a
@@ -152,6 +152,7 @@ impl EphemeralKeyPairSet {
     /// the ratchet sequence, or rather a key derived from it for this purpose.
     ///
     /// Since ephemeral secrets should only be used once, this consumes the object.
+    #[allow(non_snake_case)]
     pub fn agree(self, time_ticks: i64, static_secret: &SymmetricSecret, previous_ephemeral_secret: Option<&EphemeralSymmetricSecret>, other_public_bytes: &[u8]) -> Result<EphemeralSymmetricSecret, EphemeralKeyAgreementError> {
         let (mut key, mut ratchet_count, mut c25519_ratchet_count, mut sidhp751_ratchet_count, mut nistp521_ratchet_count) = previous_ephemeral_secret.map_or_else(|| {
             (
@@ -184,7 +185,7 @@ impl EphemeralKeyPairSet {
         }
         let other_ratchet_count = other_ratchet_count.unwrap().0;
         if other_ratchet_count < ratchet_count {
-            return Err(EphemeralKeyAgreementError::OldPublic);
+            return Err(EphemeralKeyAgreementError::OutdatedPublic);
         } else if other_ratchet_count > ratchet_count {
             return Err(EphemeralKeyAgreementError::StateMismatch);
         }
@@ -204,7 +205,7 @@ impl EphemeralKeyPairSet {
             other_public_bytes = &other_public_bytes[49..];
         } else {
             if self.state_hmac.is_some() {
-                return Err(EphemeralKeyAgreementError::OldPublic);
+                return Err(EphemeralKeyAgreementError::OutdatedPublic);
             }
             other_public_bytes = &other_public_bytes[1..];
         }
@@ -321,38 +322,26 @@ pub(crate) struct EphemeralSymmetricSecret {
     /// Current ephemeral secret key.
     pub secret: SymmetricSecret,
     /// Total number of ratchets that has occurred.
-    ratchet_count: u64,
+    pub ratchet_count: u64,
     /// Time at or after which we should start trying to re-key.
-    rekey_time: i64,
+    pub rekey_time: i64,
     /// Time after which this key is no longer valid.
-    expire_time: i64,
+    pub expire_time: i64,
     /// Number of C25519 agreements so far in ratchet.
-    c25519_ratchet_count: u64,
+    pub c25519_ratchet_count: u64,
     /// Number of SIDH P-751 agreements so far in ratchet.
-    sidhp751_ratchet_count: u64,
+    pub sidhp751_ratchet_count: u64,
     /// Number of NIST P-521 ECDH agreements so far in ratchet.
-    nistp521_ratchet_count: u64,
+    pub nistp521_ratchet_count: u64,
     /// Number of times this secret has been used to encrypt.
-    encrypt_uses: AtomicU32,
+    pub encrypt_uses: AtomicU32,
     /// Number of times this secret has been used to decrypt.
-    decrypt_uses: AtomicU32,
+    pub decrypt_uses: AtomicU32,
     /// True if most recent key exchange was NIST/FIPS compliant.
     pub fips_compliant_exchange: bool,
 }
 
 impl EphemeralSymmetricSecret {
-    #[inline(always)]
-    pub fn use_secret_to_encrypt(&self) -> &SymmetricSecret {
-        let _ = self.encrypt_uses.fetch_add(1, Ordering::Relaxed);
-        &self.secret
-    }
-
-    #[inline(always)]
-    pub fn use_secret_to_decrypt(&self) -> &SymmetricSecret {
-        let _ = self.decrypt_uses.fetch_add(1, Ordering::Relaxed);
-        &self.secret
-    }
-
     #[inline(always)]
     pub fn should_rekey(&self, time_ticks: i64) -> bool {
         time_ticks >= self.rekey_time || self.encrypt_uses.load(Ordering::Relaxed).max(self.decrypt_uses.load(Ordering::Relaxed)) >= EPHEMERAL_SECRET_REKEY_AFTER_USES

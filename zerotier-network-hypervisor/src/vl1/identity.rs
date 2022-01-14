@@ -27,7 +27,7 @@ use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
 use crate::error::InvalidFormatError;
-use crate::util::{array_range, highwayhasher};
+use crate::util::{array_range, highwayhasher, u128_from_2xu64_ne};
 use crate::util::buffer::Buffer;
 use crate::util::pool::{Pool, Pooled, PoolFactory};
 use crate::vl1::Address;
@@ -150,7 +150,7 @@ impl Identity {
 
         Self {
             address,
-            fast_eq_hash: u128::from_ne_bytes(unsafe { *hh.finalize128().as_ptr().cast() }),
+            fast_eq_hash: u128_from_2xu64_ne(hh.finalize128()),
             c25519: c25519_pub,
             ed25519: ed25519_pub,
             p521: Some(IdentityP521Public {
@@ -471,7 +471,7 @@ impl Identity {
 
         Ok(Identity {
             address,
-            fast_eq_hash: u128::from_ne_bytes(unsafe { *hh.finalize128().as_ptr().cast() }),
+            fast_eq_hash: u128_from_2xu64_ne(hh.finalize128()),
             c25519: x25519_public.0.clone(),
             ed25519: x25519_public.1.clone(),
             p521: if p521_ecdh_ecdsa_public.is_some() {
@@ -617,7 +617,7 @@ impl FromStr for Identity {
 
         Ok(Identity {
             address,
-            fast_eq_hash: u128::from_ne_bytes(unsafe { *hh.finalize128().as_ptr().cast() }),
+            fast_eq_hash: u128_from_2xu64_ne(hh.finalize128()),
             c25519: keys[0].as_slice()[0..32].try_into().unwrap(),
             ed25519: keys[0].as_slice()[32..64].try_into().unwrap(),
             p521: if keys[2].is_empty() {

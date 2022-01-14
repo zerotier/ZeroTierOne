@@ -13,6 +13,7 @@ use std::num::NonZeroI64;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
 
+use arc_swap::ArcSwapOption;
 use parking_lot::Mutex;
 
 use zerotier_core_crypto::hash::{SHA384, SHA384_HASH_SIZE};
@@ -24,7 +25,7 @@ use zerotier_core_crypto::secret::Secret;
 use crate::{PacketBuffer, VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
 use crate::util::{array_range, u64_as_bytes};
 use crate::util::buffer::Buffer;
-use crate::vl1::{Endpoint, Identity, InetAddress, Path};
+use crate::vl1::{Endpoint, Identity, InetAddress, Path, ephemeral};
 use crate::vl1::ephemeral::EphemeralSymmetricSecret;
 use crate::vl1::identity::{IDENTITY_ALGORITHM_ALL, IDENTITY_ALGORITHM_X25519};
 use crate::vl1::node::*;
@@ -41,8 +42,8 @@ pub struct Peer {
     // Static shared secret computed from agreement with identity.
     static_secret: SymmetricSecret,
 
-    // Latest ephemeral secret acknowledged with OK(HELLO).
-    ephemeral_secret: Mutex<Option<Arc<EphemeralSymmetricSecret>>>,
+    // Latest ephemeral secret or None if not yet negotiated.
+    ephemeral_secret: ArcSwapOption<EphemeralSymmetricSecret>,
 
     // Paths sorted in descending order of quality / preference.
     paths: Mutex<Vec<Arc<Path>>>,
@@ -100,8 +101,8 @@ fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_siz
 }
 
 /// Attempt AEAD packet encryption and MAC validation.
-fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8], header: &PacketHeader, fragments: &[Option<PacketBuffer>], payload: &mut Buffer<PACKET_SIZE_MAX>, message_id: &mut u64) -> bool {
-    packet_frag0_payload_bytes.get(0).map_or(false, |verb| {
+fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8], header: &PacketHeader, fragments: &[Option<PacketBuffer>], payload: &mut Buffer<PACKET_SIZE_MAX>) -> Option<u64> {
+    packet_frag0_payload_bytes.get(0).map_or(None, |verb| {
         match header.cipher() {
             CIPHER_NOCRYPT_POLY1305 => {
                 if (verb & VERB_MASK) == VERB_VL1_HELLO {
@@ -116,14 +117,13 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
                     let (_, mut poly) = salsa_poly_create(secret, header, total_packet_len);
                     poly.update(payload.as_bytes());
                     if poly.finish()[0..8].eq(&header.mac) {
-                        *message_id = u64::from_ne_bytes(header.id);
-                        true
+                        Some(u64::from_ne_bytes(header.id))
                     } else {
-                        false
+                        None
                     }
                 } else {
                     // Only HELLO is permitted without payload encryption. Drop other packet types if sent this way.
-                    false
+                    None
                 }
             }
 
@@ -142,10 +142,9 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
                     }));
                 }
                 if poly.finish()[0..8].eq(&header.mac) {
-                    *message_id = u64::from_ne_bytes(header.id);
-                    true
+                    Some(u64::from_ne_bytes(header.id))
                 } else {
-                    false
+                    None
                 }
             }
 
@@ -163,16 +162,15 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
                         })
                     });
                 }
-                aes.decrypt_finish().map_or(false, |tag| {
+                aes.decrypt_finish().map_or(None, |tag| {
                     // AES-GMAC-SIV encrypts the packet ID too as part of its computation of a single
                     // opaque 128-bit tag, so to get the original packet ID we have to grab it from the
                     // decrypted tag.
-                    *message_id = u64::from_ne_bytes(*array_range::<u8, 16, 0, 8>(tag));
-                    true
+                    Some(u64::from_ne_bytes(*array_range::<u8, 16, 0, 8>(tag)))
                 })
             }
 
-            _ => false,
+            _ => None,
         }
     })
 }
@@ -182,11 +180,11 @@ impl Peer {
     /// This only returns None if this_node_identity does not have its secrets or if some
     /// fatal error occurs performing key agreement between the two identities.
     pub(crate) fn new(this_node_identity: &Identity, id: Identity) -> Option<Peer> {
-        this_node_identity.agree(&id).map(|static_secret| {
+        this_node_identity.agree(&id).map(|static_secret| -> Peer {
             Peer {
                 identity: id,
                 static_secret: SymmetricSecret::new(static_secret),
-                ephemeral_secret: Mutex::new(None),
+                ephemeral_secret: ArcSwapOption::const_empty(),
                 paths: Mutex::new(Vec::new()),
                 reported_local_ip: Mutex::new(None),
                 last_send_time_ticks: AtomicI64::new(0),
@@ -211,23 +209,29 @@ impl Peer {
     /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
     /// If the packet comes in multiple fragments, the fragments slice should contain all
     /// those fragments after the main packet header and first chunk.
-    pub(crate) fn receive<CI: VL1SystemInterface, PH: VL1VirtualInterface>(&self, node: &Node, ci: &CI, ph: &PH, time_ticks: i64, source_endpoint: &Endpoint, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
+    pub(crate) fn receive<CI: SystemInterface, PH: VL1VirtualInterface>(&self, node: &Node, ci: &CI, ph: &PH, time_ticks: i64, source_endpoint: &Endpoint, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
         let _ = packet.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_without_memzero() };
-            let mut message_id = 0_u64;
-            let ephemeral_secret: Option<Arc<EphemeralSymmetricSecret>> = self.ephemeral_secret.lock().clone();
-            let forward_secrecy = if ephemeral_secret.map_or(false, |ephemeral_secret| try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, header, fragments, &mut payload, &mut message_id)) {
-                // Decrypted and authenticated by the ephemeral secret.
-                true
+
+            let (forward_secrecy, mut message_id) = if let Some(ephemeral_secret) = self.ephemeral_secret.load_full() {
+                if let Some(message_id) = try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, header, fragments, &mut payload) {
+                    ephemeral_secret.decrypt_uses.fetch_add(1, Ordering::Relaxed);
+                    (true, message_id)
+                } else {
+                    (false, 0)
+                }
             } else {
-                // There is no ephemeral secret, or authentication with it failed.
-                unsafe { payload.set_size_unchecked(0); }
-                if !try_aead_decrypt(&self.static_secret, packet_frag0_payload_bytes, header, fragments, &mut payload, &mut message_id) {
-                    // Static secret also failed, reject packet.
+                (false, 0)
+            };
+            if !forward_secrecy {
+                if let Some(message_id2) = try_aead_decrypt(&self.static_secret, packet_frag0_payload_bytes, header, fragments, &mut payload) {
+                    message_id = message_id2;
+                } else {
+                    // Packet failed to decrypt using either ephemeral or permament key, reject.
                     return;
                 }
-                false
-            };
+            }
+            debug_assert!(!payload.is_empty());
 
             // ---------------------------------------------------------------
             // If we made it here it decrypted and passed authentication.
@@ -237,7 +241,6 @@ impl Peer {
             self.total_bytes_received.fetch_add((payload.len() + PACKET_HEADER_SIZE) as u64, Ordering::Relaxed);
             source_path.log_receive_authenticated_packet(payload.len() + PACKET_HEADER_SIZE, source_endpoint);
 
-            debug_assert!(!payload.is_empty()); // should be impossible since this fails in try_aead_decrypt()
             let mut verb = payload.as_bytes()[0];
 
             // If this flag is set, the end of the payload is a full HMAC-SHA384 authentication
@@ -285,11 +288,20 @@ impl Peer {
                     VERB_VL1_USER_MESSAGE => self.receive_user_message(ci, node, time_ticks, source_path, &payload),
                     _ => {}
                 }
+            } else {
+                #[cfg(debug)] {
+                    if match verb {
+                        VERB_VL1_NOP | VERB_VL1_HELLO | VERB_VL1_ERROR | VERB_VL1_OK | VERB_VL1_WHOIS | VERB_VL1_RENDEZVOUS | VERB_VL1_ECHO | VERB_VL1_PUSH_DIRECT_PATHS | VERB_VL1_USER_MESSAGE => true,
+                        _ => false
+                    } {
+                        panic!("The next layer handled a VL1 packet! It should not do this.");
+                    }
+                }
             }
         });
     }
 
-    fn send_to_endpoint<CI: VL1SystemInterface>(&self, ci: &CI, endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
+    fn send_to_endpoint<CI: SystemInterface>(&self, ci: &CI, endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         debug_assert!(packet.len() <= PACKET_SIZE_MAX);
         debug_assert!(packet.len() >= PACKET_SIZE_MIN);
         match endpoint {
@@ -343,7 +355,7 @@ impl Peer {
     ///
     /// This will go directly if there is an active path, or otherwise indirectly
     /// via a root or some other route.
-    pub(crate) fn send<CI: VL1SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
+    pub(crate) fn send<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.path(node).map_or(false, |path| {
             if self.send_to_endpoint(ci, path.endpoint().as_ref(), path.local_socket(), path.local_interface(), packet) {
                 self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
@@ -362,7 +374,7 @@ impl Peer {
     ///
     /// This doesn't fragment large packets since fragments are forwarded individually.
     /// Intermediates don't need to adjust fragmentation.
-    pub(crate) fn forward<CI: VL1SystemInterface>(&self, ci: &CI, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
+    pub(crate) fn forward<CI: SystemInterface>(&self, ci: &CI, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.direct_path().map_or(false, |path| {
             if ci.wire_send(path.endpoint().as_ref(), path.local_socket(), path.local_interface(), &[packet.as_bytes()], 0) {
                 self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
@@ -378,7 +390,7 @@ impl Peer {
     ///
     /// If explicit_endpoint is not None the packet will be sent directly to this endpoint.
     /// Otherwise it will be sent via the best direct or indirect path known.
-    pub(crate) fn send_hello<CI: VL1SystemInterface>(&self, ci: &CI, node: &Node, explicit_endpoint: Option<&Endpoint>) -> bool {
+    pub(crate) fn send_hello<CI: SystemInterface>(&self, ci: &CI, node: &Node, explicit_endpoint: Option<&Endpoint>) -> bool {
         let mut packet: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
         let time_ticks = ci.time_ticks();
 
@@ -387,7 +399,7 @@ impl Peer {
             let packet_header: &mut PacketHeader = packet.append_struct_get_mut().unwrap();
             packet_header.id = message_id.to_ne_bytes(); // packet ID and message ID are the same when Poly1305 MAC is used
             packet_header.dest = self.identity.address.to_bytes();
-            packet_header.src = node.address().to_bytes();
+            packet_header.src = node.identity.address.to_bytes();
             packet_header.flags_cipher_hops = CIPHER_NOCRYPT_POLY1305;
         }
         {
@@ -450,13 +462,13 @@ impl Peer {
 
     /// Called every INTERVAL during background tasks.
     #[inline(always)]
-    pub(crate) fn call_every_interval<CI: VL1SystemInterface>(&self, ct: &CI, time_ticks: i64) {}
+    pub(crate) fn call_every_interval<CI: SystemInterface>(&self, ct: &CI, time_ticks: i64) {}
 
     #[inline(always)]
-    fn receive_hello<CI: VL1SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_hello<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_error<CI: VL1SystemInterface, PH: VL1VirtualInterface>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_error<CI: SystemInterface, PH: VL1VirtualInterface>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor).map(|error_header| {
             let in_re_message_id = u64::from_ne_bytes(error_header.in_re_message_id);
@@ -472,7 +484,7 @@ impl Peer {
     }
 
     #[inline(always)]
-    fn receive_ok<CI: VL1SystemInterface, PH: VL1VirtualInterface>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_ok<CI: SystemInterface, PH: VL1VirtualInterface>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor).map(|ok_header| {
             let in_re_message_id = u64::from_ne_bytes(ok_header.in_re_message_id);
@@ -492,19 +504,19 @@ impl Peer {
     }
 
     #[inline(always)]
-    fn receive_whois<CI: VL1SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_whois<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_rendezvous<CI: VL1SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_rendezvous<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_echo<CI: VL1SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_echo<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_push_direct_paths<CI: VL1SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_push_direct_paths<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_user_message<CI: VL1SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_user_message<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     /// Get current best path or None if there are no direct paths to this peer.
     #[inline(always)]

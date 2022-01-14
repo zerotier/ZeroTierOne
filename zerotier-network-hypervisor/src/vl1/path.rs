@@ -22,7 +22,7 @@ use crate::PacketBuffer;
 use crate::util::{array_range, highwayhasher, U64NoOpHasher};
 use crate::vl1::Endpoint;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
-use crate::vl1::node::VL1SystemInterface;
+use crate::vl1::node::SystemInterface;
 use crate::vl1::protocol::*;
 
 /// Keepalive interval for paths in milliseconds.
@@ -129,7 +129,6 @@ impl Path {
             }
         }
 
-        // This is optimized for the fragmented case because that's the most common when transferring data.
         if fp.entry(packet_id).or_insert_with(|| FragmentedPacket::new(time_ticks)).add_fragment(packet, fragment_no, fragment_expecting_count) {
             fp.remove(&packet_id)
         } else {
@@ -173,7 +172,7 @@ impl Path {
     pub(crate) const CALL_EVERY_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
 
     #[inline(always)]
-    pub(crate) fn call_every_interval<CI: VL1SystemInterface>(&self, ct: &CI, time_ticks: i64) {
-        self.fragmented_packets.lock().retain(|packet_id, frag| (time_ticks - frag.ts_ticks) < PACKET_FRAGMENT_EXPIRATION);
+    pub(crate) fn call_every_interval<CI: SystemInterface>(&self, ct: &CI, time_ticks: i64) {
+        self.fragmented_packets.lock().retain(|_, frag| (time_ticks - frag.ts_ticks) < PACKET_FRAGMENT_EXPIRATION);
     }
 }

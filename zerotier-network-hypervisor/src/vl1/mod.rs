@@ -31,6 +31,6 @@ pub use dictionary::Dictionary;
 pub use inetaddress::InetAddress;
 pub use peer::Peer;
 pub use path::Path;
-pub use node::{Node, VL1SystemInterface};
+pub use node::{Node, SystemInterface};
 
 pub use protocol::{PACKET_SIZE_MAX, PACKET_FRAGMENT_COUNT_MAX};
