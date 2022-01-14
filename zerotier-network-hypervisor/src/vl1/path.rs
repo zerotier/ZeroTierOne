@@ -172,7 +172,7 @@ impl Path {
     pub(crate) const CALL_EVERY_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
 
     #[inline(always)]
-    pub(crate) fn call_every_interval<CI: SystemInterface>(&self, ct: &CI, time_ticks: i64) {
+    pub(crate) fn call_every_interval<SI: SystemInterface>(&self, _si: &SI, time_ticks: i64) {
         self.fragmented_packets.lock().retain(|_, frag| (time_ticks - frag.ts_ticks) < PACKET_FRAGMENT_EXPIRATION);
     }
 }

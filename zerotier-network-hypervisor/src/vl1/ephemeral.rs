@@ -10,11 +10,9 @@ use std::fmt::{Debug, Display};
 use std::error::Error;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::io::Write;
-use std::convert::TryInto;
 
 use zerotier_core_crypto::c25519::{C25519KeyPair, C25519_PUBLIC_KEY_SIZE};
 use zerotier_core_crypto::hash::{SHA384_HASH_SIZE, SHA384};
-use zerotier_core_crypto::kbkdf::zt_kbkdf_hmac_sha384;
 use zerotier_core_crypto::p521::{P521KeyPair, P521_PUBLIC_KEY_SIZE, P521PublicKey};
 use zerotier_core_crypto::random::SecureRandom;
 use zerotier_core_crypto::secret::Secret;
@@ -219,81 +217,71 @@ impl EphemeralKeyPairSet {
             }
             let key_len = key_len.unwrap().0 as usize;
 
-            match cipher {
-
-                ALGORITHM_C25519 => {
-                    if other_public_bytes.len() < C25519_PUBLIC_KEY_SIZE || key_len != C25519_PUBLIC_KEY_SIZE {
-                        return Err(EphemeralKeyAgreementError::InvalidData);
-                    }
-
-                    let c25519_secret = self.c25519.agree(&other_public_bytes[0..C25519_PUBLIC_KEY_SIZE]);
-                    other_public_bytes = &other_public_bytes[C25519_PUBLIC_KEY_SIZE..];
-
-                    key.0 = SHA384::hmac(&key.0, &c25519_secret.0);
-                    it_happened = true;
-                    fips_compliant_exchange = false;
-                    c25519_ratchet_count += 1;
-                },
-
-                ALGORITHM_SIDHP751 => {
-                    if other_public_bytes.len() < (SIDH_P751_PUBLIC_KEY_SIZE + 1) || key_len != (SIDH_P751_PUBLIC_KEY_SIZE + 1) {
-                        return Err(EphemeralKeyAgreementError::InvalidData);
-                    }
-
-                    let _ = match self.sidhp751.as_ref() {
-                        Some(SIDHEphemeralKeyPair::Alice(_, seck)) => {
-                            if other_public_bytes[0] != 0 { // Alice can't agree with Alice
-                                Some(Secret(seck.shared_secret(&SIDHPublicKeyBob::from_bytes(&other_public_bytes[1..(SIDH_P751_PUBLIC_KEY_SIZE + 1)]))))
-                            } else {
-                                None
-                            }
-                        },
-                        Some(SIDHEphemeralKeyPair::Bob(_, seck)) => {
-                            if other_public_bytes[0] != 1 { // Bob can't agree with Bob
-                                Some(Secret(seck.shared_secret(&SIDHPublicKeyAlice::from_bytes(&other_public_bytes[1..(SIDH_P751_PUBLIC_KEY_SIZE + 1)]))))
-                            } else {
-                                None
-                            }
-                        },
-                        None => None,
-                    }.map(|sidh_secret| {
-                        key.0 = SHA384::hmac(&key.0, &sidh_secret.0);
-                        it_happened = true;
-                        fips_compliant_exchange = false;
-                        sidhp751_ratchet_count += 1;
-                    });
-                    other_public_bytes = &other_public_bytes[(SIDH_P751_PUBLIC_KEY_SIZE + 1)..];
-                },
-
-                ALGORITHM_NISTP751ECDH => {
-                    if other_public_bytes.len() < P521_PUBLIC_KEY_SIZE || key_len != P521_PUBLIC_KEY_SIZE {
-                        return Err(EphemeralKeyAgreementError::InvalidData);
-                    }
-
-                    let p521_public = P521PublicKey::from_bytes(&other_public_bytes[0..P521_PUBLIC_KEY_SIZE]);
-                    other_public_bytes = &other_public_bytes[P521_PUBLIC_KEY_SIZE..];
-                    if p521_public.is_none() {
-                        return Err(EphemeralKeyAgreementError::InvalidData);
-                    }
-
-                    let p521_key = self.p521.agree(p521_public.as_ref().unwrap());
-                    if p521_key.is_none() {
-                        return Err(EphemeralKeyAgreementError::InvalidData);
-                    }
-
-                    key.0 = SHA384::hmac(&key.0, &p521_key.unwrap().0);
-                    it_happened = true;
-                    fips_compliant_exchange = true;
-                    nistp521_ratchet_count += 1;
-                },
-
-                _ => {
-                    if other_public_bytes.len() < key_len {
-                        return Err(EphemeralKeyAgreementError::InvalidData);
-                    }
-                    other_public_bytes = &other_public_bytes[key_len..];
+            if cipher == ALGORITHM_C25519 {
+                if other_public_bytes.len() < C25519_PUBLIC_KEY_SIZE || key_len != C25519_PUBLIC_KEY_SIZE {
+                    return Err(EphemeralKeyAgreementError::InvalidData);
                 }
 
+                let c25519_secret = self.c25519.agree(&other_public_bytes[0..C25519_PUBLIC_KEY_SIZE]);
+                other_public_bytes = &other_public_bytes[C25519_PUBLIC_KEY_SIZE..];
+
+                key.0 = SHA384::hmac(&key.0, &c25519_secret.0);
+                it_happened = true;
+                fips_compliant_exchange = false;
+                c25519_ratchet_count += 1;
+            } else if cipher == ALGORITHM_SIDHP751 {
+                if other_public_bytes.len() < (SIDH_P751_PUBLIC_KEY_SIZE + 1) || key_len != (SIDH_P751_PUBLIC_KEY_SIZE + 1) {
+                    return Err(EphemeralKeyAgreementError::InvalidData);
+                }
+
+                let _ = match self.sidhp751.as_ref() {
+                    Some(SIDHEphemeralKeyPair::Alice(_, seck)) => {
+                        if other_public_bytes[0] != 0 { // Alice can't agree with Alice
+                            Some(Secret(seck.shared_secret(&SIDHPublicKeyBob::from_bytes(&other_public_bytes[1..(SIDH_P751_PUBLIC_KEY_SIZE + 1)]))))
+                        } else {
+                            None
+                        }
+                    },
+                    Some(SIDHEphemeralKeyPair::Bob(_, seck)) => {
+                        if other_public_bytes[0] != 1 { // Bob can't agree with Bob
+                            Some(Secret(seck.shared_secret(&SIDHPublicKeyAlice::from_bytes(&other_public_bytes[1..(SIDH_P751_PUBLIC_KEY_SIZE + 1)]))))
+                        } else {
+                            None
+                        }
+                    },
+                    None => None,
+                }.map(|sidh_secret| {
+                    key.0 = SHA384::hmac(&key.0, &sidh_secret.0);
+                    it_happened = true;
+                    fips_compliant_exchange = false;
+                    sidhp751_ratchet_count += 1;
+                });
+                other_public_bytes = &other_public_bytes[(SIDH_P751_PUBLIC_KEY_SIZE + 1)..];
+            } else if cipher == ALGORITHM_NISTP521ECDH {
+                if other_public_bytes.len() < P521_PUBLIC_KEY_SIZE || key_len != P521_PUBLIC_KEY_SIZE {
+                    return Err(EphemeralKeyAgreementError::InvalidData);
+                }
+
+                let p521_public = P521PublicKey::from_bytes(&other_public_bytes[0..P521_PUBLIC_KEY_SIZE]);
+                other_public_bytes = &other_public_bytes[P521_PUBLIC_KEY_SIZE..];
+                if p521_public.is_none() {
+                    return Err(EphemeralKeyAgreementError::InvalidData);
+                }
+
+                let p521_key = self.p521.agree(p521_public.as_ref().unwrap());
+                if p521_key.is_none() {
+                    return Err(EphemeralKeyAgreementError::InvalidData);
+                }
+
+                key.0 = SHA384::hmac(&key.0, &p521_key.unwrap().0);
+                it_happened = true;
+                fips_compliant_exchange = true;
+                nistp521_ratchet_count += 1;
+            } else {
+                if other_public_bytes.len() < key_len {
+                    return Err(EphemeralKeyAgreementError::InvalidData);
+                }
+                other_public_bytes = &other_public_bytes[key_len..];
             }
         }
 

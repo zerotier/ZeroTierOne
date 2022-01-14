@@ -36,7 +36,7 @@ impl WhoisQueue {
     pub fn new() -> Self { Self(Mutex::new(HashMap::new())) }
 
     /// Launch or renew a WHOIS query and enqueue a packet to be processed when (if) it is received.
-    pub fn query<CI: SystemInterface>(&self, node: &Node, ci: &CI, target: Address, packet: Option<QueuedPacket>) {
+    pub fn query<SI: SystemInterface>(&self, node: &Node, si: &SI, target: Address, packet: Option<QueuedPacket>) {
         let mut q = self.0.lock();
 
         let qi = q.entry(target).or_insert_with(|| WhoisQueueItem {
@@ -45,7 +45,7 @@ impl WhoisQueue {
             retry_count: 0,
         });
 
-        if qi.retry_gate.gate(ci.time_ticks()) {
+        if qi.retry_gate.gate(si.time_ticks()) {
             qi.retry_count += 1;
             if packet.is_some() {
                 while qi.packet_queue.len() >= WHOIS_MAX_WAITING_PACKETS {
@@ -53,7 +53,7 @@ impl WhoisQueue {
                 }
                 qi.packet_queue.push_back(packet.unwrap());
             }
-            self.send_whois(node, ci, &[target]);
+            self.send_whois(node, si, &[target]);
         }
     }
 
@@ -64,7 +64,7 @@ impl WhoisQueue {
     }
 
     /// Called every INTERVAL during background tasks.
-    pub fn call_every_interval<CI: SystemInterface>(&self, node: &Node, ci: &CI, time_ticks: i64) {
+    pub fn call_every_interval<SI: SystemInterface>(&self, node: &Node, si: &SI, time_ticks: i64) {
         let mut targets: Vec<Address> = Vec::new();
         self.0.lock().retain(|target, qi| {
             if qi.retry_count < WHOIS_RETRY_MAX {
@@ -78,11 +78,11 @@ impl WhoisQueue {
             }
         });
         if !targets.is_empty() {
-            self.send_whois(node, ci, targets.as_slice());
+            self.send_whois(node, si, targets.as_slice());
         }
     }
 
-    fn send_whois<CI: SystemInterface>(&self, node: &Node, ci: &CI, targets: &[Address]) {
+    fn send_whois<SI: SystemInterface>(&self, node: &Node, si: &SI, targets: &[Address]) {
         todo!()
     }
 }

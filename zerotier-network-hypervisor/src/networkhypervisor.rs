@@ -7,13 +7,12 @@
  */
 
 use std::num::NonZeroI64;
-use std::sync::Arc;
 use std::time::Duration;
 
 use crate::error::InvalidParameterError;
 use crate::vl1::{Address, Identity, Endpoint, SystemInterface, Node};
 use crate::vl2::{Switch, SwitchInterface};
-use crate::{PacketBuffer, PacketBufferPool};
+use crate::PacketBuffer;
 
 pub trait Interface: SystemInterface + SwitchInterface {}
 

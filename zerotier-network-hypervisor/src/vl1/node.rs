@@ -18,7 +18,6 @@ use crate::{PacketBuffer, PacketBufferFactory, PacketBufferPool};
 use crate::error::InvalidParameterError;
 use crate::util::buffer::Buffer;
 use crate::util::gate::IntervalGate;
-use crate::util::pool::{Pool, Pooled};
 use crate::vl1::{Address, Endpoint, Identity};
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
@@ -145,15 +144,15 @@ pub struct Node {
 
 impl Node {
     /// Create a new Node.
-    pub fn new<I: SystemInterface>(ci: &I, auto_generate_identity: bool) -> Result<Self, InvalidParameterError> {
+    pub fn new<SI: SystemInterface>(si: &SI, auto_generate_identity: bool) -> Result<Self, InvalidParameterError> {
         let id = {
-            let id_str = ci.load_node_identity();
+            let id_str = si.load_node_identity();
             if id_str.is_none() {
                 if !auto_generate_identity {
                     return Err(InvalidParameterError("no identity found and auto-generate not enabled"));
                 } else {
                     let id = Identity::generate();
-                    ci.save_node_identity(&id, id.to_string().as_bytes(), id.to_secret_string().as_bytes());
+                    si.save_node_identity(&id, id.to_string().as_bytes(), id.to_secret_string().as_bytes());
                     id
                 }
             } else {
@@ -200,14 +199,14 @@ impl Node {
     ///
     /// This should only be called periodically from a single thread, but that thread can be
     /// different each time. Calling it concurrently won't crash but won't accomplish anything.
-    pub fn do_background_tasks<I: SystemInterface>(&self, ci: &I) -> Duration {
+    pub fn do_background_tasks<SI: SystemInterface>(&self, si: &SI) -> Duration {
         let mut intervals = self.intervals.lock();
-        let tt = ci.time_ticks();
+        let tt = si.time_ticks();
 
         if intervals.paths.gate(tt) {
             self.paths.retain(|_, path| {
                 path.upgrade().map_or(false, |p| {
-                    p.call_every_interval(ci, tt);
+                    p.call_every_interval(si, tt);
                     true
                 })
             });
@@ -215,24 +214,24 @@ impl Node {
 
         if intervals.peers.gate(tt) {
             self.peers.retain(|_, peer| {
-                peer.call_every_interval(ci, tt);
+                peer.call_every_interval(si, tt);
                 todo!();
                 true
             });
         }
 
         if intervals.whois.gate(tt) {
-            self.whois.call_every_interval(self, ci, tt);
+            self.whois.call_every_interval(self, si, tt);
         }
 
         Duration::from_millis(WhoisQueue::INTERVAL.min(Path::CALL_EVERY_INTERVAL_MS).min(Peer::CALL_EVERY_INTERVAL_MS) as u64 / 4)
     }
 
     /// Called when a packet is received on the physical wire.
-    pub fn wire_receive<I: SystemInterface, PH: VL1VirtualInterface>(&self, ci: &I, ph: &PH, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
+    pub fn wire_receive<SI: SystemInterface, PH: VL1VirtualInterface>(&self, si: &SI, ph: &PH, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
         if let Ok(fragment_header) = data.struct_mut_at::<FragmentHeader>(0) {
             if let Some(dest) = Address::from_bytes(&fragment_header.dest) {
-                let time_ticks = ci.time_ticks();
+                let time_ticks = si.time_ticks();
                 if dest == self.identity.address {
                     // Handle packets addressed to this node.
 
@@ -248,9 +247,9 @@ impl Node {
                                     let packet_header = packet_header.unwrap();
                                     if let Some(source) = Address::from_bytes(&packet_header.src) {
                                         if let Some(peer) = self.peer(source) {
-                                            peer.receive(self, ci, ph, time_ticks, source_endpoint, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]);
+                                            peer.receive(self, si, ph, time_ticks, source_endpoint, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]);
                                         } else {
-                                            self.whois.query(self, ci, source, Some(QueuedPacket::Fragmented(assembled_packet)));
+                                            self.whois.query(self, si, source, Some(QueuedPacket::Fragmented(assembled_packet)));
                                         }
                                     }
                                 }
@@ -262,9 +261,9 @@ impl Node {
                         if let Ok(packet_header) = data.struct_at::<PacketHeader>(0) {
                             if let Some(source) = Address::from_bytes(&packet_header.src) {
                                 if let Some(peer) = self.peer(source) {
-                                    peer.receive(self, ci, ph, time_ticks, source_endpoint, &path, &packet_header, data.as_ref(), &[]);
+                                    peer.receive(self, si, ph, time_ticks, source_endpoint, &path, &packet_header, data.as_ref(), &[]);
                                 } else {
-                                    self.whois.query(self, ci, source, Some(QueuedPacket::Unfragmented(data)));
+                                    self.whois.query(self, si, source, Some(QueuedPacket::Unfragmented(data)));
                                 }
                             }
                         }
@@ -289,7 +288,7 @@ impl Node {
                         }
                     }
                     if let Some(peer) = self.peer(dest) {
-                        peer.forward(ci, time_ticks, data.as_ref());
+                        peer.forward(si, time_ticks, data.as_ref());
                     }
                 }
             };

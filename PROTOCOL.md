@@ -90,7 +90,7 @@ OK(HELLO) response payload, which must be sent if the HELLO receipient wishes to
 | [2] u16       | Responding node revision (0 if unspecified)       |
 | Endpoint      | Physical endpoint where OK(HELLO) was sent        |
 | [2] u16       | *(reserved)* (set to zero for legacy reasons)     |
-| [2] u16       | Length of encrypted Dictionary in bytes           |
+| [2] u16       | Length of Dictionary in bytes                     |
 | Dictionary    | Key/value dictionary containing additional fields |
 
 The unencrypted dictionary is not currently used. The encrypted dictionary can contain the following fields in both HELLO and OK(HELLO):

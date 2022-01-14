@@ -25,7 +25,7 @@ use zerotier_core_crypto::secret::Secret;
 use crate::{PacketBuffer, VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
 use crate::util::{array_range, u64_as_bytes};
 use crate::util::buffer::Buffer;
-use crate::vl1::{Endpoint, Identity, InetAddress, Path, ephemeral};
+use crate::vl1::{Endpoint, Identity, InetAddress, Path};
 use crate::vl1::ephemeral::EphemeralSymmetricSecret;
 use crate::vl1::identity::{IDENTITY_ALGORITHM_ALL, IDENTITY_ALGORITHM_X25519};
 use crate::vl1::node::*;
@@ -209,7 +209,7 @@ impl Peer {
     /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
     /// If the packet comes in multiple fragments, the fragments slice should contain all
     /// those fragments after the main packet header and first chunk.
-    pub(crate) fn receive<CI: SystemInterface, PH: VL1VirtualInterface>(&self, node: &Node, ci: &CI, ph: &PH, time_ticks: i64, source_endpoint: &Endpoint, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
+    pub(crate) fn receive<SI: SystemInterface, PH: VL1VirtualInterface>(&self, node: &Node, si: &SI, ph: &PH, time_ticks: i64, source_endpoint: &Endpoint, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
         let _ = packet.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_without_memzero() };
 
@@ -278,14 +278,14 @@ impl Peer {
             if !ph.handle_packet(self, source_path, forward_secrecy, extended_authentication, verb, &payload) {
                 match verb {
                     //VERB_VL1_NOP => {}
-                    VERB_VL1_HELLO => self.receive_hello(ci, node, time_ticks, source_path, &payload),
-                    VERB_VL1_ERROR => self.receive_error(ci, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload),
-                    VERB_VL1_OK => self.receive_ok(ci, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload),
-                    VERB_VL1_WHOIS => self.receive_whois(ci, node, time_ticks, source_path, &payload),
-                    VERB_VL1_RENDEZVOUS => self.receive_rendezvous(ci, node, time_ticks, source_path, &payload),
-                    VERB_VL1_ECHO => self.receive_echo(ci, node, time_ticks, source_path, &payload),
-                    VERB_VL1_PUSH_DIRECT_PATHS => self.receive_push_direct_paths(ci, node, time_ticks, source_path, &payload),
-                    VERB_VL1_USER_MESSAGE => self.receive_user_message(ci, node, time_ticks, source_path, &payload),
+                    VERB_VL1_HELLO => self.receive_hello(si, node, time_ticks, source_path, &payload),
+                    VERB_VL1_ERROR => self.receive_error(si, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload),
+                    VERB_VL1_OK => self.receive_ok(si, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload),
+                    VERB_VL1_WHOIS => self.receive_whois(si, node, time_ticks, source_path, &payload),
+                    VERB_VL1_RENDEZVOUS => self.receive_rendezvous(si, node, time_ticks, source_path, &payload),
+                    VERB_VL1_ECHO => self.receive_echo(si, node, time_ticks, source_path, &payload),
+                    VERB_VL1_PUSH_DIRECT_PATHS => self.receive_push_direct_paths(si, node, time_ticks, source_path, &payload),
+                    VERB_VL1_USER_MESSAGE => self.receive_user_message(si, node, time_ticks, source_path, &payload),
                     _ => {}
                 }
             } else {
@@ -301,7 +301,7 @@ impl Peer {
         });
     }
 
-    fn send_to_endpoint<CI: SystemInterface>(&self, ci: &CI, endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
+    fn send_to_endpoint<SI: SystemInterface>(&self, si: &SI, endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         debug_assert!(packet.len() <= PACKET_SIZE_MAX);
         debug_assert!(packet.len() >= PACKET_SIZE_MIN);
         match endpoint {
@@ -309,7 +309,7 @@ impl Peer {
                 let packet_size = packet.len();
                 if packet_size > UDP_DEFAULT_MTU {
                     let bytes = packet.as_bytes();
-                    if !ci.wire_send(endpoint, local_socket, local_interface, &[&bytes[0..UDP_DEFAULT_MTU]], 0) {
+                    if !si.wire_send(endpoint, local_socket, local_interface, &[&bytes[0..UDP_DEFAULT_MTU]], 0) {
                         return false;
                     }
 
@@ -331,7 +331,7 @@ impl Peer {
                     loop {
                         header.total_and_fragment_no += 1;
                         let next_pos = pos + chunk_size;
-                        if !ci.wire_send(endpoint, local_socket, local_interface, &[header.as_bytes(), &bytes[pos..next_pos]], 0) {
+                        if !si.wire_send(endpoint, local_socket, local_interface, &[header.as_bytes(), &bytes[pos..next_pos]], 0) {
                             return false;
                         }
                         pos = next_pos;
@@ -342,11 +342,11 @@ impl Peer {
                         }
                     }
                 } else {
-                    return ci.wire_send(endpoint, local_socket, local_interface, &[packet.as_bytes()], 0);
+                    return si.wire_send(endpoint, local_socket, local_interface, &[packet.as_bytes()], 0);
                 }
             }
             _ => {
-                return ci.wire_send(endpoint, local_socket, local_interface, &[packet.as_bytes()], 0);
+                return si.wire_send(endpoint, local_socket, local_interface, &[packet.as_bytes()], 0);
             }
         }
     }
@@ -355,9 +355,9 @@ impl Peer {
     ///
     /// This will go directly if there is an active path, or otherwise indirectly
     /// via a root or some other route.
-    pub(crate) fn send<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
+    pub(crate) fn send<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.path(node).map_or(false, |path| {
-            if self.send_to_endpoint(ci, path.endpoint().as_ref(), path.local_socket(), path.local_interface(), packet) {
+            if self.send_to_endpoint(si, path.endpoint().as_ref(), path.local_socket(), path.local_interface(), packet) {
                 self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
                 self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
                 true
@@ -374,9 +374,9 @@ impl Peer {
     ///
     /// This doesn't fragment large packets since fragments are forwarded individually.
     /// Intermediates don't need to adjust fragmentation.
-    pub(crate) fn forward<CI: SystemInterface>(&self, ci: &CI, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
+    pub(crate) fn forward<SI: SystemInterface>(&self, si: &SI, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.direct_path().map_or(false, |path| {
-            if ci.wire_send(path.endpoint().as_ref(), path.local_socket(), path.local_interface(), &[packet.as_bytes()], 0) {
+            if si.wire_send(path.endpoint().as_ref(), path.local_socket(), path.local_interface(), &[packet.as_bytes()], 0) {
                 self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
                 self.total_bytes_forwarded.fetch_add(packet.len() as u64, Ordering::Relaxed);
                 true
@@ -390,9 +390,9 @@ impl Peer {
     ///
     /// If explicit_endpoint is not None the packet will be sent directly to this endpoint.
     /// Otherwise it will be sent via the best direct or indirect path known.
-    pub(crate) fn send_hello<CI: SystemInterface>(&self, ci: &CI, node: &Node, explicit_endpoint: Option<&Endpoint>) -> bool {
+    pub(crate) fn send_hello<SI: SystemInterface>(&self, si: &SI, node: &Node, explicit_endpoint: Option<&Endpoint>) -> bool {
         let mut packet: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
-        let time_ticks = ci.time_ticks();
+        let time_ticks = si.time_ticks();
 
         let message_id = self.next_message_id();
         {
@@ -451,10 +451,10 @@ impl Peer {
         explicit_endpoint.map_or_else(|| {
             self.path(node).map_or(false, |path| {
                 path.log_send_anything(time_ticks);
-                self.send_to_endpoint(ci, path.endpoint().as_ref(), path.local_socket(), path.local_interface(), &packet)
+                self.send_to_endpoint(si, path.endpoint().as_ref(), path.local_socket(), path.local_interface(), &packet)
             })
         }, |endpoint| {
-            self.send_to_endpoint(ci, endpoint, None, None, &packet)
+            self.send_to_endpoint(si, endpoint, None, None, &packet)
         })
     }
 
@@ -462,13 +462,13 @@ impl Peer {
 
     /// Called every INTERVAL during background tasks.
     #[inline(always)]
-    pub(crate) fn call_every_interval<CI: SystemInterface>(&self, ct: &CI, time_ticks: i64) {}
+    pub(crate) fn call_every_interval<SI: SystemInterface>(&self, si: &SI, time_ticks: i64) {}
 
     #[inline(always)]
-    fn receive_hello<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_hello<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_error<CI: SystemInterface, PH: VL1VirtualInterface>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_error<SI: SystemInterface, PH: VL1VirtualInterface>(&self, si: &SI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor).map(|error_header| {
             let in_re_message_id = u64::from_ne_bytes(error_header.in_re_message_id);
@@ -484,7 +484,7 @@ impl Peer {
     }
 
     #[inline(always)]
-    fn receive_ok<CI: SystemInterface, PH: VL1VirtualInterface>(&self, ci: &CI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_ok<SI: SystemInterface, PH: VL1VirtualInterface>(&self, si: &SI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor).map(|ok_header| {
             let in_re_message_id = u64::from_ne_bytes(ok_header.in_re_message_id);
@@ -504,19 +504,19 @@ impl Peer {
     }
 
     #[inline(always)]
-    fn receive_whois<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_whois<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_rendezvous<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_rendezvous<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_echo<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_echo<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_push_direct_paths<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_push_direct_paths<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_user_message<CI: SystemInterface>(&self, ci: &CI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
+    fn receive_user_message<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     /// Get current best path or None if there are no direct paths to this peer.
     #[inline(always)]
