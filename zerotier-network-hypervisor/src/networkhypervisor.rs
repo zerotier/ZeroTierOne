@@ -22,9 +22,9 @@ pub struct NetworkHypervisor {
 }
 
 impl NetworkHypervisor {
-    pub fn new<CI: Interface>(ci: &CI, auto_generate_identity: bool) -> Result<NetworkHypervisor, InvalidParameterError> {
+    pub fn new<I: Interface>(ii: &I, auto_generate_identity: bool) -> Result<NetworkHypervisor, InvalidParameterError> {
         Ok(NetworkHypervisor {
-            vl1: Node::new(ci, auto_generate_identity)?,
+            vl1: Node::new(ii, auto_generate_identity)?,
             vl2: Switch::new(),
         })
     }
@@ -41,12 +41,12 @@ impl NetworkHypervisor {
     #[inline(always)]
     pub fn identity(&self) -> &Identity { &self.vl1.identity }
 
-    pub fn do_background_tasks<CI: Interface>(&self, ci: &CI) -> Duration {
-        self.vl1.do_background_tasks(ci)
+    pub fn do_background_tasks<I: Interface>(&self, ii: &I) -> Duration {
+        self.vl1.do_background_tasks(ii)
     }
 
     #[inline(always)]
-    pub fn wire_receive<CI: SystemInterface>(&self, ci: &CI, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
-        self.vl1.wire_receive(ci, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data)
+    pub fn wire_receive<I: SystemInterface>(&self, ii: &I, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
+        self.vl1.wire_receive(ii, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data)
     }
 }
