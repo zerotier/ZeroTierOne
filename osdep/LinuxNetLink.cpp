@@ -25,6 +25,7 @@
 #ifndef IFNAMSIZ
 #define IFNAMSIZ 16
 #endif
+const int ZT_RTE_METRIC = 5000;
 
 namespace ZeroTier {
 
@@ -731,6 +732,23 @@ void LinuxNetLink::addRoute(const InetAddress &target, const InetAddress &via, c
 	rtl += rtap->rta_len;
 
 	if(via) {
+		/*
+		 *  Setting a metric keeps zerotier routes from taking priority over physical
+		 *  At best the computer would use zerotier through the router instead of the LAN.
+		 *  At worst it stops working at all.
+		 *
+		 *  default via 192.168.82.1 dev eth0 proto dhcp src 192.168.82.169 metric 202 
+		 *  10.147.17.0/24 dev zt5u4uptmb proto kernel scope link src 10.147.17.94 
+		 *  192.168.82.0/24 dev eth0 proto dhcp scope link src 192.168.82.169 metric 202 
+		 *  192.168.82.0/24 via 10.147.17.1 dev zt5u4uptmb proto static metric 5000 
+		 *  
+		*/
+		rtap = (struct rtattr*)(((char*)rtap) + rtap->rta_len);
+		rtap->rta_type = RTA_PRIORITY;
+		rtap->rta_len = RTA_LENGTH(sizeof(ZT_RTE_METRIC));
+		memcpy(RTA_DATA(rtap), &ZT_RTE_METRIC, sizeof(ZT_RTE_METRIC));
+		rtl += rtap->rta_len;
+
 		rtap = (struct rtattr *)(((char*)rtap)+rtap->rta_len);
 		rtap->rta_type = RTA_GATEWAY;
 		if(via.isV4()) {

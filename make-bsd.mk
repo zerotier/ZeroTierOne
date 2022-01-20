@@ -7,6 +7,29 @@ LIBS=
 include objects.mk
 ONE_OBJS+=osdep/BSDEthernetTap.o ext/http-parser/http_parser.o
 
+ifeq ($(OSTYPE),FreeBSD)
+	# Auto-detect miniupnpc and nat-pmp as well and use ports libs if present,
+	# otherwise build into binary as done on Mac and Windows.
+	INCLUDES+=-I/usr/local/include
+	LIBS+=-L/usr/local/lib
+	ONE_OBJS+=osdep/PortMapper.o
+	override DEFS+=-DZT_USE_MINIUPNPC
+	MINIUPNPC_IS_NEW_ENOUGH=$(shell grep -sqr '.*define.*MINIUPNPC_VERSION.*"2..*"' /usr/local/include/miniupnpc/miniupnpc.h && echo 1)
+	ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
+		LIBS+=-lminiupnpc
+		override DEFS+=-DZT_USE_SYSTEM_MINIUPNPC
+	else
+		override DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -DOS_STRING=\"FreeBSD/$(shell uname -r)\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+		ONE_OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
+	endif
+	ifeq ($(wildcard /usr/local/include/natpmp.h),)
+		ONE_OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o
+	else
+		LIBS+=-lnatpmp
+		override DEFS+=-DZT_USE_SYSTEM_NATPMP
+	endif
+endif
+
 # Build with address sanitization library for advanced debugging (clang)
 ifeq ($(ZT_SANITIZE),1)
 	SANFLAGS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
