@@ -75,7 +75,6 @@ ifeq ($(ZT_DEBUG),1)
 	ARCH_FLAGS=
 	CFLAGS+=-Wall -g $(INCLUDES) $(DEFS) $(ARCH_FLAGS)
 	STRIP=echo
-	RUST_VARIANT=debug
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g $(INCLUDES) $(DEFS)
@@ -83,7 +82,7 @@ else
 	CFLAGS?=-Ofast -fstack-protector-strong
 	CFLAGS+=$(ARCH_FLAGS) -Wall -flto -fPIE -mmacosx-version-min=$(MACOS_VERSION_MIN) -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
-	RUST_VARIANT=release
+	RUST_VARIANT=--release
 endif
 
 ifeq ($(ZT_TRACE),1)
@@ -119,8 +118,8 @@ zerotier-one: one
 zeroidc: zeroidc/target/libzeroidc.a
 
 zeroidc/target/libzeroidc.a:	FORCE
-	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=x86_64-apple-darwin --$(RUST_VARIANT)
-	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=aarch64-apple-darwin --$(RUST_VARIANT)
+	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=x86_64-apple-darwin $(RUST_VARIANT)
+	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=aarch64-apple-darwin $(RUST_VARIANT)
 	cd zeroidc && lipo -create target/x86_64-apple-darwin/$(RUST_VARIANT)/libzeroidc.a target/aarch64-apple-darwin/$(RUST_VARIANT)/libzeroidc.a -output target/libzeroidc.a
 
 central-controller:
