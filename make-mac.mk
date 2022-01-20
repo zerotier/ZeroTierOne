@@ -121,8 +121,8 @@ zerotier-one: one
 zeroidc: zeroidc/target/libzeroidc.a
 
 zeroidc/target/libzeroidc.a:	FORCE
-	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=x86_64-apple-darwin --$(EXTRA_CARGO_FLAGS)
-	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=aarch64-apple-darwin --$(EXTRA_CARGO_FLAGS)
+	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=x86_64-apple-darwin $(EXTRA_CARGO_FLAGS)
+	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=aarch64-apple-darwin $(EXTRA_CARGO_FLAGS)
 	cd zeroidc && lipo -create target/x86_64-apple-darwin/$(RUST_VARIANT)/libzeroidc.a target/aarch64-apple-darwin/$(RUST_VARIANT)/libzeroidc.a -output target/libzeroidc.a
 
 central-controller:
