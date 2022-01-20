@@ -386,33 +386,49 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 		// check if the member exists first.
 		pqxx::row count = w.exec_params1("SELECT count(id) FROM ztc_member WHERE id = $1 AND network_id = $2 AND deleted = false", memberId, networkId);
 		if (count[0].as<int>() == 1) {
-			// find an unused nonce, if one exists.
+			// get active nonce, if exists.
 			pqxx::result r = w.exec_params("SELECT nonce FROM ztc_sso_expiry "
 				"WHERE network_id = $1 AND member_id = $2 "
-				"AND authentication_expiry_time IS NULL AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
+				"AND ((NOW() AT TIME ZONE 'UTC') <= authentication_expiry_time) AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
 				networkId, memberId);
 
-			if (r.size() == 1) {
-				// we have an existing nonce.  Use it
+			if (r.size() == 0) {
+				// no active nonce.
+				// find an unused nonce, if one exists.
+				pqxx::result r = w.exec_params("SELECT nonce FROM ztc_sso_expiry "
+					"WHERE network_id = $1 AND member_id = $2 "
+					"AND authentication_expiry_time IS NULL AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
+					networkId, memberId);
+
+				if (r.size() == 1) {
+					// we have an existing nonce.  Use it
+					nonce = r.at(0)[0].as<std::string>();
+					Utils::unhex(nonce.c_str(), nonceBytes, sizeof(nonceBytes));
+				} else if (r.empty()) {
+					// create a nonce
+					Utils::getSecureRandom(nonceBytes, 16);
+					char nonceBuf[64] = {0};
+					Utils::hex(nonceBytes, sizeof(nonceBytes), nonceBuf);
+					nonce = std::string(nonceBuf);
+
+					pqxx::result ir = w.exec_params0("INSERT INTO ztc_sso_expiry "
+						"(nonce, nonce_expiration, network_id, member_id) VALUES "
+						"($1, TO_TIMESTAMP($2::double precision/1000), $3, $4)",
+						nonce, OSUtils::now() + 300000, networkId, memberId);
+
+					w.commit();
+				}  else {
+					// > 1 ?!?  Thats an error!
+					fprintf(stderr, "> 1 unused nonce!\n");
+					exit(6);
+				}
+			} else if (r.size() == 1) {
 				nonce = r.at(0)[0].as<std::string>();
 				Utils::unhex(nonce.c_str(), nonceBytes, sizeof(nonceBytes));
-			} else if (r.empty()) {
-				// create a nonce
-				Utils::getSecureRandom(nonceBytes, 16);
-				char nonceBuf[64] = {0};
-				Utils::hex(nonceBytes, sizeof(nonceBytes), nonceBuf);
-				nonce = std::string(nonceBuf);
-
-				pqxx::result ir = w.exec_params0("INSERT INTO ztc_sso_expiry "
-					"(nonce, nonce_expiration, network_id, member_id) VALUES "
-					"($1, TO_TIMESTAMP($2::double precision/1000), $3, $4)",
-					nonce, OSUtils::now() + 300000, networkId, memberId);
-
-				w.commit();
-			}  else {
-				// > 1 ?!?  Thats an error!
-				fprintf(stderr, "> 1 unused nonce!\n");
-				exit(6);
+			} else {
+				// more than 1 nonce in use?  Uhhh...
+				fprintf(stderr, "> 1 nonce in use for network member?!?\n");
+				exit(7);
 			}
 
 			r = w.exec_params("SELECT org.client_id, org.authorization_endpoint, org.issuer, org.sso_impl_version "
