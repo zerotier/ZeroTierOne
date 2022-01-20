@@ -218,3 +218,16 @@ pub extern "C" fn zeroidc_network_id_from_state(state: *const c_char) -> *const 
     let s = CString::new(split[1]).unwrap();
     return s.into_raw();
 }
+
+#[no_mangle]
+pub extern "C" fn zeroidc_kick_refresh_thread(idc: *mut ZeroIDC) {
+    if idc.is_null() {
+        println!("idc is null");
+        return;
+    }
+    let idc = unsafe {
+        &mut *idc
+    };
+
+    idc.kick_refresh_thread();
+}
