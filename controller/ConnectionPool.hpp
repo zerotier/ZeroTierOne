@@ -95,7 +95,7 @@ public:
 
         if(m_pool.size()==0){
             
-            if ((m_pool.size() + m_borrowed.size()) <= m_maxPoolSize) {
+            if ((m_pool.size() + m_borrowed.size()) < m_maxPoolSize) {
                 try {
                     std::shared_ptr<Connection> conn = m_factory->create();
                     m_borrowed.insert(conn);

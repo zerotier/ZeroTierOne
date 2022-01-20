@@ -2,7 +2,7 @@
 FROM registry.zerotier.com/zerotier/controller-builder:latest as builder
 MAINTAINER Adam Ierymekno <adam.ierymenko@zerotier.com>, Grant Limberg <grant.limberg@zerotier.com>
 ADD . /ZeroTierOne
-RUN cd ZeroTierOne && make clean && make central-controller -j8
+RUN export PATH=$PATH:~/.cargo/bin && cd ZeroTierOne && make clean && make central-controller -j8
 
 FROM registry.zerotier.com/zerotier/controller-run:latest
 COPY --from=builder /ZeroTierOne/zerotier-one /usr/local/bin/zerotier-one

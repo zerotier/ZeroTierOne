@@ -1,6 +1,8 @@
 CC=clang
 CXX=clang++
-INCLUDES=
+TOPDIR=$(shell PWD)
+
+INCLUDES=-I$(shell PWD)/zeroidc/target
 DEFS=
 LIBS=
 ARCH_FLAGS=-arch x86_64 -arch arm64 
@@ -26,7 +28,7 @@ DEFS+=-DZT_BUILD_PLATFORM=$(ZT_BUILD_PLATFORM) -DZT_BUILD_ARCHITECTURE=$(ZT_BUIL
 
 include objects.mk
 ONE_OBJS+=osdep/MacEthernetTap.o osdep/MacKextEthernetTap.o osdep/MacDNSHelper.o ext/http-parser/http_parser.o
-LIBS+=-framework CoreServices -framework SystemConfiguration -framework CoreFoundation
+LIBS+=-framework CoreServices -framework SystemConfiguration -framework CoreFoundation -framework Security
 
 # Official releases are signed with our Apple cert and apply software updates by default
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
@@ -73,6 +75,8 @@ ifeq ($(ZT_DEBUG),1)
 	ARCH_FLAGS=
 	CFLAGS+=-Wall -g $(INCLUDES) $(DEFS) $(ARCH_FLAGS)
 	STRIP=echo
+	RUSTFLAGS=
+	RUST_VARIANT=debug
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g $(INCLUDES) $(DEFS)
@@ -80,6 +84,8 @@ else
 	CFLAGS?=-Ofast -fstack-protector-strong
 	CFLAGS+=$(ARCH_FLAGS) -Wall -flto -fPIE -mmacosx-version-min=$(MACOS_VERSION_MIN) -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
+	RUSTFLAGS=--release
+	RUST_VARIANT=release
 endif
 
 ifeq ($(ZT_TRACE),1)
@@ -103,8 +109,8 @@ mac-agent: FORCE
 osdep/MacDNSHelper.o: osdep/MacDNSHelper.mm
 	$(CXX) $(CXXFLAGS) -c osdep/MacDNSHelper.mm -o osdep/MacDNSHelper.o 
 
-one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
-	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS)
+one:	zeroidc $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
+	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS) zeroidc/target/libzeroidc.a
 	# $(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
@@ -112,12 +118,21 @@ one:	$(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
 
 zerotier-one: one
 
+zeroidc: zeroidc/target/libzeroidc.a
+
+zeroidc/target/libzeroidc.a:	FORCE
+	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=x86_64-apple-darwin $(RUSTFLAGS)
+	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=aarch64-apple-darwin $(RUSTFLAGS)
+	cd zeroidc && lipo -create target/x86_64-apple-darwin/$(RUST_VARIANT)/libzeroidc.a target/aarch64-apple-darwin/$(RUST_VARIANT)/libzeroidc.a -output target/libzeroidc.a
+
 central-controller:
 	make ARCH_FLAGS="-arch x86_64" ZT_CONTROLLER=1 one
 
 zerotier-idtool: one
 
 zerotier-cli: one
+
+$(ONE_OBJS): zeroidc
 
 libzerotiercore.a:	$(CORE_OBJS)
 	ar rcs libzerotiercore.a $(CORE_OBJS)
@@ -130,7 +145,7 @@ core: libzerotiercore.a
 #	$(STRIP) zerotier
 
 selftest: $(CORE_OBJS) $(ONE_OBJS) selftest.o
-	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(CORE_OBJS) $(ONE_OBJS) $(LIBS)
+	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(CORE_OBJS) $(ONE_OBJS) $(LIBS) zeroidc/target/libzeroidc.a
 	$(STRIP) zerotier-selftest
 
 zerotier-selftest: selftest
@@ -157,7 +172,7 @@ central-controller-docker: FORCE
 	docker build --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=$(shell git name-rev --name-only HEAD) .
 
 clean:
-	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
+	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_* zeroidc/target/
 
 distclean:	clean
 

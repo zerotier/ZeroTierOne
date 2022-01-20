@@ -23,6 +23,7 @@
 
 #include <libpq-fe.h>
 #include <sstream>
+#include <iomanip>
 #include <climits>
 #include <chrono>
 
@@ -80,6 +81,28 @@ std::vector<std::string> split(std::string str, char delim){
 	return tokens;
 }
 
+std::string url_encode(const std::string &value) {
+    std::ostringstream escaped;
+    escaped.fill('0');
+    escaped << std::hex;
+
+    for (std::string::const_iterator i = value.begin(), n = value.end(); i != n; ++i) {
+        std::string::value_type c = (*i);
+
+        // Keep alphanumeric and other accepted characters intact
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            escaped << c;
+            continue;
+        }
+
+        // Any other characters are percent-encoded
+        escaped << std::uppercase;
+        escaped << '%' << std::setw(2) << int((unsigned char) c);
+        escaped << std::nouppercase;
+    }
+
+    return escaped.str();
+}
 
 } // anonymous namespace
 
@@ -336,7 +359,7 @@ void PostgreSQL::nodeIsOnline(const uint64_t networkId, const uint64_t memberId,
 	}
 }
 
-std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::string &redirectURL)
+AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::string &redirectURL)
 {
 	// NONCE is just a random character string.  no semantic meaning
 	// state = HMAC SHA384 of Nonce based on shared sso key
@@ -347,10 +370,12 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::s
 	// how do we tell when a nonce is used? if auth_expiration_time is set
 	std::string networkId = member["nwid"];
 	std::string memberId = member["id"];
-	char authenticationURL[4096] = {0};
 
-	//fprintf(stderr, "PostgreSQL::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
-	bool have_auth = false;
+
+	char authenticationURL[4096] = {0};
+	AuthInfo info;
+	info.enabled = true;
+	// fprintf(stderr, "PostgreSQL::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
 	try {
 		auto c = _pool->borrow();
 		pqxx::work w(*c->c);
@@ -390,38 +415,61 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::s
 				exit(6);
 			}
 
-			r = w.exec_params("SELECT org.client_id, org.authorization_endpoint "
+			r = w.exec_params("SELECT org.client_id, org.authorization_endpoint, org.issuer, org.sso_impl_version "
 				"FROM ztc_network AS nw, ztc_org AS org "
 				"WHERE nw.id = $1 AND nw.sso_enabled = true AND org.owner_id = nw.owner_id", networkId);
 		
 			std::string client_id = "";
 			std::string authorization_endpoint = "";
+			std::string issuer = "";
+			uint64_t sso_version = 0;
 
 			if (r.size() == 1) {
 				client_id = r.at(0)[0].as<std::string>();
 				authorization_endpoint = r.at(0)[1].as<std::string>();
+				issuer = r.at(0)[2].as<std::string>();
+				sso_version = r.at(0)[3].as<uint64_t>();
 			} else if (r.size() > 1) {
 				fprintf(stderr, "ERROR: More than one auth endpoint for an organization?!?!? NetworkID: %s\n", networkId.c_str());
 			} else {
 				fprintf(stderr, "No client or auth endpoint?!?\n");
 			}
-
+		
+			info.version = sso_version;
+			
 			// no catch all else because we don't actually care if no records exist here. just continue as normal.
 			if ((!client_id.empty())&&(!authorization_endpoint.empty())) {
-				have_auth = true;
-
+				
 				uint8_t state[48];
 				HMACSHA384(_ssoPsk, nonceBytes, sizeof(nonceBytes), state);
 				char state_hex[256];
 				Utils::hex(state, 48, state_hex);
 				
-				OSUtils::ztsnprintf(authenticationURL, sizeof(authenticationURL),
-					"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redirect_uri=%s&nonce=%s&state=%s&client_id=%s",
-					authorization_endpoint.c_str(),
-					redirectURL.c_str(),
-					nonce.c_str(),
-					state_hex,
-					client_id.c_str());
+				if (info.version == 0) {
+					char url[2048] = {0};
+					OSUtils::ztsnprintf(url, sizeof(authenticationURL),
+						"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redirect_uri=%s&nonce=%s&state=%s&client_id=%s",
+						authorization_endpoint.c_str(),
+						url_encode(redirectURL).c_str(),
+						nonce.c_str(),
+						state_hex,
+						client_id.c_str());
+					info.authenticationURL = std::string(url);
+				} else if (info.version == 1) {
+					info.ssoClientID = client_id;
+					info.issuerURL = issuer;
+					info.ssoNonce = nonce;
+					info.ssoState = std::string(state_hex) + "_" +networkId;
+					info.centralAuthURL = redirectURL;
+					fprintf(
+						stderr,
+						"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s\n",
+						info.ssoClientID.c_str(),
+						info.issuerURL.c_str(),
+						info.ssoNonce.c_str(),
+						info.ssoState.c_str(),
+						info.centralAuthURL.c_str());
+				}
 			}  else {
 				fprintf(stderr, "client_id: %s\nauthorization_endpoint: %s\n", client_id.c_str(), authorization_endpoint.c_str());
 			}
@@ -432,7 +480,7 @@ std::string PostgreSQL::getSSOAuthURL(const nlohmann::json &member, const std::s
 		fprintf(stderr, "ERROR: Error updating member on load: %s\n", e.what());
 	}
 
-	return std::string(authenticationURL);
+	return info; //std::string(authenticationURL);
 }
 
 void PostgreSQL::initializeNetworks()
@@ -1025,23 +1073,47 @@ void PostgreSQL::commitThread()
 			fprintf(stderr, "not an object\n");
 			continue;
 		}
+
+		std::shared_ptr<PostgresConnection> c;
+		try {
+			c = _pool->borrow();
+		} catch (std::exception &e) {
+			fprintf(stderr, "ERROR: %s\n", e.what());
+			continue;
+		}
+
+		if (!c) {
+			fprintf(stderr, "Error getting database connection\n");
+			continue;
+		}
 		
 		try {
-			nlohmann::json *config = &(qitem.first);
-			const std::string objtype = (*config)["objtype"];
+			nlohmann::json &config = (qitem.first);
+			const std::string objtype = config["objtype"];
 			if (objtype == "member") {
 				// fprintf(stderr, "%s: commitThread: member\n", _myAddressStr.c_str());
+				std::string memberId;
+				std::string networkId;
 				try {
-					auto c = _pool->borrow();
 					pqxx::work w(*c->c);
 
-					std::string memberId = (*config)["id"];
-					std::string networkId = (*config)["nwid"];
+					memberId = config["id"];
+					networkId = config["nwid"];
+					
 					std::string target = "NULL";
-					if (!(*config)["remoteTraceTarget"].is_null()) {
-						target = (*config)["remoteTraceTarget"];
+					if (!config["remoteTraceTarget"].is_null()) {
+						target = config["remoteTraceTarget"];
 					}
 					
+					pqxx::row nwrow = w.exec_params1("SELECT COUNT(id) FROM ztc_network WHERE id = $1", networkId);
+					int nwcount = nwrow[0].as<int>();
+
+					if (nwcount != 1) {
+						fprintf(stderr, "network %s does not exist.  skipping member upsert\n", networkId.c_str());
+						w.abort();
+						_pool->unborrow(c);
+						continue;
+					}
 
 					pqxx::result res = w.exec_params0(
 						"INSERT INTO ztc_member (id, network_id, active_bridge, authorized, capabilities, "
@@ -1058,21 +1130,21 @@ void PostgreSQL::commitThread()
 						"v_minor = EXCLUDED.v_minor, v_rev = EXCLUDED.v_rev, v_proto = EXCLUDED.v_proto",
 						memberId,
 						networkId,
-						(bool)(*config)["activeBridge"],
-						(bool)(*config)["authorized"],
-						OSUtils::jsonDump((*config)["capabilities"], -1),
-						OSUtils::jsonString((*config)["identity"], ""),
-						(uint64_t)(*config)["lastAuthorizedTime"],
-						(uint64_t)(*config)["lastDeauthorizedTime"],
-						(bool)(*config)["noAutoAssignIps"],
-						(int)(*config)["remoteTraceLevel"],
+						(bool)config["activeBridge"],
+						(bool)config["authorized"],
+						OSUtils::jsonDump(config["capabilities"], -1),
+						OSUtils::jsonString(config["identity"], ""),
+						(uint64_t)config["lastAuthorizedTime"],
+						(uint64_t)config["lastDeauthorizedTime"],
+						(bool)config["noAutoAssignIps"],
+						(int)config["remoteTraceLevel"],
 						target,
-						(uint64_t)(*config)["revision"],
-						OSUtils::jsonDump((*config)["tags"], -1),
-						(int)(*config)["vMajor"],
-						(int)(*config)["vMinor"],
-						(int)(*config)["vRev"],
-						(int)(*config)["vProto"]);
+						(uint64_t)config["revision"],
+						OSUtils::jsonDump(config["tags"], -1),
+						(int)config["vMajor"],
+						(int)config["vMinor"],
+						(int)config["vRev"],
+						(int)config["vProto"]);
 
 
 					res = w.exec_params0("DELETE FROM ztc_member_ip_assignment WHERE member_id = $1 AND network_id = $2",
@@ -1080,7 +1152,7 @@ void PostgreSQL::commitThread()
 
 					std::vector<std::string> assignments;
 					bool ipAssignError = false;
-					for (auto i = (*config)["ipAssignments"].begin(); i != (*config)["ipAssignments"].end(); ++i) {
+					for (auto i = config["ipAssignments"].begin(); i != config["ipAssignments"].end(); ++i) {
 						std::string addr = *i;
 
 						if (std::find(assignments.begin(), assignments.end(), addr) != assignments.end()) {
@@ -1095,21 +1167,21 @@ void PostgreSQL::commitThread()
 					}
 					if (ipAssignError) {
 						fprintf(stderr, "%s: ipAssignError\n", _myAddressStr.c_str());
-						delete config;
-						config = nullptr;
+						w.abort();
+						_pool->unborrow(c);
+						c.reset();
 						continue;
 					}
 
 					w.commit();
-					_pool->unborrow(c);
 
-					const uint64_t nwidInt = OSUtils::jsonIntHex((*config)["nwid"], 0ULL);
-					const uint64_t memberidInt = OSUtils::jsonIntHex((*config)["id"], 0ULL);
+					const uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
+					const uint64_t memberidInt = OSUtils::jsonIntHex(config["id"], 0ULL);
 					if (nwidInt && memberidInt) {
 						nlohmann::json nwOrig;
 						nlohmann::json memOrig;
 
-						nlohmann::json memNew(*config);
+						nlohmann::json memNew(config);
 
 						get(nwidInt, nwOrig, memberidInt, memOrig);
 
@@ -1117,24 +1189,22 @@ void PostgreSQL::commitThread()
 					} else {
 						fprintf(stderr, "%s: Can't notify of change.  Error parsing nwid or memberid: %llu-%llu\n", _myAddressStr.c_str(), (unsigned long long)nwidInt, (unsigned long long)memberidInt);
 					}
-
 				} catch (std::exception &e) {
-					fprintf(stderr, "%s ERROR: Error updating member: %s\n", _myAddressStr.c_str(), e.what());
+					fprintf(stderr, "%s ERROR: Error updating member %s-%s: %s\n", _myAddressStr.c_str(), networkId.c_str(), memberId.c_str(), e.what());
 				}
 			} else if (objtype == "network") {
 				try {
 					// fprintf(stderr, "%s: commitThread: network\n", _myAddressStr.c_str());
-					auto c = _pool->borrow();
 					pqxx::work w(*c->c);
 
-					std::string id = (*config)["id"];
+					std::string id = config["id"];
 					std::string remoteTraceTarget = "";
-					if(!(*config)["remoteTraceTarget"].is_null()) {
-						remoteTraceTarget = (*config)["remoteTraceTarget"];
+					if(!config["remoteTraceTarget"].is_null()) {
+						remoteTraceTarget = config["remoteTraceTarget"];
 					}
 					std::string rulesSource = "";
-					if ((*config)["rulesSource"].is_string()) {
-						rulesSource = (*config)["rulesSource"];
+					if (config["rulesSource"].is_string()) {
+						rulesSource = config["rulesSource"];
 					}
 
 					// This ugly query exists because when we want to mirror networks to/from
@@ -1163,25 +1233,25 @@ void PostgreSQL::commitThread()
 						"sso_enabled = EXCLUDED.sso_enabled",
 						id,
 						_myAddressStr,
-						OSUtils::jsonDump((*config)["capabilitles"], -1),
-						(bool)(*config)["enableBroadcast"],
+						OSUtils::jsonDump(config["capabilitles"], -1),
+						(bool)config["enableBroadcast"],
 						OSUtils::now(),
-						(int)(*config)["mtu"],
-						(int)(*config)["multicastLimit"],
-						OSUtils::jsonString((*config)["name"],""),
-						(bool)(*config)["private"],
-						(int)(*config)["remoteTraceLevel"],
+						(int)config["mtu"],
+						(int)config["multicastLimit"],
+						OSUtils::jsonString(config["name"],""),
+						(bool)config["private"],
+						(int)config["remoteTraceLevel"],
 						remoteTraceTarget,
-						OSUtils::jsonDump((*config)["rules"], -1),
+						OSUtils::jsonDump(config["rules"], -1),
 						rulesSource,
-						OSUtils::jsonDump((*config)["tags"], -1),
-						OSUtils::jsonDump((*config)["v4AssignMode"],-1),
-						OSUtils::jsonDump((*config)["v6AssignMode"], -1),
-						OSUtils::jsonBool((*config)["ssoEnabled"], false));
+						OSUtils::jsonDump(config["tags"], -1),
+						OSUtils::jsonDump(config["v4AssignMode"],-1),
+						OSUtils::jsonDump(config["v6AssignMode"], -1),
+						OSUtils::jsonBool(config["ssoEnabled"], false));
 
 					res = w.exec_params0("DELETE FROM ztc_network_assignment_pool WHERE network_id = $1", 0);
 
-					auto pool = (*config)["ipAssignmentPools"];
+					auto pool = config["ipAssignmentPools"];
 					bool err = false;
 					for (auto i = pool.begin(); i != pool.end(); ++i) {
 						std::string start = (*i)["ipRangeStart"];
@@ -1194,7 +1264,7 @@ void PostgreSQL::commitThread()
 
 					res = w.exec_params0("DELETE FROM ztc_network_route WHERE network_id = $1", id);
 
-					auto routes = (*config)["routes"];
+					auto routes = config["routes"];
 					err = false;
 					for (auto i = routes.begin(); i != routes.end(); ++i) {
 						std::string t = (*i)["target"];
@@ -1221,12 +1291,10 @@ void PostgreSQL::commitThread()
 						fprintf(stderr, "%s: route add error\n", _myAddressStr.c_str());
 						w.abort();
 						_pool->unborrow(c);
-						delete config;
-						config = nullptr;
 						continue;
 					}
 
-					auto dns = (*config)["dns"];
+					auto dns = config["dns"];
 					std::string domain = dns["domain"];
 					std::stringstream servers;
 					servers << "{";
@@ -1244,12 +1312,11 @@ void PostgreSQL::commitThread()
 						id, domain, s);
 
 					w.commit();
-					_pool->unborrow(c);
 
-					const uint64_t nwidInt = OSUtils::jsonIntHex((*config)["nwid"], 0ULL);
+					const uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
 					if (nwidInt) {
 						nlohmann::json nwOrig;
-						nlohmann::json nwNew(*config);
+						nlohmann::json nwNew(config);
 
 						get(nwidInt, nwOrig);
 
@@ -1257,23 +1324,20 @@ void PostgreSQL::commitThread()
 					} else {
 						fprintf(stderr, "%s: Can't notify network changed: %llu\n", _myAddressStr.c_str(), (unsigned long long)nwidInt);
 					}
-
 				} catch (std::exception &e) {
 					fprintf(stderr, "%s ERROR: Error updating network: %s\n", _myAddressStr.c_str(), e.what());
 				}
 			} else if (objtype == "_delete_network") {
 				// fprintf(stderr, "%s: commitThread: delete network\n", _myAddressStr.c_str());
 				try {
-					auto c = _pool->borrow();
 					pqxx::work w(*c->c);
 
-					std::string networkId = (*config)["nwid"];
+					std::string networkId = config["nwid"];
 
 					pqxx::result res = w.exec_params0("UPDATE ztc_network SET deleted = true WHERE id = $1",
 						networkId);
 
 					w.commit();
-					_pool->unborrow(c);
 				} catch (std::exception &e) {
 					fprintf(stderr, "%s ERROR: Error deleting network: %s\n", _myAddressStr.c_str(), e.what());
 				}
@@ -1281,18 +1345,16 @@ void PostgreSQL::commitThread()
 			} else if (objtype == "_delete_member") {
 				// fprintf(stderr, "%s commitThread: delete member\n", _myAddressStr.c_str());
 				try {
-					auto c = _pool->borrow();
 					pqxx::work w(*c->c);
 
-					std::string memberId = (*config)["id"];
-					std::string networkId = (*config)["nwid"];
+					std::string memberId = config["id"];
+					std::string networkId = config["nwid"];
 
 					pqxx::result res = w.exec_params0(
 						"UPDATE ztc_member SET hidden = true, deleted = true WHERE id = $1 AND network_id = $2",
 						memberId, networkId);
 
 					w.commit();
-					_pool->unborrow(c);
 				} catch (std::exception &e) {
 					fprintf(stderr, "%s ERROR: Error deleting member: %s\n", _myAddressStr.c_str(), e.what());
 				}
@@ -1302,6 +1364,8 @@ void PostgreSQL::commitThread()
 		} catch (std::exception &e) {
 			fprintf(stderr, "%s ERROR: Error getting objtype: %s\n", _myAddressStr.c_str(), e.what());
 		}
+		_pool->unborrow(c);
+		c.reset();
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
@@ -1321,6 +1385,7 @@ void PostgreSQL::onlineNotification_Postgres()
 	nlohmann::json jtmp1, jtmp2;
 	while (_run == 1) {
 		auto c = _pool->borrow();
+		auto c2 = _pool->borrow();
 		try {
 			fprintf(stderr, "%s onlineNotification_Postgres\n", _myAddressStr.c_str());
 			std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > lastOnline;
@@ -1330,15 +1395,16 @@ void PostgreSQL::onlineNotification_Postgres()
 			}
 			
 			pqxx::work w(*c->c);
+			pqxx::work w2(*c2->c);
 
-			// using pqxx::stream_to would be a really nice alternative here, but
-			// unfortunately it doesn't support upserts.
-			// fprintf(stderr, "online notification tick\n");
-			std::stringstream memberUpdate;
-			memberUpdate << "INSERT INTO ztc_member_status (network_id, member_id, address, last_updated) VALUES ";
+			fprintf(stderr, "online notification tick\n");
+			
 			bool firstRun = true;
 			bool memberAdded = false;
 			int updateCount = 0;
+
+			pqxx::pipeline pipe(w);
+
 			for (auto i=lastOnline.begin(); i != lastOnline.end(); ++i) {
 				updateCount += 1;
 				uint64_t nwid_i = i->first.first;
@@ -1355,16 +1421,10 @@ void PostgreSQL::onlineNotification_Postgres()
 				std::string networkId(nwidTmp);
 				std::string memberId(memTmp);
 
-				const char *qvals[2] = {
-					networkId.c_str(),
-					memberId.c_str()
-				};
-
 				try {
-					pqxx::row r = w.exec_params1("SELECT id, network_id FROM ztc_member WHERE network_id = $1 AND id = $2",
+					pqxx::row r = w2.exec_params1("SELECT id, network_id FROM ztc_member WHERE network_id = $1 AND id = $2",
 						networkId, memberId);		
 				} catch (pqxx::unexpected_rows &e) {
-					// fprintf(stderr, "Member count failed: %s\n", e.what());
 					continue;
 				}
 
@@ -1372,32 +1432,30 @@ void PostgreSQL::onlineNotification_Postgres()
 				std::string ipAddr = i->second.second.toIpString(ipTmp);
 				std::string timestamp = std::to_string(ts);
 
-				if (firstRun) {
-					firstRun = false;
-				} else {
-					memberUpdate << ", ";
-				}
-
-				memberUpdate << "('" << networkId << "', '" << memberId << "', ";
+				std::stringstream memberUpdate;
+				memberUpdate << "INSERT INTO ztc_member_status (network_id, member_id, address, last_updated) VALUES "
+					<< "('" << networkId << "', '" << memberId << "', ";
 				if (ipAddr.empty()) {
 					memberUpdate << "NULL, ";
 				} else {
 					memberUpdate << "'" << ipAddr << "', ";
 				}
-				memberUpdate << "TO_TIMESTAMP(" << timestamp << "::double precision/1000))";
-				memberAdded = true;
-			}
-			memberUpdate << " ON CONFLICT (network_id, member_id) DO UPDATE SET address = EXCLUDED.address, last_updated = EXCLUDED.last_updated;";
+				memberUpdate << "TO_TIMESTAMP(" << timestamp << "::double precision/1000)) "
+					<< " ON CONFLICT (network_id, member_id) DO UPDATE SET address = EXCLUDED.address, last_updated = EXCLUDED.last_updated";
 
-			if (memberAdded) {
-				//fprintf(stderr, "%s\n", memberUpdate.str().c_str());
-				pqxx::result res = w.exec0(memberUpdate.str());
-				w.commit();
+				pipe.insert(memberUpdate.str());
 			}
+			while(!pipe.empty()) {
+				pipe.retrieve();
+			}
+
+			pipe.complete();
+			w.commit();
 			fprintf(stderr, "%s: Updated online status of %d members\n", _myAddressStr.c_str(), updateCount);
 		} catch (std::exception &e) {
 			fprintf(stderr, "%s: error in onlinenotification thread: %s\n", _myAddressStr.c_str(), e.what());
 		} 
+		_pool->unborrow(c2);
 		_pool->unborrow(c);
 
 		ConnectionPoolStats stats = _pool->get_stats();
