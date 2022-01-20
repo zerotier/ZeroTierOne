@@ -48,6 +48,7 @@ struct Inner {
     access_token: Option<AccessToken>,
     refresh_token: Option<RefreshToken>,
     exp_time: u64,
+    kick: bool,
 
     url: Option<Url>,
     csrf_token: Option<CsrfToken>,
@@ -109,6 +110,7 @@ impl ZeroIDC {
                 access_token: None,
                 refresh_token: None,
                 exp_time: 0,
+                kick: false,
 
                 url: None,
                 csrf_token: None,
@@ -138,6 +140,11 @@ impl ZeroIDC {
         Ok(idc)
     }
 
+    fn kick_refresh_thread(&mut self) {
+        let local = Arc::clone(&self.inner);
+        (*local.lock().unwrap()).kick = true;
+    }
+
     fn start(&mut self) {
         let local = Arc::clone(&self.inner);
 
@@ -160,7 +167,15 @@ impl ZeroIDC {
                     }
                     let refresh_token = (*inner_local.lock().unwrap()).refresh_token.clone();
                     if let Some(refresh_token) =  refresh_token {
-                        if now >= (exp - Duration::from_secs(30)) {
+                        let should_kick = (*inner_local.lock().unwrap()).kick;
+                        if now >= (exp - Duration::from_secs(30)) || should_kick {
+                            if should_kick {
+                                #[cfg(debug_assertions)] {
+                                    println!("refresh thread kicked");
+                                }
+                                (*inner_local.lock().unwrap()).kick = false;
+                            }
+
                             let token_response = (*inner_local.lock().unwrap()).oidc_client.as_ref().map(|c| {
                                 let res = c.exchange_refresh_token(&refresh_token)
                                     .request(http_client);
@@ -356,6 +371,11 @@ impl ZeroIDC {
     pub fn set_nonce_and_csrf(&mut self, csrf_token: String, nonce: String) {
         let local = Arc::clone(&self.inner);
         (*local.lock().expect("can't lock inner")).as_opt().map(|i| {
+            if i.running {
+                println!("refresh thread running. not setting new nonce or csrf");
+                return
+            }
+
             let need_verifier = match i.pkce_verifier {
                 None => true,
                 _ => false,

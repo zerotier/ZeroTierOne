@@ -285,6 +285,11 @@ public:
 			const char* url = zeroidc::zeroidc_get_auth_url(_idc);
 			memcpy(_config.authenticationURL, url, strlen(url));
 			_config.authenticationURL[strlen(url)] = 0;
+
+			if (zeroidc::zeroidc_is_running(_idc) && nwc->status == ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED) {
+				// TODO: kick the refresh thread
+				zeroidc::zeroidc_kick_refresh_thread(_idc);
+			}
 		}
 	}
 
