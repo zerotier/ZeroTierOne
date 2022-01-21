@@ -42,9 +42,9 @@ else
 endif
 
 ifeq ($(ZT_DEBUG),1)
-	LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl
+	LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
 else
-	LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl
+	LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
 endif
 
 # Use bundled http-parser since distribution versions are NOT API-stable or compatible!
@@ -372,7 +372,7 @@ debug:	FORCE
 	make ZT_DEBUG=1 selftest
 
 zeroidc:	FORCE
-	cd zeroidc && cargo build $(RUSTFLAGS)
+	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build -j1 $(RUSTFLAGS)
 
 # Note: keep the symlinks in /var/lib/zerotier-one to the binaries since these
 # provide backward compatibility with old releases where the binaries actually
