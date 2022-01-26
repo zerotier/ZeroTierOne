@@ -488,10 +488,10 @@ int32_t Bond::generateQoSPacket(int pathIdx, int64_t now, char* qosBuffer)
 
 bool Bond::assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now)
 {
-        if (! _numBondedPaths) {
-                log("unable to assign flow %x (bond has no links)\n", flow->id);
-                return false;
-        }
+	if (! _numBondedPaths) {
+		log("unable to assign flow %x (bond has no links)\n", flow->id);
+		return false;
+	}
 	unsigned int idx = ZT_MAX_PEER_NETWORK_PATHS;
 	if (_policy == ZT_BOND_POLICY_BALANCE_XOR) {
 		idx = abs((int)(flow->id % (_numBondedPaths)));
