@@ -99,21 +99,21 @@ SharedPtr<Bond> Bond::createTransportTriggeredBond(const RuntimeEnvironment* ren
 		if (! _policyTemplateAssignments.count(identity)) {
 			if (_defaultPolicy) {
 				bond = new Bond(renv, _defaultPolicy, peer);
-				bond->log("new default bond");
+				bond->debug("new default bond");
 			}
 			if (! _defaultPolicy && _defaultPolicyStr.length()) {
 				bond = new Bond(renv, _bondPolicyTemplates[_defaultPolicyStr].ptr(), peer);
-				bond->log("new default custom bond (based on %s)", bond->getPolicyStrByCode(bond->policy()).c_str());
+				bond->debug("new default custom bond (based on %s)", bond->getPolicyStrByCode(bond->policy()).c_str());
 			}
 		}
 		else {
 			if (! _bondPolicyTemplates[_policyTemplateAssignments[identity]]) {
 				bond = new Bond(renv, _defaultPolicy, peer);
-				bond->log("peer-specific bond, was specified as %s but the bond definition was not found, using default %s", _policyTemplateAssignments[identity].c_str(), getPolicyStrByCode(_defaultPolicy).c_str());
+				bond->debug("peer-specific bond, was specified as %s but the bond definition was not found, using default %s", _policyTemplateAssignments[identity].c_str(), getPolicyStrByCode(_defaultPolicy).c_str());
 			}
 			else {
 				bond = new Bond(renv, _bondPolicyTemplates[_policyTemplateAssignments[identity]].ptr(), peer);
-				bond->log("new default bond");
+				bond->debug("new default bond");
 			}
 		}
 	}
@@ -453,7 +453,7 @@ void Bond::receivedQoS(const SharedPtr<Path>& path, int64_t now, int count, uint
 	if (pathIdx == ZT_MAX_PEER_NETWORK_PATHS) {
 		return;
 	}
-	// log("received QoS packet (sampling %d frames) via %s", count, pathToStr(path).c_str());
+	// debug("received QoS packet (sampling %d frames) via %s", count, pathToStr(path).c_str());
 	// Look up egress times and compute latency values for each record
 	std::map<uint64_t, uint64_t>::iterator it;
 	for (int j = 0; j < count; j++) {
@@ -489,7 +489,7 @@ int32_t Bond::generateQoSPacket(int pathIdx, int64_t now, char* qosBuffer)
 bool Bond::assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now)
 {
 	if (! _numBondedPaths) {
-		log("unable to assign flow %x (bond has no links)\n", flow->id);
+		debug("unable to assign flow %x (bond has no links)\n", flow->id);
 		return false;
 	}
 	unsigned int idx = ZT_MAX_PEER_NETWORK_PATHS;
@@ -530,29 +530,29 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now)
 			++(_paths[idx].assignedFlowCount);
 		}
 		else {
-			log("unable to assign out-flow %x (unknown reason)", flow->id);
+			debug("unable to assign out-flow %x (unknown reason)", flow->id);
 			return false;
 		}
 	}
 	if (_policy == ZT_BOND_POLICY_ACTIVE_BACKUP) {
 		if (_abPathIdx == ZT_MAX_PEER_NETWORK_PATHS) {
-			log("unable to assign out-flow %x (no active backup link)", flow->id);
+			debug("unable to assign out-flow %x (no active backup link)", flow->id);
 		}
 		flow->assignPath(_abPathIdx, now);
 	}
 	SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[flow->assignedPath].p->localSocket());
-	log("assign out-flow %04x to link %s (%lu / %lu flows)", flow->id, pathToStr(_paths[flow->assignedPath].p).c_str(), _paths[flow->assignedPath].assignedFlowCount, (unsigned long)_flows.size());
+	debug("assign out-flow %04x to link %s (%lu / %lu flows)", flow->id, pathToStr(_paths[flow->assignedPath].p).c_str(), _paths[flow->assignedPath].assignedFlowCount, (unsigned long)_flows.size());
 	return true;
 }
 
 SharedPtr<Bond::Flow> Bond::createFlow(int pathIdx, int32_t flowId, unsigned char entropy, int64_t now)
 {
 	if (! _numBondedPaths) {
-		log("unable to assign flow %x (bond has no links)\n", flowId);
+		debug("unable to assign flow %x (bond has no links)\n", flowId);
 		return SharedPtr<Flow>();
 	}
 	if (_flows.size() >= ZT_FLOW_MAX_COUNT) {
-		log("forget oldest flow (max flows reached: %d)\n", ZT_FLOW_MAX_COUNT);
+		debug("forget oldest flow (max flows reached: %d)\n", ZT_FLOW_MAX_COUNT);
 		forgetFlowsWhenNecessary(0, true, now);
 	}
 	SharedPtr<Flow> flow = new Flow(flowId, now);
@@ -565,7 +565,7 @@ SharedPtr<Bond::Flow> Bond::createFlow(int pathIdx, int32_t flowId, unsigned cha
 	if (pathIdx != ZT_MAX_PEER_NETWORK_PATHS) {
 		flow->assignPath(pathIdx, now);
 		_paths[pathIdx].assignedFlowCount++;
-		log("assign in-flow %x to link %s (%lu / %lu)", flow->id, pathToStr(_paths[pathIdx].p).c_str(), _paths[pathIdx].assignedFlowCount, (unsigned long)_flows.size());
+		debug("assign in-flow %x to link %s (%lu / %lu)", flow->id, pathToStr(_paths[pathIdx].p).c_str(), _paths[pathIdx].assignedFlowCount, (unsigned long)_flows.size());
 	}
 	/**
 	 * Add a flow when no path was provided. This means that it is an outgoing packet
@@ -585,7 +585,7 @@ void Bond::forgetFlowsWhenNecessary(uint64_t age, bool oldest, int64_t now)
 	if (age) {	 // Remove by specific age
 		while (it != _flows.end()) {
 			if (it->second->age(now) > age) {
-				log("forget flow %x (age %llu) (%lu / %lu)", it->first, (unsigned long long)it->second->age(now), _paths[it->second->assignedPath].assignedFlowCount, (unsigned long)(_flows.size() - 1));
+				debug("forget flow %x (age %llu) (%lu / %lu)", it->first, (unsigned long long)it->second->age(now), _paths[it->second->assignedPath].assignedFlowCount, (unsigned long)(_flows.size() - 1));
 				_paths[it->second->assignedPath].assignedFlowCount--;
 				it = _flows.erase(it);
 			}
@@ -604,7 +604,7 @@ void Bond::forgetFlowsWhenNecessary(uint64_t age, bool oldest, int64_t now)
 			++it;
 		}
 		if (oldestFlow != _flows.end()) {
-			log("forget oldest flow %x (age %llu) (total flows: %lu)", oldestFlow->first, (unsigned long long)oldestFlow->second->age(now), (unsigned long)(_flows.size() - 1));
+			debug("forget oldest flow %x (age %llu) (total flows: %lu)", oldestFlow->first, (unsigned long long)oldestFlow->second->age(now), (unsigned long)(_flows.size() - 1));
 			_paths[oldestFlow->second->assignedPath].assignedFlowCount--;
 			_flows.erase(oldestFlow);
 		}
@@ -629,20 +629,20 @@ void Bond::processIncomingPathNegotiationRequest(uint64_t now, SharedPtr<Path>& 
 	SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[pathIdx].p->localSocket());
 	if (remoteUtility > _localUtility) {
 		_paths[pathIdx].p->address().toString(pathStr);
-		log("peer suggests alternate link %s/%s, remote utility (%d) greater than local utility (%d), switching to suggested link\n", link->ifname().c_str(), pathStr, remoteUtility, _localUtility);
+		debug("peer suggests alternate link %s/%s, remote utility (%d) greater than local utility (%d), switching to suggested link\n", link->ifname().c_str(), pathStr, remoteUtility, _localUtility);
 		_negotiatedPathIdx = pathIdx;
 	}
 	if (remoteUtility < _localUtility) {
-		log("peer suggests alternate link %s/%s, remote utility (%d) less than local utility (%d), not switching\n", link->ifname().c_str(), pathStr, remoteUtility, _localUtility);
+		debug("peer suggests alternate link %s/%s, remote utility (%d) less than local utility (%d), not switching\n", link->ifname().c_str(), pathStr, remoteUtility, _localUtility);
 	}
 	if (remoteUtility == _localUtility) {
-		log("peer suggests alternate link %s/%s, remote utility (%d) equal to local utility (%d)\n", link->ifname().c_str(), pathStr, remoteUtility, _localUtility);
+		debug("peer suggests alternate link %s/%s, remote utility (%d) equal to local utility (%d)\n", link->ifname().c_str(), pathStr, remoteUtility, _localUtility);
 		if (_peer->_id.address().toInt() > RR->node->identity().address().toInt()) {
-			log("agree with peer to use alternate link %s/%s\n", link->ifname().c_str(), pathStr);
+			debug("agree with peer to use alternate link %s/%s\n", link->ifname().c_str(), pathStr);
 			_negotiatedPathIdx = pathIdx;
 		}
 		else {
-			log("ignore petition from peer to use alternate link %s/%s\n", link->ifname().c_str(), pathStr);
+			debug("ignore petition from peer to use alternate link %s/%s\n", link->ifname().c_str(), pathStr);
 		}
 	}
 }
@@ -704,7 +704,7 @@ void Bond::pathNegotiationCheck(void* tPtr, int64_t now)
 
 void Bond::sendPATH_NEGOTIATION_REQUEST(void* tPtr, int pathIdx)
 {
-	log("send link negotiation request to peer via link %s, local utility is %d", pathToStr(_paths[pathIdx].p).c_str(), _localUtility);
+	debug("send link negotiation request to peer via link %s, local utility is %d", pathToStr(_paths[pathIdx].p).c_str(), _localUtility);
 	if (_abLinkSelectMethod != ZT_BOND_RESELECTION_POLICY_OPTIMIZE) {
 		return;
 	}
@@ -735,7 +735,7 @@ void Bond::sendQOS_MEASUREMENT(void* tPtr, int pathIdx, int64_t localSocket, con
 		_paths[pathIdx].packetsReceivedSinceLastQoS = 0;
 		_paths[pathIdx].lastQoSMeasurement = now;
 	}
-	// log("send QOS via link %s (len=%d)", pathToStr(_paths[pathIdx].p).c_str(), len);
+	// debug("send QOS via link %s (len=%d)", pathToStr(_paths[pathIdx].p).c_str(), len);
 }
 
 void Bond::processBackgroundBondTasks(void* tPtr, int64_t now)
@@ -762,9 +762,9 @@ void Bond::processBackgroundBondTasks(void* tPtr, int64_t now)
 					outp.armor(_peer->key(), true, _peer->aesKeysIfSupported());
 					RR->node->expectReplyTo(outp.packetId());
 					RR->node->putPacket(tPtr, _paths[i].p->localSocket(), _paths[i].p->address(), outp.data(), outp.size());
-					 _paths[i].p->_lastOut = now;
+					_paths[i].p->_lastOut = now;
 					_overheadBytes += outp.size();
-					log("sent ECHO via link %s", pathToStr(_paths[i].p).c_str());
+					debug("sent ECHO via link %s", pathToStr(_paths[i].p).c_str());
 				}
 			}
 			// QOS
@@ -833,7 +833,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 		//	currEligibility = false;
 		//}
 		currEligibility = _paths[i].allowed() && ((acceptableAge && satisfiedUpDelay) || inTrial);
-		// log("[%d] allowed=%d, acceptableAge=%d, satisfiedUpDelay=%d, inTrial=%d ==== %d", i, _paths[i].allowed(), acceptableAge, satisfiedUpDelay, inTrial, currEligibility);
+		// debug("[%d] allowed=%d, acceptableAge=%d, satisfiedUpDelay=%d, inTrial=%d ==== %d", i, _paths[i].allowed(), acceptableAge, satisfiedUpDelay, inTrial, currEligibility);
 
 		/**
 		 * Note eligibility state change (if any) and take appropriate action
@@ -853,7 +853,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 				_paths[i].adjustRefractoryPeriod(now, _defaultPathRefractoryPeriod, ! currEligibility);
 				if (_paths[i].bonded) {
 					if (_allowFlowHashing) {
-						log("link %s was bonded, flow reallocation will occur soon", pathToStr(_paths[i].p).c_str());
+						debug("link %s was bonded, flow reallocation will occur soon", pathToStr(_paths[i].p).c_str());
 						rebuildBond = true;
 						_paths[i].shouldReallocateFlows = _paths[i].bonded;
 					}
@@ -909,7 +909,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 			rebuildBond = true;
 		}
 		if (rebuildBond) {
-			log("rebuilding bond");
+			debug("rebuilding bond");
 			int updatedBondedPathCount = 0;
 			// Build map associating paths with local physical links. Will be selected from in next step
 			std::map<SharedPtr<Link>, std::vector<int> > linkMap;
@@ -934,7 +934,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 						}
 						addPathToBond(idx, updatedBondedPathCount);
 						++updatedBondedPathCount;
-						log("add %s (no user addr preference)", pathToStr(_paths[idx].p).c_str());
+						debug("add %s (no user addr preference)", pathToStr(_paths[idx].p).c_str());
 					}
 				}
 				// If the user prefers to only use one address type (IPv4 or IPv6)
@@ -945,12 +945,12 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 							continue;
 						}
 						if (! _paths[idx].allowed()) {
-							log("did not add %s (user addr preference %d)", pathToStr(_paths[idx].p).c_str(), ipvPref);
+							debug("did not add %s (user addr preference %d)", pathToStr(_paths[idx].p).c_str(), ipvPref);
 							continue;
 						}
 						addPathToBond(idx, updatedBondedPathCount);
 						++updatedBondedPathCount;
-						log("add path %s (user addr preference %d)", pathToStr(_paths[idx].p).c_str(), ipvPref);
+						debug("add path %s (user addr preference %d)", pathToStr(_paths[idx].p).c_str(), ipvPref);
 					}
 				}
 				// If the users prefers one address type to another, try to find at least
@@ -966,13 +966,13 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 						if (_paths[idx].preferred()) {
 							addPathToBond(idx, updatedBondedPathCount);
 							++updatedBondedPathCount;
-							log("add %s (user addr preference %d)", pathToStr(_paths[idx].p).c_str(), ipvPref);
+							debug("add %s (user addr preference %d)", pathToStr(_paths[idx].p).c_str(), ipvPref);
 							foundPreferredPath = true;
 						}
 					}
 					// Unable to find a path that matches user preference, settle for another address type
 					if (! foundPreferredPath) {
-						log("did not find first-choice path type on link %s (user preference %d)", link->ifname().c_str(), ipvPref);
+						debug("did not find first-choice path type on link %s (user preference %d)", link->ifname().c_str(), ipvPref);
 						for (int j = 0; j < it->second.size(); j++) {
 							int idx = it->second.at(j);
 							if (! _paths[idx].p || ! _paths[idx].eligible) {
@@ -980,7 +980,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 							}
 							addPathToBond(idx, updatedBondedPathCount);
 							++updatedBondedPathCount;
-							log("add %s (user addr preference %d)", pathToStr(_paths[idx].p).c_str(), ipvPref);
+							debug("add %s (user addr preference %d)", pathToStr(_paths[idx].p).c_str(), ipvPref);
 							foundPreferredPath = true;
 						}
 					}
@@ -1234,7 +1234,7 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 		 * simply find the next eligible path.
 		 */
 		if (! userHasSpecifiedLinks()) {
-			log("no user-specified links");
+			debug("no user-specified links");
 			for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 				if (_paths[i].p && _paths[i].eligible) {
 					SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i].p->localSocket());

@@ -1162,6 +1162,36 @@ class Bond {
 #endif
 	}
 
+	/**
+	 * Emit message to tracing system but with added timestamp and subsystem info
+	 *
+	 * TODO: Will be replaced when better logging facilities exist in Trace.hpp
+	 */
+	void debug(const char* fmt, ...)
+	{
+#ifdef ZT_DEBUG
+		time_t rawtime;
+		struct tm* timeinfo;
+		char timestamp[80];
+		time(&rawtime);
+		timeinfo = localtime(&rawtime);
+		strftime(timestamp, 80, "%F %T", timeinfo);
+#define MAX_BOND_MSG_LEN 1024
+		char traceMsg[MAX_BOND_MSG_LEN];
+		char userMsg[MAX_BOND_MSG_LEN];
+		va_list args;
+		va_start(args, fmt);
+		if (vsnprintf(userMsg, sizeof(userMsg), fmt, args) < 0) {
+			fprintf(stderr, "Encountered format encoding error while writing to trace log\n");
+			return;
+		}
+		snprintf(traceMsg, MAX_BOND_MSG_LEN, "%s (%llx/%s) %s", timestamp, _peerId, _policyAlias.c_str(), userMsg);
+		va_end(args);
+		RR->t->bondStateMessage(NULL, traceMsg);
+#undef MAX_MSG_LEN
+#endif
+	}
+
   private:
 	struct NominatedPath {
 		NominatedPath()
