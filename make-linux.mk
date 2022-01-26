@@ -42,9 +42,9 @@ else
 endif
 
 ifeq ($(ZT_DEBUG),1)
-	LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl
+	LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
 else
-	LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl
+	LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
 endif
 
 # Use bundled http-parser since distribution versions are NOT API-stable or compatible!
