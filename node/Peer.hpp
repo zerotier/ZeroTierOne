@@ -391,7 +391,7 @@ public:
 			++_credentialsCutoffCount;
 		else _credentialsCutoffCount = 0;
 		_lastCredentialsReceived = now;
-		return (_credentialsCutoffCount < ZT_PEER_CREDEITIALS_CUTOFF_LIMIT);
+		return (_credentialsCutoffCount < ZT_PEER_CREDENTIALS_CUTOFF_LIMIT);
 	}
 
 	/**
