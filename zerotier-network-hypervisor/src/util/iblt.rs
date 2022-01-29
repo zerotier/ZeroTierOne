@@ -7,7 +7,8 @@
  */
 
 use std::io::{Read, Write};
-use std::mem::{transmute, zeroed};
+use std::mem::{size_of, transmute, zeroed};
+use std::ptr::write_bytes;
 
 use zerotier_core_crypto::varint;
 
@@ -61,20 +62,25 @@ impl<const HS: usize, const B: usize> IBLT<HS, B> {
 
     pub fn new() -> Self { unsafe { zeroed() } }
 
+    #[inline(always)]
+    pub fn clear(&mut self) {
+        unsafe { write_bytes((self as *mut Self).cast::<u8>(), 0, size_of::<Self>()) };
+    }
+
     pub fn read<R: Read>(&mut self, r: &mut R) -> std::io::Result<()> {
         let mut tmp = [0_u8; 8];
         let mut prev_c = 0_i64;
-        for i in 0..B {
-            let b = &mut self.map[i];
+        for b in self.map.iter_mut() {
             r.read_exact(&mut b.key_sum)?;
             r.read_exact(&mut tmp)?;
             b.check_hash_sum = u64::from_le_bytes(tmp);
-            let c = ((varint::read(r)?.0 as i64) + prev_c) as u64;
+            let mut c = varint::read(r)?.0 as i64;
             if (c & 1) == 0 {
-                b.count = c.wrapping_shr(1) as i64;
+                c = c.wrapping_shr(1);
             } else {
-                b.count = -(c.wrapping_shr(1) as i64);
+                c = -c.wrapping_shr(1);
             }
+            b.count = c + prev_c;
             prev_c = b.count;
         }
         Ok(())
@@ -82,17 +88,15 @@ impl<const HS: usize, const B: usize> IBLT<HS, B> {
 
     pub fn write<W: Write>(&self, w: &mut W) -> std::io::Result<()> {
         let mut prev_c = 0_i64;
-        for i in 0..B {
-            let b = &self.map[i];
+        for b in self.map.iter() {
             w.write_all(&b.key_sum)?;
             w.write_all(&b.check_hash_sum.to_le_bytes())?;
-            let c = b.count - prev_c;
+            let mut c = (b.count - prev_c).wrapping_shl(1);
             prev_c = b.count;
-            if c >= 0 {
-                varint::write(w, (c as u64).wrapping_shl(1))?;
-            } else {
-                varint::write(w, (-c as u64).wrapping_shl(1) | 1)?;
+            if c < 0 {
+                c = -c | 1;
             }
+            varint::write(w, c as u64)?;
         }
         Ok(())
     }
@@ -103,7 +107,7 @@ impl<const HS: usize, const B: usize> IBLT<HS, B> {
         let iteration_indices: [u64; 8] = unsafe { transmute(zerotier_core_crypto::hash::SHA512::hash(key)) };
         let check_hash = calc_check_hash::<HS>(&key);
         for i in 0..KEY_MAPPING_ITERATIONS {
-            let b = &mut self.map[(u64::from_le(iteration_indices[i]) as usize) % B];
+            let b = unsafe { self.map.get_unchecked_mut((u64::from_le(iteration_indices[i]) as usize) % B) };
             for x in 0..HS {
                 b.key_sum[x] ^= key[x];
             }
@@ -200,8 +204,27 @@ mod tests {
                     t.insert(&k);
                     e.insert(k);
                 }
+
+                let t_backup = t.clone();
+                assert!(t == t_backup);
+
                 let mut cnt = 0;
                 t.list(|k| {
+                    assert!(e.contains(k));
+                    cnt += 1;
+                });
+                assert_eq!(cnt, expected_cnt);
+
+                let mut test_buf: Vec<u8> = Vec::new();
+                assert!(t_backup.write(&mut test_buf).is_ok());
+                let mut t_restore: IBLT<48, 1152> = IBLT::new();
+                let mut test_read = test_buf.as_slice();
+                assert!(t_restore.read(&mut test_read).is_ok());
+
+                assert!(t_restore == t_backup);
+
+                cnt = 0;
+                t_restore.list(|k| {
                     assert!(e.contains(k));
                     cnt += 1;
                 });

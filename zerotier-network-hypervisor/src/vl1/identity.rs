@@ -362,18 +362,18 @@ impl Identity {
              */
             buf.append_u8(0x03)?;
             let p521_has_private = if include_private && secret.map_or(false, |s| s.p521.is_some()) {
-                buf.append_u16(Self::P521_PUBLIC_AND_PRIVATE_BUNDLE_SIZE + 1 + 2);
+                buf.append_u16(Self::P521_PUBLIC_AND_PRIVATE_BUNDLE_SIZE + 1 + 2)?;
                 true
             } else {
-                buf.append_u16(Self::P521_PUBLIC_ONLY_BUNDLE_SIZE + 1 + 2);
+                buf.append_u16(Self::P521_PUBLIC_ONLY_BUNDLE_SIZE + 1 + 2)?;
                 false
             };
 
             buf.append_u8(IDENTITY_ALGORITHM_EC_NIST_P521)?;
             if p521_has_private {
-                buf.append_u16(Self::P521_PUBLIC_AND_PRIVATE_BUNDLE_SIZE);
+                buf.append_u16(Self::P521_PUBLIC_AND_PRIVATE_BUNDLE_SIZE)?;
             } else {
-                buf.append_u16(Self::P521_PUBLIC_ONLY_BUNDLE_SIZE);
+                buf.append_u16(Self::P521_PUBLIC_ONLY_BUNDLE_SIZE)?;
             }
             buf.append_bytes_fixed(&p521.ecdh)?;
             buf.append_bytes_fixed(&p521.ecdsa)?;
