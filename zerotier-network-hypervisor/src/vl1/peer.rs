@@ -100,7 +100,7 @@ fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_siz
     (salsa, Poly1305::new(&poly1305_key).unwrap())
 }
 
-/// Attempt AEAD packet encryption and MAC validation.
+/// Attempt AEAD packet encryption and MAC validation. Returns message ID on success.
 fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8], header: &PacketHeader, fragments: &[Option<PacketBuffer>], payload: &mut Buffer<PACKET_SIZE_MAX>) -> Option<u64> {
     packet_frag0_payload_bytes.get(0).map_or(None, |verb| {
         match header.cipher() {
@@ -177,6 +177,7 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
 
 impl Peer {
     /// Create a new peer.
+    ///
     /// This only returns None if this_node_identity does not have its secrets or if some
     /// fatal error occurs performing key agreement between the two identities.
     pub(crate) fn new(this_node_identity: &Identity, id: Identity) -> Option<Peer> {
@@ -202,29 +203,45 @@ impl Peer {
         })
     }
 
-    /// Get the next message ID.
+    /// Get the next message ID for sending a message to this peer.
     #[inline(always)]
     pub(crate) fn next_message_id(&self) -> u64 { self.message_id_counter.fetch_add(1, Ordering::Relaxed) }
 
     /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
+    ///
     /// If the packet comes in multiple fragments, the fragments slice should contain all
     /// those fragments after the main packet header and first chunk.
-    pub(crate) fn receive<SI: SystemInterface, PH: VL1VirtualInterface>(&self, node: &Node, si: &SI, ph: &PH, time_ticks: i64, source_endpoint: &Endpoint, source_path: &Arc<Path>, header: &PacketHeader, packet: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
-        let _ = packet.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
+    pub(crate) fn receive<SI: SystemInterface, VI: VL1VirtualInterface>(
+        &self,
+        node: &Node,
+        si: &SI,
+        vi: &VI,
+        time_ticks: i64,
+        source_endpoint: &Endpoint,
+        source_path: &Arc<Path>,
+        header: &PacketHeader,
+        frag0: &Buffer<{ PACKET_SIZE_MAX }>,
+        fragments: &[Option<PacketBuffer>])
+    {
+        let _ = frag0.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_without_memzero() };
 
             let (forward_secrecy, mut message_id) = if let Some(ephemeral_secret) = self.ephemeral_secret.load_full() {
                 if let Some(message_id) = try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, header, fragments, &mut payload) {
+                    // Decryption successful with ephemeral secret
                     ephemeral_secret.decrypt_uses.fetch_add(1, Ordering::Relaxed);
                     (true, message_id)
                 } else {
+                    // Decryption failed with ephemeral secret, which may indicate that it's obsolete.
                     (false, 0)
                 }
             } else {
+                // There is no ephemeral secret negotiated (yet?).
                 (false, 0)
             };
             if !forward_secrecy {
                 if let Some(message_id2) = try_aead_decrypt(&self.static_secret, packet_frag0_payload_bytes, header, fragments, &mut payload) {
+                    // Decryption successful with static secret.
                     message_id = message_id2;
                 } else {
                     // Packet failed to decrypt using either ephemeral or permament key, reject.
@@ -275,12 +292,12 @@ impl Peer {
             // because the most performance critical path is the handling of the ???_FRAME
             // verbs, which are in VL2.
             verb &= VERB_MASK; // mask off flags
-            if !ph.handle_packet(self, source_path, forward_secrecy, extended_authentication, verb, &payload) {
+            if !vi.handle_packet(self, source_path, forward_secrecy, extended_authentication, verb, &payload) {
                 match verb {
                     //VERB_VL1_NOP => {}
                     VERB_VL1_HELLO => self.receive_hello(si, node, time_ticks, source_path, &payload),
-                    VERB_VL1_ERROR => self.receive_error(si, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload),
-                    VERB_VL1_OK => self.receive_ok(si, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload),
+                    VERB_VL1_ERROR => self.receive_error(si, vi, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload),
+                    VERB_VL1_OK => self.receive_ok(si, vi, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload),
                     VERB_VL1_WHOIS => self.receive_whois(si, node, time_ticks, source_path, &payload),
                     VERB_VL1_RENDEZVOUS => self.receive_rendezvous(si, node, time_ticks, source_path, &payload),
                     VERB_VL1_ECHO => self.receive_echo(si, node, time_ticks, source_path, &payload),
@@ -289,6 +306,7 @@ impl Peer {
                     _ => {}
                 }
             } else {
+                // In debug build check to make sure the next layer (VL2) is complying with the API contract.
                 #[cfg(debug)] {
                     if match verb {
                         VERB_VL1_NOP | VERB_VL1_HELLO | VERB_VL1_ERROR | VERB_VL1_OK | VERB_VL1_WHOIS | VERB_VL1_RENDEZVOUS | VERB_VL1_ECHO | VERB_VL1_PUSH_DIRECT_PATHS | VERB_VL1_USER_MESSAGE => true,
@@ -491,10 +509,8 @@ impl Peer {
             let current_packet_id_counter = self.message_id_counter.load(Ordering::Relaxed);
             if current_packet_id_counter.wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match ok_header.in_re_verb {
-                    VERB_VL1_HELLO => {
-                    }
-                    VERB_VL1_WHOIS => {
-                    }
+                    VERB_VL1_HELLO => {}
+                    VERB_VL1_WHOIS => {}
                     _ => {
                         ph.handle_ok(self, source_path, forward_secrecy, extended_authentication, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor);
                     }
