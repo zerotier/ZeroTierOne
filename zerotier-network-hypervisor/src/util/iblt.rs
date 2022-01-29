@@ -69,7 +69,7 @@ impl<const HS: usize, const B: usize> IBLT<HS, B> {
             r.read_exact(&mut b.key_sum)?;
             r.read_exact(&mut tmp)?;
             b.check_hash_sum = u64::from_le_bytes(tmp);
-            let c = varint::read(r)?.0 + prev_c;
+            let c = ((varint::read(r)?.0 as i64) + prev_c) as u64;
             if (c & 1) == 0 {
                 b.count = c.wrapping_shr(1) as i64;
             } else {
@@ -101,7 +101,7 @@ impl<const HS: usize, const B: usize> IBLT<HS, B> {
         assert!(HS >= 8);
         assert!(key.len() >= HS);
         let iteration_indices: [u64; 8] = unsafe { transmute(zerotier_core_crypto::hash::SHA512::hash(key)) };
-        let check_hash = Self::calc_check_hash::<HS>(&key);
+        let check_hash = calc_check_hash::<HS>(&key);
         for i in 0..KEY_MAPPING_ITERATIONS {
             let b = &mut self.map[(u64::from_le(iteration_indices[i]) as usize) % B];
             for x in 0..HS {
@@ -149,7 +149,7 @@ impl<const HS: usize, const B: usize> IBLT<HS, B> {
             if b.is_singular() {
                 let key = b.key_sum.clone();
                 let iteration_indices: [u64; 8] = unsafe { transmute(zerotier_core_crypto::hash::SHA512::hash(&key)) };
-                let check_hash = Self::calc_check_hash::<HS>(&key);
+                let check_hash = calc_check_hash::<HS>(&key);
 
                 f(&key);
 
@@ -184,7 +184,7 @@ mod tests {
 
     use zerotier_core_crypto::hash::SHA384;
 
-    use crate::iblt::*;
+    use crate::util::iblt::*;
 
     #[allow(unused_variables)]
     #[test]
