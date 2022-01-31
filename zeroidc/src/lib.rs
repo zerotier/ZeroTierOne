@@ -26,7 +26,6 @@ use jwt::{Token};
 use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
 use openidconnect::reqwest::http_client;
 use openidconnect::{AccessToken, AccessTokenHash, AuthorizationCode, AuthenticationFlow, ClientId, CsrfToken, IssuerUrl, Nonce, OAuth2TokenResponse, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenResponse};
-use serde::{Deserialize, Serialize};
 use std::str::from_utf8;
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn, JoinHandle};
