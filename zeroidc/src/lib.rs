@@ -22,7 +22,7 @@ extern crate url;
 use crate::error::ZeroIDCError;
 
 use bytes::Bytes;
-use jsonwebtoken::{dangerous_insecure_decode};
+use jwt::{Token};
 use openidconnect::core::{CoreClient, CoreProviderMetadata, CoreResponseType};
 use openidconnect::reqwest::http_client;
 use openidconnect::{AccessToken, AccessTokenHash, AuthorizationCode, AuthenticationFlow, ClientId, CsrfToken, IssuerUrl, Nonce, OAuth2TokenResponse, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenResponse};
@@ -277,15 +277,20 @@ impl ZeroIDC {
 
                                                                 let access_token = res.access_token();
                                                                 let at = access_token.secret();
-                                                                // yes this function is called `dangerous_insecure_decode`
-                                                                // and it doesn't validate the jwt token signature, 
-                                                                // but if we've gotten this far, our claims have already
-                                                                // been validated up above
-                                                                let exp = dangerous_insecure_decode::<Exp>(&at);
+
+                                                                let t: Result<Token<jwt::Header, jwt::Claims, jwt::Unverified<'_>>, jwt::Error>= Token::parse_unverified(at);
                                                                 
-                                                                if let Ok(e) = exp {
-                                                                    (*inner_local.lock().unwrap()).exp_time = e.claims.exp
-                                                                }
+                                                                if let Ok(t) = t {
+                                                                    let claims = t.claims().registered.clone();
+                                                                    match claims.expiration {
+                                                                        Some(exp) => {
+                                                                            (*inner_local.lock().unwrap()).exp_time = exp;
+                                                                        },
+                                                                        None => {
+                                                                            panic!("expiration is None.  This shouldn't happen")
+                                                                        }
+                                                                    }
+                                                                }  
 
                                                                 (*inner_local.lock().unwrap()).access_token = Some(access_token.clone());
                                                                 if let Some(t) = res.refresh_token() {
@@ -544,10 +549,19 @@ impl ZeroIDC {
                                 let at = tok.access_token().secret();
 
                                 // see previous note about this function's use
-                                let exp = dangerous_insecure_decode::<Exp>(&at);
-                                if let Ok(e) = exp {
-                                    i.exp_time = e.claims.exp
-                                }
+                                let t: Result<Token<jwt::Header, jwt::Claims, jwt::Unverified<'_>>, jwt::Error>= Token::parse_unverified(at);
+                                                                
+                                if let Ok(t) = t {
+                                    let claims = t.claims().registered.clone();
+                                    match claims.expiration {
+                                        Some(exp) => {
+                                            i.exp_time = exp;
+                                        },
+                                        None => {
+                                            panic!("expiration is None.  This shouldn't happen")
+                                        }
+                                    }
+                                } 
 
                                 i.access_token = Some(tok.access_token().clone());
                                 if let Some(t) = tok.refresh_token() {
