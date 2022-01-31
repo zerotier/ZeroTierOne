@@ -63,11 +63,6 @@ impl Inner {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Exp {
-    exp: u64
-}
-
 fn csrf_func(csrf_token: String) -> Box<dyn Fn() -> CsrfToken> {
     return Box::new(move || CsrfToken::new(csrf_token.to_string()));
 }
@@ -548,7 +543,6 @@ impl ZeroIDC {
 
                                 let at = tok.access_token().secret();
 
-                                // see previous note about this function's use
                                 let t: Result<Token<jwt::Header, jwt::Claims, jwt::Unverified<'_>>, jwt::Error>= Token::parse_unverified(at);
                                                                 
                                 if let Ok(t) = t {
