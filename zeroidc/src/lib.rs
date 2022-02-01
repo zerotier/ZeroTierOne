@@ -35,10 +35,28 @@ use time::{OffsetDateTime, format_description};
 
 use url::Url;
 
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
 pub struct ZeroIDC {
     inner: Arc<Mutex<Inner>>,
 }
 
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
 struct Inner {
     running: bool,
     auth_endpoint: String,
@@ -88,6 +106,15 @@ fn systemtime_strftime<T>(dt: T, format: &str) -> String
     }
 }
 
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
 impl ZeroIDC {
     pub fn new(
         issuer: &str,
@@ -606,4 +633,3 @@ impl ZeroIDC {
         };
     }
 }
-

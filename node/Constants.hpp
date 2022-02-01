@@ -50,9 +50,16 @@
 #define __UNIX_LIKE__
 #endif
 #include <endian.h>
+
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64) || defined(__aarch64__))
+#define OIDC_SUPPORTED 1
+#else
+#define OIDC_SUPPORTED 0
+#endif
 #endif
 
 #ifdef __APPLE__
+#define OIDC_SUPPORTED 1
 #define likely(x) __builtin_expect((x),1)
 #define unlikely(x) __builtin_expect((x),0)
 #include <TargetConditionals.h>
@@ -66,6 +73,7 @@
 #endif
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+#define OIDC_SUPPORTED 0
 #ifndef __UNIX_LIKE__
 #define __UNIX_LIKE__
 #endif
@@ -81,6 +89,7 @@
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
+#define OIDC_SUPPORTED 1
 #ifndef __WINDOWS__
 #define __WINDOWS__
 #endif

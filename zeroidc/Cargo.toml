@@ -12,7 +12,7 @@ crate-type = ["staticlib","rlib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-openidconnect = "2.2"
+openidconnect = { version = "2.2", default-features = false, features = ["reqwest", "native-tls"] }
 base64 = "0.13"
 url = "2.2"
 reqwest = "0.11"

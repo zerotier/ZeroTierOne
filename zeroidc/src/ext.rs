@@ -16,6 +16,15 @@ use url::{Url};
 
 use crate::ZeroIDC;
 
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
 #[no_mangle]
 pub extern "C" fn zeroidc_new(
     issuer: *const c_char,
@@ -57,6 +66,15 @@ pub extern "C" fn zeroidc_new(
     }
 }
 
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
 #[no_mangle]
 pub extern "C" fn zeroidc_delete(ptr: *mut ZeroIDC) {
     if ptr.is_null() {
@@ -67,6 +85,15 @@ pub extern "C" fn zeroidc_delete(ptr: *mut ZeroIDC) {
     }
 }
 
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
 #[no_mangle]
 pub extern "C" fn zeroidc_start(ptr: *mut ZeroIDC) {
     let idc = unsafe {
@@ -76,6 +103,15 @@ pub extern "C" fn zeroidc_start(ptr: *mut ZeroIDC) {
     idc.start();
 }
 
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
 #[no_mangle]
 pub extern "C" fn zeroidc_stop(ptr: *mut ZeroIDC) {
     let idc = unsafe {
@@ -85,6 +121,15 @@ pub extern "C" fn zeroidc_stop(ptr: *mut ZeroIDC) {
     idc.stop();
 }
 
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
 #[no_mangle]
 pub extern "C" fn zeroidc_is_running(ptr: *mut ZeroIDC) -> bool {
     let idc = unsafe {
@@ -105,6 +150,15 @@ pub extern "C" fn zeroidc_get_exp_time(ptr: *mut ZeroIDC) -> u64 {
     id.get_exp_time()
 }
 
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
 #[no_mangle]
 pub extern "C" fn zeroidc_set_nonce_and_csrf(
     ptr: *mut ZeroIDC,
@@ -137,6 +191,15 @@ pub extern "C" fn zeroidc_set_nonce_and_csrf(
     idc.set_nonce_and_csrf(csrf_token, nonce);
 }
 
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
 #[no_mangle]
 pub extern "C" fn zeroidc_get_auth_url(ptr: *mut ZeroIDC) -> *const c_char {
     if ptr.is_null() {
@@ -151,6 +214,15 @@ pub extern "C" fn zeroidc_get_auth_url(ptr: *mut ZeroIDC) -> *const c_char {
     return s.into_raw();
 }
 
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
 #[no_mangle]
 pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char ) -> *const c_char {
     if idc.is_null() {
@@ -219,6 +291,15 @@ pub extern "C" fn zeroidc_network_id_from_state(state: *const c_char) -> *const 
     return s.into_raw();
 }
 
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
 #[no_mangle]
 pub extern "C" fn zeroidc_kick_refresh_thread(idc: *mut ZeroIDC) {
     if idc.is_null() {
