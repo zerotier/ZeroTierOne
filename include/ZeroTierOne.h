@@ -123,12 +123,12 @@ extern "C" {
 /**
  * Maximum number of pushed routes on a network
  */
-#define ZT_MAX_NETWORK_ROUTES 32
+#define ZT_MAX_NETWORK_ROUTES 128
 
 /**
  * Maximum number of statically assigned IP addresses per network endpoint using ZT address management (not DHCP)
  */
-#define ZT_MAX_ZT_ASSIGNED_ADDRESSES 16
+#define ZT_MAX_ZT_ASSIGNED_ADDRESSES 32
 
 /**
  * Maximum number of "specialists" on a network -- bridges, relays, etc.

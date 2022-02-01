@@ -523,7 +523,7 @@
 /**
  * Maximum number of VERB_NETWORK_CREDENTIALS within cutoff time
  */
-#define ZT_PEER_CREDEITIALS_CUTOFF_LIMIT 15
+#define ZT_PEER_CREDENTIALS_CUTOFF_LIMIT 15
 
 /**
  * WHOIS rate limit (we allow these to be pretty fast)
