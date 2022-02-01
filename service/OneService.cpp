@@ -53,7 +53,9 @@
 #include "OneService.hpp"
 #include "SoftwareUpdater.hpp"
 
+#if OIDC_SUPPORTED
 #include <zeroidc.h>
+#endif
 
 #ifdef __WINDOWS__
 #include <winsock2.h>
@@ -169,11 +171,13 @@ public:
 		this->_managedRoutes.clear();
 		this->_tap.reset();
 
+#if OIDC_SUPPORTED
 		if (_idc) {
 			zeroidc::zeroidc_stop(_idc);
 			zeroidc::zeroidc_delete(_idc);
 			_idc = nullptr;
 		}
+#endif
 	}
 
 	void setWebPort(unsigned int port) {
@@ -251,6 +255,7 @@ public:
 
 		if (_config.ssoEnabled && _config.ssoVersion == 1) {
 			//  fprintf(stderr, "ssoEnabled for %s\n", nwid);
+#if OIDC_SUPPORTED
 			if (_idc == nullptr)
 			{
 				assert(_config.issuerURL != nullptr);
@@ -290,6 +295,7 @@ public:
 				// TODO: kick the refresh thread
 				zeroidc::zeroidc_kick_refresh_thread(_idc);
 			}
+#endif
 		}
 	}
 
@@ -306,14 +312,17 @@ public:
 	}
 
 	const char* getAuthURL() {
+#if OIDC_SUPPORTED
 		if (_idc != nullptr) {
 			return zeroidc::zeroidc_get_auth_url(_idc);
 		}
 		fprintf(stderr, "_idc is null\n");
+#endif
 		return "";
 	}
 
 	const char* doTokenExchange(const char *code) {
+#if OIDC_SUPPORTED
 		if (_idc == nullptr) {
 			fprintf(stderr, "ainfo or idc null\n");
 			return "";
@@ -330,6 +339,9 @@ public:
 		memcpy(_config.authenticationURL, url, strlen(url));
 		_config.authenticationURL[strlen(url)] = 0;
 		return ret;
+#else
+		return "";
+#endif
 	}
 
 	uint64_t getExpiryTime() {
@@ -337,8 +349,11 @@ public:
 			fprintf(stderr, "idc is null\n");
 			return 0;
 		}
-
+#if OIDC_SUPPORTED
 		return zeroidc::zeroidc_get_exp_time(_idc);
+#else
+		return 0;
+#endif
 	}
 
 private:
@@ -348,7 +363,9 @@ private:
 	std::vector<InetAddress> _managedIps;
 	std::map< InetAddress, SharedPtr<ManagedRoute> > _managedRoutes;
 	OneService::NetworkSettings _settings;
+#if OIDC_SUPPORTED
 	zeroidc::ZeroIDC *_idc;
+#endif
 };
 
 namespace {
@@ -1661,10 +1678,10 @@ public:
 						scode = _controller->handleControlPlaneHttpGET(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 					} else scode = 404;
 				}
-
+#if OIDC_SUPPORTED
 			} else if (ps[0] == "sso") {
 				// SSO redirect handling
-				const char* state = zeroidc::zeroidc_get_url_param_value("state", path.c_str());
+								const char* state = zeroidc::zeroidc_get_url_param_value("state", path.c_str());
 				const char* nwid = zeroidc::zeroidc_network_id_from_state(state);
 				
 				const uint64_t id = Utils::hexStrToU64(nwid);
@@ -1716,6 +1733,7 @@ div.icon {\
 				} else {
 					scode = 404;
 				}
+#endif
 			} else {
 				scode = 401; // isAuth == false && !sso
 			}
