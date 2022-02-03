@@ -1,0 +1,7 @@
+FROM registry.sean.farm/sid-builder as stage
+COPY . .
+RUN /usr/bin/make -j 8
+
+FROM scratch AS export
+COPY --from=stage /zerotier-one .
+COPY --from=stage /zerotier-cli .
