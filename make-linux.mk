@@ -41,14 +41,6 @@ else
 	override DEFS+=-DZT_USE_SYSTEM_NATPMP
 endif
 
-ifeq ($(ZT_SSO_SUPPORTED), 1)
-	ifeq ($(ZT_DEBUG),1)
-		LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
-	else
-		LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
-	endif
-endif
-
 # Use bundled http-parser since distribution versions are NOT API-stable or compatible!
 # Trying to use dynamically linked libhttp-parser causes tons of compatibility problems.
 ONE_OBJS+=ext/http-parser/http_parser.o
@@ -178,6 +170,7 @@ ifeq ($(CC_MACH),armhf)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+	ZT_SSO_SUPPORTED=1
 endif
 ifeq ($(CC_MACH),armv6)
 	ZT_ARCHITECTURE=3
@@ -267,6 +260,14 @@ ifeq ($(ZT_IA32),1)
 	# Prevent the use of X64 crypto
 	ZT_USE_X64_ASM_SALSA=0
 	ZT_USE_X64_ASM_ED25519=0
+endif
+
+ifeq ($(ZT_SSO_SUPPORTED), 1)
+	ifeq ($(ZT_DEBUG),1)
+		LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
+	else
+		LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
+	endif
 endif
 
 # Disable software updates by default on Linux since that is normally done with package management
