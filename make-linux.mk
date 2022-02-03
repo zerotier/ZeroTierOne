@@ -41,10 +41,12 @@ else
 	override DEFS+=-DZT_USE_SYSTEM_NATPMP
 endif
 
-ifeq ($(ZT_DEBUG),1)
-	LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
-else
-	LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
+ifeq ($(ZT_SSO_SUPPORTED), 1)
+	ifeq ($(ZT_DEBUG),1)
+		LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
+	else
+		LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
+	endif
 endif
 
 # Use bundled http-parser since distribution versions are NOT API-stable or compatible!
