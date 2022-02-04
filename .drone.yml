@@ -139,9 +139,5 @@ steps:
     commands:
       - ./ci/scripts/build.sh linux s390x $${DRONE_COMMIT_SHA}
 
-platform:
-  os: linux
-  arch: amd64
-
 image_pull_secrets:
   - dockerconfigjson
