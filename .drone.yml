@@ -46,6 +46,10 @@ steps:
     commands:
       - ./ci/scripts/build.sh linux arm64 $${DRONE_COMMIT_SHA}
 
+platform:
+  os: linux
+  arch: arm64
+      
 image_pull_secrets:
   - dockerconfigjson
 
@@ -53,6 +57,10 @@ image_pull_secrets:
 kind: pipeline
 type: docker
 name: build armv7
+
+platform:
+  os: linux
+  arch: arm64
 
 clone:
   depth: 1
