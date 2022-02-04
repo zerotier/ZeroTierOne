@@ -8,11 +8,11 @@ clone:
 
 steps:
   - name: build 386
-    image: registry.sean.farm/honda-builder
+    image: registry.sean.farm/honda-builder:4
     commands:
       - ./ci/scripts/build.sh linux 386 $${DRONE_COMMIT_SHA}
   - name: notify-mattermost
-    image: dabankio/drone-plugin-mattermost
+    image: registry.sean.farm/mattermost-notify
     environment:
       token:
         from_secret: mattermost-token
