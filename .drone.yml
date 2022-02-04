@@ -20,8 +20,7 @@ steps:
         from_secret: mattermost-host
       channel:
         from_secret: mattermost-channel
-    settings:
-        maxRetry: 3
+      maxRetry: 3
     when:
       status:
         - failure
