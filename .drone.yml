@@ -1,0 +1,135 @@
+---
+kind: pipeline
+type: docker
+name: build 386
+
+clone:
+  depth: 1
+
+steps:
+  - name: build 386
+    image: registry.sean.farm/honda-builder
+    commands:
+      - ./ci/scripts/build.sh linux 386 $${DRONE_COMMIT_SHA}
+
+image_pull_secrets:
+  - dockerconfigjson
+
+---
+kind: pipeline
+type: docker
+name: build amd64
+
+clone:
+  depth: 1
+
+steps:
+  - name: build amd64
+    image: registry.sean.farm/honda-builder
+    commands:
+      - ./ci/scripts/build.sh linux amd64 $${DRONE_COMMIT_SHA}
+
+image_pull_secrets:
+  - dockerconfigjson
+
+---
+kind: pipeline
+type: docker
+name: build arm64
+
+clone:
+  depth: 1
+
+steps:
+  - name: build arm64
+    image: registry.sean.farm/honda-builder
+    commands:
+      - ./ci/scripts/build.sh linux arm64 $${DRONE_COMMIT_SHA}
+
+image_pull_secrets:
+  - dockerconfigjson
+
+---
+kind: pipeline
+type: docker
+name: build armv7
+
+clone:
+  depth: 1
+
+steps:
+  - name: build armv7
+    image: registry.sean.farm/honda-builder
+    commands:
+      - ./ci/scripts/build.sh linux armv7 $${DRONE_COMMIT_SHA}
+
+image_pull_secrets:
+  - dockerconfigjson
+
+---
+kind: pipeline
+type: docker
+name: build riscv64
+
+clone:
+  depth: 1
+
+steps:
+  - name: build riscv64
+    image: registry.sean.farm/honda-builder
+    commands:
+      - ./ci/scripts/build.sh linux riscv64 $${DRONE_COMMIT_SHA}
+
+image_pull_secrets:
+  - dockerconfigjson
+
+---
+kind: pipeline
+type: docker
+name: build mips64le
+
+clone:
+  depth: 1
+
+steps:
+  - name: build mips64le
+    image: registry.sean.farm/honda-builder
+    commands:
+      - ./ci/scripts/build.sh linux mips64le $${DRONE_COMMIT_SHA}
+
+image_pull_secrets:
+  - dockerconfigjson
+
+---
+kind: pipeline
+type: docker
+name: build ppc64le
+
+clone:
+  depth: 1
+
+steps:
+  - name: build ppc64le
+    image: registry.sean.farm/honda-builder
+    commands:
+      - ./ci/scripts/build.sh linux ppc64le $${DRONE_COMMIT_SHA}
+
+image_pull_secrets:
+  - dockerconfigjson
+
+---
+kind: pipeline
+type: docker
+name: build s390x
+
+clone:
+  depth: 1
+
+steps:
+  - name: build s390x
+    image: registry.sean.farm/honda-builder
+    commands:
+      - ./ci/scripts/build.sh linux s390x $${DRONE_COMMIT_SHA}
+
+image_pull_secrets:
+  - dockerconfigjson

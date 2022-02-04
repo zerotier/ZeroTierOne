@@ -156,7 +156,9 @@ public:
 	NetworkState() 
 		: _webPort(9993)
 		, _tap((EthernetTap *)0)
+#if OIDC_SUPPORTED
 		, _idc(nullptr)
+#endif
 	{
 		// Real defaults are in network 'up' code in network event handler
 		_settings.allowManaged = true;
@@ -345,11 +347,11 @@ public:
 	}
 
 	uint64_t getExpiryTime() {
+#if OIDC_SUPPORTED
 		if (_idc == nullptr) {
 			fprintf(stderr, "idc is null\n");
 			return 0;
 		}
-#if OIDC_SUPPORTED
 		return zeroidc::zeroidc_get_exp_time(_idc);
 #else
 		return 0;
