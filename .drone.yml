@@ -11,6 +11,15 @@ steps:
     image: registry.sean.farm/honda-builder
     commands:
       - ./ci/scripts/build.sh linux 386 $${DRONE_COMMIT_SHA}
+  - name: notify-mattermost
+    image: dabankio/drone-plugin-mattermost
+    environment:
+      token:
+        from_secret: mattermost-token
+      host:
+        from_secret: mattermost-host
+      channel:
+        from_secret: mattermost-channel
 
 image_pull_secrets:
   - dockerconfigjson
