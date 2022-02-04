@@ -20,6 +20,10 @@ steps:
         from_secret: mattermost-host
       channel:
         from_secret: mattermost-channel
+    when:
+      status:
+        - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
