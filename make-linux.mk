@@ -384,7 +384,8 @@ debug:	FORCE
 
 ifeq ($(ZT_SSO_SUPPORTED), 1)
 zeroidc:	FORCE
-	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build -j1 $(RUSTFLAGS)
+#	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build -j1 $(RUSTFLAGS)
+	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build $(RUSTFLAGS)
 else
 zeroidc:
 endif
