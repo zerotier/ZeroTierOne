@@ -13,7 +13,7 @@ steps:
       - ./ci/scripts/build.sh linux 386 $${DRONE_COMMIT_SHA}
   - name: notify-mattermost
     pull: always
-    image: registry.sean.farm/mattermost-notify
+    image: registry.sean.farm/mattermost-notify:202202071123
     environment:
       token:
         from_secret: mattermost-token
@@ -45,7 +45,7 @@ steps:
       - ./ci/scripts/build.sh linux amd64 $${DRONE_COMMIT_SHA}
   - name: notify-mattermost
     pull: always
-    image: registry.sean.farm/mattermost-notify
+    image: registry.sean.farm/mattermost-notify:202202071123
     environment:
       token:
         from_secret: mattermost-token
@@ -77,7 +77,7 @@ steps:
       - ./ci/scripts/build.sh linux arm64 $${DRONE_COMMIT_SHA}
   - name: notify-mattermost
     pull: always
-    image: registry.sean.farm/mattermost-notify
+    image: registry.sean.farm/mattermost-notify:202202071123
     environment:
       token:
         from_secret: mattermost-token
@@ -113,7 +113,7 @@ steps:
       - ./ci/scripts/build.sh linux armv7 $${DRONE_COMMIT_SHA}
   - name: notify-mattermost
     pull: always
-    image: registry.sean.farm/mattermost-notify
+    image: registry.sean.farm/mattermost-notify:202202071123
     environment:
       token:
         from_secret: mattermost-token
@@ -149,7 +149,7 @@ steps:
       - ./ci/scripts/build.sh linux riscv64 $${DRONE_COMMIT_SHA}
   - name: notify-mattermost
     pull: always
-    image: registry.sean.farm/mattermost-notify
+    image: registry.sean.farm/mattermost-notify:202202071123
     environment:
       token:
         from_secret: mattermost-token
@@ -181,7 +181,7 @@ steps:
       - ./ci/scripts/build.sh linux mips64le $${DRONE_COMMIT_SHA}
   - name: notify-mattermost
     pull: always
-    image: registry.sean.farm/mattermost-notify
+    image: registry.sean.farm/mattermost-notify:202202071123
     environment:
       token:
         from_secret: mattermost-token
@@ -213,7 +213,7 @@ steps:
       - ./ci/scripts/build.sh linux ppc64le $${DRONE_COMMIT_SHA}
   - name: notify-mattermost
     pull: always
-    image: registry.sean.farm/mattermost-notify
+    image: registry.sean.farm/mattermost-notify:202202071123
     environment:
       token:
         from_secret: mattermost-token
@@ -245,7 +245,7 @@ steps:
       - ./ci/scripts/build.sh linux s390x $${DRONE_COMMIT_SHA}
   - name: notify-mattermost
     pull: always
-    image: registry.sean.farm/mattermost-notify
+    image: registry.sean.farm/mattermost-notify:202202071123
     environment:
       token:
         from_secret: mattermost-token
