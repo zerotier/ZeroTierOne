@@ -25,6 +25,7 @@ steps:
     when:
       status:
         - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
@@ -56,6 +57,7 @@ steps:
     when:
       status:
         - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
@@ -87,6 +89,7 @@ steps:
     when:
       status:
         - failure
+        - success
 
 platform:
   os: linux
@@ -122,6 +125,7 @@ steps:
     when:
       status:
         - failure
+        - success
 
 platform:
   os: linux
@@ -157,6 +161,7 @@ steps:
     when:
       status:
         - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
@@ -188,6 +193,7 @@ steps:
     when:
       status:
         - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
@@ -219,6 +225,7 @@ steps:
     when:
       status:
         - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
@@ -250,6 +257,7 @@ steps:
     when:
       status:
         - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
