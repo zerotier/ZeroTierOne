@@ -61,6 +61,10 @@ steps:
     commands:
       - ./ci/scripts/build.sh linux arm64 $${DRONE_COMMIT_SHA}
 
+platform:
+  os: linux
+  arch: arm64
+  
 image_pull_secrets:
   - dockerconfigjson
 
@@ -78,6 +82,10 @@ steps:
     commands:
       - ./ci/scripts/build.sh linux armv7 $${DRONE_COMMIT_SHA}
 
+platform:
+  os: linux
+  arch: arm64
+  
 image_pull_secrets:
   - dockerconfigjson
 
