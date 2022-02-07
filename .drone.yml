@@ -13,6 +13,7 @@ steps:
       - ./ci/scripts/build.sh linux 386 $${DRONE_COMMIT_SHA}
   - name: notify-mattermost
     image: registry.sean.farm/mattermost-notify
+    pull: always
     environment:
       token:
         from_secret: mattermost-token
