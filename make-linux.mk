@@ -41,12 +41,6 @@ else
 	override DEFS+=-DZT_USE_SYSTEM_NATPMP
 endif
 
-ifeq ($(ZT_DEBUG),1)
-	LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
-else
-	LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
-endif
-
 # Use bundled http-parser since distribution versions are NOT API-stable or compatible!
 # Trying to use dynamically linked libhttp-parser causes tons of compatibility problems.
 ONE_OBJS+=ext/http-parser/http_parser.o
@@ -122,6 +116,7 @@ ifeq ($(CC_MACH),x86_64)
 	ZT_USE_X64_ASM_ED25519=1
 	override CFLAGS+=-msse -msse2
 	override CXXFLAGS+=-msse -msse2
+	ZT_SSO_SUPPORTED=1
 endif
 ifeq ($(CC_MACH),amd64)
 	ZT_ARCHITECTURE=2
@@ -129,6 +124,7 @@ ifeq ($(CC_MACH),amd64)
 	ZT_USE_X64_ASM_ED25519=1
 	override CFLAGS+=-msse -msse2
 	override CXXFLAGS+=-msse -msse2
+	ZT_SSO_SUPPORTED=1
 endif
 ifeq ($(CC_MACH),powerpc64le)
 	ZT_ARCHITECTURE=8
@@ -150,15 +146,19 @@ ifeq ($(CC_MACH),e2k)
 endif
 ifeq ($(CC_MACH),i386)
 	ZT_ARCHITECTURE=1
+	ZT_SSO_SUPPORTED=1
 endif
 ifeq ($(CC_MACH),i486)
 	ZT_ARCHITECTURE=1
+	ZT_SSO_SUPPORTED=1
 endif
 ifeq ($(CC_MACH),i586)
 	ZT_ARCHITECTURE=1
+	ZT_SSO_SUPPORTED=1
 endif
 ifeq ($(CC_MACH),i686)
 	ZT_ARCHITECTURE=1
+	ZT_SSO_SUPPORTED=1
 endif
 ifeq ($(CC_MACH),arm)
 	ZT_ARCHITECTURE=3
@@ -174,6 +174,7 @@ ifeq ($(CC_MACH),armhf)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+	ZT_SSO_SUPPORTED=1
 endif
 ifeq ($(CC_MACH),armv6)
 	ZT_ARCHITECTURE=3
@@ -217,10 +218,12 @@ ifeq ($(CC_MACH),armv7ve)
 endif
 ifeq ($(CC_MACH),arm64)
 	ZT_ARCHITECTURE=4
+	ZT_SSO_SUPPORTED=1
 	override DEFS+=-DZT_NO_TYPE_PUNNING -DZT_ARCH_ARM_HAS_NEON -march=armv8-a+crypto -mtune=generic -mstrict-align
 endif
 ifeq ($(CC_MACH),aarch64)
 	ZT_ARCHITECTURE=4
+	ZT_SSO_SUPPORTED=1
 	override DEFS+=-DZT_NO_TYPE_PUNNING -DZT_ARCH_ARM_HAS_NEON -march=armv8-a+crypto -mtune=generic -mstrict-align
 endif
 ifeq ($(CC_MACH),mipsel)
@@ -261,6 +264,14 @@ ifeq ($(ZT_IA32),1)
 	# Prevent the use of X64 crypto
 	ZT_USE_X64_ASM_SALSA=0
 	ZT_USE_X64_ASM_ED25519=0
+endif
+
+ifeq ($(ZT_SSO_SUPPORTED), 1)
+	ifeq ($(ZT_DEBUG),1)
+		LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
+	else
+		LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
+	endif
 endif
 
 # Disable software updates by default on Linux since that is normally done with package management
@@ -371,8 +382,13 @@ debug:	FORCE
 	make ZT_DEBUG=1 one
 	make ZT_DEBUG=1 selftest
 
+ifeq ($(ZT_SSO_SUPPORTED), 1)
 zeroidc:	FORCE
-	cd zeroidc && cargo build $(RUSTFLAGS)
+#	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build -j1 $(RUSTFLAGS)
+	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build $(RUSTFLAGS)
+else
+zeroidc:
+endif
 
 # Note: keep the symlinks in /var/lib/zerotier-one to the binaries since these
 # provide backward compatibility with old releases where the binaries actually
