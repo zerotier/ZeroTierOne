@@ -12,7 +12,7 @@ steps:
     commands:
       - ./ci/scripts/build.sh linux 386 $${DRONE_COMMIT_SHA}
   - name: notify-mattermost
-    image: registry.sean.farm/mattermost-notify:202202071024
+    image: registry.sean.farm/mattermost-notify:202202071040
     pull: always
     environment:
       token:
