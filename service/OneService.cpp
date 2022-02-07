@@ -1504,25 +1504,19 @@ public:
 						res["config"] = _localConfig;
 					}
 					json &settings = res["config"]["settings"];
-					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 					settings["allowTcpFallbackRelay"] = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],_allowTcpFallbackRelay);
-/*
-					if (_node->bondController()->inUse()) {
-						json &multipathConfig = res["bonds"];
-						ZT_PeerList *pl = _node->peers();
-						char peerAddrStr[256];
-						if (pl) {
-							for(unsigned long i=0;i<pl->peerCount;++i) {
-								if (pl->peers[i].isBonded) {
-									nlohmann::json pj;
-									_bondToJson(pj,&(pl->peers[i]));
-									OSUtils::ztsnprintf(peerAddrStr,sizeof(peerAddrStr),"%.10llx",pl->peers[i].address);
-									multipathConfig[peerAddrStr] = (pj);
-								}
-							}
-						}
+					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
+					settings["secondaryPort"] = OSUtils::jsonInt(settings["secondaryPort"],(uint64_t)_secondaryPort) & 0xffff;
+					settings["tertiaryPort"] = OSUtils::jsonInt(settings["tertiaryPort"],(uint64_t)_tertiaryPort) & 0xffff;
+					// Enumerate all external listening address/port pairs
+					std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());
+					auto boundAddrArray = json::array();
+					for (int i = 0; i < boundAddrs.size(); i++) {
+						char ipBuf[64] = { 0 };
+						boundAddrs[i].toString(ipBuf);
+						boundAddrArray.push_back(ipBuf);
 					}
-*/
+					settings["listeningOn"] = boundAddrArray;
 
 #ifdef ZT_USE_MINIUPNPC
 					settings["portMappingEnabled"] = OSUtils::jsonBool(settings["portMappingEnabled"],true);
