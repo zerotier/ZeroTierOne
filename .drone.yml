@@ -11,6 +11,21 @@ steps:
     image: registry.sean.farm/honda-builder
     commands:
       - ./ci/scripts/build.sh linux 386 $${DRONE_COMMIT_SHA}
+  - name: notify-mattermost
+    pull: always
+    image: registry.sean.farm/mattermost-notify
+    environment:
+      token:
+        from_secret: mattermost-token
+      host:
+        from_secret: mattermost-host
+      channel:
+        from_secret: mattermost-channel
+      maxRetry: 3
+    when:
+      status:
+        - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
@@ -28,6 +43,21 @@ steps:
     image: registry.sean.farm/honda-builder
     commands:
       - ./ci/scripts/build.sh linux amd64 $${DRONE_COMMIT_SHA}
+  - name: notify-mattermost
+    pull: always
+    image: registry.sean.farm/mattermost-notify
+    environment:
+      token:
+        from_secret: mattermost-token
+      host:
+        from_secret: mattermost-host
+      channel:
+        from_secret: mattermost-channel
+      maxRetry: 3
+    when:
+      status:
+        - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
@@ -45,11 +75,26 @@ steps:
     image: registry.sean.farm/honda-builder
     commands:
       - ./ci/scripts/build.sh linux arm64 $${DRONE_COMMIT_SHA}
+  - name: notify-mattermost
+    pull: always
+    image: registry.sean.farm/mattermost-notify
+    environment:
+      token:
+        from_secret: mattermost-token
+      host:
+        from_secret: mattermost-host
+      channel:
+        from_secret: mattermost-channel
+      maxRetry: 3
+    when:
+      status:
+        - failure
+        - success
 
 platform:
   os: linux
   arch: arm64
-      
+
 image_pull_secrets:
   - dockerconfigjson
 
@@ -70,7 +115,26 @@ steps:
     image: registry.sean.farm/honda-builder
     commands:
       - ./ci/scripts/build.sh linux armv7 $${DRONE_COMMIT_SHA}
+  - name: notify-mattermost
+    pull: always
+    image: registry.sean.farm/mattermost-notify
+    environment:
+      token:
+        from_secret: mattermost-token
+      host:
+        from_secret: mattermost-host
+      channel:
+        from_secret: mattermost-channel
+      maxRetry: 3
+    when:
+      status:
+        - failure
+        - success
 
+platform:
+  os: linux
+  arch: arm64
+  
 image_pull_secrets:
   - dockerconfigjson
 
@@ -87,6 +151,21 @@ steps:
     image: registry.sean.farm/honda-builder
     commands:
       - ./ci/scripts/build.sh linux riscv64 $${DRONE_COMMIT_SHA}
+  - name: notify-mattermost
+    pull: always
+    image: registry.sean.farm/mattermost-notify
+    environment:
+      token:
+        from_secret: mattermost-token
+      host:
+        from_secret: mattermost-host
+      channel:
+        from_secret: mattermost-channel
+      maxRetry: 3
+    when:
+      status:
+        - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
@@ -104,6 +183,21 @@ steps:
     image: registry.sean.farm/honda-builder
     commands:
       - ./ci/scripts/build.sh linux mips64le $${DRONE_COMMIT_SHA}
+  - name: notify-mattermost
+    pull: always
+    image: registry.sean.farm/mattermost-notify
+    environment:
+      token:
+        from_secret: mattermost-token
+      host:
+        from_secret: mattermost-host
+      channel:
+        from_secret: mattermost-channel
+      maxRetry: 3
+    when:
+      status:
+        - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
@@ -121,6 +215,21 @@ steps:
     image: registry.sean.farm/honda-builder
     commands:
       - ./ci/scripts/build.sh linux ppc64le $${DRONE_COMMIT_SHA}
+  - name: notify-mattermost
+    pull: always
+    image: registry.sean.farm/mattermost-notify
+    environment:
+      token:
+        from_secret: mattermost-token
+      host:
+        from_secret: mattermost-host
+      channel:
+        from_secret: mattermost-channel
+      maxRetry: 3
+    when:
+      status:
+        - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
@@ -138,6 +247,21 @@ steps:
     image: registry.sean.farm/honda-builder
     commands:
       - ./ci/scripts/build.sh linux s390x $${DRONE_COMMIT_SHA}
+  - name: notify-mattermost
+    pull: always
+    image: registry.sean.farm/mattermost-notify
+    environment:
+      token:
+        from_secret: mattermost-token
+      host:
+        from_secret: mattermost-host
+      channel:
+        from_secret: mattermost-channel
+      maxRetry: 3
+    when:
+      status:
+        - failure
+        - success
 
 image_pull_secrets:
   - dockerconfigjson
