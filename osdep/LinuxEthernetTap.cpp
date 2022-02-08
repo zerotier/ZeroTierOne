@@ -265,7 +265,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 		usleep(100000);
 
-		if (!isLinuxV2OrLess()) {
+		if (!isOldLinuxKernel()) {
 			ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
 			_mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
 			if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
