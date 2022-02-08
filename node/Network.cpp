@@ -984,7 +984,6 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 	}
 
 	if (nc) {
-		fprintf(stderr, "Network::handleConfigChucnk->setConfiguration %.16llx\n", this->_id);
 		this->setConfiguration(tPtr, *nc, true);
 		delete nc;
 		return configUpdateId;
