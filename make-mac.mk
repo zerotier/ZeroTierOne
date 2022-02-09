@@ -92,6 +92,10 @@ ifeq ($(ZT_TRACE),1)
 	DEFS+=-DZT_TRACE
 endif
 
+ifeq ($(ZT_DEBUG),1)
+	DEFS+=-DZT_DEBUG
+endif
+
 ifeq ($(ZT_VAULT_SUPPORT),1)
 	DEFS+=-DZT_VAULT_SUPPORT=1
 	LIBS+=-lcurl
