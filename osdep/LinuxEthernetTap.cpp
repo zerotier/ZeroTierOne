@@ -52,6 +52,10 @@
 #include <utility>
 #include <string>
 
+#include <ctype.h>
+#include <sys/utsname.h>
+
+
 #ifndef IFNAMSIZ
 #define IFNAMSIZ 16
 #endif
@@ -62,6 +66,35 @@
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
 
 namespace ZeroTier {
+
+// determine if we're running a really old linux kernel.
+// Kernels in the 2.6.x series don't behave the same when bringing up 
+// the tap devices.
+//
+// Returns true if the kernel major version is < 3
+bool isOldLinuxKernel() {
+	struct utsname buffer;
+	char *p;
+	long ver[16];
+	int i = 0;
+	if (uname(&buffer) != 0) {
+		perror("uname");
+		exit(EXIT_FAILURE);
+	}
+
+	p = buffer.release;
+
+    while (*p) {
+        if (isdigit(*p)) {
+            ver[i] = strtol(p, &p, 10);
+            i++;
+        } else {
+            p++;
+        }
+    }
+
+	return ver[0] < 3;
+}
 
 static const char _base32_chars[32] = { 'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','2','3','4','5','6','7' };
 static void _base32_5_to_8(const uint8_t *in,char *out)
@@ -213,6 +246,13 @@ LinuxEthernetTap::LinuxEthernetTap(
 			return;
 		}
 
+		ifr.ifr_ifru.ifru_mtu = (int)_mtu;
+		if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
+			::close(sock);
+			printf("WARNING: ioctl() failed setting up Linux tap device (set MTU)\n");
+			return;
+		}
+
 		usleep(100000);
 
 		ifr.ifr_flags |= IFF_MULTICAST;
@@ -225,19 +265,21 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 		usleep(100000);
 
-		ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
-		_mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
-		if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
-			::close(sock);
-			printf("WARNING: ioctl() failed setting up Linux tap device (set MAC)\n");
-			return;
-		}
+		if (!isOldLinuxKernel()) {
+			ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
+			_mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
+			if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
+				::close(sock);
+				printf("WARNING: ioctl() failed setting up Linux tap device (set MAC)\n");
+				return;
+			}
 
-		ifr.ifr_ifru.ifru_mtu = (int)_mtu;
-		if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
-			::close(sock);
-			printf("WARNING: ioctl() failed setting up Linux tap device (set MTU)\n");
-			return;
+			ifr.ifr_ifru.ifru_mtu = (int)_mtu;
+			if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
+				::close(sock);
+				printf("WARNING: ioctl() failed setting up Linux tap device (set MTU)\n");
+				return;
+			}
 		}
 
 		fcntl(_fd,F_SETFL,O_NONBLOCK);
