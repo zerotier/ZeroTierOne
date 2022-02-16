@@ -1,0 +1,14 @@
+
+module zerotier-one 1.0;
+
+require {
+	type unconfined_t;
+	type initrc_t;
+	class memprotect mmap_zero;
+}
+
+#============= initrc_t ==============
+allow initrc_t self:memprotect mmap_zero;
+
+#============= unconfined_t ==============
+allow unconfined_t self:memprotect mmap_zero;

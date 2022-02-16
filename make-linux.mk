@@ -418,6 +418,7 @@ install:	FORCE
 	rm -f $(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
 	cat doc/zerotier-cli.1 | gzip -9 >$(DESTDIR)/usr/share/man/man1/zerotier-cli.1.gz
 	cat doc/zerotier-idtool.1 | gzip -9 >$(DESTDIR)/usr/share/man/man1/zerotier-idtool.1.gz
+	cp ext/installfiles/linux/zerotier-one.te /var/lib/zerotier-one/zerotier-one.te
 
 # Uninstall preserves identity.public and identity.secret since the user might
 # want to save these. These are your ZeroTier address.
