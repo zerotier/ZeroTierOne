@@ -177,6 +177,7 @@ impl Arbitrary for ExtensionFieldElement {
 
 impl ExtensionFieldElement {
     /// Construct a zero `ExtensionFieldElement`.
+    #[inline(always)]
     pub fn zero() -> ExtensionFieldElement {
         ExtensionFieldElement{
             A: Fp751Element::zero(),
@@ -185,6 +186,7 @@ impl ExtensionFieldElement {
     }
 
     /// Construct a one `ExtensionFieldElement`.
+    #[inline(always)]
     pub fn one() -> ExtensionFieldElement {
         ExtensionFieldElement{
             A: Fp751Element([0x249ad, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x83100000, 0x375c6c66, 0x5527b1e4, 0x3f4f24d0, 0x697797bf, 0xac5c4e2e, 0xc89db7b2, 0xd2076956, 0x4ca4b439, 0x7512c7e9, 0x10f7926c, 0x24bce5e2, 0x2d5b]),
@@ -234,7 +236,7 @@ impl ExtensionFieldElement {
     // Set (y1, y2, y3)  = (1/x1, 1/x2, 1/x3).
     //
     // All xi, yi must be distinct.
-    pub fn batch3_inv(x1: &ExtensionFieldElement, x2: &ExtensionFieldElement, x3: &ExtensionFieldElement) -> 
+    pub fn batch3_inv(x1: &ExtensionFieldElement, x2: &ExtensionFieldElement, x3: &ExtensionFieldElement) ->
                  (ExtensionFieldElement, ExtensionFieldElement, ExtensionFieldElement)
     {
         let x1x2 = x1 * x2;     // x1*x2
@@ -281,6 +283,7 @@ impl ExtensionFieldElement {
     }
 
     /// Convert the input to wire format.
+    #[inline(always)]
     pub fn to_bytes(&self) -> [u8; 188] {
         let mut bytes = [0u8; 188];
         bytes[0..94].clone_from_slice(&self.A.to_bytes());
@@ -289,6 +292,7 @@ impl ExtensionFieldElement {
     }
 
     /// Read 188 bytes into the given `ExtensionFieldElement`.
+    #[inline(always)]
     pub fn from_bytes(bytes: &[u8]) -> ExtensionFieldElement {
         assert!(bytes.len() >= 188, "Too short input to ExtensionFieldElement from_bytes, expected 188 bytes");
         let a = Fp751Element::from_bytes(&bytes[0..94]);

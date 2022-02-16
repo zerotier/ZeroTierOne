@@ -7,15 +7,14 @@
  */
 
 use zerotier_core_crypto::aes_gmac_siv::AesGmacSiv;
-use zerotier_core_crypto::hash::SHA384_HASH_SIZE;
-use zerotier_core_crypto::kbkdf::zt_kbkdf_hmac_sha384;
+use zerotier_core_crypto::kbkdf::*;
 use zerotier_core_crypto::secret::Secret;
 
 use crate::util::pool::{Pool, PoolFactory};
 use crate::vl1::protocol::*;
 
 /// Pool of reusable AES-GMAC-SIV instances.
-pub(crate) struct AesGmacSivPoolFactory(Secret<SHA384_HASH_SIZE>, Secret<SHA384_HASH_SIZE>);
+pub(crate) struct AesGmacSivPoolFactory(Secret<48>, Secret<48>);
 
 impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
     #[inline(always)]
@@ -30,16 +29,10 @@ impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
 /// This contains the key and several sub-keys and ciphers keyed with sub-keys.
 pub(crate) struct SymmetricSecret {
     /// The root shared symmetric secret from which other keys are derived.
-    pub key: Secret<SHA384_HASH_SIZE>,
+    pub key: Secret<64>,
 
     /// Key for adding an HMAC to packets e.g. in v2+ HELLO.
-    pub packet_hmac_key: Secret<SHA384_HASH_SIZE>,
-
-    /// A key used as input to the ephemeral key ratcheting mechanism.
-    pub ephemeral_ratchet_key: Secret<SHA384_HASH_SIZE>,
-
-    /// A key used to verify the state of the ephemeral ratchet.
-    pub ephemeral_ratchet_state_key: Secret<SHA384_HASH_SIZE>,
+    pub packet_hmac_key: Secret<64>,
 
     /// A pool of reusable keyed and initialized AES-GMAC-SIV ciphers.
     pub aes_gmac_siv: Pool<AesGmacSiv, AesGmacSivPoolFactory>,
@@ -54,18 +47,14 @@ impl Eq for SymmetricSecret {}
 
 impl SymmetricSecret {
     /// Create a new symmetric secret, deriving all sub-keys and such.
-    pub fn new(base_key: Secret<SHA384_HASH_SIZE>) -> SymmetricSecret {
-        let usage_packet_hmac = zt_kbkdf_hmac_sha384(&base_key.0, KBKDF_KEY_USAGE_LABEL_PACKET_HMAC, 0, 0);
-        let usage_ephemeral_ratchet = zt_kbkdf_hmac_sha384(&base_key.0, KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_NEXT_KEY, 0, 0);
-        let usage_ephemeral_ratchet_state = zt_kbkdf_hmac_sha384(&base_key.0, KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_STATE_KEY, 0, 0);
+    pub fn new(base_key: Secret<64>) -> SymmetricSecret {
+        let usage_packet_hmac = zt_kbkdf_hmac_sha512(&base_key.0, KBKDF_KEY_USAGE_LABEL_PACKET_HMAC, 0, 0);
         let aes_factory = AesGmacSivPoolFactory(
-            zt_kbkdf_hmac_sha384(&base_key.0, KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0, 0, 0),
-            zt_kbkdf_hmac_sha384(&base_key.0, KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1, 0, 0));
+            zt_kbkdf_hmac_sha384(&base_key.0[0..48], KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0, 0, 0),
+            zt_kbkdf_hmac_sha384(&base_key.0[0..48], KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1, 0, 0));
         SymmetricSecret {
             key: base_key,
             packet_hmac_key: usage_packet_hmac,
-            ephemeral_ratchet_key: usage_ephemeral_ratchet,
-            ephemeral_ratchet_state_key: usage_ephemeral_ratchet_state,
             aes_gmac_siv: Pool::new(2, aes_factory),
         }
     }

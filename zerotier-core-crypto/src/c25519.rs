@@ -26,7 +26,7 @@ pub struct C25519KeyPair(x25519_dalek::StaticSecret, x25519_dalek::PublicKey);
 
 impl C25519KeyPair {
     #[inline(always)]
-    pub fn generate(_transient: bool) -> C25519KeyPair {
+    pub fn generate() -> C25519KeyPair {
         let sk = x25519_dalek::StaticSecret::new(SecureRandom::get());
         let pk = x25519_dalek::PublicKey::from(&sk);
         C25519KeyPair(sk, pk)
@@ -68,7 +68,7 @@ pub struct Ed25519KeyPair(ed25519_dalek::Keypair);
 
 impl Ed25519KeyPair {
     #[inline(always)]
-    pub fn generate(_transient: bool) -> Ed25519KeyPair {
+    pub fn generate() -> Ed25519KeyPair {
         let mut rng = SecureRandom::get();
         Ed25519KeyPair(ed25519_dalek::Keypair::generate(&mut rng))
     }

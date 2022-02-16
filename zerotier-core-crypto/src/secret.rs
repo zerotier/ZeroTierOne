@@ -6,7 +6,6 @@
  * https://www.zerotier.com/
  */
 
-use std::convert::TryInto;
 use std::ptr::write_volatile;
 
 /// Container for secrets that clears them on drop.

@@ -41,9 +41,6 @@ pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1: u8 = b'1';
 /// KBKDF usage label for the key used to advance the ratchet.
 pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_NEXT_KEY: u8 = b'e';
 
-/// KBKDF usage label for generating the ratchet state ID (which is not actually a key).
-pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_STATE_KEY: u8 = b'E';
-
 /// Try to re-key ephemeral keys after this time.
 pub const EPHEMERAL_SECRET_REKEY_AFTER_TIME: i64 = 300000; // 5 minutes
 
@@ -179,7 +176,7 @@ pub const IDENTITY_V0_POW_THRESHOLD: u8 = 17;
 
 /// Proof of work difficulty (threshold) for new v1 identities.
 /// This is lower than the V0 threshold, causing the V0 part of V1 identities to verify on old nodes.
-pub const IDENTITY_V1_POW_THRESHOLD: u8 = 9;
+pub const IDENTITY_V1_POW_THRESHOLD: u8 = 13;
 
 /// Compress a packet and return true if compressed.
 /// The 'dest' buffer must be empty (will panic otherwise). A return value of false indicates an error or

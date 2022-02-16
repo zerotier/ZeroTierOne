@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
 use arc_swap::ArcSwapOption;
 use parking_lot::Mutex;
 
-use zerotier_core_crypto::hash::{SHA384, SHA384_HASH_SIZE};
+use zerotier_core_crypto::hash::{hmac_sha384, SHA384, SHA384_HASH_SIZE};
 use zerotier_core_crypto::poly1305::Poly1305;
 use zerotier_core_crypto::random::next_u64_secure;
 use zerotier_core_crypto::salsa::Salsa;
@@ -78,7 +78,7 @@ pub struct Peer {
 ///
 /// This is only used for Salsa/Poly modes.
 #[inline(always)]
-fn salsa_derive_per_packet_key(key: &Secret<48>, header: &PacketHeader, packet_size: usize) -> Secret<48> {
+fn salsa_derive_per_packet_key(key: &Secret<64>, header: &PacketHeader, packet_size: usize) -> Secret<64> {
     let hb = header.as_bytes();
     let mut k = key.clone();
     for i in 0..18 {
@@ -92,9 +92,9 @@ fn salsa_derive_per_packet_key(key: &Secret<48>, header: &PacketHeader, packet_s
 
 /// Create initialized instances of Salsa20/12 and Poly1305 for a packet.
 #[inline(always)]
-fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_size: usize) -> (Salsa, Poly1305) {
+fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_size: usize) -> (Salsa<12>, Poly1305) {
     let key = salsa_derive_per_packet_key(&secret.key, header, packet_size);
-    let mut salsa = Salsa::new(&key.0[0..32], &header.id, true).unwrap();
+    let mut salsa = Salsa::<12>::new(&key.0[0..32], &header.id);
     let mut poly1305_key = [0_u8; 32];
     salsa.crypt_in_place(&mut poly1305_key);
     (salsa, Poly1305::new(&poly1305_key).unwrap())
@@ -266,10 +266,10 @@ impl Peer {
             if extended_authentication {
                 if payload.len() >= (1 + SHA384_HASH_SIZE) {
                     let actual_end_of_payload = payload.len() - SHA384_HASH_SIZE;
-                    let hmac = SHA384::hmac_multipart(self.static_secret.packet_hmac_key.as_ref(), &[u64_as_bytes(&message_id), payload.as_bytes()]);
-                    if !hmac.eq(&(payload.as_bytes()[actual_end_of_payload..])) {
-                        return;
-                    }
+                    //let hmac = hmac_sha384(self.static_secret.packet_hmac_key.as_ref(), &[u64_as_bytes(&message_id), payload.as_bytes()]);
+                    //if !hmac.eq(&(payload.as_bytes()[actual_end_of_payload..])) {
+                    //    return;
+                    //}
                     payload.set_size(actual_end_of_payload);
                 } else {
                     return;
@@ -449,13 +449,13 @@ impl Peer {
         let zero_moon_count = packet.append_bytes_fixed_get_mut::<2>().unwrap();
         let mut salsa_iv = message_id.to_ne_bytes();
         salsa_iv[7] &= 0xf8;
-        Salsa::new(&self.static_secret.key.0[0..32], &salsa_iv, true).unwrap().crypt(&[0_u8, 0_u8], zero_moon_count);
+        Salsa::<12>::new(&self.static_secret.key.0[0..32], &salsa_iv).crypt(&[0_u8, 0_u8], zero_moon_count);
 
         // Size of dictionary with optional fields, currently none. For future use.
         assert!(packet.append_u16(0).is_ok());
 
         // Add full HMAC for strong authentication with newer nodes.
-        assert!(packet.append_bytes_fixed(&SHA384::hmac_multipart(&self.static_secret.packet_hmac_key.0, &[u64_as_bytes(&message_id), &packet.as_bytes()[PACKET_HEADER_SIZE..]])).is_ok());
+        //assert!(packet.append_bytes_fixed(&SHA384::hmac_multipart(&self.static_secret.packet_hmac_key.0, &[u64_as_bytes(&message_id), &packet.as_bytes()[PACKET_HEADER_SIZE..]])).is_ok());
 
         // LEGACY: set MAC field in header with poly1305 for older nodes.
         // Newer nodes use the HMAC for stronger verification.

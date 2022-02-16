@@ -9,7 +9,6 @@
 pub mod pool;
 pub mod gate;
 pub mod buffer;
-pub mod iblt;
 
 pub use zerotier_core_crypto::hex;
 pub use zerotier_core_crypto::varint;
@@ -42,9 +41,6 @@ lazy_static! {
 /// The random salt is generated at process start and so will differ for each invocation of whatever process this is inside.
 #[inline(always)]
 pub(crate) fn highwayhasher() -> highway::HighwayHasher { highway::HighwayHasher::new(highway::Key(HIGHWAYHASHER_KEY.clone())) }
-
-#[inline(always)]
-pub(crate) fn u128_from_2xu64_ne(x: [u64; 2]) -> u128 { unsafe { std::mem::transmute(x) } }
 
 /// Non-cryptographic 64-bit bit mixer for things like local hashing.
 #[inline(always)]

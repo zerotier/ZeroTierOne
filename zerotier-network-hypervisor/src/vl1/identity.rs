@@ -15,19 +15,16 @@ use std::mem::MaybeUninit;
 use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 use std::str::FromStr;
 
-use highway::HighwayHash;
-
 use lazy_static::lazy_static;
 
-use zerotier_core_crypto::c25519::{C25519_PUBLIC_KEY_SIZE, C25519_SECRET_KEY_SIZE, C25519KeyPair, ED25519_PUBLIC_KEY_SIZE, ED25519_SECRET_KEY_SIZE, ED25519_SIGNATURE_SIZE, ed25519_verify, Ed25519KeyPair};
-use zerotier_core_crypto::hash::{SHA384, SHA384_HASH_SIZE, SHA512};
+use zerotier_core_crypto::c25519::*;
+use zerotier_core_crypto::hash::{hmac_sha512, SHA384, SHA384_HASH_SIZE, SHA512, SHA512_HASH_SIZE};
 use zerotier_core_crypto::hex;
-use zerotier_core_crypto::p521::{P521_ECDSA_SIGNATURE_SIZE, P521_PUBLIC_KEY_SIZE, P521_SECRET_KEY_SIZE, P521KeyPair, P521PublicKey};
+use zerotier_core_crypto::p384::*;
 use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
 use crate::error::InvalidFormatError;
-use crate::util::{array_range, highwayhasher, u128_from_2xu64_ne};
 use crate::util::buffer::Buffer;
 use crate::util::pool::{Pool, Pooled, PoolFactory};
 use crate::vl1::Address;
@@ -36,26 +33,26 @@ use crate::vl1::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_V0_POW_TH
 /// Curve25519 and Ed25519
 pub const IDENTITY_ALGORITHM_X25519: u8 = 0x01;
 
-/// NIST P-521 ECDH and ECDSA
-pub const IDENTITY_ALGORITHM_EC_NIST_P521: u8 = 0x02;
+/// NIST P-384 ECDH and ECDSA
+pub const IDENTITY_ALGORITHM_EC_NIST_P384: u8 = 0x02;
 
 /// Bit mask to include all algorithms.
 pub const IDENTITY_ALGORITHM_ALL: u8 = 0xff;
 
 /// Current sanity limit for the size of a marshaled Identity (can be increased if needed).
-pub const MAX_MARSHAL_SIZE: usize = ADDRESS_SIZE + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + 16;
+pub const MAX_MARSHAL_SIZE: usize = ADDRESS_SIZE + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + 16;
 
 #[derive(Clone)]
-pub struct IdentityP521Secret {
-    pub ecdh: P521KeyPair,
-    pub ecdsa: P521KeyPair,
+pub struct IdentityP384Secret {
+    pub ecdh: P384KeyPair,
+    pub ecdsa: P384KeyPair,
 }
 
 #[derive(Clone)]
-pub struct IdentityP521Public {
-    pub ecdh: [u8; P521_PUBLIC_KEY_SIZE],
-    pub ecdsa: [u8; P521_PUBLIC_KEY_SIZE],
-    pub ecdsa_self_signature: [u8; P521_ECDSA_SIGNATURE_SIZE],
+pub struct IdentityP384Public {
+    pub ecdh: P384PublicKey,
+    pub ecdsa: P384PublicKey,
+    pub ecdsa_self_signature: [u8; P384_ECDSA_SIGNATURE_SIZE],
     pub ed25519_self_signature: [u8; ED25519_SIGNATURE_SIZE],
 }
 
@@ -63,22 +60,22 @@ pub struct IdentityP521Public {
 pub struct IdentitySecret {
     pub c25519: C25519KeyPair,
     pub ed25519: Ed25519KeyPair,
-    pub p521: Option<IdentityP521Secret>,
+    pub p384: Option<IdentityP384Secret>,
 }
 
 #[derive(Clone)]
 pub struct Identity {
     pub address: Address,
-    fast_eq_hash: u128, // highwayhash used internally for very fast eq()
     pub c25519: [u8; C25519_PUBLIC_KEY_SIZE],
     pub ed25519: [u8; ED25519_PUBLIC_KEY_SIZE],
-    pub p521: Option<IdentityP521Public>,
+    pub p384: Option<IdentityP384Public>,
     pub secret: Option<IdentitySecret>,
+    pub fingerprint: [u8; SHA512_HASH_SIZE]
 }
 
 #[inline(always)]
 fn concat_arrays_2<const A: usize, const B: usize, const S: usize>(a: &[u8; A], b: &[u8; B]) -> [u8; S] {
-    debug_assert_eq!(A + B, S);
+    assert_eq!(A + B, S);
     let mut tmp: [u8; S] = unsafe { MaybeUninit::uninit().assume_init() };
     tmp[..A].copy_from_slice(a);
     tmp[A..].copy_from_slice(b);
@@ -87,7 +84,7 @@ fn concat_arrays_2<const A: usize, const B: usize, const S: usize>(a: &[u8; A], 
 
 #[inline(always)]
 fn concat_arrays_4<const A: usize, const B: usize, const C: usize, const D: usize, const S: usize>(a: &[u8; A], b: &[u8; B], c: &[u8; C], d: &[u8; D]) -> [u8; S] {
-    debug_assert_eq!(A + B + C + D, S);
+    assert_eq!(A + B + C + D, S);
     let mut tmp: [u8; S] = unsafe { MaybeUninit::uninit().assume_init() };
     tmp[..A].copy_from_slice(a);
     tmp[A..(A + B)].copy_from_slice(b);
@@ -100,14 +97,14 @@ impl Identity {
     /// Generate a new identity.
     pub fn generate() -> Self {
         let mut sha = SHA512::new();
-        let ed25519 = Ed25519KeyPair::generate(false);
+        let ed25519 = Ed25519KeyPair::generate();
         let ed25519_pub = ed25519.public_bytes();
         let address;
         let mut c25519;
         let mut c25519_pub;
         let mut genmem_pool_obj = ADDRESS_DERVIATION_MEMORY_POOL.get();
         loop {
-            c25519 = C25519KeyPair::generate(false);
+            c25519 = C25519KeyPair::generate();
             c25519_pub = c25519.public_bytes();
 
             sha.update(&c25519_pub);
@@ -127,72 +124,69 @@ impl Identity {
         }
         drop(genmem_pool_obj);
 
-        let p521_ecdh = P521KeyPair::generate(false).unwrap();
-        let p521_ecdsa = P521KeyPair::generate(false).unwrap();
-        let p521_ecdh_pub = p521_ecdh.public_key_bytes().clone();
-        let p521_ecdsa_pub = p521_ecdsa.public_key_bytes().clone();
+        let p384_ecdh = P384KeyPair::generate();
+        let p384_ecdsa = P384KeyPair::generate();
 
-        let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE);
+        let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE);
         let _ = self_sign_buf.write_all(&address.to_bytes());
         let _ = self_sign_buf.write_all(&c25519_pub);
         let _ = self_sign_buf.write_all(&ed25519_pub);
-        self_sign_buf.push(IDENTITY_ALGORITHM_EC_NIST_P521);
-        let _ = self_sign_buf.write_all(&p521_ecdh_pub);
-        let _ = self_sign_buf.write_all(&p521_ecdsa_pub);
-        self_sign_buf.push(IDENTITY_ALGORITHM_EC_NIST_P521);
+        self_sign_buf.push(IDENTITY_ALGORITHM_EC_NIST_P384);
+        let _ = self_sign_buf.write_all(p384_ecdh.public_key_bytes());
+        let _ = self_sign_buf.write_all(p384_ecdsa.public_key_bytes());
 
-        let mut hh = highwayhasher();
-        Hasher::write_u64(&mut hh, address.to_u64());
-        Hasher::write(&mut hh, &c25519_pub);
-        Hasher::write(&mut hh, &ed25519_pub);
-        Hasher::write(&mut hh, &p521_ecdh_pub);
-        Hasher::write(&mut hh, &p521_ecdsa_pub);
+        let ecdsa_self_signature = p384_ecdsa.sign(self_sign_buf.as_slice());
+        let ed25519_self_signature = ed25519.sign(self_sign_buf.as_slice());
+
+        let mut sha = SHA512::new();
+        sha.update(self_sign_buf.as_slice());
+        sha.update(&ecdsa_self_signature);
+        sha.update(&ed25519_self_signature);
 
         Self {
             address,
-            fast_eq_hash: u128_from_2xu64_ne(hh.finalize128()),
             c25519: c25519_pub,
             ed25519: ed25519_pub,
-            p521: Some(IdentityP521Public {
-                ecdh: p521_ecdh_pub,
-                ecdsa: p521_ecdsa_pub,
-                ecdsa_self_signature: p521_ecdsa.sign(self_sign_buf.as_slice()).expect("NIST P-521 signature failed in identity generation"),
-                ed25519_self_signature: ed25519.sign(self_sign_buf.as_slice()),
+            p384: Some(IdentityP384Public {
+                ecdh: p384_ecdh.public_key().clone(),
+                ecdsa: p384_ecdsa.public_key().clone(),
+                ecdsa_self_signature,
+                ed25519_self_signature,
             }),
             secret: Some(IdentitySecret {
                 c25519,
                 ed25519,
-                p521: Some(IdentityP521Secret {
-                    ecdh: p521_ecdh,
-                    ecdsa: p521_ecdsa,
+                p384: Some(IdentityP384Secret {
+                    ecdh: p384_ecdh,
+                    ecdsa: p384_ecdsa,
                 }),
             }),
+            fingerprint: sha.finish()
         }
     }
 
     #[inline(always)]
     pub fn algorithms(&self) -> u8 {
-        if self.p521.is_some() {
-            IDENTITY_ALGORITHM_X25519 | IDENTITY_ALGORITHM_EC_NIST_P521
+        if self.p384.is_some() {
+            IDENTITY_ALGORITHM_X25519 | IDENTITY_ALGORITHM_EC_NIST_P384
         } else {
             IDENTITY_ALGORITHM_X25519
         }
     }
 
     /// Get a SHA384 hash of this identity's address and public keys.
-    /// This provides a globally unique 384-bit fingerprint of this identity.
-    pub fn hash(&self) -> [u8; SHA384_HASH_SIZE] {
+    /// This is a SHA384 counterpart to the sha512 field.
+    pub fn sha384(&self) -> [u8; SHA384_HASH_SIZE] {
         let mut sha = SHA384::new();
         sha.update(&self.address.to_bytes());
         sha.update(&self.c25519);
         sha.update(&self.ed25519);
-        let _ = self.p521.as_ref().map(|p521| {
-            sha.update(&[IDENTITY_ALGORITHM_EC_NIST_P521]);
-            sha.update(&p521.ecdh);
-            sha.update(&p521.ecdsa);
-            sha.update(&p521.ecdsa_self_signature);
-            sha.update(&p521.ed25519_self_signature);
-            sha.update(&[IDENTITY_ALGORITHM_EC_NIST_P521]);
+        let _ = self.p384.as_ref().map(|p384| {
+            sha.update(&[IDENTITY_ALGORITHM_EC_NIST_P384]);
+            sha.update(p384.ecdh.as_bytes());
+            sha.update(p384.ecdsa.as_bytes());
+            sha.update(&p384.ecdsa_self_signature);
+            sha.update(&p384.ed25519_self_signature);
         });
         sha.finish()
     }
@@ -201,22 +195,21 @@ impl Identity {
     ///
     /// This is somewhat time consuming due to the memory-intensive work algorithm.
     pub fn validate_identity(&self) -> bool {
-        let pow_threshold = if self.p521.is_some() {
-            let p521 = self.p521.as_ref().unwrap();
+        let pow_threshold = if self.p384.is_some() {
+            let p384 = self.p384.as_ref().unwrap();
 
-            let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE);
+            let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE);
             let _ = self_sign_buf.write_all(&self.address.to_bytes());
             let _ = self_sign_buf.write_all(&self.c25519);
             let _ = self_sign_buf.write_all(&self.ed25519);
-            self_sign_buf.push(IDENTITY_ALGORITHM_EC_NIST_P521);
-            let _ = self_sign_buf.write_all(&p521.ecdh);
-            let _ = self_sign_buf.write_all(&p521.ecdsa);
-            self_sign_buf.push(IDENTITY_ALGORITHM_EC_NIST_P521);
+            self_sign_buf.push(IDENTITY_ALGORITHM_EC_NIST_P384);
+            let _ = self_sign_buf.write_all(p384.ecdh.as_bytes());
+            let _ = self_sign_buf.write_all(p384.ecdsa.as_bytes());
 
-            if !P521PublicKey::from_bytes(&p521.ecdsa).map_or(false, |ecdsa_pub| ecdsa_pub.verify(self_sign_buf.as_slice(), &p521.ecdsa_self_signature)) {
+            if !p384.ecdsa.verify(self_sign_buf.as_slice(), &p384.ecdsa_self_signature) {
                 return false;
             }
-            if !ed25519_verify(&self.ed25519, &p521.ed25519_self_signature, self_sign_buf.as_slice()) {
+            if !ed25519_verify(&self.ed25519, &p384.ed25519_self_signature, self_sign_buf.as_slice()) {
                 return false;
             }
 
@@ -240,28 +233,34 @@ impl Identity {
     ///
     /// An error can occur if this identity does not hold its secret portion or if either key is invalid.
     ///
-    /// If both sides have NIST P-521 keys then key agreement is performed using both Curve25519 and
-    /// NIST P-521 and the result is HMAC(Curve25519 secret, NIST P-521 secret).
-    pub fn agree(&self, other: &Identity) -> Option<Secret<48>> {
+    /// If both sides have NIST P-384 keys then key agreement is performed using both Curve25519 and
+    /// NIST P-384 and the result is HMAC(Curve25519 secret, NIST P-384 secret).
+    ///
+    /// Nothing actually uses a 512-bit secret directly, but if the base secret is 512 bits then
+    /// no entropy is lost when deriving secrets with a KDF. Ciphers like AES use the first 256 bits
+    /// of these keys.
+    pub fn agree(&self, other: &Identity) -> Option<Secret<64>> {
         self.secret.as_ref().and_then(|secret| {
             let c25519_secret = Secret(SHA512::hash(&secret.c25519.agree(&other.c25519).0));
 
             // FIPS note: FIPS-compliant exchange algorithms must be the last algorithms in any HKDF chain
             // for the final result to be technically FIPS compliant. Non-FIPS algorithm secrets are considered
             // a salt in the HMAC(salt, key) HKDF construction.
-            if secret.p521.is_some() && other.p521.is_some() {
-                P521PublicKey::from_bytes(&other.p521.as_ref().unwrap().ecdh).and_then(|other_p521| {
-                    secret.p521.as_ref().unwrap().ecdh.agree(&other_p521).map(|p521_secret| {
-                        Secret(SHA384::hmac(&c25519_secret.0[0..48], &p521_secret.0))
-                    })
+            if secret.p384.is_some() && other.p384.is_some() {
+                secret.p384.as_ref().unwrap().ecdh.agree(&other.p384.as_ref().unwrap().ecdh).map(|p384_secret| {
+                    Secret(hmac_sha512(&c25519_secret.0, &p384_secret.0))
                 })
             } else {
-                Some(Secret(array_range::<u8, 64, 0, 48>(&c25519_secret.0).clone()))
+                Some(c25519_secret)
             }
         })
     }
 
     /// Sign a message with this identity.
+    ///
+    /// If legacy_compatibility is true this generates only an ed25519 signature. Otherwise it
+    /// will generate a signature using both the ed25519 key and the P-384 key if the latter
+    /// is present in the identity.
     ///
     /// A return of None happens if we don't have our secret key(s) or some other error occurs.
     pub fn sign(&self, msg: &[u8], legacy_compatibility: bool) -> Option<Vec<u8>> {
@@ -269,20 +268,16 @@ impl Identity {
             let secret = self.secret.as_ref().unwrap();
             if legacy_compatibility {
                 Some(secret.ed25519.sign_zt(msg).to_vec())
-            } else if secret.p521.is_some() {
-                let p521 = secret.p521.as_ref().unwrap();
-                let p521_sig = p521.ecdsa.sign(msg).unwrap();
-                let ed25519_sig = secret.ed25519.sign(msg);
-                let mut tmp: Vec<u8> = Vec::with_capacity(1 + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE);
-                tmp.push(IDENTITY_ALGORITHM_X25519 | IDENTITY_ALGORITHM_EC_NIST_P521);
-                let _ = tmp.write_all(&ed25519_sig);
-                let _ = tmp.write_all(&p521_sig);
+            } else if secret.p384.is_some() {
+                let mut tmp: Vec<u8> = Vec::with_capacity(1 + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE);
+                tmp.push(IDENTITY_ALGORITHM_X25519 | IDENTITY_ALGORITHM_EC_NIST_P384);
+                let _ = tmp.write_all(&secret.p384.as_ref().unwrap().ecdsa.sign(msg));
+                let _ = tmp.write_all(&secret.ed25519.sign(msg));
                 Some(tmp)
             } else {
-                let ed25519_sig = secret.ed25519.sign(msg);
                 let mut tmp: Vec<u8> = Vec::with_capacity(1 + ED25519_SIGNATURE_SIZE);
                 tmp.push(IDENTITY_ALGORITHM_X25519);
-                let _ = tmp.write_all(&ed25519_sig);
+                let _ = tmp.write_all(&secret.ed25519.sign(msg));
                 Some(tmp)
             }
         } else {
@@ -299,14 +294,14 @@ impl Identity {
             signature = &signature[1..];
             let mut ok = true;
             let mut checked = false;
+            if ok && (algorithms & IDENTITY_ALGORITHM_EC_NIST_P384) != 0 && signature.len() >= P384_ECDSA_SIGNATURE_SIZE && self.p384.is_some() {
+                ok = self.p384.as_ref().unwrap().ecdsa.verify(msg, &signature[..P384_ECDSA_SIGNATURE_SIZE]);
+                signature = &signature[P384_ECDSA_SIGNATURE_SIZE..];
+                checked = true;
+            }
             if ok && (algorithms & IDENTITY_ALGORITHM_X25519) != 0 && signature.len() >= ED25519_SIGNATURE_SIZE {
                 ok = ed25519_verify(&self.ed25519, &signature[..ED25519_SIGNATURE_SIZE], msg);
                 signature = &signature[ED25519_SIGNATURE_SIZE..];
-                checked = true;
-            }
-            if ok && (algorithms & IDENTITY_ALGORITHM_EC_NIST_P521) != 0 && signature.len() >= P521_ECDSA_SIGNATURE_SIZE && self.p521.is_some() {
-                ok = P521PublicKey::from_bytes(&self.p521.as_ref().unwrap().ecdsa).map_or(false, |p521| p521.verify(msg, &signature[..P521_ECDSA_SIGNATURE_SIZE]));
-                signature = &signature[P521_ECDSA_SIGNATURE_SIZE..];
                 checked = true;
             }
             checked && ok
@@ -322,15 +317,15 @@ impl Identity {
         b
     }
 
-    const P521_PUBLIC_AND_PRIVATE_BUNDLE_SIZE: u16 = (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE) as u16;
-    const P521_PUBLIC_ONLY_BUNDLE_SIZE: u16 = (P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE) as u16;
+    const P384_PUBLIC_AND_PRIVATE_BUNDLE_SIZE: u16 = (P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE) as u16;
+    const P384_PUBLIC_ONLY_BUNDLE_SIZE: u16 = (P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE) as u16;
 
     pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_algorithms: u8, include_private: bool) -> std::io::Result<()> {
         let algorithms = self.algorithms() & include_algorithms;
         let secret = self.secret.as_ref();
 
         buf.append_bytes_fixed(&self.address.to_bytes())?;
-        buf.append_u8(0x00)?; // use 0x00 here for backward compatibility
+        buf.append_u8(0x00)?; // LEGACY: 0x00 here for backward compatibility
         buf.append_bytes_fixed(&self.c25519)?;
         buf.append_bytes_fixed(&self.ed25519)?;
         if include_private && secret.is_some() {
@@ -342,8 +337,8 @@ impl Identity {
             buf.append_u8(0)?;
         }
 
-        if (algorithms & IDENTITY_ALGORITHM_EC_NIST_P521) == IDENTITY_ALGORITHM_EC_NIST_P521 && self.p521.is_some() {
-            let p521 = self.p521.as_ref().unwrap();
+        if (algorithms & IDENTITY_ALGORITHM_EC_NIST_P384) != 0 && self.p384.is_some() {
+            let p384 = self.p384.as_ref().unwrap();
 
             /*
              * For legacy backward compatibility, any key pairs and other material after the x25519
@@ -361,28 +356,28 @@ impl Identity {
              * Key agreement can then proceed using only x25519 keys.
              */
             buf.append_u8(0x03)?;
-            let p521_has_private = if include_private && secret.map_or(false, |s| s.p521.is_some()) {
-                buf.append_u16(Self::P521_PUBLIC_AND_PRIVATE_BUNDLE_SIZE + 1 + 2)?;
+            let p384_has_private = if include_private && secret.map_or(false, |s| s.p384.is_some()) {
+                buf.append_u16(Self::P384_PUBLIC_AND_PRIVATE_BUNDLE_SIZE + 1 + 2)?;
                 true
             } else {
-                buf.append_u16(Self::P521_PUBLIC_ONLY_BUNDLE_SIZE + 1 + 2)?;
+                buf.append_u16(Self::P384_PUBLIC_ONLY_BUNDLE_SIZE + 1 + 2)?;
                 false
             };
 
-            buf.append_u8(IDENTITY_ALGORITHM_EC_NIST_P521)?;
-            if p521_has_private {
-                buf.append_u16(Self::P521_PUBLIC_AND_PRIVATE_BUNDLE_SIZE)?;
+            buf.append_u8(IDENTITY_ALGORITHM_EC_NIST_P384)?;
+            if p384_has_private {
+                buf.append_u16(Self::P384_PUBLIC_AND_PRIVATE_BUNDLE_SIZE)?;
             } else {
-                buf.append_u16(Self::P521_PUBLIC_ONLY_BUNDLE_SIZE)?;
+                buf.append_u16(Self::P384_PUBLIC_ONLY_BUNDLE_SIZE)?;
             }
-            buf.append_bytes_fixed(&p521.ecdh)?;
-            buf.append_bytes_fixed(&p521.ecdsa)?;
-            buf.append_bytes_fixed(&p521.ecdsa_self_signature)?;
-            buf.append_bytes_fixed(&p521.ed25519_self_signature)?;
-            if p521_has_private {
-                let p521s = secret.unwrap().p521.as_ref().unwrap();
-                buf.append_bytes_fixed(&p521s.ecdh.secret_key_bytes().0)?;
-                buf.append_bytes_fixed(&p521s.ecdsa.secret_key_bytes().0)?;
+            buf.append_bytes_fixed(p384.ecdh.as_bytes())?;
+            buf.append_bytes_fixed(p384.ecdsa.as_bytes())?;
+            buf.append_bytes_fixed(&p384.ecdsa_self_signature)?;
+            buf.append_bytes_fixed(&p384.ed25519_self_signature)?;
+            if p384_has_private {
+                let p384s = secret.unwrap().p384.as_ref().unwrap();
+                buf.append_bytes_fixed(&p384s.ecdh.secret_key_bytes().0)?;
+                buf.append_bytes_fixed(&p384s.ecdsa.secret_key_bytes().0)?;
             }
         }
 
@@ -398,8 +393,8 @@ impl Identity {
 
         let mut x25519_public: Option<([u8; C25519_PUBLIC_KEY_SIZE], [u8; ED25519_PUBLIC_KEY_SIZE])> = None;
         let mut x25519_secret: Option<([u8; C25519_SECRET_KEY_SIZE], [u8; ED25519_SECRET_KEY_SIZE])> = None;
-        let mut p521_ecdh_ecdsa_public: Option<([u8; P521_PUBLIC_KEY_SIZE], [u8; P521_PUBLIC_KEY_SIZE], [u8; P521_ECDSA_SIGNATURE_SIZE], [u8; ED25519_SIGNATURE_SIZE])> = None;
-        let mut p521_ecdh_ecdsa_secret: Option<([u8; P521_SECRET_KEY_SIZE], [u8; P521_SECRET_KEY_SIZE])> = None;
+        let mut p384_ecdh_ecdsa_public: Option<(P384PublicKey, P384PublicKey, [u8; P384_ECDSA_SIGNATURE_SIZE], [u8; ED25519_SIGNATURE_SIZE])> = None;
+        let mut p384_ecdh_ecdsa_secret: Option<([u8; P384_SECRET_KEY_SIZE], [u8; P384_SECRET_KEY_SIZE])> = None;
 
         loop {
             let algorithm = buf.read_u8(cursor);
@@ -426,23 +421,28 @@ impl Identity {
                     // compatibility. See comments in marshal(). New versions can ignore this field.
                     *cursor += 2;
                 }
-                IDENTITY_ALGORITHM_EC_NIST_P521 => {
+                IDENTITY_ALGORITHM_EC_NIST_P384 => {
                     let size = buf.read_u16(cursor)?;
-                    if size < Self::P521_PUBLIC_ONLY_BUNDLE_SIZE {
-                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p521 public key"));
+                    if size < Self::P384_PUBLIC_ONLY_BUNDLE_SIZE {
+                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p384 public key"));
                     }
-                    let a = buf.read_bytes_fixed::<P521_PUBLIC_KEY_SIZE>(cursor)?;
-                    let b = buf.read_bytes_fixed::<P521_PUBLIC_KEY_SIZE>(cursor)?;
-                    let c = buf.read_bytes_fixed::<P521_ECDSA_SIGNATURE_SIZE>(cursor)?;
+                    let a = buf.read_bytes_fixed::<P384_PUBLIC_KEY_SIZE>(cursor)?;
+                    let b = buf.read_bytes_fixed::<P384_PUBLIC_KEY_SIZE>(cursor)?;
+                    let c = buf.read_bytes_fixed::<P384_ECDSA_SIGNATURE_SIZE>(cursor)?;
                     let d = buf.read_bytes_fixed::<ED25519_SIGNATURE_SIZE>(cursor)?;
-                    p521_ecdh_ecdsa_public = Some((a.clone(), b.clone(), c.clone(), d.clone()));
-                    if size > Self::P521_PUBLIC_ONLY_BUNDLE_SIZE {
-                        if size != Self::P521_PUBLIC_AND_PRIVATE_BUNDLE_SIZE {
-                            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p521 secret key"));
+                    let a = P384PublicKey::from_bytes(a);
+                    let b = P384PublicKey::from_bytes(b);
+                    if a.is_none() || b.is_none() {
+                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p384 public key"));
+                    }
+                    p384_ecdh_ecdsa_public = Some((a.unwrap(), b.unwrap(), c.clone(), d.clone()));
+                    if size > Self::P384_PUBLIC_ONLY_BUNDLE_SIZE {
+                        if size != Self::P384_PUBLIC_AND_PRIVATE_BUNDLE_SIZE {
+                            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p384 secret key"));
                         }
-                        let a = buf.read_bytes_fixed::<P521_SECRET_KEY_SIZE>(cursor)?;
-                        let b = buf.read_bytes_fixed::<P521_SECRET_KEY_SIZE>(cursor)?;
-                        p521_ecdh_ecdsa_secret = Some((a.clone(), b.clone()));
+                        let a = buf.read_bytes_fixed::<P384_SECRET_KEY_SIZE>(cursor)?;
+                        let b = buf.read_bytes_fixed::<P384_SECRET_KEY_SIZE>(cursor)?;
+                        p384_ecdh_ecdsa_secret = Some((a.clone(), b.clone()));
                     }
                 }
                 _ => {
@@ -460,27 +460,30 @@ impl Identity {
         }
         let x25519_public = x25519_public.unwrap();
 
-        let mut hh = highwayhasher();
-        Hasher::write_u64(&mut hh, address.to_u64());
-        Hasher::write(&mut hh, &x25519_public.0);
-        Hasher::write(&mut hh, &x25519_public.1);
-        let _ = p521_ecdh_ecdsa_public.as_ref().map(|p521| {
-            Hasher::write(&mut hh, &p521.0);
-            Hasher::write(&mut hh, &p521.1);
-        });
+        let mut sha = SHA512::new();
+        sha.update(&address.to_bytes());
+        sha.update(&x25519_public.0);
+        sha.update(&x25519_public.1);
+        if p384_ecdh_ecdsa_public.is_some() {
+            let p384 = p384_ecdh_ecdsa_public.as_ref().unwrap();
+            sha.update(&[IDENTITY_ALGORITHM_EC_NIST_P384]);
+            sha.update(p384.0.as_bytes());
+            sha.update(p384.1.as_bytes());
+            sha.update(&p384.2);
+            sha.update(&p384.3);
+        }
 
         Ok(Identity {
             address,
-            fast_eq_hash: u128_from_2xu64_ne(hh.finalize128()),
             c25519: x25519_public.0.clone(),
             ed25519: x25519_public.1.clone(),
-            p521: if p521_ecdh_ecdsa_public.is_some() {
-                let p521_ecdh_ecdsa_public = p521_ecdh_ecdsa_public.as_ref().unwrap();
-                Some(IdentityP521Public {
-                    ecdh: p521_ecdh_ecdsa_public.0.clone(),
-                    ecdsa: p521_ecdh_ecdsa_public.1.clone(),
-                    ecdsa_self_signature: p521_ecdh_ecdsa_public.2.clone(),
-                    ed25519_self_signature: p521_ecdh_ecdsa_public.3.clone(),
+            p384: if p384_ecdh_ecdsa_public.is_some() {
+                let p384_ecdh_ecdsa_public = p384_ecdh_ecdsa_public.as_ref().unwrap();
+                Some(IdentityP384Public {
+                    ecdh: p384_ecdh_ecdsa_public.0.clone(),
+                    ecdsa: p384_ecdh_ecdsa_public.1.clone(),
+                    ecdsa_self_signature: p384_ecdh_ecdsa_public.2.clone(),
+                    ed25519_self_signature: p384_ecdh_ecdsa_public.3.clone(),
                 })
             } else {
                 None
@@ -495,17 +498,17 @@ impl Identity {
                 Some(IdentitySecret {
                     c25519: c25519_secret.unwrap(),
                     ed25519: ed25519_secret.unwrap(),
-                    p521: if p521_ecdh_ecdsa_secret.is_some() && p521_ecdh_ecdsa_public.is_some() {
-                        let p521_ecdh_ecdsa_public = p521_ecdh_ecdsa_public.as_ref().unwrap();
-                        let p521_ecdh_ecdsa_secret = p521_ecdh_ecdsa_secret.as_ref().unwrap();
-                        let p521_ecdh_secret = P521KeyPair::from_bytes(&p521_ecdh_ecdsa_public.0, &p521_ecdh_ecdsa_secret.0);
-                        let p521_ecdsa_secret = P521KeyPair::from_bytes(&p521_ecdh_ecdsa_public.1, &p521_ecdh_ecdsa_secret.1);
-                        if p521_ecdh_secret.is_none() || p521_ecdsa_secret.is_none() {
-                            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "p521 secret key invalid"));
+                    p384: if p384_ecdh_ecdsa_secret.is_some() && p384_ecdh_ecdsa_public.is_some() {
+                        let p384_ecdh_ecdsa_public = p384_ecdh_ecdsa_public.as_ref().unwrap();
+                        let p384_ecdh_ecdsa_secret = p384_ecdh_ecdsa_secret.as_ref().unwrap();
+                        let p384_ecdh_secret = P384KeyPair::from_bytes(p384_ecdh_ecdsa_public.0.as_bytes(), &p384_ecdh_ecdsa_secret.0);
+                        let p384_ecdsa_secret = P384KeyPair::from_bytes(p384_ecdh_ecdsa_public.1.as_bytes(), &p384_ecdh_ecdsa_secret.1);
+                        if p384_ecdh_secret.is_none() || p384_ecdsa_secret.is_none() {
+                            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "p384 secret key invalid"));
                         }
-                        Some(IdentityP521Secret {
-                            ecdh: p521_ecdh_secret.unwrap(),
-                            ecdsa: p521_ecdsa_secret.unwrap(),
+                        Some(IdentityP384Secret {
+                            ecdh: p384_ecdh_secret.unwrap(),
+                            ecdsa: p384_ecdsa_secret.unwrap(),
                         })
                     } else {
                         None
@@ -514,6 +517,7 @@ impl Identity {
             } else {
                 None
             },
+            fingerprint: sha.finish()
         })
     }
 
@@ -521,32 +525,39 @@ impl Identity {
     pub fn to_string_with_options(&self, include_algorithms: u8, include_private: bool) -> String {
         if include_private && self.secret.is_some() {
             let secret = self.secret.as_ref().unwrap();
-            if (include_algorithms & IDENTITY_ALGORITHM_EC_NIST_P521) == IDENTITY_ALGORITHM_EC_NIST_P521 && secret.p521.is_some() && self.p521.is_some() {
-                let p521_secret = secret.p521.as_ref().unwrap();
-                let p521 = self.p521.as_ref().unwrap();
-                let p521_secret_joined: [u8; P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE] = concat_arrays_2(p521_secret.ecdh.secret_key_bytes().as_bytes(), p521_secret.ecdsa.secret_key_bytes().as_bytes());
-                let p521_joined: [u8; P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(&p521.ecdh, &p521.ecdsa, &p521.ecdsa_self_signature, &p521.ed25519_self_signature);
+            if (include_algorithms & IDENTITY_ALGORITHM_EC_NIST_P384) == IDENTITY_ALGORITHM_EC_NIST_P384 && secret.p384.is_some() && self.p384.is_some() {
+                let p384_secret = secret.p384.as_ref().unwrap();
+                let p384 = self.p384.as_ref().unwrap();
+                let p384_secret_joined: [u8; P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE] = concat_arrays_2(p384_secret.ecdh.secret_key_bytes().as_bytes(), p384_secret.ecdsa.secret_key_bytes().as_bytes());
+                let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(p384.ecdh.as_bytes(), p384.ecdsa.as_bytes(), &p384.ecdsa_self_signature, &p384.ed25519_self_signature);
                 format!("{}:0:{}{}:{}{}:2:{}:{}",
                     self.address.to_string(),
                     hex::to_string(&self.c25519),
                     hex::to_string(&self.ed25519),
                     hex::to_string(&secret.c25519.secret_bytes().0),
                     hex::to_string(&secret.ed25519.secret_bytes().0),
-                    base64::encode_config(p521_joined, base64::URL_SAFE_NO_PAD),
-                    base64::encode_config(p521_secret_joined, base64::URL_SAFE_NO_PAD))
+                    base64::encode_config(p384_joined, base64::URL_SAFE_NO_PAD),
+                    base64::encode_config(p384_secret_joined, base64::URL_SAFE_NO_PAD))
             } else {
-                format!("{}:0:{}{}:{}{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519), hex::to_string(&secret.c25519.secret_bytes().0), hex::to_string(&secret.ed25519.secret_bytes().0))
+                format!("{}:0:{}{}:{}{}",
+                    self.address.to_string(),
+                    hex::to_string(&self.c25519),
+                    hex::to_string(&self.ed25519),
+                    hex::to_string(&secret.c25519.secret_bytes().0),
+                    hex::to_string(&secret.ed25519.secret_bytes().0))
             }
         } else {
-            self.p521.as_ref().map_or_else(|| {
-                format!("{}:0:{}{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519))
-            }, |p521| {
-                let p521_joined: [u8; P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(&p521.ecdh, &p521.ecdsa, &p521.ecdsa_self_signature, &p521.ed25519_self_signature);
+            self.p384.as_ref().map_or_else(|| {
+                format!("{}:0:{}{}",
+                    self.address.to_string(),
+                    hex::to_string(&self.c25519),hex::to_string(&self.ed25519))
+            }, |p384| {
+                let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(p384.ecdh.as_bytes(), p384.ecdsa.as_bytes(), &p384.ecdsa_self_signature, &p384.ed25519_self_signature);
                 format!("{}:0:{}{}::2:{}",
                     self.address.to_string(),
                     hex::to_string(&self.c25519),
                     hex::to_string(&self.ed25519),
-                    base64::encode_config(p521_joined, base64::URL_SAFE_NO_PAD))
+                    base64::encode_config(p384_joined, base64::URL_SAFE_NO_PAD))
             })
         }
     }
@@ -573,7 +584,7 @@ impl FromStr for Identity {
         }
         let address = Address::from_str(fields[0]).map_err(|_| InvalidFormatError)?;
 
-        // x25519 public, x25519 secret, p521 public, p521 secret
+        // x25519 public, x25519 secret, p384 public, p384 secret
         let mut keys: [Option<&str>; 4] = [None, None, None, None];
 
         let mut ptr = 1;
@@ -607,30 +618,38 @@ impl FromStr for Identity {
         if keys[0].len() != C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE {
             return Err(InvalidFormatError);
         }
+        if !keys[2].is_empty() && keys[2].len() != P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE {
+            return Err(InvalidFormatError);
+        }
+        if !keys[3].is_empty() && keys[3].len() != P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE {
+            return Err(InvalidFormatError);
+        }
 
-        let mut hh = highwayhasher();
-        Hasher::write_u64(&mut hh, address.to_u64());
-        Hasher::write(&mut hh, keys[0].as_slice());
+        let mut sha = SHA512::new();
+        sha.update(&address.to_bytes());
+        sha.update(&keys[0].as_slice()[0..64]);
         if !keys[2].is_empty() {
-            Hasher::write(&mut hh, &keys[2].as_slice()[0..264]);
+            sha.update(&[IDENTITY_ALGORITHM_EC_NIST_P384]);
+            sha.update(&keys[2].as_slice());
         }
 
         Ok(Identity {
             address,
-            fast_eq_hash: u128_from_2xu64_ne(hh.finalize128()),
             c25519: keys[0].as_slice()[0..32].try_into().unwrap(),
             ed25519: keys[0].as_slice()[32..64].try_into().unwrap(),
-            p521: if keys[2].is_empty() {
+            p384: if keys[2].is_empty() {
                 None
             } else {
-                if keys[2].len() != P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE {
+                let ecdh = P384PublicKey::from_bytes(&keys[2].as_slice()[..P384_PUBLIC_KEY_SIZE]);
+                let ecdsa = P384PublicKey::from_bytes(&keys[2].as_slice()[P384_PUBLIC_KEY_SIZE..(P384_PUBLIC_KEY_SIZE * 2)]);
+                if ecdh.is_none() || ecdsa.is_none() {
                     return Err(InvalidFormatError);
                 }
-                Some(IdentityP521Public {
-                    ecdh: keys[2].as_slice()[0..132].try_into().unwrap(),
-                    ecdsa: keys[2].as_slice()[132..264].try_into().unwrap(),
-                    ecdsa_self_signature: keys[2].as_slice()[264..396].try_into().unwrap(),
-                    ed25519_self_signature: keys[2].as_slice()[396..460].try_into().unwrap(),
+                Some(IdentityP384Public {
+                    ecdh: ecdh.unwrap(),
+                    ecdsa: ecdsa.unwrap(),
+                    ecdsa_self_signature: keys[2].as_slice()[(P384_PUBLIC_KEY_SIZE * 2)..((P384_PUBLIC_KEY_SIZE * 2) + P384_ECDSA_SIGNATURE_SIZE)].try_into().unwrap(),
+                    ed25519_self_signature: keys[2].as_slice()[((P384_PUBLIC_KEY_SIZE * 2) + P384_ECDSA_SIGNATURE_SIZE)..].try_into().unwrap(),
                 })
             },
             secret: if keys[1].is_empty() {
@@ -654,25 +673,19 @@ impl FromStr for Identity {
                         }
                         tmp.unwrap()
                     },
-                    p521: if keys[3].is_empty() {
+                    p384: if keys[3].is_empty() {
                         None
                     } else {
-                        if keys[2].len() != P521_PUBLIC_KEY_SIZE + P521_PUBLIC_KEY_SIZE + P521_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE {
-                            return Err(InvalidFormatError);
-                        }
-                        if keys[3].len() != P521_SECRET_KEY_SIZE + P521_SECRET_KEY_SIZE {
-                            return Err(InvalidFormatError);
-                        }
-                        Some(IdentityP521Secret {
+                        Some(IdentityP384Secret {
                             ecdh: {
-                                let tmp = P521KeyPair::from_bytes(&keys[2].as_slice()[0..132], &keys[3].as_slice()[..P521_SECRET_KEY_SIZE]);
+                                let tmp = P384KeyPair::from_bytes(&keys[2].as_slice()[..P384_PUBLIC_KEY_SIZE], &keys[3].as_slice()[..P384_SECRET_KEY_SIZE]);
                                 if tmp.is_none() {
                                     return Err(InvalidFormatError);
                                 }
                                 tmp.unwrap()
                             },
                             ecdsa: {
-                                let tmp = P521KeyPair::from_bytes(&keys[2].as_slice()[132..264], &keys[3].as_slice()[P521_SECRET_KEY_SIZE..]);
+                                let tmp = P384KeyPair::from_bytes(&keys[2].as_slice()[P384_PUBLIC_KEY_SIZE..(P384_PUBLIC_KEY_SIZE * 2)], &keys[3].as_slice()[P384_SECRET_KEY_SIZE..]);
                                 if tmp.is_none() {
                                     return Err(InvalidFormatError);
                                 }
@@ -682,37 +695,20 @@ impl FromStr for Identity {
                     },
                 })
             },
+            fingerprint: sha.finish()
         })
     }
 }
 
 impl PartialEq for Identity {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool { self.address == other.address && self.fast_eq_hash == other.fast_eq_hash }
+    fn eq(&self, other: &Self) -> bool { self.fingerprint == other.fingerprint }
 }
 
 impl Eq for Identity {}
 
 impl Ord for Identity {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.address.cmp(&other.address).then_with(|| self.c25519.cmp(&other.c25519).then_with(|| self.ed25519.cmp(&other.ed25519).then_with(|| {
-            if self.p521.is_some() {
-                if other.p521.is_some() {
-                    let p521_a = self.p521.as_ref().unwrap();
-                    let p521_b = other.p521.as_ref().unwrap();
-                    p521_a.ecdh.cmp(&p521_b.ecdh).then_with(|| p521_a.ecdsa.cmp(&p521_b.ecdsa))
-                } else {
-                    Ordering::Greater
-                }
-            } else {
-                if other.p521.is_none() {
-                    Ordering::Equal
-                } else {
-                    Ordering::Less
-                }
-            }
-        })))
-    }
+    fn cmp(&self, other: &Self) -> Ordering { self.address.cmp(&other.address).then_with(|| self.fingerprint.cmp(&other.fingerprint)) }
 }
 
 impl PartialOrd for Identity {
@@ -738,7 +734,7 @@ fn zt_address_derivation_memory_intensive_hash(digest: &mut [u8; 64], genmem_poo
     let (genmem, genmem_alias_hack) = unsafe { (&mut *slice_from_raw_parts_mut(genmem_ptr, ADDRESS_DERIVATION_HASH_MEMORY_SIZE), &*slice_from_raw_parts(genmem_ptr, ADDRESS_DERIVATION_HASH_MEMORY_SIZE)) };
     let genmem_u64_ptr = genmem_ptr.cast::<u64>();
 
-    let mut s20 = Salsa::new(&digest[0..32], &digest[32..40], false).unwrap();
+    let mut s20 = Salsa::<20>::new(&digest[0..32], &digest[32..40]);
 
     s20.crypt(&crate::util::ZEROES[0..64], &mut genmem[0..64]);
     let mut i: usize = 64;
@@ -803,6 +799,7 @@ pub(crate) fn purge_verification_memory_pool() {
 mod tests {
     use std::str::FromStr;
     use std::time::{Duration, SystemTime};
+    use zerotier_core_crypto::hex;
     use crate::vl1::identity::{Identity, IDENTITY_ALGORITHM_ALL};
 
     const GOOD_V0_IDENTITIES: [&'static str; 10] = [
@@ -818,25 +815,40 @@ mod tests {
         "aec623e59d:0:d7b1a715d95490611b8d467bbee442e3c88949f677371d3692da92f5b23d9e01bb916596cc1ddd2d5e0e5ecd6c750bb71ad2ba594b614b771c6f07b39dbe4126:ae4e4759d67158dcc54ede8c8ddb08acac49baf8b816883fc0ac5b6e328d17ced5f05ee0b4cd20b03bc5005471795c29206b835081b873fef26d3941416bd626%"
     ];
     const GOOD_V1_IDENTITIES: [&'static str; 10] = [
-        "a145374edd:0:552f4f3244d1cef146dfbf781e4a64d1b529b8a30b496100dbd4f2e60553280f4089f1a0eea27821991604d7bd8de93c1c24fd172558287c73c72a313865fe5f:c845de3ec427903e97feec496698b83d130a0fe03fe165f53f3c3dd1b86c1d4d808936369637e1d023f25b2081176d31ca1cc828c1b135da23eca5aa37476813:2:AItC2JQyFwA10ijnEmkPqNHKlH5L-nl7HiPA9bF6DlL6-qST7OALZhgDWTFjR3oqjTaxTwqeq4f9UUOZasMlSqw0ACV1H-JFhORbhzMu5Koj4Ufe6c7QZvpVrmPp6Ka2QsVQOkoca3E-hD94IJqA01FYA4tHtvW5X32tdg5YKFFNjXs5AFSm9MQeO21kIWTG-Xyu-BGGRvOTK3f0DXsjS3tiIWiECy0HIJaNBDaSg3qme7wvQ-v2xAiHt8OtI_vL6_-vpUbNAAknWgKeoP_ZTrtd4ReyKPWT_cP_lv6ba9x9FReNEnYNaAIXSqNFpZIeIBF3YMw33xabt4vKLFBaGW_2hGqzqWOhATyWjq077SLpCRFNqm_s6VODhowOsOHX6IUhYsLsE-f9t6jPykhEJsYEkqwh2yBVMAL4kTyfK_18o7s01_Ju8xsMADW7PJAGgypm4MTxNiODpHdnKqAxyXJblNPA2b9mv9YgOScDlYLg6gS2pk0od1CezPgLhEulOdaCfr8MddsW4_WH_I9wy2xuLAUQZdoZH5l5pdgOuForVSp2vgCYiXEmZfc1ybl81m5QnstUef6NQe9iwKJBd09A_tC11kGID-SaCQ:AdXjxecCo3AW9X-H4RIfvQiOItl4aESgTQem5RvWPlp5mNYi_AmPXdwl2ay5Ul1Ev55W3lLHuxK4kpzWH4pMdOktAAA-UD-xk-4cvGvE5VFo8XV9eGf0rsTXMYFx66GM5nqhMY7SqwNpi-CRPNzzwzOEeVj5J_monJlTd46pO0nkOz7j",
-        "3fb14dca24:0:bf46edea78200f176766c6b9c96ec68bc513908b974db5f877a0c9789a26ea4dd4fe1326fba39fc1bf37de1053948a200770ee2d145fb7f074f83b243f26b30e:406d507510278d9d3a1b8bbe183a9cbc054d6eefb4e66ea38bb85203aed1a74502782fed8a3b12060fcf311f2b12dc006f3680e091b9a7ef8eecd0dfad91ad57:2:AJM7WjBgO24HVjoSQ2TXaKvH5krzZEeIekF_vV_A05-s30j0EJK0ZcVB-RJtt410JOmxA_wpdvp6m5CZdoDi_R6PAJ66ah7noFWdJ_BZ8tV4Q5AK15rA9AvmONZLoxvDAsmWFzHPOeAQ-nWCfFDqPNiI1kTRc3gOIzheOFZ4Esy-AjwuAEvqydx15Y38oC-B1TeS5Ey1fCFqo19R4f-c2hxIUM_6TjPYPFWuM26Q06SyAkedetjiSAkj95tSLqB9Xb4UXCS2AGZqnOLT2tq5pE9XlUAze3K8e9ubtThKOYLzUM1kxYDA8UqxeIf-JFIv-ukcpB2XL2J0vcoeaI0Ki-a205inXX78AJ6BQJut63ovH46OfGP0YkKnY7VdX5N6bZGLONHxtCd1JCVphqa60ze3Yh2nkCSPHGxK6LJ-kTO17ypGcy6C6ztbATj_yXeADyZAbfjiWLDDJXngYWMGu3-gp0gdQM6iv2vuLlrQ8BrBWR9W77xF6mHjPTCo58YBHtu86zdoY5ecBFMwbXrpwSYb_m_UvQXYbY1EcyTT5A5NPkjvE4wd6J48dj-0M5te58v2RBVDLZkDzT7e86vUeKrxABzk2YPr6jLUAQ:AABH1HPwGnfdyciVwch0PYH67utoUtk4XxqmPiNZx9b9oUepuv22rlBd0JdnCgPbvMjfj7MygtneVG48pDbeMe28AYOOjZGjHNZ5cKxQIoOzYuKPDuLY67BcQOOUBFKsmz9cRyCe8sQsc3HtnyYDcLcNCVS3c2Hi529xAvX3qhjuxh-d",
-        "467ca2d39c:0:5836b22097530a21999b17dc1bade971e8c8d92f653da1428eaeeb1c7d25296506081a3660f968a81463d75b86fc8f01455c6d86ff13aac28a63d5aef159645f:d0d23ddad71bf39ccaea2bca7ab777100632b3904a077d6f5e5bbf580b32ef50ced7be0090ea6d8775e62bd11acadcacae6effc2e162bf9e694d2b3c498c9d26:2:AE2mcfDzyoksMh-uhinx5BYTTdLgbQCq9Tzfhb5-MdJKIZC0drgBJLAsQTlL1DEjWdSqJGC3c5J__Ydu3Q78qgU5AKUu-YpMKx8gK1EYYNnJLOiN5vxSdViOmUX91_4YxpbDXPWAXoGynKlW0XaHPk6jtrvlZcvOY08BbOc6-3XckKQwASx8yJ13H_wwnuAEhm_9Mv6tgFVroR2cWfn1AtZKoPdpfMg0u8nghu4ULfiyiusXcxc9I9c6wedr_gk1F2O1_y9bAA_pdFwN-JuHRO0QuU4UDC9cS4G3Gv8ZZHgNIswgjWWMvwrE6kcBtvoP5pgPYFTqaxQ5s_86qe7EIW6vF6InjLk_AfkaAfFjZ2tgbjh2u-tWwPmieYcRCyvifZ3pCyFpNtCy5ILhXgejUWg68aEqTgTLiL__2Jg3V4bTL7TpWWiWmNnnAeN9uGHULx3AJD-I-Uq1A2hNldlwe0pmRSc8VLQld5EClXM_RIh_WtkOwUB0yG1N6rfbtXf7wY-Pq21DzsDFezNukf97fACJfoIRiH73gHCyizM4_NkbbQL9W_7ehsVzvIJBqfyGd2BxuqxRxVPL_SkoACOo9BsWUXyMDCPWzFMTBA:AU3cy-juui20tWVrYndPqsmeJmQoSJtxvyr0RPjb6Zr5wg7q8gFWgdZiPVRh_oz3-k_upRUNaGFbpW6CW-d9P8NcAamCreeQ5m42hdzd5x5ao8ouE-aR9aBhBFOfusPAIgqm53857KwtWwoaRjkRo4RH-_oZXEKn6sG16XFFs-rBlG7p",
-        "344397cd0e:0:3f847dfd3b747bc5f9da128945e9b36199dc742c7a51bb2590cbeeb0eb3ef07b5fa68a7a97b7d13fd6d4dc122f3fe71094cc177456c3d92e05c191e18ef78f01:c88e4895defd13ae763e68cff50e7406c6b601f18c1a24406ecfe9392a9f9c50206194a29bdfc1b256547407540ca14d91d3c2069515c754dcd5065fdda64032:2:ACXUR9j2GTh2jEyCDKj5qmAdI2XVMHeQMJYnpTVL3dVlODbrTPOc326YQ-vxNmIvIQa5KYPqhYIqbYfLeeKv1wWaAMmkPgmcLNKz2lZ3GqE-dvQ4--rUOWITIpSTcg1Kwo1o9twmU5ynCyah826-xhcJnfWg19AzPqR6Puwh2IGj9Q7oAGMVoTob4feGAj0G90nD4V-Uylqyb-bh83NWo61jsUm42UGptsq397LTR3oM3AzqNV_ntO1Aiq-exy6zBVizOMJfAFXJx6pc8CzeS-pPeg3h_e4MKU7_GZGayrIbEoN8SUoBrl7yonKkfm2geSNCDf3fy9VXYcKvdGlZKSvGpxQ8p9PBAQIc8gBz1iCfggx3XCMd4d3cRMdsbxmlp0vlb9DRKbxakAlzcz6g92wUJWsZ1b6p5F7b9glyL4BezlPyGxPFNHHNASpkkx1YsGdjm_KhllbAzeIBwLd4ghwsRXKzFQ2Gm2lf6CjVECDAY77pe4oX4RJTZPvBSC1sWMndBTqqpioxMYOHY9iVC6im7i44nUrW3q4OSe7PfC5LRN7fExpbq5czH9bQ9FS_uxY9v-gDiL9MdLNNs_o-iLsy3u6vq0mosn5nBQ:ACZPO033kuvXj-vtlimDWcdTj-aLRo3VlAUd2PduaakvxdVHoBN7wIvWFlZRbi7rx842vS49tZAQtIvPSnEUMms7AZc2iXkvAFvQiecTKN3Dsa-iOX0zf8f-cUHK2OJ0VVkp4XoXHvVeL_Me-l1MUZBUEQVx2uYVrU7uPxext8qqpeRc",
-        "33c9267872:0:8a50ee533b2fe15a03ab351a26f0347cdaa087f66093b71005de4660202e7932a41dc38d8c47f38b1d0adb39446b1d58f8f5eb1f1d28ca2b6bb7f7ef0bb22fdd:00e1a9b356a1f5f28515df24015623fa09f5fb72e83de115a66dfe7222b8266fc37f0bc8fa948e80e40067246b315b275e31d045622d047b2a4de55161b089b2:2:AOO1k926VACCHyWxMkCRZheDch28mvwN6jW46yDGm7gPQwroB6Yy9VaftCWNKa3togYSLTfowEac-0v9dBns7HHcABbJUmsAJ4038GoIeXsFIBSYP_uvNFZN4Xn4ZtyHeRCZDmR2rKaGB9hjMEZ6XkdtV17UmFLjlO9VG1SosOZJQhvVAWSbEbDyo7kIynMJmo94pyp7ZDYzWiZ8ubfhXZNAxnTNpdz252s3__O3xUUQcHr-gmKLVXGnHfPrFrG0XhLyZH-oAHK2jZ-FhirXn7v7gyW3JA6s_S-zBYb-qdY6ZlTM0WpT0kys_AJ9fYY7TB3AS0q27Ag-swg-jGf5qedcXpYUg7GJAQ6Tq__uN4ILH4NryKq6RQArqdTxB6tmCSTkjnFbZ4YrDUX-_eHB-i9oisZoIRz3pjEYR3EcY52hn6EI1sRPxFQOAPPxSW0vGqr5JMM8sZp7S-jUmVTnu742e9m9dfpO7bEPnPaeEhJUFVzPvLKeIrkhbug20hd5CkClRgiUgJXQ3IpQoDes1t1aGL8uZudFknGsm3QJXpw6Tb5h8ZSuQj6bueWw7QdNcHV7fA0UTJpy41lgx4WZ7xv2-M0jkOhmliu9BQ:ABtZ0WVVe7SywNQ1oVeh4VIXkk0IT0ML8kUwy4GnCGCKLOit084F14eoDss0okk248jDJEjiRTmmSXQbC2I_SrVZAXL-Q-MhOUuHdiR_ES2YATalcWfDH534_g6D6MI1l-dJ7HyQu9Oz-xF1SMiP6-XhvS9vnmMBuyNkirbI7c1eGE5Q",
-        "00ee1db06b:0:3d60bd6ef991ee621cc77573407d6be66bd60dbd82f2ada4a28afafcf8b00c6a626ed3d000a4bc2630a013fa4f25a8e60116bdda14bd1380e48a3360e9eff6f0:603314e715652db9b8e0b2de217051a9a017962e7349a94ad2f4f1787f3e1c66b881c47c73a8dcb7d020b13e4a5858b0cfc392ce348e83c1a2c4c76471346ea2:2:ALEHh95ZRAP1I5lahFTXRa_51YeG0l3t6vroG-q1YFpTnIYTN4JajBBXmQhmTf9hHDc-R9iQstPXRV4FPsFmCihwAOAenFhNDDRlr7otUP5o2T-Oc3yX3MEZZa3jY8GxSuL_2aVQEcYgPfWrierDiXi7QQTGyvmkt-wMy414nPcRTP2NAaEys8AKMRISLFh631kJ_b-_KdViUmAnAMcxG7zVu-tr2Zi00tZ2i8KY_9LCXofEtUdGTg29CqqkNlMX2y0cRz6pAHXWIUNqq7EVy6DzAUEnMZvcKW-Ig2zJW-yOOvPsIQZ_naOOquyFSyQoRGfvVajI6CIjmwgBaOL1hD1EG50AoVu3APwCbvUhRgU-48s0gqY9fQ5buC9Gy-cH78qmxKv5a0kZWSeXtu6J8CeH68tCd8yZhgqA4c4TBc1T6QE5NSJRbmM8AMF_O2TBwoMwWhs5KZ7ljEX5L4RwbBu79g3R_3ub8s8iQ9wHuSyZDlICDlbH__pYY0jBwNIwH6wOnyp9bZ9u610ltU-spahjDy4Kh1W_J3-N35dT6psg234-ctpEKoj264kG7WsXOOohRsdSEGqgFuFlKNclevdx4fQsKzsXQkmCDw:AXBt-nAitsr0E_kjc8DhvMVXLOXjKnz9cK9t--mm6_iUmYnAjjVzkvIjS9_2r3ba9UM2vWJ5et9EvOj6rZfZjhkJAZ6tGwq3TrANuzn88lQq845i18rI5VWjMYJLQIl-_uQC-5vt8VJrNYAwPay_o2LV73rMcWMroNFZy6U0sLB5qOs_",
-        "50cd888fe0:0:577a71938a275240667d381b80fe4eb4a99a49d564f2bd32d6b4aa58fe2db832837c321d02f2c9f1ac5228572f6446c3706e09c7c81340450ebcc42c5cde50a8:d0f23d0a727636bdf9d8ff7a2ac4836972e0f1a754cdb6d70f070261f5f2f154d17fa6424f2cd2da9cdaca18eeab11181b40463c8070f4f5f22b286f2040cecd:2:AacV20WYy_3mvFze-EdowUu4w1K_tcvy6U1iU62k5UdvgdWdpPHY-vXDMffN-Hs8eYes9rxucBQTTL7oxIs3L6u8ANDr4kd6ErsTuK7ewI597clD51pi9B7QFPRf_KxktFGQvVGY2IYbZ8tS4vRX1MKPdwojwea02QT0N5aDqH-NXv-nARfC8hnCY8XSrkdrXMcIS_5tBsbKOXfz49yb1yWBaOwWXDtTQesPDfesdQYMQ8WNKuDo_Fj3-EaZTwWiYa619bn4ACdIoI0YtWge-IGbETyeEic8KXXsrKOxXCC8bTwmRUmACTZc5e8XX9zsSNLxjffbZJMyXUAFU1AS8tc6kPrknD6aAP6P-c84D-bfS5rC7-YVs-YyW8-LZ8YrjWDTqWkYM2PdNISfe1yGygzoapEfHK6Np-0Q5jYTkhvsPXgsBFwEmI2CASLjj3BqkotcfrL9dPv4FNQgmffVBM__LAX8kkPglXzBfCwJ70o8-NmMoYF-TNtEwUqHnpv5ypLd05N2U66Z1aZ7__TalVxWFK_fdr8UTHw35c6HgCMlaneuIfb2zKwt3_F-v_iSlvWE8C2SS8cAm5PBnC8vYaI4ysxYgxlwJaImDg:AD-Iwly2Yj-bbmMMerQWMVG37luX0Nfa1g49j0nAYMXqDRaENAtQ75ZyY0hwst1xtYG0xC3PtqDGQVhjQX23xVC4AIuTSqG5VuFd5PRAXqXAGj487EKt3GNdj8ChbmZeIxETcQH7d_Zj4By1KB26Qzt3qQRiSbKW2cxF62_YBry3SUza",
-        "939576391c:0:487f993e2f270e840eaaa3d1fe82c5027ff8ee62c15c9e9867589693e8ae2f7747583863a81e8a886916d57989f6c0ab35219d605b45990d8d4682b86549f718:08a6139b7c55b402ad0ad0d8c8541581a506563f2d018636e613b7a7ba472355ea4ea13e08de962876d4b4fd5163b486dcc2be0c47a1fdecfbb54f217c1273f7:2:ATqdfUlPE7Tp9cXniiWiIZMPsjtlfWoijyfDzKGGu_OTk3btuKt6vHQMQeuswYiFaKmjqxB0hkUccdrsWTNQ-jaJAG_8aFsePJ0VjSaytfFjLNyCvNLweVfiGflJVMAWnN6otiSe0zozPMGZ-RpJJFaHV7uuNolhl_3jWPHRgcgWubLMAcxnki1xqixmzb3Ygp-9VvY6JlCEAo50sDCKX0ll3noz6RGrwe5SEyxwtsdvGJJnpLB0-2JlEjpkg2TIR-FUsP8QAMKS_zF1546vKwhTpz8FfjQOjVJ2wxIzeMxz96rLQxN5y0DIGQCSKc3E0U3u7TKtveid4qQ_2NfNhDy4bjNjdSb9AcTBzzkexWL0uu87_jy62y2AJG5xFFbsRItReM_NrLpk21lXH7xKC2pkvCavp2rX8nkl_Zprs4GjONnnrjQqUPBJABd64QpuON1P-Azv3FSAY419QXj2QmhfB-g2KxNGLXXc7gXSjWr58EY_BPP7fKuQxr-TDmkgq-QAdzAibEoJS0swK1yYDoHJeDHgG8-BrRRivHxAkGW0sYiW8ovNg92RPfMelU9SLpgw-mC85hkL5y2iUwR15EmiCkF_REkPpNUmAg:ACuwxcroXHk3FPGSQyOixwz_MFtzk1cy6TEqeT-2pQ9m5fd9AIf4xAEOKHo5hsuXNkaE42deXntrm6Kzde2uNTXYAfkXNAQL_j5oJu_9GROif3v_ZwzSTSMkEMhu-FwXGaUZR3gIST_2Sddt1Psakivczd6toHcBfFBSNIa7mcxzPj7m",
-        "0d7224be02:0:31c616d4ba918e1a59a7efea6633a51ddbb94056ef5576fe61268ca0c0f3035a3a1bb4200c737c6e4a87bf979f9767f230066bb41e0641210d5676493845ddb5:1868a4cd394d0e5b0904dff18094333893ebeaf29561391ff442235fc6d0406f8ff119a8ce948b417a1fdf5067d8649e481fdfa67d85e865726a960d941dea5e:2:AcJ0WaHJyhDYold1aIwTqxJOwV-a_IJSqsQS-1x-YxOdBQFsQEEu23A1WlyqY3z0_KdEvJ8vG8NItpa53H4AuYIpAASlWlJG1KxCnWj4_5W3Xzj3eVu_gyoEgs46vQkCsSk6IqQzEs9orPwbUq3Wajwbd9O5D_CSdkYCa-chB1SZFIoPAGrzJc99-zdAQayev3j4WkSlr9jHvnYWdUeei6AE49VKXbg78BuioWkeH7FRCI2PoFH1WZnvFQoEzLJSotefchGGAG3RrxQJXbxzEKoFaLTAEuFYd5OkwUT3nKRrTuHgc4vaYEas5fmylqpmeozJMSzNfcmMKE-Kpr34xN-4Wn5kpTsdAdrCG0okMPhveRz0qdjLe7D_Rb10zAZoed3M5N99kIxDwUNVyFkMPAv4Y3gl0k_Kcg761GA5Sf8UxEFLLdKEJDD6AVMq9_18YBxe3fu96VvMpriK3sPKN2ICUZDauy9WvT35okNxp_RibID6FtipShYRHhz8tsqA2HUOUqbzcWEMqasyWritiqy8wpelBCg2nCHYWorR64Af0x9naZyNaqYuuEQ2Q6cjeoS1odAi--5QUbf8d1eQs83IDX1XUufb8qT3BQ:AGwwFjs3XifAex32HyTeSwzdjUYiCoQhM3GrRPStTI1Oxxq0nU4bPxCcvsM4xzzIIw0o9bcQkJDGBqaH_L_eWu7dAEFI_WCuaI7nS-5sLjtAQMeaQbeAy4omS5XuODVHBHadgHEQwZ2xroQgqH_3Wy7E2jphUqSWqro7cLdRbSZuxkL2",
-        "8c3ba1296c:0:6137b816948f56158455356514eb396ae7fe14846af5b237003c394a38e1347bb159fffed778b958734eb3a3e43aef56c03a908af08f32d817fd8fd57be0b1b4:8048d42cedc04bc6e6fe0f358200239f4db1a5f16f4d156354ac55448fb6d5444131ec66ce53012765aefd98a45d12dbcf39e572ed83e370e0ba6595cb2252e5:2:AK0oHAiihtJ0d4YgirwblDtM9y4AFbUnMu6PcS9k6wBBCLnB5YlmbM3Ejx0MY-T1V99nmKydwmfvxdNZudDQ90qrABhXTfrDWBY1XVJmNHxQvvBRXyrlBn5ZM662JLI_qyBMo9VsdKKeSQHX4YFcu7n0mCCIDGH_jbVIyXqjLJDscoriAP8JKjOGN-XL7YizUxewM3nsaJCDED8vs0Y_iFh9owmf3KKJ2BPXlNv4hWExVoK4YAG0OjDERJoO_Y6LCnxO89xVAOyFR0PH_83mUN8I_DX8KVHiPM_Od7bgQnkB9Di3QvIzzqX8NKEEnJfOTuEUnptqmXeSih01e9KiJsLAdViU3VxxAcDoO6JOUkmGspZqPF2ms9FrKH1xRpx0EMPsFv1YJcAgBxxjvNaG-FBT8xWzpNRwBg13-XiDzRdOHNy4T60APXtnALW7J6zoXwhnQSM5XyBb54uO2IsZSeO2HEzFnEttGlKMEZTXSHfEmG4x8teYyIPC9glom-5FVWBxgu6p7xAkc6uktCKigNzHDiyxaF3m6b_oWRsSIe4FbeZv0IqidkbxU2fUFnDVfIuq5vp5knyzawnfv91pne6oWdQzQPIW1wD4Dw:AIBIHwGOEpJTwZVxMElofxxUlTOgNVnixX6mPE92OdIKOVGd87jiTBaRx66LjSIyRS5GiFk54F7XSXlQSx7eRfoDAR6whTQKxhFOh8XGfO_0bRqXyna2BAWTVFoKNcS8TmpPw2Ug-IOMl5USI92lF53P-yDPi_QouJu50uZ4SV4_bScC"
+        "7c2b729f7b:0:4d9d097668f27decb7a56953cf560f595e13c48873c40c4dc19dc5a716aa551e7c0b91d00f2af1bcaa7e31f5cfe38077eb55aad97dcbb0f3b013b5297a93aa2d::2:A4Ro-uv9LK9Je7RHDOAzV_RbrG-rZ6v7_7ePKzfQk_uo0-avhSlkT8NR408L6a5cvQIDhDVhBWYR_eAaTrE888Val9FSMaM_ekmle6k74V7fi0fcA5Jhsg-eHfyw1z_ovGpWppJEs0xX5SMOCM2MBs93K20e9P4IpdFXayoLod9FAKAn-arh94tbkUALr4Uf59ACLovMymhoJr6Y-wkKRwEsnAOdSNa8bN3HGGVDOykAgvLs1E65pkIkFXTxmcSVMLbETKETYwmSaaNYEXMVGD5HBJ0GqA8298bs4HVYjNoYwMHu--Hwb1joQS0XK5WjifYRrWAA94J48f05tMDklQcF",
+        "0d4be14d60:0:69c300b00e5af62e2d55c1ea81f5316375038608ad3696f67bf092f960e4f7036e51a091c88c1bcadf00cf43647e9464b53017a760e24deb76f776488d430237::2:ArquLyV1f3eaXkFZPdRHzgEhD01HK0tgzXBiWO5a1flT1agj_lkyNziY-YyOoP1fEQKplNnnXhryqI75siIZFMMUZInzlJm1Ll84_qV2pfbcFMXNN--4P5LgtChR1DNNHaKLMHt5U0IKh9UwSvfH5xbTr8LjadezbPOuy9a-uf-FSQTBZvALYtLSKLjPvaNMLMamT6ruEuJbgRLsCeZ38zEqMPYQ05iG4_TrjAw0uZJ4pz8m--STLE6B5XOU3Lc50fzxdDrIqL-dDTbCX5XecQzDiN8a3CSf8vq2uMu3-Fs6AaQ_dNc8_B8Y2dpfc7UYj7sRmAyFiw0FEwHIPPSZDjsI",
+        "d2608c9625:0:5a19103678e8a28942d077278024421219c5dcf6e25fd8d74c082df6e288ec581ac09d4bc84b9ef2287342c1b4736da59109d9986740a9d135621399569161cc::2:A5T6RjeDlzTvJAFHlXfSFP3dOPWxCaE1jRcAdzZgxsdy80TV7pVRiAyeOdYGJEbFaQPa0qIl20ZHXUI5fZfUc7PWxp3wkQqkqD9X-3Ms3wOPP5kc_kqxKIGnlXk6E_NEggZIPr0LONZShGrDRO-kKsdDxzP9EE4FDlnrD0E2yAbjH8hAIQqhERarSabCNE_iJrJG30yi0bPZtJNI36SPJex11X8X7Vu8GFXqWmZQRIU9Q1WJBmX-LVwxxD4BzNKWsy_txeQeGokKGydV3ejASi6ViicbwxtkVHbPzDgYl0kOBwv_qJTg3PIt1x27qTAYPs4qG6PSWQt_eqGtrKCYVOAO",
+        "7615cd90d0:0:49641eb54b001b1c91afd162a780252bea7e315c7454beda712864e5ad801046eedb11927cdef951c64c12706cc4f332512307de9754d99ab1978b396d5c70a2::2:A-KmSE-Cga8As0AT25LxJTOLntyN1ORiJ6it_Ud6CfGPbANpvEnAbs2m7i7yJ_DP9APo4Q9RrQKS5THa0yADD_QWLz-o7zb4cTfAoG0IkVed2sWWq7SR0-6VHQWg__WglqMYIKM4FXPZ9i1uuKLrshN-fF4XAdqJLrqWTpqvpVmdYJB9LKez5MpEXO-UeLJb-4jgeFjB35Qxbcp6TsVZca3ep5FzqYdyNjfI7RkKTPnVpCKdTWFmIbDqzQMyjqg93lu8OWq2tPorzUth-qpWf9AWTPYxofNzd_t9OMimR6kevaG-qjsEX7-SOzf-UI76y3JR6lF9dMs3UiqVjv3guDgE",
+        "bf7544ad9f:0:fb726a8e1c8c50100661ca64a99504b13ad7d0604db1c96c35f94091aaed69168e118aa7c3ca7f4aad092a02513ca171ca5fdc445f1bbc2dda49e8af544f941b::2:A0NV5tU0HTcdrJQzjgGy01FbHzi0v7DnpkyrmNvGrcJwcU6Fas35vmpNBJpsi9YTRQPNCzPYkeMz_7s59ukEzK-Lhk5ZxyvGdJMUoW6mmWiE8T6pJcD3JC37kNRuW28cH13d5_YuDnVsPz-p1ER2d2BzvjucwgkhmQnMSWSVCNikfe7pR-2mqFjr2KkEHqCp5js1tdM-nzOrV7smjed1vl2AZIeYRBcpJXBCDiyCMSpe8MD32KcNoJPINHu6k7uDxKKEwSocacDAI8SlFjz5Sb_JXM0XUDZyoSrql9bAdDi4s4bVVjTrpOqcUfQ9Shs-QKNcrOmDG-uyM4Pqaz5NRhsF",
+        "e7ea5a5db4:0:1fc5c90b7350899babf0e20b3aaf7d778d63cd8b587f966e194841e80fc69a73a2c2ae340ae78b5aea47733352eddbd501147d464ef7d31297832a4a80473c40::2:Ahq6VPPeoqNX-SbAuxg2GjgxJw_4dJQb7hCL_hZ3ZZD8QHey5oK8rEg8U5GBT0M92wK4SXrUTJErbn2xxL5mFfzq4Yv_C5V_y88LYDV_pAZ5vA4HVzIs1dYXrKJZzgt9CwHev05MbvOguc3ueUGxYw5ZVR7l9RM-O4CXgvpWre8kuElv6nXfT6Rrs7UFHgJqpdti93vDMBiY6_4_sk68OFDTakqixHO0qxPwWHDOFW9OWBDCeWuDtpv3VLhCYspGKborJMbraQkkXwkd04Tm5-UgsXFfXRXP_qR4RBLmxFmf7kuSHQzqTJJQ-kIw0ZUKqvNCjqP1ii2LIa3YcXJjNZQF",
+        "e431ace96f:0:1a665addeb00bd8f6d46cc0cc8fa39cb3932a93e737263c431435c9f80828a7f98020ecbc6240e8284dbd2f9ddce212da5c9d8d565110e278b54a50259835c76::2:AinmOs3et5j0jzNiQj31hp8Fyb_REuhr8CdFyEZuS2uU4xu9eMo9GDUHCq_DzbyqgAK0ppN9ZaE0PTT-FLRcVBZpQ25MgPw99LMT85o7nGc0l2ffsPBiOn8s6A4U551d1glzgwBkQuUNUrO1dKHd77_ZZ0uSHybxg_eVyD-FOmXkJCc1WcFhaao7Mlso0U9XV7olrRspEs75jN3gKgnEAqp3LzpB0gX_DeTJQE9eCuJ9d72oooRqrh2VcO0Bq6K8X7IUU5q5VRzJELeedeloatyRSEzpRCiXNVweCo2J9H-in6km0SaZgk0PZIJUSB5PZOrhdvw7WQONWaigD112LtcC",
+        "3596edb275:0:b3a8e692955d9d2fe216e144dd91b467878d91d5d308f97b72f100b5b3f73501406f77fc00a71b7814bd4fa7b3f3e161cf55c8c50400a239a062a4b5da56f11c::2:AyDEvg6plLbzsM1pNExvF7HIeOwVSfzMpE9rqX5Bs9tOW5NNcyEb6xkYlOKIbYNTgAL2hGWLBN4pUSV9x6uDDolgtQRR84dUEmDTFynxp5lYPLo8viOqNgdrWilkx_H2hZSoStSrdecGAXIAsEbE_4NHZqA05yqiLnG_WvMxBE4s3NYVwttcVNCL2-GNQ019_cEXENeKM_0KgXY5f4WubbEL-mJzTkvjAnA8MhAbGnk3DkzdQ8syiqvgtuZGNeQ_vVyhqVJ1W7FrI-KeXB0o4dIfRQNLEue7YhSg7MPdFkaaqfe5pqHXHIbu-upYn3RNJsL7WTzjQIycW1r3v2NXlAwM",
+        "bb94fbb14c:0:f44e527f3776173dd8e7106f458dfb1acf680f5555d9cbe48de4daed8b3d0a4b692c3a5af67bfbfc5b275df8c6d27f2c647f529d3e1d33a0b52f5f800a5bb44e::2:Axt5NjbXaCznLoTQ6FZ2KB0WF9GSerApl94XXb3myLopi273EjLTKfzoqRe_1dhBnQOpn1RKKA27WY9WFU8vLfmxyEitLUhy8_8R86qQHwW2YIXz9OGlO4PQ2vDyzFEP28AdqQDSi3_ZbE68cTY4FdOtLYhmelvX6tzUXc6Oc0b2Fr_3DCBMVxLJwbuP2HzH-k3yGTa2jn2xBtb40jCQoS3CbQf5Pa7UW6elOmsL2KP4iupVq_FQk4fXZKXlVGjru6UAQE686KnMuzSc0TEeLG360JggmZhsxUN72xM6ei88L_BTu6srMGe3K0QLE_K1eFUXWat7WQ8Bim5G6FSMv1UD",
+        "91174e9989:0:d268c8b9856a8051f0794f4c221a08fb9764418187d28af7c205d89e9facc924c633af7f63cc3878bea5aefde175e16e068e93efd00f7f241c0aa7495cdd00ae::2:A5hywCOYFiGs_r347-0A9oAArsrWHwn8Zpy1AXRh4ZrVhLEH0Zzle6qek0WC3982oQMMY6ljD5DpLWwoqZwSGZDRpRIOIGutEyR-y-mvwv-nr970G7AlC7vTmCq-GGvSiDhL1S6og_JpHtGVpj6gEaTirIcG27503PhKwnZ93x8FLN-wFVX9TamePGGA82A3rkuuC90qI8bdpsAYNDZzGbXSuCSJLEaXFRj0efJn0l-No7_NnNGdBce6IYuV2jYbNxUV7AqUlhWEw8WWZl5OX9VOvskI6DGtZ13NMWc6q-1OSf8jqThdh1PeDFVNYy1qX5AI88GHQfIs54GIT8FAJeAG"
     ];
 
     #[test]
     fn marshal_unmarshal_sign_verify_agree() {
-        let mut good_identities: Vec<Identity> = Vec::with_capacity(10);
+        let gen = Identity::generate();
+        assert!(gen.agree(&gen).is_some());
+        assert!(gen.validate_identity());
+        let bytes = gen.to_bytes(IDENTITY_ALGORITHM_ALL, true);
+        let string = gen.to_string_with_options(IDENTITY_ALGORITHM_ALL, true);
+        assert!(Identity::from_str(string.as_str()).unwrap().eq(&gen));
+        let mut cursor = 0_usize;
+        assert!(Identity::unmarshal(&bytes, &mut cursor).unwrap().eq(&gen));
+        cursor = 0;
+        assert!(Identity::unmarshal(&bytes, &mut cursor).unwrap().secret.is_some());
+        assert!(Identity::from_str(string.as_str()).unwrap().secret.is_some());
+
+        let gen2 = Identity::generate();
+        assert!(gen2.validate_identity());
+        assert!(gen2.agree(&gen).unwrap().eq(&gen.agree(&gen2).unwrap()));
+
         for id_str in GOOD_V0_IDENTITIES {
             let id = Identity::from_str(id_str).unwrap();
             assert!(id.validate_identity());
-            assert!(id.p521.is_none());
+            assert!(id.p384.is_none());
             let idb = id.to_bytes(IDENTITY_ALGORITHM_ALL, true);
             let mut cursor = 0;
             let id_unmarshal = Identity::unmarshal(&idb, &mut cursor).expect("unmarshal v0 failed");
@@ -844,37 +856,19 @@ mod tests {
             assert!(id_unmarshal.secret.is_some());
             let idb2 = id_unmarshal.to_bytes(IDENTITY_ALGORITHM_ALL, true);
             assert!(idb == idb2);
-            let sig = id.sign(&[1, 2, 3, 4, 5], false).unwrap();
-            assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
-            let sig = id.sign(&[1, 2, 3, 4, 5], true).unwrap();
-            assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
             assert!(Identity::from_str(id.to_string().as_str()).unwrap().eq(&id));
-            good_identities.push(id);
         }
         for id_str in GOOD_V1_IDENTITIES {
             let id = Identity::from_str(id_str).unwrap();
             assert!(id.validate_identity());
-            assert!(id.p521.is_some());
+            assert!(id.p384.is_some());
             let idb = id.to_bytes(IDENTITY_ALGORITHM_ALL, true);
             let mut cursor = 0;
             let id_unmarshal = Identity::unmarshal(&idb, &mut cursor).expect("unmarshal v1 failed");
             assert!(id == id_unmarshal);
-            assert!(id_unmarshal.secret.is_some());
             let idb2 = id_unmarshal.to_bytes(IDENTITY_ALGORITHM_ALL, true);
             assert!(idb == idb2);
-            let sig = id.sign(&[1, 2, 3, 4, 5], false).unwrap();
-            assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
-            let sig = id.sign(&[1, 2, 3, 4, 5], true).unwrap();
-            assert!(id_unmarshal.verify(&[1, 2, 3, 4, 5], sig.as_slice()));
             assert!(Identity::from_str(id.to_string().as_str()).unwrap().eq(&id));
-            good_identities.push(id);
-        }
-        for i in 0..good_identities.len() {
-            for j in 0..good_identities.len() {
-                let k0 = good_identities.get(i).unwrap().agree(good_identities.get(j).unwrap()).unwrap();
-                let k1 = good_identities.get(j).unwrap().agree(good_identities.get(i).unwrap()).unwrap();
-                assert!(k0 == k1);
-            }
         }
     }
 
@@ -887,7 +881,6 @@ mod tests {
         let mut duration;
         loop {
             let _id = Identity::generate();
-            //println!("{}", _id.to_secret_string());
             end = SystemTime::now();
             duration = end.duration_since(start).unwrap();
             count += 1;

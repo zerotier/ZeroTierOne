@@ -197,7 +197,7 @@ impl<const L: usize> Buffer<L> {
     }
 
     #[inline(always)]
-    pub fn append_varint(&mut self, mut i: u64) -> std::io::Result<()> {
+    pub fn append_varint(&mut self, i: u64) -> std::io::Result<()> {
         crate::util::varint::write(self, i)
     }
 
