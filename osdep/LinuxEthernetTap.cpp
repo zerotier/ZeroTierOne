@@ -246,14 +246,19 @@ LinuxEthernetTap::LinuxEthernetTap(
 			return;
 		}
 
-		ifr.ifr_ifru.ifru_mtu = (int)_mtu;
-		if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
-			::close(sock);
-			printf("WARNING: ioctl() failed setting up Linux tap device (set MTU)\n");
-			return;
-		}
-
 		usleep(100000);
+
+		if (isOldLinuxKernel()) {
+			ifr.ifr_ifru.ifru_mtu = (int)_mtu;
+			if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
+				::close(sock);
+				printf("WARNING: ioctl() failed setting up Linux tap device (set MTU)\n");
+				return;
+			}
+
+			usleep(100000);
+		}
+	
 
 		ifr.ifr_flags |= IFF_MULTICAST;
 		ifr.ifr_flags |= IFF_UP;
