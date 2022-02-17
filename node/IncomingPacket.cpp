@@ -191,7 +191,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 		}	break;
 
 		case Packet::ERROR_NETWORK_AUTHENTICATION_REQUIRED: {
-			fprintf(stderr, "\nPacket::ERROR_NETWORK_AUTHENTICATION_REQUIRED\n\n");
+			//fprintf(stderr, "\nPacket::ERROR_NETWORK_AUTHENTICATION_REQUIRED\n\n");
 			const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 			if ((network)&&(network->controller() == peer->address())) {
 				int s = (int)size() - (ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8);
@@ -237,7 +237,6 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 						}
 					}
 				} else {
-					fprintf(stderr, "authinfo??????\n");
 					network->setAuthenticationRequired(tPtr, "");
 				}
 			}
@@ -1058,10 +1057,10 @@ bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,c
 {
 	const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PACKET_IDX_PAYLOAD)));
 	if (network) {
-		fprintf(stderr, "IncomingPacket::_doNETWORK_CONFIG %.16llx\n", network->id());
+		//fprintf(stderr, "IncomingPacket::_doNETWORK_CONFIG %.16llx\n", network->id());
 		const uint64_t configUpdateId = network->handleConfigChunk(tPtr,packetId(),source(),*this,ZT_PACKET_IDX_PAYLOAD);
 		if (configUpdateId) {
-			fprintf(stderr, "Have config update ID: %llu\n", configUpdateId);
+			//fprintf(stderr, "Have config update ID: %llu\n", configUpdateId);
 			Packet outp(peer->address(), RR->identity.address(), Packet::VERB_OK);
 			outp.append((uint8_t)Packet::VERB_ECHO);
 			outp.append((uint64_t)packetId());
@@ -1071,7 +1070,7 @@ bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,c
 			outp.armor(peer->key(),true,peer->aesKeysIfSupported());
 			peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
 			if (!_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now())) {
-				fprintf(stderr, "Error sending VERB_OK after NETWORK_CONFIG packet for %.16llx\n", network->id());
+				//fprintf(stderr, "Error sending VERB_OK after NETWORK_CONFIG packet for %.16llx\n", network->id());
 			}
 		}
 	}
