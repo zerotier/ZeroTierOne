@@ -6,6 +6,7 @@
  * https://www.zerotier.com/
  */
 
+use std::mem::MaybeUninit;
 use std::ptr::write_volatile;
 
 /// Container for secrets that clears them on drop.
@@ -18,6 +19,7 @@ use std::ptr::write_volatile;
 /// but it's still not a bad idea due to things like swap or obscure side channel
 /// attacks that allow memory to be read.
 #[derive(Clone, PartialEq, Eq)]
+#[repr(transparent)]
 pub struct Secret<const L: usize>(pub [u8; L]);
 
 impl<const L: usize> Secret<L> {
@@ -30,13 +32,21 @@ impl<const L: usize> Secret<L> {
 
     #[inline(always)]
     pub fn as_bytes(&self) -> &[u8; L] { return &self.0 }
+
+    /// Get a clone of the first N bytes of this secret.
+    #[inline(always)]
+    pub fn first_n<const N: usize>(&self) -> Secret<N> {
+        let mut tmp: Secret<N> = unsafe { MaybeUninit::uninit().assume_init() };
+        tmp.0.copy_from_slice(&self.0[..N]);
+        tmp
+    }
 }
 
 impl<const L: usize> Drop for Secret<L> {
     fn drop(&mut self) {
         unsafe {
             for i in 0..L {
-                write_volatile(self.0.as_mut_ptr().offset(i as isize), 0_u8);
+                write_volatile(self.0.as_mut_ptr().add(i), 0_u8);
             }
         }
     }

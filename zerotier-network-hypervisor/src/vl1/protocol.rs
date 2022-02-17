@@ -39,7 +39,7 @@ pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0: u8 = b'0';
 pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1: u8 = b'1';
 
 /// KBKDF usage label for the key used to advance the ratchet.
-pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_NEXT_KEY: u8 = b'e';
+pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_KEY: u8 = b'e';
 
 /// Try to re-key ephemeral keys after this time.
 pub const EPHEMERAL_SECRET_REKEY_AFTER_TIME: i64 = 300000; // 5 minutes

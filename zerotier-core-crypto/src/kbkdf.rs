@@ -8,9 +8,10 @@
 
 use crate::secret::Secret;
 
+// HMAC'd message is: preface | iteration[4], preface[2], label, 0x00, context, hash size[4]
+// See: https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-108.pdf page 12
+
 pub fn zt_kbkdf_hmac_sha384(key: &[u8], label: u8, context: u8, iter: u32) -> Secret<48> {
-    // HMAC'd message is: preface | iteration[4], preface[2], label, 0x00, context, hash size[4]
-    // See: https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-108.pdf page 12
     Secret(crate::hash::hmac_sha384(key, &[
         (iter >> 24) as u8,
         (iter >> 16) as u8,
@@ -25,8 +26,6 @@ pub fn zt_kbkdf_hmac_sha384(key: &[u8], label: u8, context: u8, iter: u32) -> Se
 }
 
 pub fn zt_kbkdf_hmac_sha512(key: &[u8], label: u8, context: u8, iter: u32) -> Secret<64> {
-    // HMAC'd message is: preface | iteration[4], preface[2], label, 0x00, context, hash size[4]
-    // See: https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-108.pdf page 12
     Secret(crate::hash::hmac_sha512(key, &[
         (iter >> 24) as u8,
         (iter >> 16) as u8,

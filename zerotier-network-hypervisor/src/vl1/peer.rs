@@ -9,7 +9,6 @@
 use std::convert::TryInto;
 use std::mem::MaybeUninit;
 use std::num::NonZeroI64;
-
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
 
@@ -26,11 +25,10 @@ use crate::{PacketBuffer, VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_R
 use crate::util::{array_range, u64_as_bytes};
 use crate::util::buffer::Buffer;
 use crate::vl1::{Endpoint, Identity, InetAddress, Path};
-use crate::vl1::ephemeral::EphemeralSymmetricSecret;
 use crate::vl1::identity::{IDENTITY_ALGORITHM_ALL, IDENTITY_ALGORITHM_X25519};
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
-use crate::vl1::symmetricsecret::SymmetricSecret;
+use crate::vl1::symmetricsecret::{EphemeralSymmetricSecret, SymmetricSecret};
 
 /// A remote peer known to this node.
 /// Sending-related and receiving-related fields are locked separately since concurrent
