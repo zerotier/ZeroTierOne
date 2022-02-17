@@ -17,7 +17,6 @@ base64 = "^0"
 lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }
 dashmap = "^4"
 parking_lot = "^0"
-arc-swap = { version = "^1", features = [], default-features = false }
 lazy_static = "^1"
 highway = "^0"
 

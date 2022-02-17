@@ -13,7 +13,6 @@ use std::num::NonZeroI64;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, Ordering};
 
-use arc_swap::ArcSwap;
 use highway::HighwayHash;
 use parking_lot::Mutex;
 use zerotier_core_crypto::hash::SHA384_HASH_SIZE;
@@ -39,7 +38,7 @@ lazy_static! {
 /// one and only one unique path object. That enables statistics to be tracked
 /// for them and uniform application of things like keepalives.
 pub struct Path {
-    endpoint: ArcSwap<Endpoint>,
+    endpoint: Mutex<Arc<Endpoint>>,
     local_socket: Option<NonZeroI64>,
     local_interface: Option<NonZeroI64>,
     last_send_time_ticks: AtomicI64,
@@ -84,7 +83,7 @@ impl Path {
     #[inline(always)]
     pub fn new(endpoint: Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Self {
         Self {
-            endpoint: ArcSwap::new(Arc::new(endpoint)),
+            endpoint: Mutex::new(Arc::new(endpoint)),
             local_socket,
             local_interface,
             last_send_time_ticks: AtomicI64::new(0),
@@ -94,7 +93,7 @@ impl Path {
     }
 
     #[inline(always)]
-    pub fn endpoint(&self) -> Arc<Endpoint> { self.endpoint.load_full() }
+    pub fn endpoint(&self) -> Arc<Endpoint> { self.endpoint.lock().clone() }
 
     #[inline(always)]
     pub fn local_socket(&self) -> Option<NonZeroI64> { self.local_socket }
@@ -146,7 +145,7 @@ impl Path {
         let mut replace = false;
         match source_endpoint {
             Endpoint::IpUdp(ip) => {
-                let ep = self.endpoint.load();
+                let ep = self.endpoint.lock().clone();
                 match ep.as_ref() {
                     Endpoint::IpUdp(ip_orig) => {
                         debug_assert!(ip_orig.ip_bytes().eq(ip.ip_bytes()));
@@ -160,7 +159,7 @@ impl Path {
             _ => {}
         }
         if replace {
-            self.endpoint.swap(Arc::new(source_endpoint.clone()));
+            (*self.endpoint.lock()) = Arc::new(source_endpoint.clone());
         }
     }
 

@@ -12,17 +12,16 @@ use std::num::NonZeroI64;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
 
-use arc_swap::ArcSwapOption;
 use parking_lot::Mutex;
 
-use zerotier_core_crypto::hash::{hmac_sha384, SHA384, SHA384_HASH_SIZE};
+use zerotier_core_crypto::hash::*;
 use zerotier_core_crypto::poly1305::Poly1305;
 use zerotier_core_crypto::random::next_u64_secure;
 use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
 use crate::{PacketBuffer, VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
-use crate::util::{array_range, u64_as_bytes};
+use crate::util::array_range;
 use crate::util::buffer::Buffer;
 use crate::vl1::{Endpoint, Identity, InetAddress, Path};
 use crate::vl1::identity::{IDENTITY_ALGORITHM_ALL, IDENTITY_ALGORITHM_X25519};
@@ -41,7 +40,7 @@ pub struct Peer {
     static_secret: SymmetricSecret,
 
     // Latest ephemeral secret or None if not yet negotiated.
-    ephemeral_secret: ArcSwapOption<EphemeralSymmetricSecret>,
+    ephemeral_secret: Mutex<Option<Arc<EphemeralSymmetricSecret>>>,
 
     // Paths sorted in descending order of quality / preference.
     paths: Mutex<Vec<Arc<Path>>>,
@@ -183,7 +182,7 @@ impl Peer {
             Peer {
                 identity: id,
                 static_secret: SymmetricSecret::new(static_secret),
-                ephemeral_secret: ArcSwapOption::const_empty(),
+                ephemeral_secret: Mutex::new(None),
                 paths: Mutex::new(Vec::new()),
                 reported_local_ip: Mutex::new(None),
                 last_send_time_ticks: AtomicI64::new(0),
@@ -224,7 +223,7 @@ impl Peer {
         let _ = frag0.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_without_memzero() };
 
-            let (forward_secrecy, mut message_id) = if let Some(ephemeral_secret) = self.ephemeral_secret.load_full() {
+            let (forward_secrecy, mut message_id) = if let Some(ephemeral_secret) = self.ephemeral_secret.lock().clone() {
                 if let Some(message_id) = try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, header, fragments, &mut payload) {
                     // Decryption successful with ephemeral secret
                     ephemeral_secret.decrypt_uses.fetch_add(1, Ordering::Relaxed);
