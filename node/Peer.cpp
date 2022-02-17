@@ -224,6 +224,8 @@ void Peer::received(
 		if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
 			_lastDirectPathPushSent = now;
 			std::vector<InetAddress> pathsToPush(RR->node->directPaths());
+			std::vector<InetAddress> ma = RR->sa->whoami();
+			pathsToPush.insert(pathsToPush.end(), ma.begin(), ma.end());
 			if (!pathsToPush.empty()) {
 				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
 				while (p != pathsToPush.end()) {
@@ -453,7 +455,7 @@ void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atA
 	if (atAddress) {
 		outp.armor(_key,false,nullptr); // false == don't encrypt full payload, but add MAC
 		RR->node->expectReplyTo(outp.packetId());
-		RR->node->putPacket(tPtr,localSocket,atAddress,outp.data(),outp.size());
+		RR->node->putPacket(tPtr,-1,atAddress,outp.data(),outp.size());
 	} else {
 		RR->node->expectReplyTo(outp.packetId());
 		RR->sw->send(tPtr,outp,false); // false == don't encrypt full payload, but add MAC
