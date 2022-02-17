@@ -568,6 +568,8 @@ private:
 	Mutex _paths_m;
 	Mutex _bond_m;
 
+	bool _isLeaf;
+
 	Identity _id;
 
 	unsigned int _directPathPushCutoffCount;

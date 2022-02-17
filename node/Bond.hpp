@@ -762,6 +762,11 @@ class Bond {
 	void dequeueNextActiveBackupPath(uint64_t now);
 
 	/**
+	 * Zero all timers
+	 */
+	void initTimers();
+
+	/**
 	 * Set bond parameters to reasonable defaults, these may later be overwritten by
 	 * user-specified parameters.
 	 *
@@ -1135,7 +1140,6 @@ class Bond {
 	/**
 	 * Emit message to tracing system but with added timestamp and subsystem info
 	 *
-	 * TODO: Will be replaced when better logging facilities exist in Trace.hpp
 	 */
 	void log(const char* fmt, ...)
 	{
@@ -1165,7 +1169,6 @@ class Bond {
 	/**
 	 * Emit message to tracing system but with added timestamp and subsystem info
 	 *
-	 * TODO: Will be replaced when better logging facilities exist in Trace.hpp
 	 */
 	void debug(const char* fmt, ...)
 	{
@@ -1499,6 +1502,7 @@ class Bond {
 	unsigned char _freeRandomByte;	 // Free byte of entropy that is updated on every packet egress event.
 	SharedPtr<Peer> _peer;			 // Remote peer that this bond services
 	unsigned long long _peerId;		 // ID of the peer that this bond services
+	bool _isLeaf;
 
 	/**
 	 * Rate-limiting
