@@ -24,11 +24,11 @@ use zerotier_core_crypto::p384::*;
 use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
-use crate::error::InvalidFormatError;
+use crate::error::{InvalidFormatError, InvalidParameterError};
 use crate::util::buffer::Buffer;
 use crate::util::pool::{Pool, Pooled, PoolFactory};
 use crate::vl1::Address;
-use crate::vl1::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_V0_POW_THRESHOLD, IDENTITY_V1_POW_THRESHOLD};
+use crate::vl1::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_POW_THRESHOLD};
 
 /// Curve25519 and Ed25519
 pub const IDENTITY_ALGORITHM_X25519: u8 = 0x01;
@@ -112,7 +112,7 @@ impl Identity {
             let mut digest = sha.finish();
             zt_address_derivation_memory_intensive_hash(&mut digest, &mut genmem_pool_obj);
 
-            if digest[0] < IDENTITY_V1_POW_THRESHOLD {
+            if digest[0] < IDENTITY_POW_THRESHOLD {
                 let addr = Address::from_bytes(&digest[59..64]);
                 if addr.is_some() {
                     address = addr.unwrap();
@@ -124,45 +124,70 @@ impl Identity {
         }
         drop(genmem_pool_obj);
 
-        let p384_ecdh = P384KeyPair::generate();
-        let p384_ecdsa = P384KeyPair::generate();
-
-        let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE);
-        let _ = self_sign_buf.write_all(&address.to_bytes());
-        let _ = self_sign_buf.write_all(&c25519_pub);
-        let _ = self_sign_buf.write_all(&ed25519_pub);
-        self_sign_buf.push(IDENTITY_ALGORITHM_EC_NIST_P384);
-        let _ = self_sign_buf.write_all(p384_ecdh.public_key_bytes());
-        let _ = self_sign_buf.write_all(p384_ecdsa.public_key_bytes());
-
-        let ecdsa_self_signature = p384_ecdsa.sign(self_sign_buf.as_slice());
-        let ed25519_self_signature = ed25519.sign(self_sign_buf.as_slice());
-
-        let mut sha = SHA512::new();
-        sha.update(self_sign_buf.as_slice());
-        sha.update(&ecdsa_self_signature);
-        sha.update(&ed25519_self_signature);
-
-        Self {
+        let mut id = Self {
             address,
             c25519: c25519_pub,
             ed25519: ed25519_pub,
-            p384: Some(IdentityP384Public {
+            p384: None,
+            secret: Some(IdentitySecret {
+                c25519,
+                ed25519,
+                p384: None,
+            }),
+            fingerprint: [0_u8; 64] // replaced in upgrade()
+        };
+        assert!(id.upgrade().is_ok());
+        id
+    }
+
+    /// Upgrade older x25519-only identities to hybrid identities with both x25519 and NIST P-384 curves.
+    ///
+    /// The identity must contain its x25519 secret key or an error occurs. If the identity is already
+    /// a new form hybrid identity nothing happens and Ok is returned.
+    pub fn upgrade(&mut self) -> Result<(), InvalidParameterError> {
+        if self.secret.is_none() {
+            return Err(InvalidParameterError("an identity can only be upgraded if it includes its private key"));
+        }
+        if self.p384.is_none() {
+            let p384_ecdh = P384KeyPair::generate();
+            let p384_ecdsa = P384KeyPair::generate();
+
+            let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + 4);
+            let _ = self_sign_buf.write_all(&self.address.to_bytes());
+            let _ = self_sign_buf.write_all(&self.c25519);
+            let _ = self_sign_buf.write_all(&self.ed25519);
+            self_sign_buf.push(IDENTITY_ALGORITHM_EC_NIST_P384);
+            let _ = self_sign_buf.write_all(p384_ecdh.public_key_bytes());
+            let _ = self_sign_buf.write_all(p384_ecdsa.public_key_bytes());
+
+            // Sign all keys including the x25519 ones with the new P-384 keys.
+            let ecdsa_self_signature = p384_ecdsa.sign(self_sign_buf.as_slice());
+
+            // Sign everything with the original ed25519 key to bind the new key pairs. Include the ECDSA
+            // signature because these signatures are not deterministic. We don't want the ability to
+            // make a new identity with the same address but a different fingerprint by mangling the
+            // ECDSA signature in some way.
+            let _ = self_sign_buf.write_all(&ecdsa_self_signature);
+            let ed25519_self_signature = self.secret.as_ref().unwrap().ed25519.sign(self_sign_buf.as_slice());
+
+            let mut sha = SHA512::new();
+            sha.update(self_sign_buf.as_slice());
+            sha.update(&ed25519_self_signature);
+
+            let _ = self.p384.insert(IdentityP384Public {
                 ecdh: p384_ecdh.public_key().clone(),
                 ecdsa: p384_ecdsa.public_key().clone(),
                 ecdsa_self_signature,
                 ed25519_self_signature,
-            }),
-            secret: Some(IdentitySecret {
-                c25519,
-                ed25519,
-                p384: Some(IdentityP384Secret {
-                    ecdh: p384_ecdh,
-                    ecdsa: p384_ecdsa,
-                }),
-            }),
-            fingerprint: sha.finish()
+            });
+            let _ = self.secret.as_mut().unwrap().p384.insert(IdentityP384Secret {
+                ecdh: p384_ecdh,
+                ecdsa: p384_ecdsa,
+            });
+
+            self.fingerprint = sha.finish();
         }
+        return Ok(());
     }
 
     #[inline(always)]
@@ -174,28 +199,11 @@ impl Identity {
         }
     }
 
-    /// Get a SHA384 hash of this identity's address and public keys.
-    /// This is a SHA384 counterpart to the sha512 field.
-    pub fn sha384(&self) -> [u8; SHA384_HASH_SIZE] {
-        let mut sha = SHA384::new();
-        sha.update(&self.address.to_bytes());
-        sha.update(&self.c25519);
-        sha.update(&self.ed25519);
-        let _ = self.p384.as_ref().map(|p384| {
-            sha.update(&[IDENTITY_ALGORITHM_EC_NIST_P384]);
-            sha.update(p384.ecdh.as_bytes());
-            sha.update(p384.ecdsa.as_bytes());
-            sha.update(&p384.ecdsa_self_signature);
-            sha.update(&p384.ed25519_self_signature);
-        });
-        sha.finish()
-    }
-
     /// Locally check the validity of this identity.
     ///
     /// This is somewhat time consuming due to the memory-intensive work algorithm.
     pub fn validate_identity(&self) -> bool {
-        let pow_threshold = if self.p384.is_some() {
+        if self.p384.is_some() {
             let p384 = self.p384.as_ref().unwrap();
 
             let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE);
@@ -207,16 +215,18 @@ impl Identity {
             let _ = self_sign_buf.write_all(p384.ecdsa.as_bytes());
 
             if !p384.ecdsa.verify(self_sign_buf.as_slice(), &p384.ecdsa_self_signature) {
-                return false;
-            }
-            if !ed25519_verify(&self.ed25519, &p384.ed25519_self_signature, self_sign_buf.as_slice()) {
+                println!("foo");
                 return false;
             }
 
-            IDENTITY_V1_POW_THRESHOLD
-        } else {
-            IDENTITY_V0_POW_THRESHOLD
-        };
+            let _ = self_sign_buf.write_all(&p384.ecdsa_self_signature);
+            if !ed25519_verify(&self.ed25519, &p384.ed25519_self_signature, self_sign_buf.as_slice()) {
+                println!("bar");
+                return false;
+            }
+        }
+
+        // NOTE: fingerprint is always computed locally, so no need to check it.
 
         let mut sha = SHA512::new();
         sha.update(&self.c25519);
@@ -226,7 +236,7 @@ impl Identity {
         zt_address_derivation_memory_intensive_hash(&mut digest, &mut genmem_pool_obj);
         drop(genmem_pool_obj);
 
-        return digest[0] < pow_threshold && Address::from_bytes(&digest[59..64]).map_or(false, |a| a == self.address);
+        return digest[0] < IDENTITY_POW_THRESHOLD && Address::from_bytes(&digest[59..64]).map_or(false, |a| a == self.address);
     }
 
     /// Perform ECDH key agreement, returning a shared secret or None on error.
@@ -815,16 +825,16 @@ mod tests {
         "aec623e59d:0:d7b1a715d95490611b8d467bbee442e3c88949f677371d3692da92f5b23d9e01bb916596cc1ddd2d5e0e5ecd6c750bb71ad2ba594b614b771c6f07b39dbe4126:ae4e4759d67158dcc54ede8c8ddb08acac49baf8b816883fc0ac5b6e328d17ced5f05ee0b4cd20b03bc5005471795c29206b835081b873fef26d3941416bd626%"
     ];
     const GOOD_V1_IDENTITIES: [&'static str; 10] = [
-        "7c2b729f7b:0:4d9d097668f27decb7a56953cf560f595e13c48873c40c4dc19dc5a716aa551e7c0b91d00f2af1bcaa7e31f5cfe38077eb55aad97dcbb0f3b013b5297a93aa2d::2:A4Ro-uv9LK9Je7RHDOAzV_RbrG-rZ6v7_7ePKzfQk_uo0-avhSlkT8NR408L6a5cvQIDhDVhBWYR_eAaTrE888Val9FSMaM_ekmle6k74V7fi0fcA5Jhsg-eHfyw1z_ovGpWppJEs0xX5SMOCM2MBs93K20e9P4IpdFXayoLod9FAKAn-arh94tbkUALr4Uf59ACLovMymhoJr6Y-wkKRwEsnAOdSNa8bN3HGGVDOykAgvLs1E65pkIkFXTxmcSVMLbETKETYwmSaaNYEXMVGD5HBJ0GqA8298bs4HVYjNoYwMHu--Hwb1joQS0XK5WjifYRrWAA94J48f05tMDklQcF",
-        "0d4be14d60:0:69c300b00e5af62e2d55c1ea81f5316375038608ad3696f67bf092f960e4f7036e51a091c88c1bcadf00cf43647e9464b53017a760e24deb76f776488d430237::2:ArquLyV1f3eaXkFZPdRHzgEhD01HK0tgzXBiWO5a1flT1agj_lkyNziY-YyOoP1fEQKplNnnXhryqI75siIZFMMUZInzlJm1Ll84_qV2pfbcFMXNN--4P5LgtChR1DNNHaKLMHt5U0IKh9UwSvfH5xbTr8LjadezbPOuy9a-uf-FSQTBZvALYtLSKLjPvaNMLMamT6ruEuJbgRLsCeZ38zEqMPYQ05iG4_TrjAw0uZJ4pz8m--STLE6B5XOU3Lc50fzxdDrIqL-dDTbCX5XecQzDiN8a3CSf8vq2uMu3-Fs6AaQ_dNc8_B8Y2dpfc7UYj7sRmAyFiw0FEwHIPPSZDjsI",
-        "d2608c9625:0:5a19103678e8a28942d077278024421219c5dcf6e25fd8d74c082df6e288ec581ac09d4bc84b9ef2287342c1b4736da59109d9986740a9d135621399569161cc::2:A5T6RjeDlzTvJAFHlXfSFP3dOPWxCaE1jRcAdzZgxsdy80TV7pVRiAyeOdYGJEbFaQPa0qIl20ZHXUI5fZfUc7PWxp3wkQqkqD9X-3Ms3wOPP5kc_kqxKIGnlXk6E_NEggZIPr0LONZShGrDRO-kKsdDxzP9EE4FDlnrD0E2yAbjH8hAIQqhERarSabCNE_iJrJG30yi0bPZtJNI36SPJex11X8X7Vu8GFXqWmZQRIU9Q1WJBmX-LVwxxD4BzNKWsy_txeQeGokKGydV3ejASi6ViicbwxtkVHbPzDgYl0kOBwv_qJTg3PIt1x27qTAYPs4qG6PSWQt_eqGtrKCYVOAO",
-        "7615cd90d0:0:49641eb54b001b1c91afd162a780252bea7e315c7454beda712864e5ad801046eedb11927cdef951c64c12706cc4f332512307de9754d99ab1978b396d5c70a2::2:A-KmSE-Cga8As0AT25LxJTOLntyN1ORiJ6it_Ud6CfGPbANpvEnAbs2m7i7yJ_DP9APo4Q9RrQKS5THa0yADD_QWLz-o7zb4cTfAoG0IkVed2sWWq7SR0-6VHQWg__WglqMYIKM4FXPZ9i1uuKLrshN-fF4XAdqJLrqWTpqvpVmdYJB9LKez5MpEXO-UeLJb-4jgeFjB35Qxbcp6TsVZca3ep5FzqYdyNjfI7RkKTPnVpCKdTWFmIbDqzQMyjqg93lu8OWq2tPorzUth-qpWf9AWTPYxofNzd_t9OMimR6kevaG-qjsEX7-SOzf-UI76y3JR6lF9dMs3UiqVjv3guDgE",
-        "bf7544ad9f:0:fb726a8e1c8c50100661ca64a99504b13ad7d0604db1c96c35f94091aaed69168e118aa7c3ca7f4aad092a02513ca171ca5fdc445f1bbc2dda49e8af544f941b::2:A0NV5tU0HTcdrJQzjgGy01FbHzi0v7DnpkyrmNvGrcJwcU6Fas35vmpNBJpsi9YTRQPNCzPYkeMz_7s59ukEzK-Lhk5ZxyvGdJMUoW6mmWiE8T6pJcD3JC37kNRuW28cH13d5_YuDnVsPz-p1ER2d2BzvjucwgkhmQnMSWSVCNikfe7pR-2mqFjr2KkEHqCp5js1tdM-nzOrV7smjed1vl2AZIeYRBcpJXBCDiyCMSpe8MD32KcNoJPINHu6k7uDxKKEwSocacDAI8SlFjz5Sb_JXM0XUDZyoSrql9bAdDi4s4bVVjTrpOqcUfQ9Shs-QKNcrOmDG-uyM4Pqaz5NRhsF",
-        "e7ea5a5db4:0:1fc5c90b7350899babf0e20b3aaf7d778d63cd8b587f966e194841e80fc69a73a2c2ae340ae78b5aea47733352eddbd501147d464ef7d31297832a4a80473c40::2:Ahq6VPPeoqNX-SbAuxg2GjgxJw_4dJQb7hCL_hZ3ZZD8QHey5oK8rEg8U5GBT0M92wK4SXrUTJErbn2xxL5mFfzq4Yv_C5V_y88LYDV_pAZ5vA4HVzIs1dYXrKJZzgt9CwHev05MbvOguc3ueUGxYw5ZVR7l9RM-O4CXgvpWre8kuElv6nXfT6Rrs7UFHgJqpdti93vDMBiY6_4_sk68OFDTakqixHO0qxPwWHDOFW9OWBDCeWuDtpv3VLhCYspGKborJMbraQkkXwkd04Tm5-UgsXFfXRXP_qR4RBLmxFmf7kuSHQzqTJJQ-kIw0ZUKqvNCjqP1ii2LIa3YcXJjNZQF",
-        "e431ace96f:0:1a665addeb00bd8f6d46cc0cc8fa39cb3932a93e737263c431435c9f80828a7f98020ecbc6240e8284dbd2f9ddce212da5c9d8d565110e278b54a50259835c76::2:AinmOs3et5j0jzNiQj31hp8Fyb_REuhr8CdFyEZuS2uU4xu9eMo9GDUHCq_DzbyqgAK0ppN9ZaE0PTT-FLRcVBZpQ25MgPw99LMT85o7nGc0l2ffsPBiOn8s6A4U551d1glzgwBkQuUNUrO1dKHd77_ZZ0uSHybxg_eVyD-FOmXkJCc1WcFhaao7Mlso0U9XV7olrRspEs75jN3gKgnEAqp3LzpB0gX_DeTJQE9eCuJ9d72oooRqrh2VcO0Bq6K8X7IUU5q5VRzJELeedeloatyRSEzpRCiXNVweCo2J9H-in6km0SaZgk0PZIJUSB5PZOrhdvw7WQONWaigD112LtcC",
-        "3596edb275:0:b3a8e692955d9d2fe216e144dd91b467878d91d5d308f97b72f100b5b3f73501406f77fc00a71b7814bd4fa7b3f3e161cf55c8c50400a239a062a4b5da56f11c::2:AyDEvg6plLbzsM1pNExvF7HIeOwVSfzMpE9rqX5Bs9tOW5NNcyEb6xkYlOKIbYNTgAL2hGWLBN4pUSV9x6uDDolgtQRR84dUEmDTFynxp5lYPLo8viOqNgdrWilkx_H2hZSoStSrdecGAXIAsEbE_4NHZqA05yqiLnG_WvMxBE4s3NYVwttcVNCL2-GNQ019_cEXENeKM_0KgXY5f4WubbEL-mJzTkvjAnA8MhAbGnk3DkzdQ8syiqvgtuZGNeQ_vVyhqVJ1W7FrI-KeXB0o4dIfRQNLEue7YhSg7MPdFkaaqfe5pqHXHIbu-upYn3RNJsL7WTzjQIycW1r3v2NXlAwM",
-        "bb94fbb14c:0:f44e527f3776173dd8e7106f458dfb1acf680f5555d9cbe48de4daed8b3d0a4b692c3a5af67bfbfc5b275df8c6d27f2c647f529d3e1d33a0b52f5f800a5bb44e::2:Axt5NjbXaCznLoTQ6FZ2KB0WF9GSerApl94XXb3myLopi273EjLTKfzoqRe_1dhBnQOpn1RKKA27WY9WFU8vLfmxyEitLUhy8_8R86qQHwW2YIXz9OGlO4PQ2vDyzFEP28AdqQDSi3_ZbE68cTY4FdOtLYhmelvX6tzUXc6Oc0b2Fr_3DCBMVxLJwbuP2HzH-k3yGTa2jn2xBtb40jCQoS3CbQf5Pa7UW6elOmsL2KP4iupVq_FQk4fXZKXlVGjru6UAQE686KnMuzSc0TEeLG360JggmZhsxUN72xM6ei88L_BTu6srMGe3K0QLE_K1eFUXWat7WQ8Bim5G6FSMv1UD",
-        "91174e9989:0:d268c8b9856a8051f0794f4c221a08fb9764418187d28af7c205d89e9facc924c633af7f63cc3878bea5aefde175e16e068e93efd00f7f241c0aa7495cdd00ae::2:A5hywCOYFiGs_r347-0A9oAArsrWHwn8Zpy1AXRh4ZrVhLEH0Zzle6qek0WC3982oQMMY6ljD5DpLWwoqZwSGZDRpRIOIGutEyR-y-mvwv-nr970G7AlC7vTmCq-GGvSiDhL1S6og_JpHtGVpj6gEaTirIcG27503PhKwnZ93x8FLN-wFVX9TamePGGA82A3rkuuC90qI8bdpsAYNDZzGbXSuCSJLEaXFRj0efJn0l-No7_NnNGdBce6IYuV2jYbNxUV7AqUlhWEw8WWZl5OX9VOvskI6DGtZ13NMWc6q-1OSf8jqThdh1PeDFVNYy1qX5AI88GHQfIs54GIT8FAJeAG"
+        "c35be0ca60:0:bd7b7d9f59fa7bd7700d7291f394dde3bda0c7a0d0da6b1992fdb4b74d4bba7ff831999362d996b0032e94f9454e636363a9ec125185edfa9451f2cb5a47e8aa::2:AiUlMlsVUa2wLr6hSL6PWb8v4n7H-6SjBz_rMNjQVlSgoHTKdrc2pTaFlvgXXVDsxgKYj6XOCAy-kPcB6gbaAEr4HC0BaRDphLi7Q3Od2NNx1Fm3A8NDrTX6agcVCxRybxRVkJdLFE3EBkLWMAzPQ1_Qr0nvSVGZ0inAbQEQFbd0j7aDgEsik2A2pYqhvPRINiIzPBqr7kwPL7OSXF-v6oNlwFJ5NhVmleioIGekapFJkjTYF0xxMR9eOwjHArGbHtWP_yiFgXcVwV4ta-ttjnGImjCuq9AaEqhhhYsYeGhya8Pd9e9obIwbTYIS1DaCd9fXPcK6vhnLi-wEtYZ3qg0A",
+        "f7193a4d70:0:a796837e99841ac933c85dee615172485c87b7d9de5493c9f2fc7c5428d88833869bcdfbbf8ab0966ba3e284e131cf89b308364ed8a2af69a6986583b490cc69::2:A44ZHHXaN9bk4vssB-HuGodAbBIHmGmRmwqyD4ocUWwQWlPaQDt_y6HbNX8GmWLv5QPoMhFzuHmusOx6sAP5-2xYnUf5mpBRGTtKvW2VxG5yHNlR6olL9p2xX2okSppuYgab7X3QzTA6AiOQYCqWs-39GDA0L68q5_Vdnebfn36u3AIh0WnUlkPzkCsqF87lrgaqq_fdtE4Dz96YhvChWevDdCHhqdzjlgddk6KREpx2IPb8dQMGtwdOQZ7Kl12Ezza69PwaFsDfp47AmfsomYIB-e4kzo3G7_2me-0Zi5By9WnPtKRYHh_5HDFpjwlg9ElIjs7cyQlgz6Duc7nQHQ4E",
+        "780a66fd18:0:ab09057d5ffed767bf0b7a75c8d810c878758aee85e29f80ebbb80b3aefc274b22fe7fb5757dbddd0f81621a0386a9b586b50722222b8a15fc4349f0ca102dbd::2:A7CL-xo4PA8geCRMGkDa347wtlt8vsPb5ShHQs63fDzREjqPx_ghu6lDKBZSUbfRqgPkvD-dsHbx-j-Neyvp7xF-O3TsiD_OuVmYF9MCZ8e7UeCyNN9Ao6blsHiXNlE6dL5BGcOy7kmcIGEqiLnQM_SM1iggRJI3YkpYRaGuJdu7Jpc8A0XTWVzE3RccPlbu25jvagmY4u3phR9DjA3vcaY21NLDNuyBzCXQmh66WIqjbOEcIH1Tr7JjciBdhE-cmzYqFOyGxNBDCm2oXdPHHaTMljySc526LkfiMcJilNiVrTf0-6CjccLxAXGlUU6VZz_DxPoVGRzPSj8kUbfvujwO",
+        "3961fb1d69:0:360b65017c4b690f370e9ac84a7cb1b2866978dbded70e2a8ca7c72c73b7bc3d74052cc8f51307a79fd570fad104447f524b4bdac9dadd8ebf7da3672a49739d::2:A-RabnEvl-55tTWseqP3IphwMM6dCi2PMAYnabt2yjWALVYqRV27VD4_T6P0H513SwOY27dfClgv3a-vVnw7uag8p4CBPax1q-nOuvrl62w8KzUcDS5eWyZxnvkR5iFBp3Iq4oSEDBBV1pzTZlc3aoz5Muqzt4c6X3Qh8Wcahnu2f86FL9Yl5xL9_al9Jh8PfnupO6uyvXv4jSQJaRZbQbJo0gl8WRsSZwHUTWgKbZdb3RcOxyOhJhj3dFMrTr3OrwjMAoAYuREsHkj72dOBuoZs5aMMsyjS4cjjFBDijJ4RhuzAd8n0hp1a_DV5roVOj_-sdMf0dPbDDibAV9nA_QUG",
+        "16c21adb85:0:8fe2f38bf5749861fabbedf7fcaee0dd79a6e6127f1e092c67ff2198b0475c771f26428438dadc3aefca1bef2e23a8cdbd1dd97f559e799e79617faa97c4da80::2:A48nTihf1f4MKVpCzyigjFNGcVeCynZTwMevsi07gfzpwTuRb1fjNmgfuyYh00X0mAMWdupKP_2rTpDd0vbcPb9aqxdUO9fqgmGHsTtudBWpjQVCueC_aITwmZhtF3ey--PV2iItyINxXeGGkXHr2EYoM5mfoZWuLhaEV0lmAk_FKZ-Mb09zfXfgNKXKCA2eQBWWBth-oHxH0vzlX86dd7D2qxsG2LY2hpn4ma2AaLHtZTKa_EsouTOxA43DlXeQxkDL3HSRjlX-ET_xae_JkPMuaMCmo0wKIOM3_6tYJkj5sKVK28gY_ziRC_27bznow9z3sJIvxVcx9MUu5nRgaakH",
+        "d2586ea351:0:9c7d5f25533d042564a8b1bd76f37c27e3bca494a6693d456703ba3eadc2d94d3f131fc7914e66347f9624d6f303964714e8d9f0b03bd79eb1dac137e6b8153b::2:AwwJDn3zibov2pahZy4Do714Zq2j8w3kmHpcAqBQkvEg4cVoHjkDUCOUW8HbivJdsQK5cZRTvcitNb65Gch8OfAGVfkDHYrO5eE0Ev7EXYlRqtqXaTzdwijVd3R1hxZh8FTln75Be0JMNDVQgjNH4F_WH2KLzNf8Uy44AIXYRVvC0GF0eAx3AqxpajqA9VsyT2mF0dwoeuwyre54SXu2w7cap8s4OlhW52Fv99NhE2W2inlI7gxBC_KdinIlTYepWcnHwFJnj6ZVeLYRMZuNGDMSUPXk00wqbqfEYdWSLGvz9g9NvSAq_NGI-L7WQCB368K1teXsdL1WLzYaA2vQYYMG",
+        "6ae70ee955:0:858884d8b8d863ee0fd79cd55d96034a7e1a4828f1661d362d6b2ac1e942c459a38a17907fdd268e19e82ade375a9a654e2a477a28ecaf8ce5f14c9b141d59f6::2:A0aVghbPjh5okma0NrfrArePpgX9RYj7ULLiib_DB6yh0pKYemgYY5sHmHeRrf33ngO8dYzDTSPMd_pWdGWkpiwgrCxyY8TNYxjn_b-odGxdjP9Id-QUJ9bHEAA0W1C7I3LkrWGsGajw18lUJroE4_QiwQm6Csh7l4hUma7mgyBtOumMfEdQL5sxvvv5e1E5skveuEEyCzei7tu9Yl1oFh-kqj4OAIA9fw8yc7F19a102HoGA3on_mYyEglTmoRAL7GyN8RAEGm7dzLNrwI3Q4acHFcoyA3D_pbF0EyGFN2YDTZYs7fNGP8HFXj_c_5zAmIe-99UgqlOoVAoQvQ4w8QL",
+        "875b7f95a6:0:0a81b6da6cc1d7924a18c3b719b1621bd9e09e0638ab86a99e530f67267c7a0fb3bcdebf09c242ff1b29f19b1442e907b06a2a81028add0090f8061c8b841636::2:AkAXRtMOLsm2LoxZ314SC9fgCOpkLwor6Mr9newu1wFJbnBNA2RVH639hRo26VDDmwJLrEH2Dxo4ssRGM4McOcRCzWi2VameTu_PqUTfZ8_B60xOfNqlES6ZS12ujho28l8kP7TFbfwl9CbB1y8Lrs5x-LbEZG0sx0PgiadcNJzjlecwcLCq7hZ58mnrKNX3clMnb59X1AVMHYsY4XlflYzkICxB_QnpNmPTyeruIg-Hl4gmnuOyYeSnEOkPTYYByxlLmc4Eyz3AqhzA634WaAfqkF1DiR4XJ3B5W1-D3Z5znIowVgNoBlIJ2uVDbjm02eRh-Glxvgt0OimuptT_GgcN",
+        "e4f8e758c6:0:cf3504c7392b1e15dc11a73ca76f1144578459ee32f3f12dc35bc28be93ada2cc3f8dd2ee066a9b9358a4e7653222b399b4ff2f53ecf7d264d528f8bfb3434c8::2:Aw170fJF8sqymG1z5w4K1ZSU2M2epkkXtbnnzVd9zcLEcum7CQ4_1QTZH5ze1OXzBAIOxZSy4eQBgBaNKPM2x2fGIc5eIcHgnYkXvR41hUVAhdAe4zAi52GQvyCyZ2H5qSZYZrgcHQec4ctpqZEodbfJaznO4VjOTxh6dh41SQLqjWIQmruFDSZ1KG_yQD4mRnPsMzFT4pNmIuQq-mw52_64A7RQ0wEIXRpTkfGav1if1qnfU-TQVj6I8607XugdGE3CoILRBdNMld8J3W7Cq6xHtyw6DeCPCwGN7xt4giyMsIKgbOd0x8HNHX0QRYmvmUZpPQT_wp2LA4NNieNZ9VsO",
+        "a6b56f96ad:0:d1d5b9cc259804516edb11903784ee3c3e69fe1b4334129a2db3859406298a3379a2fe894ce24f565fd7e2c065cdf295a7488a5197e62a9aae7d48c311d03ef7::2:AnwaTJ3eJdMKY17HlwVNKpMb_H_kezrgKYCdz_h62-eFW8DGPuqND_QRt4XDSmPO9ANZHkINJ35q4g-MfKITocXzBE3uFTgVgCJhqrsKdf2CspjQT2ZGT5xZHbKGUU9eUShpSdQEVEfuAURTOEyWzifjp9ZEqXbigWeNXaAwiUBihRvh0vMPDumvdrovxX2rAm5N1f2nKKYUYhx5YsSyBhoIjjsKei00iPoBj5gNeINylnxf6PqVyUp9HVApsupHm5xblPWhw0lwa56q5R8rKVwygtHb74qNNmFPKjS6VziNI0XxcKN9lapfj1dmmj6cXCkvdD8YpznaERclOZotdbcA"
     ];
 
     #[test]
@@ -846,29 +856,54 @@ mod tests {
         assert!(gen2.agree(&gen).unwrap().eq(&gen.agree(&gen2).unwrap()));
 
         for id_str in GOOD_V0_IDENTITIES {
-            let id = Identity::from_str(id_str).unwrap();
+            let mut id = Identity::from_str(id_str).unwrap();
+
             assert!(id.validate_identity());
             assert!(id.p384.is_none());
+
             let idb = id.to_bytes(IDENTITY_ALGORITHM_ALL, true);
             let mut cursor = 0;
-            let id_unmarshal = Identity::unmarshal(&idb, &mut cursor).expect("unmarshal v0 failed");
+            let id_unmarshal = Identity::unmarshal(&idb, &mut cursor).unwrap();
             assert!(id == id_unmarshal);
             assert!(id_unmarshal.secret.is_some());
-            let idb2 = id_unmarshal.to_bytes(IDENTITY_ALGORITHM_ALL, true);
-            assert!(idb == idb2);
-            assert!(Identity::from_str(id.to_string().as_str()).unwrap().eq(&id));
+
+            let idb2 = id_unmarshal.to_bytes(IDENTITY_ALGORITHM_ALL, false);
+            cursor = 0;
+            let id_unmarshal2 = Identity::unmarshal(&idb2, &mut cursor).unwrap();
+            assert!(id_unmarshal2 == id_unmarshal);
+            assert!(id_unmarshal2 == id);
+            assert!(id_unmarshal2.secret.is_none());
+
+            let ids = id.to_string();
+            assert!(Identity::from_str(ids.as_str()).unwrap() == id);
+
+            assert!(id.upgrade().is_ok());
+            assert!(id.validate_identity());
+            assert!(id.p384.is_some());
+            assert!(id.secret.as_ref().unwrap().p384.is_some());
+
+            let ids = id.to_string();
+            assert!(Identity::from_str(ids.as_str()).unwrap() == id);
         }
         for id_str in GOOD_V1_IDENTITIES {
             let id = Identity::from_str(id_str).unwrap();
+
             assert!(id.validate_identity());
             assert!(id.p384.is_some());
+
             let idb = id.to_bytes(IDENTITY_ALGORITHM_ALL, true);
             let mut cursor = 0;
-            let id_unmarshal = Identity::unmarshal(&idb, &mut cursor).expect("unmarshal v1 failed");
+            let id_unmarshal = Identity::unmarshal(&idb, &mut cursor).unwrap();
             assert!(id == id_unmarshal);
-            let idb2 = id_unmarshal.to_bytes(IDENTITY_ALGORITHM_ALL, true);
-            assert!(idb == idb2);
-            assert!(Identity::from_str(id.to_string().as_str()).unwrap().eq(&id));
+
+            cursor = 0;
+            let idb2 = id_unmarshal.to_bytes(IDENTITY_ALGORITHM_ALL, false);
+            let id_unmarshal2 = Identity::unmarshal(&idb2, &mut cursor).unwrap();
+            assert!(id_unmarshal2 == id_unmarshal);
+            assert!(id_unmarshal2 == id);
+
+            let ids = id.to_string();
+            assert!(Identity::from_str(ids.as_str()).unwrap() == id);
         }
     }
 
@@ -881,6 +916,7 @@ mod tests {
         let mut duration;
         loop {
             let _id = Identity::generate();
+            //println!("{}", _id.to_string());
             end = SystemTime::now();
             duration = end.duration_since(start).unwrap();
             count += 1;

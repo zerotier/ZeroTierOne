@@ -21,6 +21,7 @@ pub(crate) mod mac;
 pub(crate) mod fragmentedpacket;
 pub(crate) mod whoisqueue;
 pub(crate) mod symmetricsecret;
+pub(crate) mod hybridkey;
 
 pub use address::Address;
 pub use mac::MAC;

@@ -241,8 +241,22 @@ pub fn hmac_sha512(key: &[u8], msg: &[u8]) -> [u8; 64] {
 }
 
 #[inline(always)]
+pub fn hmac_sha512_into(key: &[u8], msg: &[u8], md: &mut [u8]) {
+    let mut hm = HMACSHA512::new(key);
+    hm.update(msg);
+    hm.finish_into(md);
+}
+
+#[inline(always)]
 pub fn hmac_sha384(key: &[u8], msg: &[u8]) -> [u8; 48] {
     let mut hm = HMACSHA384::new(key);
     hm.update(msg);
     hm.finish()
+}
+
+#[inline(always)]
+pub fn hmac_sha384_into(key: &[u8], msg: &[u8], md: &mut [u8]) {
+    let mut hm = HMACSHA384::new(key);
+    hm.update(msg);
+    hm.finish_into(md);
 }

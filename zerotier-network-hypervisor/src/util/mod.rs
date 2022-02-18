@@ -6,8 +6,8 @@
  * https://www.zerotier.com/
  */
 
-pub mod pool;
-pub mod gate;
+pub(crate) mod pool;
+pub(crate) mod gate;
 pub mod buffer;
 
 pub use zerotier_core_crypto::hex;

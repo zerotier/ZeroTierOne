@@ -171,12 +171,8 @@ pub const WHOIS_RETRY_MAX: u16 = 3;
 /// Maximum number of packets to queue up behind a WHOIS.
 pub const WHOIS_MAX_WAITING_PACKETS: usize = 64;
 
-/// Proof of work difficulty (threshold) for old v0 identities.
-pub const IDENTITY_V0_POW_THRESHOLD: u8 = 17;
-
-/// Proof of work difficulty (threshold) for new v1 identities.
-/// This is lower than the V0 threshold, causing the V0 part of V1 identities to verify on old nodes.
-pub const IDENTITY_V1_POW_THRESHOLD: u8 = 13;
+/// Proof of work difficulty (threshold) for identity generation.
+pub const IDENTITY_POW_THRESHOLD: u8 = 17;
 
 /// Compress a packet and return true if compressed.
 /// The 'dest' buffer must be empty (will panic otherwise). A return value of false indicates an error or
