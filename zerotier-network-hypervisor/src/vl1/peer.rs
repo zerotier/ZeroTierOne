@@ -494,7 +494,7 @@ impl Peer {
         let _ = ephemeral_secret.as_ref().map(|s| fields.set_bytes(SESSION_METADATA_EPHEMERAL_CURRENT_SYMMETRIC_KEY_ID, s.id.to_vec()));
         drop(ephemeral_secret); // release lock
         let ephemeral_offer = self.ephemeral_offer.lock();
-        let _ = ephemeral_offer.as_ref().map(|p| fields.set_bytes(SESSION_METADATA_EPHEMERAL_PUBLIC_OFFER, p.public_bytes()));
+        let _ = ephemeral_offer.as_ref().map(|p| fields.set_bytes(SESSION_METADATA_EPHEMERAL_PUBLIC_OFFER, p.0.public_bytes()));
         drop(ephemeral_offer); // release lock
         let fields = fields.to_bytes();
         assert!(fields.len() <= 0xffff); // sanity check, should be impossible
