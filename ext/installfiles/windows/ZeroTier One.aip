@@ -27,7 +27,7 @@
     <ROW Property="LIMITUI" MultiBuildValue="DefaultBuild:1"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{F95AD88B-4F7A-41B3-A178-0EA5CF69328A} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{C5DB1481-7EBE-4F34-BFB1-00A114B5713D} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
     <ROW Property="ProductVersion" Value="1.8.5" Type="32"/>
