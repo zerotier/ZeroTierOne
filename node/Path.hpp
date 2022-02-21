@@ -83,6 +83,7 @@ public:
 		_lastOut(0),
 		_lastIn(0),
 		_lastTrustEstablishedPacketReceived(0),
+		_lastEchoRequestReceived(0),
 		_localSocket(-1),
 		_latency(0xffff),
 		_addr(),
@@ -93,6 +94,7 @@ public:
 		_lastOut(0),
 		_lastIn(0),
 		_lastTrustEstablishedPacketReceived(0),
+		_lastEchoRequestReceived(0),
 		_localSocket(localSocket),
 		_latency(0xffff),
 		_addr(addr),
@@ -266,6 +268,18 @@ public:
 	 */
 	inline int64_t lastTrustEstablishedPacketReceived() const { return _lastTrustEstablishedPacketReceived; }
 
+	/**
+	 * Rate limit gate for inbound ECHO requests
+	 */
+	inline bool rateGateEchoRequest(const int64_t now)
+	{
+		if ((now - _lastEchoRequestReceived) >= (ZT_PEER_GENERAL_RATE_LIMIT / 16)) {
+			_lastEchoRequestReceived = now;
+			return true;
+		}
+		return false;
+	}
+
 	void *_bondingMetricPtr;
 
 private:
@@ -273,6 +287,9 @@ private:
 	volatile int64_t _lastOut;
 	volatile int64_t _lastIn;
 	volatile int64_t _lastTrustEstablishedPacketReceived;
+
+	int64_t _lastEchoRequestReceived;
+
 	int64_t _localSocket;
 	volatile unsigned int _latency;
 	InetAddress _addr;
