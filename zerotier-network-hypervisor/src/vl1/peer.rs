@@ -14,16 +14,19 @@ use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
 
 use parking_lot::Mutex;
 
+use zerotier_core_crypto::aes_gmac_siv::AesCtr;
 use zerotier_core_crypto::hash::*;
+use zerotier_core_crypto::kbkdf::zt_kbkdf_hmac_sha384;
 use zerotier_core_crypto::poly1305::Poly1305;
-use zerotier_core_crypto::random::next_u64_secure;
+use zerotier_core_crypto::random::{fill_bytes_secure, get_bytes_secure, next_u64_secure};
 use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
 use crate::{PacketBuffer, VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
-use crate::util::array_range;
+use crate::util::{array_range, u64_as_bytes};
 use crate::util::buffer::Buffer;
-use crate::vl1::{Endpoint, Identity, InetAddress, Path};
+use crate::vl1::{Dictionary, Endpoint, Identity, InetAddress, Path};
+use crate::vl1::hybridkey::{HybridKeyPair, HybridPublicKey};
 use crate::vl1::identity::{IDENTITY_ALGORITHM_ALL, IDENTITY_ALGORITHM_X25519};
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
@@ -37,10 +40,16 @@ pub struct Peer {
     identity: Identity,
 
     // Static shared secret computed from agreement with identity.
-    static_secret: SymmetricSecret,
+    identity_symmetric_key: SymmetricSecret,
 
     // Latest ephemeral secret or None if not yet negotiated.
-    ephemeral_secret: Mutex<Option<Arc<EphemeralSymmetricSecret>>>,
+    ephemeral_symmetric_key: Mutex<Option<Arc<EphemeralSymmetricSecret>>>,
+
+    // Pending symmetric secret key that has not been ACKed yet.
+    ephemeral_pending_symmetric_key: Mutex<Option<Arc<EphemeralSymmetricSecret>>>,
+
+    // Locally generated ephemeral key pair on offer if we are re-keying, and when it was generated.
+    ephemeral_offer: Mutex<Option<(HybridKeyPair, i64)>>,
 
     // Paths sorted in descending order of quality / preference.
     paths: Mutex<Vec<Arc<Path>>>,
@@ -74,7 +83,6 @@ pub struct Peer {
 /// is different the key will be wrong and MAC will fail.
 ///
 /// This is only used for Salsa/Poly modes.
-#[inline(always)]
 fn salsa_derive_per_packet_key(key: &Secret<64>, header: &PacketHeader, packet_size: usize) -> Secret<64> {
     let hb = header.as_bytes();
     let mut k = key.clone();
@@ -88,7 +96,6 @@ fn salsa_derive_per_packet_key(key: &Secret<64>, header: &PacketHeader, packet_s
 }
 
 /// Create initialized instances of Salsa20/12 and Poly1305 for a packet.
-#[inline(always)]
 fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_size: usize) -> (Salsa<12>, Poly1305) {
     let key = salsa_derive_per_packet_key(&secret.key, header, packet_size);
     let mut salsa = Salsa::<12>::new(&key.0[0..32], &header.id);
@@ -177,12 +184,14 @@ impl Peer {
     ///
     /// This only returns None if this_node_identity does not have its secrets or if some
     /// fatal error occurs performing key agreement between the two identities.
-    pub(crate) fn new(this_node_identity: &Identity, id: Identity) -> Option<Peer> {
+    pub(crate) fn new(this_node_identity: &Identity, id: Identity, time_ticks: i64) -> Option<Peer> {
         this_node_identity.agree(&id).map(|static_secret| -> Peer {
             Peer {
                 identity: id,
-                static_secret: SymmetricSecret::new(static_secret),
-                ephemeral_secret: Mutex::new(None),
+                identity_symmetric_key: SymmetricSecret::new(static_secret),
+                ephemeral_symmetric_key: Mutex::new(None),
+                ephemeral_pending_symmetric_key: Mutex::new(None),
+                ephemeral_offer: Mutex::new(Some((HybridKeyPair::generate(), time_ticks))),
                 paths: Mutex::new(Vec::new()),
                 reported_local_ip: Mutex::new(None),
                 last_send_time_ticks: AtomicI64::new(0),
@@ -223,7 +232,7 @@ impl Peer {
         let _ = frag0.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_without_memzero() };
 
-            let (forward_secrecy, mut message_id) = if let Some(ephemeral_secret) = self.ephemeral_secret.lock().clone() {
+            let (forward_secrecy, mut message_id) = if let Some(ephemeral_secret) = self.ephemeral_symmetric_key.lock().clone() {
                 if let Some(message_id) = try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, header, fragments, &mut payload) {
                     // Decryption successful with ephemeral secret
                     ephemeral_secret.decrypt_uses.fetch_add(1, Ordering::Relaxed);
@@ -237,7 +246,7 @@ impl Peer {
                 (false, 0)
             };
             if !forward_secrecy {
-                if let Some(message_id2) = try_aead_decrypt(&self.static_secret, packet_frag0_payload_bytes, header, fragments, &mut payload) {
+                if let Some(message_id2) = try_aead_decrypt(&self.identity_symmetric_key, packet_frag0_payload_bytes, header, fragments, &mut payload) {
                     // Decryption successful with static secret.
                     message_id = message_id2;
                 } else {
@@ -405,10 +414,28 @@ impl Peer {
     ///
     /// If explicit_endpoint is not None the packet will be sent directly to this endpoint.
     /// Otherwise it will be sent via the best direct or indirect path known.
+    ///
+    /// Unlike other messages HELLO is sent partially in the clear and always with the long-lived
+    /// static identity key.
     pub(crate) fn send_hello<SI: SystemInterface>(&self, si: &SI, node: &Node, explicit_endpoint: Option<&Endpoint>) -> bool {
+        let mut path = None;
+        let destination = explicit_endpoint.map_or_else(|| {
+            self.path(node).map_or(None, |p| {
+                path = Some(p.clone());
+                Some(p.endpoint().as_ref().clone())
+            })
+        }, |endpoint| {
+            Some(endpoint.clone())
+        });
+        if destination.is_none() {
+            return false;
+        }
+        let destination = destination.unwrap();
+
         let mut packet: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
         let time_ticks = si.time_ticks();
 
+        // Create packet headers and the first fixed-size fields in HELLO.
         let message_id = self.next_message_id();
         {
             let packet_header: &mut PacketHeader = packet.append_struct_get_mut().unwrap();
@@ -420,56 +447,87 @@ impl Peer {
         {
             let hello_fixed_headers: &mut message_component_structs::HelloFixedHeaderFields = packet.append_struct_get_mut().unwrap();
             hello_fixed_headers.verb = VERB_VL1_HELLO | VERB_FLAG_EXTENDED_AUTHENTICATION;
+
+            // Protocol version so remote can do version-dependent things.
             hello_fixed_headers.version_proto = VERSION_PROTO;
+
+            // Software version (if this is the "official" ZeroTier implementation).
             hello_fixed_headers.version_major = VERSION_MAJOR;
             hello_fixed_headers.version_minor = VERSION_MINOR;
             hello_fixed_headers.version_revision = (VERSION_REVISION as u16).to_be_bytes();
+
+            // Timestamp for purposes of latency determination (not wall clock).
             hello_fixed_headers.timestamp = (time_ticks as u64).to_be_bytes();
         }
 
+        // Add this node's identity.
         assert!(self.identity.marshal(&mut packet, IDENTITY_ALGORITHM_ALL, false).is_ok());
         if self.identity.algorithms() == IDENTITY_ALGORITHM_X25519 {
-            // LEGACY: append an extra zero when marshaling identities containing only
-            // x25519 keys. This is interpreted as an empty InetAddress by old nodes.
-            // This isn't needed if a NIST P-521 key or other new key types are present.
-            // See comments before IDENTITY_CIPHER_SUITE_EC_NIST_P521 in identity.rs.
+            // LEGACY: append an extra zero when marshaling identities containing only x25519 keys.
+            // See comments in Identity::marshal().
             assert!(packet.append_u8(0).is_ok());
         }
 
-        assert!(packet.append_u64(0).is_ok()); // reserved, must be zero for legacy compatibility
-        assert!(packet.append_u64(node.instance_id).is_ok());
+        // 8 reserved bytes, must be zero for legacy compatibility.
+        assert!(packet.append_padding(0, 8).is_ok());
+
+        // Generate a 12-byte nonce for the private section of HELLO.
+        let mut nonce = get_bytes_secure::<12>();
 
         // LEGACY: create a 16-bit encrypted field that specifies zero "moons." This is ignored now
-        // but causes old nodes to be able to parse this packet properly. This is not significant in
-        // terms of encryption or authentication and can disappear once old versions are dead. Newer
-        // versions ignore these bytes.
-        let zero_moon_count = packet.append_bytes_fixed_get_mut::<2>().unwrap();
+        // but causes old nodes to be able to parse this packet properly. Newer nodes will treat this
+        // as part of a 12-byte nonce and otherwise ignore it. These bytes will be random.
         let mut salsa_iv = message_id.to_ne_bytes();
         salsa_iv[7] &= 0xf8;
-        Salsa::<12>::new(&self.static_secret.key.0[0..32], &salsa_iv).crypt(&[0_u8, 0_u8], zero_moon_count);
+        Salsa::<12>::new(&self.identity_symmetric_key.key.0[0..32], &salsa_iv).crypt(&[0_u8, 0_u8], &mut nonce[8..10]);
 
-        // Size of dictionary with optional fields, currently none. For future use.
-        assert!(packet.append_u16(0).is_ok());
+        // Append 12-byte AES-CTR nonce.
+        assert!(packet.append_bytes_fixed(&nonce).is_ok());
 
-        // Add full HMAC for strong authentication with newer nodes.
-        //assert!(packet.append_bytes_fixed(&SHA384::hmac_multipart(&self.static_secret.packet_hmac_key.0, &[u64_as_bytes(&message_id), &packet.as_bytes()[PACKET_HEADER_SIZE..]])).is_ok());
+        // Add encrypted private field map. Plain AES-CTR is used with no MAC or SIV because
+        // the whole packet is authenticated with HMAC-SHA512.
+        let mut fields = Dictionary::new();
+        fields.set_u64(SESSION_METADATA_INSTANCE_ID, node.instance_id);
+        fields.set_u64(SESSION_METADATA_CLOCK, si.time_clock() as u64);
+        fields.set_bytes(SESSION_METADATA_SENT_TO, destination.to_bytes());
+        let ephemeral_secret = self.ephemeral_symmetric_key.lock();
+        let _ = ephemeral_secret.as_ref().map(|s| fields.set_bytes(SESSION_METADATA_EPHEMERAL_CURRENT_SYMMETRIC_KEY_ID, s.id.to_vec()));
+        drop(ephemeral_secret); // release lock
+        let ephemeral_offer = self.ephemeral_offer.lock();
+        let _ = ephemeral_offer.as_ref().map(|p| fields.set_bytes(SESSION_METADATA_EPHEMERAL_PUBLIC_OFFER, p.public_bytes()));
+        drop(ephemeral_offer); // release lock
+        let fields = fields.to_bytes();
+        assert!(fields.len() <= 0xffff); // sanity check, should be impossible
+        assert!(packet.append_u16(fields.len() as u16).is_ok()); // prefix with unencrypted size
+        let private_section_start = packet.len();
+        assert!(packet.append_bytes(fields.as_slice()).is_ok());
+        let mut aes = AesCtr::new(&zt_kbkdf_hmac_sha384(&self.identity_symmetric_key.key.as_bytes()[0..48], KBKDF_KEY_USAGE_LABEL_HELLO_PRIVATE_SECTION, 0, 0).as_bytes()[0..32]);
+        aes.init(&nonce);
+        aes.crypt_in_place(&mut packet.as_mut()[private_section_start..]);
 
-        // LEGACY: set MAC field in header with poly1305 for older nodes.
-        // Newer nodes use the HMAC for stronger verification.
-        let (_, mut poly) = salsa_poly_create(&self.static_secret, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
+        // Add extended HMAC-SHA512 authentication.
+        let mut hmac = HMACSHA512::new(self.identity_symmetric_key.packet_hmac_key.as_bytes());
+        hmac.update(u64_as_bytes(&message_id));
+        hmac.update(&packet.as_bytes()[PACKET_HEADER_SIZE..]);
+        assert!(packet.append_bytes_fixed(&hmac.finish()).is_ok());
+
+        // Set legacy poly1305 MAC in packet header. Newer nodes check HMAC-SHA512 but older ones only use this.
+        let (_, mut poly) = salsa_poly_create(&self.identity_symmetric_key, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
         poly.update(packet.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap());
         packet.as_mut_range_fixed::<HEADER_MAC_FIELD_INDEX, { HEADER_MAC_FIELD_INDEX + 8 }>().copy_from_slice(&poly.finish()[0..8]);
 
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
         self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
 
-        explicit_endpoint.map_or_else(|| {
-            self.path(node).map_or(false, |path| {
-                path.log_send_anything(time_ticks);
-                self.send_to_endpoint(si, path.endpoint().as_ref(), path.local_socket(), path.local_interface(), &packet)
-            })
-        }, |endpoint| {
-            self.send_to_endpoint(si, endpoint, None, None, &packet)
+        path.map_or_else(|| {
+            self.send_to_endpoint(si, &destination, None, None, &packet)
+        }, |p| {
+            if self.send_to_endpoint(si, &destination, p.local_socket(), p.local_interface(), &packet) {
+                p.log_send_anything(time_ticks);
+                true
+            } else {
+                false
+            }
         })
     }
 

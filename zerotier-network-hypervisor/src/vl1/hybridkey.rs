@@ -26,7 +26,6 @@ pub struct HybridKeyPair {
 }
 
 impl HybridKeyPair {
-    #[inline(always)]
     pub fn generate() -> HybridKeyPair {
         Self {
             c25519: C25519KeyPair::generate(),
@@ -34,12 +33,12 @@ impl HybridKeyPair {
         }
     }
 
-    #[inline(always)]
-    pub fn get_public(&self) -> HybridPublicKey {
-        HybridPublicKey {
-            c25519: Some(self.c25519.public_bytes().clone()),
-            p384: Some(self.p384.public_key().clone())
-        }
+    pub fn public_bytes(&self) -> Vec<u8> {
+        let mut buf: Vec<u8> = Vec::with_capacity(1 + C25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE);
+        buf.push(ALGORITHM_C25519 | ALGORITHM_ECC_NIST_P384);
+        let _ = buf.write_all(&self.c25519.public_bytes());
+        let _ = buf.write_all(self.p384.public_key_bytes());
+        buf
     }
 
     /// Execute key agreement using all keys in common between this and the other public key.
@@ -70,8 +69,6 @@ impl HybridKeyPair {
 }
 
 unsafe impl Send for HybridKeyPair {}
-
-unsafe impl Sync for HybridKeyPair {}
 
 /// A public key composed of multiple public keys for multiple algorithms.
 ///
@@ -116,22 +113,6 @@ impl HybridPublicKey {
         }
         return None;
     }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut buf: Vec<u8> = Vec::with_capacity(1 + C25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE);
-        buf.push(0);
-        if self.c25519.is_some() {
-            *buf.get_mut(0).unwrap() |= ALGORITHM_C25519;
-            let _ = buf.write_all(self.c25519.as_ref().unwrap());
-        }
-        if self.p384.is_some() {
-            *buf.get_mut(0).unwrap() |= ALGORITHM_ECC_NIST_P384;
-            let _ = buf.write_all(self.p384.as_ref().unwrap().as_bytes());
-        }
-        buf
-    }
 }
 
 unsafe impl Send for HybridPublicKey {}
-
-unsafe impl Sync for HybridPublicKey {}

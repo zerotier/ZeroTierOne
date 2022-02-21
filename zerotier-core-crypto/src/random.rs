@@ -34,6 +34,13 @@ pub fn fill_bytes_secure(dest: &mut [u8]) {
     assert!(rand_bytes(dest).is_ok());
 }
 
+#[inline(always)]
+pub fn get_bytes_secure<const COUNT: usize>() -> [u8; COUNT] {
+    let mut tmp: [u8; COUNT] = unsafe { MaybeUninit::uninit().assume_init() };
+    assert!(rand_bytes(&tmp).is_ok());
+    tmp
+}
+
 impl SecureRandom {
     #[inline(always)]
     pub fn get() -> Self { Self }

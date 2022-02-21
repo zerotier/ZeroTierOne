@@ -104,6 +104,13 @@ impl Endpoint {
     #[inline(always)]
     pub fn is_nil(&self) -> bool { matches!(self, Endpoint::Nil) }
 
+    #[inline(always)]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut b: Buffer<256> = Buffer::new();
+        self.marshal(&mut b).expect("internal error marshaling Endpoint");
+        b.as_bytes().to_vec()
+    }
+
     pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         match self {
             Endpoint::Nil => {

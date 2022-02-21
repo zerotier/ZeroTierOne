@@ -38,6 +38,9 @@ pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0: u8 = b'0';
 /// KBKDF usage label for the second AES-GMAC-SIV key.
 pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1: u8 = b'1';
 
+/// KBKDF usage label for the private section of HELLOs.
+pub const KBKDF_KEY_USAGE_LABEL_HELLO_PRIVATE_SECTION: u8 = b'h';
+
 /// KBKDF usage label for the key used to advance the ratchet.
 pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_KEY: u8 = b'e';
 
@@ -52,6 +55,12 @@ pub const EPHEMERAL_SECRET_REJECT_AFTER_TIME: i64 = EPHEMERAL_SECRET_REKEY_AFTER
 
 /// Ephemeral secret reject after uses.
 pub const EPHEMERAL_SECRET_REJECT_AFTER_USES: u32 = 2147483648; // NIST/FIPS security bound
+
+pub const SESSION_METADATA_INSTANCE_ID: &'static str = "i";
+pub const SESSION_METADATA_CLOCK: &'static str = "t";
+pub const SESSION_METADATA_SENT_TO: &'static str = "d";
+pub const SESSION_METADATA_EPHEMERAL_CURRENT_SYMMETRIC_KEY_ID: &'static str = "e";
+pub const SESSION_METADATA_EPHEMERAL_PUBLIC_OFFER: &'static str = "E";
 
 /// Length of an address in bytes.
 pub const ADDRESS_SIZE: usize = 5;

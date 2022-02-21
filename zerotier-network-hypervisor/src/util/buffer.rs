@@ -171,6 +171,19 @@ impl<const L: usize> Buffer<L> {
     }
 
     #[inline(always)]
+    pub fn append_padding(&mut self, b: u8, count: usize) -> std::io::Result<()> {
+        let ptr = self.0;
+        let end = ptr + count;
+        if end <= L {
+            self.0 = end;
+            self.1[ptr..end].fill(b);
+            Ok(())
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+        }
+    }
+
+    #[inline(always)]
     pub fn append_bytes(&mut self, buf: &[u8]) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + buf.len();

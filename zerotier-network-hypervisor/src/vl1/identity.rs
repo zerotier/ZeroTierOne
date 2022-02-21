@@ -167,12 +167,7 @@ impl Identity {
             // signature because these signatures are not deterministic. We don't want the ability to
             // make a new identity with the same address but a different fingerprint by mangling the
             // ECDSA signature in some way.
-            let _ = self_sign_buf.write_all(&ecdsa_self_signature);
             let ed25519_self_signature = self.secret.as_ref().unwrap().ed25519.sign(self_sign_buf.as_slice());
-
-            let mut sha = SHA512::new();
-            sha.update(self_sign_buf.as_slice());
-            sha.update(&ed25519_self_signature);
 
             let _ = self.p384.insert(IdentityP384Public {
                 ecdh: p384_ecdh.public_key().clone(),
@@ -185,7 +180,7 @@ impl Identity {
                 ecdsa: p384_ecdsa,
             });
 
-            self.fingerprint = sha.finish();
+            self.fingerprint = SHA512::hash(self_sign_buf.as_slice());
         }
         return Ok(());
     }
@@ -479,8 +474,6 @@ impl Identity {
             sha.update(&[IDENTITY_ALGORITHM_EC_NIST_P384]);
             sha.update(p384.0.as_bytes());
             sha.update(p384.1.as_bytes());
-            sha.update(&p384.2);
-            sha.update(&p384.3);
         }
 
         Ok(Identity {
@@ -640,7 +633,7 @@ impl FromStr for Identity {
         sha.update(&keys[0].as_slice()[0..64]);
         if !keys[2].is_empty() {
             sha.update(&[IDENTITY_ALGORITHM_EC_NIST_P384]);
-            sha.update(&keys[2].as_slice());
+            sha.update(&keys[2].as_slice()[0..(P384_PUBLIC_KEY_SIZE * 2)]);
         }
 
         Ok(Identity {

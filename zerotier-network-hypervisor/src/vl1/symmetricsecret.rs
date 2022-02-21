@@ -61,9 +61,11 @@ impl SymmetricSecret {
 
 /// An ephemeral symmetric secret with usage timers and counters.
 pub(crate) struct EphemeralSymmetricSecret {
+    pub id: [u8; 16], // first 16 bytes of SHA384 of symmetric secret
     pub secret: SymmetricSecret,
     pub rekey_time: i64,
     pub expire_time: i64,
+    pub ratchet_count: u64,
     pub encrypt_uses: AtomicU32,
     pub decrypt_uses: AtomicU32,
     pub fips_compliant_exchange: bool,
