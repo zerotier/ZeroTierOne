@@ -273,7 +273,7 @@ public:
 	 */
 	inline bool rateGateEchoRequest(const int64_t now)
 	{
-		if ((now - _lastEchoRequestReceived) >= (ZT_PEER_GENERAL_RATE_LIMIT / 20)) {
+		if ((now - _lastEchoRequestReceived) >= (ZT_PEER_GENERAL_RATE_LIMIT / 6)) {
 			_lastEchoRequestReceived = now;
 			return true;
 		}
