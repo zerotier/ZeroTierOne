@@ -419,18 +419,6 @@ public:
 	}
 
 	/**
-	 * Rate limit gate for inbound ECHO requests
-	 */
-	inline bool rateGateEchoRequest(const int64_t now)
-	{
-		if ((now - _lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
-			_lastEchoRequestReceived = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
 	 * Serialize a peer for storage in local cache
 	 *
 	 * This does not serialize everything, just non-ephemeral information.
@@ -546,7 +534,6 @@ private:
 	int64_t _lastTriedMemorizedPath;
 	int64_t _lastDirectPathPushSent;
 	int64_t _lastDirectPathPushReceive;
-	int64_t _lastEchoRequestReceived;
 	int64_t _lastCredentialRequestSent;
 	int64_t _lastWhoisRequestReceived;
 	int64_t _lastCredentialsReceived;

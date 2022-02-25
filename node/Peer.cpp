@@ -34,7 +34,6 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastTriedMemorizedPath(0),
 	_lastDirectPathPushSent(0),
 	_lastDirectPathPushReceive(0),
-	_lastEchoRequestReceived(0),
 	_lastCredentialRequestSent(0),
 	_lastWhoisRequestReceived(0),
 	_lastCredentialsReceived(0),
