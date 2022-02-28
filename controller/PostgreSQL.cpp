@@ -777,6 +777,7 @@ void PostgreSQL::initializeMembers()
 			std::string assignedAddresses = std::get<20>(row);
 
 			config["id"] = memberId;
+			config["address"] = memberId;
 			config["nwid"] = networkId;
 			config["activeBridge"] = activeBridge.value_or(false);
 			config["authorized"] = authorized.value_or(false);
