@@ -1,0 +1,12 @@
+[package]
+name = "syncwhole"
+version = "0.1.0"
+edition = "2021"
+license = "MPL-2.0"
+authors = ["Adam Ierymenko <adam.ierymenko@zerotier.com>"]
+
+[dependencies]
+tokio = { version = "^1", features = ["net", "rt", "parking_lot", "time", "io-std", "io-util", "sync"], default-features = false }
+serde = { version = "^1", features = ["derive"], default-features = false }
+rmp = "^0"
+rmp-serde = "^1"

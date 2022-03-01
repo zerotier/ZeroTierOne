@@ -137,14 +137,15 @@ impl Identity {
             fingerprint: [0_u8; 64] // replaced in upgrade()
         };
         assert!(id.upgrade().is_ok());
+        assert!(id.p384.is_some() && id.secret.as_ref().unwrap().p384.is_some());
         id
     }
 
     /// Upgrade older x25519-only identities to hybrid identities with both x25519 and NIST P-384 curves.
     ///
-    /// The identity must contain its x25519 secret key or an error occurs. If the identity is already
-    /// a new form hybrid identity nothing happens and Ok is returned.
-    pub fn upgrade(&mut self) -> Result<(), InvalidParameterError> {
+    /// The boolean indicates whether or not an upgrade occurred. An error occurs if this identity is
+    /// invalid or missing its private key(s). This does nothing if no upgrades are possible.
+    pub fn upgrade(&mut self) -> Result<bool, InvalidParameterError> {
         if self.secret.is_none() {
             return Err(InvalidParameterError("an identity can only be upgraded if it includes its private key"));
         }
@@ -179,10 +180,11 @@ impl Identity {
                 ecdh: p384_ecdh,
                 ecdsa: p384_ecdsa,
             });
-
             self.fingerprint = SHA512::hash(self_sign_buf.as_slice());
+
+            return Ok(true);
         }
-        return Ok(());
+        return Ok(false);
     }
 
     #[inline(always)]

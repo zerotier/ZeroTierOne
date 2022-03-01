@@ -35,10 +35,6 @@ pub trait SystemInterface: Sync + Send {
     /// Node is shutting down.
     fn event_node_is_down(&self);
 
-    /// A root signaled an identity collision.
-    /// This should cause the external code to shut down this node, delete its identity, and recreate.
-    fn event_identity_collision(&self);
-
     /// Node has gone online or offline.
     fn event_online_status_change(&self, online: bool);
 
@@ -49,8 +45,7 @@ pub trait SystemInterface: Sync + Send {
     fn load_node_identity(&self) -> Option<Vec<u8>>;
 
     /// Save this node's identity.
-    /// Note that this is only called on first startup (after up) and after identity_changed.
-    fn save_node_identity(&self, id: &Identity, public: &[u8], secret: &[u8]);
+    fn save_node_identity(&self, id: &Identity);
 
     /// Called to send a packet over the physical network (virtual -> physical).
     ///
@@ -145,14 +140,14 @@ pub struct Node {
 impl Node {
     /// Create a new Node.
     pub fn new<SI: SystemInterface>(si: &SI, auto_generate_identity: bool) -> Result<Self, InvalidParameterError> {
-        let id = {
+        let mut id = {
             let id_str = si.load_node_identity();
             if id_str.is_none() {
                 if !auto_generate_identity {
                     return Err(InvalidParameterError("no identity found and auto-generate not enabled"));
                 } else {
                     let id = Identity::generate();
-                    si.save_node_identity(&id, id.to_string().as_bytes(), id.to_secret_string().as_bytes());
+                    si.save_node_identity(&id);
                     id
                 }
             } else {
@@ -165,6 +160,11 @@ impl Node {
                 }
             }
         };
+
+        // Automatically upgrade old type identities to add P-384 keys.
+        if id.upgrade()? {
+            si.save_node_identity(&id);
+        }
 
         Ok(Self {
             instance_id: zerotier_core_crypto::random::next_u64_secure(),
@@ -203,20 +203,20 @@ impl Node {
         let mut intervals = self.intervals.lock();
         let tt = si.time_ticks();
 
+        if intervals.peers.gate(tt) {
+            self.peers.retain(|_, peer| {
+                peer.call_every_interval(si, tt);
+                todo!();
+                true
+            });
+        }
+
         if intervals.paths.gate(tt) {
             self.paths.retain(|_, path| {
                 path.upgrade().map_or(false, |p| {
                     p.call_every_interval(si, tt);
                     true
                 })
-            });
-        }
-
-        if intervals.peers.gate(tt) {
-            self.peers.retain(|_, peer| {
-                peer.call_every_interval(si, tt);
-                todo!();
-                true
             });
         }
 

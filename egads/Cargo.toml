@@ -1,9 +1,0 @@
-[package]
-name = "egads"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-zerotier-core-crypto = { path = "../zerotier-core-crypto" }
-serde = { version = "^1", features = ["derive"], default-features = false }
-rmp-serde = "^0"
