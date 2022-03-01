@@ -37,7 +37,7 @@ pub enum StoreResult {
     Rejected
 }
 
-/// API to be implemented by the data store we want to replicate.
+/// API to be implemented by the data set we want to replicate.
 ///
 /// The API specified here supports temporally subjective data sets. These are data sets
 /// where the existence or non-existence of a record may depend on the (real world) time.
@@ -45,11 +45,11 @@ pub enum StoreResult {
 /// what time I think it is" value to be considered locally so that data can be replicated
 /// as of any given time.
 ///
-/// The KEY_IS_COMPUTED constant must be set to indicate whether keys are a pure function of
+/// The KEY_IS_COMPUTED constant must be set to indicate whether keys are a function of
 /// values. If this is true, get_key() must be implemented.
 ///
 /// The implementation must be thread safe.
-pub trait Database: Sync + Send {
+pub trait DataStore: Sync + Send {
     /// Type to be enclosed in the Ok() enum value in LoadResult.
     type LoadResultValueType: AsRef<[u8]> + Send;
 
@@ -70,9 +70,12 @@ pub trait Database: Sync + Send {
     /// If KEY_IS_COMPUTED is true this must be implemented. The default implementation
     /// panics to indicate this. If KEY_IS_COMPUTED is false this is never called.
     #[allow(unused_variables)]
-    fn get_key(value: &[u8], key: &mut [u8]) {
+    fn get_key(&self, value: &[u8], key: &mut [u8]) {
         panic!("get_key() must be implemented if KEY_IS_COMPUTED is true");
     }
+
+    /// Get the domain of this data store, which is just an arbitrary unique identifier.
+    fn domain(&self) -> &str;
 
     /// Get an item if it exists as of a given reference time.
     ///
@@ -115,23 +118,27 @@ pub trait Database: Sync + Send {
 /// A simple in-memory data store backed by a BTreeMap.
 pub struct MemoryDatabase<const KEY_SIZE: usize> {
     max_age: i64,
+    domain: String,
     db: Mutex<BTreeMap<[u8; KEY_SIZE], (i64, Arc<[u8]>)>>
 }
 
 impl<const KEY_SIZE: usize> MemoryDatabase<KEY_SIZE> {
-    pub fn new(max_age: i64) -> Self {
+    pub fn new(max_age: i64, domain: String) -> Self {
         Self {
             max_age: if max_age > 0 { max_age } else { i64::MAX },
+            domain,
             db: Mutex::new(BTreeMap::new())
         }
     }
 }
 
-impl<const KEY_SIZE: usize> Database for MemoryDatabase<KEY_SIZE> {
+impl<const KEY_SIZE: usize> DataStore for MemoryDatabase<KEY_SIZE> {
     type LoadResultValueType = Arc<[u8]>;
     const KEY_SIZE: usize = KEY_SIZE;
     const MAX_VALUE_SIZE: usize = 65536;
     const KEY_IS_COMPUTED: bool = false;
+
+    fn domain(&self) -> &str { self.domain.as_str() }
 
     fn load(&self, reference_time: i64, key: &[u8]) -> LoadResult<Self::LoadResultValueType> {
         let db = self.db.lock().unwrap();

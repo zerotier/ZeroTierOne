@@ -10,6 +10,8 @@ use std::collections::HashSet;
 use std::error::Error;
 use std::net::SocketAddr;
 
+use crate::node::RemoteNodeInfo;
+
 /// A trait that users of syncwhole implement to provide configuration information and listen for events.
 pub trait Host: Sync + Send {
     /// Compute SHA512.
@@ -27,11 +29,16 @@ pub trait Host: Sync + Send {
     /// of the set is less than the minimum active link count the host wishes to maintain.
     fn get_more_endpoints(&self, current_endpoints: &HashSet<SocketAddr>) -> Vec<SocketAddr>;
 
-    /// Called whenever we have successfully connected to a remote endpoint to (possibly) remember it.
-    fn on_connect_success(&self, endpoint: &SocketAddr);
+    /// Get the maximum number of endpoints allowed.
+    ///
+    /// This is checked on incoming connect and incoming links are refused if the total is over this count.
+    fn max_endpoints(&self) -> usize;
 
-    /// Called whenever an outgoing connection fails.
-    fn on_connect_failure(&self, endpoint: &SocketAddr, reason: Box<dyn Error>);
+    /// Called whenever we have successfully connected to a remote node (after connection is initialized).
+    fn on_connect(&self, info: &RemoteNodeInfo);
+
+    /// Called when an open connection is closed.
+    fn on_connection_closed(&self, endpoint: &SocketAddr, reason: Option<Box<dyn Error>>);
 
     /// Fill a buffer with secure random bytes.
     fn get_secure_random(&self, buf: &mut [u8]);

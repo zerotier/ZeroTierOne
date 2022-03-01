@@ -6,9 +6,9 @@
  * https://www.zerotier.com/
  */
 
-use std::io::{Read, Write};
 use std::mem::{size_of, zeroed};
 use std::ptr::write_bytes;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::varint;
 
@@ -103,13 +103,13 @@ impl<const B: usize> IBLT<B> {
         unsafe { write_bytes((&mut self.map as *mut IBLTEntry).cast::<u8>(), 0, size_of::<[IBLTEntry; B]>()) };
     }
 
-    pub fn read<R: Read>(&mut self, r: &mut R) -> std::io::Result<()> {
-        r.read_exact(unsafe { &mut *(&mut self.salt as *mut u64).cast::<[u8; 8]>() })?;
+    pub async fn read<R: AsyncReadExt + Unpin>(&mut self, r: &mut R) -> std::io::Result<()> {
+        r.read_exact(unsafe { &mut *(&mut self.salt as *mut u64).cast::<[u8; 8]>() }).await?;
         let mut prev_c = 0_i64;
         for b in self.map.iter_mut() {
-            r.read_exact(unsafe { &mut *(&mut b.key_sum as *mut u64).cast::<[u8; 8]>() })?;
-            r.read_exact(unsafe { &mut *(&mut b.check_hash_sum as *mut u64).cast::<[u8; 8]>() })?;
-            let mut c = varint::read(r)? as i64;
+            let _ = r.read_exact(unsafe { &mut *(&mut b.key_sum as *mut u64).cast::<[u8; 8]>() }).await?;
+            let _ = r.read_exact(unsafe { &mut *(&mut b.check_hash_sum as *mut u64).cast::<[u8; 8]>() }).await?;
+            let mut c = varint::read_async(r).await? as i64;
             if (c & 1) == 0 {
                 c = c.wrapping_shr(1);
             } else {
@@ -121,18 +121,18 @@ impl<const B: usize> IBLT<B> {
         Ok(())
     }
 
-    pub fn write<W: Write>(&self, w: &mut W) -> std::io::Result<()> {
-        w.write_all(unsafe { &*(&self.salt as *const u64).cast::<[u8; 8]>() })?;
+    pub async fn write<W: AsyncWriteExt + Unpin>(&self, w: &mut W) -> std::io::Result<()> {
+        let _ = w.write_all(unsafe { &*(&self.salt as *const u64).cast::<[u8; 8]>() }).await?;
         let mut prev_c = 0_i64;
         for b in self.map.iter() {
-            w.write_all(unsafe { &*(&b.key_sum as *const u64).cast::<[u8; 8]>() })?;
-            w.write_all(unsafe { &*(&b.check_hash_sum as *const u64).cast::<[u8; 8]>() })?;
+            let _ = w.write_all(unsafe { &*(&b.key_sum as *const u64).cast::<[u8; 8]>() }).await?;
+            let _ = w.write_all(unsafe { &*(&b.check_hash_sum as *const u64).cast::<[u8; 8]>() }).await?;
             let mut c = (b.count - prev_c).wrapping_shl(1);
             prev_c = b.count;
             if c < 0 {
                 c = -c | 1;
             }
-            varint::write(w, c as u64)?;
+            let _ = varint::write_async(w, c as u64).await?;
         }
         Ok(())
     }
