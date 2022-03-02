@@ -436,7 +436,14 @@ class Bond {
 	 * @param peer Remote peer that this bond services
 	 * @return A pointer to the newly created Bond
 	 */
-	static SharedPtr<Bond> createTransportTriggeredBond(const RuntimeEnvironment* renv, const SharedPtr<Peer>& peer);
+	static SharedPtr<Bond> createBond(const RuntimeEnvironment* renv, const SharedPtr<Peer>& peer);
+
+	/**
+	 * Remove a bond from the bond controller.
+	 *
+	 * @param peerId Remote peer that this bond services
+	 */
+	static void destroyBond(uint64_t peerId);
 
 	/**
 	 * Periodically perform maintenance tasks for the bonding layer.
@@ -1021,14 +1028,6 @@ class Bond {
 	}
 
 	/**
-	 * @return the health status of the bond
-	 */
-	inline bool isHealthy()
-	{
-		return _isHealthy;
-	}
-
-	/**
 	 * @return the number of links comprising this bond which are considered alive
 	 */
 	inline uint8_t getNumAliveLinks()
@@ -1344,7 +1343,7 @@ class Bond {
 		int packetsIn;
 		int packetsOut;
 
-		AtomicCounter __refCount;
+		//AtomicCounter __refCount;
 
 		SharedPtr<Path> p;
 		void set(uint64_t now, const SharedPtr<Path>& path)
@@ -1490,7 +1489,6 @@ class Bond {
 	/**
 	 * Link state reporting
 	 */
-	bool _isHealthy;
 	uint8_t _numAliveLinks;
 	uint8_t _numTotalLinks;
 

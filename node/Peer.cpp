@@ -503,7 +503,7 @@ void Peer::performMultipathStateCheck(void *tPtr, int64_t now)
 	_localMultipathSupported = ((numAlivePaths >= 1) && (RR->bc->inUse()) && (ZT_PROTO_VERSION > 9));
 	if (_localMultipathSupported && !_bond) {
 		if (RR->bc) {
-			_bond = RR->bc->createTransportTriggeredBond(RR, this);
+			_bond = RR->bc->createBond(RR, this);
 			/**
 			 * Allow new bond to retroactively learn all paths known to this peer
 			 */

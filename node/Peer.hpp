@@ -53,7 +53,10 @@ private:
 	Peer() {} // disabled to prevent bugs -- should not be constructed uninitialized
 
 public:
-	~Peer() { Utils::burn(_key,sizeof(_key)); }
+	~Peer() {
+		Utils::burn(_key,sizeof(_key));
+		RR->bc->destroyBond(_id.address().toInt());
+	}
 
 	/**
 	 * Construct a new peer

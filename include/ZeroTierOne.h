@@ -1405,11 +1405,6 @@ typedef struct
 	int bondingPolicy;
 
 	/**
-	 * The health status of the bond to this peer
-	 */
-	bool isHealthy;
-
-	/**
 	 * The number of links that comprise the bond to this peer that are considered alive
 	 */
 	int numAliveLinks;

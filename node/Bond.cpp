@@ -90,7 +90,7 @@ SharedPtr<Bond> Bond::getBondByPeerId(int64_t identity)
 	return _bonds.count(identity) ? _bonds[identity] : SharedPtr<Bond>();
 }
 
-SharedPtr<Bond> Bond::createTransportTriggeredBond(const RuntimeEnvironment* renv, const SharedPtr<Peer>& peer)
+SharedPtr<Bond> Bond::createBond(const RuntimeEnvironment* renv, const SharedPtr<Peer>& peer)
 {
 	Mutex::Lock _l(_bonds_m);
 	int64_t identity = peer->identity().address().toInt();
@@ -143,6 +143,12 @@ SharedPtr<Bond> Bond::createTransportTriggeredBond(const RuntimeEnvironment* ren
 		return bond;
 	}
 	return SharedPtr<Bond>();
+}
+
+void Bond::destroyBond(uint64_t peerId)
+{
+	Mutex::Lock _l(_bonds_m);
+	_bonds.erase(peerId);
 }
 
 SharedPtr<Link> Bond::getLinkBySocket(const std::string& policyAlias, uint64_t localSocket)
@@ -816,6 +822,17 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 		if (! _paths[i].p) {
 			continue;
 		}
+
+		/**
+		 * Remove expired links from bond
+		 */
+		if ((now - _paths[i].p->_lastIn) > (ZT_PEER_EXPIRED_PATH_TRIAL_PERIOD)) {
+			log("link %s has expired, removing from bond", pathToStr(_paths[i].p).c_str());
+			_paths[i] = NominatedPath();
+			_paths[i].p = SharedPtr<Path>();
+			continue;
+		}
+
 		tmpNumTotalLinks++;
 		if (_paths[i].eligible) {
 			tmpNumAliveLinks++;
@@ -876,42 +893,18 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 	}
 
 	/**
-	 * Determine health status to report to user
+	 * Trigger status report if number of links change
 	 */
 	_numAliveLinks = tmpNumAliveLinks;
 	_numTotalLinks = tmpNumTotalLinks;
-	bool tmpHealthStatus = true;
-
-	if (_policy == ZT_BOND_POLICY_BROADCAST) {
-		if (_numAliveLinks < 1) {
-			// Considered healthy if we're able to send frames at all
-			tmpHealthStatus = false;
-		}
-	}
-	if ((_policy == ZT_BOND_POLICY_BALANCE_RR) || (_policy == ZT_BOND_POLICY_BALANCE_XOR) || (_policy == ZT_BOND_POLICY_BALANCE_AWARE || (_policy == ZT_BOND_POLICY_ACTIVE_BACKUP))) {
-		if (_numAliveLinks < _numTotalLinks) {
-			tmpHealthStatus = false;
-		}
-	}
-	if (tmpHealthStatus != _isHealthy) {
-		std::string healthStatusStr;
-		if (tmpHealthStatus == true) {
-			healthStatusStr = "HEALTHY";
-		}
-		else {
-			healthStatusStr = "DEGRADED";
-		}
-		log("bond is %s (%d/%d links)", healthStatusStr.c_str(), _numAliveLinks, _numTotalLinks);
+	if ((_numAliveLinks != tmpNumAliveLinks) || (_numTotalLinks != tmpNumTotalLinks)) {
 		dumpInfo(now, true);
 	}
-
-	_isHealthy = tmpHealthStatus;
 
 	/**
 	 * Curate the set of paths that are part of the bond proper. Select a set of paths
 	 * per logical link according to eligibility and user-specified constraints.
 	 */
-
 	if ((_policy == ZT_BOND_POLICY_BALANCE_RR) || (_policy == ZT_BOND_POLICY_BALANCE_XOR) || (_policy == ZT_BOND_POLICY_BALANCE_AWARE)) {
 		if (! _numBondedPaths) {
 			rebuildBond = true;
@@ -1009,14 +1002,14 @@ void Bond::estimatePathQuality(int64_t now)
 	uint32_t totUserSpecifiedLinkSpeed = 0;
 	if (_numBondedPaths) {	 // Compute relative user-specified speeds of links
 		for (unsigned int i = 0; i < _numBondedPaths; ++i) {
-			SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i].p->localSocket());
 			if (_paths[i].p && _paths[i].allowed()) {
+				SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i].p->localSocket());
 				totUserSpecifiedLinkSpeed += link->speed();
 			}
 		}
 		for (unsigned int i = 0; i < _numBondedPaths; ++i) {
-			SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i].p->localSocket());
 			if (_paths[i].p && _paths[i].allowed()) {
+				SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i].p->localSocket());
 				link->setRelativeSpeed((uint8_t)round(((float)link->speed() / (float)totUserSpecifiedLinkSpeed) * 255));
 			}
 		}
@@ -1213,6 +1206,11 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 	int nonPreferredPathIdx;
 	bool bFoundPrimaryLink = false;
 
+	if (_abPathIdx != ZT_MAX_PEER_NETWORK_PATHS && !_paths[_abPathIdx].p) {
+		_abPathIdx = ZT_MAX_PEER_NETWORK_PATHS;
+		log("main active-backup path has been removed");
+	}
+
 	/**
 	 * Generate periodic status report
 	 */
@@ -1242,7 +1240,6 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 		 * simply find the next eligible path.
 		 */
 		if (! userHasSpecifiedLinks()) {
-			debug("no user-specified links");
 			for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 				if (_paths[i].p && _paths[i].eligible) {
 					SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i].p->localSocket());
@@ -1575,7 +1572,6 @@ void Bond::setBondParameters(int policy, SharedPtr<Bond> templateBond, bool useT
 
 	// Bond status
 
-	_isHealthy = false;
 	_numAliveLinks = 0;
 	_numTotalLinks = 0;
 	_numBondedPaths = 0;
@@ -1685,11 +1681,14 @@ SharedPtr<Link> Bond::getLink(const SharedPtr<Path>& path)
 std::string Bond::pathToStr(const SharedPtr<Path>& path)
 {
 #ifdef ZT_TRACE
-	char pathStr[64] = { 0 };
-	char fullPathStr[384] = { 0 };
-	path->address().toString(pathStr);
-	snprintf(fullPathStr, 384, "%.16llx-%s/%s", (unsigned long long)(path->localSocket()), getLink(path)->ifname().c_str(), pathStr);
-	return std::string(fullPathStr);
+	if (path) {
+		char pathStr[64] = { 0 };
+		char fullPathStr[384] = { 0 };
+		path->address().toString(pathStr);
+		snprintf(fullPathStr, 384, "%.16llx-%s/%s", (unsigned long long)(path->localSocket()), getLink(path)->ifname().c_str(), pathStr);
+		return std::string(fullPathStr);
+	}
+	return "";
 #else
 	return "";
 #endif
@@ -1728,7 +1727,7 @@ void Bond::dumpInfo(int64_t now, bool force)
 	_lastSummaryDump = now;
 	float overhead = (_overheadBytes / (timeSinceLastDump / 1000.0f) / 1000.0f);
 	_overheadBytes = 0;
-	log("bond: bp=%d, fi=%d, mi=%d, ud=%d, dd=%d, flows=%lu, leaf=%d, overhead=%f KB/s",
+	log("bond: bp=%d, fi=%d, mi=%d, ud=%d, dd=%d, flows=%lu, leaf=%d, overhead=%f KB/s, links=(%d/%d)",
 		_policy,
 		_failoverInterval,
 		_monitorInterval,
@@ -1736,7 +1735,9 @@ void Bond::dumpInfo(int64_t now, bool force)
 		_downDelay,
 		(unsigned long)_flows.size(),
 		_isLeaf,
-		overhead);
+		overhead,
+		_numAliveLinks,
+		_numTotalLinks);
 	for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 		if (_paths[i].p) {
 			dumpPathStatus(now, i);

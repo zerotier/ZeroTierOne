@@ -523,31 +523,23 @@ static int cli(int argc,char **argv)
 					printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 				} else {
 					bool bFoundBond = false;
-					printf("    <peer>                        <bondtype>    <status>    <links>" ZT_EOL_S);
+					printf("    <peer>                        <bondtype>     <links>" ZT_EOL_S);
 					if (j.is_array()) {
 						for(unsigned long k=0;k<j.size();++k) {
 							nlohmann::json &p = j[k];
 							bool isBonded = p["isBonded"];
 							if (isBonded) {
 								int8_t bondingPolicy = p["bondingPolicy"];
-								bool isHealthy = p["isHealthy"];
 								int8_t numAliveLinks = p["numAliveLinks"];
 								int8_t numTotalLinks = p["numTotalLinks"];
 								bFoundBond = true;
-								std::string healthStr;
-								if (isHealthy) {
-									healthStr = "HEALTHY";
-								} else {
-									healthStr = "DEGRADED";
-								}
 								std::string policyStr = "none";
 								if (bondingPolicy >= ZT_BOND_POLICY_NONE && bondingPolicy <= ZT_BOND_POLICY_BALANCE_AWARE) {
 									policyStr = Bond::getPolicyStrByCode(bondingPolicy);
 								}
-								printf("%10s  %32s    %8s        %d/%d" ZT_EOL_S,
+								printf("%10s  %32s         %d/%d" ZT_EOL_S,
 									OSUtils::jsonString(p ["address"],"-").c_str(),
 									policyStr.c_str(),
-									healthStr.c_str(),
 									numAliveLinks,
 									numTotalLinks);
 							}
@@ -617,12 +609,6 @@ static int cli(int argc,char **argv)
 					if (json) {
 						printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 					} else {
-						std::string healthStr;
-						if (OSUtils::jsonInt(j["isHealthy"],0)) {
-							healthStr = "Healthy";
-						} else {
-							healthStr = "Degraded";
-						}
 						int numAliveLinks = OSUtils::jsonInt(j["numAliveLinks"],0);
 						int numTotalLinks = OSUtils::jsonInt(j["numTotalLinks"],0);
 						printf("Peer               : %s\n", arg1.c_str());
@@ -630,7 +616,6 @@ static int cli(int argc,char **argv)
 						//if (bondingPolicy == ZT_BOND_POLICY_ACTIVE_BACKUP) {
 						printf("Link Select Method : %d\n", (int)OSUtils::jsonInt(j["linkSelectMethod"],0));
 						//}
-						printf("Status             : %s\n", healthStr.c_str());
 						printf("Links              : %d/%d\n", numAliveLinks, numTotalLinks);
 						printf("Failover Interval  : %d (ms)\n", (int)OSUtils::jsonInt(j["failoverInterval"],0));
 						printf("Up Delay           : %d (ms)\n", (int)OSUtils::jsonInt(j["upDelay"],0));
@@ -705,33 +690,23 @@ static int cli(int argc,char **argv)
 				printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 			} else {
 				bool bFoundBond = false;
-				printf("    <peer>                        <bondtype>    <status>    <links>" ZT_EOL_S);
+				printf("    <peer>                        <bondtype>     <links>" ZT_EOL_S);
 				if (j.is_array()) {
 					for(unsigned long k=0;k<j.size();++k) {
 						nlohmann::json &p = j[k];
 						bool isBonded = p["isBonded"];
 						if (isBonded) {
 							int8_t bondingPolicy = p["bondingPolicy"];
-							bool isHealthy = p["isHealthy"];
 							int8_t numAliveLinks = p["numAliveLinks"];
 							int8_t numTotalLinks = p["numTotalLinks"];
-
 							bFoundBond = true;
-							std::string healthStr;
-							if (isHealthy) {
-								healthStr = "Healthy";
-							} else {
-								healthStr = "Degraded";
-							}
 							std::string policyStr = "none";
 							if (bondingPolicy >= ZT_BOND_POLICY_NONE && bondingPolicy <= ZT_BOND_POLICY_BALANCE_AWARE) {
 								policyStr = Bond::getPolicyStrByCode(bondingPolicy);
 							}
-
-							printf("%10s  %32s    %8s        %d/%d" ZT_EOL_S,
+							printf("%10s  %32s         %d/%d" ZT_EOL_S,
 								OSUtils::jsonString(p["address"],"-").c_str(),
 								policyStr.c_str(),
-								healthStr.c_str(),
 								numAliveLinks,
 								numTotalLinks);
 						}
