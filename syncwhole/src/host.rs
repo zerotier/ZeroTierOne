@@ -14,32 +14,51 @@ use crate::node::RemoteNodeInfo;
 
 /// A trait that users of syncwhole implement to provide configuration information and listen for events.
 pub trait Host: Sync + Send {
-    /// Compute SHA512.
-    fn sha512(msg: &[u8]) -> [u8; 64];
-
-    /// Get a list of endpoints to which we always want to try to stay connected.
+    /// Get a list of peer addresses to which we always want to try to stay connected.
     ///
-    /// The node will repeatedly try to connect to these until a link is established and
-    /// reconnect on link failure. They should be stable well known nodes for this domain.
-    fn get_static_endpoints(&self) -> &[SocketAddr];
+    /// These are always contacted until a link is established regardless of anything else.
+    fn fixed_peers(&self) -> &[SocketAddr];
 
-    /// Get additional endpoints to try.
-    ///
-    /// This should return any endpoints not in the supplied endpoint set if the size
-    /// of the set is less than the minimum active link count the host wishes to maintain.
-    fn get_more_endpoints(&self, current_endpoints: &HashSet<SocketAddr>) -> Vec<SocketAddr>;
+    /// Get a random peer address not in the supplied set.
+    fn another_peer(&self, exclude: &HashSet<SocketAddr>) -> Option<SocketAddr>;
 
     /// Get the maximum number of endpoints allowed.
     ///
-    /// This is checked on incoming connect and incoming links are refused if the total is over this count.
-    fn max_endpoints(&self) -> usize;
+    /// This is checked on incoming connect and incoming links are refused if the total is
+    /// over this count. Fixed endpoints will be contacted even if the total is over this limit.
+    fn max_connection_count(&self) -> usize;
 
-    /// Called whenever we have successfully connected to a remote node (after connection is initialized).
+    /// Get the number of connections we ideally want.
+    ///
+    /// Attempts will be made to lazily contact remote endpoints if the total number of links
+    /// is under this amount. Note that fixed endpoints will still be contacted even if the
+    /// total is over the desired count.
+    ///
+    /// This should always be less than max_connection_count().
+    fn desired_connection_count(&self) -> usize;
+
+    /// Test whether an inbound connection should be allowed from an address.
+    fn allow(&self, remote_address: &SocketAddr) -> bool;
+
+    /// Called when an attempt is made to connect to a remote address.
+    fn on_connect_attempt(&self, address: &SocketAddr);
+
+    /// Called when a connection has been successfully established.
+    ///
+    /// Hosts are encouraged to learn endpoints when a successful outbound connection is made. Check the
+    /// inbound flag in the remote node info structure.
     fn on_connect(&self, info: &RemoteNodeInfo);
 
-    /// Called when an open connection is closed.
-    fn on_connection_closed(&self, endpoint: &SocketAddr, reason: Option<Box<dyn Error>>);
+    /// Called when an open connection is closed for any reason.
+    fn on_connection_closed(&self, address: &SocketAddr, reason: Option<Box<dyn Error>>);
 
     /// Fill a buffer with secure random bytes.
+    ///
+    /// This is supplied to reduce inherent dependencies and allow the user to choose the implementation.
     fn get_secure_random(&self, buf: &mut [u8]);
+
+    /// Compute a SHA512 digest of the input.
+    ///
+    /// This is supplied to reduce inherent dependencies and allow the user to choose the implementation.
+    fn sha512(msg: &[u8]) -> [u8; 64];
 }

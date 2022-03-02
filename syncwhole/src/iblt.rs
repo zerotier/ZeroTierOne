@@ -6,21 +6,20 @@
  * https://www.zerotier.com/
  */
 
-use std::mem::{size_of, zeroed};
+use std::alloc::{alloc_zeroed, dealloc, Layout};
+use std::mem::size_of;
 use std::ptr::write_bytes;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::varint;
 
-// max value: 6, 5 was determined to be good via empirical testing
-const KEY_MAPPING_ITERATIONS: usize = 5;
-
 #[inline(always)]
 fn xorshift64(mut x: u64) -> u64 {
+    x = u64::from_le(x);
     x ^= x.wrapping_shl(13);
     x ^= x.wrapping_shr(7);
     x ^= x.wrapping_shl(17);
-    x
+    x.to_le()
 }
 
 #[inline(always)]
@@ -45,22 +44,9 @@ fn splitmix64_inverse(mut x: u64) -> u64 {
     x.to_le()
 }
 
-// https://nullprogram.com/blog/2018/07/31/
 #[inline(always)]
-fn triple32(mut x: u32) -> u32 {
-    x ^= x.wrapping_shr(17);
-    x = x.wrapping_mul(0xed5ad4bb);
-    x ^= x.wrapping_shr(11);
-    x = x.wrapping_mul(0xac4c1b51);
-    x ^= x.wrapping_shr(15);
-    x = x.wrapping_mul(0x31848bab);
-    x ^= x.wrapping_shr(14);
-    x
-}
-
-#[inline(always)]
-fn next_iteration_index(prev_iteration_index: u64, salt: u64) -> u64 {
-    prev_iteration_index.wrapping_add(triple32(prev_iteration_index.wrapping_shr(32) as u32) as u64).wrapping_add(salt)
+fn next_iteration_index(prev_iteration_index: u64) -> u64 {
+    splitmix64(prev_iteration_index.wrapping_add(1))
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -84,29 +70,31 @@ impl IBLTEntry {
 /// An Invertible Bloom Lookup Table for set reconciliation with 64-bit hashes.
 #[derive(Clone, PartialEq, Eq)]
 pub struct IBLT<const B: usize> {
-    salt: u64,
-    map: [IBLTEntry; B]
+    map: *mut [IBLTEntry; B]
 }
 
 impl<const B: usize> IBLT<B> {
+    /// Number of buckets (capacity) of this IBLT.
     pub const BUCKETS: usize = B;
 
-    pub fn new(salt: u64) -> Self {
+    /// This was determined to be effective via empirical testing with random keys. This
+    /// is a protocol constant that can't be changed without upgrading all nodes in a domain.
+    const KEY_MAPPING_ITERATIONS: usize = 2;
+
+    pub fn new() -> Self {
+        assert!(B < u32::MAX as usize); // sanity check
         Self {
-            salt,
-            map: unsafe { zeroed() }
+            map: unsafe { alloc_zeroed(Layout::new::<[IBLTEntry; B]>()).cast() }
         }
     }
 
-    pub fn reset(&mut self, salt: u64) {
-        self.salt = salt;
-        unsafe { write_bytes((&mut self.map as *mut IBLTEntry).cast::<u8>(), 0, size_of::<[IBLTEntry; B]>()) };
+    pub fn reset(&mut self) {
+        unsafe { write_bytes(self.map.cast::<u8>(), 0, size_of::<[IBLTEntry; B]>()) };
     }
 
     pub async fn read<R: AsyncReadExt + Unpin>(&mut self, r: &mut R) -> std::io::Result<()> {
-        r.read_exact(unsafe { &mut *(&mut self.salt as *mut u64).cast::<[u8; 8]>() }).await?;
         let mut prev_c = 0_i64;
-        for b in self.map.iter_mut() {
+        for b in unsafe { (*self.map).iter_mut() } {
             let _ = r.read_exact(unsafe { &mut *(&mut b.key_sum as *mut u64).cast::<[u8; 8]>() }).await?;
             let _ = r.read_exact(unsafe { &mut *(&mut b.check_hash_sum as *mut u64).cast::<[u8; 8]>() }).await?;
             let mut c = varint::read_async(r).await? as i64;
@@ -122,9 +110,8 @@ impl<const B: usize> IBLT<B> {
     }
 
     pub async fn write<W: AsyncWriteExt + Unpin>(&self, w: &mut W) -> std::io::Result<()> {
-        let _ = w.write_all(unsafe { &*(&self.salt as *const u64).cast::<[u8; 8]>() }).await?;
         let mut prev_c = 0_i64;
-        for b in self.map.iter() {
+        for b in unsafe { (*self.map).iter() } {
             let _ = w.write_all(unsafe { &*(&b.key_sum as *const u64).cast::<[u8; 8]>() }).await?;
             let _ = w.write_all(unsafe { &*(&b.check_hash_sum as *const u64).cast::<[u8; 8]>() }).await?;
             let mut c = (b.count - prev_c).wrapping_shl(1);
@@ -137,13 +124,25 @@ impl<const B: usize> IBLT<B> {
         Ok(())
     }
 
+    /// Get this IBLT as a byte array.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut out = std::io::Cursor::new(Vec::<u8>::with_capacity(B * 20));
+        let current = tokio::runtime::Handle::try_current();
+        if current.is_ok() {
+            assert!(current.unwrap().block_on(self.write(&mut out)).is_ok());
+        } else {
+            assert!(tokio::runtime::Builder::new_current_thread().build().unwrap().block_on(self.write(&mut out)).is_ok());
+        }
+        out.into_inner()
+    }
+
     fn ins_rem(&mut self, mut key: u64, delta: i64) {
-        key = splitmix64(key ^ self.salt);
+        key = splitmix64(key);
         let check_hash = xorshift64(key);
         let mut iteration_index = u64::from_le(key);
-        for _ in 0..KEY_MAPPING_ITERATIONS {
-            iteration_index = next_iteration_index(iteration_index, self.salt);
-            let b = unsafe { self.map.get_unchecked_mut((iteration_index as usize) % B) };
+        for _ in 0..Self::KEY_MAPPING_ITERATIONS {
+            iteration_index = next_iteration_index(iteration_index);
+            let b = unsafe { (*self.map).get_unchecked_mut((iteration_index as usize) % B) };
             b.key_sum ^= key;
             b.check_hash_sum ^= check_hash;
             b.count += delta;
@@ -166,59 +165,63 @@ impl<const B: usize> IBLT<B> {
         self.ins_rem(unsafe { u64::from_ne_bytes(*(key.as_ptr().cast::<[u8; 8]>())) }, -1);
     }
 
+    /// Subtract another IBLT from this one to get a set difference.
     pub fn subtract(&mut self, other: &Self) {
-        for b in 0..B {
-            let s = &mut self.map[b];
-            let o = &other.map[b];
+        for (s, o) in unsafe { (*self.map).iter_mut().zip((*other.map).iter()) } {
             s.key_sum ^= o.key_sum;
             s.check_hash_sum ^= o.check_hash_sum;
-            s.count += o.count;
+            s.count -= o.count;
         }
     }
 
     pub fn list<F: FnMut(&[u8; 8])>(mut self, mut f: F) -> bool {
-        let mut singular_buckets = [0_usize; B];
-        let mut singular_bucket_count = 0_usize;
+        let mut queue: Vec<u32> = Vec::with_capacity(B);
 
         for b in 0..B {
-            if self.map[b].is_singular() {
-                singular_buckets[singular_bucket_count] = b;
-                singular_bucket_count += 1;
+            if unsafe { (*self.map).get_unchecked(b).is_singular() } {
+                queue.push(b as u32);
             }
         }
 
-        while singular_bucket_count > 0 {
-            singular_bucket_count -= 1;
-            let b = &self.map[singular_buckets[singular_bucket_count]];
-
+        loop {
+            let b = queue.pop();
+            let b = if b.is_some() {
+                unsafe { (*self.map).get_unchecked_mut(b.unwrap() as usize) }
+            } else {
+                break;
+            };
             if b.is_singular() {
                 let key = b.key_sum;
                 let check_hash = xorshift64(key);
                 let mut iteration_index = u64::from_le(key);
 
-                f(&(splitmix64_inverse(key) ^ self.salt).to_ne_bytes());
+                f(&(splitmix64_inverse(key)).to_ne_bytes());
 
-                for _ in 0..KEY_MAPPING_ITERATIONS {
-                    iteration_index = next_iteration_index(iteration_index, self.salt);
-                    let b_idx = (iteration_index as usize) % B;
-                    let b = unsafe { self.map.get_unchecked_mut(b_idx) };
+                for _ in 0..Self::KEY_MAPPING_ITERATIONS {
+                    iteration_index = next_iteration_index(iteration_index);
+                    let b_idx = iteration_index % (B as u64);
+                    let b = unsafe { (*self.map).get_unchecked_mut(b_idx as usize) };
                     b.key_sum ^= key;
                     b.check_hash_sum ^= check_hash;
                     b.count -= 1;
 
                     if b.is_singular() {
-                        if singular_bucket_count >= B {
-                            // This would indicate an invalid IBLT.
+                        if queue.len() >= (B * 2) { // sanity check for invalid IBLT
                             return false;
                         }
-                        singular_buckets[singular_bucket_count] = b_idx;
-                        singular_bucket_count += 1;
+                        queue.push(b_idx as u32);
                     }
                 }
             }
         }
 
         return true;
+    }
+}
+
+impl<const B: usize> Drop for IBLT<B> {
+    fn drop(&mut self) {
+        unsafe { dealloc(self.map.cast(), Layout::new::<[IBLTEntry; B]>()) };
     }
 }
 
@@ -230,32 +233,75 @@ mod tests {
 
     #[test]
     fn splitmix_is_invertiblex() {
-        for i in 1..1024_u64 {
+        for i in 1..2000_u64 {
             assert_eq!(i, splitmix64_inverse(splitmix64(i)))
         }
     }
 
     #[test]
-    fn insert_and_list() {
+    fn fill_list_performance() {
         let mut rn = xorshift64(SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos() as u64);
-        for _ in 0..256 {
-            let mut alice: IBLT<1024> = IBLT::new(rn);
-            rn = xorshift64(rn);
-            let mut expected: HashSet<u64> = HashSet::with_capacity(1024);
-            let count = 600;
+        let mut expected: HashSet<u64> = HashSet::with_capacity(4096);
+        let mut count = 64;
+        const CAPACITY: usize = 4096;
+        while count <= CAPACITY {
+            let mut test: IBLT<CAPACITY> = IBLT::new();
+            expected.clear();
+
             for _ in 0..count {
                 let x = rn;
-                rn = xorshift64(rn);
+                rn = splitmix64(rn);
                 expected.insert(x);
-                alice.insert(&x.to_ne_bytes());
+                test.insert(&x.to_ne_bytes());
             }
-            let mut cnt = 0;
-            alice.list(|x| {
+
+            let mut list_count = 0;
+            test.list(|x| {
                 let x = u64::from_ne_bytes(*x);
-                cnt += 1;
+                list_count += 1;
                 assert!(expected.contains(&x));
             });
-            assert_eq!(cnt, count);
+
+            //println!("inserted: {}\tlisted: {}\tcapacity: {}\tscore: {:.4}\tfill: {:.4}", count, list_count, CAPACITY, (list_count as f64) / (count as f64), (count as f64) / (CAPACITY as f64));
+            count += 64;
+        }
+    }
+
+    #[test]
+    fn merge_sets() {
+        let mut rn = xorshift64(SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos() as u64);
+        const CAPACITY: usize = 16384;
+        const REMOTE_SIZE: usize = 1024 * 1024;
+        const STEP: usize = 1024;
+        let mut missing_count = 1024;
+        let mut missing: HashSet<u64> = HashSet::with_capacity(CAPACITY);
+        while missing_count <= CAPACITY {
+            missing.clear();
+            let mut local: IBLT<CAPACITY> = IBLT::new();
+            let mut remote: IBLT<CAPACITY> = IBLT::new();
+
+            for k in 0..REMOTE_SIZE {
+                if k >= missing_count {
+                    local.insert(&rn.to_ne_bytes());
+                } else {
+                    missing.insert(rn);
+                }
+                remote.insert(&rn.to_ne_bytes());
+                rn = splitmix64(rn);
+            }
+
+            local.subtract(&mut remote);
+            let bytes = local.to_bytes().len();
+            let mut cnt = 0;
+            local.list(|k| {
+                let k = u64::from_ne_bytes(*k);
+                assert!(missing.contains(&k));
+                cnt += 1;
+            });
+
+            println!("total: {}  missing: {:5}  recovered: {:5}  size: {:5}  score: {:.4}  bytes/item: {:.2}", REMOTE_SIZE, missing.len(), cnt, bytes, (cnt as f64) / (missing.len() as f64), (bytes as f64) / (cnt as f64));
+
+            missing_count += STEP;
         }
     }
 }

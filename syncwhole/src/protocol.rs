@@ -45,10 +45,10 @@ pub mod msg {
         pub node_name: Option<String>,
         #[serde(rename = "nc")]
         pub node_contact: Option<String>,
-        #[serde(rename = "pi4")]
-        pub preferred_ipv4: Option<IPv4>,
-        #[serde(rename = "pi6")]
-        pub preferred_ipv6: Option<IPv6>,
+        #[serde(rename = "ei4")]
+        pub explicit_ipv4: Option<IPv4>,
+        #[serde(rename = "ei6")]
+        pub explicit_ipv6: Option<IPv6>,
     }
 
     #[derive(Serialize, Deserialize)]

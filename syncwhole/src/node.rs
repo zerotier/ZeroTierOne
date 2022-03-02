@@ -6,7 +6,7 @@
  * https://www.zerotier.com/
  */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::sync::{Arc, Weak};
 use std::sync::atomic::{AtomicI64, Ordering};
@@ -26,20 +26,46 @@ use crate::protocol::*;
 use crate::varint;
 
 const CONNECTION_TIMEOUT: i64 = 60000;
-const CONNECTION_KEEPALIVE_AFTER: i64 = 20000;
+const CONNECTION_KEEPALIVE_AFTER: i64 = CONNECTION_TIMEOUT / 3;
+const HOUSEKEEPING_INTERVAL: i64 = CONNECTION_KEEPALIVE_AFTER / 2;
 const IO_BUFFER_SIZE: usize = 65536;
 
-#[derive(Clone, PartialEq, Eq)]
+/// Information about a remote node to which we are connected.
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteNodeInfo {
+    /// Optional name advertised by remote node (arbitrary).
     pub node_name: Option<String>,
+
+    /// Optional contact information advertised by remote node (arbitrary).
     pub node_contact: Option<String>,
-    pub endpoint: SocketAddr,
-    pub preferred_endpoints: Vec<SocketAddr>,
+
+    /// Actual remote endpoint address.
+    pub remote_address: SocketAddr,
+
+    /// Explicitly advertised remote addresses supplied by remote node (not necessarily verified).
+    pub explicit_addresses: Vec<SocketAddr>,
+
+    /// Time TCP connection was established.
     pub connect_time: SystemTime,
+
+    /// True if this is an inbound TCP connection.
     pub inbound: bool,
+
+    /// True if this connection has exchanged init messages.
     pub initialized: bool,
 }
 
+fn configure_tcp_socket(socket: &TcpSocket) -> std::io::Result<()> {
+    if socket.set_reuseport(true).is_err() {
+        socket.set_reuseaddr(true)?;
+    }
+    Ok(())
+}
+
+/// An instance of the syncwhole data set synchronization engine.
+///
+/// This holds a number of async tasks that are terminated or aborted if this object
+/// is dropped. In other words this implements structured concurrency.
 pub struct Node<D: DataStore + 'static, H: Host + 'static> {
     internal: Arc<NodeInternal<D, H>>,
     housekeeping_task: JoinHandle<()>,
@@ -49,9 +75,7 @@ pub struct Node<D: DataStore + 'static, H: Host + 'static> {
 impl<D: DataStore + 'static, H: Host + 'static> Node<D, H> {
     pub async fn new(db: Arc<D>, host: Arc<H>, bind_address: SocketAddr) -> std::io::Result<Self> {
         let listener = if bind_address.is_ipv4() { TcpSocket::new_v4() } else { TcpSocket::new_v6() }?;
-        if listener.set_reuseport(true).is_err() {
-            listener.set_reuseaddr(true)?;
-        }
+        configure_tcp_socket(&listener)?;
         listener.bind(bind_address.clone())?;
         let listener = listener.listen(1024)?;
 
@@ -65,6 +89,7 @@ impl<D: DataStore + 'static, H: Host + 'static> Node<D, H> {
             host: host.clone(),
             bind_address,
             connections: Mutex::new(HashMap::with_capacity(64)),
+            attempts: Mutex::new(HashMap::with_capacity(64)),
         });
 
         Ok(Self {
@@ -76,7 +101,7 @@ impl<D: DataStore + 'static, H: Host + 'static> Node<D, H> {
 
     #[inline(always)]
     pub async fn connect(&self, endpoint: &SocketAddr) -> std::io::Result<bool> {
-        self.internal.connect(endpoint).await
+        self.internal.clone().connect(endpoint).await
     }
 
     pub fn list_connections(&self) -> Vec<RemoteNodeInfo> {
@@ -105,17 +130,20 @@ pub struct NodeInternal<D: DataStore + 'static, H: Host + 'static> {
     host: Arc<H>,
     bind_address: SocketAddr,
     connections: Mutex<HashMap<SocketAddr, (Weak<Connection>, Option<JoinHandle<std::io::Result<()>>>)>>,
+    attempts: Mutex<HashMap<SocketAddr, JoinHandle<std::io::Result<bool>>>>,
 }
 
 impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
     async fn housekeeping_task_main(self: Arc<Self>) {
         loop {
-            tokio::time::sleep(Duration::from_millis((CONNECTION_KEEPALIVE_AFTER / 2) as u64)).await;
+            tokio::time::sleep(Duration::from_millis(HOUSEKEEPING_INTERVAL as u64)).await;
 
             let mut to_ping: Vec<Arc<Connection>> = Vec::new();
             let mut dead: Vec<(SocketAddr, Option<JoinHandle<std::io::Result<()>>>)> = Vec::new();
+            let mut current_endpoints: HashSet<SocketAddr> = HashSet::new();
 
             let mut connections = self.connections.lock().await;
+            current_endpoints.reserve(connections.len() + 1);
             let now = ms_monotonic();
             connections.retain(|sa, c| {
                 let cc = c.0.upgrade();
@@ -125,6 +153,7 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                         if (now - cc.last_send_time.load(Ordering::Relaxed)) >= CONNECTION_KEEPALIVE_AFTER {
                             to_ping.push(cc);
                         }
+                        current_endpoints.insert(sa.clone());
                         true
                     } else {
                         c.1.take().map(|j| j.abort());
@@ -152,15 +181,43 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
             for c in to_ping.iter() {
                 let _ = c.send(&[MESSAGE_TYPE_NOP, 0], now).await;
             }
+
+            let desired = self.host.desired_connection_count();
+            let fixed = self.host.fixed_peers();
+
+            let mut attempts = self.attempts.lock().await;
+
+            for ep in fixed.iter() {
+                if !current_endpoints.contains(ep) {
+                    let self2 = self.clone();
+                    let ep2 = ep.clone();
+                    attempts.insert(ep.clone(), tokio::spawn(async move { self2.connect(&ep2).await }));
+                    current_endpoints.insert(ep.clone());
+                }
+            }
+
+            while current_endpoints.len() < desired {
+                let ep = self.host.another_peer(&current_endpoints);
+                if ep.is_some() {
+                    let ep = ep.unwrap();
+                    current_endpoints.insert(ep.clone());
+                    let self2 = self.clone();
+                    attempts.insert(ep.clone(), tokio::spawn(async move { self2.connect(&ep).await }));
+                } else {
+                    break;
+                }
+            }
         }
     }
 
     async fn listener_task_main(self: Arc<Self>, listener: TcpListener) {
         loop {
             let socket = listener.accept().await;
-            if self.connections.lock().await.len() < self.host.max_endpoints() && socket.is_ok() {
+            if self.connections.lock().await.len() < self.host.max_connection_count() && socket.is_ok() {
                 let (stream, endpoint) = socket.unwrap();
-                Self::connection_start(&self, endpoint, stream, true).await;
+                if self.host.allow(&endpoint) {
+                    Self::connection_start(&self, endpoint, stream, true).await;
+                }
             }
         }
     }
@@ -175,8 +232,8 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
             max_value_size: D::MAX_VALUE_SIZE as u64,
             node_name: None,
             node_contact: None,
-            preferred_ipv4: None,
-            preferred_ipv6: None
+            explicit_ipv4: None,
+            explicit_ipv6: None
         }, ms_monotonic()).await?;
 
         let mut init_received = false;
@@ -194,6 +251,7 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
             let now = ms_monotonic();
 
             match message_type {
+
                 MESSAGE_TYPE_INIT => {
                     if init_received {
                         return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "duplicate init"));
@@ -220,13 +278,14 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                     let mut info = connection.info.lock().unwrap();
                     info.node_name = msg.node_name.clone();
                     info.node_contact = msg.node_contact.clone();
-                    let _ = msg.preferred_ipv4.map(|pv4| {
-                        info.preferred_endpoints.push(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(pv4.ip[0], pv4.ip[1], pv4.ip[2], pv4.ip[3]), pv4.port)));
+                    let _ = msg.explicit_ipv4.map(|pv4| {
+                        info.explicit_addresses.push(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(pv4.ip), pv4.port)));
                     });
-                    let _ = msg.preferred_ipv6.map(|pv6| {
-                        info.preferred_endpoints.push(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from(pv6.ip), pv6.port, 0, 0)));
+                    let _ = msg.explicit_ipv6.map(|pv6| {
+                        info.explicit_addresses.push(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from(pv6.ip), pv6.port, 0, 0)));
                     });
                 },
+
                 MESSAGE_TYPE_INIT_RESPONSE => {
                     if initialized {
                         return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "duplicate init response"));
@@ -246,6 +305,7 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                     let info = info.clone();
                     self.host.on_connect(&info);
                 },
+
                 _ => {
                     // Skip messages that aren't recognized or don't need to be parsed like NOP.
                     let mut remaining = message_size as usize;
@@ -256,16 +316,16 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                     }
                     connection.last_receive_time.store(ms_monotonic(), Ordering::Relaxed);
                 }
+
             }
         }
     }
 
-    async fn connection_start(self: &Arc<Self>, endpoint: SocketAddr, stream: TcpStream, inbound: bool) -> bool {
-        let _ = stream.set_nodelay(true);
+    async fn connection_start(self: &Arc<Self>, address: SocketAddr, stream: TcpStream, inbound: bool) -> bool {
         let (reader, writer) = stream.into_split();
 
         let mut ok = false;
-        let _ = self.connections.lock().await.entry(endpoint.clone()).or_insert_with(|| {
+        let _ = self.connections.lock().await.entry(address.clone()).or_insert_with(|| {
             ok = true;
             let now = ms_monotonic();
             let connection = Arc::new(Connection {
@@ -275,8 +335,8 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                 info: std::sync::Mutex::new(RemoteNodeInfo {
                     node_name: None,
                     node_contact: None,
-                    endpoint: endpoint.clone(),
-                    preferred_endpoints: Vec::new(),
+                    remote_address: address.clone(),
+                    explicit_addresses: Vec::new(),
                     connect_time: SystemTime::now(),
                     inbound,
                     initialized: false
@@ -287,23 +347,26 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
         ok
     }
 
-    async fn connect(self: &Arc<Self>, endpoint: &SocketAddr) -> std::io::Result<bool> {
-        if !self.connections.lock().await.contains_key(endpoint) {
-            let stream = if endpoint.is_ipv4() { TcpSocket::new_v4() } else { TcpSocket::new_v6() }?;
-            if stream.set_reuseport(true).is_err() {
-                stream.set_reuseaddr(true)?;
-            }
+    async fn connect(self: Arc<Self>, address: &SocketAddr) -> std::io::Result<bool> {
+        let mut success = false;
+        if !self.connections.lock().await.contains_key(address) {
+            self.host.on_connect_attempt(address);
+            let stream = if address.is_ipv4() { TcpSocket::new_v4() } else { TcpSocket::new_v6() }?;
+            configure_tcp_socket(&stream)?;
             stream.bind(self.bind_address.clone())?;
-            let stream = stream.connect(endpoint.clone()).await?;
-            Ok(self.connection_start(endpoint.clone(), stream, false).await)
-        } else {
-            Ok(false)
+            let stream = stream.connect(address.clone()).await?;
+            success = self.connection_start(address.clone(), stream, false).await;
         }
+        self.attempts.lock().await.remove(address);
+        Ok(success)
     }
 }
 
 impl<D: DataStore + 'static, H: Host + 'static> Drop for NodeInternal<D, H> {
     fn drop(&mut self) {
+        for a in self.attempts.blocking_lock().iter() {
+            a.1.abort();
+        }
         for (_, c) in self.connections.blocking_lock().drain() {
             c.1.map(|c| c.abort());
         }

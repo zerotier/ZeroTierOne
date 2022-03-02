@@ -27,13 +27,13 @@ pub enum StoreResult {
     /// Entry was accepted (whether or not an old value was replaced).
     Ok,
 
-    /// Entry was rejected as a duplicate but was otherwise valid.
+    /// Entry was a duplicate of one we already have but was otherwise valid.
     Duplicate,
 
-    /// Entry was rejected as invalid.
-    ///
-    /// An invalid entry is one that is malformed, fails a signature check, etc., and returning
-    /// this causes the synchronization service to drop the link to the node that sent it.
+    /// Entry was valid but was ignored for an unspecified reason.
+    Ignored,
+
+    /// Entry was rejected as malformed or otherwise invalid (e.g. failed signature check).
     Rejected
 }
 
@@ -45,12 +45,19 @@ pub enum StoreResult {
 /// what time I think it is" value to be considered locally so that data can be replicated
 /// as of any given time.
 ///
+/// The constants KEY_SIZE, MAX_VALUE_SIZE, and KEY_IS_COMPUTED are protocol constants
+/// for your replication domain. They can't be changed once defined unless all nodes
+/// are upgraded at once.
+///
 /// The KEY_IS_COMPUTED constant must be set to indicate whether keys are a function of
 /// values. If this is true, get_key() must be implemented.
 ///
-/// The implementation must be thread safe.
+/// The implementation must be thread safe and may be called concurrently.
 pub trait DataStore: Sync + Send {
     /// Type to be enclosed in the Ok() enum value in LoadResult.
+    ///
+    /// Allowing this type to be defined lets you use any type that makes sense with
+    /// your implementation. Examples include Box<[u8]>, Arc<[u8]>, Vec<u8>, etc.
     type LoadResultValueType: AsRef<[u8]> + Send;
 
     /// Size of keys, which must be fixed in length. These are typically hashes.
@@ -61,11 +68,14 @@ pub trait DataStore: Sync + Send {
 
     /// This should be true if the key is computed, such as by hashing the value.
     ///
-    /// If this is true only values are sent over the wire and get_key() is used to compute
-    /// keys from values. If this is false both keys and values are replicated.
+    /// If this is true then keys do not have to be sent over the wire. Instead they
+    /// are computed by calling get_key(). If this is false keys are assumed not to
+    /// be computable from values and are explicitly sent.
     const KEY_IS_COMPUTED: bool;
 
-    /// Get the key corresponding to a value.
+    /// Compute the key corresponding to a value.
+    ///
+    /// The 'key' slice must be KEY_SIZE bytes in length.
     ///
     /// If KEY_IS_COMPUTED is true this must be implemented. The default implementation
     /// panics to indicate this. If KEY_IS_COMPUTED is false this is never called.
@@ -74,44 +84,56 @@ pub trait DataStore: Sync + Send {
         panic!("get_key() must be implemented if KEY_IS_COMPUTED is true");
     }
 
-    /// Get the domain of this data store, which is just an arbitrary unique identifier.
+    /// Get the domain of this data store.
+    ///
+    /// This is an arbitrary unique identifier that must be the same for all nodes that
+    /// are replicating the same data. It's checked on connect to avoid trying to share
+    /// data across data sets if this is not desired.
     fn domain(&self) -> &str;
 
     /// Get an item if it exists as of a given reference time.
-    ///
-    /// The supplied key must be of length KEY_SIZE or this may panic.
     fn load(&self, reference_time: i64, key: &[u8]) -> LoadResult<Self::LoadResultValueType>;
 
-    /// Store an item in the data store and return Ok, Duplicate, or Rejected.
-    ///
-    /// The supplied key must be of length KEY_SIZE or this may panic.
+    /// Store an item in the data store and return its status.
     ///
     /// Note that no time is supplied here. The data store must determine this in an implementation
     /// dependent manner if this is a temporally subjective data store. It could be determined by
     /// the wall clock, from the object itself, etc.
+    ///
+    /// The implementation is responsible for validating inputs and returning 'Rejected' if they
+    /// are invalid. A return value of Rejected can be used to do things like drop connections
+    /// to peers that send invalid data, so it should only be returned if the data is malformed
+    /// or something like a signature check fails. The 'Ignored' enum value should be returned
+    /// for inputs that are valid but were not stored for some other reason, such as being
+    /// expired. It's important to return 'Ok' for accepted values to hint to the replicator
+    /// that they should be aggressively advertised to other peers.
+    ///
+    /// If KEY_IS_COMPUTED is true, the key supplied here can be assumed to be correct. It will
+    /// have been computed via get_key().
     fn store(&self, key: &[u8], value: &[u8]) -> StoreResult;
 
     /// Get the number of items under a prefix as of a given reference time.
     ///
-    /// The default implementation uses for_each(). This can be specialized if it can be done
-    /// more efficiently than that.
+    /// The default implementation uses for_each_key(). This can be specialized if it can
+    /// be done more efficiently than that.
     fn count(&self, reference_time: i64, key_prefix: &[u8]) -> u64 {
         let mut cnt: u64 = 0;
-        self.for_each(reference_time, key_prefix, |_, _| {
+        self.for_each_key(reference_time, key_prefix, |_| {
             cnt += 1;
             true
         });
         cnt
     }
 
-    /// Iterate through keys beneath a key prefix, stopping at the end or if the function returns false.
+    /// Iterate through keys beneath a key prefix, stopping if the function returns false.
     ///
-    /// The default implementation uses for_each().
+    /// The default implementation uses for_each(). This can be specialized if it's faster to
+    /// only load keys.
     fn for_each_key<F: FnMut(&[u8]) -> bool>(&self, reference_time: i64, key_prefix: &[u8], mut f: F) {
         self.for_each(reference_time, key_prefix, |k, _| f(k));
     }
 
-    /// Iterate through keys and values beneath a key prefix, stopping at the end or if the function returns false.
+    /// Iterate through keys and values beneath a key prefix, stopping if the function returns false.
     fn for_each<F: FnMut(&[u8], &[u8]) -> bool>(&self, reference_time: i64, key_prefix: &[u8], f: F);
 }
 
@@ -196,4 +218,3 @@ impl<const KEY_SIZE: usize> PartialEq for MemoryDatabase<KEY_SIZE> {
 }
 
 impl<const KEY_SIZE: usize> Eq for MemoryDatabase<KEY_SIZE> {}
-

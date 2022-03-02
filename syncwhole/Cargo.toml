@@ -10,3 +10,6 @@ tokio = { version = "^1", features = ["net", "rt", "parking_lot", "time", "io-st
 serde = { version = "^1", features = ["derive"], default-features = false }
 rmp = "^0"
 rmp-serde = "^1"
+
+[dev-dependencies]
+sha2 = "^0"
