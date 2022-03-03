@@ -509,7 +509,6 @@ ZT_PeerList *Node::peers() const
 		if (pi->second->bond()) {
 			p->isBonded = pi->second->bond();
 			p->bondingPolicy = pi->second->bond()->policy();
-			p->isHealthy = pi->second->bond()->isHealthy();
 			p->numAliveLinks = pi->second->bond()->getNumAliveLinks();
 			p->numTotalLinks = pi->second->bond()->getNumTotalLinks();
 		}

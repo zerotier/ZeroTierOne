@@ -571,13 +571,13 @@
  * Anything below this value gets into thrashing territory since we divide
  * this value by ZT_BOND_ECHOS_PER_FAILOVER_INTERVAL to send ECHOs often.
  */
-#define ZT_BOND_FAILOVER_MIN_INTERVAL 250
+#define ZT_BOND_FAILOVER_MIN_INTERVAL 500
 
 /**
  * How many times per failover interval that an ECHO is sent. This should be
  * at least 2. Anything more then 4 starts to increase overhead significantly.
  */
-#define ZT_BOND_ECHOS_PER_FAILOVER_INTERVAL 4
+#define ZT_BOND_ECHOS_PER_FAILOVER_INTERVAL 3
 
 /**
  * A defensive timer to prevent path quality metrics from being

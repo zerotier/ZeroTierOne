@@ -99,6 +99,21 @@ void SelfAwareness::iam(void *tPtr,const Address &reporter,const int64_t receive
 	}
 }
 
+std::vector<InetAddress> SelfAwareness::whoami()
+{
+	std::vector<InetAddress> surfaceAddresses;
+	Mutex::Lock _l(_phy_m);
+	Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
+	PhySurfaceKey *k = (PhySurfaceKey *)0;
+	PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+	while (i.next(k,e)) {
+		if (std::find(surfaceAddresses.begin(), surfaceAddresses.end(), e->mySurface) == surfaceAddresses.end()) {
+			surfaceAddresses.push_back(e->mySurface);
+		}
+	}
+	return surfaceAddresses;
+}
+
 void SelfAwareness::clean(int64_t now)
 {
 	Mutex::Lock _l(_phy_m);

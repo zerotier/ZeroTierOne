@@ -860,7 +860,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const 
 bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
 	uint64_t now = RR->node->now();
-	if (!peer->rateGateEchoRequest(now)) {
+	if (!_path->rateGateEchoRequest(now)) {
 		return true;
 	}
 
