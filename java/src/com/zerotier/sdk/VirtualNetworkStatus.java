@@ -38,6 +38,11 @@ public enum VirtualNetworkStatus {
     NETWORK_STATUS_OK,
 
     /**
+     * Netconf master said SSO auth required.
+     */
+    NETWORK_STATUS_AUTHENTICATION_REQUIRED,
+
+    /**
      * Netconf master told us 'nope'
      */
     NETWORK_STATUS_ACCESS_DENIED,
