@@ -117,6 +117,9 @@ jobject createVirtualNetworkStatus(JNIEnv *env, ZT_VirtualNetworkStatus status)
     case ZT_NETWORK_STATUS_OK:
         fieldName = "NETWORK_STATUS_OK";
         break;
+    case ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED:
+        fieldName = "NETWORK_STATUS_AUTHENTICATION_REQUIRED";
+        break;
     case ZT_NETWORK_STATUS_ACCESS_DENIED:
         fieldName = "NETWORK_STATUS_ACCESS_DENIED";
         break;

@@ -53,6 +53,8 @@ std::string InstallService(PSTR pszServiceName,
     char szPathTmp[MAX_PATH],szPath[MAX_PATH];
     SC_HANDLE schSCManager = NULL;
     SC_HANDLE schService = NULL;
+    SERVICE_DESCRIPTION sd;
+    LPTSTR szDesc = TEXT("ZeroTier network virtualization service.");
 
     if (GetModuleFileName(NULL, szPathTmp, ARRAYSIZE(szPath)) == 0)
     {
@@ -77,7 +79,7 @@ std::string InstallService(PSTR pszServiceName,
         schSCManager,                   // SCManager database
         pszServiceName,                 // Name of service
         pszDisplayName,                 // Name to display
-        SERVICE_QUERY_STATUS,           // Desired access
+        SERVICE_ALL_ACCESS,             // Desired access
         SERVICE_WIN32_OWN_PROCESS,      // Service type
         dwStartType,                    // Service start type
         SERVICE_ERROR_NORMAL,           // Error control type
@@ -94,6 +96,9 @@ std::string InstallService(PSTR pszServiceName,
         goto Cleanup;
     }
 
+    // Setup service description
+    sd.lpDescription = szDesc;
+    ChangeServiceConfig2(schService, SERVICE_CONFIG_DESCRIPTION, &sd);
 Cleanup:
     // Centralized cleanup for all allocated resources.
     if (schSCManager)
