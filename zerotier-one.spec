@@ -15,6 +15,7 @@ BuildRequires:  systemd
 %endif
 
 Requires:       iproute libstdc++ openssl
+AutoReqProv:    no
 
 %if 0%{?rhel} >= 7
 Requires:       systemd
@@ -164,6 +165,9 @@ esac
 %endif
 
 %changelog
+* Fri Mar 07 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.6
+- see https://github.com/zerotier/ZeroTierOne for release notes
+
 * Fri Dec 17 2021 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.5
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
