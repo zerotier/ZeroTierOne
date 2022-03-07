@@ -54,7 +54,7 @@ std::string InstallService(PSTR pszServiceName,
     SC_HANDLE schSCManager = NULL;
     SC_HANDLE schService = NULL;
     SERVICE_DESCRIPTION sd;
-    LPTSTR szDesc = TEXT("Provides secure encrypted communications between hosts over an insecure networks.");
+    LPTSTR szDesc = TEXT("ZeroTier network virtualization service.");
 
     if (GetModuleFileName(NULL, szPathTmp, ARRAYSIZE(szPath)) == 0)
     {
@@ -98,9 +98,7 @@ std::string InstallService(PSTR pszServiceName,
 
     // Setup service description
     sd.lpDescription = szDesc;
-    if (!ChangeServiceConfig2(schService, SERVICE_CONFIG_DESCRIPTION, &sd)) {
-        ret = "CreateService failed (description)";
-    }
+    ChangeServiceConfig2(schService, SERVICE_CONFIG_DESCRIPTION, &sd);
 Cleanup:
     // Centralized cleanup for all allocated resources.
     if (schSCManager)
