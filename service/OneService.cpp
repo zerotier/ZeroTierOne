@@ -745,6 +745,7 @@ public:
 	// Time we last received a packet from a global address
 	uint64_t _lastDirectReceiveFromGlobal;
 #ifdef ZT_TCP_FALLBACK_RELAY
+	InetAddress _fallbackRelayAddress;
 	uint64_t _lastSendToGlobalV4;
 #endif
 
@@ -808,6 +809,7 @@ public:
 		,_udpPortPickerCounter(0)
 		,_lastDirectReceiveFromGlobal(0)
 #ifdef ZT_TCP_FALLBACK_RELAY
+		, _fallbackRelayAddress(ZT_TCP_FALLBACK_RELAY)
 		,_lastSendToGlobalV4(0)
 #endif
 		,_lastRestart(0)
@@ -2131,6 +2133,9 @@ div.icon {\
 
 		// bondingPolicy cannot be used with allowTcpFallbackRelay
 		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true) && !(_node->bondController()->inUse());
+#ifdef ZT_TCP_FALLBACK_RELAY
+		_fallbackRelayAddress = InetAddress(OSUtils::jsonString("tcpFallbackRelay", ZT_TCP_FALLBACK_RELAY).c_str());
+#endif
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 		_allowSecondaryPort = OSUtils::jsonBool(settings["allowSecondaryPort"],true);
 		_secondaryPort = (unsigned int)OSUtils::jsonInt(settings["secondaryPort"],0);
@@ -3142,7 +3147,7 @@ div.icon {\
 								phyOnTcpWritable(_tcpFallbackTunnel->sock,&tmpptr);
 							}
 						} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
-							const InetAddress addr(ZT_TCP_FALLBACK_RELAY);
+							const InetAddress addr(_fallbackRelayAddress);
 							TcpConnection *tc = new TcpConnection();
 							{
 								Mutex::Lock _l(_tcpConnections_m);
