@@ -97,7 +97,7 @@ impl<const B: usize> IBLT<B> {
         for b in unsafe { (*self.map).iter_mut() } {
             let _ = r.read_exact(unsafe { &mut *(&mut b.key_sum as *mut u64).cast::<[u8; 8]>() }).await?;
             let _ = r.read_exact(unsafe { &mut *(&mut b.check_hash_sum as *mut u64).cast::<[u8; 8]>() }).await?;
-            let mut c = varint::read_async(r).await? as i64;
+            let mut c = varint::read_async(r).await?.0 as i64;
             if (c & 1) == 0 {
                 c = c.wrapping_shr(1);
             } else {
@@ -174,7 +174,7 @@ impl<const B: usize> IBLT<B> {
         }
     }
 
-    pub fn list<F: FnMut(&[u8; 8])>(mut self, mut f: F) -> bool {
+    pub fn list<F: FnMut(&[u8; 8])>(self, mut f: F) -> bool {
         let mut queue: Vec<u32> = Vec::with_capacity(B);
 
         for b in 0..B {

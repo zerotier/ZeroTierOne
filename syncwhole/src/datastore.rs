@@ -9,6 +9,7 @@
 use std::ops::Bound::Included;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
+use crate::ms_since_epoch;
 
 /// Result returned by DB::load().
 pub enum LoadResult<V: AsRef<[u8]> + Send> {
@@ -50,7 +51,7 @@ pub enum StoreResult {
 /// are upgraded at once.
 ///
 /// The KEY_IS_COMPUTED constant must be set to indicate whether keys are a function of
-/// values. If this is true, get_key() must be implemented.
+/// values. If this is true, key_from_value() must be implemented.
 ///
 /// The implementation must be thread safe and may be called concurrently.
 pub trait DataStore: Sync + Send {
@@ -75,14 +76,18 @@ pub trait DataStore: Sync + Send {
 
     /// Compute the key corresponding to a value.
     ///
-    /// The 'key' slice must be KEY_SIZE bytes in length.
-    ///
     /// If KEY_IS_COMPUTED is true this must be implemented. The default implementation
     /// panics to indicate this. If KEY_IS_COMPUTED is false this is never called.
     #[allow(unused_variables)]
-    fn get_key(&self, value: &[u8], key: &mut [u8]) {
-        panic!("get_key() must be implemented if KEY_IS_COMPUTED is true");
+    fn key_from_value(&self, value: &[u8], key_buffer: &mut [u8]) {
+        panic!("key_from_value() must be implemented if KEY_IS_COMPUTED is true");
     }
+
+    /// Get the current wall clock in milliseconds since Unix epoch.
+    ///
+    /// This is delegated to the data store to support scenarios where you want to fix
+    /// the clock or snapshot at a given time.
+    fn clock(&self) -> i64;
 
     /// Get the domain of this data store.
     ///
@@ -125,6 +130,9 @@ pub trait DataStore: Sync + Send {
         cnt
     }
 
+    /// Get the total number of records in this data store.
+    fn total_count(&self) -> u64;
+
     /// Iterate through keys beneath a key prefix, stopping if the function returns false.
     ///
     /// The default implementation uses for_each(). This can be specialized if it's faster to
@@ -138,13 +146,13 @@ pub trait DataStore: Sync + Send {
 }
 
 /// A simple in-memory data store backed by a BTreeMap.
-pub struct MemoryDatabase<const KEY_SIZE: usize> {
+pub struct MemoryDataStore<const KEY_SIZE: usize> {
     max_age: i64,
     domain: String,
     db: Mutex<BTreeMap<[u8; KEY_SIZE], (i64, Arc<[u8]>)>>
 }
 
-impl<const KEY_SIZE: usize> MemoryDatabase<KEY_SIZE> {
+impl<const KEY_SIZE: usize> MemoryDataStore<KEY_SIZE> {
     pub fn new(max_age: i64, domain: String) -> Self {
         Self {
             max_age: if max_age > 0 { max_age } else { i64::MAX },
@@ -154,11 +162,13 @@ impl<const KEY_SIZE: usize> MemoryDatabase<KEY_SIZE> {
     }
 }
 
-impl<const KEY_SIZE: usize> DataStore for MemoryDatabase<KEY_SIZE> {
+impl<const KEY_SIZE: usize> DataStore for MemoryDataStore<KEY_SIZE> {
     type LoadResultValueType = Arc<[u8]>;
     const KEY_SIZE: usize = KEY_SIZE;
     const MAX_VALUE_SIZE: usize = 65536;
     const KEY_IS_COMPUTED: bool = false;
+
+    fn clock(&self) -> i64 { ms_since_epoch() }
 
     fn domain(&self) -> &str { self.domain.as_str() }
 
@@ -196,6 +206,8 @@ impl<const KEY_SIZE: usize> DataStore for MemoryDatabase<KEY_SIZE> {
         }
     }
 
+    fn total_count(&self) -> u64 { self.db.lock().unwrap().len() as u64 }
+
     fn for_each<F: FnMut(&[u8], &[u8]) -> bool>(&self, reference_time: i64, key_prefix: &[u8], mut f: F) {
         let mut r_start = [0_u8; KEY_SIZE];
         let mut r_end = [0xff_u8; KEY_SIZE];
@@ -211,10 +223,20 @@ impl<const KEY_SIZE: usize> DataStore for MemoryDatabase<KEY_SIZE> {
     }
 }
 
-impl<const KEY_SIZE: usize> PartialEq for MemoryDatabase<KEY_SIZE> {
+impl<const KEY_SIZE: usize> PartialEq for MemoryDataStore<KEY_SIZE> {
     fn eq(&self, other: &Self) -> bool {
-        self.max_age == other.max_age && self.db.lock().unwrap().eq(&*other.db.lock().unwrap())
+        self.max_age == other.max_age && self.domain == other.domain && self.db.lock().unwrap().eq(&*other.db.lock().unwrap())
     }
 }
 
-impl<const KEY_SIZE: usize> Eq for MemoryDatabase<KEY_SIZE> {}
+impl<const KEY_SIZE: usize> Eq for MemoryDataStore<KEY_SIZE> {}
+
+impl<const KEY_SIZE: usize> Clone for MemoryDataStore<KEY_SIZE> {
+    fn clone(&self) -> Self {
+        Self {
+            max_age: self.max_age,
+            domain: self.domain.clone(),
+            db: Mutex::new(self.db.lock().unwrap().clone())
+        }
+    }
+}

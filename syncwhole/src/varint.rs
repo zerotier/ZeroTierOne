@@ -34,19 +34,25 @@ pub async fn write_async<W: AsyncWrite + Unpin>(w: &mut W, v: u64) -> std::io::R
     w.write_all(&b[0..i]).await
 }
 
-pub async fn read_async<R: AsyncRead + Unpin>(r: &mut R) -> std::io::Result<u64> {
+pub async fn read_async<R: AsyncRead + Unpin>(r: &mut R) -> std::io::Result<(u64, usize)> {
     let mut v = 0_u64;
     let mut buf = [0_u8; 1];
     let mut pos = 0;
+    let mut count = 0;
     loop {
-        let _ = r.read_exact(&mut buf).await?;
+        loop {
+            if r.read(&mut buf).await? == 1 {
+                break;
+            }
+        }
+        count += 1;
         let b = buf[0];
         if b <= 0x7f {
             v |= (b as u64).wrapping_shl(pos);
             pos += 7;
         } else {
             v |= ((b & 0x7f) as u64).wrapping_shl(pos);
-            return Ok(v);
+            return Ok((v, count));
         }
     }
 }
