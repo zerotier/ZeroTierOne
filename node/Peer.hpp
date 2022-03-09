@@ -438,7 +438,7 @@ public:
 	template<unsigned int C>
 	inline void serializeForCache(Buffer<C> &b) const
 	{
-		b.append((uint8_t)1);
+		b.append((uint8_t)2);
 
 		_id.serialize(b);
 
@@ -466,7 +466,7 @@ public:
 	{
 		try {
 			unsigned int ptr = 0;
-			if (b[ptr++] != 1)
+			if (b[ptr++] != 2)
 				return SharedPtr<Peer>();
 
 			Identity id;
