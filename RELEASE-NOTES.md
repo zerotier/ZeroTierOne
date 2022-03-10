@@ -5,6 +5,7 @@ ZeroTier Release Notes
 
  * Fixed an issue that could cause the UI to be non-responsive if not joined to any networks.
  * Fix dependency issues in Debian and RedHat packages for some distributions (Fedora, Mint).
+ * Bumped the peer cache serialization version to prevent "coma" issues on upgrade due to changes in path logic behaving badly with old values.
 
 # 2022-02-22 -- Version 1.8.5
 
