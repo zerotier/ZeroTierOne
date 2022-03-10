@@ -510,6 +510,7 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 	pj["isBonded"] = peer->isBonded;
 	if (peer->isBonded) {
 		pj["bondingPolicy"] = peer->bondingPolicy;
+		pj["isHealthy"] = peer->isHealthy;
 		pj["numAliveLinks"] = peer->numAliveLinks;
 		pj["numTotalLinks"] = peer->numTotalLinks;
 	}
@@ -541,6 +542,7 @@ static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 		return;
 	}
 
+	pj["isHealthy"] = bond->isHealthy();
 	pj["numAliveLinks"] = bond->getNumAliveLinks();
 	pj["numTotalLinks"] = bond->getNumTotalLinks();
 	pj["failoverInterval"] = bond->getFailoverInterval();
