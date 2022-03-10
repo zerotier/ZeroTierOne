@@ -325,6 +325,13 @@ impl ZeroIDC {
                                                                 println!("Central post failed: {}", r.status().to_string());
                                                                 println!("hit url: {}", r.url().as_str());
                                                                 println!("Status: {}", r.status());
+                                                                if let Ok(body) = r.bytes() {
+                                                                    if let Ok(body) = std::str::from_utf8(&body) {
+                                                                        println!("Body: {}", body);
+                                                                    }
+                                                                    
+                                                                }
+                                                                
                                                                 (*inner_local.lock().unwrap()).exp_time = 0;
                                                                 (*inner_local.lock().unwrap()).running = false;
                                                             }
