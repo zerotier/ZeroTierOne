@@ -1577,37 +1577,31 @@ public:
 					}
 				} else if (ps[0] == "network") {
 					Mutex::Lock _l(_nets_m);
-					if (!_nets.empty()) {
-						if (ps.size() == 1) {
-							// Return [array] of all networks
+					if (ps.size() == 1) {
+						// Return [array] of all networks
 
-							res = nlohmann::json::array();
-							
-							for (auto it = _nets.begin(); it != _nets.end(); ++it) {
-								NetworkState &ns = it->second;
-								nlohmann::json nj;
-								_networkToJson(nj, ns);
-								res.push_back(nj);
-							}
+						res = nlohmann::json::array();
 
+						for (auto it = _nets.begin(); it != _nets.end(); ++it) {
+							NetworkState &ns = it->second;
+							nlohmann::json nj;
+							_networkToJson(nj, ns);
+							res.push_back(nj);
+						}
+
+						scode = 200;
+					} else if (ps.size() == 2) {
+						// Return a single network by ID or 404 if not found
+
+						const uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
+						if (_nets.find(wantnw) != _nets.end()) {
+							res = json::object();
+							NetworkState& ns = _nets[wantnw];
+							_networkToJson(res, ns);
 							scode = 200;
-						} else if (ps.size() == 2) {
-							// Return a single network by ID or 404 if not found
-
-							const uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
-							if (_nets.find(wantnw) != _nets.end()) {
-								res = json::object();
-								NetworkState& ns = _nets[wantnw];
-								_networkToJson(res, ns);
-								scode = 200;
-							}
-						} else {
-							fprintf(stderr, "not found\n");
-							scode = 404;
 						}
 					} else {
-						fprintf(stderr, "_nets is empty??\n");
-						scode = 500;
+						scode = 404;
 					}
 				} else if (ps[0] == "peer") {
 					ZT_PeerList *pl = _node->peers();

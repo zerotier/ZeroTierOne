@@ -1,12 +1,19 @@
 ZeroTier Release Notes
 ======
 
+# 2022-03-04 -- Version 1.8.6
+
+ * Fixed an issue that could cause the UI to be non-responsive if not joined to any networks.
+ * Fix dependency issues in Debian and RedHat packages for some distributions (Fedora, Mint).
+ * Bumped the peer cache serialization version to prevent "coma" issues on upgrade due to changes in path logic behaving badly with old values.
+
 # 2022-02-22 -- Version 1.8.5
 
  * Plumbing under the hood for endpoint device SSO support.
  * Fix in LinuxEthernetTap to tap device support on very old (2.6) Linux kernels.
  * Fix an issue that could cause self-hosted roots ("moons") to fail to assist peers in making direct links. (GitHub issue #1512)
  * Merge a series of changes by Joseph Henry (of ZeroTier) that should fix some edge cases where ZeroTier would "forget" valid paths.
+ * Minor multipath improvements for automatic path negotiation.
 
 # 2021-11-30 -- Version 1.8.4
 
