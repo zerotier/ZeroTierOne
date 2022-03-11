@@ -13,11 +13,4 @@ pub(crate) mod iblt;
 pub mod datastore;
 pub mod node;
 pub mod host;
-
-pub fn ms_since_epoch() -> i64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64
-}
-
-pub fn ms_monotonic() -> i64 {
-    std::time::Instant::now().elapsed().as_millis() as i64
-}
+pub mod utils;

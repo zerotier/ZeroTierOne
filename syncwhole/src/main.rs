@@ -13,6 +13,7 @@ use syncwhole::datastore::{DataStore, LoadResult, StoreResult};
 use syncwhole::host::Host;
 use syncwhole::ms_since_epoch;
 use syncwhole::node::{Node, RemoteNodeInfo};
+use syncwhole::utils::*;
 
 const TEST_NODE_COUNT: usize = 16;
 const TEST_PORT_RANGE_START: u16 = 21384;
@@ -55,13 +56,7 @@ impl Host for TestNodeHost {
 impl DataStore for TestNodeHost {
     type LoadResultValueType = Arc<[u8]>;
 
-    const KEY_SIZE: usize = 64;
     const MAX_VALUE_SIZE: usize = 1024;
-    const KEY_IS_COMPUTED: bool = true;
-
-    fn key_from_value(&self, value: &[u8], key_buffer: &mut [u8]) {
-        key_buffer.copy_from_slice(Sha512::digest(value).as_slice());
-    }
 
     fn clock(&self) -> i64 { ms_since_epoch() }
 
@@ -73,7 +68,7 @@ impl DataStore for TestNodeHost {
 
     fn store(&self, key: &[u8], value: &[u8]) -> StoreResult {
         assert_eq!(key.len(), 64);
-        let mut res = StoreResult::Ok;
+        let mut res = StoreResult::Ok(0);
         self.db.lock().unwrap().entry(key.try_into().unwrap()).and_modify(|e| {
             if e.as_ref().eq(value) {
                 res = StoreResult::Duplicate;
@@ -86,14 +81,14 @@ impl DataStore for TestNodeHost {
         res
     }
 
+    fn count(&self, _: i64, key_range_start: &[u8], key_range_end: &[u8]) -> u64 {
+        self.db.lock().unwrap().range((Included(key_range_start.try_into().unwrap()), Included(key_range_end.try_into().unwrap()))).count() as u64
+    }
+
     fn total_count(&self) -> u64 { self.db.lock().unwrap().len() as u64 }
 
-    fn for_each<F: FnMut(&[u8], &[u8]) -> bool>(&self, _: i64, key_prefix: &[u8], mut f: F) {
-        let mut r_start = [0_u8; Self::KEY_SIZE];
-        let mut r_end = [0xff_u8; Self::KEY_SIZE];
-        (&mut r_start[0..key_prefix.len()]).copy_from_slice(key_prefix);
-        (&mut r_end[0..key_prefix.len()]).copy_from_slice(key_prefix);
-        for (k, v) in self.db.lock().unwrap().range((Included(r_start), Included(r_end))) {
+    fn for_each<F: FnMut(&[u8], &[u8]) -> bool>(&self, _: i64, key_range_start: &[u8], key_range_end: &[u8], mut f: F) {
+        for (k, v) in self.db.lock().unwrap().range((Included(key_range_start.try_into().unwrap()), Included(key_range_end.try_into().unwrap()))) {
             if !f(k, v.as_ref()) {
                 break;
             }
@@ -126,11 +121,13 @@ fn main() {
 
         loop {
             tokio::time::sleep(Duration::from_secs(1)).await;
+            /*
             let mut count = 0;
             for n in nodes.iter() {
                 count += n.connection_count().await;
             }
             println!("{}", count);
+            */
         }
     });
 }

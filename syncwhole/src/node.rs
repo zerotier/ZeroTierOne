@@ -13,7 +13,6 @@ use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::ops::Add;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, Ordering};
-use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
@@ -21,12 +20,13 @@ use tokio::net::{TcpListener, TcpSocket, TcpStream};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
-use tokio::time::{Instant, Duration};
+use tokio::time::{Duration, Instant};
 
-use crate::datastore::DataStore;
+use crate::datastore::*;
 use crate::host::Host;
-use crate::ms_monotonic;
+use crate::iblt::IBLT;
 use crate::protocol::*;
+use crate::utils::*;
 use crate::varint;
 
 /// Inactivity timeout for connections in milliseconds.
@@ -56,8 +56,11 @@ pub struct RemoteNodeInfo {
     /// Explicitly advertised remote addresses supplied by remote node (not necessarily verified).
     pub explicit_addresses: Vec<SocketAddr>,
 
-    /// Time TCP connection was established.
-    pub connect_time: SystemTime,
+    /// Time TCP connection was established (ms since epoch).
+    pub connect_time: i64,
+
+    /// Time TCP connection was estaablished (ms, monotonic).
+    pub connect_instant: i64,
 
     /// True if this is an inbound TCP connection.
     pub inbound: bool,
@@ -101,7 +104,7 @@ impl<D: DataStore + 'static, H: Host + 'static> Node<D, H> {
             datastore: db.clone(),
             host: host.clone(),
             connections: Mutex::new(HashMap::with_capacity(64)),
-            bind_address
+            bind_address,
         });
 
         Ok(Self {
@@ -115,7 +118,6 @@ impl<D: DataStore + 'static, H: Host + 'static> Node<D, H> {
 
     pub fn host(&self) -> &Arc<H> { &self.internal.host }
 
-    #[inline(always)]
     pub async fn connect(&self, endpoint: &SocketAddr) -> std::io::Result<bool> {
         self.internal.clone().connect(endpoint, Instant::now().add(Duration::from_millis(CONNECTION_TIMEOUT as u64))).await
     }
@@ -142,14 +144,22 @@ impl<D: DataStore + 'static, H: Host + 'static> Drop for Node<D, H> {
 }
 
 pub struct NodeInternal<D: DataStore + 'static, H: Host + 'static> {
+    // Secret used to perform HMAC to detect and drop loopback connections to self.
     anti_loopback_secret: [u8; 64],
+
+    // Outside code implementations of DataStore and Host traits.
     datastore: Arc<D>,
     host: Arc<H>,
+
+    // Connections and their task join handles, by remote endpoint address.
     connections: Mutex<HashMap<SocketAddr, (Arc<Connection>, Option<JoinHandle<std::io::Result<()>>>)>>,
+
+    // Local address to which this node is bound
     bind_address: SocketAddr,
 }
 
 impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
+    /// Loop that constantly runs in the background to do cleanup and service things.
     async fn housekeeping_task_main(self: Arc<Self>) {
         let mut last_status_sent = ms_monotonic();
         let mut tasks: Vec<JoinHandle<()>> = Vec::new();
@@ -173,8 +183,8 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
             let status = if (now - last_status_sent) >= STATUS_INTERVAL {
                 last_status_sent = now;
                 Some(msg::Status {
-                    record_count: self.datastore.total_count(),
-                    clock: self.datastore.clock() as u64
+                    total_record_count: self.datastore.total_count(),
+                    reference_time: self.datastore.clock()
                 })
             } else {
                 None
@@ -191,6 +201,8 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                             let sa = sa.clone();
                             tasks.push(tokio::spawn(async move {
                                 if cc.info.lock().await.initialized {
+                                    // This almost always completes instantly due to queues, but add a timeout in case connection
+                                    // is stalled. In this case the result is a closed connection.
                                     if !tokio::time::timeout_at(sleep_until, cc.send_obj(MESSAGE_TYPE_STATUS, &status, now)).await.map_or(false, |r| r.is_ok()) {
                                         let _ = self2.connections.lock().await.remove(&sa).map(|c| c.1.map(|j| j.abort()));
                                         self2.host.on_connection_closed(&*cc.info.lock().await, "write overflow (timeout)".to_string());
@@ -198,7 +210,7 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                                 }
                             }));
                         });
-                        true
+                        true // keep connection
                     } else {
                         let _ = c.1.take().map(|j| j.abort());
                         let host = self.host.clone();
@@ -206,7 +218,7 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                         tasks.push(tokio::spawn(async move {
                             host.on_connection_closed(&*cc.info.lock().await, "timeout".to_string());
                         }));
-                        false
+                        false // discard connection
                     }
                 } else {
                     let host = self.host.clone();
@@ -225,7 +237,7 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                             host.on_connection_closed(&*cc.info.lock().await, "remote host closed connection".to_string());
                         }
                     }));
-                    false
+                    false // discard connection
                 }
             });
 
@@ -243,7 +255,7 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
             }
 
             // Try to connect to more peers until desired connection count is reached.
-            let desired_connection_count = self.host.desired_connection_count();
+            let desired_connection_count = self.host.desired_connection_count().min(self.host.max_connection_count());
             while connected_to_addresses.len() < desired_connection_count {
                 let sa = self.host.another_peer(&connected_to_addresses);
                 if sa.is_some() {
@@ -270,133 +282,36 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
         }
     }
 
+    /// Incoming TCP acceptor task.
     async fn listener_task_main(self: Arc<Self>, listener: TcpListener) {
         loop {
             let socket = listener.accept().await;
             if socket.is_ok() {
-                let (stream, endpoint) = socket.unwrap();
-                let num_conn = self.connections.lock().await.len();
-                if num_conn < self.host.max_connection_count() || self.host.fixed_peers().contains(&endpoint) {
-                    Self::connection_start(&self, endpoint, stream, true).await;
+                let (stream, address) = socket.unwrap();
+                if self.host.allow(&address) {
+                    if self.connections.lock().await.len() < self.host.max_connection_count() || self.host.fixed_peers().contains(&address) {
+                        Self::connection_start(&self, address, stream, true).await;
+                    }
                 }
             }
         }
     }
 
-    #[inline(always)]
-    async fn connection_io_task_main(self: Arc<Self>, connection: &Arc<Connection>, mut reader: BufReader<OwnedReadHalf>) -> std::io::Result<()> {
-        let mut buf: Vec<u8> = Vec::new();
-        buf.resize(4096, 0);
-
-        let mut anti_loopback_challenge_sent = [0_u8; 64];
-        let mut challenge_sent = [0_u8; 64];
-        self.host.get_secure_random(&mut anti_loopback_challenge_sent);
-        self.host.get_secure_random(&mut challenge_sent);
-        connection.send_obj(MESSAGE_TYPE_INIT, &msg::Init {
-            anti_loopback_challenge: &anti_loopback_challenge_sent,
-            challenge: &challenge_sent,
-            domain: self.datastore.domain().to_string(),
-            key_size: D::KEY_SIZE as u16,
-            max_value_size: D::MAX_VALUE_SIZE as u64,
-            node_name: self.host.name().map(|n| n.to_string()),
-            node_contact: self.host.contact().map(|c| c.to_string()),
-            locally_bound_port: self.bind_address.port(),
-            explicit_ipv4: None,
-            explicit_ipv6: None
-        }, ms_monotonic()).await?;
-
-        let mut init_received = false;
-        loop {
-            reader.read_exact(&mut buf.as_mut_slice()[0..1]).await?;
-            let message_type = unsafe { *buf.get_unchecked(0) };
-            let message_size = varint::read_async(&mut reader).await?;
-            let header_size = 1 + message_size.1;
-            let message_size = message_size.0;
-            if message_size > (D::MAX_VALUE_SIZE + ((D::KEY_SIZE + 10) * 256) + 65536) as u64 {
-                return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "message too large"));
-            }
-
-            let now = ms_monotonic();
-            connection.last_receive_time.store(now, Ordering::Relaxed);
-
-            match message_type {
-
-                MESSAGE_TYPE_INIT => {
-                    if init_received {
-                        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "duplicate init"));
-                    }
-
-                    let msg: msg::Init = connection.read_obj(&mut reader, &mut buf, message_size as usize).await?;
-
-                    if !msg.domain.as_str().eq(self.datastore.domain()) {
-                        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("data set domain mismatch: '{}' != '{}'", msg.domain, self.datastore.domain())));
-                    }
-                    if msg.key_size != D::KEY_SIZE as u16 || msg.max_value_size > D::MAX_VALUE_SIZE as u64 {
-                        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "data set key/value sizing mismatch"));
-                    }
-
-                    let (anti_loopback_response, challenge_response) = {
-                        let mut info = connection.info.lock().await;
-                        info.node_name = msg.node_name.clone();
-                        info.node_contact = msg.node_contact.clone();
-                        let _ = msg.explicit_ipv4.map(|pv4| {
-                            info.explicit_addresses.push(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(pv4.ip), pv4.port)));
-                        });
-                        let _ = msg.explicit_ipv6.map(|pv6| {
-                            info.explicit_addresses.push(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from(pv6.ip), pv6.port, 0, 0)));
-                        });
-
-                        let challenge_response = self.host.authenticate(&info, msg.challenge);
-                        if challenge_response.is_none() {
-                            return Err(std::io::Error::new(std::io::ErrorKind::Other, "authenticate() returned None, connection dropped"));
-                        }
-                        (H::hmac_sha512(&self.anti_loopback_secret, msg.anti_loopback_challenge), challenge_response.unwrap())
-                    };
-
-                    connection.send_obj(MESSAGE_TYPE_INIT_RESPONSE, &msg::InitResponse {
-                        anti_loopback_response: &anti_loopback_response,
-                        challenge_response: &challenge_response
-                    }, now).await?;
-
-                    init_received = true;
-                },
-
-                MESSAGE_TYPE_INIT_RESPONSE => {
-                    let msg: msg::InitResponse = connection.read_obj(&mut reader, &mut buf, message_size as usize).await?;
-
-                    let mut info = connection.info.lock().await;
-                    if info.initialized {
-                        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "duplicate init response"));
-                    }
-                    info.initialized = true;
-                    let info = info.clone();
-
-                    if msg.anti_loopback_response.eq(&H::hmac_sha512(&self.anti_loopback_secret, &anti_loopback_challenge_sent)) {
-                        return Err(std::io::Error::new(std::io::ErrorKind::Other, "rejected connection to self"));
-                    }
-                    if !self.host.authenticate(&info, &challenge_sent).map_or(false, |cr| msg.challenge_response.eq(&cr)) {
-                        return Err(std::io::Error::new(std::io::ErrorKind::Other, "challenge/response authentication failed"));
-                    }
-
-                    self.host.on_connect(&info);
-                },
-
-                _ => {
-                    // Skip messages that aren't recognized or don't need to be parsed.
-                    let mut remaining = message_size as usize;
-                    while remaining > 0 {
-                        let s = remaining.min(buf.len());
-                        reader.read_exact(&mut buf.as_mut_slice()[0..s]).await?;
-                        remaining -= s;
-                    }
-                }
-
-            }
-
-            connection.bytes_received.fetch_add((header_size as u64) + message_size, Ordering::Relaxed);
+    /// Initiate an outgoing connection with a deadline based timeout.
+    async fn connect(self: Arc<Self>, address: &SocketAddr, deadline: Instant) -> std::io::Result<bool> {
+        self.host.on_connect_attempt(address);
+        let stream = if address.is_ipv4() { TcpSocket::new_v4() } else { TcpSocket::new_v6() }?;
+        configure_tcp_socket(&stream)?;
+        stream.bind(self.bind_address.clone())?;
+        let stream = tokio::time::timeout_at(deadline, stream.connect(address.clone())).await;
+        if stream.is_ok() {
+            Ok(self.connection_start(address.clone(), stream.unwrap()?, false).await)
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "connect timed out"))
         }
     }
 
+    /// Sets up and spawns the task for a new TCP connection whether inbound or outbound.
     async fn connection_start(self: &Arc<Self>, address: SocketAddr, stream: TcpStream, inbound: bool) -> bool {
         let mut ok = false;
         let _ = self.connections.lock().await.entry(address.clone()).or_insert_with(|| {
@@ -415,7 +330,8 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                     node_contact: None,
                     remote_address: address.clone(),
                     explicit_addresses: Vec::new(),
-                    connect_time: SystemTime::now(),
+                    connect_time: ms_since_epoch(),
+                    connect_instant: ms_monotonic(),
                     inbound,
                     initialized: false
                 }),
@@ -431,25 +347,322 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
         ok
     }
 
-    async fn connect(self: Arc<Self>, address: &SocketAddr, deadline: Instant) -> std::io::Result<bool> {
-        self.host.on_connect_attempt(address);
-        let stream = if address.is_ipv4() { TcpSocket::new_v4() } else { TcpSocket::new_v6() }?;
-        configure_tcp_socket(&stream)?;
-        stream.bind(self.bind_address.clone())?;
-        let stream = tokio::time::timeout_at(deadline, stream.connect(address.clone())).await;
-        if stream.is_ok() {
-            Ok(self.connection_start(address.clone(), stream.unwrap()?, false).await)
-        } else {
-            Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "connect timed out"))
+    /// Main I/O task launched for each connection.
+    ///
+    /// This handles reading from the connection and reacting to what it sends. Killing this
+    /// task is done when the connection is closed.
+    async fn connection_io_task_main(self: Arc<Self>, connection: &Arc<Connection>, mut reader: BufReader<OwnedReadHalf>) -> std::io::Result<()> {
+        let mut anti_loopback_challenge_sent = [0_u8; 64];
+        let mut domain_challenge_sent = [0_u8; 64];
+        let mut auth_challenge_sent = [0_u8; 64];
+        self.host.get_secure_random(&mut anti_loopback_challenge_sent);
+        self.host.get_secure_random(&mut domain_challenge_sent);
+        self.host.get_secure_random(&mut auth_challenge_sent);
+        connection.send_obj(MESSAGE_TYPE_INIT, &msg::Init {
+            anti_loopback_challenge: &anti_loopback_challenge_sent,
+            domain_challenge: &domain_challenge_sent,
+            auth_challenge: &auth_challenge_sent,
+            node_name: self.host.name().map(|n| n.to_string()),
+            node_contact: self.host.contact().map(|c| c.to_string()),
+            locally_bound_port: self.bind_address.port(),
+            explicit_ipv4: None,
+            explicit_ipv6: None
+        }, ms_monotonic()).await?;
+
+        let mut initialized = false;
+        let background_tasks = AsyncTaskReaper::new();
+        let mut init_received = false;
+        let mut buf: Vec<u8> = Vec::new();
+        buf.resize(4096, 0);
+        loop {
+            let message_type = reader.read_u8().await?;
+            let message_size = varint::read_async(&mut reader).await?;
+            let header_size = 1 + message_size.1;
+            let message_size = message_size.0;
+            if message_size > (D::MAX_VALUE_SIZE + ((D::KEY_SIZE + 10) * 256) + 65536) as u64 {
+                return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "message too large"));
+            }
+
+            let now = ms_monotonic();
+            connection.last_receive_time.store(now, Ordering::Relaxed);
+
+            match message_type {
+
+                MESSAGE_TYPE_INIT => {
+                    if init_received {
+                        return Err(std::io::Error::new(std::io::ErrorKind::Other, "duplicate init"));
+                    }
+
+                    let msg: msg::Init = connection.read_obj(&mut reader, &mut buf, message_size as usize).await?;
+                    let (anti_loopback_response, domain_challenge_response, auth_challenge_response) = {
+                        let mut info = connection.info.lock().await;
+                        info.node_name = msg.node_name.clone();
+                        info.node_contact = msg.node_contact.clone();
+                        let _ = msg.explicit_ipv4.map(|pv4| {
+                            info.explicit_addresses.push(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(pv4.ip), pv4.port)));
+                        });
+                        let _ = msg.explicit_ipv6.map(|pv6| {
+                            info.explicit_addresses.push(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from(pv6.ip), pv6.port, 0, 0)));
+                        });
+
+                        let auth_challenge_response = self.host.authenticate(&info, msg.auth_challenge);
+                        if auth_challenge_response.is_none() {
+                            return Err(std::io::Error::new(std::io::ErrorKind::Other, "authenticate() returned None, connection dropped"));
+                        }
+                        (
+                            H::hmac_sha512(&self.anti_loopback_secret, msg.anti_loopback_challenge),
+                            H::hmac_sha512(&H::sha512(&[self.datastore.domain().as_bytes()]), msg.domain_challenge),
+                            auth_challenge_response.unwrap()
+                        )
+                    };
+
+                    connection.send_obj(MESSAGE_TYPE_INIT_RESPONSE, &msg::InitResponse {
+                        anti_loopback_response: &anti_loopback_response,
+                        domain_response: &domain_challenge_response,
+                        auth_response: &auth_challenge_response
+                    }, now).await?;
+
+                    init_received = true;
+                },
+
+                MESSAGE_TYPE_INIT_RESPONSE => {
+                    let msg: msg::InitResponse = connection.read_obj(&mut reader, &mut buf, message_size as usize).await?;
+
+                    let mut info = connection.info.lock().await;
+                    if info.initialized {
+                        return Err(std::io::Error::new(std::io::ErrorKind::Other, "duplicate init response"));
+                    }
+                    info.initialized = true;
+                    let info = info.clone();
+
+                    if msg.anti_loopback_response.eq(&H::hmac_sha512(&self.anti_loopback_secret, &anti_loopback_challenge_sent)) {
+                        return Err(std::io::Error::new(std::io::ErrorKind::Other, "rejected connection to self"));
+                    }
+                    if msg.domain_response.eq(&H::hmac_sha512(&H::sha512(&[self.datastore.domain().as_bytes()]), &domain_challenge_sent)) {
+                        return Err(std::io::Error::new(std::io::ErrorKind::Other, "domain mismatch"));
+                    }
+                    if !self.host.authenticate(&info, &auth_challenge_sent).map_or(false, |cr| msg.auth_response.eq(&cr)) {
+                        return Err(std::io::Error::new(std::io::ErrorKind::Other, "challenge/response authentication failed"));
+                    }
+
+                    self.host.on_connect(&info);
+                    initialized = true;
+                },
+
+                _ => {
+                    if !initialized {
+                        return Err(std::io::Error::new(std::io::ErrorKind::Other, "init exchange must be completed before other messages are sent"));
+                    }
+
+                    match message_type {
+
+                        MESSAGE_TYPE_STATUS => {
+                            let msg: msg::Status = connection.read_obj(&mut reader, &mut buf, message_size as usize).await?;
+                            self.connection_request_summary(connection, msg.total_record_count, now, msg.reference_time).await?;
+                        },
+
+                        MESSAGE_TYPE_GET_SUMMARY => {
+                            //let msg: msg::GetSummary = connection.read_obj(&mut reader, &mut buf, message_size as usize).await?;
+                        },
+
+                        MESSAGE_TYPE_SUMMARY => {
+                            let mut remaining = message_size as isize;
+
+                            // Read summary header.
+                            let summary_header_size = varint::read_async(&mut reader).await?;
+                            remaining -= summary_header_size.1 as isize;
+                            let summary_header_size = summary_header_size.0;
+                            if (summary_header_size as i64) > (remaining as i64) {
+                                return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid summary header"));
+                            }
+                            let summary_header: msg::SummaryHeader = connection.read_obj(&mut reader, &mut buf, summary_header_size as usize).await?;
+                            remaining -= summary_header_size as isize;
+
+                            // Read and evaluate summary that we were sent.
+                            match summary_header.summary_type {
+                                SUMMARY_TYPE_KEYS => {
+                                    self.connection_receive_and_process_remote_hash_list(
+                                        connection,
+                                        remaining,
+                                        &mut reader,
+                                        now,
+                                        summary_header.reference_time,
+                                        &summary_header.prefix[0..summary_header.prefix.len().min((summary_header.prefix_bits / 8) as usize)]).await?;
+                                },
+                                SUMMARY_TYPE_IBLT => {
+                                    //let summary = IBLT::new_from_reader(&mut reader, remaining as usize).await?;
+                                },
+                                _ => {} // ignore unknown summary types
+                            }
+
+                            // Request another summary if needed, keeping a ping-pong game going in a tight loop until synced.
+                            self.connection_request_summary(connection, summary_header.total_record_count, now, summary_header.reference_time).await?;
+                        },
+
+                        MESSAGE_TYPE_HAVE_RECORDS => {
+                            let mut remaining = message_size as isize;
+                            let reference_time = varint::read_async(&mut reader).await?;
+                            remaining -= reference_time.1 as isize;
+                            if remaining <= 0 {
+                                return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid message"));
+                            }
+                            self.connection_receive_and_process_remote_hash_list(connection, remaining, &mut reader, now, reference_time.0 as i64, &[]).await?
+                        },
+
+                        MESSAGE_TYPE_GET_RECORDS => {
+                        },
+
+                        MESSAGE_TYPE_RECORD => {
+                            let value = connection.read_msg(&mut reader, &mut buf, message_size as usize).await?;
+                            if value.len() > D::MAX_VALUE_SIZE {
+                                return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "value larger than MAX_VALUE_SIZE"));
+                            }
+                            let key = H::sha512(&[value]);
+                            match self.datastore.store(&key, value) {
+                                StoreResult::Ok(reference_time) => {
+                                    let mut have_records_msg = [0_u8; 2 + 10 + ANNOUNCE_HASH_BYTES];
+                                    let mut msg_len = varint::encode(&mut have_records_msg, reference_time as u64);
+                                    have_records_msg[msg_len] = ANNOUNCE_HASH_BYTES as u8;
+                                    msg_len += 1;
+                                    have_records_msg[msg_len..(msg_len + ANNOUNCE_HASH_BYTES)].copy_from_slice(&key[..ANNOUNCE_HASH_BYTES]);
+                                    msg_len += ANNOUNCE_HASH_BYTES;
+
+                                    let self2 = self.clone();
+                                    let connection2 = connection.clone();
+                                    background_tasks.spawn(async move {
+                                        let connections = self2.connections.lock().await;
+                                        let mut recipients = Vec::with_capacity(connections.len());
+                                        for (_, c) in connections.iter() {
+                                            if !Arc::ptr_eq(&(c.0), &connection2) {
+                                                recipients.push(c.0.clone());
+                                            }
+                                        }
+                                        drop(connections); // release lock
+
+                                        for c in recipients.iter() {
+                                            // This typically completes instantly due to buffering, as this message is small.
+                                            // Add a small timeout in the case that some connections are stalled. Misses will
+                                            // not impact the overall network much.
+                                            let _ = tokio::time::timeout(Duration::from_millis(250), c.send_msg(MESSAGE_TYPE_HAVE_RECORDS, &have_records_msg[..msg_len], now)).await;
+                                        }
+                                    });
+                                },
+                                StoreResult::Rejected => {
+                                    return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid datum received"));
+                                },
+                                _ => {} // duplicate or ignored values are just... ignored
+                            }
+                        },
+
+                        _ => {
+                            // Skip messages that aren't recognized or don't need to be parsed.
+                            let mut remaining = message_size as usize;
+                            while remaining > 0 {
+                                let s = remaining.min(buf.len());
+                                reader.read_exact(&mut buf.as_mut_slice()[0..s]).await?;
+                                remaining -= s;
+                            }
+                        }
+
+                    }
+                }
+            }
+
+            connection.bytes_received.fetch_add((header_size as u64) + message_size, Ordering::Relaxed);
         }
+    }
+
+    /// Request a summary if needed, or do nothing if not.
+    ///
+    /// This is where all the logic lives that determines whether to request summaries, choosing a
+    /// prefix, etc. It's called when the remote node tells us its total record count with an
+    /// associated reference time, which happens in status announcements and in summaries.
+    async fn connection_request_summary(&self, connection: &Arc<Connection>, total_record_count: u64, now: i64, reference_time: i64) -> std::io::Result<()> {
+        let my_total_record_count = self.datastore.total_count();
+        if my_total_record_count < total_record_count {
+            // Figure out how many bits need to be in a randomly chosen prefix to choose a slice of
+            // the data set such that the set difference should be around 4096 records. This assumes
+            // random distribution, which should be mostly maintained by probing prefixes at random.
+            let prefix_bits = ((total_record_count - my_total_record_count) as f64) / 4096.0;
+            let prefix_bits = if prefix_bits > 1.0 {
+                (prefix_bits.log2().ceil() as usize).min(64)
+            } else {
+                0 as usize
+            };
+            let prefix_bytes = (prefix_bits / 8) + (((prefix_bits % 8) != 0) as usize);
+
+            // Generate a random prefix of this many bits (to the nearest byte).
+            let mut prefix = [0_u8; 64];
+            self.host.get_secure_random(&mut prefix[..prefix_bytes]);
+
+            // Request a set summary for this prefix, providing our own count for this prefix so
+            // the remote can decide whether to send something like an IBLT or just hashes.
+            let (local_range_start, local_range_end) = range_from_prefix(&prefix, prefix_bits);
+            connection.send_obj(MESSAGE_TYPE_GET_SUMMARY, &msg::GetSummary {
+                reference_time,
+                prefix: &prefix[..prefix_bytes],
+                prefix_bits: prefix_bits as u8,
+                record_count: self.datastore.count(reference_time, &local_range_start, &local_range_end)
+            }, now).await
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Read a stream of record hashes (or hash prefixes) from a connection and request records we don't have.
+    async fn connection_receive_and_process_remote_hash_list(&self, connection: &Arc<Connection>, mut remaining: isize, reader: &mut BufReader<OwnedReadHalf>, now: i64, reference_time: i64, common_prefix: &[u8]) -> std::io::Result<()> {
+        if remaining > 0 {
+            // Hash list is prefaced by the number of bytes in each hash, since whole 64 byte hashes do not have to be sent.
+            let prefix_entry_size = reader.read_u8().await? as usize;
+            let total_prefix_size = common_prefix.len() + prefix_entry_size;
+
+            if prefix_entry_size > 0 && total_prefix_size <= 64 {
+                remaining -= 1;
+                if remaining >= (prefix_entry_size as isize) {
+                    let mut get_records_msg: Vec<u8> = Vec::with_capacity(((remaining as usize) / prefix_entry_size) * total_prefix_size);
+                    varint::write(&mut get_records_msg, reference_time as u64)?;
+                    get_records_msg.push(total_prefix_size as u8);
+
+                    let mut key_prefix_buf = [0_u8; 64];
+                    key_prefix_buf[..common_prefix.len()].copy_from_slice(common_prefix);
+
+                    while remaining >= (prefix_entry_size as isize) {
+                        remaining -= prefix_entry_size as isize;
+                        reader.read_exact(&mut key_prefix_buf[common_prefix.len()..total_prefix_size]).await?;
+
+                        if if total_prefix_size < 64 {
+                            let (s, e) = range_from_prefix(&key_prefix_buf[..total_prefix_size], total_prefix_size * 8);
+                            self.datastore.count(reference_time, &s, &e) == 0
+                        } else {
+                            !self.datastore.contains(reference_time, &key_prefix_buf)
+                        } {
+                            let _ = get_records_msg.write_all(&key_prefix_buf[..total_prefix_size]);
+                        }
+                    }
+
+                    if remaining == 0 {
+                        return connection.send_msg(MESSAGE_TYPE_GET_RECORDS, get_records_msg.as_slice(), now).await;
+                    }
+                }
+            }
+        }
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid hash list"));
     }
 }
 
 impl<D: DataStore + 'static, H: Host + 'static> Drop for NodeInternal<D, H> {
     fn drop(&mut self) {
-        for (_, c) in self.connections.blocking_lock().drain() {
-            c.1.map(|c| c.abort());
-        }
+        let _ = tokio::runtime::Handle::try_current().map_or_else(|_| {
+            for (_, c) in self.connections.blocking_lock().drain() {
+                c.1.map(|c| c.abort());
+            }
+        }, |h| {
+            let _ = h.block_on(async {
+                for (_, c) in self.connections.lock().await.drain() {
+                    c.1.map(|c| c.abort());
+                }
+            });
+        });
     }
 }
 
@@ -464,11 +677,18 @@ struct Connection {
 }
 
 impl Connection {
-    async fn send(&self, data: &[u8], now: i64) -> std::io::Result<()> {
-        self.writer.lock().await.write_all(data).await?;
-        self.last_send_time.store(now, Ordering::Relaxed);
-        self.bytes_sent.fetch_add(data.len() as u64, Ordering::Relaxed);
-        Ok(())
+    async fn send_msg(&self, message_type: u8, data: &[u8], now: i64) -> std::io::Result<()> {
+        let mut type_and_size = [0_u8; 16];
+        type_and_size[0] = message_type;
+        let tslen = 1 + varint::encode(&mut type_and_size[1..], data.len() as u64) as usize;
+        let total_size = tslen + data.len();
+        if self.writer.lock().await.write_vectored(&[IoSlice::new(&type_and_size[..tslen]), IoSlice::new(data)]).await? == total_size {
+            self.last_send_time.store(now, Ordering::Relaxed);
+            self.bytes_sent.fetch_add(total_size as u64, Ordering::Relaxed);
+            Ok(())
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "write error"))
+        }
     }
 
     async fn send_obj<O: Serialize>(&self, message_type: u8, obj: &O, now: i64) -> std::io::Result<()> {
