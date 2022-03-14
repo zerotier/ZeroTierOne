@@ -282,6 +282,22 @@ public:
 	bool fromString(const char *str);
 
 	/**
+	 * Deserialize an Identity from a given secret.
+	 *
+	 * Calculates the SHA512 hash of the given secret. This hash is
+	 * used as the private key. However, not all private keys are valid
+	 * e.g. the hashcash criteria need to be met. If the keypair does
+	 * not fulfill the hashcash criteria, the next valid keypair
+	 * meeting this condition will be returned. This function will
+	 * always return the same Identity for the same given secret.
+	 *
+	 * @param secret secret to be used
+	 * @param len length of secret
+	 * @return True if deserialization appears successful
+	 */
+	bool fromSecret(const char *secret,unsigned int len);
+
+	/**
 	 * @return C25519 public key
 	 */
 	inline const C25519::Public &publicKey() const { return _publicKey; }

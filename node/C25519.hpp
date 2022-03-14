@@ -74,6 +74,32 @@ public:
 	}
 
 	/**
+	 * Find next valid key pair satisfying a condition
+	 *
+	 * This begins with supplied initial key pair and
+	 * iteratively increments the given private key until cond(kp) returns true.
+	 * This is used to compute key pairs in which the public key, its hash
+	 * or some other aspect of it satisfies some condition, such as for a
+	 * hashcash criteria.
+	 *
+	 * @param cond Condition function or function object
+	 * @param kp Initial key pair that is used to find the next valid key pair
+	 * @return Key pair where cond(kp) returns true
+	 * @tparam F Type of 'cond'
+	 */
+	template<typename F>
+	static inline Pair generateNextSatisfyingKeypairFromPrivateKey(F cond, Pair& kp)
+	{
+		void *const priv = (void *)kp.priv.data;
+		_calcPubED(kp); // do Ed25519 key -- bytes 32-63 of pub and priv
+		do {
+			++(((uint64_t *)priv)[1]);
+			--(((uint64_t *)priv)[2]);
+			_calcPubDH(kp); // keep regenerating bytes 0-31 until satisfied
+		} while (!cond(kp));
+		return kp;
+	}
+	/**
 	 * Perform C25519 ECC key agreement
 	 *
 	 * Actual key bytes are generated from one or more SHA-512 digests of

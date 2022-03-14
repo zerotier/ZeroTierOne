@@ -141,6 +141,27 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 	return buf;
 }
 
+bool Identity::fromSecret(const char *secret,unsigned int len)
+{
+	unsigned char digest[64];
+	SHA512(digest,secret,len);
+	// digest will now be used as the private key.
+	C25519::Pair kp{};
+	memcpy(kp.priv.data,digest,64);
+	char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
+	do {
+		kp = C25519::generateNextSatisfyingKeypairFromPrivateKey(_Identity_generate_cond(digest,genmem), kp);
+		_address.setTo(digest + 59,ZT_ADDRESS_LENGTH); // last 5 bytes are address
+	} while (_address.isReserved());
+
+	_publicKey = kp.pub;
+	if (!_privateKey)
+		_privateKey = new C25519::Private();
+	*_privateKey = kp.priv;
+
+	return true;
+}
+
 bool Identity::fromString(const char *str)
 {
 	if (!str) {
