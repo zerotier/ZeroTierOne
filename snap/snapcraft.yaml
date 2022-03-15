@@ -64,13 +64,12 @@ layout:
 
 parts:
   one:
-    plugin: make
-    source: .
-    build-packages:
-      - build-essential
-      - libc++-dev
-    make-parameters:
-      - CXX=g++
+    source: ./
+    plugin: dump
+    organize:
+      zerotier-one : usr/sbin/zerotier-one
+      zerotier-cli : usr/sbin/zerotier-cli
+      zerotier-idtool : usr/sbin/zerotier-idtool
     filesets:
       binaries:
         - usr/sbin/zerotier-one
