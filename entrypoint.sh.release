@@ -58,6 +58,12 @@ do
 
   zerotier-cli join "$i"
 
+  if [ $? -ne 0 ]
+  then
+    echo >&2 "ZeroTier could not be started; did you pass the right arguments to \`docker run\`?"
+    exit 1
+  fi
+
   while [ "$(zerotier-cli get $i status)" != "OK" ]
   do 
     echo "joining $i failed (are they added in central?); trying again in 1s"
