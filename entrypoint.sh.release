@@ -1,7 +1,7 @@
 #!/bin/sh
 
 grepzt() {
-  [ ! -n "$(cat /var/lib/zerotier-one/zerotier-one.pid)" -a -d "/proc/$(cat /var/lib/zerotier-one/zerotier-one.pid)" ]
+  [ -f /var/lib/zerotier-one/zerotier-one.pid -a -n "$(cat /var/lib/zerotier-one/zerotier-one.pid)" -a -d "/proc/$(cat /var/lib/zerotier-one/zerotier-one.pid)" ]
   return $?
 }
 
@@ -46,6 +46,7 @@ nohup /usr/sbin/zerotier-one &
 while ! grepzt
 do
   echo "zerotier hasn't started, waiting a second"
+  tail -n 10 nohup.out
   sleep 1
 done
 
@@ -55,9 +56,11 @@ for i in "$@"
 do
   echo "joining $i"
 
-  while ! zerotier-cli join "$i"
+  zerotier-cli join "$i"
+
+  while [ "$(zerotier-cli get $i status)" != "OK" ]
   do 
-    echo "joining $i failed; trying again in 1s"
+    echo "joining $i failed (are they added in central?); trying again in 1s"
     sleep 1
   done
 done
