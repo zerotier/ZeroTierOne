@@ -1,7 +1,7 @@
 #!/bin/sh
 
 grepzt() {
-  [ ! -n "$(cat /var/lib/zerotier-one/zerotier-one.pid)" -a -d "/proc/$(cat /var/lib/zerotier-one/zerotier-one.pid)" ]
+  [ -n "$(cat /var/lib/zerotier-one/zerotier-one.pid)" ] && [ -d "/proc/$(cat /var/lib/zerotier-one/zerotier-one.pid)" ]
   return $?
 }
 
@@ -41,7 +41,7 @@ killzerotier() {
 trap killzerotier INT TERM
 
 echo "starting zerotier"
-nohup /usr/sbin/zerotier-one &
+nohup /usr/sbin/zerotier-one -d < /dev/null > /dev/stdout 2>&1
 
 while ! grepzt
 do
