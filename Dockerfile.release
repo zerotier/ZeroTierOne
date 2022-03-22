@@ -13,7 +13,10 @@ FROM debian:buster
 
 COPY --from=stage zerotier-one.deb .
 
-RUN dpkg -i zerotier-one.deb && rm -f zerotier-one.deb
+RUN apt-get update -qq \
+  && apt-get install -y ./zerotier-one.deb \
+  && rm -rf /var/lib/apt/lists/* \
+  && rm -f zerotier-one.deb
 RUN echo "${VERSION}" >/etc/zerotier-version
 RUN rm -rf /var/lib/zerotier-one
 
