@@ -77,4 +77,8 @@ EOF
 
 chmod +x /healthcheck.sh
 
-sleep infinity
+echo "Sleeping infinitely"
+while true
+do
+  sleep 1
+done
