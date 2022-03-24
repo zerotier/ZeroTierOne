@@ -40,30 +40,35 @@ killzerotier() {
 
 trap killzerotier INT TERM
 
+echo "Configuring networks to join"
+mkdir -p /var/lib/zerotier-one/networks.d
+
+echo "joining networks: $@"
+for i in "$@"
+do
+  echo "Configuring join for $i"
+  touch "/var/lib/zerotier-one/networks.d/${i}.conf"
+done
+
 echo "starting zerotier"
 nohup /usr/sbin/zerotier-one &
 
 while ! grepzt
 do
   echo "zerotier hasn't started, waiting a second"
-  tail -n 10 nohup.out
+
+  if [ -f nohup.out ]
+  then
+    tail -n 10 nohup.out
+  fi
+
   sleep 1
 done
 
-echo "joining networks: $@"
+echo "Ensuring status for networks: $@"
 
 for i in "$@"
 do
-  echo "joining $i"
-
-  zerotier-cli join "$i"
-
-  if [ $? -ne 0 ]
-  then
-    echo >&2 "ZeroTier could not be started; did you pass the right arguments to \`docker run\`?"
-    exit 1
-  fi
-
   while [ "$(zerotier-cli get $i status)" != "OK" ]
   do 
     echo "joining $i failed (are they added in central?); trying again in 1s"
