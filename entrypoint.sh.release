@@ -65,15 +65,16 @@ do
   sleep 1
 done
 
-echo "Ensuring status for networks: $@"
+echo "Writing healthcheck for networks: $@"
 
-for i in "$@"
+cat >/healthcheck.sh <<EOF
+#!/bin/bash
+for i in $@
 do
-  while [ "$(zerotier-cli get $i status)" != "OK" ]
-  do 
-    echo "joining $i failed (are they added in central?); trying again in 1s"
-    sleep 1
-  done
+  [ "\$(zerotier-cli get \$i status)" = "OK" ] || exit 1
 done
+EOF
+
+chmod +x /healthcheck.sh
 
 sleep infinity
