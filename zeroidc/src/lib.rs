@@ -241,9 +241,10 @@ impl ZeroIDC {
                                                             }
 
                                                             let access_token = res.access_token();
-                                                            let at = access_token.secret();
+                                                            let idt = &id_token.to_string();
 
-                                                            let t: Result<Token<jwt::Header, jwt::Claims, jwt::Unverified<'_>>, jwt::Error>= Token::parse_unverified(at);
+                                                            let t: Result<Token<jwt::Header, jwt::Claims, jwt::Unverified<'_>>, jwt::Error> =
+                                                                 Token::parse_unverified(idt);
                                                             
                                                             if let Ok(t) = t {
                                                                 let claims = t.claims().registered.clone();
