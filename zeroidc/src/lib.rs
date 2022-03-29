@@ -203,7 +203,6 @@ impl ZeroIDC {
                             }
 
                             #[cfg(debug_assertions)] {
-                                println!("now: {:?}\nexp: {:?}", now, exp);
                                 println!("Refresh Token: {}", refresh_token.secret());
                             }
 
