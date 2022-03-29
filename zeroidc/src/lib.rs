@@ -203,6 +203,7 @@ impl ZeroIDC {
                             }
 
                             #[cfg(debug_assertions)] {
+                                println!("now: {:?}\nexp: {:?}", now, exp);
                                 println!("Refresh Token: {}", refresh_token.secret());
                             }
 
@@ -519,15 +520,17 @@ impl ZeroIDC {
                                     println!("Status: {}", res.status());
                                 }
 
-                                let at = tok.access_token().secret();
+                                let idt = &id_token.to_string();
 
-                                let t: Result<Token<jwt::Header, jwt::Claims, jwt::Unverified<'_>>, jwt::Error>= Token::parse_unverified(at);
+                                let t: Result<Token<jwt::Header, jwt::Claims, jwt::Unverified<'_>>, jwt::Error>= 
+                                    Token::parse_unverified(idt);
                                                                 
                                 if let Ok(t) = t {
                                     let claims = t.claims().registered.clone();
                                     match claims.expiration {
                                         Some(exp) => {
                                             i.exp_time = exp;
+                                            println!("Set exp time to: {:?}", i.exp_time);
                                         },
                                         None => {
                                             panic!("expiration is None.  This shouldn't happen")
