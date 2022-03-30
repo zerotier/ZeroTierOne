@@ -1,11 +1,12 @@
 ZeroTier Release Notes
 ======
 
-# 2022-03-21 -- Version 1.8.7
+# 2022-03-30 -- Version 1.8.7
 
- * Fix for dependency installations in Windows MSI package
- * Fix for privilege escalation in desktop UI when the user is not a current super-user
- * Bug fix in local OIDC / SSO support
+ * Fix for dependency installations in Windows MSI package.
+ * Fix for desktop UI setup when run by a non-super-user.
+ * Bug fix in local OIDC / SSO support for auth0 and other providers.
+ * Other minor fixes for e.g. old Linux distributions.
 
 # 2022-03-04 -- Version 1.8.6
 
