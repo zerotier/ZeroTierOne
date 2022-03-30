@@ -147,7 +147,46 @@ size_t curlResponseWrite(void *ptr, size_t size, size_t nmemb, std::string *data
 }
 #endif
 
+
 namespace ZeroTier {
+
+const char *ssoResponseTemplate = "<html>\
+<head>\
+<style type=\"text/css\">\
+html,body {\
+	background: #eeeeee;\
+	margin: 0;\
+	padding: 0;\
+	font-family: \"Helvetica\";\
+	font-weight: bold;\
+	font-size: 12pt;\
+	height: 100%;\
+	width: 100%;\
+}\
+div.icon {\
+	background: #ffb354;\
+	color: #000000;\
+	font-size: 120pt;\
+	border-radius: 2.5rem;\
+	display: inline-block;\
+	width: 1.3em;\
+	height: 1.3em;\
+	padding: 0;\
+	margin: 15;\
+	line-height: 1.4em;\
+	vertical-align: middle;\
+	text-align: center;\
+}\
+</style>\
+</head>\
+<body>\
+<br><br><br><br><br><br>\
+<center>\
+<div class=\"icon\">&#x23c1;</div>\
+<div class=\"text\">%s</div>\
+</center>\
+</body>\
+</html>";
 
 // Configured networks
 class NetworkState
@@ -1668,8 +1707,21 @@ public:
 				}
 #if OIDC_SUPPORTED
 			} else if (ps[0] == "sso") {
+				char resBuf[4096] = {0};
+				const char *error = zeroidc::zeroidc_get_url_param_value("error", path.c_str());
+				if (error != nullptr) {
+					const char *desc = zeroidc::zeroidc_get_url_param_value("error_description", path.c_str());
+					scode = 500;
+					char errBuff[256] = {0};
+					sprintf(errBuff, "ERROR %s: %s", error, desc);
+					sprintf(resBuf, ssoResponseTemplate, errBuff);
+					responseBody = std::string(resBuf);
+					responseContentType = "text/html";
+					return scode;
+				} 
+
 				// SSO redirect handling
-								const char* state = zeroidc::zeroidc_get_url_param_value("state", path.c_str());
+				const char* state = zeroidc::zeroidc_get_url_param_value("state", path.c_str());
 				const char* nwid = zeroidc::zeroidc_network_id_from_state(state);
 				
 				const uint64_t id = Utils::hexStrToU64(nwid);
@@ -1679,43 +1731,9 @@ public:
 					const char* code = zeroidc::zeroidc_get_url_param_value("code", path.c_str());
 					ns.doTokenExchange(code);
 					scode = 200;
-					responseBody = "<html>\
-<head>\
-<style type=\"text/css\">\
-html,body {\
-	background: #eeeeee;\
-	margin: 0;\
-	padding: 0;\
-	font-family: \"Helvetica\";\
-	font-weight: bold;\
-	font-size: 12pt;\
-	height: 100%;\
-	width: 100%;\
-}\
-div.icon {\
-	background: #ffb354;\
-	color: #000000;\
-	font-size: 120pt;\
-	border-radius: 2.5rem;\
-	display: inline-block;\
-	width: 1.3em;\
-	height: 1.3em;\
-	padding: 0;\
-	margin: 15;\
-	line-height: 1.4em;\
-	vertical-align: middle;\
-	text-align: center;\
-}\
-</style>\
-</head>\
-<body>\
-<br><br><br><br><br><br>\
-<center>\
-<div class=\"icon\">&#x23c1;</div>\
-<div class=\"text\">Authentication Successful. You may now access the network.</div>\
-</center>\
-</body>\
-</html>";
+					sprintf(resBuf, ssoResponseTemplate, "Authentication Successful. You may now access the network.");
+					responseBody = std::string(resBuf);
+
 					responseContentType = "text/html";
 					return scode;
 				} else {
