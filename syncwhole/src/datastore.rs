@@ -6,21 +6,35 @@
  * https://www.zerotier.com/
  */
 
+/// Size of keys, which is the size of a 512-bit hash. This is a protocol constant.
+pub const KEY_SIZE: usize = 64;
+
+/// Minimum possible key (all zero).
+pub const MIN_KEY: [u8; KEY_SIZE] = [0; KEY_SIZE];
+
+/// Maximum possible key (all 0xff).
+pub const MAX_KEY: [u8; KEY_SIZE] = [0xff; KEY_SIZE];
+
 /// Generate a range of SHA512 hashes from a prefix and a number of bits.
 /// The range will be inclusive and cover all keys under the prefix.
-pub fn range_from_prefix(prefix: &[u8], prefix_bits: usize) -> ([u8; 64], [u8; 64]) {
-    let prefix_bits = prefix_bits.min(prefix.len() * 8).min(64);
-    let mut start = [0_u8; 64];
-    let mut end = [0xff_u8; 64];
+pub fn range_from_prefix(prefix: &[u8], prefix_bits: usize) -> Option<([u8; KEY_SIZE], [u8; KEY_SIZE])> {
+    let mut start = [0_u8; KEY_SIZE];
+    let mut end = [0xff_u8; KEY_SIZE];
+    if prefix_bits > (KEY_SIZE * 8) {
+        return None;
+    }
     let whole_bytes = prefix_bits / 8;
     let remaining_bits = prefix_bits % 8;
+    if prefix.len() < (whole_bytes + ((remaining_bits != 0) as usize)) {
+        return None;
+    }
     start[0..whole_bytes].copy_from_slice(&prefix[0..whole_bytes]);
     end[0..whole_bytes].copy_from_slice(&prefix[0..whole_bytes]);
-    if remaining_bits != 0 && whole_bytes < prefix.len() {
+    if remaining_bits != 0 {
         start[whole_bytes] |= prefix[whole_bytes];
         end[whole_bytes] &= prefix[whole_bytes] | ((0xff_u8).wrapping_shr(remaining_bits as u32));
     }
-    (start, end)
+    return Some((start, end));
 }
 
 /// Result returned by DataStore::load().
@@ -32,15 +46,13 @@ pub enum LoadResult<V: AsRef<[u8]> + Send> {
     NotFound,
 
     /// Supplied reference_time is outside what is available (usually too old).
-    TimeNotAvailable
+    TimeNotAvailable,
 }
 
 /// Result returned by DataStore::store().
 pub enum StoreResult {
     /// Entry was accepted.
-    /// The integer included with Ok is the reference time that should be advertised.
-    /// If this is not a temporally subjective data set then zero can be used.
-    Ok(i64),
+    Ok,
 
     /// Entry was a duplicate of one we already have but was otherwise valid.
     Duplicate,
@@ -49,7 +61,7 @@ pub enum StoreResult {
     Ignored,
 
     /// Entry was rejected as malformed or otherwise invalid (e.g. failed signature check).
-    Rejected
+    Rejected,
 }
 
 /// API to be implemented by the data set we want to replicate.
@@ -73,7 +85,7 @@ pub trait DataStore: Sync + Send {
     type LoadResultValueType: AsRef<[u8]> + Send;
 
     /// Key hash size, always 64 for SHA512.
-    const KEY_SIZE: usize = 64;
+    const KEY_SIZE: usize = KEY_SIZE;
 
     /// Maximum size of a value in bytes.
     const MAX_VALUE_SIZE: usize;
@@ -98,7 +110,7 @@ pub trait DataStore: Sync + Send {
     fn contains(&self, reference_time: i64, key: &[u8]) -> bool {
         match self.load(reference_time, key) {
             LoadResult::Ok(_) => true,
-            _ => false
+            _ => false,
         }
     }
 

@@ -8,18 +8,15 @@
 
 use std::collections::HashMap;
 use std::future::Future;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::SystemTime;
+
 use tokio::task::JoinHandle;
 
 /// Get the real time clock in milliseconds since Unix epoch.
 pub fn ms_since_epoch() -> i64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64
-}
-
-/// Get the current monotonic clock in milliseconds.
-pub fn ms_monotonic() -> i64 {
-    std::time::Instant::now().elapsed().as_millis() as i64
 }
 
 /// Encode a byte slice to a hexadecimal string.
@@ -66,6 +63,28 @@ pub fn splitmix64_inverse(mut x: u64) -> u64 {
     x.to_le()
 }
 
+static mut RANDOM_STATE_0: u64 = 0;
+static mut RANDOM_STATE_1: u64 = 0;
+
+/// Get a non-cryptographic pseudorandom number.
+pub fn random() -> u64 {
+    let (mut s0, mut s1) = unsafe { (RANDOM_STATE_0, RANDOM_STATE_1) };
+    if s0 == 0 {
+        s0 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos() as u64;
+    }
+    if s1 == 0 {
+        s1 = splitmix64(std::process::id() as u64);
+    }
+    let s1_new = xorshift64(s1);
+    s0 = splitmix64(s0.wrapping_add(s1));
+    s1 = s1_new;
+    unsafe {
+        RANDOM_STATE_0 = s0;
+        RANDOM_STATE_1 = s1;
+    };
+    s0
+}
+
 /// Wrapper for tokio::spawn() that aborts tasks not yet completed when it is dropped.
 pub struct AsyncTaskReaper {
     ctr: AtomicUsize,
@@ -74,22 +93,23 @@ pub struct AsyncTaskReaper {
 
 impl AsyncTaskReaper {
     pub fn new() -> Self {
-        Self {
-            ctr: AtomicUsize::new(0),
-            handles: Arc::new(std::sync::Mutex::new(HashMap::new()))
-        }
+        Self { ctr: AtomicUsize::new(0), handles: Arc::new(std::sync::Mutex::new(HashMap::new())) }
     }
 
     /// Spawn a new task.
-    /// Note that currently any output is ignored. This is primarily for background tasks
-    /// that are used similarly to goroutines in Go.
+    ///
+    /// Note that currently any task output is ignored. This is for fire and forget
+    /// background tasks that you want to be collected on loss of scope.
     pub fn spawn<F: Future + Send + 'static>(&self, future: F) {
         let id = self.ctr.fetch_add(1, Ordering::Relaxed);
         let handles = self.handles.clone();
-        self.handles.lock().unwrap().insert(id, tokio::spawn(async move {
-            let _ = future.await;
-            let _ = handles.lock().unwrap().remove(&id);
-        }));
+        self.handles.lock().unwrap().insert(
+            id,
+            tokio::spawn(async move {
+                let _ = future.await;
+                let _ = handles.lock().unwrap().remove(&id);
+            }),
+        );
     }
 }
 

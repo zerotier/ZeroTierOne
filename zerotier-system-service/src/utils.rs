@@ -39,7 +39,6 @@ pub fn ms_monotonic() -> i64 {
 
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 pub fn ms_monotonic() -> i64 {
-    std::time::Instant::now().elapsed().as_millis() as i64
 }
 
 pub fn parse_bool(v: &str) -> Result<bool, String> {

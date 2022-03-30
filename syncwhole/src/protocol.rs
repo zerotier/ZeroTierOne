@@ -6,55 +6,108 @@
  * https://www.zerotier.com/
  */
 
-/// No operation, payload ignored.
-pub const MESSAGE_TYPE_NOP: u8 = 0;
+/// Number of bytes of SHA512 to announce, should be high enough to make collisions virtually impossible.
+pub const ANNOUNCE_KEY_LEN: usize = 24;
 
-/// Sent by both sides of a TCP link when it's established.
-pub const MESSAGE_TYPE_INIT: u8 = 1;
+/// Send SyncStatus this frequently, in milliseconds.
+pub const SYNC_STATUS_PERIOD: i64 = 5000;
 
-/// Reply sent to INIT.
-pub const MESSAGE_TYPE_INIT_RESPONSE: u8 = 2;
+#[derive(Clone, Copy, Eq, PartialEq)]
+#[repr(u8)]
+pub enum MessageType {
+    Nop = 0_u8,
+    Init = 1_u8,
+    InitResponse = 2_u8,
+    HaveRecord = 3_u8,
+    HaveRecords = 4_u8,
+    GetRecords = 5_u8,
+    Record = 6_u8,
+    SyncStatus = 7_u8,
+    SyncRequest = 8_u8,
+    SyncResponse = 9_u8,
+}
 
-/// Sent every few seconds to notify peers of number of records, clock, etc.
-pub const MESSAGE_TYPE_STATUS: u8 = 3;
+impl From<u8> for MessageType {
+    /// Get a type from a byte, returning the Nop type if the byte is out of range.
+    #[inline(always)]
+    fn from(b: u8) -> Self {
+        if b <= 7 {
+            unsafe { std::mem::transmute(b) }
+        } else {
+            Self::Nop
+        }
+    }
+}
 
-/// Get a set summary of a prefix in the data set.
-pub const MESSAGE_TYPE_GET_SUMMARY: u8 = 4;
+impl MessageType {
+    pub fn name(&self) -> &'static str {
+        match *self {
+            Self::Nop => "NOP",
+            Self::Init => "INIT",
+            Self::InitResponse => "INIT_RESPONSE",
+            Self::HaveRecord => "HAVE_RECORD",
+            Self::HaveRecords => "HAVE_RECORDS",
+            Self::GetRecords => "GET_RECORDS",
+            Self::Record => "RECORD",
+            Self::SyncStatus => "SYNC_STATUS",
+            Self::SyncRequest => "SYNC_REQUEST",
+            Self::SyncResponse => "SYNC_RESPONSE",
+        }
+    }
+}
 
-/// Set summary of a prefix.
-pub const MESSAGE_TYPE_SUMMARY: u8 = 5;
+#[derive(Clone, Copy, Eq, PartialEq)]
+#[repr(u8)]
+pub enum SyncResponseType {
+    /// No response, do nothing.
+    None = 0_u8,
 
-/// Payload is a list of keys of records. Usually sent to advertise recently received new records.
-pub const MESSAGE_TYPE_HAVE_RECORDS: u8 = 6;
+    /// Response is a msgpack-encoded HaveRecords message.
+    HaveRecords = 1_u8,
 
-/// Payload is a list of keys of records the sending node wants.
-pub const MESSAGE_TYPE_GET_RECORDS: u8 = 7;
+    /// Response is a series of records prefixed by varint record sizes.
+    Records = 2_u8,
 
-/// Payload is a record, with key being omitted if the data store's KEY_IS_COMPUTED constant is true.
-pub const MESSAGE_TYPE_RECORD: u8 = 8;
+    /// Response is an IBLT set summary.
+    IBLT = 3_u8,
+}
 
-/// Summary type: simple array of keys under the given prefix.
-pub const SUMMARY_TYPE_KEYS: u8 = 0;
+impl From<u8> for SyncResponseType {
+    /// Get response type from a byte, returning None if the byte is out of range.
+    #[inline(always)]
+    fn from(b: u8) -> Self {
+        if b <= 3 {
+            unsafe { std::mem::transmute(b) }
+        } else {
+            Self::None
+        }
+    }
+}
 
-/// An IBLT set summary.
-pub const SUMMARY_TYPE_IBLT: u8 = 1;
-
-/// Number of bytes of each SHA512 hash to announce, request, etc. This is okay to change but 16 is plenty.
-pub const ANNOUNCE_HASH_BYTES: usize = 16;
+impl SyncResponseType {
+    pub fn as_str(&self) -> &'static str {
+        match *self {
+            SyncResponseType::None => "NONE",
+            SyncResponseType::HaveRecords => "HAVE_RECORDS",
+            SyncResponseType::Records => "RECORDS",
+            SyncResponseType::IBLT => "IBLT",
+        }
+    }
+}
 
 pub mod msg {
-    use serde::{Serialize, Deserialize};
+    use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize)]
     pub struct IPv4 {
         pub ip: [u8; 4],
-        pub port: u16
+        pub port: u16,
     }
 
     #[derive(Serialize, Deserialize)]
     pub struct IPv6 {
         pub ip: [u8; 16],
-        pub port: u16
+        pub port: u16,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -72,10 +125,10 @@ pub mod msg {
         pub auth_challenge: &'a [u8],
 
         /// Optional name to advertise for this node.
-        pub node_name: Option<String>,
+        pub node_name: &'a str,
 
         /// Optional contact information for this node, such as a URL or an e-mail address.
-        pub node_contact: Option<String>,
+        pub node_contact: &'a str,
 
         /// Port to which this node has locally bound.
         /// This is used to try to auto-detect whether a NAT is in the way.
@@ -105,63 +158,95 @@ pub mod msg {
         pub auth_response: &'a [u8],
     }
 
-    #[derive(Serialize, Deserialize, Clone)]
-    pub struct Status {
-        /// Total number of records in data set.
-        #[serde(rename = "c")]
-        pub total_record_count: u64,
+    #[derive(Serialize, Deserialize)]
+    pub struct HaveRecords<'a> {
+        /// Length of each key, chosen to ensure uniqueness.
+        #[serde(rename = "l")]
+        pub key_length: usize,
 
-        /// Reference wall clock time in milliseconds since Unix epoch.
-        #[serde(rename = "t")]
-        pub reference_time: i64,
+        /// Keys whose existence is being announced, of 'key_length' length.
+        #[serde(with = "serde_bytes")]
+        #[serde(rename = "k")]
+        pub keys: &'a [u8],
     }
 
-    #[derive(Serialize, Deserialize, Clone)]
-    pub struct GetSummary<'a> {
-        /// Reference wall clock time in milliseconds since Unix epoch.
-        #[serde(rename = "t")]
-        pub reference_time: i64,
+    #[derive(Serialize, Deserialize)]
+    pub struct GetRecords<'a> {
+        /// Length of each key, chosen to ensure uniqueness.
+        #[serde(rename = "l")]
+        pub key_length: usize,
 
-        /// Prefix within key space.
-        #[serde(rename = "p")]
+        /// Keys to retrieve, of 'key_length' bytes in length.
         #[serde(with = "serde_bytes")]
-        pub prefix: &'a [u8],
+        #[serde(rename = "k")]
+        pub keys: &'a [u8],
+    }
 
-        /// Length of prefix in bits (trailing bits in byte array are ignored).
-        #[serde(rename = "b")]
-        pub prefix_bits: u8,
-
-        /// Number of records in this range the requesting node already has, used to choose summary type.
-        #[serde(rename = "r")]
+    #[derive(Serialize, Deserialize)]
+    pub struct SyncStatus {
+        /// Total number of records this node has in its data store.
+        #[serde(rename = "c")]
         pub record_count: u64,
+
+        /// Sending node's system clock.
+        #[serde(rename = "t")]
+        pub clock: u64,
     }
 
-    #[derive(Serialize, Deserialize, Clone)]
-    pub struct SummaryHeader<'a> {
-        /// Total number of records in data set, for easy rapid generation of next query.
-        #[serde(rename = "c")]
-        pub total_record_count: u64,
-
-        /// Reference wall clock time in milliseconds since Unix epoch.
-        #[serde(rename = "t")]
-        pub reference_time: i64,
-
-        /// Random salt value used by some summary types.
-        #[serde(rename = "x")]
+    #[derive(Serialize, Deserialize)]
+    pub struct SyncRequest<'a> {
+        /// Query mask, a random string of KEY_SIZE bytes.
         #[serde(with = "serde_bytes")]
-        pub salt: &'a [u8],
+        #[serde(rename = "q")]
+        pub query_mask: &'a [u8],
 
-        /// Prefix within key space.
-        #[serde(rename = "p")]
-        #[serde(with = "serde_bytes")]
-        pub prefix: &'a [u8],
-
-        /// Length of prefix in bits (trailing bits in byte array are ignored).
+        /// Number of bits to match as a prefix in query_mask (0 for entire data set).
         #[serde(rename = "b")]
-        pub prefix_bits: u8,
+        pub query_mask_bits: u8,
 
-        /// Type of summary that follows this header.
+        /// Number of records requesting node already holds under query mask prefix.
+        #[serde(rename = "c")]
+        pub record_count: u64,
+
+        /// Sender's reference time.
+        #[serde(rename = "t")]
+        pub reference_time: u64,
+
+        /// Random salt
         #[serde(rename = "s")]
-        pub summary_type: u8,
+        pub salt: u64,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct SyncResponse<'a> {
+        /// Query mask, a random string of KEY_SIZE bytes.
+        #[serde(with = "serde_bytes")]
+        #[serde(rename = "q")]
+        pub query_mask: &'a [u8],
+
+        /// Number of bits to match as a prefix in query_mask (0 for entire data set).
+        #[serde(rename = "b")]
+        pub query_mask_bits: u8,
+
+        /// Number of records sender has under this prefix.
+        #[serde(rename = "c")]
+        pub record_count: u64,
+
+        /// Sender's reference time.
+        #[serde(rename = "t")]
+        pub reference_time: u64,
+
+        /// Random salt
+        #[serde(rename = "s")]
+        pub salt: u64,
+
+        /// SyncResponseType determining content of 'data'.
+        #[serde(rename = "r")]
+        pub response_type: u8,
+
+        /// Data whose meaning depends on the response type.
+        #[serde(with = "serde_bytes")]
+        #[serde(rename = "d")]
+        pub data: &'a [u8],
     }
 }

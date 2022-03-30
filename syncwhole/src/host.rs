@@ -6,70 +6,50 @@
  * https://www.zerotier.com/
  */
 
-use std::collections::HashSet;
 use std::net::SocketAddr;
 
 #[cfg(feature = "include_sha2_lib")]
 use sha2::digest::{Digest, FixedOutput};
 
+use serde::{Deserialize, Serialize};
+
 use crate::node::RemoteNodeInfo;
+
+/// Configuration setttings for a syncwhole node.
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
+pub struct Config {
+    /// A list of peer addresses to which we always want to stay connected.
+    /// The library will try to maintain connectivity to these regardless of connection limits.
+    pub anchors: Vec<SocketAddr>,
+
+    /// A list of peer addresses that we can try in order to achieve desired_connection_count.
+    pub seeds: Vec<SocketAddr>,
+
+    /// The maximum number of TCP connections we should allow.
+    pub max_connection_count: usize,
+
+    /// The desired number of peering links.
+    pub desired_connection_count: usize,
+
+    /// An optional name for this node to advertise to other nodes.
+    pub name: String,
+
+    /// An optional contact string for this node to advertise to other nodes.
+    /// Example: bighead@stanford.edu or https://www.piedpiper.com/
+    pub contact: String,
+}
 
 /// A trait that users of syncwhole implement to provide configuration information and listen for events.
 pub trait Host: Sync + Send {
-    /// Get a list of peer addresses to which we always want to try to stay connected.
-    ///
-    /// These are always contacted until a link is established regardless of anything else.
-    fn fixed_peers(&self) -> &[SocketAddr];
-
-    /// Get a random peer address not in the supplied set.
-    ///
-    /// The default implementation just returns None.
-    fn another_peer(&self, exclude: &HashSet<SocketAddr>) -> Option<SocketAddr> {
-        None
-    }
-
-    /// Get the maximum number of endpoints allowed.
-    ///
-    /// This is checked on incoming connect and incoming links are refused if the total is
-    /// over this count. Fixed endpoints will be contacted even if the total is over this limit.
-    ///
-    /// The default implementation returns 1024.
-    fn max_connection_count(&self) -> usize {
-        1024
-    }
-
-    /// Get the number of connections we ideally want.
-    ///
-    /// Attempts will be made to lazily contact remote endpoints if the total number of links
-    /// is under this amount. Note that fixed endpoints will still be contacted even if the
-    /// total is over the desired count.
-    ///
-    /// This should always be less than max_connection_count().
-    ///
-    /// The default implementation returns 128.
-    fn desired_connection_count(&self) -> usize {
-        128
-    }
-
-    /// Get an optional name that this node should advertise.
-    ///
-    /// The default implementation returns None.
-    fn name(&self) -> Option<&str> {
-        None
-    }
-
-    /// Get an optional contact info string that this node should advertise.
-    ///
-    /// The default implementation returns None.
-    fn contact(&self) -> Option<&str> {
-        None
-    }
+    /// Get a copy of the current configuration for this syncwhole node.
+    fn node_config(&self) -> Config;
 
     /// Test whether an inbound connection should be allowed from an address.
     ///
     /// This is called on first incoming connection before any init is received. The authenticate()
     /// method is called once init has been received and is another decision point. The default
     /// implementation of this always returns true.
+    #[allow(unused_variables)]
     fn allow(&self, remote_address: &SocketAddr) -> bool {
         true
     }
@@ -83,6 +63,10 @@ pub trait Host: Sync + Send {
     ///
     /// This actually gets called twice per link: once when Init is received to compute the
     /// response, and once when InitResponse is received to verify the response to our challenge.
+    ///
+    /// The default implementation authenticates with an all-zero key. Leave it this way if
+    /// you don't want authentication.
+    #[allow(unused_variables)]
     fn authenticate(&self, info: &RemoteNodeInfo, challenge: &[u8]) -> Option<[u8; 64]> {
         Some(Self::hmac_sha512(&[0_u8; 64], challenge))
     }
@@ -125,8 +109,8 @@ pub trait Host: Sync + Send {
     ///
     /// Supplied key will always be 64 bytes in length.
     ///
-    /// The default implementation is a basic HMAC implemented in terms of sha512() above. This
-    /// can be specialized if the user wishes to provide their own implementation.
+    /// The default implementation is HMAC implemented in terms of sha512() above. Specialize
+    /// to provide your own implementation.
     fn hmac_sha512(key: &[u8], msg: &[u8]) -> [u8; 64] {
         let mut opad = [0x5c_u8; 128];
         let mut ipad = [0x36_u8; 128];
@@ -137,7 +121,6 @@ pub trait Host: Sync + Send {
         for i in 0..64 {
             ipad[i] ^= key[i];
         }
-        let s1 = Self::sha512(&[&ipad, msg]);
-        Self::sha512(&[&opad, &s1])
+        Self::sha512(&[&opad, &Self::sha512(&[&ipad, msg])])
     }
 }

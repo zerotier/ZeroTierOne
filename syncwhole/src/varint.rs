@@ -6,10 +6,7 @@
  * https://www.zerotier.com/
  */
 
-use std::io::{Read, Write};
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-
-const VARINT_MAX_SIZE_BYTES: usize = 10;
+pub const VARINT_MAX_SIZE_BYTES: usize = 10;
 
 pub fn encode(b: &mut [u8], mut v: u64) -> usize {
     let mut i = 0;
@@ -27,50 +24,21 @@ pub fn encode(b: &mut [u8], mut v: u64) -> usize {
     i
 }
 
-#[inline(always)]
-pub async fn write_async<W: AsyncWrite + Unpin>(w: &mut W, v: u64) -> std::io::Result<()> {
-    let mut b = [0_u8; VARINT_MAX_SIZE_BYTES];
-    let i = encode(&mut b, v);
-    w.write_all(&b[0..i]).await
-}
-
-pub async fn read_async<R: AsyncRead + Unpin>(r: &mut R) -> std::io::Result<(u64, usize)> {
+pub fn decode(b: &[u8]) -> (u64, usize) {
     let mut v = 0_u64;
     let mut pos = 0;
-    let mut count = 0;
-    loop {
-        count += 1;
-        let b = r.read_u8().await?;
-        if b <= 0x7f {
-            v |= (b as u64).wrapping_shl(pos);
+    let mut l = 0;
+    let bl = b.len();
+    while l < bl {
+        let x = b[l];
+        l += 1;
+        if x <= 0x7f {
+            v |= (x as u64).wrapping_shl(pos);
             pos += 7;
         } else {
-            v |= ((b & 0x7f) as u64).wrapping_shl(pos);
-            return Ok((v, count));
+            v |= ((x & 0x7f) as u64).wrapping_shl(pos);
+            return (v, l);
         }
     }
-}
-
-#[inline(always)]
-pub fn write<W: Write>(w: &mut W, v: u64) -> std::io::Result<()> {
-    let mut b = [0_u8; VARINT_MAX_SIZE_BYTES];
-    let i = encode(&mut b, v);
-    w.write_all(&b[0..i])
-}
-
-pub fn read<R: Read>(r: &mut R) -> std::io::Result<u64> {
-    let mut v = 0_u64;
-    let mut buf = [0_u8; 1];
-    let mut pos = 0;
-    loop {
-        let _ = r.read_exact(&mut buf)?;
-        let b = buf[0];
-        if b <= 0x7f {
-            v |= (b as u64).wrapping_shl(pos);
-            pos += 7;
-        } else {
-            v |= ((b & 0x7f) as u64).wrapping_shl(pos);
-            return Ok(v);
-        }
-    }
+    return (0, 0);
 }

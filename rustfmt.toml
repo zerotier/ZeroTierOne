@@ -1,0 +1,8 @@
+max_width = 300
+use_small_heuristics = "Max"
+tab_spaces = 4
+newline_style = "Unix"
+control_brace_style = "AlwaysSameLine"
+edition = "2021"
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
