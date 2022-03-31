@@ -30,7 +30,6 @@ Thumbs.db
 /windows/WebUIWrapper/obj
 /windows/lib
 /ext/installfiles/windows/ZeroTier One-SetupFiles
-/ext/installfiles/windows/Prerequisites
 /ext/installfiles/windows/*-cache
 /ZeroTier One.msi
 *.vcxproj.backup

@@ -11,6 +11,8 @@ RUN curl -sSL -o zerotier-one.deb "${PACKAGE_BASEURL}/zerotier-one_${VERSION}_${
 
 FROM debian:buster
 
+RUN apt-get update -qq && apt-get install openssl libssl1.1 -y
+
 COPY --from=stage zerotier-one.deb .
 
 RUN dpkg -i zerotier-one.deb && rm -f zerotier-one.deb
@@ -19,6 +21,8 @@ RUN rm -rf /var/lib/zerotier-one
 
 COPY entrypoint.sh.release /entrypoint.sh
 RUN chmod 755 /entrypoint.sh
+
+HEALTHCHECK --interval=1s CMD bash /healthcheck.sh
 
 CMD []
 ENTRYPOINT ["/entrypoint.sh"]
