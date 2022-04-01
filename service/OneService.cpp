@@ -53,7 +53,7 @@
 #include "OneService.hpp"
 #include "SoftwareUpdater.hpp"
 
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 #include <zeroidc.h>
 #endif
 
@@ -195,7 +195,7 @@ public:
 	NetworkState() 
 		: _webPort(9993)
 		, _tap((EthernetTap *)0)
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 		, _idc(nullptr)
 #endif
 	{
@@ -212,7 +212,7 @@ public:
 		this->_managedRoutes.clear();
 		this->_tap.reset();
 
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 		if (_idc) {
 			zeroidc::zeroidc_stop(_idc);
 			zeroidc::zeroidc_delete(_idc);
@@ -296,7 +296,7 @@ public:
 
 		if (_config.ssoEnabled && _config.ssoVersion == 1) {
 			//  fprintf(stderr, "ssoEnabled for %s\n", nwid);
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 			if (_idc == nullptr)
 			{
 				assert(_config.issuerURL != nullptr);
@@ -353,7 +353,7 @@ public:
 	}
 
 	const char* getAuthURL() {
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 		if (_idc != nullptr) {
 			return zeroidc::zeroidc_get_auth_url(_idc);
 		}
@@ -363,7 +363,7 @@ public:
 	}
 
 	const char* doTokenExchange(const char *code) {
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 		if (_idc == nullptr) {
 			fprintf(stderr, "ainfo or idc null\n");
 			return "";
@@ -386,7 +386,7 @@ public:
 	}
 
 	uint64_t getExpiryTime() {
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 		if (_idc == nullptr) {
 			fprintf(stderr, "idc is null\n");
 			return 0;
@@ -404,7 +404,7 @@ private:
 	std::vector<InetAddress> _managedIps;
 	std::map< InetAddress, SharedPtr<ManagedRoute> > _managedRoutes;
 	OneService::NetworkSettings _settings;
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 	zeroidc::ZeroIDC *_idc;
 #endif
 };
@@ -1707,7 +1707,7 @@ public:
 						scode = _controller->handleControlPlaneHttpGET(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 					} else scode = 404;
 				}
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 			} else if (ps[0] == "sso") {
 				char resBuf[4096] = {0};
 				const char *error = zeroidc::zeroidc_get_url_param_value("error", path.c_str());
@@ -2310,11 +2310,11 @@ public:
 						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString(ipbuf));
 				}
 			}
+#endif
 
 #ifdef __APPLE__
 			if (!MacDNSHelper::addIps(n.config().nwid, n.config().mac, n.tap()->deviceName().c_str(), newManagedIps))
 				fprintf(stderr, "ERROR: unable to add v6 addresses to system configuration" ZT_EOL_S);
-#endif
 #endif
 			n.setManagedIps(newManagedIps);
 		}
