@@ -2298,17 +2298,13 @@ public:
 						fprintf(stderr,"ERROR: unable to remove ip address %s" ZT_EOL_S, ip->toString(ipbuf));
 				}
 			}
-#ifdef __SYNOLOGY__
-			if (!n.tap->addIpSyn(newManagedIps))
-				fprintf(stderr,"ERROR: unable to add ip addresses to ifcfg" ZT_EOL_S);
-#else
+
 			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
 				if (std::find(n.managedIps().begin(),n.managedIps().end(),*ip) == n.managedIps().end()) {
 					if (!n.tap()->addIp(*ip))
 						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString(ipbuf));
 				}
 			}
-#endif
 
 #ifdef __APPLE__
 			if (!MacDNSHelper::addIps(n.config().nwid, n.config().mac, n.tap()->deviceName().c_str(), newManagedIps))
