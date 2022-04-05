@@ -48,7 +48,7 @@ apply_routes()
     # Wait for ZT service to come online before attempting queries
     sleep 15
 
-    # Loop until killed, every two minutes check for required routes and add if needed
+    # Loop until killed, check for required routes and add if needed
     while true
     do
         NETWORK_COUNT=$(zerotier-cli -j listnetworks | jq -r '. | length')

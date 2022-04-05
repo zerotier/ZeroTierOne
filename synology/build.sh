@@ -26,8 +26,8 @@ generate_package_sources()
   # Generate the SPK
 
   # Copy package scripts to spksrc so they're accessible to container
-  rm -rf spksrc/ztpkg-dsm6
-  cp -rf ztpkg-dsm6 spksrc/ztpkg-dsm6
+  rm -rf spksrc/dsm6-pkg
+  cp -rf dsm6-pkg spksrc/dsm6-pkg
 
   TAB="$(printf '\t')"
 
@@ -98,7 +98,7 @@ cat > spksrc/spk/zerotier/Makefile <<- EOM
 SPK_NAME = zerotier
 SPK_VERS = $ZTO_VER
 SPK_REV = $PKG_REV
-SPK_ICON = /spksrc/ztpkg-dsm6/PACKAGE_ICON_256.png
+SPK_ICON = /spksrc/dsm6-pkg/PACKAGE_ICON_256.png
 DEPENDS = cross/zerotier
 MAINTAINER = ZeroTier, Inc.
 DESCRIPTION = $ZTO_DESC
@@ -114,7 +114,7 @@ REQUIRED_DSM = 6.2.4
 
 ENV += ZT_SYNOLOGY=1
 
-SSS_SCRIPT = ../../ztpkg-dsm6/start-stop-status.sh
+SSS_SCRIPT = ../../dsm6-pkg/start-stop-status.sh
 
 PRE_STRIP_TARGET = zerotier_install
 
