@@ -6,8 +6,6 @@ service_postinst()
 
 service_postuninst()
 {
-	# remove all files except for identity files and network config files (for future convenience)
-	find /var/lib/zerotier-one/* -type f -o -type d ! -name 'identity.*' -delete
 	exit 0
 }
 

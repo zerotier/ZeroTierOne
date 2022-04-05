@@ -114,7 +114,6 @@ REQUIRED_DSM = 6.2.4
 
 ENV += ZT_SYNOLOGY=1
 
-SERVICE_SETUP = ../../ztpkg-dsm6/service-setup.sh
 SSS_SCRIPT = ../../ztpkg-dsm6/start-stop-status.sh
 
 PRE_STRIP_TARGET = zerotier_install

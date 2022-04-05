@@ -1,19 +1,15 @@
 #!/bin/sh
 
-if [ "${SYNOPKG_DSM_VERSION_MAJOR}" -eq "6" ]; then
-    PKGDIR="/var/packages/zerotier/var"
-else
-    PKGDIR="${SYNOPKG_PKGVAR}"
-fi
+PKGVAR=/var/packages/zerotier/var
 
-ZTO_PID_FILE="${PKGDIR}/zerotier-one.pid"
-WAT_PID_FILE="${PKGDIR}/zerotier-watchdog.pid"
-ZTO_LOG_FILE="${PKGDIR}/zerotier-one.log"
+ZTO_PID_FILE="$PKGVAR/zerotier-one.pid"
+WAT_PID_FILE="$PKGVAR/zerotier-watchdog.pid"
+ZTO_LOG_FILE="$PKGVAR/zerotier-one.log"
 
 log()
 {
     local timestamp=$(date --iso-8601=second)
-    echo "${timestamp} $1" >> ${ZTO_LOG_FILE}
+    echo "$timestamp $1" >> $ZTO_LOG_FILE
 }
 
 configure_tun()
@@ -40,13 +36,13 @@ configure_cli()
 {
     # Create ZT CLI symlinks if needed
     mkdir -p /usr/local/bin/
-    ln -s ${SYNOPKG_PKGDEST}/bin/zerotier-one /usr/local/bin/zerotier-cli
-    ln -s ${SYNOPKG_PKGDEST}/bin/zerotier-one /usr/local/bin/zerotier-idtool
+    ln -s $SYNOPKG_PKGDEST/bin/zerotier-one /usr/local/bin/zerotier-cli
+    ln -s $SYNOPKG_PKGDEST/bin/zerotier-one /usr/local/bin/zerotier-idtool
 }
 
 apply_routes()
 {
-    echo $BASHPID >> ${WAT_PID_FILE}
+    echo $BASHPID >> $WAT_PID_FILE
     log "Started Watchdog ($(cat $WAT_PID_FILE))"
 
     # Wait for ZT service to come online before attempting queries
@@ -89,20 +85,20 @@ configure_routes()
 
 start_daemon()
 {
-    ${SYNOPKG_PKGDEST}/bin/zerotier-one -d
+    ${SYNOPKG_PKGDEST}/bin/zerotier-one $PKGVAR -d
     echo $(pidof zerotier-one) > ${ZTO_PID_FILE}
     log "Started ZeroTier ($(cat $ZTO_PID_FILE))"
 }
 
 stop_daemon() {
-    if [ -r "${ZTO_PID_FILE}" ]; then
+    if [ -r "$ZTO_PID_FILE" ]; then
         local ZTO_PID=$(cat "${ZTO_PID_FILE}")
         log "Stopped ZeroTier ($(cat $ZTO_PID_FILE))"
         kill -TERM $ZTO_PID
-        wait_for_status 1 || kill -KILL $PID >> ${LOG_FILE} 2>&1
+        wait_for_status 1 || kill -KILL $PID >> $LOG_FILE 2>&1
         rm -f $ZTO_PID_FILE > /dev/null
     fi
-    if [ -r "${WAT_PID_FILE}" ]; then
+    if [ -r "$WAT_PID_FILE" ]; then
         local WAT_PID=$(cat "${WAT_PID_FILE}")
         log "Stopped Watchdog ($(cat $WAT_PID_FILE))"
         kill -TERM $WAT_PID
@@ -112,17 +108,17 @@ stop_daemon() {
 
 daemon_status()
 {
-    if [ -f ${ZTO_PID_FILE} ] && kill -0 `cat ${ZTO_PID_FILE}` > /dev/null 2>&1; then
+    if [ -f $ZTO_PID_FILE ] && kill -0 `cat $ZTO_PID_FILE` > /dev/null 2>&1; then
         return
     fi
-    rm -f ${ZTO_PID_FILE}
+    rm -f $ZTO_PID_FILE
     return 1
 }
 
 wait_for_status()
 {
     counter=$2
-    while [ ${counter} -gt 0 ]; do
+    while [ $counter -gt 0 ]; do
         daemon_status
         [ $? -eq $1 ] && return
         let counter=counter-1
