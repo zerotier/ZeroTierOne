@@ -6,3 +6,5 @@ control_brace_style = "AlwaysSameLine"
 edition = "2021"
 imports_granularity = "Crate"
 group_imports = "StdExternalCrate"
+fn_single_line = true
+struct_lit_width = 60

@@ -1,18 +1,27 @@
-extern crate core;
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * (c)2022 ZeroTier, Inc.
+ * https://www.zerotier.com/
+ */
 
 use std::collections::BTreeMap;
 use std::io::{stdout, Write};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::ops::Bound::Included;
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
+
+use async_trait::async_trait;
 
 use sha2::digest::Digest;
 use sha2::Sha512;
 
-use syncwhole::datastore::{DataStore, LoadResult, StoreResult};
-use syncwhole::host::Host;
-use syncwhole::node::{Node, RemoteNodeInfo};
+use syncwhole::datastore::*;
+use syncwhole::host::*;
+use syncwhole::node::*;
 use syncwhole::utils::*;
 
 const TEST_NODE_COUNT: usize = 8;
@@ -36,16 +45,33 @@ fn get_random_bytes(mut buf: &mut [u8]) {
     unsafe { RANDOM_CTR = ctr };
 }
 
-struct TestNodeHost {
-    name: String,
-    peers: Vec<SocketAddr>,
-    db: Mutex<BTreeMap<[u8; 64], Arc<[u8]>>>,
+pub struct TestNodeHost {
+    pub name: String,
+    pub config: Config,
+    pub records: tokio::sync::Mutex<BTreeMap<[u8; 64], [u8; 64]>>,
+}
+
+impl TestNodeHost {
+    pub fn new_random(test_no: usize) -> Self {
+        let mut s = BTreeMap::new();
+        for _ in 0..TEST_STARTING_RECORDS_PER_NODE {
+            let mut v = [0_u8; 64];
+            get_random_bytes(&mut v);
+            let k = Self::sha512(&[&v]);
+            s.insert(k, v);
+        }
+        Self {
+            name: test_no.to_string(),
+            config: Config::default(),
+            records: tokio::sync::Mutex::new(s),
+        }
+    }
 }
 
 impl Host for TestNodeHost {
-    fn fixed_peers(&self) -> &[SocketAddr] { self.peers.as_slice() }
-
-    fn name(&self) -> Option<&str> { Some(self.name.as_str()) }
+    fn node_config(&self) -> Config {
+        self.config.clone()
+    }
 
     fn on_connect_attempt(&self, _address: &SocketAddr) {
         //println!("{:5}: connecting to {}", self.name, _address.to_string());
@@ -56,7 +82,7 @@ impl Host for TestNodeHost {
     }
 
     fn on_connection_closed(&self, info: &RemoteNodeInfo, reason: String) {
-        println!("{:5}: closed connection to {}: {} ({}, {})", self.name, info.remote_address.to_string(), reason, if info.inbound { "inbound" } else { "outbound" }, if info.initialized { "initialized" } else { "not initialized" });
+        //println!("{:5}: closed connection to {}: {} ({}, {})", self.name, info.remote_address.to_string(), reason, if info.inbound { "inbound" } else { "outbound" }, if info.initialized { "initialized" } else { "not initialized" });
     }
 
     fn get_secure_random(&self, buf: &mut [u8]) {
@@ -65,47 +91,68 @@ impl Host for TestNodeHost {
     }
 }
 
+#[async_trait]
 impl DataStore for TestNodeHost {
-    type LoadResultValueType = Arc<[u8]>;
+    type ValueRef = [u8; 64];
 
     const MAX_VALUE_SIZE: usize = 1024;
 
-    fn clock(&self) -> i64 { ms_since_epoch() }
-
-    fn domain(&self) -> &str { "test" }
-
-    fn load(&self, _: i64, key: &[u8]) -> LoadResult<Self::LoadResultValueType> {
-        self.db.lock().unwrap().get(key).map_or(LoadResult::NotFound, |r| LoadResult::Ok(r.clone()))
+    fn clock(&self) -> i64 {
+        ms_since_epoch()
     }
 
-    fn store(&self, key: &[u8], value: &[u8]) -> StoreResult {
-        assert_eq!(key.len(), 64);
-        let mut res = StoreResult::Ok(0);
-        self.db.lock().unwrap().entry(key.try_into().unwrap()).and_modify(|e| {
-            if e.as_ref().eq(value) {
-                res = StoreResult::Duplicate;
-            } else {
-                *e = Arc::from(value)
+    fn domain(&self) -> &str {
+        "test"
+    }
+
+    async fn load(&self, _: i64, key: &[u8]) -> Option<Self::ValueRef> {
+        let key = key.try_into();
+        if key.is_ok() {
+            let key: [u8; 64] = key.unwrap();
+            let records = self.records.lock().await;
+            let value = records.get(&key);
+            if value.is_some() {
+                return Some(value.unwrap().clone());
             }
-        }).or_insert_with(|| {
-            Arc::from(value)
-        });
-        res
+        }
+        return None;
     }
 
-    fn count(&self, _: i64, key_range_start: &[u8], key_range_end: &[u8]) -> u64 {
-        let s: [u8; 64] = key_range_start.try_into().unwrap();
-        let e: [u8; 64] = key_range_end.try_into().unwrap();
-        self.db.lock().unwrap().range((Included(s), Included(e))).count() as u64
+    async fn store(&self, key: &[u8], value: &[u8]) -> StoreResult {
+        let key = key.try_into();
+        if key.is_ok() && value.len() == 64 {
+            let key: [u8; 64] = key.unwrap();
+            let value: [u8; 64] = value.try_into().unwrap();
+            if key == Self::sha512(&[&value]) {
+                if self.records.lock().await.insert(key, value).is_none() {
+                    StoreResult::Ok
+                } else {
+                    StoreResult::Duplicate
+                }
+            } else {
+                StoreResult::Rejected
+            }
+        } else {
+            StoreResult::Rejected
+        }
     }
 
-    fn total_count(&self) -> u64 { self.db.lock().unwrap().len() as u64 }
+    async fn count(&self, _: i64, key_range_start: &[u8], key_range_end: &[u8]) -> u64 {
+        let start: [u8; 64] = key_range_start.try_into().unwrap();
+        let end: [u8; 64] = key_range_end.try_into().unwrap();
+        self.records.lock().await.range((Included(start), Included(end))).count() as u64
+    }
 
-    fn for_each<F: FnMut(&[u8], &[u8]) -> bool>(&self, _: i64, key_range_start: &[u8], key_range_end: &[u8], mut f: F) {
-        let s: [u8; 64] = key_range_start.try_into().unwrap();
-        let e: [u8; 64] = key_range_end.try_into().unwrap();
-        for (k, v) in self.db.lock().unwrap().range((Included(s), Included(e))) {
-            if !f(k, v.as_ref()) {
+    async fn total_count(&self) -> u64 {
+        self.records.lock().await.len() as u64
+    }
+
+    async fn for_each<F: Send + FnMut(&[u8], &Self::ValueRef) -> bool>(&self, _reference_time: i64, key_range_start: &[u8], key_range_end: &[u8], mut f: F) {
+        let start: [u8; 64] = key_range_start.try_into().unwrap();
+        let end: [u8; 64] = key_range_end.try_into().unwrap();
+        let records = self.records.lock().await;
+        for (k, v) in records.range((Included(start), Included(end))) {
+            if !f(k, v) {
                 break;
             }
         }
@@ -126,11 +173,10 @@ fn main() {
                     peers.push(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port2)));
                 }
             }
-            let nh = Arc::new(TestNodeHost {
-                name: format!("{}", port),
-                peers,
-                db: Mutex::new(BTreeMap::new())
-            });
+            let mut th = TestNodeHost::new_random(port as usize);
+            th.config.anchors = peers;
+            th.config.name = port.to_string();
+            let nh = Arc::new(th);
             //println!("Starting node on 127.0.0.1:{}...", port, nh.db.lock().unwrap().len());
             nodes.push(Node::new(nh.clone(), nh.clone(), SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port))).await.unwrap());
         }
@@ -149,20 +195,6 @@ fn main() {
             } else {
                 print!(".");
                 let _ = stdout().flush();
-            }
-        }
-
-        println!("Populating maps with data to be synchronized between nodes...");
-        let mut all_records = BTreeMap::new();
-        for n in nodes.iter_mut() {
-            for _ in 0..TEST_STARTING_RECORDS_PER_NODE {
-                let mut k = [0_u8; 64];
-                let mut v = [0_u8; 32];
-                get_random_bytes(&mut k);
-                get_random_bytes(&mut v);
-                let v: Arc<[u8]> = Arc::from(v);
-                all_records.insert(k.clone(), v.clone());
-                n.datastore().db.lock().unwrap().insert(k, v);
             }
         }
 

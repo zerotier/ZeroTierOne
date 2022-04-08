@@ -6,13 +6,26 @@
  * https://www.zerotier.com/
  */
 
-use crate::utils::*;
+use std::borrow::Cow;
+
+/// Total memory overhead of each bucket in bytes.
+const BUCKET_SIZE_BYTES: usize = 13; // u64 key + u32 check + i8 count
+
+/// Based on xorshift64 with endian conversion for BE systems.
+#[inline(always)]
+fn get_check_hash(mut x: u64) -> u32 {
+    x = u64::from_le(x);
+    x ^= x.wrapping_shl(13);
+    x ^= x.wrapping_shr(7);
+    x ^= x.wrapping_shl(17);
+    x.wrapping_add(x.wrapping_shr(32)).to_le() as u32
+}
 
 /// Called to get the next iteration index for each KEY_MAPPING_ITERATIONS table lookup.
-/// (See IBLT papers, etc.)
+/// A series of these implements the "series of different hashes" construct in IBLT.
 #[inline(always)]
-fn next_iteration_index(mut x: u64) -> u64 {
-    x = x.wrapping_add(1);
+fn next_iteration_index(mut x: u64, hash_no: u64) -> u64 {
+    x = x.wrapping_add(hash_no);
     x ^= x.wrapping_shr(30);
     x = x.wrapping_mul(0xbf58476d1ce4e5b9);
     x ^= x.wrapping_shr(27);
@@ -26,60 +39,82 @@ fn next_iteration_index(mut x: u64) -> u64 {
 /// Usage inspired by this paper:
 ///
 /// https://dash.harvard.edu/bitstream/handle/1/14398536/GENTILI-SENIORTHESIS-2015.pdf
-#[repr(C, packed)]
-pub struct IBLT<const BUCKETS: usize> {
+///
+/// Note that an 8-bit counter that wraps is used instead of a much wider counter that
+/// would probably never overflow. This saves space on the wire but means that there is
+/// a very small (roughly 1/2^64) chance that this will list a value that is invalid in that
+/// it was never added on either side. In our protocol that should not cause a problem as
+/// it would just result in one key in a GetRecords query not being fulfilled, and in any
+/// case it should be an extremely rare event.
+///
+/// BUCKETS is the maximum capacity in buckets, while HASHES is the number of
+/// "different" (differently seeded) hash functions to use.
+///
+/// The best value for HASHES seems to be 3 for an optimal fill of 80%.
+#[repr(C)]
+pub struct IBLT<const BUCKETS: usize, const HASHES: usize> {
     key: [u64; BUCKETS],
-    check_hash: [u64; BUCKETS],
+    check_hash: [u32; BUCKETS],
     count: [i8; BUCKETS],
 }
 
-impl<const BUCKETS: usize> IBLT<BUCKETS> {
-    /// This was determined to be effective via empirical testing with random keys. This
-    /// is a protocol constant that can't be changed without upgrading all nodes in a domain.
-    const KEY_MAPPING_ITERATIONS: usize = 2;
+impl<const BUCKETS: usize, const HASHES: usize> Clone for IBLT<BUCKETS, HASHES> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        // NOTE: clone() is manually implemented here so it's tolerant of unaligned access on architectures not supporting it.
+        unsafe {
+            let mut tmp: Self = std::mem::MaybeUninit::uninit().assume_init();
+            std::ptr::copy_nonoverlapping((self as *const Self).cast::<u8>(), (&mut tmp as *mut Self).cast::<u8>(), Self::SIZE_BYTES);
+            tmp
+        }
+    }
+}
 
+impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
     /// Number of buckets in this IBLT.
+    #[allow(unused)]
     pub const BUCKETS: usize = BUCKETS;
 
     /// Size of this IBLT in bytes.
-    pub const SIZE_BYTES: usize = BUCKETS * (8 + 8 + 1);
-
-    #[inline(always)]
-    fn is_singular(&self, i: usize) -> bool {
-        let c = self.count[i];
-        if c == 1 || c == -1 {
-            xorshift64(self.key[i]) == self.check_hash[i]
-        } else {
-            false
-        }
-    }
+    pub const SIZE_BYTES: usize = BUCKETS * BUCKET_SIZE_BYTES;
 
     /// Create a new zeroed IBLT.
+    #[inline(always)]
     pub fn new() -> Self {
-        assert_eq!(Self::SIZE_BYTES, std::mem::size_of::<Self>());
+        assert!(Self::SIZE_BYTES <= std::mem::size_of::<Self>());
         assert!(BUCKETS < (i32::MAX as usize));
         unsafe { std::mem::zeroed() }
     }
 
-    /// Cast a byte array to an IBLT if it is of the correct size.
-    pub fn ref_from_bytes(b: &[u8]) -> Option<&Self> {
-        if b.len() == Self::SIZE_BYTES {
-            Some(unsafe { &*b.as_ptr().cast() })
-        } else {
-            None
-        }
+    /// Get this IBLT as a byte slice (free cast operation).
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8] {
+        unsafe { &*std::ptr::slice_from_raw_parts((self as *const Self).cast::<u8>(), Self::SIZE_BYTES) }
     }
 
-    /// Compute the IBLT size in buckets to reconcile a given set difference, or return 0 if no advantage.
-    /// This returns zero if an IBLT would take up as much or more space than just sending local_set_size
-    /// hashes of hash_size_bytes.
+    /// Obtain an IBLT from bytes in memory.
+    ///
+    /// If the architecture supports unaligned memory access or the memory is aligned, this returns a borrowed
+    /// Cow to 'b' that is just a cast. If re-alignment is necessary it returns an owned Cow containing a properly
+    /// aligned copy. This makes conversion a nearly free cast when alignment adjustment isn't needed.
     #[inline(always)]
-    pub fn calc_iblt_parameters(hash_size_bytes: usize, local_set_size: u64, difference_size: u64) -> usize {
-        let b = (difference_size as f64) * 1.8; // factor determined experimentally for best bytes/item, can be tuned
-        if b > 64.0 && (b * (8.0 + 8.0 + 1.0)) < ((hash_size_bytes as f64) * (local_set_size as f64)) {
-            b.round() as usize
+    pub fn from_bytes<'a>(b: &'a [u8]) -> Option<Cow<'a, Self>> {
+        if b.len() == Self::SIZE_BYTES {
+            #[cfg(not(any(target_arch = "x86_64", target_arch = "x86", target_arch = "powerpc64", target_arch = "aarch64")))]
+            {
+                if b.as_ptr().align_offset(8) == 0 {
+                    Some(Cow::Borrowed(unsafe { &*b.as_ptr().cast() }))
+                } else {
+                    // NOTE: clone() is implemented above using a raw copy so that alignment doesn't matter.
+                    Some(Cow::Owned(unsafe { &*b.as_ptr().cast::<Self>() }.clone()))
+                }
+            }
+            #[cfg(any(target_arch = "x86_64", target_arch = "x86", target_arch = "powerpc64", target_arch = "aarch64"))]
+            {
+                Some(Cow::Borrowed(unsafe { &*b.as_ptr().cast() }))
+            }
         } else {
-            0
+            None
         }
     }
 
@@ -91,17 +126,11 @@ impl<const BUCKETS: usize> IBLT<BUCKETS> {
         }
     }
 
-    /// Get this IBLT as a byte slice in place.
-    #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8] {
-        unsafe { &*std::ptr::slice_from_raw_parts((self as *const Self).cast::<u8>(), std::mem::size_of::<Self>()) }
-    }
-
     fn ins_rem(&mut self, key: u64, delta: i8) {
-        let check_hash = xorshift64(key);
+        let check_hash = get_check_hash(key);
         let mut iteration_index = u64::from_le(key);
-        for _ in 0..Self::KEY_MAPPING_ITERATIONS {
-            iteration_index = next_iteration_index(iteration_index);
+        for k in 0..(HASHES as u64) {
+            iteration_index = next_iteration_index(iteration_index, k);
             let i = (iteration_index as usize) % BUCKETS;
             self.key[i] ^= key;
             self.check_hash[i] ^= check_hash;
@@ -123,83 +152,84 @@ impl<const BUCKETS: usize> IBLT<BUCKETS> {
 
     /// Subtract another IBLT from this one to get a set difference.
     pub fn subtract(&mut self, other: &Self) {
-        for i in 0..BUCKETS {
-            self.key[i] ^= other.key[i];
-        }
-        for i in 0..BUCKETS {
-            self.check_hash[i] ^= other.check_hash[i];
-        }
-        for i in 0..BUCKETS {
-            self.count[i] = self.count[i].wrapping_sub(other.count[i]);
-        }
+        self.key.iter_mut().zip(other.key.iter()).for_each(|(a, b)| *a ^= *b);
+        self.check_hash.iter_mut().zip(other.check_hash.iter()).for_each(|(a, b)| *a ^= *b);
+        self.count.iter_mut().zip(other.count.iter()).for_each(|(a, b)| *a = a.wrapping_sub(*b));
     }
 
     /// List as many entries in this IBLT as can be extracted.
-    pub fn list<F: FnMut(u64)>(mut self, mut f: F) {
+    /// True is returned if extraction was 100% successful. False indicates that
+    /// some entries were not extractable.
+    pub fn list<F: FnMut(u64)>(mut self, mut f: F) -> bool {
         let mut queue: Vec<u32> = Vec::with_capacity(BUCKETS);
 
         for i in 0..BUCKETS {
-            if self.is_singular(i) {
+            let count = self.count[i];
+            if (count == 1 || count == -1) && get_check_hash(self.key[i]) == self.check_hash[i] {
                 queue.push(i as u32);
             }
         }
 
-        loop {
+        'list_main: loop {
             let i = queue.pop();
             let i = if i.is_some() {
                 i.unwrap() as usize
             } else {
-                break;
+                break 'list_main;
             };
 
-            if self.is_singular(i) {
-                let key = self.key[i];
-
+            let key = self.key[i];
+            let check_hash = self.check_hash[i];
+            let count = self.count[i];
+            if (count == 1 || count == -1) && check_hash == get_check_hash(key) {
                 f(key);
 
-                let check_hash = xorshift64(key);
                 let mut iteration_index = u64::from_le(key);
-                for _ in 0..Self::KEY_MAPPING_ITERATIONS {
-                    iteration_index = next_iteration_index(iteration_index);
+                for k in 0..(HASHES as u64) {
+                    iteration_index = next_iteration_index(iteration_index, k);
                     let i = (iteration_index as usize) % BUCKETS;
-                    self.key[i] ^= key;
-                    self.check_hash[i] ^= check_hash;
-                    self.count[i] = self.count[i].wrapping_sub(1);
-                    if self.is_singular(i) {
+                    let key2 = self.key[i] ^ key;
+                    let check_hash2 = self.check_hash[i] ^ check_hash;
+                    let count2 = self.count[i].wrapping_sub(count);
+                    self.key[i] = key2;
+                    self.check_hash[i] = check_hash2;
+                    self.count[i] = count2;
+                    if (count2 == 1 || count2 == -1) && check_hash2 == get_check_hash(key2) {
                         if queue.len() > BUCKETS {
                             // sanity check, should be impossible
-                            return;
+                            break 'list_main;
                         }
                         queue.push(i as u32);
                     }
                 }
             }
         }
+
+        self.count.iter().all(|x| *x == 0) && self.key.iter().all(|x| *x == 0)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
+    #[allow(unused_imports)]
     use std::time::SystemTime;
 
     use crate::iblt::*;
+    #[allow(unused_imports)]
+    use crate::utils::{splitmix64, xorshift64};
 
-    #[test]
-    fn splitmix_is_invertiblex() {
-        for i in 1..2000_u64 {
-            assert_eq!(i, splitmix64_inverse(splitmix64(i)))
-        }
-    }
+    const HASHES: usize = 3;
 
     #[test]
     fn fill_list_performance() {
-        let mut rn = xorshift64(SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos() as u64);
+        const CAPACITY: usize = 4096;
+        //let mut rn = xorshift64(SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos() as u64);
+        let mut rn = 31337;
         let mut expected: HashSet<u64> = HashSet::with_capacity(4096);
         let mut count = 64;
-        const CAPACITY: usize = 4096;
         while count <= CAPACITY {
-            let mut test = IBLT::<CAPACITY>::new();
+            let mut test = IBLT::<CAPACITY, HASHES>::new();
             expected.clear();
 
             for _ in 0..count {
@@ -215,43 +245,50 @@ mod tests {
                 assert!(expected.contains(&x));
             });
 
-            //println!("inserted: {}\tlisted: {}\tcapacity: {}\tscore: {:.4}\tfill: {:.4}", count, list_count, CAPACITY, (list_count as f64) / (count as f64), (count as f64) / (CAPACITY as f64));
+            println!("inserted: {}\tlisted: {}\tcapacity: {}\tscore: {:.4}\tfill: {:.4}", count, list_count, CAPACITY, (list_count as f64) / (count as f64), (count as f64) / (CAPACITY as f64));
             count += 64;
         }
     }
 
     #[test]
     fn merge_sets() {
-        let mut rn = xorshift64(SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos() as u64);
         const CAPACITY: usize = 16384;
-        const REMOTE_SIZE: usize = 1024 * 1024;
+        const REMOTE_SIZE: usize = 1024 * 1024 * 2;
         const STEP: usize = 1024;
+        //let mut rn = xorshift64(SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos() as u64);
+        let mut rn = 31337;
         let mut missing_count = 1024;
-        let mut missing: HashSet<u64> = HashSet::with_capacity(CAPACITY);
+        let mut missing: HashSet<u64> = HashSet::with_capacity(CAPACITY * 2);
+        let mut all: HashSet<u64> = HashSet::with_capacity(REMOTE_SIZE);
         while missing_count <= CAPACITY {
             missing.clear();
-            let mut local = IBLT::<CAPACITY>::new();
-            let mut remote = IBLT::<CAPACITY>::new();
+            all.clear();
+            let mut local = IBLT::<CAPACITY, HASHES>::new();
+            let mut remote = IBLT::<CAPACITY, HASHES>::new();
 
-            for k in 0..REMOTE_SIZE {
-                if k >= missing_count {
-                    local.insert(rn);
-                } else {
-                    missing.insert(rn);
+            let mut k = 0;
+            while k < REMOTE_SIZE {
+                if all.insert(rn) {
+                    if k >= missing_count {
+                        local.insert(rn);
+                    } else {
+                        missing.insert(rn);
+                    }
+                    remote.insert(rn);
+                    k += 1;
                 }
-                remote.insert(rn);
                 rn = splitmix64(rn);
             }
 
             local.subtract(&mut remote);
             let bytes = local.as_bytes().len();
             let mut cnt = 0;
-            local.list(|k| {
+            let all_success = local.list(|k| {
                 assert!(missing.contains(&k));
                 cnt += 1;
             });
 
-            println!("total: {}  missing: {:5}  recovered: {:5}  size: {:5}  score: {:.4}  bytes/item: {:.2}", REMOTE_SIZE, missing.len(), cnt, bytes, (cnt as f64) / (missing.len() as f64), (bytes as f64) / (cnt as f64));
+            println!("total: {}  missing: {:5}  recovered: {:5}  size: {:5}  score: {:.4}  bytes/item: {:.2}  extract(fill): {:.4}  100%: {}", REMOTE_SIZE, missing.len(), cnt, bytes, (cnt as f64) / (missing.len() as f64), (bytes as f64) / (cnt as f64), (cnt as f64) / (CAPACITY as f64), all_success);
 
             missing_count += STEP;
         }

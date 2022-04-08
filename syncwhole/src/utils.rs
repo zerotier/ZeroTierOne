@@ -34,33 +34,30 @@ pub fn to_hex_string(b: &[u8]) -> String {
 
 #[inline(always)]
 pub fn xorshift64(mut x: u64) -> u64 {
-    x = u64::from_le(x);
     x ^= x.wrapping_shl(13);
     x ^= x.wrapping_shr(7);
     x ^= x.wrapping_shl(17);
-    x.to_le()
+    x
 }
 
 #[inline(always)]
 pub fn splitmix64(mut x: u64) -> u64 {
-    x = u64::from_le(x);
     x ^= x.wrapping_shr(30);
     x = x.wrapping_mul(0xbf58476d1ce4e5b9);
     x ^= x.wrapping_shr(27);
     x = x.wrapping_mul(0x94d049bb133111eb);
     x ^= x.wrapping_shr(31);
-    x.to_le()
+    x
 }
 
 #[inline(always)]
 pub fn splitmix64_inverse(mut x: u64) -> u64 {
-    x = u64::from_le(x);
     x ^= x.wrapping_shr(31) ^ x.wrapping_shr(62);
     x = x.wrapping_mul(0x319642b2d24d8ec3);
     x ^= x.wrapping_shr(27) ^ x.wrapping_shr(54);
     x = x.wrapping_mul(0x96de1b173f119089);
     x ^= x.wrapping_shr(30) ^ x.wrapping_shr(60);
-    x.to_le()
+    x
 }
 
 static mut RANDOM_STATE_0: u64 = 0;
@@ -73,7 +70,7 @@ pub fn random() -> u64 {
         s0 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos() as u64;
     }
     if s1 == 0 {
-        s1 = splitmix64(std::process::id() as u64);
+        s1 = splitmix64((std::process::id() as u64).wrapping_add((unsafe { &RANDOM_STATE_0 } as *const u64) as u64));
     }
     let s1_new = xorshift64(s1);
     s0 = splitmix64(s0.wrapping_add(s1));
@@ -93,7 +90,10 @@ pub struct AsyncTaskReaper {
 
 impl AsyncTaskReaper {
     pub fn new() -> Self {
-        Self { ctr: AtomicUsize::new(0), handles: Arc::new(std::sync::Mutex::new(HashMap::new())) }
+        Self {
+            ctr: AtomicUsize::new(0),
+            handles: Arc::new(std::sync::Mutex::new(HashMap::new())),
+        }
     }
 
     /// Spawn a new task.

@@ -6,11 +6,13 @@
  * https://www.zerotier.com/
  */
 
-pub(crate) mod varint;
-pub(crate) mod protocol;
 pub(crate) mod iblt;
+pub(crate) mod protocol;
+pub(crate) mod varint;
 
 pub mod datastore;
-pub mod node;
 pub mod host;
+pub mod node;
 pub mod utils;
+
+pub use async_trait;

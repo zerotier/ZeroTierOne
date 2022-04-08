@@ -39,6 +39,19 @@ pub struct Config {
     pub contact: String,
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            anchors: Vec::new(),
+            seeds: Vec::new(),
+            max_connection_count: 128,
+            desired_connection_count: 64,
+            name: String::new(),
+            contact: String::new(),
+        }
+    }
+}
+
 /// A trait that users of syncwhole implement to provide configuration information and listen for events.
 pub trait Host: Sync + Send {
     /// Get a copy of the current configuration for this syncwhole node.
@@ -102,7 +115,7 @@ pub trait Host: Sync + Send {
         for b in msg.iter() {
             h.update(*b);
         }
-        h.finalize_fixed().as_ref().try_into().unwrap()
+        h.finalize_fixed().try_into().unwrap()
     }
 
     /// Compute HMAC-SHA512 using key and input.

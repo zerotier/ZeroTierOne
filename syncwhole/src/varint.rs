@@ -6,6 +6,7 @@
  * https://www.zerotier.com/
  */
 
+#[allow(unused)]
 pub const VARINT_MAX_SIZE_BYTES: usize = 10;
 
 pub fn encode(b: &mut [u8], mut v: u64) -> usize {

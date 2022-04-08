@@ -6,48 +6,16 @@
  * https://www.zerotier.com/
  */
 
+use async_trait::async_trait;
+
 /// Size of keys, which is the size of a 512-bit hash. This is a protocol constant.
 pub const KEY_SIZE: usize = 64;
 
-/// Minimum possible key (all zero).
+/// Minimum possible value in a key range (all zero).
 pub const MIN_KEY: [u8; KEY_SIZE] = [0; KEY_SIZE];
 
-/// Maximum possible key (all 0xff).
+/// Maximum possible value in a key range (all 0xff).
 pub const MAX_KEY: [u8; KEY_SIZE] = [0xff; KEY_SIZE];
-
-/// Generate a range of SHA512 hashes from a prefix and a number of bits.
-/// The range will be inclusive and cover all keys under the prefix.
-pub fn range_from_prefix(prefix: &[u8], prefix_bits: usize) -> Option<([u8; KEY_SIZE], [u8; KEY_SIZE])> {
-    let mut start = [0_u8; KEY_SIZE];
-    let mut end = [0xff_u8; KEY_SIZE];
-    if prefix_bits > (KEY_SIZE * 8) {
-        return None;
-    }
-    let whole_bytes = prefix_bits / 8;
-    let remaining_bits = prefix_bits % 8;
-    if prefix.len() < (whole_bytes + ((remaining_bits != 0) as usize)) {
-        return None;
-    }
-    start[0..whole_bytes].copy_from_slice(&prefix[0..whole_bytes]);
-    end[0..whole_bytes].copy_from_slice(&prefix[0..whole_bytes]);
-    if remaining_bits != 0 {
-        start[whole_bytes] |= prefix[whole_bytes];
-        end[whole_bytes] &= prefix[whole_bytes] | ((0xff_u8).wrapping_shr(remaining_bits as u32));
-    }
-    return Some((start, end));
-}
-
-/// Result returned by DataStore::load().
-pub enum LoadResult<V: AsRef<[u8]> + Send> {
-    /// Object was found.
-    Ok(V),
-
-    /// Object was not found, including the case of being excluded due to the value of reference_time.
-    NotFound,
-
-    /// Supplied reference_time is outside what is available (usually too old).
-    TimeNotAvailable,
-}
 
 /// Result returned by DataStore::store().
 pub enum StoreResult {
@@ -76,13 +44,15 @@ pub enum StoreResult {
 /// what time I think it is" value to be considered locally so that data can be replicated
 /// as of any given time.
 ///
-/// The implementation must be thread safe and may be called concurrently.
+/// In any call with a reference_time it should be ignored if it's zero. A zero reference
+/// time should mean include all data that we have.
+#[async_trait]
 pub trait DataStore: Sync + Send {
-    /// Type to be enclosed in the Ok() enum value in LoadResult.
+    /// Container for values returned by load().
     ///
-    /// Allowing this type to be defined lets you use any type that makes sense with
-    /// your implementation. Examples include Box<[u8]>, Arc<[u8]>, Vec<u8>, etc.
-    type LoadResultValueType: AsRef<[u8]> + Send;
+    /// Making this a trait defined type lets you use Arc<[u8]>, etc. as well as obvious
+    /// ones like Box<[u8]> and Vec<u8>.
+    type ValueRef: AsRef<[u8]> + Sync + Send + Clone;
 
     /// Key hash size, always 64 for SHA512.
     const KEY_SIZE: usize = KEY_SIZE;
@@ -101,17 +71,13 @@ pub trait DataStore: Sync + Send {
     fn domain(&self) -> &str;
 
     /// Get an item if it exists as of a given reference time.
-    fn load(&self, reference_time: i64, key: &[u8]) -> LoadResult<Self::LoadResultValueType>;
+    async fn load(&self, reference_time: i64, key: &[u8]) -> Option<Self::ValueRef>;
 
     /// Check whether this data store contains a key.
     ///
-    /// The default implementation just uses load(). Override if you can provide a faster
-    /// version.
-    fn contains(&self, reference_time: i64, key: &[u8]) -> bool {
-        match self.load(reference_time, key) {
-            LoadResult::Ok(_) => true,
-            _ => false,
-        }
+    /// The default implementation just calls load(). Override if a faster version is possible.
+    async fn contains(&self, reference_time: i64, key: &[u8]) -> bool {
+        self.load(reference_time, key).await.is_some()
     }
 
     /// Store an item in the data store and return its status.
@@ -137,22 +103,22 @@ pub trait DataStore: Sync + Send {
     /// Rejected should only be returned if the value actually fails a validity check, signature
     /// verification, proof of work check, or some other required criteria. Ignored must be
     /// returned if the value is valid but is too old or was rejected for some other normal reason.
-    fn store(&self, key: &[u8], value: &[u8]) -> StoreResult;
+    async fn store(&self, key: &[u8], value: &[u8]) -> StoreResult;
 
     /// Get the number of items in a range.
-    fn count(&self, reference_time: i64, key_range_start: &[u8], key_range_end: &[u8]) -> u64;
+    async fn count(&self, reference_time: i64, key_range_start: &[u8], key_range_end: &[u8]) -> u64;
 
     /// Get the total number of records in this data store.
-    fn total_count(&self) -> u64;
+    async fn total_count(&self) -> u64;
 
-    /// Iterate through keys, stopping if the function returns false.
+    /// Iterate through a series of keys in a range (inclusive), stopping when function returns false.
     ///
-    /// The default implementation uses for_each(). This can be specialized if it's faster to
-    /// only load keys.
-    fn for_each_key<F: FnMut(&[u8]) -> bool>(&self, reference_time: i64, key_range_start: &[u8], key_range_end: &[u8], mut f: F) {
-        self.for_each(reference_time, key_range_start, key_range_end, |k, _| f(k));
+    /// The default implementation uses for_each() and just drops the value. Specialize if you can do it faster
+    /// by only retrieving keys.
+    async fn for_each_key<F: Send + FnMut(&[u8]) -> bool>(&self, reference_time: i64, key_range_start: &[u8], key_range_end: &[u8], mut f: F) {
+        self.for_each(reference_time, key_range_start, key_range_end, |k, _| f(k)).await;
     }
 
-    /// Iterate through keys and values, stopping if the function returns false.
-    fn for_each<F: FnMut(&[u8], &[u8]) -> bool>(&self, reference_time: i64, key_range_start: &[u8], key_range_end: &[u8], f: F);
+    /// Iterate through a series of entries in a range (inclusive), stopping when function returns false.
+    async fn for_each<F: Send + FnMut(&[u8], &Self::ValueRef) -> bool>(&self, reference_time: i64, key_range_start: &[u8], key_range_end: &[u8], f: F);
 }
