@@ -4,7 +4,7 @@
 /aes-gmac-siv/Cargo.lock
 /zerotier-core-crypto/Cargo.lock
 /zerotier-network-hypervisor/Cargo.lock
-/zeropoint/Cargo.lock
+/syncwhole/Cargo.lock
 
 .DS_*
 .Icon*
@@ -15,3 +15,4 @@
 *.dSYM
 *.a
 /.idea
+*.secret
