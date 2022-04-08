@@ -9,30 +9,28 @@
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod impl_macos;
 
-//#[cfg(not(any(target_os = "macos", target_os = "ios", target_arch = "s390x", target_arch = "powerpc64le", target_arch = "powerpc64")))]
-//mod impl_gcrypt;
-
-//#[cfg(all(not(any(target_os = "macos", target_os = "ios")), any(target_arch = "s390x", target_arch = "powerpc64le", target_arch = "powerpc64")))]
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 mod impl_openssl;
+
+//#[cfg(not(any(target_os = "macos", target_os = "ios")))]
+//mod impl_gcrypt;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub use impl_macos::{AesCtr, AesGmacSiv};
 
-//#[cfg(not(any(target_os = "macos", target_os = "ios", target_arch = "s390x", target_arch = "powerpc64le", target_arch = "powerpc64")))]
-//pub use impl_gcrypt::{AesCtr, AesGmacSiv};
-
-//#[cfg(all(not(any(target_os = "macos", target_os = "ios")), any(target_arch = "s390x", target_arch = "powerpc64le", target_arch = "powerpc64")))]
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 pub use impl_openssl::{AesCtr, AesGmacSiv};
+
+//#[cfg(not(any(target_os = "macos", target_os = "ios")))]
+//pub use impl_gcrypt::{AesCtr, AesGmacSiv};
 
 pub(crate) const ZEROES: [u8; 16] = [0_u8; 16];
 
 #[cfg(test)]
 mod tests {
     use crate::AesGmacSiv;
-    use std::time::SystemTime;
     use sha2::Digest;
+    use std::time::SystemTime;
 
     fn to_hex(b: &[u8]) -> String {
         let mut s = String::new();
@@ -44,9 +42,9 @@ mod tests {
 
     #[test]
     fn encrypt_decrypt() {
-        let aes_key_0: [u8; 32] = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32];
-        let aes_key_1: [u8; 32] = [2,3,4,5,6,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32];
-        let iv: [u8; 8] = [0,1,2,3,4,5,6,7];
+        let aes_key_0: [u8; 32] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32];
+        let aes_key_1: [u8; 32] = [2, 3, 4, 5, 6, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32];
+        let iv: [u8; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
 
         let mut buf = [0_u8; 12345];
         for i in 1..12345 {
