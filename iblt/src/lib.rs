@@ -11,6 +11,24 @@ use std::borrow::Cow;
 /// Total memory overhead of each bucket in bytes.
 const BUCKET_SIZE_BYTES: usize = 13; // u64 key + u32 check + i8 count
 
+#[inline(always)]
+pub fn xorshift64(mut x: u64) -> u64 {
+    x ^= x.wrapping_shl(13);
+    x ^= x.wrapping_shr(7);
+    x ^= x.wrapping_shl(17);
+    x
+}
+
+#[inline(always)]
+pub fn splitmix64(mut x: u64) -> u64 {
+    x ^= x.wrapping_shr(30);
+    x = x.wrapping_mul(0xbf58476d1ce4e5b9);
+    x ^= x.wrapping_shr(27);
+    x = x.wrapping_mul(0x94d049bb133111eb);
+    x ^= x.wrapping_shr(31);
+    x
+}
+
 /// Based on xorshift64 with endian conversion for BE systems.
 #[inline(always)]
 fn get_check_hash(mut x: u64) -> u32 {
@@ -215,9 +233,9 @@ mod tests {
     #[allow(unused_imports)]
     use std::time::SystemTime;
 
-    use crate::iblt::*;
+    use super::*;
     #[allow(unused_imports)]
-    use crate::utils::{splitmix64, xorshift64};
+    use super::{splitmix64, xorshift64};
 
     const HASHES: usize = 3;
 

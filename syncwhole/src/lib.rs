@@ -6,7 +6,6 @@
  * https://www.zerotier.com/
  */
 
-pub(crate) mod iblt;
 pub(crate) mod protocol;
 pub(crate) mod varint;
 

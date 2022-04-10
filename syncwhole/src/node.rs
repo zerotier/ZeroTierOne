@@ -24,10 +24,10 @@ use tokio::time::{Duration, Instant};
 
 use crate::datastore::*;
 use crate::host::Host;
-use crate::iblt::IBLT;
 use crate::protocol::*;
 use crate::utils::*;
 use crate::varint;
+use iblt::IBLT;
 
 /// Period for running main housekeeping pass.
 const HOUSEKEEPING_PERIOD: i64 = SYNC_STATUS_PERIOD;

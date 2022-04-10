@@ -1,0 +1,16 @@
+[package]
+name = "iblt"
+version = "0.1.0"
+edition = "2021"
+license = "MPL-2.0"
+authors = ["Adam Ierymenko <adam.ierymenko@zerotier.com>"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = 'abort'
+
+[dependencies]
+
+[lib]
