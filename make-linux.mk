@@ -486,4 +486,7 @@ snap-upload-stable: FORCE
 		snapcraft upload --release=stable $${SNAPFILE};\
 	done
 
+synology: FORCE
+	./synology/build.sh build
+
 FORCE:

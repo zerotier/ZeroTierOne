@@ -1,11 +1,11 @@
 #!/bin/bash
 
-ZTO_VER=$(jq -r '.version' config.json)
-PKG_REV=$(jq -r '.rev' config.json)
+ZTO_VER=$(jq -r '.version' synology/config.json)
+PKG_REV=$(jq -r '.rev' synology/config.json)
 echo $ZTO_VER-$PKG_REV
-ZTO_DESC=$(jq -r '.desc' config.json)
+ZTO_DESC=$(jq -r '.desc' synology/config.json)
 echo $ZTO_DESC
-ZTO_EMAIL=$(jq -r '.email' config.json)
+ZTO_EMAIL=$(jq -r '.email' synology/config.json)
 echo $ZTO_EMAIL
 read -p "Confirm details [y/n] ? " -n 1 -r; echo; if [[ ! $REPLY =~ ^[Yy]$ ]]; then echo "Exiting."; exit; fi
 
@@ -18,12 +18,14 @@ build_environment()
 generate_package_sources()
 {
   # Clean up any intermediate files
-  make -C spksrc clean
+  sudo make -C spksrc clean
   rm -rf spksrc/distrib/*
   rm -rf spksrc/packages/*
   rm -rf spksrc/distrib/*source.tar.gz*
+  rm -rf spksrc/cross/*
+  mkdir -p spksrc/cross/zerotier
 
-  # Generate the SPK
+  # Generate the SPK contents
 
   # Copy package scripts to spksrc so they're accessible to container
   rm -rf spksrc/dsm6-pkg
@@ -37,12 +39,6 @@ generate_package_sources()
   git ls-files -z | xargs -0 tar -czvf source.tar.gz
   mkdir -p synology/spksrc/distrib
   cp source.tar.gz synology/spksrc/distrib/source.tar.gz
-
-  #
-  # Set up (cross) directory contents
-  #
-  rm -rf spksrc/cross/*
-  mkdir -p spksrc/cross/zerotier
 
 cat > synology/spksrc/cross/zerotier/digests <<- EOM
 source.tar.gz SHA1 $(sha1sum source.tar.gz | awk '{print $1}')
@@ -133,9 +129,11 @@ EOM
 
 build()
 {
+  pushd synology
   build_environment
   generate_package_sources
   sudo docker run -it -v $(pwd)/spksrc:/spksrc zt-spksrc /bin/bash
+  popd
 }
 
 "$@"
