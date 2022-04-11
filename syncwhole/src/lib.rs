@@ -8,11 +8,11 @@
 
 pub(crate) mod iblt;
 pub(crate) mod protocol;
+pub(crate) mod utils;
 pub(crate) mod varint;
 
 pub mod datastore;
 pub mod host;
 pub mod node;
-pub mod utils;
 
 pub use async_trait;

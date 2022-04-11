@@ -53,6 +53,7 @@ fn next_iteration_index(mut x: u64, hash_no: u64) -> u64 {
 /// The best value for HASHES seems to be 3 for an optimal fill of 80%.
 #[repr(C)]
 pub struct IBLT<const BUCKETS: usize, const HASHES: usize> {
+    total_count: i64, // always stored little-endian in memory
     key: [u64; BUCKETS],
     check_hash: [u32; BUCKETS],
     count: [i8; BUCKETS],
@@ -76,7 +77,7 @@ impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
     pub const BUCKETS: usize = BUCKETS;
 
     /// Size of this IBLT in bytes.
-    pub const SIZE_BYTES: usize = BUCKETS * BUCKET_SIZE_BYTES;
+    pub const SIZE_BYTES: usize = 8 + (BUCKETS * BUCKET_SIZE_BYTES); // total_count + buckets
 
     /// Create a new zeroed IBLT.
     #[inline(always)]
@@ -126,7 +127,13 @@ impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
         }
     }
 
-    fn ins_rem(&mut self, key: u64, delta: i8) {
+    /// Get the total number of set items that have been added to this IBLT.
+    pub fn count(&self) -> u64 {
+        i64::from_le(self.total_count).max(0) as u64
+    }
+
+    pub(crate) fn ins_rem(&mut self, key: u64, delta: i8) {
+        self.total_count = i64::from_le(self.total_count).wrapping_add(delta as i64).to_le();
         let check_hash = get_check_hash(key);
         let mut iteration_index = u64::from_le(key);
         for k in 0..(HASHES as u64) {
@@ -152,14 +159,20 @@ impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
 
     /// Subtract another IBLT from this one to get a set difference.
     pub fn subtract(&mut self, other: &Self) {
+        self.total_count = i64::from_le(self.total_count).wrapping_sub(i64::from_le(other.total_count.max(0))).max(0).to_le();
         self.key.iter_mut().zip(other.key.iter()).for_each(|(a, b)| *a ^= *b);
         self.check_hash.iter_mut().zip(other.check_hash.iter()).for_each(|(a, b)| *a ^= *b);
         self.count.iter_mut().zip(other.count.iter()).for_each(|(a, b)| *a = a.wrapping_sub(*b));
     }
 
     /// List as many entries in this IBLT as can be extracted.
-    /// True is returned if extraction was 100% successful. False indicates that
-    /// some entries were not extractable.
+    ///
+    /// True is returned if the number of extracted items was exactly equal to the total number of items
+    /// in this set summary. A return of false indicates incomplete extraction or an invalid IBLT.
+    ///
+    /// Due to the small check hash sizes used in this IBLT there is a very small chance this will list
+    /// bogus items that were never added. This is not an issue with this protocol as it would just result
+    /// in an unsatisfied record request.
     pub fn list<F: FnMut(u64)>(mut self, mut f: F) -> bool {
         let mut queue: Vec<u32> = Vec::with_capacity(BUCKETS);
 
@@ -170,7 +183,10 @@ impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
             }
         }
 
-        'list_main: loop {
+        let total_count = i64::from_le(self.total_count);
+        let mut listed = 0;
+
+        'list_main: while listed < total_count {
             let i = queue.pop();
             let i = if i.is_some() {
                 i.unwrap() as usize
@@ -182,6 +198,7 @@ impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
             let check_hash = self.check_hash[i];
             let count = self.count[i];
             if (count == 1 || count == -1) && check_hash == get_check_hash(key) {
+                listed += 1;
                 f(key);
 
                 let mut iteration_index = u64::from_le(key);
@@ -205,7 +222,7 @@ impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
             }
         }
 
-        self.count.iter().all(|x| *x == 0) && self.key.iter().all(|x| *x == 0)
+        listed == total_count
     }
 }
 

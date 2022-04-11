@@ -27,7 +27,7 @@ pub enum MessageType {
     /// msg::InitResponse (msgpack)
     InitResponse = 2_u8,
 
-    /// <u8 length of each key in bytes>[<key>...]
+    /// <full record key>[<full record key>...]
     HaveRecords = 3_u8,
 
     /// <u8 length of each key in bytes>[<key>...]
@@ -36,14 +36,8 @@ pub enum MessageType {
     /// <record>
     Record = 5_u8,
 
-    /// msg::SyncStatus (msgpack)
-    SyncStatus = 6_u8,
-
-    /// msg::SyncRequest (msgpack)
-    SyncRequest = 7_u8,
-
-    /// msg::SyncResponse (msgpack)
-    SyncResponse = 8_u8,
+    /// msg::Sync (msgpack)
+    Sync = 7_u8,
 }
 
 impl From<u8> for MessageType {
@@ -68,9 +62,7 @@ impl MessageType {
             Self::HaveRecords => "HAVE_RECORDS",
             Self::GetRecords => "GET_RECORDS",
             Self::Record => "RECORD",
-            Self::SyncStatus => "SYNC_STATUS",
-            Self::SyncRequest => "SYNC_REQUEST",
-            Self::SyncResponse => "SYNC_RESPONSE",
+            Self::Sync => "SYNC",
         }
     }
 }
@@ -141,81 +133,22 @@ pub mod msg {
     }
 
     #[derive(Serialize, Deserialize)]
-    pub struct SyncStatus {
-        /// Total number of records this node has in its data store.
-        #[serde(rename = "c")]
-        pub record_count: u64,
+    pub struct Sync<'a> {
+        /// 64-bit prefix of reocrd keys for this request
+        #[serde(rename = "p")]
+        pub prefix: u64,
 
-        /// Sending node's system clock.
-        #[serde(rename = "t")]
-        pub clock: u64,
-    }
-
-    #[derive(Serialize, Deserialize)]
-    pub struct SyncRequest<'a> {
-        /// Key range start (length: KEY_SIZE)
-        #[serde(with = "serde_bytes")]
-        #[serde(rename = "s")]
-        pub range_start: &'a [u8],
-
-        /// Key range end (length: KEY_SIZE)
-        #[serde(with = "serde_bytes")]
-        #[serde(rename = "e")]
-        pub range_end: &'a [u8],
-
-        /// Number of records requesting node already has under key range
-        #[serde(rename = "c")]
-        pub record_count: u64,
+        /// Number of bits in prefix that are meaningful
+        #[serde(rename = "b")]
+        pub prefix_bits: u8,
 
         /// Reference time for query
         #[serde(rename = "t")]
         pub reference_time: u64,
 
-        /// Random salt
-        #[serde(rename = "x")]
-        pub salt: &'a [u8],
-    }
-
-    #[derive(Serialize, Deserialize)]
-    pub struct SyncResponse<'a> {
-        /// Key range start (length: KEY_SIZE)
-        #[serde(rename = "s")]
-        pub range_start: &'a [u8],
-
-        /// Key range end (length: KEY_SIZE)
-        #[serde(rename = "e")]
-        pub range_end: &'a [u8],
-
-        /// Number of records responder has under key range
-        #[serde(rename = "c")]
-        pub record_count: u64,
-
-        /// Reference time for query
-        #[serde(rename = "t")]
-        pub reference_time: u64,
-
-        /// Random salt
-        #[serde(rename = "x")]
-        pub salt: &'a [u8],
-
-        /// IBLT set summary or empty if not included
-        ///
-        /// If an IBLT is omitted it means the sender determined it was
-        /// more efficient to just send keys. In that case keys[] should have
-        /// an explicit list.
+        /// Set summary for keys under prefix
         #[serde(with = "serde_bytes")]
         #[serde(rename = "i")]
         pub iblt: &'a [u8],
-
-        /// Explicit list of keys (full key length).
-        ///
-        /// This may still contain keys if an IBLT is present. In that case
-        /// keys included here will be any that have identical 64-bit prefixes
-        /// to keys already added to the IBLT and thus would collide. These
-        /// should be rare so it's most efficient to just explicitly name them.
-        /// Otherwise keys with identical 64-bit prefixes may never be synced.
-        #[serde(with = "serde_bytes")]
-        #[serde(rename = "k")]
-        pub keys: &'a [u8],
     }
 }

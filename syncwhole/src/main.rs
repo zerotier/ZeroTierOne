@@ -48,7 +48,7 @@ fn get_random_bytes(mut buf: &mut [u8]) {
 pub struct TestNodeHost {
     pub name: String,
     pub config: Config,
-    pub records: tokio::sync::Mutex<BTreeMap<[u8; 64], [u8; 64]>>,
+    pub records: tokio::sync::RwLock<BTreeMap<[u8; 64], [u8; 64]>>,
 }
 
 impl TestNodeHost {
@@ -63,7 +63,7 @@ impl TestNodeHost {
         Self {
             name: test_no.to_string(),
             config: Config::default(),
-            records: tokio::sync::Mutex::new(s),
+            records: tokio::sync::RwLock::new(s),
         }
     }
 }
@@ -105,54 +105,34 @@ impl DataStore for TestNodeHost {
         "test"
     }
 
-    async fn load(&self, _: i64, key: &[u8]) -> Option<Self::ValueRef> {
-        let key = key.try_into();
-        if key.is_ok() {
-            let key: [u8; 64] = key.unwrap();
-            let records = self.records.lock().await;
-            let value = records.get(&key);
-            if value.is_some() {
-                return Some(value.unwrap().clone());
-            }
+    async fn load(&self, key: &[u8; 64]) -> Option<Self::ValueRef> {
+        let records = self.records.read().await;
+        let value = records.get(key);
+        if value.is_some() {
+            Some(value.unwrap().clone())
+        } else {
+            None
         }
-        return None;
     }
 
-    async fn store(&self, key: &[u8], value: &[u8]) -> StoreResult {
-        let key = key.try_into();
-        if key.is_ok() && value.len() == 64 {
-            let key: [u8; 64] = key.unwrap();
-            let value: [u8; 64] = value.try_into().unwrap();
-            if key == Self::sha512(&[&value]) {
-                if self.records.lock().await.insert(key, value).is_none() {
-                    StoreResult::Ok
-                } else {
-                    StoreResult::Duplicate
-                }
+    async fn store(&self, key: &[u8; 64], value: &[u8]) -> StoreResult {
+        let value: [u8; 64] = value.try_into();
+        if value.is_ok() {
+            if self.records.write().await.insert(key.clone(), value).is_none() {
+                StoreResult::Ok
             } else {
-                StoreResult::Rejected
+                StoreResult::Duplicate
             }
         } else {
             StoreResult::Rejected
         }
     }
 
-    async fn count(&self, _: i64, key_range_start: &[u8], key_range_end: &[u8]) -> u64 {
-        let start: [u8; 64] = key_range_start.try_into().unwrap();
-        let end: [u8; 64] = key_range_end.try_into().unwrap();
-        self.records.lock().await.range((Included(start), Included(end))).count() as u64
-    }
-
-    async fn total_count(&self) -> u64 {
-        self.records.lock().await.len() as u64
-    }
-
-    async fn for_each<F: Send + FnMut(&[u8], &Self::ValueRef) -> bool>(&self, _reference_time: i64, key_range_start: &[u8], key_range_end: &[u8], mut f: F) {
-        let start: [u8; 64] = key_range_start.try_into().unwrap();
-        let end: [u8; 64] = key_range_end.try_into().unwrap();
-        let records = self.records.lock().await;
+    async fn keys_under<F: Send + FnMut(&[u8]) -> bool>(&self, reference_time: i64, prefix: u64, prefix_bits: u32, f: F) {
+        let (start, end) = prefix_to_range(prefix, prefix_bits);
+        let records = self.records.read().await;
         for (k, v) in records.range((Included(start), Included(end))) {
-            if !f(k, v) {
+            if !f(k) {
                 break;
             }
         }
