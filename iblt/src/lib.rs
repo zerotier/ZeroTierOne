@@ -11,24 +11,6 @@ use std::borrow::Cow;
 /// Total memory overhead of each bucket in bytes.
 const BUCKET_SIZE_BYTES: usize = 13; // u64 key + u32 check + i8 count
 
-#[inline(always)]
-pub fn xorshift64(mut x: u64) -> u64 {
-    x ^= x.wrapping_shl(13);
-    x ^= x.wrapping_shr(7);
-    x ^= x.wrapping_shl(17);
-    x
-}
-
-#[inline(always)]
-pub fn splitmix64(mut x: u64) -> u64 {
-    x ^= x.wrapping_shr(30);
-    x = x.wrapping_mul(0xbf58476d1ce4e5b9);
-    x ^= x.wrapping_shr(27);
-    x = x.wrapping_mul(0x94d049bb133111eb);
-    x ^= x.wrapping_shr(31);
-    x
-}
-
 /// Based on xorshift64 with endian conversion for BE systems.
 #[inline(always)]
 fn get_check_hash(mut x: u64) -> u32 {
@@ -36,7 +18,7 @@ fn get_check_hash(mut x: u64) -> u32 {
     x ^= x.wrapping_shl(13);
     x ^= x.wrapping_shr(7);
     x ^= x.wrapping_shl(17);
-    x.wrapping_add(x.wrapping_shr(32)).to_le() as u32
+    (x.wrapping_add(x.wrapping_shr(32)) as u32).to_le()
 }
 
 /// Called to get the next iteration index for each KEY_MAPPING_ITERATIONS table lookup.
@@ -71,7 +53,6 @@ fn next_iteration_index(mut x: u64, hash_no: u64) -> u64 {
 /// The best value for HASHES seems to be 3 for an optimal fill of 80%.
 #[repr(C)]
 pub struct IBLT<const BUCKETS: usize, const HASHES: usize> {
-    total_count: i64, // always stored little-endian in memory
     key: [u64; BUCKETS],
     check_hash: [u32; BUCKETS],
     count: [i8; BUCKETS],
@@ -95,7 +76,7 @@ impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
     pub const BUCKETS: usize = BUCKETS;
 
     /// Size of this IBLT in bytes.
-    pub const SIZE_BYTES: usize = 8 + (BUCKETS * BUCKET_SIZE_BYTES); // total_count + buckets
+    pub const SIZE_BYTES: usize = BUCKETS * BUCKET_SIZE_BYTES;
 
     /// Create a new zeroed IBLT.
     #[inline(always)]
@@ -145,13 +126,7 @@ impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
         }
     }
 
-    /// Get the total number of set items that have been added to this IBLT.
-    pub fn count(&self) -> u64 {
-        i64::from_le(self.total_count).max(0) as u64
-    }
-
     pub(crate) fn ins_rem(&mut self, key: u64, delta: i8) {
-        self.total_count = i64::from_le(self.total_count).wrapping_add(delta as i64).to_le();
         let check_hash = get_check_hash(key);
         let mut iteration_index = u64::from_le(key);
         for k in 0..(HASHES as u64) {
@@ -177,7 +152,6 @@ impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
 
     /// Subtract another IBLT from this one to get a set difference.
     pub fn subtract(&mut self, other: &Self) {
-        self.total_count = i64::from_le(self.total_count).wrapping_sub(i64::from_le(other.total_count.max(0))).max(0).to_le();
         self.key.iter_mut().zip(other.key.iter()).for_each(|(a, b)| *a ^= *b);
         self.check_hash.iter_mut().zip(other.check_hash.iter()).for_each(|(a, b)| *a ^= *b);
         self.count.iter_mut().zip(other.count.iter()).for_each(|(a, b)| *a = a.wrapping_sub(*b));
@@ -201,10 +175,7 @@ impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
             }
         }
 
-        let total_count = i64::from_le(self.total_count);
-        let mut listed = 0;
-
-        'list_main: while listed < total_count {
+        'list_main: loop {
             let i = queue.pop();
             let i = if i.is_some() {
                 i.unwrap() as usize
@@ -216,7 +187,6 @@ impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
             let check_hash = self.check_hash[i];
             let count = self.count[i];
             if (count == 1 || count == -1) && check_hash == get_check_hash(key) {
-                listed += 1;
                 f(key);
 
                 let mut iteration_index = u64::from_le(key);
@@ -240,19 +210,37 @@ impl<const BUCKETS: usize, const HASHES: usize> IBLT<BUCKETS, HASHES> {
             }
         }
 
-        listed == total_count
+        self.count.iter().any(|x| *x != 0) || self.key.iter().any(|x| *x != 0)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused)]
+    #[inline(always)]
+    pub fn xorshift64(mut x: u64) -> u64 {
+        x ^= x.wrapping_shl(13);
+        x ^= x.wrapping_shr(7);
+        x ^= x.wrapping_shl(17);
+        x
+    }
+
+    #[allow(unused)]
+    #[inline(always)]
+    pub fn splitmix64(mut x: u64) -> u64 {
+        x ^= x.wrapping_shr(30);
+        x = x.wrapping_mul(0xbf58476d1ce4e5b9);
+        x ^= x.wrapping_shr(27);
+        x = x.wrapping_mul(0x94d049bb133111eb);
+        x ^= x.wrapping_shr(31);
+        x
+    }
+
     use std::collections::HashSet;
     #[allow(unused_imports)]
     use std::time::SystemTime;
 
     use super::*;
-    #[allow(unused_imports)]
-    use super::{splitmix64, xorshift64};
 
     const HASHES: usize = 3;
 
