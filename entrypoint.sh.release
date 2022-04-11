@@ -77,6 +77,8 @@ EOF
 
 chmod +x /healthcheck.sh
 
+echo "zerotier-cli info: $(zerotier-cli info)"
+
 echo "Sleeping infinitely"
 while true
 do
