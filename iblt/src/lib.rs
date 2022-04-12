@@ -173,8 +173,14 @@ impl<const BUCKETS: usize, const ITEM_BYTES: usize, const HASHES: usize> IBLT<BU
 
     /// List as many entries in this IBLT as can be extracted.
     ///
-    /// True is returned if the number of extracted items was exactly equal to the total number of items
-    /// in this set summary. A return of false indicates incomplete extraction or an invalid IBLT.
+    /// The second boolean argument supplied to the function is true if this item belongs to the
+    /// "local" IBLT and false if it belongs to the "remote." This is meaningful after subtract()
+    /// where true would indicate an item we have and false would indicate an item that only exists
+    /// on the other side.
+    ///
+    /// This function returns true if all entries were successfully listed and false if the listing
+    /// is incomplete due to an over-saturated or corrupt IBLT. An incomplete list will still yield
+    /// some valid entries, so that does not mean results that were generated were invalid.
     ///
     /// Due to the small check hash sizes used in this IBLT there is a very small chance this will list
     /// bogus items that were never added. This is not an issue with this protocol as it would just result
