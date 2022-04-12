@@ -44,7 +44,7 @@ fn murmurhash32_mix32(mut x: u32) -> u32 {
     x
 }
 
-/// An Invertible Bloom Lookup Table for set reconciliation with 64-bit hashes.
+/// An Invertible Bloom Lookup Table for set reconciliation.
 ///
 /// Usage inspired by this paper:
 ///
