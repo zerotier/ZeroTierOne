@@ -19,17 +19,17 @@ fn xor_with<const L: usize>(x: &mut [u8; L], y: &[u8; L]) {
 fn xor_with<const L: usize>(x: &mut [u8; L], y: &[u8; L]) {
     if L >= 16 {
         for i in 0..(L / 16) {
-            unsafe { *x.as_mut_ptr().cast::<u128>().add(i) ^= *y.as_ptr().cast::<u128>() };
+            unsafe { *x.as_mut_ptr().cast::<u128>().add(i) ^= *y.as_ptr().cast::<u128>().add(i) };
         }
         for i in (L - (L % 16))..L {
-            unsafe { *x.as_mut_ptr().cast::<u8>().add(i) ^= *y.as_ptr().cast::<u8>() };
+            unsafe { *x.as_mut_ptr().add(i) ^= *y.as_ptr().add(i) };
         }
     } else {
         for i in 0..(L / 8) {
-            unsafe { *x.as_mut_ptr().cast::<u64>().add(i) ^= *y.as_ptr().cast::<u64>() };
+            unsafe { *x.as_mut_ptr().cast::<u64>().add(i) ^= *y.as_ptr().cast::<u64>().add(i) };
         }
         for i in (L - (L % 8))..L {
-            unsafe { *x.as_mut_ptr().cast::<u8>().add(i) ^= *y.as_ptr().cast::<u8>() };
+            unsafe { *x.as_mut_ptr().add(i) ^= *y.as_ptr().add(i) };
         }
     }
 }
@@ -210,9 +210,9 @@ impl<const BUCKETS: usize, const ITEM_BYTES: usize, const HASHES: usize> IBLT<BU
                     let check_hash2 = self.check_hash[i2] ^ check_hash;
                     let count2 = self.count[i2].wrapping_sub(count);
                     let key2 = &mut self.key[i2];
-                    xor_with(key2, &key);
                     self.check_hash[i2] = check_hash2;
                     self.count[i2] = count2;
+                    xor_with(key2, &key);
                     if (count2 == 1 || count2 == -1) && check_hash2 == crc32fast::hash(key2) {
                         if queue.len() > BUCKETS {
                             // sanity check, should be impossible
@@ -226,9 +226,18 @@ impl<const BUCKETS: usize, const ITEM_BYTES: usize, const HASHES: usize> IBLT<BU
             }
         }
 
-        self.count.iter().all(|x| *x == 0) || self.check_hash.iter().all(|x| *x == 0)
+        self.check_hash.iter().all(|x| *x == 0) && self.count.iter().all(|x| *x == 0)
     }
 }
+
+impl<const BUCKETS: usize, const ITEM_BYTES: usize, const HASHES: usize> PartialEq for IBLT<BUCKETS, ITEM_BYTES, HASHES> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.as_bytes().eq(other.as_bytes())
+    }
+}
+
+impl<const BUCKETS: usize, const ITEM_BYTES: usize, const HASHES: usize> Eq for IBLT<BUCKETS, ITEM_BYTES, HASHES> {}
 
 #[cfg(test)]
 mod tests {
