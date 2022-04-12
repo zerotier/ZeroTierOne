@@ -30,7 +30,7 @@ pub enum MessageType {
     /// <full record key>[<full record key>...]
     HaveRecords = 3_u8,
 
-    /// <u8 length of each key in bytes>[<key>...]
+    /// <u8 length of each key prefix in bytes>[<key>...]
     GetRecords = 4_u8,
 
     /// <record>
@@ -133,8 +133,8 @@ pub mod msg {
     }
 
     #[derive(Serialize, Deserialize)]
-    pub struct Sync<'a> {
-        /// 64-bit prefix of reocrd keys for this request
+    pub struct SyncRequest<'a> {
+        /// 64-bit prefix of record keys for this request
         #[serde(rename = "p")]
         pub prefix: u64,
 
@@ -142,11 +142,24 @@ pub mod msg {
         #[serde(rename = "b")]
         pub prefix_bits: u8,
 
-        /// Reference time for query
-        #[serde(rename = "t")]
-        pub reference_time: u64,
+        /// Data-store-specific subset selector indicating what subset of items desired
+        pub subset: &'a [u8],
+    }
 
-        /// Set summary for keys under prefix
+    #[derive(Serialize, Deserialize)]
+    pub struct Sync<'a> {
+        /// 64-bit prefix of record keys for this request
+        #[serde(rename = "p")]
+        pub prefix: u64,
+
+        /// Number of bits in prefix that are meaningful
+        #[serde(rename = "b")]
+        pub prefix_bits: u8,
+
+        /// Data-store-specific subset selector indicating what subset of items were included
+        pub subset: &'a [u8],
+
+        /// Set summary for keys under prefix within subset
         #[serde(with = "serde_bytes")]
         #[serde(rename = "i")]
         pub iblt: &'a [u8],

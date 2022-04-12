@@ -12,5 +12,6 @@ codegen-units = 1
 panic = 'abort'
 
 [dependencies]
+crc32fast = "^1"
 
 [lib]
