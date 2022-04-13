@@ -1002,27 +1002,16 @@ public:
 				// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
 				// use the other two ports for that because some NATs do really funky
 				// stuff with ports that are explicitly mapped that breaks things.
-				if (_ports[1]) {
-					if (_tertiaryPort) {
-						_ports[2] = _tertiaryPort;
-					} else {
-						_ports[2] = 20000 + (_ports[0] % 40000);
-						for(int i=0;;++i) {
-							if (i > 1000) {
-								_ports[2] = 0;
-								break;
-							} else if (++_ports[2] >= 65536) {
-								_ports[2] = 20000;
-							}
-							if (_trialBind(_ports[2]))
-								break;
-						}
-						if (_ports[2]) {
-							char uniqueName[64];
-							OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
-							_portMapper = new PortMapper(_ports[2],uniqueName);
-						}
-					}
+				if (_tertiaryPort) {
+					_ports[2] = _tertiaryPort;
+				} else {
+					_ports[2] = _getRandomPort();
+				}
+
+				if (_ports[2]) {
+					char uniqueName[64];
+					OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
+					_portMapper = new PortMapper(_ports[2],uniqueName);
 				}
 			}
 #endif
