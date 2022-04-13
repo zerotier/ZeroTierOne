@@ -151,16 +151,14 @@ impl<const BUCKETS: usize, const ITEM_BYTES: usize, const HASHES: usize> IBLT<BU
     /// Insert a set item into this set.
     /// This will panic if the slice is smaller than ITEM_BYTES.
     #[inline(always)]
-    pub fn insert(&mut self, key: &[u8]) {
-        assert!(key.len() >= ITEM_BYTES);
+    pub fn insert(&mut self, key: &[u8; ITEM_BYTES]) {
         self.ins_rem(unsafe { &*key.as_ptr().cast() }, 1);
     }
 
     /// Insert a set item into this set.
     /// This will panic if the slice is smaller than ITEM_BYTES.
     #[inline(always)]
-    pub fn remove(&mut self, key: &[u8]) {
-        assert!(key.len() >= ITEM_BYTES);
+    pub fn remove(&mut self, key: &[u8; ITEM_BYTES]) {
         self.ins_rem(unsafe { &*key.as_ptr().cast() }, -1);
     }
 
