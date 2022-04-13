@@ -2294,6 +2294,7 @@ public:
 						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString(ipbuf));
 				}
 			}
+#endif
 
 #ifdef __APPLE__
 			if (!MacDNSHelper::addIps(n.config().nwid, n.config().mac, n.tap()->deviceName().c_str(), newManagedIps))

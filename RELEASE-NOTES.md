@@ -1,6 +1,12 @@
 ZeroTier Release Notes
 ======
 
+# 2022-04-11 -- Version 1.8.8
+
+ * Fix a local privilege escalation bug in the Windows installer.
+ * Dependency fix for some Ubuntu versions.
+ * No changes for other platforms. Windows upgrade recommended, everyone else optional.
+
 # 2022-03-30 -- Version 1.8.7
 
  * Fix for dependency installations in Windows MSI package.

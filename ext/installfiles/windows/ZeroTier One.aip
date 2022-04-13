@@ -30,10 +30,10 @@
     <ROW Property="LIMITUI" MultiBuildValue="DefaultBuild:1"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{002609B2-C32C-481A-B17F-B7ED428427AC} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{C904F29F-944E-4322-A6A0-B52F7AC3E205} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
-    <ROW Property="ProductVersion" Value="1.8.7"/>
+    <ROW Property="ProductVersion" Value="1.8.8"/>
     <ROW Property="REBOOT" MultiBuildValue="DefaultBuild:ReallySuppress"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{B0E2A5F3-88B6-4E77-B922-CB4739B4C4C8}"/>
@@ -52,31 +52,37 @@
     <ROW Property="ZTHEADLESS" Value="No"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiDirsComponent">
-    <ROW Directory="APPDIR" Directory_Parent="TARGETDIR" DefaultDir="APPDIR:." IsPseudoRoot="1" DirectoryOptions="3"/>
+    <ROW Directory="APPDIR" Directory_Parent="TARGETDIR" DefaultDir="APPDIR:." IsPseudoRoot="1" DirectoryOptions="15"/>
     <ROW Directory="CommonAppDataFolder" Directory_Parent="TARGETDIR" DefaultDir="COMMON~1|CommonAppDataFolder" IsPseudoRoot="1"/>
-    <ROW Directory="One_Dir" Directory_Parent="ZeroTier_Dir" DefaultDir="One"/>
+    <ROW Directory="One_Dir" Directory_Parent="ZeroTier_Dir" DefaultDir="One" DirectoryOptions="12"/>
     <ROW Directory="ProgramFilesFolder" Directory_Parent="TARGETDIR" DefaultDir="PROGRA~1|ProgramFilesFolder" IsPseudoRoot="1"/>
     <ROW Directory="ProgramMenuFolder" Directory_Parent="TARGETDIR" DefaultDir="PROGRA~2|ProgramMenuFolder" IsPseudoRoot="1"/>
     <ROW Directory="TARGETDIR" DefaultDir="SourceDir"/>
-    <ROW Directory="ZeroTier_Dir" Directory_Parent="CommonAppDataFolder" DefaultDir="ZeroTier"/>
+    <ROW Directory="ZeroTier_Dir" Directory_Parent="CommonAppDataFolder" DefaultDir="ZeroTier" DirectoryOptions="12"/>
     <ROW Directory="i686_1_Dir" Directory_Parent="ProgramMenuFolder" DefaultDir=".:i686"/>
-    <ROW Directory="i686_Dir" Directory_Parent="APPDIR" DefaultDir=".:i686" DirectoryOptions="3"/>
-    <ROW Directory="networks.d_Dir" Directory_Parent="One_Dir" DefaultDir="networks.d"/>
-    <ROW Directory="regid.201001.com.zerotier_Dir" Directory_Parent="CommonAppDataFolder" DefaultDir="REGID2~1.ZER|regid.2010-01.com.zerotier"/>
-    <ROW Directory="tapwindows_Dir" Directory_Parent="One_Dir" DefaultDir="TAP-WI~1|tap-windows"/>
-    <ROW Directory="x64_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x64"/>
-    <ROW Directory="x86_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x86"/>
+    <ROW Directory="i686_Dir" Directory_Parent="APPDIR" DefaultDir=".:i686" DirectoryOptions="15"/>
+    <ROW Directory="networks.d_Dir" Directory_Parent="One_Dir" DefaultDir="networks.d" DirectoryOptions="12"/>
+    <ROW Directory="regid.201001.com.zerotier_Dir" Directory_Parent="CommonAppDataFolder" DefaultDir="REGID2~1.ZER|regid.2010-01.com.zerotier" DirectoryOptions="12"/>
+    <ROW Directory="tapwindows_Dir" Directory_Parent="One_Dir" DefaultDir="TAP-WI~1|tap-windows" DirectoryOptions="12"/>
+    <ROW Directory="x64_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x64" DirectoryOptions="12"/>
+    <ROW Directory="x86_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x86" DirectoryOptions="12"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{AE9B64A8-133E-4205-A700-6962B9FD02EB}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{3AD372B5-B885-444C-9AC7-D2FCCBB03811}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{46FFA8C5-A0CB-4E05-9AD3-911D543DE8CA}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{8E02B36C-7A19-429B-A93E-77A9261AC918}" Directory_="APPDIR" Attributes="4" KeyPath="AI_ExePath"/>
     <ROW Component="APPDIR" ComponentId="{4DD7907D-D7FE-4CD6-B1A0-B5C1625F5133}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="MicrosoftEdgeWebview2Setup.exe" ComponentId="{A243EE85-09B7-4451-B053-0C9BA4CA33A6}" Directory_="APPDIR" Attributes="0" KeyPath="MicrosoftEdgeWebview2Setup.exe"/>
+    <ROW Component="One" ComponentId="{41AB11E7-066E-414A-96F8-F051D3D3B353}" Directory_="One_Dir" Attributes="0"/>
     <ROW Component="ProductInformation" ComponentId="{DB078D04-EA8E-4A7C-9001-89BAD932F9D9}" Directory_="APPDIR" Attributes="4" KeyPath="Version"/>
+    <ROW Component="ZeroTier" ComponentId="{8864F744-9BDF-4891-88A1-6D23D76BCCB1}" Directory_="ZeroTier_Dir" Attributes="0"/>
     <ROW Component="i686" ComponentId="{6EC46014-3BFD-4017-ACBC-C4417D1D6361}" Directory_="i686_1_Dir" Attributes="0"/>
+    <ROW Component="i686_1" ComponentId="{60156BDC-31D7-47EE-A307-B62129607DD5}" Directory_="i686_Dir" Attributes="0"/>
     <ROW Component="networks.d" ComponentId="{EF54D0DF-889F-41DC-AF5C-4E7F96AB1C8B}" Directory_="networks.d_Dir" Attributes="0"/>
     <ROW Component="regid.201001.com.zerotier" ComponentId="{A39C80FC-6A8F-454F-9052-10DAC3C3B139}" Directory_="regid.201001.com.zerotier_Dir" Attributes="0"/>
+    <ROW Component="tapwindows" ComponentId="{3E9CBCCE-EC9D-4802-B8FD-DADB4CC532A2}" Directory_="tapwindows_Dir" Attributes="0"/>
+    <ROW Component="x64" ComponentId="{4DD1F90B-53F1-4390-BDF1-E6D9B39B8D80}" Directory_="x64_Dir" Attributes="0"/>
+    <ROW Component="x86" ComponentId="{8E83C577-3C22-49B7-82A8-369BE1F19224}" Directory_="x86_Dir" Attributes="0"/>
     <ROW Component="zerotier_desktop_ui.exe" ComponentId="{61A7F53C-C6C3-418D-A652-2E4D9F8173AA}" Directory_="APPDIR" Attributes="256" Condition="ZTHEADLESS = &quot;No&quot; AND VersionNT64" KeyPath="zerotier_desktop_ui.exe"/>
     <ROW Component="zerotier_desktop_ui.exe_1" ComponentId="{5CFEA823-6D17-4EAA-BBAA-810E1C89555D}" Directory_="i686_Dir" Attributes="0" Condition="ZTHEADLESS = &quot;No&quot; AND NOT VersionNT64" KeyPath="zerotier_desktop_ui.exe_1"/>
     <ROW Component="zerotierone_x64.exe" ComponentId="{DFCFB72D-B055-4E60-B6D8-81FF585C2183}" Directory_="One_Dir" Attributes="256" Condition="VersionNT64" KeyPath="zerotierone_x64.exe"/>
@@ -250,6 +256,12 @@
     <ROW Directory_="regid.201001.com.zerotier_Dir" Component_="regid.201001.com.zerotier" ManualDelete="false"/>
     <ROW Directory_="APPDIR" Component_="APPDIR" ManualDelete="true"/>
     <ROW Directory_="i686_1_Dir" Component_="i686" ManualDelete="false"/>
+    <ROW Directory_="ZeroTier_Dir" Component_="ZeroTier" ManualDelete="true"/>
+    <ROW Directory_="One_Dir" Component_="One" ManualDelete="false"/>
+    <ROW Directory_="tapwindows_Dir" Component_="tapwindows" ManualDelete="false"/>
+    <ROW Directory_="x64_Dir" Component_="x64" ManualDelete="false"/>
+    <ROW Directory_="x86_Dir" Component_="x86" ManualDelete="false"/>
+    <ROW Directory_="i686_Dir" Component_="i686_1" ManualDelete="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCustActComponent">
     <ROW Action="AI_AppSearchEx" Type="1" Source="Prereq.dll" Target="DoAppSearchEx"/>
@@ -289,6 +301,7 @@
     <ROW Action="AI_RESTORE_LOCATION" Type="65" Source="aicustact.dll" Target="RestoreLocation"/>
     <ROW Action="AI_RemoveExternalUIStub" Type="1" Source="ExternalUICleaner.dll" Target="RemoveExternalUIStub"/>
     <ROW Action="AI_ResolveKnownFolders" Type="1" Source="aicustact.dll" Target="AI_ResolveKnownFolders"/>
+    <ROW Action="AI_ResolveLocalizedCredentials" Type="1" Source="aicustact.dll" Target="GetLocalizedCredentials"/>
     <ROW Action="AI_RollbackChainers" Type="11585" Source="chainersupport.dll" Target="RollbackChainedPackages" WithoutSeq="true"/>
     <ROW Action="AI_SHOW_LOG" Type="65" Source="aicustact.dll" Target="LaunchLogFile" WithoutSeq="true"/>
     <ROW Action="AI_STORE_LOCATION" Type="51" Source="ARPINSTALLLOCATION" Target="[APPDIR]"/>
@@ -337,6 +350,12 @@
     <ROW Feature_="ZeroTierOne" Component_="AI_ExePath"/>
     <ROW Feature_="ZeroTierOne" Component_="i686"/>
     <ROW Feature_="ZeroTierOne" Component_="MicrosoftEdgeWebview2Setup.exe"/>
+    <ROW Feature_="ZeroTierOne" Component_="ZeroTier"/>
+    <ROW Feature_="ZeroTierOne" Component_="One"/>
+    <ROW Feature_="ZeroTierOne" Component_="tapwindows"/>
+    <ROW Feature_="ZeroTierOne" Component_="x64"/>
+    <ROW Feature_="ZeroTierOne" Component_="x86"/>
+    <ROW Feature_="ZeroTierOne" Component_="i686_1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="ZeroTierIcon.exe" SourcePath="..\..\..\artwork\ZeroTierIcon.ico" Index="0"/>
@@ -346,7 +365,7 @@
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
     <ROW Action="AI_STORE_LOCATION" Condition="(Not Installed) OR REINSTALL" Sequence="1502"/>
     <ROW Action="AI_PREPARE_UPGRADE" Condition="AI_UPGRADE=&quot;No&quot; AND (Not Installed)" Sequence="1397"/>
-    <ROW Action="AI_ResolveKnownFolders" Sequence="52"/>
+    <ROW Action="AI_ResolveKnownFolders" Sequence="53"/>
     <ROW Action="AI_XmlInstall" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5103"/>
     <ROW Action="AI_DATA_SETTER" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5102"/>
     <ROW Action="AI_XmlUninstall" Condition="(REMOVE)" Sequence="3102"/>
@@ -372,7 +391,7 @@
     <ROW Action="AI_DeleteLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="6594" Builds="ExeBuild"/>
     <ROW Action="TerminateUIOld" Sequence="1602"/>
     <ROW Action="AI_DATA_SETTER_6" Sequence="1601"/>
-    <ROW Action="AI_EnableDebugLog" Sequence="51"/>
+    <ROW Action="AI_EnableDebugLog" Sequence="52"/>
     <ROW Action="AI_AppSearchEx" Sequence="101"/>
     <ROW Action="AI_PrepareChainers" Condition="VersionMsi &gt;= &quot;4.05&quot;" Sequence="5851"/>
     <ROW Action="AI_ExtractFiles" Sequence="1399" Builds="ExeBuild"/>
@@ -382,17 +401,20 @@
     <ROW Action="AI_DATA_SETTER_5" Sequence="1603"/>
     <ROW Action="LaunchUI" Condition="( NOT Installed ) AND ( ZTHEADLESS = &quot;No&quot; )" Sequence="6604"/>
     <ROW Action="MicrosoftEdgeWebview2Setup.exe" Condition="( NOT Installed )" Sequence="6401"/>
+    <ROW Action="AI_DETECT_MODERNWIN" Condition="(VersionNT &gt;= 603)" Sequence="54" MsiKey="AI_DETECT_MODERNWIN"/>
+    <ROW Action="AI_ResolveLocalizedCredentials" Sequence="51"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
-    <ROW Action="AI_ResolveKnownFolders" Sequence="53"/>
-    <ROW Action="AI_DpiContentScale" Sequence="52"/>
+    <ROW Action="AI_ResolveKnownFolders" Sequence="54"/>
+    <ROW Action="AI_DpiContentScale" Sequence="53"/>
     <ROW Action="AI_BACKUP_AI_SETUPEXEPATH" Sequence="99"/>
     <ROW Action="AI_RESTORE_AI_SETUPEXEPATH" Condition="AI_SETUPEXEPATH_ORIGINAL" Sequence="103"/>
     <ROW Action="ExecuteAction" Sequence="1299" SeqType="0" MsiKey="ExecuteAction"/>
     <ROW Action="AI_DetectSoftware" Sequence="102"/>
-    <ROW Action="AI_EnableDebugLog" Sequence="51"/>
+    <ROW Action="AI_EnableDebugLog" Sequence="52"/>
     <ROW Action="AI_AppSearchEx" Sequence="101"/>
+    <ROW Action="AI_ResolveLocalizedCredentials" Sequence="51"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiLaunchConditionsComponent">
     <ROW Condition="( Version9X OR ( NOT VersionNT64 ) OR ( VersionNT64 AND ((VersionNT64 &lt;&gt; 600) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 600) OR (MsiNTProductType = 1)) AND ((VersionNT64 &lt;&gt; 601) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 601) OR (MsiNTProductType = 1)) ) )" Description="[ProductName] cannot be installed on the following Windows versions: [WindowsTypeNT64Display]." DescriptionLocId="AI.LaunchCondition.NoSpecificNT64" IsPredefined="true" Builds="DefaultBuild"/>
@@ -404,6 +426,23 @@
     <ROW Condition="Privileged" Description="[ProductName] requires administrative privileges to install." DescriptionLocId="AI.LaunchCondition.Privileged" IsPredefined="true" Builds="DefaultBuild"/>
     <ROW Condition="SETUPEXEDIR OR (REMOVE=&quot;ALL&quot;)" Description="This package can only be run from a bootstrapper." DescriptionLocId="AI.LaunchCondition.RequireBootstrapper" IsPredefined="true" Builds="ExeBuild"/>
     <ROW Condition="VersionNT" Description="[ProductName] cannot be installed on [WindowsType9XDisplay]." DescriptionLocId="AI.LaunchCondition.No9X" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
+  </COMPONENT>
+  <COMPONENT cid="caphyon.advinst.msicomp.MsiLockPermComponent">
+    <ROW LockObject="ZeroTier_Dir" Table="CreateFolder" User="[GRP_EVERYONE]" Permission="1179817" Flags="0"/>
+    <ROW LockObject="ZeroTier_Dir" Table="CreateFolder" User="[GRP_ADMINISTRATORS]" Permission="1245631" Flags="0"/>
+    <ROW LockObject="One_Dir" Table="CreateFolder" User="[GRP_ADMINISTRATORS]" Permission="1245631" Flags="0"/>
+    <ROW LockObject="One_Dir" Table="CreateFolder" User="[GRP_EVERYONE]" Permission="1179817" Flags="0"/>
+    <ROW LockObject="networks.d_Dir" Table="CreateFolder" User="[GRP_ADMINISTRATORS]" Permission="1245631" Flags="0"/>
+    <ROW LockObject="networks.d_Dir" Table="CreateFolder" User="[GRP_EVERYONE]" Permission="1179817" Flags="0"/>
+    <ROW LockObject="tapwindows_Dir" Table="CreateFolder" User="[GRP_EVERYONE]" Permission="1179817" Flags="0"/>
+    <ROW LockObject="tapwindows_Dir" Table="CreateFolder" User="[GRP_ADMINISTRATORS]" Permission="1245631" Flags="0"/>
+    <ROW LockObject="x64_Dir" Table="CreateFolder" User="[GRP_ADMINISTRATORS]" Permission="1245631" Flags="0"/>
+    <ROW LockObject="x64_Dir" Table="CreateFolder" User="[GRP_EVERYONE]" Permission="1179817" Flags="0"/>
+    <ROW LockObject="x86_Dir" Table="CreateFolder" User="[GRP_ADMINISTRATORS]" Permission="1245631" Flags="0"/>
+    <ROW LockObject="x86_Dir" Table="CreateFolder" User="[GRP_EVERYONE]" Permission="1179817" Flags="0"/>
+    <ROW LockObject="regid.201001.com.zerotier_Dir" Table="CreateFolder" User="[GRP_EVERYONE]" Permission="1179817" Flags="0"/>
+    <ROW LockObject="APPDIR" Table="CreateFolder" User="[GRP_EVERYONE]" Permission="1179817" Flags="0"/>
+    <ROW LockObject="i686_Dir" Table="CreateFolder" User="[GRP_EVERYONE]" Permission="1179817" Flags="0"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiRegLocatorComponent">
     <ROW Signature_="AI_EXE_PATH_CU" Root="1" Key="Software\Caphyon\Advanced Installer\LZMA\[ProductCode]\[ProductVersion]" Name="AI_ExePath" Type="2"/>
@@ -491,7 +530,7 @@
     <ROW XmlAttribute="xsischemaLocation" XmlElement="swidsoftware_identification_tag" Name="xsi:schemaLocation" Flags="14" Order="3" Value="http://standards.iso.org/iso/19770/-2/2008/schema.xsd software_identification_tag.xsd"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlElementComponent">
-    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="7" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="8" UpdateIndexInParent="0"/>
     <ROW XmlElement="swidentitlement_required_indicator" ParentElement="swidsoftware_identification_tag" Name="swid:entitlement_required_indicator" Condition="1" Order="0" Flags="14" Text="false" UpdateIndexInParent="0"/>
     <ROW XmlElement="swidmajor" ParentElement="swidnumeric" Name="swid:major" Condition="1" Order="0" Flags="14" Text="1" UpdateIndexInParent="0"/>
     <ROW XmlElement="swidminor" ParentElement="swidnumeric" Name="swid:minor" Condition="1" Order="1" Flags="14" Text="8" UpdateIndexInParent="0"/>
