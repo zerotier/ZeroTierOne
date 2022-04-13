@@ -1,12 +1,12 @@
 # Automagically pick CLANG or RH/CentOS newer GCC if present
 # This is only done if we have not overridden these with an environment or CLI variable
 ifeq ($(origin CC),default)
-        CC:=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
-        CC:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/gcc ]; then echo /opt/rh/devtoolset-8/root/usr/bin/gcc; else echo $(CC); fi)
+	CC:=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
+	CC:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/gcc ]; then echo /opt/rh/devtoolset-8/root/usr/bin/gcc; else echo $(CC); fi)
 endif
 ifeq ($(origin CXX),default)
-        CXX:=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
-        CXX:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/g++ ]; then echo /opt/rh/devtoolset-8/root/usr/bin/g++; else echo $(CXX); fi)
+	CXX:=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
+	CXX:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/g++ ]; then echo /opt/rh/devtoolset-8/root/usr/bin/g++; else echo $(CXX); fi)
 endif
 
 INCLUDES?=-Izeroidc/target
@@ -75,16 +75,19 @@ else
 endif
 
 ifeq ($(ZT_QNAP), 1)
-        override DEFS+=-D__QNAP__
+	override DEFS+=-D__QNAP__
+	ZT_EMBEDDED=1
 endif
 ifeq ($(ZT_UBIQUITI), 1)
-        override DEFS+=-D__UBIQUITI__
+	override DEFS+=-D__UBIQUITI__
+	ZT_EMBEDDED=1
 endif
 
 ifeq ($(ZT_SYNOLOGY), 1)
 	override CFLAGS+=-fPIC
 	override CXXFLAGS+=-fPIC
 	override DEFS+=-D__SYNOLOGY__
+	ZT_EMBEDDED=1
 endif
 
 ifeq ($(ZT_DISABLE_COMPRESSION), 1)
@@ -213,9 +216,9 @@ ifeq ($(CC_MACH),armv7hl)
 	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),armv7ve)
-        ZT_ARCHITECTURE=3
-        override DEFS+=-DZT_NO_TYPE_PUNNING
-        ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+	ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),arm64)
 	ZT_ARCHITECTURE=4
@@ -249,6 +252,10 @@ endif
 ifeq ($(CC_MACH),riscv64)
 	ZT_ARCHITECTURE=0
 endif
+ifeq ($(CC_MACH),loongarch64)
+	ZT_ARCHITECTURE=17
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
 
 # Fail if system architecture could not be determined
 ifeq ($(ZT_ARCHITECTURE),999)
@@ -268,10 +275,13 @@ ifeq ($(ZT_IA32),1)
 endif
 
 ifeq ($(ZT_SSO_SUPPORTED), 1)
-	ifeq ($(ZT_DEBUG),1)
-		LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
-	else
-		LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
+	ifeq ($(ZT_EMBEDDED),)
+		override DEFS+=-DZT_SSO_SUPPORTED=1
+		ifeq ($(ZT_DEBUG),1)
+			LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
+		else
+			LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
+		endif
 	endif
 endif
 
@@ -306,8 +316,8 @@ ifeq ($(ZT_ARCHITECTURE),3)
 		override CXXFLAGS+=-march=armv5t -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	else
-		override CFLAGS+=-mfloat-abi=hard -march=armv6kz -marm -mfpu=vfp -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
-		override CXXFLAGS+=-mfloat-abi=hard -march=armv6kz -marm -mfpu=vfp -fexceptions -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
+		override CFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
+		override CXXFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -fexceptions -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	endif
 endif
@@ -384,9 +394,11 @@ debug:	FORCE
 	make ZT_DEBUG=1 selftest
 
 ifeq ($(ZT_SSO_SUPPORTED), 1)
+ifeq ($(ZT_EMBEDDED),)
 zeroidc:	FORCE
 #	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build -j1 $(RUSTFLAGS)
 	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build $(RUSTFLAGS)
+endif
 else
 zeroidc:
 endif
@@ -477,5 +489,11 @@ snap-upload-stable: FORCE
 	for SNAPFILE in ./*.snap; do\
 		snapcraft upload --release=stable $${SNAPFILE};\
 	done
+
+synology-pkg: FORCE
+	cd synology ; ./build.sh build
+
+synology-docker: FORCE
+	cd synology/dsm7-docker/; ./build.sh build
 
 FORCE:
