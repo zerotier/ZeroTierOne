@@ -252,6 +252,10 @@ endif
 ifeq ($(CC_MACH),riscv64)
 	ZT_ARCHITECTURE=0
 endif
+ifeq ($(CC_MACH),loongarch64)
+	ZT_ARCHITECTURE=17
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
 
 # Fail if system architecture could not be determined
 ifeq ($(ZT_ARCHITECTURE),999)
@@ -486,7 +490,10 @@ snap-upload-stable: FORCE
 		snapcraft upload --release=stable $${SNAPFILE};\
 	done
 
-synology: FORCE
-	./synology/build.sh build
+synology-pkg: FORCE
+	cd synology ; ./build.sh build
+
+synology-docker: FORCE
+	cd synology/dsm7-docker/; ./build.sh build
 
 FORCE:

@@ -38,6 +38,8 @@ configure_cli()
     mkdir -p /usr/local/bin/
     ln -s $SYNOPKG_PKGDEST/bin/zerotier-one /usr/local/bin/zerotier-cli
     ln -s $SYNOPKG_PKGDEST/bin/zerotier-one /usr/local/bin/zerotier-idtool
+    rm -rf /var/lib/zerotier-one
+    ln -s /var/packages/zerotier/var /var/lib/zerotier-one
 }
 
 apply_routes()
@@ -69,8 +71,8 @@ apply_routes()
                     fi
                 done
             done
-            sleep 15
         fi
+        sleep 15
     done
 }
 

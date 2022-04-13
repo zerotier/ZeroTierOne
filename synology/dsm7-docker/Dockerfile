@@ -2,19 +2,17 @@
 
 FROM alpine:latest as builder
 
-ARG COMMIT=04b77773c4cd384c359e3a48f40307b288233194
-
 RUN apk add --no-cache rust cargo
 RUN apk add  openssl-dev
 
 RUN apk add --update alpine-sdk linux-headers \
   && git clone --quiet https://github.com/zerotier/ZeroTierOne.git /src \
-  && git -C src reset --quiet --hard ${COMMIT} \
+  && git -C src reset --quiet --hard ${ZTO_COMMIT} \
   && cd /src \
   && make -f make-linux.mk
 
 FROM alpine:latest
-LABEL version="1.8.7"
+LABEL version=${ZTO_VER}
 LABEL description="ZeroTier One docker image for Synology NAS"
 
 RUN apk add --update --no-cache bash jq libc6-compat libstdc++
