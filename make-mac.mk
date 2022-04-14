@@ -154,6 +154,10 @@ selftest: $(CORE_OBJS) $(ONE_OBJS) selftest.o
 
 zerotier-selftest: selftest
 
+# Make compile_commands.json for clangd editor extensions. Probably works on Linux too.
+compile_commands: FORCE
+	compiledb make ZT_DEBUG=1
+
 # Requires Packages: http://s.sudre.free.fr/Software/Packages/about.html
 mac-dist-pkg: FORCE
 	packagesbuild "ext/installfiles/mac/ZeroTier One.pkgproj"

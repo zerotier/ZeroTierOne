@@ -9,6 +9,7 @@
 # IDE stuff
 /.idea
 /.nova
+/compile_commands.json
 
 # OS-created garbage files from various platforms
 .DS_Store
