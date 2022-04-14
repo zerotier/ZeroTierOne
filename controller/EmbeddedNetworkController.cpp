@@ -1865,6 +1865,7 @@ void EmbeddedNetworkController::_startThreads()
 	const long hwc = std::max((long)std::thread::hardware_concurrency(),(long)1);
 	for(long t=0;t<hwc;++t) {
 		_threads.emplace_back([this]() {
+			std::vector< std::pair<uint64_t, uint64_t> > expired;
 			for(;;) {
 				_RQEntry *qe = (_RQEntry *)0;
 				auto timedWaitResult = _queue.get(qe, 1000);
@@ -1883,12 +1884,12 @@ void EmbeddedNetworkController::_startThreads()
 					}
 				}
 
-				std::vector< std::pair<uint64_t, uint64_t> > expired;
+				expired.clear();
 				int64_t now = OSUtils::now();
 				{
 					std::lock_guard<std::mutex> l(_expiringSoon_l);
 					for(auto s=_expiringSoon.begin();s!=_expiringSoon.end();) {
-						int64_t when = s->first;
+						const int64_t when = s->first;
 						if (when <= now) {
 							// Remove expired entries and if they are still correct as per the network status, deauth them.
 							std::lock_guard<std::mutex> l(_memberStatus_l);
@@ -1928,9 +1929,11 @@ void EmbeddedNetworkController::_startThreads()
 				}
 				*/
 
+				/*
 				for(auto e=expired.begin();e!=expired.end();++e) {
 					onNetworkMemberDeauthorize(nullptr, e->first, e->second);
 				}
+				*/
 			}
 		});
 	}
