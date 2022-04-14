@@ -109,6 +109,7 @@ private:
 			RQENTRY_TYPE_REQUEST = 0
 		} type;
 	};
+
 	struct _MemberStatusKey
 	{
 		_MemberStatusKey() : networkId(0),nodeId(0) {}
@@ -119,8 +120,9 @@ private:
 	};
 	struct _MemberStatus
 	{
-		_MemberStatus() : lastRequestTime(0),vMajor(-1),vMinor(-1),vRev(-1),vProto(-1) {}
-		uint64_t lastRequestTime;
+		_MemberStatus() : lastRequestTime(0),authenticationExpiryTime(-1),vMajor(-1),vMinor(-1),vRev(-1),vProto(-1) {}
+		int64_t lastRequestTime;
+		int64_t authenticationExpiryTime;
 		int vMajor,vMinor,vRev,vProto;
 		Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> lastRequestMetaData;
 		Identity identity;
@@ -151,6 +153,9 @@ private:
 
 	std::unordered_map< _MemberStatusKey,_MemberStatus,_MemberStatusHash > _memberStatus;
 	std::mutex _memberStatus_l;
+
+	std::multimap< int64_t, _MemberStatusKey > _expiringSoon;
+	std::mutex _expiringSoon_l;
 
 	RedisConfig *_rc;
 	std::string _ssoRedirectURL;

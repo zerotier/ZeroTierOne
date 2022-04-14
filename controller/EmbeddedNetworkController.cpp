@@ -1335,9 +1335,10 @@ void EmbeddedNetworkController::_request(
 	// Should we check SSO Stuff?
 	// If network is configured with SSO, and the member is not marked exempt: yes
 	// Otherwise no, we use standard auth logic.
+	AuthInfo info;
+	int64_t authenticationExpiryTime = -1;
 	bool networkSSOEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
 	bool memberSSOExempt = OSUtils::jsonBool(member["ssoExempt"], false);
-	AuthInfo info;
 	if (networkSSOEnabled && !memberSSOExempt) {
 		// TODO:  Get expiry time if auth is still valid
 
@@ -1347,7 +1348,7 @@ void EmbeddedNetworkController::_request(
 
 		std::string memberId = member["id"];
 		//fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
-		uint64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
+		authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
 		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
 		if (authenticationExpiryTime < now) {
 			fprintf(stderr, "Handling expired member\n");
@@ -1392,7 +1393,7 @@ void EmbeddedNetworkController::_request(
 			}
 		} else if (authorized) {
 			fprintf(stderr, "Setting member will expire to: %lld\n", authenticationExpiryTime);
-			_db.memberWillExpire(authenticationExpiryTime, nwid, identity.address().toInt());
+			//_db.memberWillExpire(authenticationExpiryTime, nwid, identity.address().toInt());
 		}
 	}
 
@@ -1409,10 +1410,12 @@ void EmbeddedNetworkController::_request(
 			member["vRev"] = vRev;
 			member["vProto"] = vProto;
 
+			_MemberStatusKey msk(nwid,identity.address().toInt());
+
 			{
 				std::lock_guard<std::mutex> l(_memberStatus_l);
-				_MemberStatus &ms = _memberStatus[_MemberStatusKey(nwid,identity.address().toInt())];
-
+				_MemberStatus &ms = _memberStatus[msk];
+				ms.authenticationExpiryTime = authenticationExpiryTime;
 				ms.vMajor = (int)vMajor;
 				ms.vMinor = (int)vMinor;
 				ms.vRev = (int)vRev;
@@ -1420,9 +1423,13 @@ void EmbeddedNetworkController::_request(
 				ms.lastRequestMetaData = metaData;
 				ms.identity = identity;
 			}
-		}		
+
+			if (authenticationExpiryTime > 0) {
+				std::lock_guard<std::mutex> l(_expiringSoon_l);
+				_expiringSoon.insert(std::pair<int64_t, _MemberStatusKey>(authenticationExpiryTime, msk));
+			}
+		}
 	} else {
-		
 		// If they are not authorized, STOP!
 		DB::cleanMember(member);
 		_db.save(member,true);
@@ -1876,6 +1883,30 @@ void EmbeddedNetworkController::_startThreads()
 					}
 				}
 
+				std::vector< std::pair<uint64_t, uint64_t> > expired;
+				int64_t now = OSUtils::now();
+				{
+					std::lock_guard<std::mutex> l(_expiringSoon_l);
+					for(auto s=_expiringSoon.begin();s!=_expiringSoon.end();) {
+						int64_t when = s->first;
+						if (when <= now) {
+							// Remove expired entries and if they are still correct as per the network status, deauth them.
+							std::lock_guard<std::mutex> l(_memberStatus_l);
+							_MemberStatus &ms = _memberStatus[s->second];
+							if ((ms.authenticationExpiryTime > 0)&&(ms.authenticationExpiryTime <= now)) {
+								expired.push_back(std::pair<uint64_t, uint64_t>(s->second.networkId, s->second.nodeId));
+							}
+							_expiringSoon.erase(s++);
+						} else if ((when - now) > 1000) {
+							// Don't bother going further into the future than necessary.
+							break;
+						} else {
+							++s;
+						}
+					}
+				}
+
+				/*
 				std::set< std::pair<uint64_t, uint64_t> > soon;
 				std::set< std::pair<uint64_t, uint64_t> > expired;
 				_db.membersExpiring(soon, expired);
@@ -1895,6 +1926,7 @@ void EmbeddedNetworkController::_startThreads()
 						request(s->first,InetAddress(),0,identity,lastMetaData);
 					}
 				}
+				*/
 
 				for(auto e=expired.begin();e!=expired.end();++e) {
 					onNetworkMemberDeauthorize(nullptr, e->first, e->second);

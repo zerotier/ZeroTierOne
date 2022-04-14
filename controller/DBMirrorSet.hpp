@@ -61,8 +61,8 @@ public:
 		_dbs.push_back(db);
 	}
 
-	void membersExpiring(std::set< std::pair<uint64_t, uint64_t> > &soon, std::set< std::pair<uint64_t, uint64_t> > &expired);
-	void memberWillExpire(int64_t expTime, uint64_t nwid, uint64_t memberId);
+	//void membersExpiring(std::set< std::pair<uint64_t, uint64_t> > &soon, std::set< std::pair<uint64_t, uint64_t> > &expired);
+	//void memberWillExpire(int64_t expTime, uint64_t nwid, uint64_t memberId);
 
 private:
 	DB::ChangeListener *const _listener;
@@ -70,8 +70,8 @@ private:
 	std::thread _syncCheckerThread;
 	std::vector< std::shared_ptr< DB > > _dbs;
 	mutable std::mutex _dbs_l;
-	std::set< std::pair< int64_t, std::pair<uint64_t, uint64_t> > > _membersExpiringSoon;
-	mutable std::mutex _membersExpiringSoon_l;
+	//std::set< std::pair< int64_t, std::pair<uint64_t, uint64_t> > > _membersExpiringSoon;
+	//mutable std::mutex _membersExpiringSoon_l;
 };
 
 } // namespace ZeroTier

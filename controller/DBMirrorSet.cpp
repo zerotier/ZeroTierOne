@@ -248,6 +248,7 @@ void DBMirrorSet::onNetworkMemberDeauthorize(const void *db,uint64_t networkId,u
 	_listener->onNetworkMemberDeauthorize(this,networkId,memberId);
 }
 
+/*
 void DBMirrorSet::membersExpiring(std::set< std::pair<uint64_t, uint64_t> > &soon, std::set< std::pair<uint64_t, uint64_t> > &expired)
 {
 	std::unique_lock<std::mutex> l(_membersExpiringSoon_l);
@@ -284,11 +285,14 @@ void DBMirrorSet::membersExpiring(std::set< std::pair<uint64_t, uint64_t> > &soo
 		_membersExpiringSoon.erase(next++);
 	}
 }
+*/
 
+/*
 void DBMirrorSet::memberWillExpire(int64_t expTime, uint64_t nwid, uint64_t memberId)
 {
 	std::unique_lock<std::mutex> l(_membersExpiringSoon_l);
 	_membersExpiringSoon.insert(std::pair< int64_t, std::pair< uint64_t, uint64_t > >(expTime, std::pair< uint64_t, uint64_t >(nwid, memberId)));
 }
+*/
 
 } // namespace ZeroTier
