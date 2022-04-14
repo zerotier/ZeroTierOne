@@ -6,6 +6,10 @@
 /zerotier
 /nltest
 
+# IDE stuff
+/.idea
+/.nova
+
 # OS-created garbage files from various platforms
 .DS_Store
 .Apple*
