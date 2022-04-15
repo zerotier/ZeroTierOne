@@ -1424,10 +1424,12 @@ void EmbeddedNetworkController::_request(
 				ms.identity = identity;
 			}
 
+			/*
 			if (authenticationExpiryTime > 0) {
 				std::lock_guard<std::mutex> l(_expiringSoon_l);
 				_expiringSoon.insert(std::pair<int64_t, _MemberStatusKey>(authenticationExpiryTime, msk));
 			}
+			*/
 		}
 	} else {
 		// If they are not authorized, STOP!
@@ -1441,18 +1443,13 @@ void EmbeddedNetworkController::_request(
 	// If we made it this far, they are authorized (and authenticated).
 	// -------------------------------------------------------------------------
 
-	int64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA;
-	if (now > ns.mostRecentDeauthTime) {
-		// If we recently de-authorized a member, shrink credential TTL/max delta to
-		// be below the threshold required to exclude it. Cap this to a min/max to
-		// prevent jitter or absurdly large values.
-		const uint64_t deauthWindow = now - ns.mostRecentDeauthTime;
-		if (deauthWindow < ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA) {
-			credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA;
-		} else if (deauthWindow < (ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA + 5000ULL)) {
-			credentialtmd = deauthWindow - 5000ULL;
-		}
+	// Default timeout: 15 minutes. Maximum: two hours. Can be specified by an optional field in the network config
+	// if something longer than 15 minutes is desired. Minimum is 5 minutes since shorter than that would be flaky.
+	int64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_DFL_MAX_DELTA;
+	if (network.contains("certificateTimeoutWindowSize")) {
+		credentialtmd = (int64_t)network["certificateTimeoutWindowSize"];
 	}
+	credentialtmd = std::max(std::min(credentialtmd, ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MAX_MAX_DELTA), ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_MIN_MAX_DELTA);
 
 	std::unique_ptr<NetworkConfig> nc(new NetworkConfig());
 
@@ -1884,6 +1881,7 @@ void EmbeddedNetworkController::_startThreads()
 					}
 				}
 
+				/*
 				expired.clear();
 				int64_t now = OSUtils::now();
 				{
@@ -1898,38 +1896,16 @@ void EmbeddedNetworkController::_startThreads()
 								expired.push_back(std::pair<uint64_t, uint64_t>(s->second.networkId, s->second.nodeId));
 							}
 							_expiringSoon.erase(s++);
-						} else if ((when - now) > 1000) {
+						} else if ((when - now) > 500) {
 							// Don't bother going further into the future than necessary.
 							break;
 						} else {
+							// Skip not yet expired entries.
 							++s;
 						}
 					}
 				}
 
-				/*
-				std::set< std::pair<uint64_t, uint64_t> > soon;
-				std::set< std::pair<uint64_t, uint64_t> > expired;
-				_db.membersExpiring(soon, expired);
-
-				for(auto s=soon.begin();s!=soon.end();++s) {
-					Identity identity;
-					Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> lastMetaData;
-					{
-						std::unique_lock<std::mutex> ll(_memberStatus_l);
-						auto ms = _memberStatus.find(_MemberStatusKey(s->first, s->second));
-						if (ms != _memberStatus.end()) {
-							lastMetaData = ms->second.lastRequestMetaData;
-							identity = ms->second.identity;
-						}
-					}
-					if (identity) {
-						request(s->first,InetAddress(),0,identity,lastMetaData);
-					}
-				}
-				*/
-
-				/*
 				for(auto e=expired.begin();e!=expired.end();++e) {
 					onNetworkMemberDeauthorize(nullptr, e->first, e->second);
 				}

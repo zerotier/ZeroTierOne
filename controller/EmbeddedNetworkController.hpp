@@ -154,8 +154,8 @@ private:
 	std::unordered_map< _MemberStatusKey,_MemberStatus,_MemberStatusHash > _memberStatus;
 	std::mutex _memberStatus_l;
 
-	std::multimap< int64_t, _MemberStatusKey > _expiringSoon;
-	std::mutex _expiringSoon_l;
+	//std::multimap< int64_t, _MemberStatusKey > _expiringSoon;
+	//std::mutex _expiringSoon_l;
 
 	RedisConfig *_rc;
 	std::string _ssoRedirectURL;
