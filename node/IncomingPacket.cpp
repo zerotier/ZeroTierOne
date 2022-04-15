@@ -47,14 +47,13 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr,int32_t f
 	try {
 		// Check for trusted paths or unencrypted HELLOs (HELLO is the only packet sent in the clear)
 		const unsigned int c = cipher();
-		bool trusted = false;
 		if (c == ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH) {
 			// If this is marked as a packet via a trusted path, check source address and path ID.
 			// Obviously if no trusted paths are configured this always returns false and such
 			// packets are dropped on the floor.
 			const uint64_t tpid = trustedPathId();
 			if (RR->topology->shouldInboundPathBeTrusted(_path->address(),tpid)) {
-				trusted = true;
+				_authenticated = true;
 			} else {
 				RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,packetId(),sourceAddress,hops(),"path not trusted");
 				return true;
@@ -66,7 +65,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr,int32_t f
 
 		const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,sourceAddress));
 		if (peer) {
-			if (!trusted) {
+			if (!_authenticated) {
 				if (!dearmor(peer->key(), peer->aesKeys())) {
 					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,packetId(),sourceAddress,hops(),"invalid MAC");
 					peer->recordIncomingInvalidPacket(_path);

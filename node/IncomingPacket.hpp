@@ -51,7 +51,9 @@ class IncomingPacket : public Packet
 public:
 	IncomingPacket() :
 		Packet(),
-		_receiveTime(0)
+		_receiveTime(0),
+		_path(),
+		_authenticated(false)
 	{
 	}
 
@@ -67,7 +69,8 @@ public:
 	IncomingPacket(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now) :
 		Packet(data,len),
 		_receiveTime(now),
-		_path(path)
+		_path(path),
+		_authenticated(false)
 	{
 	}
 
@@ -85,6 +88,7 @@ public:
 		copyFrom(data,len);
 		_receiveTime = now;
 		_path = path;
+		_authenticated = false;
 	}
 
 	/**
@@ -134,6 +138,7 @@ private:
 
 	uint64_t _receiveTime;
 	SharedPtr<Path> _path;
+	bool _authenticated;
 };
 
 } // namespace ZeroTier
