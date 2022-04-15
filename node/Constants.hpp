@@ -373,9 +373,9 @@
 #define ZT_QOS_TABLE_SIZE ((ZT_QOS_MAX_PACKET_SIZE * 8) / (64 + 16))
 
 /**
- * Maximum number of outgoing packets we monitor for QoS information
+ * Maximum number of packets we monitor for QoS information at any given time
  */
-#define ZT_QOS_MAX_OUTSTANDING_RECORDS (1024 * 16)
+#define ZT_QOS_MAX_PENDING_RECORDS (ZT_QOS_TABLE_SIZE * 3)
 
 /**
  * Interval used for rate-limiting the computation of path quality estimates.

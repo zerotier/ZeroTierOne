@@ -373,7 +373,7 @@ void Bond::recordIncomingInvalidPacket(const SharedPtr<Path>& path)
 	Mutex::Lock _l(_paths_m);
 	for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 		if (_paths[i].p == path) {
-			_paths[i].packetValiditySamples.push(false);
+			//_paths[i].packetValiditySamples.push(false);
 		}
 	}
 }
@@ -396,7 +396,7 @@ void Bond::recordOutgoingPacket(const SharedPtr<Path>& path, uint64_t packetId, 
 		if (shouldRecord) {
 			//_paths[pathIdx].unackedBytes += payloadLength;
 			// Take note that we're expecting a VERB_ACK on this path as of a specific time
-			if (_paths[pathIdx].qosStatsOut.size() < ZT_QOS_MAX_OUTSTANDING_RECORDS) {
+			if (_paths[pathIdx].qosStatsOut.size() < ZT_QOS_MAX_PENDING_RECORDS) {
 				_paths[pathIdx].qosStatsOut[packetId] = now;
 			}
 		}
@@ -429,9 +429,11 @@ void Bond::recordIncomingPacket(const SharedPtr<Path>& path, uint64_t packetId, 
 				_lastFrame = now;
 			}
 			if (shouldRecord) {
-				_paths[pathIdx].qosStatsIn[packetId] = now;
-				++(_paths[pathIdx].packetsReceivedSinceLastQoS);
-				_paths[pathIdx].packetValiditySamples.push(true);
+				if (_paths[pathIdx].qosStatsIn.size() < ZT_QOS_MAX_PENDING_RECORDS) {
+					_paths[pathIdx].qosStatsIn[packetId] = now;
+					++(_paths[pathIdx].packetsReceivedSinceLastQoS);
+					//_paths[pathIdx].packetValiditySamples.push(true);
+				}
 			}
 		}
 	}
@@ -1038,7 +1040,7 @@ void Bond::estimatePathQuality(int64_t now)
 		// Compute/Smooth average of real-world observations
 		_paths[i].latencyMean = _paths[i].latencySamples.mean();
 		_paths[i].latencyVariance = _paths[i].latencySamples.stddev();
-		_paths[i].packetErrorRatio = 1.0 - (_paths[i].packetValiditySamples.count() ? _paths[i].packetValiditySamples.mean() : 1.0);
+		//_paths[i].packetErrorRatio = 1.0 - (_paths[i].packetValiditySamples.count() ? _paths[i].packetValiditySamples.mean() : 1.0);
 
 		if (userHasSpecifiedLinkSpeeds()) {
 			// Use user-reported metrics
@@ -1048,19 +1050,37 @@ void Bond::estimatePathQuality(int64_t now)
 				_paths[i].throughputVariance = 0;
 			}
 		}
+
 		// Drain unacknowledged QoS records
+		int qosRecordTimeout = (_qosSendInterval * 3);
 		std::map<uint64_t, uint64_t>::iterator it = _paths[i].qosStatsOut.begin();
-		uint64_t currentLostRecords = 0;
+		int numDroppedQosOutRecords = 0;
 		while (it != _paths[i].qosStatsOut.end()) {
-			int qosRecordTimeout = 5000;   //_paths[i].p->monitorInterval() * ZT_BOND_QOS_ACK_INTERVAL_MULTIPLIER * 8;
 			if ((now - it->second) >= qosRecordTimeout) {
-				// Packet was lost
 				it = _paths[i].qosStatsOut.erase(it);
-				++currentLostRecords;
+				++numDroppedQosOutRecords;
 			}
 			else {
 				++it;
 			}
+		}
+		if (numDroppedQosOutRecords) {
+			log("Dropped %d QOS out-records", numDroppedQosOutRecords);
+		}
+
+		it = _paths[i].qosStatsIn.begin();
+		int numDroppedQosInRecords = 0;
+		while (it != _paths[i].qosStatsIn.end()) {
+			if ((now - it->second) >= qosRecordTimeout) {
+				it = _paths[i].qosStatsIn.erase(it);
+				++numDroppedQosInRecords;
+			}
+			else {
+				++it;
+			}
+		}
+		if (numDroppedQosInRecords) {
+			log("Dropped %d QOS in-records", numDroppedQosInRecords);
 		}
 
 		quality[i] = 0;
