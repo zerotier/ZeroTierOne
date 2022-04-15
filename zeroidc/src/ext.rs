@@ -201,7 +201,28 @@ pub extern "C" fn zeroidc_set_nonce_and_csrf(
     )
 )]
 #[no_mangle]
-pub extern "C" fn zeroidc_get_auth_url(ptr: *mut ZeroIDC) -> *const c_char {
+pub extern "C" fn free_cstr(s: *mut c_char) {
+    if s.is_null() {
+        println!("passed a null object");
+        return;
+    }
+
+    unsafe {
+        let _ = CString::from_raw(s);
+    }
+}
+
+#[cfg(
+    any(
+        all(target_os = "linux", target_arch = "x86"),
+        all(target_os = "linux", target_arch = "x86_64"),
+        all(target_os = "linux", target_arch = "aarch64"),
+        target_os = "windows",
+        target_os = "macos",
+    )
+)]
+#[no_mangle]
+pub extern "C" fn zeroidc_get_auth_url(ptr: *mut ZeroIDC) -> *mut c_char {
     if ptr.is_null() {
         println!("passed a null object");
         return std::ptr::null_mut();
@@ -224,15 +245,15 @@ pub extern "C" fn zeroidc_get_auth_url(ptr: *mut ZeroIDC) -> *const c_char {
     )
 )]
 #[no_mangle]
-pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char ) -> *const c_char {
+pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char ) -> *mut c_char {
     if idc.is_null() {
         println!("idc is null");
-        return std::ptr::null();
+        return std::ptr::null_mut();
     }
 
     if code.is_null() {
         println!("code is null");
-        return std::ptr::null();
+        return std::ptr::null_mut();
     }
     let idc = unsafe {
         &mut *idc
@@ -246,14 +267,14 @@ pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char 
 }
 
 #[no_mangle]
-pub extern "C" fn zeroidc_get_url_param_value(param: *const c_char, path: *const c_char) -> *const c_char {
+pub extern "C" fn zeroidc_get_url_param_value(param: *const c_char, path: *const c_char) -> *mut c_char {
     if param.is_null() {
         println!("param is null");
-        return std::ptr::null();
+        return std::ptr::null_mut();
     }
     if path.is_null() {
         println!("path is null");
-        return std::ptr::null();
+        return std::ptr::null_mut();
     }
     let param = unsafe {CStr::from_ptr(param)}.to_str().unwrap();
     let path =  unsafe {CStr::from_ptr(path)}.to_str().unwrap();
@@ -269,14 +290,14 @@ pub extern "C" fn zeroidc_get_url_param_value(param: *const c_char, path: *const
         }
     }
 
-    return std::ptr::null();
+    return std::ptr::null_mut();
 }
 
 #[no_mangle]
-pub extern "C" fn zeroidc_network_id_from_state(state: *const c_char) -> *const c_char {
+pub extern "C" fn zeroidc_network_id_from_state(state: *const c_char) -> *mut c_char {
     if state.is_null() {
         println!("state is null");
-        return std::ptr::null();
+        return std::ptr::null_mut();
     }
 
     let state = unsafe{CStr::from_ptr(state)}.to_str().unwrap();
@@ -284,7 +305,7 @@ pub extern "C" fn zeroidc_network_id_from_state(state: *const c_char) -> *const 
     let split = state.split("_");
     let split = split.collect::<Vec<&str>>();
     if split.len() != 2 {
-        return std::ptr::null();
+        return std::ptr::null_mut();
     }
 
     let s = CString::new(split[1]).unwrap();
