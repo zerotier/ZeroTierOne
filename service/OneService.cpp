@@ -328,9 +328,10 @@ public:
 				_config.ssoNonce
 			);
 
-			const char* url = zeroidc::zeroidc_get_auth_url(_idc);
+			char* url = zeroidc::zeroidc_get_auth_url(_idc);
 			memcpy(_config.authenticationURL, url, strlen(url));
 			_config.authenticationURL[strlen(url)] = 0;
+			zeroidc::free_cstr(url);
 
 			if (zeroidc::zeroidc_is_running(_idc) && nwc->status == ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED) {
 				// TODO: kick the refresh thread
@@ -362,23 +363,25 @@ public:
 		return "";
 	}
 
-	const char* doTokenExchange(const char *code) {
+	char* doTokenExchange(const char *code) {
 #if ZT_SSO_ENABLED
 		if (_idc == nullptr) {
 			fprintf(stderr, "ainfo or idc null\n");
 			return "";
 		}
 
-		const char *ret = zeroidc::zeroidc_token_exchange(_idc, code);
+		char *ret = zeroidc::zeroidc_token_exchange(_idc, code);
 		zeroidc::zeroidc_set_nonce_and_csrf(
 			_idc,
 			_config.ssoState,
 			_config.ssoNonce
 		);
 
-		const char* url = zeroidc::zeroidc_get_auth_url(_idc);
+		char* url = zeroidc::zeroidc_get_auth_url(_idc);
 		memcpy(_config.authenticationURL, url, strlen(url));
 		_config.authenticationURL[strlen(url)] = 0;
+		zeroidc::free_cstr(url);
+		
 		return ret;
 #else
 		return "";
@@ -1710,19 +1713,26 @@ public:
 				} 
 
 				// SSO redirect handling
-				const char* state = zeroidc::zeroidc_get_url_param_value("state", path.c_str());
-				const char* nwid = zeroidc::zeroidc_network_id_from_state(state);
+				char* state = zeroidc::zeroidc_get_url_param_value("state", path.c_str());
+				char* nwid = zeroidc::zeroidc_network_id_from_state(state);
 				
 				const uint64_t id = Utils::hexStrToU64(nwid);
+				
+				zeroidc::free_cstr(nwid);
+				zeroidc::free_cstr(state);
+
 				Mutex::Lock l(_nets_m);
 				if (_nets.find(id) != _nets.end()) {
 					NetworkState& ns = _nets[id];
-					const char* code = zeroidc::zeroidc_get_url_param_value("code", path.c_str());
-					ns.doTokenExchange(code);
+					char* code = zeroidc::zeroidc_get_url_param_value("code", path.c_str());
+					char *ret = ns.doTokenExchange(code);
 					scode = 200;
 					sprintf(resBuf, ssoResponseTemplate, "Authentication Successful. You may now access the network.");
 					responseBody = std::string(resBuf);
 
+					zeroidc::free_cstr(code);
+					zeroidc::free_cstr(ret);
+					
 					responseContentType = "text/html";
 					return scode;
 				} else {
