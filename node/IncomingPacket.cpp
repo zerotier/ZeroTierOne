@@ -78,6 +78,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr,int32_t f
 				return true;
 			}
 
+			_authenticated = true;
 			const Packet::Verb v = verb();
 
 			bool r = true;
