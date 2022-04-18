@@ -10,19 +10,19 @@ use std::collections::HashMap;
 use std::hash::Hasher;
 use std::io::Write;
 use std::num::NonZeroI64;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::Arc;
 
 use highway::HighwayHash;
 use parking_lot::Mutex;
 use zerotier_core_crypto::hash::SHA384_HASH_SIZE;
 
-use crate::PacketBuffer;
 use crate::util::{array_range, highwayhasher, U64NoOpHasher};
-use crate::vl1::Endpoint;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::SystemInterface;
 use crate::vl1::protocol::*;
+use crate::vl1::Endpoint;
+use crate::PacketBuffer;
 
 /// Keepalive interval for paths in milliseconds.
 pub(crate) const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
@@ -59,7 +59,7 @@ impl Path {
             Endpoint::Ethernet(m) => (m.to_u64() | 0x0100000000000000) as u128 ^ lsi,
             Endpoint::WifiDirect(m) => (m.to_u64() | 0x0200000000000000) as u128 ^ lsi,
             Endpoint::Bluetooth(m) => (m.to_u64() | 0x0400000000000000) as u128 ^ lsi,
-            Endpoint::Ip(ip) => ip.ip_as_native_u128().wrapping_sub(lsi), // naked IP has no port
+            Endpoint::Ip(ip) => ip.ip_as_native_u128().wrapping_sub(lsi),    // naked IP has no port
             Endpoint::IpUdp(ip) => ip.ip_as_native_u128().wrapping_add(lsi), // UDP maintains one path per IP but merely learns the most recent port
             Endpoint::IpTcp(ip) => ip.ip_as_native_u128().wrapping_sub(crate::util::hash64_noncrypt((ip.port() as u64).wrapping_add(*RANDOM_64BIT_SALT_2)) as u128).wrapping_sub(lsi),
             Endpoint::Http(s) => {
@@ -93,19 +93,29 @@ impl Path {
     }
 
     #[inline(always)]
-    pub fn endpoint(&self) -> Arc<Endpoint> { self.endpoint.lock().clone() }
+    pub fn endpoint(&self) -> Arc<Endpoint> {
+        self.endpoint.lock().clone()
+    }
 
     #[inline(always)]
-    pub fn local_socket(&self) -> Option<NonZeroI64> { self.local_socket }
+    pub fn local_socket(&self) -> Option<NonZeroI64> {
+        self.local_socket
+    }
 
     #[inline(always)]
-    pub fn local_interface(&self) -> Option<NonZeroI64> { self.local_interface }
+    pub fn local_interface(&self) -> Option<NonZeroI64> {
+        self.local_interface
+    }
 
     #[inline(always)]
-    pub fn last_send_time_ticks(&self) -> i64 { self.last_send_time_ticks.load(Ordering::Relaxed) }
+    pub fn last_send_time_ticks(&self) -> i64 {
+        self.last_send_time_ticks.load(Ordering::Relaxed)
+    }
 
     #[inline(always)]
-    pub fn last_receive_time_ticks(&self) -> i64 { self.last_receive_time_ticks.load(Ordering::Relaxed) }
+    pub fn last_receive_time_ticks(&self) -> i64 {
+        self.last_receive_time_ticks.load(Ordering::Relaxed)
+    }
 
     /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.
     /// This returns None if more fragments are needed to assemble the packet.
@@ -152,10 +162,10 @@ impl Path {
                         if ip_orig.port() != ip.port() {
                             replace = true;
                         }
-                    },
+                    }
                     _ => {}
                 }
-            },
+            }
             _ => {}
         }
         if replace {

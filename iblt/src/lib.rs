@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn merge_sets() {
-        const CAPACITY: usize = 16384;
+        const CAPACITY: usize = 4096; // previously 16384;
         const REMOTE_SIZE: usize = 1024 * 1024 * 2;
         const STEP: usize = 1024;
         let mut rn: u128 = 0xd3b07384d113edec49eaa6238ad5ff00;

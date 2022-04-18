@@ -11,15 +11,15 @@ use std::collections::{HashMap, LinkedList};
 use parking_lot::Mutex;
 
 use crate::util::gate::IntervalGate;
-use crate::vl1::Address;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::{Node, SystemInterface};
-use crate::vl1::protocol::{WHOIS_RETRY_INTERVAL, WHOIS_MAX_WAITING_PACKETS, WHOIS_RETRY_MAX};
+use crate::vl1::protocol::{WHOIS_MAX_WAITING_PACKETS, WHOIS_RETRY_INTERVAL, WHOIS_RETRY_MAX};
+use crate::vl1::Address;
 use crate::PacketBuffer;
 
 pub(crate) enum QueuedPacket {
     Unfragmented(PacketBuffer),
-    Fragmented(FragmentedPacket)
+    Fragmented(FragmentedPacket),
 }
 
 struct WhoisQueueItem {
@@ -33,7 +33,9 @@ pub(crate) struct WhoisQueue(Mutex<HashMap<Address, WhoisQueueItem>>);
 impl WhoisQueue {
     pub(crate) const INTERVAL: i64 = WHOIS_RETRY_INTERVAL;
 
-    pub fn new() -> Self { Self(Mutex::new(HashMap::new())) }
+    pub fn new() -> Self {
+        Self(Mutex::new(HashMap::new()))
+    }
 
     /// Launch or renew a WHOIS query and enqueue a packet to be processed when (if) it is received.
     pub fn query<SI: SystemInterface>(&self, node: &Node, si: &SI, target: Address, packet: Option<QueuedPacket>) {

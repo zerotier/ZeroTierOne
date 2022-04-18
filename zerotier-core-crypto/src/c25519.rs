@@ -45,10 +45,14 @@ impl C25519KeyPair {
     }
 
     #[inline(always)]
-    pub fn public_bytes(&self) -> [u8; C25519_PUBLIC_KEY_SIZE] { self.1.to_bytes() }
+    pub fn public_bytes(&self) -> [u8; C25519_PUBLIC_KEY_SIZE] {
+        self.1.to_bytes()
+    }
 
     #[inline(always)]
-    pub fn secret_bytes(&self) -> Secret<{ C25519_SECRET_KEY_SIZE }> { Secret(self.0.to_bytes()) }
+    pub fn secret_bytes(&self) -> Secret<{ C25519_SECRET_KEY_SIZE }> {
+        Secret(self.0.to_bytes())
+    }
 
     /// Execute ECDH agreement and return a raw (un-hashed) shared secret key.
     pub fn agree(&self, their_public: &[u8]) -> Secret<{ C25519_SHARED_SECRET_SIZE }> {
@@ -60,7 +64,9 @@ impl C25519KeyPair {
 }
 
 impl Clone for C25519KeyPair {
-    fn clone(&self) -> Self { Self(x25519_dalek::StaticSecret::from(self.0.to_bytes()), x25519_dalek::PublicKey::from(self.1.to_bytes())) }
+    fn clone(&self) -> Self {
+        Self(x25519_dalek::StaticSecret::from(self.0.to_bytes()), x25519_dalek::PublicKey::from(self.1.to_bytes()))
+    }
 }
 
 /// Ed25519 key pair for EDDSA signatures.
@@ -78,10 +84,7 @@ impl Ed25519KeyPair {
             let pk = ed25519_dalek::PublicKey::from_bytes(public_bytes);
             let sk = ed25519_dalek::SecretKey::from_bytes(secret_bytes);
             if pk.is_ok() && sk.is_ok() {
-                Some(Ed25519KeyPair(ed25519_dalek::Keypair {
-                    public: pk.unwrap(),
-                    secret: sk.unwrap(),
-                }))
+                Some(Ed25519KeyPair(ed25519_dalek::Keypair { public: pk.unwrap(), secret: sk.unwrap() }))
             } else {
                 None
             }
@@ -91,10 +94,14 @@ impl Ed25519KeyPair {
     }
 
     #[inline(always)]
-    pub fn public_bytes(&self) -> [u8; ED25519_PUBLIC_KEY_SIZE] { self.0.public.to_bytes() }
+    pub fn public_bytes(&self) -> [u8; ED25519_PUBLIC_KEY_SIZE] {
+        self.0.public.to_bytes()
+    }
 
     #[inline(always)]
-    pub fn secret_bytes(&self) -> Secret<{ ED25519_SECRET_KEY_SIZE }> { Secret(self.0.secret.to_bytes()) }
+    pub fn secret_bytes(&self) -> Secret<{ ED25519_SECRET_KEY_SIZE }> {
+        Secret(self.0.secret.to_bytes())
+    }
 
     pub fn sign(&self, msg: &[u8]) -> [u8; ED25519_SIGNATURE_SIZE] {
         let mut h = ed25519_dalek::Sha512::new();
@@ -118,7 +125,9 @@ impl Ed25519KeyPair {
 }
 
 impl Clone for Ed25519KeyPair {
-    fn clone(&self) -> Self { Self(ed25519_dalek::Keypair::from_bytes(&self.0.to_bytes()).unwrap()) }
+    fn clone(&self) -> Self {
+        Self(ed25519_dalek::Keypair::from_bytes(&self.0.to_bytes()).unwrap())
+    }
 }
 
 pub fn ed25519_verify(public_key: &[u8], signature: &[u8], msg: &[u8]) -> bool {

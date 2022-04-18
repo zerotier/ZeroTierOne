@@ -8,8 +8,8 @@
 
 // AES-GMAC-SIV implemented using MacOS/iOS CommonCrypto (MacOS 10.13 or newer required).
 
-use std::os::raw::{c_void, c_int};
-use std::ptr::{null_mut, null};
+use std::os::raw::{c_int, c_void};
+use std::ptr::{null, null_mut};
 
 #[allow(non_upper_case_globals)]
 const kCCModeECB: i32 = 1;

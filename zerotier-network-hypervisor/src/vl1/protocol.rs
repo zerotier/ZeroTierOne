@@ -9,8 +9,8 @@
 use std::convert::TryFrom;
 use std::mem::MaybeUninit;
 
+use crate::util::buffer::{Buffer, RawObject};
 use crate::vl1::Address;
-use crate::util::buffer::{RawObject, Buffer};
 
 pub const VERB_VL1_NOP: u8 = 0x00;
 pub const VERB_VL1_HELLO: u8 = 0x01;
@@ -224,10 +224,14 @@ unsafe impl RawObject for PacketHeader {}
 
 impl PacketHeader {
     #[inline(always)]
-    pub fn cipher(&self) -> u8 { self.flags_cipher_hops & HEADER_FLAGS_FIELD_MASK_CIPHER }
+    pub fn cipher(&self) -> u8 {
+        self.flags_cipher_hops & HEADER_FLAGS_FIELD_MASK_CIPHER
+    }
 
     #[inline(always)]
-    pub fn hops(&self) -> u8 { self.flags_cipher_hops & HEADER_FLAGS_FIELD_MASK_HOPS }
+    pub fn hops(&self) -> u8 {
+        self.flags_cipher_hops & HEADER_FLAGS_FIELD_MASK_HOPS
+    }
 
     #[inline(always)]
     pub fn increment_hops(&mut self) -> u8 {
@@ -238,10 +242,14 @@ impl PacketHeader {
     }
 
     #[inline(always)]
-    pub fn is_fragmented(&self) -> bool { (self.flags_cipher_hops & HEADER_FLAG_FRAGMENTED) != 0 }
+    pub fn is_fragmented(&self) -> bool {
+        (self.flags_cipher_hops & HEADER_FLAG_FRAGMENTED) != 0
+    }
 
     #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8; PACKET_HEADER_SIZE] { unsafe { &*(self as *const Self).cast::<[u8; PACKET_HEADER_SIZE]>() } }
+    pub fn as_bytes(&self) -> &[u8; PACKET_HEADER_SIZE] {
+        unsafe { &*(self as *const Self).cast::<[u8; PACKET_HEADER_SIZE]>() }
+    }
 
     #[inline(always)]
     pub fn aad_bytes(&self) -> [u8; 11] {
@@ -280,16 +288,24 @@ unsafe impl RawObject for FragmentHeader {}
 
 impl FragmentHeader {
     #[inline(always)]
-    pub fn is_fragment(&self) -> bool { self.fragment_indicator == PACKET_FRAGMENT_INDICATOR }
+    pub fn is_fragment(&self) -> bool {
+        self.fragment_indicator == PACKET_FRAGMENT_INDICATOR
+    }
 
     #[inline(always)]
-    pub fn total_fragments(&self) -> u8 { self.total_and_fragment_no >> 4 }
+    pub fn total_fragments(&self) -> u8 {
+        self.total_and_fragment_no >> 4
+    }
 
     #[inline(always)]
-    pub fn fragment_no(&self) -> u8 { self.total_and_fragment_no & 0x0f }
+    pub fn fragment_no(&self) -> u8 {
+        self.total_and_fragment_no & 0x0f
+    }
 
     #[inline(always)]
-    pub fn hops(&self) -> u8 { self.reserved_hops & HEADER_FLAGS_FIELD_MASK_HOPS }
+    pub fn hops(&self) -> u8 {
+        self.reserved_hops & HEADER_FLAGS_FIELD_MASK_HOPS
+    }
 
     #[inline(always)]
     pub fn increment_hops(&mut self) -> u8 {
@@ -300,7 +316,9 @@ impl FragmentHeader {
     }
 
     #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8; FRAGMENT_HEADER_SIZE] { unsafe { &*(self as *const Self).cast::<[u8; FRAGMENT_HEADER_SIZE]>() } }
+    pub fn as_bytes(&self) -> &[u8; FRAGMENT_HEADER_SIZE] {
+        unsafe { &*(self as *const Self).cast::<[u8; FRAGMENT_HEADER_SIZE]>() }
+    }
 }
 
 pub(crate) mod message_component_structs {
@@ -330,7 +348,7 @@ pub(crate) mod message_component_structs {
         pub version_major: u8,
         pub version_minor: u8,
         pub version_revision: [u8; 2], // u16
-        pub timestamp: [u8; 8], // u64
+        pub timestamp: [u8; 8],        // u64
     }
 
     unsafe impl RawObject for HelloFixedHeaderFields {}

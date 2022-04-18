@@ -122,7 +122,8 @@ impl AesGmacSiv {
     pub fn encrypt_first_pass_finish(&mut self) {
         let _ = self.gmac.flush();
         let _ = self.gmac.get_mac(&mut self.tmp);
-        unsafe { // tag[8..16] = tmp[0..8] ^ tmp[8..16]
+        unsafe {
+            // tag[8..16] = tmp[0..8] ^ tmp[8..16]
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
             *self.tag.as_mut_ptr().cast::<u64>().offset(1) = *tmp ^ *tmp.offset(1);
         }
@@ -158,7 +159,8 @@ impl AesGmacSiv {
         self.tmp[12] &= 0x7f;
         let _ = self.ctr.set_ctr(&self.tmp);
         let _ = self.ecb.decrypt_inplace(&mut self.tag);
-        unsafe { // tmp[0..8] = tag[0..8], tmp[8..16] = 0
+        unsafe {
+            // tmp[0..8] = tag[0..8], tmp[8..16] = 0
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
             *tmp = *self.tag.as_mut_ptr().cast::<u64>();
             *tmp.offset(1) = 0;
@@ -203,7 +205,8 @@ impl AesGmacSiv {
     pub fn decrypt_finish(&mut self) -> bool {
         let _ = self.gmac.flush();
         let _ = self.gmac.get_mac(&mut self.tmp);
-        unsafe { // tag[8..16] == tmp[0..8] ^ tmp[8..16]
+        unsafe {
+            // tag[8..16] == tmp[0..8] ^ tmp[8..16]
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
             *self.tag.as_mut_ptr().cast::<u64>().offset(1) == *tmp ^ *tmp.offset(1)
         }
