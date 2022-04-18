@@ -1291,11 +1291,13 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 						if (_paths[i].preferred()) {
 							_abPathIdx = i;
 							bFoundPrimaryLink = true;
-							SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[_abPathIdx].p->localSocket());
-							if (link) {
-								log("found preferred primary link %s", pathToStr(_paths[_abPathIdx].p).c_str());
+							if (_paths[_abPathIdx].p) {
+								SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[_abPathIdx].p->localSocket());
+								if (link) {
+									log("found preferred primary link %s", pathToStr(_paths[_abPathIdx].p).c_str());
+								}
+								break;	 // Found preferred path on primary link
 							}
-							break;	 // Found preferred path on primary link
 						}
 					}
 				}
@@ -1317,17 +1319,19 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 					}
 				}
 				if (_abPathIdx != ZT_MAX_PEER_NETWORK_PATHS) {
-					SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[_abPathIdx].p->localSocket());
-					if (link) {
-						log("select non-primary link %s", pathToStr(_paths[_abPathIdx].p).c_str());
+					if (_paths[_abPathIdx].p) {
+						SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[_abPathIdx].p->localSocket());
+						if (link) {
+							log("select non-primary link %s", pathToStr(_paths[_abPathIdx].p).c_str());
+						}
 					}
 				}
 			}
 		}
 	}
 
-	// Short-circuit if we don't have an active link yet
-	if (_abPathIdx == ZT_MAX_PEER_NETWORK_PATHS) {
+	// Short-circuit if we don't have an active link yet. Everything below is optimization from the base case
+	if (_abPathIdx < 0 || _abPathIdx == ZT_MAX_PEER_NETWORK_PATHS || (!_paths[_abPathIdx].p)) {
 		return;
 	}
 
@@ -1393,17 +1397,19 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 					}
 				}
 			}
-			if (_paths[i].p.ptr() != _paths[_abPathIdx].p.ptr()) {
-				bool bFoundPathInQueue = false;
-				for (std::deque<int>::iterator it(_abFailoverQueue.begin()); it != _abFailoverQueue.end(); ++it) {
-					if (_paths[i].p.ptr() == _paths[(*it)].p.ptr()) {
-						bFoundPathInQueue = true;
+			if (_paths[i].p) {
+				if (_paths[i].p.ptr() != _paths[_abPathIdx].p.ptr()) {
+					bool bFoundPathInQueue = false;
+					for (std::deque<int>::iterator it(_abFailoverQueue.begin()); it != _abFailoverQueue.end(); ++it) {
+						if (_paths[(*it)].p && (_paths[i].p.ptr() == _paths[(*it)].p.ptr())) {
+							bFoundPathInQueue = true;
+						}
 					}
-				}
-				if (! bFoundPathInQueue) {
-					_abFailoverQueue.push_front(i);
-					log("add link %s to failover queue (%zu links in queue)", pathToStr(_paths[i].p).c_str(), _abFailoverQueue.size());
-					addPathToBond(0, i);
+					if (! bFoundPathInQueue) {
+						_abFailoverQueue.push_front(i);
+						log("add link %s to failover queue (%zu links in queue)", pathToStr(_paths[i].p).c_str(), _abFailoverQueue.size());
+						addPathToBond(0, i);
+					}
 				}
 			}
 		}
@@ -1476,7 +1482,7 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 	/**
 	 * Fulfill primary re-select obligations
 	 */
-	if (_paths[_abPathIdx].p && ! _paths[_abPathIdx].eligible) {   // Implicit ZT_BOND_RESELECTION_POLICY_FAILURE
+	if (! _paths[_abPathIdx].eligible) {   // Implicit ZT_BOND_RESELECTION_POLICY_FAILURE
 		log("link %s has failed, select link from failover queue (%zu links in queue)", pathToStr(_paths[_abPathIdx].p).c_str(), _abFailoverQueue.size());
 		if (! _abFailoverQueue.empty()) {
 			dequeueNextActiveBackupPath(now);
@@ -1493,15 +1499,15 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 		_lastActiveBackupPathChange = now;
 	}
 	if (_abLinkSelectMethod == ZT_BOND_RESELECTION_POLICY_ALWAYS) {
-		if (_paths[_abPathIdx].p && ! getLink(_paths[_abPathIdx].p)->primary() && getLink(_paths[_abFailoverQueue.front()].p)->primary()) {
+		if (! getLink(_paths[_abPathIdx].p)->primary() && _paths[_abFailoverQueue.front()].p && getLink(_paths[_abFailoverQueue.front()].p)->primary()) {
 			dequeueNextActiveBackupPath(now);
 			log("switch back to available primary link %s (select mode: always)", pathToStr(_paths[_abPathIdx].p).c_str());
 		}
 	}
 	if (_abLinkSelectMethod == ZT_BOND_RESELECTION_POLICY_BETTER) {
-		if (_paths[_abPathIdx].p && ! getLink(_paths[_abPathIdx].p)->primary()) {
+		if (! getLink(_paths[_abPathIdx].p)->primary()) {
 			// Active backup has switched to "better" primary link according to re-select policy.
-			if (getLink(_paths[_abFailoverQueue.front()].p)->primary() && (_paths[_abFailoverQueue.front()].failoverScore > _paths[_abPathIdx].failoverScore)) {
+			if (_paths[_abFailoverQueue.front()].p && getLink(_paths[_abFailoverQueue.front()].p)->primary() && (_paths[_abFailoverQueue.front()].failoverScore > _paths[_abPathIdx].failoverScore)) {
 				dequeueNextActiveBackupPath(now);
 				log("switch back to user-defined primary link %s (select mode: better)", pathToStr(_paths[_abPathIdx].p).c_str());
 			}
