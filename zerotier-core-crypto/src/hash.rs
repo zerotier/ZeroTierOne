@@ -52,7 +52,9 @@ impl Write for SHA512 {
     }
 
     #[inline(always)]
-    fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
 }
 
 pub struct SHA384(Option<openssl::sha::Sha384>);
@@ -92,7 +94,9 @@ impl Write for SHA384 {
     }
 
     #[inline(always)]
-    fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
 }
 
 //#[link(name="crypto")]
@@ -109,22 +113,18 @@ extern "C" {
 
 pub struct HMACSHA512 {
     ctx: *mut c_void,
-    evp_md: *const c_void
+    evp_md: *const c_void,
 }
 
 impl HMACSHA512 {
     #[inline(always)]
     pub fn new(key: &[u8]) -> Self {
         unsafe {
-            let hm = Self {
-                ctx: HMAC_CTX_new(),
-                evp_md: EVP_sha512()
-            };
+            let hm = Self { ctx: HMAC_CTX_new(), evp_md: EVP_sha512() };
             assert!(!hm.ctx.is_null());
             assert_ne!(HMAC_Init_ex(hm.ctx, key.as_ptr().cast(), key.len() as c_int, hm.evp_md, null()), 0);
             hm
         }
-
     }
 
     #[inline(always)]
@@ -172,22 +172,18 @@ unsafe impl Send for HMACSHA512 {}
 
 pub struct HMACSHA384 {
     ctx: *mut c_void,
-    evp_md: *const c_void
+    evp_md: *const c_void,
 }
 
 impl HMACSHA384 {
     #[inline(always)]
     pub fn new(key: &[u8]) -> Self {
         unsafe {
-            let hm = Self {
-                ctx: HMAC_CTX_new(),
-                evp_md: EVP_sha384()
-            };
+            let hm = Self { ctx: HMAC_CTX_new(), evp_md: EVP_sha384() };
             assert!(!hm.ctx.is_null());
             assert_ne!(HMAC_Init_ex(hm.ctx, key.as_ptr().cast(), key.len() as c_int, hm.evp_md, null()), 0);
             hm
         }
-
     }
 
     #[inline(always)]

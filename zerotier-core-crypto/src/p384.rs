@@ -10,13 +10,13 @@ use std::convert::TryInto;
 use std::os::raw::{c_int, c_ulong, c_void};
 use std::ptr::{null, write_volatile};
 
+use foreign_types::{ForeignType, ForeignTypeRef};
 use lazy_static::lazy_static;
 use openssl::bn::{BigNum, BigNumContext};
 use openssl::ec::{EcKey, EcPoint, EcPointRef, PointConversionForm};
 use openssl::ecdsa::EcdsaSig;
 use openssl::nid::Nid;
 use openssl::pkey::{Private, Public};
-use foreign_types::{ForeignType, ForeignTypeRef};
 
 use crate::hash::SHA384;
 use crate::secret::Secret;
@@ -39,7 +39,7 @@ lazy_static! {
 #[derive(Clone)]
 pub struct P384PublicKey {
     key: EcKey<Public>,
-    bytes: [u8; 49]
+    bytes: [u8; 49],
 }
 
 impl P384PublicKey {
@@ -50,7 +50,7 @@ impl P384PublicKey {
         bytes[(49 - kb.len())..].copy_from_slice(kb.as_slice());
         Self {
             key: EcKey::from_public_key(GROUP_P384.as_ref(), key).unwrap(),
-            bytes
+            bytes,
         }
     }
 
@@ -63,10 +63,7 @@ impl P384PublicKey {
                 if key.is_on_curve(GROUP_P384.as_ref(), &mut bnc).unwrap_or(false) {
                     let key = EcKey::from_public_key(GROUP_P384.as_ref(), key.as_ref());
                     if key.is_ok() {
-                        return Some(Self {
-                            key: key.unwrap(),
-                            bytes: b.try_into().unwrap()
-                        });
+                        return Some(Self { key: key.unwrap(), bytes: b.try_into().unwrap() });
                     }
                 }
             }
@@ -89,12 +86,16 @@ impl P384PublicKey {
     }
 
     #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8; 49] { &self.bytes }
+    pub fn as_bytes(&self) -> &[u8; 49] {
+        &self.bytes
+    }
 }
 
 impl PartialEq for P384PublicKey {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool { self.bytes == other.bytes }
+    fn eq(&self, other: &Self) -> bool {
+        self.bytes == other.bytes
+    }
 }
 
 unsafe impl Send for P384PublicKey {}
@@ -113,10 +114,7 @@ impl P384KeyPair {
         let pair = EcKey::generate(GROUP_P384.as_ref()).unwrap(); // failure implies a serious problem
         assert!(pair.check_key().is_ok()); // also would imply a serious problem
         let public = P384PublicKey::new_from_point(pair.public_key());
-        Self {
-            pair,
-            public,
-        }
+        Self { pair, public }
     }
 
     pub fn from_bytes(public_bytes: &[u8], secret_bytes: &[u8]) -> Option<P384KeyPair> {
@@ -127,10 +125,7 @@ impl P384KeyPair {
                     if pair.is_ok() {
                         let pair = pair.unwrap();
                         if pair.check_key().is_ok() {
-                            Some(Self {
-                                pair,
-                                public
-                            })
+                            Some(Self { pair, public })
                         } else {
                             None
                         }
@@ -145,10 +140,14 @@ impl P384KeyPair {
     }
 
     #[inline(always)]
-    pub fn public_key(&self) -> &P384PublicKey { &self.public }
+    pub fn public_key(&self) -> &P384PublicKey {
+        &self.public
+    }
 
     #[inline(always)]
-    pub fn public_key_bytes(&self) -> &[u8; P384_PUBLIC_KEY_SIZE] { &self.public.bytes }
+    pub fn public_key_bytes(&self) -> &[u8; P384_PUBLIC_KEY_SIZE] {
+        &self.public.bytes
+    }
 
     pub fn secret_key_bytes(&self) -> Secret<P384_SECRET_KEY_SIZE> {
         let mut tmp: Secret<P384_SECRET_KEY_SIZE> = Secret::default();

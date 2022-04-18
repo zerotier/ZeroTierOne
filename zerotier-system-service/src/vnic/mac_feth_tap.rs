@@ -57,7 +57,7 @@ const SYSCTL: &'static str = "/usr/sbin/sysctl";
 // Holds names of feth devices and destroys them on Drop.
 struct MacFethDevice {
     pub name: String,
-    pub peer_name: String
+    pub peer_name: String,
 }
 
 impl Drop for MacFethDevice {
@@ -100,80 +100,80 @@ lazy_static! {
 
 /*
 struct nd_ifinfo {
-	u_int32_t linkmtu;		/* LinkMTU */
-	u_int32_t maxmtu;		/* Upper bound of LinkMTU */
-	u_int32_t basereachable;	/* BaseReachableTime */
-	u_int32_t reachable;		/* Reachable Time */
-	u_int32_t retrans;		/* Retrans Timer */
-	u_int32_t flags;		/* Flags */
-	int recalctm;			/* BaseReacable re-calculation timer */
-	u_int8_t chlim;			/* CurHopLimit */
-	u_int8_t receivedra;
+    u_int32_t linkmtu;		/* LinkMTU */
+    u_int32_t maxmtu;		/* Upper bound of LinkMTU */
+    u_int32_t basereachable;	/* BaseReachableTime */
+    u_int32_t reachable;		/* Reachable Time */
+    u_int32_t retrans;		/* Retrans Timer */
+    u_int32_t flags;		/* Flags */
+    int recalctm;			/* BaseReacable re-calculation timer */
+    u_int8_t chlim;			/* CurHopLimit */
+    u_int8_t receivedra;
 };
 struct	in6_ndireq {
     char ifname[IFNAMSIZ];
     struct nd_ifinfo ndi;
 };
 struct in6_addrlifetime {
-	time_t ia6t_expire;     /* valid lifetime expiration time */
-	time_t ia6t_preferred;  /* preferred lifetime expiration time */
-	u_int32_t ia6t_vltime;  /* valid lifetime */
-	u_int32_t ia6t_pltime;  /* prefix lifetime */
+    time_t ia6t_expire;     /* valid lifetime expiration time */
+    time_t ia6t_preferred;  /* preferred lifetime expiration time */
+    u_int32_t ia6t_vltime;  /* valid lifetime */
+    u_int32_t ia6t_pltime;  /* prefix lifetime */
 };
 struct in6_ifstat {
-	ifs6_in_receive;       /* # of total input datagram */
-	ifs6_in_hdrerr;        /* # of datagrams with invalid hdr */
-	ifs6_in_toobig;        /* # of datagrams exceeded MTU */
-	ifs6_in_noroute;       /* # of datagrams with no route */
-	ifs6_in_addrerr;       /* # of datagrams with invalid dst */
-	ifs6_in_protounknown;  /* # of datagrams with unknown proto */
-	                                /* NOTE: increment on final dst if */
-	ifs6_in_truncated;     /* # of truncated datagrams */
-	ifs6_in_discard;       /* # of discarded datagrams */
-	                                /* NOTE: fragment timeout is not here */
-	ifs6_in_deliver;       /* # of datagrams delivered to ULP */
-	                                /* NOTE: increment on final dst if */
-	ifs6_out_forward;      /* # of datagrams forwarded */
-	                                /* NOTE: increment on outgoing if */
-	ifs6_out_request;      /* # of outgoing datagrams from ULP */
-	                                /* NOTE: does not include forwrads */
-	ifs6_out_discard;      /* # of discarded datagrams */
-	ifs6_out_fragok;       /* # of datagrams fragmented */
-	ifs6_out_fragfail;     /* # of datagrams failed on fragment */
-	ifs6_out_fragcreat;    /* # of fragment datagrams */
-	                                /* NOTE: this is # after fragment */
-	ifs6_reass_reqd;       /* # of incoming fragmented packets */
-	                                /* NOTE: increment on final dst if */
-	ifs6_reass_ok;         /* # of reassembled packets */
-	                                /* NOTE: this is # after reass */
-	                                /* NOTE: increment on final dst if */
-	ifs6_atmfrag_rcvd;     /* # of atomic fragments received */
-	ifs6_reass_fail;       /* # of reass failures */
-	                                /* NOTE: may not be packet count */
-	                                /* NOTE: increment on final dst if */
-	ifs6_in_mcast;         /* # of inbound multicast datagrams */
-	ifs6_out_mcast;        /* # of outbound multicast datagrams */
+    ifs6_in_receive;       /* # of total input datagram */
+    ifs6_in_hdrerr;        /* # of datagrams with invalid hdr */
+    ifs6_in_toobig;        /* # of datagrams exceeded MTU */
+    ifs6_in_noroute;       /* # of datagrams with no route */
+    ifs6_in_addrerr;       /* # of datagrams with invalid dst */
+    ifs6_in_protounknown;  /* # of datagrams with unknown proto */
+                                    /* NOTE: increment on final dst if */
+    ifs6_in_truncated;     /* # of truncated datagrams */
+    ifs6_in_discard;       /* # of discarded datagrams */
+                                    /* NOTE: fragment timeout is not here */
+    ifs6_in_deliver;       /* # of datagrams delivered to ULP */
+                                    /* NOTE: increment on final dst if */
+    ifs6_out_forward;      /* # of datagrams forwarded */
+                                    /* NOTE: increment on outgoing if */
+    ifs6_out_request;      /* # of outgoing datagrams from ULP */
+                                    /* NOTE: does not include forwrads */
+    ifs6_out_discard;      /* # of discarded datagrams */
+    ifs6_out_fragok;       /* # of datagrams fragmented */
+    ifs6_out_fragfail;     /* # of datagrams failed on fragment */
+    ifs6_out_fragcreat;    /* # of fragment datagrams */
+                                    /* NOTE: this is # after fragment */
+    ifs6_reass_reqd;       /* # of incoming fragmented packets */
+                                    /* NOTE: increment on final dst if */
+    ifs6_reass_ok;         /* # of reassembled packets */
+                                    /* NOTE: this is # after reass */
+                                    /* NOTE: increment on final dst if */
+    ifs6_atmfrag_rcvd;     /* # of atomic fragments received */
+    ifs6_reass_fail;       /* # of reass failures */
+                                    /* NOTE: may not be packet count */
+                                    /* NOTE: increment on final dst if */
+    ifs6_in_mcast;         /* # of inbound multicast datagrams */
+    ifs6_out_mcast;        /* # of outbound multicast datagrams */
 
-	ifs6_cantfoward_icmp6; /* # of ICMPv6 packets received for unreachable dest */
-	ifs6_addr_expiry_cnt;  /* # of address expiry events (excluding privacy addresses) */
-	ifs6_pfx_expiry_cnt;   /* # of prefix expiry events */
-	ifs6_defrtr_expiry_cnt;        /* # of default router expiry events */
+    ifs6_cantfoward_icmp6; /* # of ICMPv6 packets received for unreachable dest */
+    ifs6_addr_expiry_cnt;  /* # of address expiry events (excluding privacy addresses) */
+    ifs6_pfx_expiry_cnt;   /* # of prefix expiry events */
+    ifs6_defrtr_expiry_cnt;        /* # of default router expiry events */
 };
 struct in6_ifreq {
-	char    ifr_name[IFNAMSIZ];
-	union {
-		struct  sockaddr_in6 ifru_addr;
-		struct  sockaddr_in6 ifru_dstaddr;
-		int     ifru_flags;
-		int     ifru_flags6;
-		int     ifru_metric;
-		int     ifru_intval;
-		caddr_t ifru_data;
-		struct in6_addrlifetime ifru_lifetime;
-		struct in6_ifstat ifru_stat;
-		struct icmp6_ifstat ifru_icmp6stat;
-		u_int32_t ifru_scope_id[SCOPE6_ID_MAX];
-	} ifr_ifru;
+    char    ifr_name[IFNAMSIZ];
+    union {
+        struct  sockaddr_in6 ifru_addr;
+        struct  sockaddr_in6 ifru_dstaddr;
+        int     ifru_flags;
+        int     ifru_flags6;
+        int     ifru_metric;
+        int     ifru_intval;
+        caddr_t ifru_data;
+        struct in6_addrlifetime ifru_lifetime;
+        struct in6_ifstat ifru_stat;
+        struct icmp6_ifstat ifru_icmp6stat;
+        u_int32_t ifru_scope_id[SCOPE6_ID_MAX];
+    } ifr_ifru;
 };
 */
 
@@ -268,7 +268,7 @@ union u_ifr_ifru {
     ifru_lifetime: in6_addrlifetime,
     ifru_stat: in6_ifstat,
     ifru_icmp6stat: icmp6_ifstat,
-    ifru_scope_id: [u32; 16 /* SCOPE6_ID_MAX */],
+    ifru_scope_id: [u32; 16],
 }
 
 #[allow(non_camel_case_types)]
@@ -328,7 +328,16 @@ fn device_ipv6_set_params(device: &String, perform_nud: bool, accept_ra: bool) -
 
         let mut ifr: in6_ifreq = zeroed();
         copy_nonoverlapping(dev.as_ptr(), ifr.ifr_name.as_mut_ptr().cast::<u8>(), if dev.len() > (ifr.ifr_name.len() - 1) { ifr.ifr_name.len() - 1 } else { dev.len() });
-        if libc::ioctl(s, if accept_ra { 132 /* SIOCAUTOCONF_START */ } else { 133 /* SIOCAUTOCONF_STOP */ }, (&mut ifr as *mut in6_ifreq).cast::<c_void>()) != 0 {
+        if libc::ioctl(
+            s,
+            if accept_ra {
+                132 /* SIOCAUTOCONF_START */
+            } else {
+                133 /* SIOCAUTOCONF_STOP */
+            },
+            (&mut ifr as *mut in6_ifreq).cast::<c_void>(),
+        ) != 0
+        {
             ok = false;
         }
 
@@ -339,40 +348,40 @@ fn device_ipv6_set_params(device: &String, perform_nud: bool, accept_ra: bool) -
 
 /*
 struct ifkpi {
-	unsigned int    ifk_module_id;
-	unsigned int    ifk_type;
-	union {
-		void            *ifk_ptr;
-		int             ifk_value;
-	} ifk_data;
+    unsigned int    ifk_module_id;
+    unsigned int    ifk_type;
+    union {
+        void            *ifk_ptr;
+        int             ifk_value;
+    } ifk_data;
 };
 struct ifdevmtu {
-	int     ifdm_current;
-	int     ifdm_min;
-	int     ifdm_max;
+    int     ifdm_current;
+    int     ifdm_min;
+    int     ifdm_max;
 };
 struct  ifreq {
 #ifndef IFNAMSIZ
 #define IFNAMSIZ        IF_NAMESIZE
 #endif
-	char    ifr_name[IFNAMSIZ];             /* if name, e.g. "en0" */
-	union {
-		struct  sockaddr ifru_addr;
-		struct  sockaddr ifru_dstaddr;
-		struct  sockaddr ifru_broadaddr;
-		short   ifru_flags;
-		int     ifru_metric;
-		int     ifru_mtu;
-		int     ifru_phys;
-		int     ifru_media;
-		int     ifru_intval;
-		caddr_t ifru_data;
-		struct  ifdevmtu ifru_devmtu;
-		struct  ifkpi   ifru_kpi;
-		u_int32_t ifru_wake_flags;
-		u_int32_t ifru_route_refcnt;
-		int     ifru_cap[2];
-		u_int32_t ifru_functional_type;
+    char    ifr_name[IFNAMSIZ];             /* if name, e.g. "en0" */
+    union {
+        struct  sockaddr ifru_addr;
+        struct  sockaddr ifru_dstaddr;
+        struct  sockaddr ifru_broadaddr;
+        short   ifru_flags;
+        int     ifru_metric;
+        int     ifru_mtu;
+        int     ifru_phys;
+        int     ifru_media;
+        int     ifru_intval;
+        caddr_t ifru_data;
+        struct  ifdevmtu ifru_devmtu;
+        struct  ifkpi   ifru_kpi;
+        u_int32_t ifru_wake_flags;
+        u_int32_t ifru_route_refcnt;
+        int     ifru_cap[2];
+        u_int32_t ifru_functional_type;
 #define IFRTYPE_FUNCTIONAL_UNKNOWN              0
 #define IFRTYPE_FUNCTIONAL_LOOPBACK             1
 #define IFRTYPE_FUNCTIONAL_WIRED                2
@@ -382,7 +391,7 @@ struct  ifreq {
 #define IFRTYPE_FUNCTIONAL_INTCOPROC            6
 #define IFRTYPE_FUNCTIONAL_COMPANIONLINK        7
 #define IFRTYPE_FUNCTIONAL_LAST                 7
-	} ifr_ifru;
+    } ifr_ifru;
 #define ifr_addr        ifr_ifru.ifru_addr      /* address */
 #define ifr_dstaddr     ifr_ifru.ifru_dstaddr   /* other end of p-to-p link */
 #define ifr_broadaddr   ifr_ifru.ifru_broadaddr /* broadcast address */
@@ -406,9 +415,9 @@ struct  ifreq {
 #define ifr_curcap      ifr_ifru.ifru_cap[1]    /* current capabilities */
 };
 struct sockaddr_ndrv {
-	unsigned char snd_len;
-	unsigned char snd_family;
-	unsigned char snd_name[IFNAMSIZ]; /* from if.h */
+    unsigned char snd_len;
+    unsigned char snd_family;
+    unsigned char snd_name[IFNAMSIZ]; /* from if.h */
 };
 */
 
@@ -510,7 +519,9 @@ impl MacFethTap {
         // Set sysctl for max if_fake MTU. This is allowed to fail since this sysctl doesn't
         // exist on older versions of MacOS (and isn't required there). 16000 is larger than
         // anything ZeroTier supports. OS max is 16384 - some overhead.
-        let _ = Command::new(SYSCTL).arg("net.link.fake.max_mtu").arg("10000").spawn().map(|mut c| { let _ = c.wait(); });
+        let _ = Command::new(SYSCTL).arg("net.link.fake.max_mtu").arg("10000").spawn().map(|mut c| {
+            let _ = c.wait();
+        });
 
         // Create pair of feth interfaces and create MacFethDevice struct.
         let cmd = Command::new(IFCONFIG).arg(&device_name).arg("create").spawn();
@@ -523,10 +534,7 @@ impl MacFethTap {
             return Err(format!("unable to create device '{}': {}", peer_device_name.as_str(), cmd.err().unwrap().to_string()));
         }
         let _ = cmd.unwrap().wait();
-        let device = MacFethDevice {
-            name: device_name,
-            peer_name: peer_device_name,
-        };
+        let device = MacFethDevice { name: device_name, peer_name: peer_device_name };
 
         // Set link-layer (MAC) address of primary interface.
         let cmd = Command::new(IFCONFIG).arg(&device.name).arg("lladdr").arg(mac.to_string()).spawn();
@@ -584,46 +592,78 @@ impl MacFethTap {
         // Set/get buffer length to use with reads from BPF device, trying to
         // use up to BPF_BUFFER_SIZE bytes.
         let mut fl: c_int = BPF_BUFFER_SIZE as c_int;
-        if unsafe { libc::ioctl(bpf_fd as c_int, 102 /* BIOCSBLEN */, (&mut fl as *mut c_int).cast::<c_void>()) } != 0 {
-            unsafe { libc::close(bpf_fd); }
+        if unsafe {
+            libc::ioctl(bpf_fd as c_int, 102 /* BIOCSBLEN */, (&mut fl as *mut c_int).cast::<c_void>())
+        } != 0
+        {
+            unsafe {
+                libc::close(bpf_fd);
+            }
             return Err(String::from("unable to configure BPF device"));
         }
         let bpf_read_size = fl as libc::size_t;
 
         // Set immediate mode for "live" capture.
         fl = 1;
-        if unsafe { libc::ioctl(bpf_fd as c_int, 112 /* BIOCIMMEDIATE */, (&mut fl as *mut c_int).cast::<c_void>()) } != 0 {
-            unsafe { libc::close(bpf_fd); }
+        if unsafe {
+            libc::ioctl(bpf_fd as c_int, 112 /* BIOCIMMEDIATE */, (&mut fl as *mut c_int).cast::<c_void>())
+        } != 0
+        {
+            unsafe {
+                libc::close(bpf_fd);
+            }
             return Err(String::from("unable to configure BPF device"));
         }
 
         // Do not send us back packets we inject or send.
         fl = 0;
-        if unsafe { libc::ioctl(bpf_fd as c_int, 119 /* BIOCSSEESENT */, (&mut fl as *mut c_int).cast::<c_void>()) } != 0 {
-            unsafe { libc::close(bpf_fd); }
+        if unsafe {
+            libc::ioctl(bpf_fd as c_int, 119 /* BIOCSSEESENT */, (&mut fl as *mut c_int).cast::<c_void>())
+        } != 0
+        {
+            unsafe {
+                libc::close(bpf_fd);
+            }
             return Err(String::from("unable to configure BPF device"));
         }
 
         // Bind BPF to secondary feth device.
         let mut bpf_ifr: ifreq = unsafe { std::mem::zeroed() };
         let peer_dev_name_bytes = device.peer_name.as_bytes();
-        unsafe { copy_nonoverlapping(peer_dev_name_bytes.as_ptr(), bpf_ifr.ifr_name.as_mut_ptr().cast::<u8>(), if peer_dev_name_bytes.len() > (bpf_ifr.ifr_name.len() - 1) { bpf_ifr.ifr_name.len() - 1 } else { peer_dev_name_bytes.len() }); }
-        if unsafe { libc::ioctl(bpf_fd as c_int, 108 /* BIOCSETIF */, (&mut bpf_ifr as *mut ifreq).cast::<c_void>()) } != 0 {
-            unsafe { libc::close(bpf_fd); }
+        unsafe {
+            copy_nonoverlapping(peer_dev_name_bytes.as_ptr(), bpf_ifr.ifr_name.as_mut_ptr().cast::<u8>(), if peer_dev_name_bytes.len() > (bpf_ifr.ifr_name.len() - 1) { bpf_ifr.ifr_name.len() - 1 } else { peer_dev_name_bytes.len() });
+        }
+        if unsafe {
+            libc::ioctl(bpf_fd as c_int, 108 /* BIOCSETIF */, (&mut bpf_ifr as *mut ifreq).cast::<c_void>())
+        } != 0
+        {
+            unsafe {
+                libc::close(bpf_fd);
+            }
             return Err(String::from("unable to configure BPF device"));
         }
 
         // Include Ethernet header in BPF captures.
         fl = 1;
-        if unsafe { libc::ioctl(bpf_fd as c_int, 117 /* BIOCSHDRCMPLT */, (&mut fl as *mut c_int).cast::<c_void>()) } != 0 {
-            unsafe { libc::close(bpf_fd); }
+        if unsafe {
+            libc::ioctl(bpf_fd as c_int, 117 /* BIOCSHDRCMPLT */, (&mut fl as *mut c_int).cast::<c_void>())
+        } != 0
+        {
+            unsafe {
+                libc::close(bpf_fd);
+            }
             return Err(String::from("unable to configure BPF device"));
         }
 
         // Set promiscuous mode so bridging can work.
         fl = 1;
-        if unsafe { libc::ioctl(bpf_fd as c_int, 105 /* BIOCPROMISC */, (&mut fl as *mut c_int).cast::<c_void>()) } != 0 {
-            unsafe { libc::close(bpf_fd); }
+        if unsafe {
+            libc::ioctl(bpf_fd as c_int, 105 /* BIOCPROMISC */, (&mut fl as *mut c_int).cast::<c_void>())
+        } != 0
+        {
+            unsafe {
+                libc::close(bpf_fd);
+            }
             return Err(String::from("unable to configure BPF device"));
         }
 
@@ -653,30 +693,46 @@ impl MacFethTap {
             }
         });
         if t.is_err() {
-            unsafe { libc::close(bpf_fd); }
+            unsafe {
+                libc::close(bpf_fd);
+            }
             return Err(String::from("unable to start thread"));
         }
 
         // Create AF_NDRV socket used to inject packets. We could inject with BPF but that has
         // a hard MTU limit of 2048 so we have to use AF_NDRV instead. Performance is probably
         // the same, but it means another socket.
-        let ndrv_fd = unsafe { libc::socket(27 /* AF_NDRV */, libc::SOCK_RAW, 0) };
+        let ndrv_fd = unsafe {
+            libc::socket(27 /* AF_NDRV */, libc::SOCK_RAW, 0)
+        };
         if ndrv_fd < 0 {
-            unsafe { libc::close(bpf_fd); }
+            unsafe {
+                libc::close(bpf_fd);
+            }
             return Err(String::from("unable to create AF_NDRV socket"));
         }
         let mut ndrv_sa: sockaddr_ndrv = unsafe { std::mem::zeroed() };
         ndrv_sa.snd_len = std::mem::size_of::<sockaddr_ndrv>() as c_uchar;
         ndrv_sa.snd_family = 27 /* AF_NDRV */;
-        unsafe { copy_nonoverlapping(peer_dev_name_bytes.as_ptr(), ndrv_sa.snd_name.as_mut_ptr().cast::<u8>(), if peer_dev_name_bytes.len() > (bpf_ifr.ifr_name.len() - 1) { bpf_ifr.ifr_name.len() - 1 } else { peer_dev_name_bytes.len() }); }
+        unsafe {
+            copy_nonoverlapping(peer_dev_name_bytes.as_ptr(), ndrv_sa.snd_name.as_mut_ptr().cast::<u8>(), if peer_dev_name_bytes.len() > (bpf_ifr.ifr_name.len() - 1) { bpf_ifr.ifr_name.len() - 1 } else { peer_dev_name_bytes.len() });
+        }
         if unsafe { libc::bind(ndrv_fd, (&ndrv_sa as *const sockaddr_ndrv).cast(), std::mem::size_of::<sockaddr_ndrv>() as libc::socklen_t) } != 0 {
-            unsafe { libc::close(bpf_fd); }
-            unsafe { libc::close(ndrv_fd); }
+            unsafe {
+                libc::close(bpf_fd);
+            }
+            unsafe {
+                libc::close(ndrv_fd);
+            }
             return Err(String::from("unable to bind AF_NDRV socket"));
         }
         if unsafe { libc::connect(ndrv_fd, (&ndrv_sa as *const sockaddr_ndrv).cast(), std::mem::size_of::<sockaddr_ndrv>() as libc::socklen_t) } != 0 {
-            unsafe { libc::close(bpf_fd); }
-            unsafe { libc::close(ndrv_fd); }
+            unsafe {
+                libc::close(bpf_fd);
+            }
+            unsafe {
+                libc::close(ndrv_fd);
+            }
             return Err(String::from("unable to connect AF_NDRV socket"));
         }
 
@@ -688,7 +744,7 @@ impl MacFethTap {
             ndrv_fd,
             bpf_fd,
             bpf_no,
-            bpf_read_thread: Cell::new(Some(t.unwrap()))
+            bpf_read_thread: Cell::new(Some(t.unwrap())),
         })
     }
 
@@ -758,10 +814,7 @@ impl VNIC for MacFethTap {
         let mut hdr: [u8; 14] = [(dm >> 40) as u8, (dm >> 32) as u8, (dm >> 24) as u8, (dm >> 16) as u8, (dm >> 8) as u8, dm as u8, (sm >> 40) as u8, (sm >> 32) as u8, (sm >> 24) as u8, (sm >> 16) as u8, (sm >> 8) as u8, sm as u8, (ethertype >> 8) as u8, ethertype as u8];
         unsafe {
             let iov: [libc::iovec; 2] = [
-                libc::iovec {
-                    iov_base: hdr.as_mut_ptr().cast(),
-                    iov_len: 14,
-                },
+                libc::iovec { iov_base: hdr.as_mut_ptr().cast(), iov_len: 14 },
                 libc::iovec {
                     iov_base: transmute(data), // have to "cast away const" even though data is not modified by writev()
                     iov_len: len as libc::size_t,

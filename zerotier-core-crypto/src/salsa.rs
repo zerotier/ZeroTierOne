@@ -9,7 +9,7 @@
 use std::convert::TryInto;
 use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 
-const CONSTANTS: [u32; 4] = [ u32::from_le_bytes(*b"expa"), u32::from_le_bytes(*b"nd 3"), u32::from_le_bytes(*b"2-by"), u32::from_le_bytes(*b"te k") ];
+const CONSTANTS: [u32; 4] = [u32::from_le_bytes(*b"expa"), u32::from_le_bytes(*b"nd 3"), u32::from_le_bytes(*b"2-by"), u32::from_le_bytes(*b"te k")];
 
 /// Salsa stream cipher implementation supporting 8, 12, or 20 rounds.
 ///
@@ -19,7 +19,7 @@ const CONSTANTS: [u32; 4] = [ u32::from_le_bytes(*b"expa"), u32::from_le_bytes(*
 /// transport encryption in ZeroTier anyway, but is still used to derive addresses from
 /// identity public keys.
 pub struct Salsa<const ROUNDS: usize> {
-    state: [u32; 16]
+    state: [u32; 16],
 }
 
 impl<const ROUNDS: usize> Salsa<ROUNDS> {
@@ -45,13 +45,14 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
                 u32::from_le_bytes((&key[20..24]).try_into().unwrap()),
                 u32::from_le_bytes((&key[24..28]).try_into().unwrap()),
                 u32::from_le_bytes((&key[28..32]).try_into().unwrap()),
-                CONSTANTS[3]
-            ]
+                CONSTANTS[3],
+            ],
         }
     }
 
     pub fn crypt(&mut self, mut plaintext: &[u8], mut ciphertext: &mut [u8]) {
-        let (j0, j1, j2, j3, j4, j5, j6, j7, mut j8, mut j9, j10, j11, j12, j13, j14, j15) = (self.state[0], self.state[1], self.state[2], self.state[3], self.state[4], self.state[5], self.state[6], self.state[7], self.state[8], self.state[9], self.state[10], self.state[11], self.state[12], self.state[13], self.state[14], self.state[15]);
+        let (j0, j1, j2, j3, j4, j5, j6, j7, mut j8, mut j9, j10, j11, j12, j13, j14, j15) =
+            (self.state[0], self.state[1], self.state[2], self.state[3], self.state[4], self.state[5], self.state[6], self.state[7], self.state[8], self.state[9], self.state[10], self.state[11], self.state[12], self.state[13], self.state[14], self.state[15]);
         loop {
             let (mut x0, mut x1, mut x2, mut x3, mut x4, mut x5, mut x6, mut x7, mut x8, mut x9, mut x10, mut x11, mut x12, mut x13, mut x14, mut x15) = (j0, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10, j11, j12, j13, j14, j15);
 
@@ -108,7 +109,8 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
             x15 = x15.wrapping_add(j15);
 
             if plaintext.len() >= 64 {
-                #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))] {
+                #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+                {
                     // Slightly faster keystream XOR for little-endian platforms with unaligned load/store.
                     unsafe {
                         *ciphertext.as_mut_ptr().cast::<u32>() = *plaintext.as_ptr().cast::<u32>() ^ x0;
@@ -129,7 +131,8 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
                         *ciphertext.as_mut_ptr().cast::<u32>().add(15) = *plaintext.as_ptr().cast::<u32>().add(15) ^ x15;
                     }
                 }
-                #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))] {
+                #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
+                {
                     // Portable keystream XOR with alignment-safe access and native to little-endian conversion.
                     ciphertext[0..4].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().cast::<[u8; 4]>() }) ^ x0.to_le()).to_ne_bytes());
                     ciphertext[4..8].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(4).cast::<[u8; 4]>() }) ^ x1.to_le()).to_ne_bytes());
@@ -171,8 +174,6 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
 
     #[inline(always)]
     pub fn crypt_in_place(&mut self, data: &mut [u8]) {
-        unsafe {
-            self.crypt(&*slice_from_raw_parts(data.as_ptr(), data.len()), &mut *slice_from_raw_parts_mut(data.as_mut_ptr(), data.len()))
-        }
+        unsafe { self.crypt(&*slice_from_raw_parts(data.as_ptr(), data.len()), &mut *slice_from_raw_parts_mut(data.as_mut_ptr(), data.len())) }
     }
 }

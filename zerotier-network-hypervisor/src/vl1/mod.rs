@@ -6,31 +6,31 @@
  * https://www.zerotier.com/
  */
 
-pub mod inetaddress;
 pub mod endpoint;
 pub mod identity;
+pub mod inetaddress;
 
-#[allow(unused)]
-pub(crate) mod protocol;
+pub(crate) mod address;
+pub(crate) mod dictionary;
+pub(crate) mod fragmentedpacket;
+pub(crate) mod hybridkey;
+pub(crate) mod mac;
 pub(crate) mod node;
 pub(crate) mod path;
 pub(crate) mod peer;
-pub(crate) mod dictionary;
-pub(crate) mod address;
-pub(crate) mod mac;
-pub(crate) mod fragmentedpacket;
-pub(crate) mod whoisqueue;
+#[allow(unused)]
+pub(crate) mod protocol;
 pub(crate) mod symmetricsecret;
-pub(crate) mod hybridkey;
+pub(crate) mod whoisqueue;
 
 pub use address::Address;
-pub use mac::MAC;
-pub use identity::Identity;
-pub use endpoint::Endpoint;
 pub use dictionary::Dictionary;
+pub use endpoint::Endpoint;
+pub use identity::Identity;
 pub use inetaddress::InetAddress;
-pub use peer::Peer;
-pub use path::Path;
+pub use mac::MAC;
 pub use node::{Node, SystemInterface};
+pub use path::Path;
+pub use peer::Peer;
 
-pub use protocol::{PACKET_SIZE_MAX, PACKET_FRAGMENT_COUNT_MAX};
+pub use protocol::{PACKET_FRAGMENT_COUNT_MAX, PACKET_SIZE_MAX};

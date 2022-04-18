@@ -14,15 +14,15 @@ use std::time::Duration;
 use dashmap::DashMap;
 use parking_lot::Mutex;
 
-use crate::{PacketBuffer, PacketBufferFactory, PacketBufferPool};
 use crate::error::InvalidParameterError;
 use crate::util::buffer::Buffer;
 use crate::util::gate::IntervalGate;
-use crate::vl1::{Address, Endpoint, Identity};
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
 use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
+use crate::vl1::{Address, Endpoint, Identity};
+use crate::{PacketBuffer, PacketBufferFactory, PacketBufferPool};
 
 /// Trait implemented by external code to handle events and provide an interface to the system or application.
 ///
@@ -180,10 +180,14 @@ impl Node {
 
     /// Get a packet buffer that will automatically check itself back into the pool on drop.
     #[inline(always)]
-    pub fn get_packet_buffer(&self) -> PacketBuffer { self.buffer_pool.get() }
+    pub fn get_packet_buffer(&self) -> PacketBuffer {
+        self.buffer_pool.get()
+    }
 
     /// Get a peer by address.
-    pub fn peer(&self, a: Address) -> Option<Arc<Peer>> { self.peers.get(&a).map(|peer| peer.value().clone()) }
+    pub fn peer(&self, a: Address) -> Option<Arc<Peer>> {
+        self.peers.get(&a).map(|peer| peer.value().clone())
+    }
 
     /// Get all peers currently in the peer cache.
     pub fn peers(&self) -> Vec<Arc<Peer>> {
@@ -239,7 +243,6 @@ impl Node {
                     path.log_receive_anything(time_ticks);
 
                     if fragment_header.is_fragment() {
-
                         if let Some(assembled_packet) = path.receive_fragment(u64::from_ne_bytes(fragment_header.id), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks) {
                             if let Some(frag0) = assembled_packet.frags[0].as_ref() {
                                 let packet_header = frag0.struct_at::<PacketHeader>(0);
@@ -255,9 +258,7 @@ impl Node {
                                 }
                             }
                         }
-
                     } else {
-
                         if let Ok(packet_header) = data.struct_at::<PacketHeader>(0) {
                             if let Some(source) = Address::from_bytes(&packet_header.src) {
                                 if let Some(peer) = self.peer(source) {
@@ -267,9 +268,7 @@ impl Node {
                                 }
                             }
                         }
-
                     }
-
                 } else {
                     // Forward packets not destined for this node.
                     // TODO: need to add check for whether this node should forward. Regular nodes should only forward if a trust relationship exists.
@@ -296,10 +295,14 @@ impl Node {
     }
 
     /// Get the current best root peer that we should use for WHOIS, relaying, etc.
-    pub fn root(&self) -> Option<Arc<Peer>> { self.roots.lock().first().cloned() }
+    pub fn root(&self) -> Option<Arc<Peer>> {
+        self.roots.lock().first().cloned()
+    }
 
     /// Return true if a peer is a root.
-    pub fn is_peer_root(&self, peer: &Peer) -> bool { self.roots.lock().iter().any(|p| Arc::as_ptr(p) == (peer as *const Peer)) }
+    pub fn is_peer_root(&self, peer: &Peer) -> bool {
+        self.roots.lock().iter().any(|p| Arc::as_ptr(p) == (peer as *const Peer))
+    }
 
     /// Get the canonical Path object for a given endpoint and local socket information.
     ///

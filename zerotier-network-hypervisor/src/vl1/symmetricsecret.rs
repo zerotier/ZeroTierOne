@@ -19,10 +19,14 @@ pub(crate) struct AesGmacSivPoolFactory(Secret<32>, Secret<32>);
 
 impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
     #[inline(always)]
-    fn create(&self) -> AesGmacSiv { AesGmacSiv::new(&self.0.0, &self.1.0) }
+    fn create(&self) -> AesGmacSiv {
+        AesGmacSiv::new(&self.0 .0, &self.1 .0)
+    }
 
     #[inline(always)]
-    fn reset(&self, obj: &mut AesGmacSiv) { obj.reset(); }
+    fn reset(&self, obj: &mut AesGmacSiv) {
+        obj.reset();
+    }
 }
 
 /// A symmetric secret key negotiated between peers.
@@ -37,7 +41,9 @@ pub(crate) struct SymmetricSecret {
 
 impl PartialEq for SymmetricSecret {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool { self.key.0.eq(&other.key.0) }
+    fn eq(&self, other: &Self) -> bool {
+        self.key.0.eq(&other.key.0)
+    }
 }
 
 impl Eq for SymmetricSecret {}
@@ -47,9 +53,7 @@ impl SymmetricSecret {
     pub fn new(key: Secret<64>) -> SymmetricSecret {
         let packet_hmac_key = zt_kbkdf_hmac_sha512(&key.0, KBKDF_KEY_USAGE_LABEL_PACKET_HMAC, 0, 0);
         let ephemeral_ratchet_key = zt_kbkdf_hmac_sha512(&key.0, KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_KEY, 0, 0);
-        let aes_factory = AesGmacSivPoolFactory(
-            zt_kbkdf_hmac_sha384(&key.0[0..48], KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0, 0, 0).first_n(),
-            zt_kbkdf_hmac_sha384(&key.0[0..48], KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1, 0, 0).first_n());
+        let aes_factory = AesGmacSivPoolFactory(zt_kbkdf_hmac_sha384(&key.0[0..48], KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0, 0, 0).first_n(), zt_kbkdf_hmac_sha384(&key.0[0..48], KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1, 0, 0).first_n());
         SymmetricSecret {
             key,
             packet_hmac_key,

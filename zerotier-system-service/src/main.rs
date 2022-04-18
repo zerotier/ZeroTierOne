@@ -16,19 +16,20 @@ use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION
 use crate::store::platform_default_home_path;
 
 mod fastudpsocket;
-mod localconfig;
 mod getifaddrs;
+mod localconfig;
 #[macro_use]
 mod log;
-mod store;
-mod vnic;
 mod service;
+mod store;
 mod utils;
+mod vnic;
 
 pub const HTTP_API_OBJECT_SIZE_LIMIT: usize = 131072;
 
 fn make_help(long_help: bool) -> String {
-    format!(r###"ZeroTier Network Hypervisor Service Version {}.{}.{}
+    format!(
+        r###"ZeroTier Network Hypervisor Service Version {}.{}.{}
 (c)2013-2021 ZeroTier, Inc.
 Licensed under the Mozilla Public License (MPL) 2.0 (see LICENSE.txt)
 
@@ -77,8 +78,10 @@ Common Operations:
 · join <network>                           Join a virtual network
 · leave <network>                          Leave a virtual network
 {}"###,
-            VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION,
-            if long_help {
+        VERSION_MAJOR,
+        VERSION_MINOR,
+        VERSION_REVISION,
+        if long_help {
             r###"
 Advanced Operations:
 
@@ -105,7 +108,10 @@ Advanced Operations:
     @ Argument is the path to a file containing the object.
     ? Argument can be either the object or a path to it (auto-detected).
 "###
-        } else { "" })
+        } else {
+            ""
+        }
+    )
 }
 
 pub fn print_help(long_help: bool) {
@@ -117,7 +123,7 @@ pub struct GlobalCommandLineFlags {
     pub json_output: bool,
     pub base_path: String,
     pub auth_token_path_override: Option<String>,
-    pub auth_token_override: Option<String>
+    pub auth_token_override: Option<String>,
 }
 
 fn main() {
@@ -131,69 +137,45 @@ fn main() {
             .subcommand(App::new("help"))
             .subcommand(App::new("version"))
             .subcommand(App::new("status"))
-            .subcommand(App::new("set")
-                .subcommand(App::new("port")
-                    .arg(Arg::with_name("port#").index(1).validator(utils::is_valid_port)))
-                .subcommand(App::new("secondaryport")
-                    .arg(Arg::with_name("port#").index(1).validator(utils::is_valid_port)))
-                .subcommand(App::new("blacklist")
-                    .subcommand(App::new("cidr")
-                        .arg(Arg::with_name("ip_bits").index(1))
-                        .arg(Arg::with_name("boolean").index(2).validator(utils::is_valid_bool)))
-                    .subcommand(App::new("if")
-                        .arg(Arg::with_name("prefix").index(1))
-                        .arg(Arg::with_name("boolean").index(2).validator(utils::is_valid_bool))))
-                .subcommand(App::new("portmap")
-                    .arg(Arg::with_name("boolean").index(1).validator(utils::is_valid_bool))))
-            .subcommand(App::new("peer")
-                .subcommand(App::new("show")
-                    .arg(Arg::with_name("address").index(1).required(true)))
-                .subcommand(App::new("list"))
-                .subcommand(App::new("listroots"))
-                .subcommand(App::new("try")))
-            .subcommand(App::new("network")
-                .subcommand(App::new("show")
-                    .arg(Arg::with_name("nwid").index(1).required(true)))
-                .subcommand(App::new("list"))
-                .subcommand(App::new("set")
-                    .arg(Arg::with_name("nwid").index(1).required(true))
-                    .arg(Arg::with_name("setting").index(2).required(false))
-                    .arg(Arg::with_name("value").index(3).required(false))))
-            .subcommand(App::new("join")
-                .arg(Arg::with_name("nwid").index(1).required(true)))
-            .subcommand(App::new("leave")
-                .arg(Arg::with_name("nwid").index(1).required(true)))
+            .subcommand(
+                App::new("set")
+                    .subcommand(App::new("port").arg(Arg::with_name("port#").index(1).validator(utils::is_valid_port)))
+                    .subcommand(App::new("secondaryport").arg(Arg::with_name("port#").index(1).validator(utils::is_valid_port)))
+                    .subcommand(
+                        App::new("blacklist")
+                            .subcommand(App::new("cidr").arg(Arg::with_name("ip_bits").index(1)).arg(Arg::with_name("boolean").index(2).validator(utils::is_valid_bool)))
+                            .subcommand(App::new("if").arg(Arg::with_name("prefix").index(1)).arg(Arg::with_name("boolean").index(2).validator(utils::is_valid_bool))),
+                    )
+                    .subcommand(App::new("portmap").arg(Arg::with_name("boolean").index(1).validator(utils::is_valid_bool))),
+            )
+            .subcommand(App::new("peer").subcommand(App::new("show").arg(Arg::with_name("address").index(1).required(true))).subcommand(App::new("list")).subcommand(App::new("listroots")).subcommand(App::new("try")))
+            .subcommand(
+                App::new("network")
+                    .subcommand(App::new("show").arg(Arg::with_name("nwid").index(1).required(true)))
+                    .subcommand(App::new("list"))
+                    .subcommand(App::new("set").arg(Arg::with_name("nwid").index(1).required(true)).arg(Arg::with_name("setting").index(2).required(false)).arg(Arg::with_name("value").index(3).required(false))),
+            )
+            .subcommand(App::new("join").arg(Arg::with_name("nwid").index(1).required(true)))
+            .subcommand(App::new("leave").arg(Arg::with_name("nwid").index(1).required(true)))
             .subcommand(App::new("service"))
-            .subcommand(App::new("controller")
-                .subcommand(App::new("list"))
-                .subcommand(App::new("new"))
-                .subcommand(App::new("set")
-                    .arg(Arg::with_name("id").index(1).required(true))
-                    .arg(Arg::with_name("setting").index(2))
-                    .arg(Arg::with_name("value").index(3)))
-                .subcommand(App::new("show")
-                    .arg(Arg::with_name("id").index(1).required(true))
-                    .arg(Arg::with_name("member").index(2)))
-                .subcommand(App::new("auth")
-                    .arg(Arg::with_name("member").index(1).required(true)))
-                .subcommand(App::new("deauth")
-                    .arg(Arg::with_name("member").index(1).required(true))))
-            .subcommand(App::new("identity")
-                .subcommand(App::new("new")
-                    .arg(Arg::with_name("type").possible_value("p384").possible_value("c25519").default_value("c25519").index(1)))
-                .subcommand(App::new("getpublic")
-                    .arg(Arg::with_name("identity").index(1).required(true)))
-                .subcommand(App::new("fingerprint")
-                    .arg(Arg::with_name("identity").index(1).required(true)))
-                .subcommand(App::new("validate")
-                    .arg(Arg::with_name("identity").index(1).required(true)))
-                .subcommand(App::new("sign")
-                    .arg(Arg::with_name("identity").index(1).required(true))
-                    .arg(Arg::with_name("path").index(2).required(true)))
-                .subcommand(App::new("verify")
-                    .arg(Arg::with_name("identity").index(1).required(true))
-                    .arg(Arg::with_name("path").index(2).required(true))
-                    .arg(Arg::with_name("signature").index(3).required(true))))
+            .subcommand(
+                App::new("controller")
+                    .subcommand(App::new("list"))
+                    .subcommand(App::new("new"))
+                    .subcommand(App::new("set").arg(Arg::with_name("id").index(1).required(true)).arg(Arg::with_name("setting").index(2)).arg(Arg::with_name("value").index(3)))
+                    .subcommand(App::new("show").arg(Arg::with_name("id").index(1).required(true)).arg(Arg::with_name("member").index(2)))
+                    .subcommand(App::new("auth").arg(Arg::with_name("member").index(1).required(true)))
+                    .subcommand(App::new("deauth").arg(Arg::with_name("member").index(1).required(true))),
+            )
+            .subcommand(
+                App::new("identity")
+                    .subcommand(App::new("new").arg(Arg::with_name("type").possible_value("p384").possible_value("c25519").default_value("c25519").index(1)))
+                    .subcommand(App::new("getpublic").arg(Arg::with_name("identity").index(1).required(true)))
+                    .subcommand(App::new("fingerprint").arg(Arg::with_name("identity").index(1).required(true)))
+                    .subcommand(App::new("validate").arg(Arg::with_name("identity").index(1).required(true)))
+                    .subcommand(App::new("sign").arg(Arg::with_name("identity").index(1).required(true)).arg(Arg::with_name("path").index(2).required(true)))
+                    .subcommand(App::new("verify").arg(Arg::with_name("identity").index(1).required(true)).arg(Arg::with_name("path").index(2).required(true)).arg(Arg::with_name("signature").index(3).required(true))),
+            )
             .help(help.as_str())
             .get_matches_from_safe(std::env::args());
         if args.is_err() {
@@ -215,7 +197,7 @@ fn main() {
         json_output: cli_args.is_present("json"),
         base_path: cli_args.value_of("path").map_or_else(|| platform_default_home_path(), |p| p.into_string()),
         auth_token_path_override: cli_args.value_of("token_path").map(|p| p.into_string()),
-        auth_token_override: cli_args.value_of("token").map(|t| t.into_string())
+        auth_token_override: cli_args.value_of("token").map(|t| t.into_string()),
     };
 
     std::process::exit({

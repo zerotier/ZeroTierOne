@@ -73,7 +73,9 @@ impl Encoded {
 
 impl AsRef<[u8]> for Encoded {
     #[inline(always)]
-    fn as_ref(&self) -> &[u8] { &self.0[0..(self.1 as usize)] }
+    fn as_ref(&self) -> &[u8] {
+        &self.0[0..(self.1 as usize)]
+    }
 }
 
 #[cfg(test)]

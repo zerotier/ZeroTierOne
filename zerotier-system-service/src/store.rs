@@ -6,13 +6,13 @@
  * https://www.zerotier.com/
  */
 
+use std::ffi::CString;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 use std::str::FromStr;
-use std::ffi::CString;
+use std::sync::Mutex;
 
-use zerotier_core::{StateObjectType, NetworkId};
+use zerotier_core::{NetworkId, StateObjectType};
 
 use crate::localconfig::LocalConfig;
 
@@ -27,7 +27,7 @@ pub enum StateObjectType {
     IdentityPublic,
     IdentitySecret,
     NetworkConfig,
-    Peer
+    Peer,
 }
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -70,16 +70,8 @@ impl Store {
             peers_path: bp.join("peers.d").into_boxed_path(),
             controller_path: bp.join("controller.d").into_boxed_path(),
             networks_path: bp.join("networks.d").into_boxed_path(),
-            auth_token_path: Mutex::new(auth_token_path_override.map_or_else(|| {
-                bp.join(AUTHTOKEN_SECRET).into_boxed_path()
-            }, |auth_token_path_override| {
-                PathBuf::from(auth_token_path_override).into_boxed_path()
-            })),
-            auth_token: Mutex::new(auth_token_override.map_or_else(|| {
-                String::new()
-            }, |auth_token_override| {
-                auth_token_override
-            })),
+            auth_token_path: Mutex::new(auth_token_path_override.map_or_else(|| bp.join(AUTHTOKEN_SECRET).into_boxed_path(), |auth_token_path_override| PathBuf::from(auth_token_path_override).into_boxed_path())),
+            auth_token: Mutex::new(auth_token_override.map_or_else(|| String::new(), |auth_token_override| auth_token_override)),
         };
 
         let _ = std::fs::create_dir_all(&s.peers_path);
@@ -99,7 +91,7 @@ impl Store {
                 } else {
                     Some(self.networks_path.join(format!("{:0>16x}.conf", obj_id[0])))
                 }
-            },
+            }
             StateObjectType::Peer => {
                 if obj_id.len() < 1 {
                     None
@@ -132,7 +124,7 @@ impl Store {
             let p = self.auth_token_path.lock().unwrap();
             let ps = p.to_str().unwrap();
 
-            let token2 = self.read_file(ps).map_or(String::new(), |sb| { String::from_utf8(sb).unwrap_or(String::new()).trim().to_string() });
+            let token2 = self.read_file(ps).map_or(String::new(), |sb| String::from_utf8(sb).unwrap_or(String::new()).trim().to_string());
             if token2.is_empty() {
                 if generate_if_missing {
                     let mut rb = [0_u8; 32];
@@ -173,7 +165,8 @@ impl Store {
                 if de.is_ok() {
                     let nn = de.unwrap().file_name();
                     let n = nn.to_str().unwrap_or("");
-                    if n.len() == 21 && n.ends_with(".conf") { // ################.conf
+                    if n.len() == 21 && n.ends_with(".conf") {
+                        // ################.conf
                         let nwid = u64::from_str_radix(&n[0..16], 16);
                         if nwid.is_ok() {
                             list.push(NetworkId(nwid.unwrap()));

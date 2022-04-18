@@ -6,9 +6,9 @@
  * https://www.zerotier.com/
  */
 
-use std::io::Write;
-use std::mem::{MaybeUninit, size_of};
 use crate::util::{array_range, array_range_mut};
+use std::io::Write;
+use std::mem::{size_of, MaybeUninit};
 
 use crate::util::pool::PoolFactory;
 
@@ -27,7 +27,9 @@ unsafe impl<const L: usize> RawObject for Buffer<L> {}
 
 impl<const L: usize> Default for Buffer<L> {
     #[inline(always)]
-    fn default() -> Self { Self(0, [0_u8; L]) }
+    fn default() -> Self {
+        Self(0, [0_u8; L])
+    }
 }
 
 const OVERFLOW_ERR_MSG: &'static str = "overflow";
@@ -35,14 +37,20 @@ const OVERFLOW_ERR_MSG: &'static str = "overflow";
 impl<const L: usize> Buffer<L> {
     pub const CAPACITY: usize = L;
 
-    pub const fn capacity(&self) -> usize { L }
+    pub const fn capacity(&self) -> usize {
+        L
+    }
 
     #[inline(always)]
-    pub fn new() -> Self { Self(0, [0_u8; L]) }
+    pub fn new() -> Self {
+        Self(0, [0_u8; L])
+    }
 
     /// Create an empty buffer without zeroing its memory (saving a bit of CPU).
     #[inline(always)]
-    pub unsafe fn new_without_memzero() -> Self { Self(0, MaybeUninit::uninit().assume_init()) }
+    pub unsafe fn new_without_memzero() -> Self {
+        Self(0, MaybeUninit::uninit().assume_init())
+    }
 
     #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> std::io::Result<Self> {
@@ -58,22 +66,34 @@ impl<const L: usize> Buffer<L> {
     }
 
     #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8] { &self.1[0..self.0] }
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.1[0..self.0]
+    }
 
     #[inline(always)]
-    pub fn as_bytes_mut(&mut self) -> &mut [u8] { &mut self.1[0..self.0] }
+    pub fn as_bytes_mut(&mut self) -> &mut [u8] {
+        &mut self.1[0..self.0]
+    }
 
     #[inline(always)]
-    pub fn as_range_fixed<const START: usize, const LEN: usize>(&self) -> &[u8; LEN] { array_range::<u8, L, START, LEN>(&self.1) }
+    pub fn as_range_fixed<const START: usize, const LEN: usize>(&self) -> &[u8; LEN] {
+        array_range::<u8, L, START, LEN>(&self.1)
+    }
 
     #[inline(always)]
-    pub fn as_ptr(&self) -> *const u8 { self.1.as_ptr() }
+    pub fn as_ptr(&self) -> *const u8 {
+        self.1.as_ptr()
+    }
 
     #[inline(always)]
-    pub fn as_mut_ptr(&mut self) -> *mut u8 { self.1.as_mut_ptr() }
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.1.as_mut_ptr()
+    }
 
     #[inline(always)]
-    pub fn as_mut_range_fixed<const START: usize, const LEN: usize>(&mut self) -> &mut [u8; LEN] { array_range_mut::<u8, L, START, LEN>(&mut self.1) }
+    pub fn as_mut_range_fixed<const START: usize, const LEN: usize>(&mut self) -> &mut [u8; LEN] {
+        array_range_mut::<u8, L, START, LEN>(&mut self.1)
+    }
 
     /// Get all bytes after a given position.
     #[inline(always)]
@@ -106,10 +126,14 @@ impl<const L: usize> Buffer<L> {
     }
 
     #[inline(always)]
-    pub fn len(&self) -> usize { self.0 }
+    pub fn len(&self) -> usize {
+        self.0
+    }
 
     #[inline(always)]
-    pub fn is_empty(&self) -> bool { self.0 == 0 }
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
 
     /// Set the size of this buffer's data.
     ///
@@ -127,10 +151,14 @@ impl<const L: usize> Buffer<L> {
     }
 
     #[inline(always)]
-    pub unsafe fn set_size_unchecked(&mut self, s: usize) { self.0 = s; }
+    pub unsafe fn set_size_unchecked(&mut self, s: usize) {
+        self.0 = s;
+    }
 
     #[inline(always)]
-    pub unsafe fn get_unchecked(&self, i: usize) -> u8 { *self.1.get_unchecked(i) }
+    pub unsafe fn get_unchecked(&self, i: usize) -> u8 {
+        *self.1.get_unchecked(i)
+    }
 
     /// Append a structure and return a mutable reference to its memory.
     #[inline(always)]
@@ -314,9 +342,7 @@ impl<const L: usize> Buffer<L> {
     #[inline(always)]
     pub fn struct_at<T: RawObject>(&self, ptr: usize) -> std::io::Result<&T> {
         if (ptr + size_of::<T>()) <= self.0 {
-            unsafe {
-                Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>())
-            }
+            unsafe { Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()) }
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
@@ -326,9 +352,7 @@ impl<const L: usize> Buffer<L> {
     #[inline(always)]
     pub fn struct_mut_at<T: RawObject>(&mut self, ptr: usize) -> std::io::Result<&mut T> {
         if (ptr + size_of::<T>()) <= self.0 {
-            unsafe {
-                Ok(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<T>())
-            }
+            unsafe { Ok(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()) }
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
@@ -351,9 +375,7 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            unsafe {
-                Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>())
-            }
+            unsafe { Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()) }
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
@@ -366,9 +388,7 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            unsafe {
-                Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<[u8; S]>())
-            }
+            unsafe { Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<[u8; S]>()) }
         } else {
             Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
         }
@@ -501,7 +521,9 @@ impl<const L: usize> Buffer<L> {
 
 impl<const L: usize> PartialEq for Buffer<L> {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool { self.1[0..self.0].eq(&other.1[0..other.0]) }
+    fn eq(&self, other: &Self) -> bool {
+        self.1[0..self.0].eq(&other.1[0..other.0])
+    }
 }
 
 impl<const L: usize> Eq for Buffer<L> {}
@@ -521,30 +543,42 @@ impl<const L: usize> Write for Buffer<L> {
     }
 
     #[inline(always)]
-    fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
 }
 
 impl<const L: usize> AsRef<[u8]> for Buffer<L> {
     #[inline(always)]
-    fn as_ref(&self) -> &[u8] { self.as_bytes() }
+    fn as_ref(&self) -> &[u8] {
+        self.as_bytes()
+    }
 }
 
 impl<const L: usize> AsMut<[u8]> for Buffer<L> {
     #[inline(always)]
-    fn as_mut(&mut self) -> &mut [u8] { self.as_bytes_mut() }
+    fn as_mut(&mut self) -> &mut [u8] {
+        self.as_bytes_mut()
+    }
 }
 
 pub struct PooledBufferFactory<const L: usize>;
 
 impl<const L: usize> PooledBufferFactory<L> {
     #[inline(always)]
-    pub fn new() -> Self { Self{} }
+    pub fn new() -> Self {
+        Self {}
+    }
 }
 
 impl<const L: usize> PoolFactory<Buffer<L>> for PooledBufferFactory<L> {
     #[inline(always)]
-    fn create(&self) -> Buffer<L> { Buffer::new() }
+    fn create(&self) -> Buffer<L> {
+        Buffer::new()
+    }
 
     #[inline(always)]
-    fn reset(&self, obj: &mut Buffer<L>) { obj.clear(); }
+    fn reset(&self, obj: &mut Buffer<L>) {
+        obj.clear();
+    }
 }

@@ -7,7 +7,7 @@
  */
 
 use std::fs::{File, OpenOptions};
-use std::io::{Seek, SeekFrom, stderr, Write};
+use std::io::{stderr, Seek, SeekFrom, Write};
 use std::sync::Arc;
 
 use parking_lot::Mutex;
@@ -39,7 +39,7 @@ impl Log {
         if !p.is_empty() {
             p.push(' ');
         }
-        Arc::new(Mutex::new(Log{
+        Arc::new(Mutex::new(Log {
             prefix: p,
             path: String::from(path),
             file: None,
