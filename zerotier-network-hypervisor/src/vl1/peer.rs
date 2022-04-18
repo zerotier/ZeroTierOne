@@ -9,8 +9,8 @@
 use std::convert::TryInto;
 use std::mem::MaybeUninit;
 use std::num::NonZeroI64;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
+use std::sync::Arc;
 
 use parking_lot::Mutex;
 
@@ -22,15 +22,15 @@ use zerotier_core_crypto::random::{fill_bytes_secure, get_bytes_secure, next_u64
 use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
-use crate::{PacketBuffer, VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
-use crate::util::{array_range, u64_as_bytes};
 use crate::util::buffer::Buffer;
-use crate::vl1::{Dictionary, Endpoint, Identity, InetAddress, Path};
+use crate::util::{array_range, u64_as_bytes};
 use crate::vl1::hybridkey::{HybridKeyPair, HybridPublicKey};
 use crate::vl1::identity::{IDENTITY_ALGORITHM_ALL, IDENTITY_ALGORITHM_X25519};
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
 use crate::vl1::symmetricsecret::{EphemeralSymmetricSecret, SymmetricSecret};
+use crate::vl1::{Dictionary, Endpoint, Identity, InetAddress, Path};
+use crate::{PacketBuffer, VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
 
 /// A remote peer known to this node.
 /// Sending-related and receiving-related fields are locked separately since concurrent
@@ -140,10 +140,12 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
                 poly.update(packet_frag0_payload_bytes);
                 let _ = payload.append_bytes_get_mut(packet_frag0_payload_bytes.len()).map(|b| salsa.crypt(packet_frag0_payload_bytes, b));
                 for f in fragments.iter() {
-                    let _ = f.as_ref().map(|f| f.as_bytes_starting_at(FRAGMENT_HEADER_SIZE).map(|f| {
-                        poly.update(f);
-                        let _ = payload.append_bytes_get_mut(f.len()).map(|b| salsa.crypt(f, b));
-                    }));
+                    let _ = f.as_ref().map(|f| {
+                        f.as_bytes_starting_at(FRAGMENT_HEADER_SIZE).map(|f| {
+                            poly.update(f);
+                            let _ = payload.append_bytes_get_mut(f.len()).map(|b| salsa.crypt(f, b));
+                        })
+                    });
                 }
                 if poly.finish()[0..8].eq(&header.mac) {
                     Some(u64::from_ne_bytes(header.id))
@@ -211,24 +213,15 @@ impl Peer {
 
     /// Get the next message ID for sending a message to this peer.
     #[inline(always)]
-    pub(crate) fn next_message_id(&self) -> u64 { self.message_id_counter.fetch_add(1, Ordering::Relaxed) }
+    pub(crate) fn next_message_id(&self) -> u64 {
+        self.message_id_counter.fetch_add(1, Ordering::Relaxed)
+    }
 
     /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
     ///
     /// If the packet comes in multiple fragments, the fragments slice should contain all
     /// those fragments after the main packet header and first chunk.
-    pub(crate) fn receive<SI: SystemInterface, VI: VL1VirtualInterface>(
-        &self,
-        node: &Node,
-        si: &SI,
-        vi: &VI,
-        time_ticks: i64,
-        source_endpoint: &Endpoint,
-        source_path: &Arc<Path>,
-        header: &PacketHeader,
-        frag0: &Buffer<{ PACKET_SIZE_MAX }>,
-        fragments: &[Option<PacketBuffer>])
-    {
+    pub(crate) fn receive<SI: SystemInterface, VI: VL1VirtualInterface>(&self, node: &Node, si: &SI, vi: &VI, time_ticks: i64, source_endpoint: &Endpoint, source_path: &Arc<Path>, header: &PacketHeader, frag0: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
         let _ = frag0.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_without_memzero() };
 
@@ -313,10 +306,11 @@ impl Peer {
                 }
             } else {
                 // In debug build check to make sure the next layer (VL2) is complying with the API contract.
-                #[cfg(debug)] {
+                #[cfg(debug)]
+                {
                     if match verb {
                         VERB_VL1_NOP | VERB_VL1_HELLO | VERB_VL1_ERROR | VERB_VL1_OK | VERB_VL1_WHOIS | VERB_VL1_RENDEZVOUS | VERB_VL1_ECHO | VERB_VL1_PUSH_DIRECT_PATHS | VERB_VL1_USER_MESSAGE => true,
-                        _ => false
+                        _ => false,
                     } {
                         panic!("The next layer handled a VL1 packet! It should not do this.");
                     }
@@ -419,14 +413,15 @@ impl Peer {
     /// static identity key.
     pub(crate) fn send_hello<SI: SystemInterface>(&self, si: &SI, node: &Node, explicit_endpoint: Option<&Endpoint>) -> bool {
         let mut path = None;
-        let destination = explicit_endpoint.map_or_else(|| {
-            self.path(node).map_or(None, |p| {
-                path = Some(p.clone());
-                Some(p.endpoint().as_ref().clone())
-            })
-        }, |endpoint| {
-            Some(endpoint.clone())
-        });
+        let destination = explicit_endpoint.map_or_else(
+            || {
+                self.path(node).map_or(None, |p| {
+                    path = Some(p.clone());
+                    Some(p.endpoint().as_ref().clone())
+                })
+            },
+            |endpoint| Some(endpoint.clone()),
+        );
         if destination.is_none() {
             return false;
         }
@@ -519,16 +514,17 @@ impl Peer {
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
         self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
 
-        path.map_or_else(|| {
-            self.send_to_endpoint(si, &destination, None, None, &packet)
-        }, |p| {
-            if self.send_to_endpoint(si, &destination, p.local_socket(), p.local_interface(), &packet) {
-                p.log_send_anything(time_ticks);
-                true
-            } else {
-                false
-            }
-        })
+        path.map_or_else(
+            || self.send_to_endpoint(si, &destination, None, None, &packet),
+            |p| {
+                if self.send_to_endpoint(si, &destination, p.local_socket(), p.local_interface(), &packet) {
+                    p.log_send_anything(time_ticks);
+                    true
+                } else {
+                    false
+                }
+            },
+        )
     }
 
     pub(crate) const CALL_EVERY_INTERVAL_MS: i64 = EPHEMERAL_SECRET_REKEY_AFTER_TIME / 10;
