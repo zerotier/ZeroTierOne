@@ -12,9 +12,9 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Mutex;
 
-use zerotier_core::{NetworkId, StateObjectType};
-
 use crate::localconfig::LocalConfig;
+
+use zerotier_network_hypervisor::vl1::identity::NetworkId;
 
 const ZEROTIER_PID: &'static str = "zerotier.pid";
 const ZEROTIER_URI: &'static str = "zerotier.uri";
@@ -128,7 +128,7 @@ impl Store {
             if token2.is_empty() {
                 if generate_if_missing {
                     let mut rb = [0_u8; 32];
-                    unsafe { crate::osdep::getSecureRandom(rb.as_mut_ptr().cast(), 64) };
+                    unsafe { rb.fill_with(rand::random) };
                     token.reserve(rb.len());
                     for b in rb.iter() {
                         if *b > 127_u8 {
@@ -234,7 +234,7 @@ impl Store {
     }
 
     pub fn write_pid(&self) -> std::io::Result<()> {
-        let pid = unsafe { crate::osdep::getpid() }.to_string();
+        let pid = unsafe { libc::getpid() }.to_string();
         self.write_file(ZEROTIER_PID, pid.as_bytes())
     }
 

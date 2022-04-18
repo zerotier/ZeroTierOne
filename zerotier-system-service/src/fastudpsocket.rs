@@ -21,8 +21,8 @@ use std::sync::Arc;
 
 use num_traits::cast::AsPrimitive;
 
-use crate::debug;
-use zerotier_network_hypervisor::vl1::InetAddress;
+//use crate::debug;
+use zerotier_network_hypervisor::vl1::{InetAddress, InetAddressFamily};
 use zerotier_network_hypervisor::{PacketBuffer, PacketBufferPool};
 
 const FAST_UDP_SOCKET_MAX_THREADS: usize = 4;
@@ -224,7 +224,7 @@ impl FastUDPSocket {
                 let packet_buffer_pool_copy = packet_buffer_pool.clone();
                 s.threads.push(
                     std::thread::Builder::new()
-                        .stack_size(zerotier_core::RECOMMENDED_THREAD_STACK_SIZE)
+                        //.stack_size(zerotier_core::RECOMMENDED_THREAD_STACK_SIZE)
                         .spawn(move || {
                             let mut from_address = InetAddress::new();
                             while thread_run.load(Ordering::Relaxed) {
@@ -255,7 +255,7 @@ impl FastUDPSocket {
     }
 
     #[inline(always)]
-    pub fn send(&self, to_address: &InetAddress, data: &[u8], packet_ttl: i32) {
+    pub fn send(&self, to_address: &InetAddress, data: &[&[u8]], packet_ttl: u8) {
         debug_assert!(!self.sockets.is_empty());
         fast_udp_socket_sendto(unsafe { self.sockets.get_unchecked(0) }, to_address, data, packet_ttl);
     }
@@ -279,7 +279,7 @@ impl Drop for FastUDPSocket {
         self.thread_run.store(false, Ordering::Relaxed);
         for s in self.sockets.iter() {
             unsafe {
-                libc::sendto(s.get().as_(), tmp.as_ptr().cast(), 0, 0, (&self.bind_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as osdep::socklen_t);
+                libc::sendto(s.get().as_(), tmp.as_ptr().cast(), 0, 0, (&self.bind_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as libc::socklen_t);
             }
         }
         for s in self.sockets.iter() {
@@ -308,7 +308,7 @@ mod tests {
     #[test]
     fn test_udp_bind_and_transfer() {
         {
-            let pool = Arc::new(PacketBufferPool::new(64, PacketBufferFactory));
+            let pool = Arc::new(PacketBufferPool::new(64, PacketBufferFactory::new()));
 
             let ba0 = InetAddress::new_from_string("127.0.0.1/23333");
             assert!(ba0.is_some());
@@ -334,8 +334,8 @@ mod tests {
 
             let data_bytes = [0_u8; 1024];
             loop {
-                s0.send(&ba1, &data_bytes, 0);
-                s1.send(&ba0, &data_bytes, 0);
+                s0.send(&ba1, &[&data_bytes], 0);
+                s1.send(&ba0, &[&data_bytes], 0);
                 if cnt0.load(Ordering::Relaxed) > 10000 && cnt1.load(Ordering::Relaxed) > 10000 {
                     break;
                 }

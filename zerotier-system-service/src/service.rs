@@ -19,7 +19,7 @@ use zerotier_network_hypervisor::{Interface, NetworkHypervisor};
 
 use crate::localconfig::LocalConfig;
 use crate::log::Log;
-use crate::store::{platform_default_home_path, StateObjectType, Store};
+use crate::store::{StateObjectType, Store};
 use crate::utils::{ms_monotonic, ms_since_epoch};
 use crate::GlobalCommandLineFlags;
 
@@ -105,7 +105,7 @@ impl VL1SystemInterface for ServiceInterface {
 
 impl SwitchInterface for ServiceInterface {}
 
-impl Interface for ServiceInterface {}
+//impl Interface for ServiceInterface {}
 
 pub fn run(global_cli_flags: &GlobalCommandLineFlags) -> i32 {
     let store = Store::new(global_cli_flags.base_path.as_str(), &global_cli_flags.auth_token_path_override, &global_cli_flags.auth_token_override);

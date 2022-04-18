@@ -11,6 +11,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::str::FromStr;
+use std::time::UNIX_EPOCH;
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -18,10 +19,10 @@ use serde::Serialize;
 use zerotier_core_crypto::hex;
 use zerotier_network_hypervisor::vl1::Identity;
 
-use crate::osdep;
+//use crate::osdep;
 
 pub fn ms_since_epoch() -> i64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64
+    std::time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
 }
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -39,7 +40,9 @@ pub fn ms_monotonic() -> i64 {
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
-pub fn ms_monotonic() -> i64 {}
+pub fn ms_monotonic() -> i64 {
+    std::time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
+}
 
 pub fn parse_bool(v: &str) -> Result<bool, String> {
     if !v.is_empty() {
@@ -104,20 +107,20 @@ pub fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity, Strin
 pub fn create_http_auth_nonce(timestamp: i64) -> String {
     let mut nonce_plaintext: [u64; 2] = [timestamp as u64, timestamp as u64];
     unsafe {
-        osdep::encryptHttpAuthNonce(nonce_plaintext.as_mut_ptr().cast());
-        hex::encode(*nonce_plaintext.as_ptr().cast::<[u8; 16]>())
+        //osdep::encryptHttpAuthNonce(nonce_plaintext.as_mut_ptr().cast());
+        hex::to_string(&nonce_plaintext.as_ptr().cast::<[u8]>())
     }
 }
 
 /// Decrypt HTTP auth nonce encrypted by this process and return the timestamp.
 /// This returns zero if the input was not valid.
 pub fn decrypt_http_auth_nonce(nonce: &str) -> i64 {
-    let nonce = hex::decode(nonce.trim());
+    let nonce = hex::from_string(nonce.trim());
     if !nonce.is_err() {
         let mut nonce = nonce.unwrap();
         if nonce.len() == 16 {
             unsafe {
-                osdep::decryptHttpAuthNonce(nonce.as_mut_ptr().cast());
+                //osdep::decryptHttpAuthNonce(nonce.as_mut_ptr().cast());
                 let nonce = *nonce.as_ptr().cast::<[u64; 2]>();
                 if nonce[0] == nonce[1] {
                     return nonce[0] as i64;
