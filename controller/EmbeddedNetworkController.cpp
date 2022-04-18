@@ -1348,6 +1348,7 @@ void EmbeddedNetworkController::_request(
 				Dictionary<4096> authInfo;
 				authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, (uint64_t)0ULL);
 				authInfo.add(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, info.authenticationURL.c_str());
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
 			} else if (info.version == 1) {
 				Dictionary<8192> authInfo;
 				authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, info.version);
