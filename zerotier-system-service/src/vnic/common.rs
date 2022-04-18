@@ -59,6 +59,6 @@ pub fn get_l2_multicast_subscriptions(dev: &str) -> HashSet<MAC> {
 /// Linux stores this stuff in /proc and it needs to be fetched from there.
 #[cfg(target_os = "linux")]
 pub fn get_l2_multicast_subscriptions(dev: &str) -> HashSet<MAC> {
-    let mut groups: HashSet<MulticastGroup> = HashSet::new();
+    let mut groups: HashSet<MAC> = HashSet::new();
     groups
 }

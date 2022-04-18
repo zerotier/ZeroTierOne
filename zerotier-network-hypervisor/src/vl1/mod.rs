@@ -21,6 +21,7 @@ pub(crate) mod peer;
 #[allow(unused)]
 pub(crate) mod protocol;
 pub(crate) mod symmetricsecret;
+pub(crate) mod system_interface;
 pub(crate) mod whoisqueue;
 
 pub use address::Address;
@@ -32,5 +33,6 @@ pub use mac::MAC;
 pub use node::{Node, SystemInterface};
 pub use path::Path;
 pub use peer::Peer;
+pub use system_interface::VL1SystemInterface;
 
 pub use protocol::{PACKET_FRAGMENT_COUNT_MAX, PACKET_SIZE_MAX};

@@ -64,7 +64,7 @@ impl Log {
 
     fn log_internal(&mut self, pfx: &str, s: &str) {
         if !s.is_empty() {
-            let log_line = format!("{}[{}] {}{}\n", l.prefix.as_str(), chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(), pfx, s);
+            let log_line = format!("{}[{}] {}{}\n", self.prefix.as_str(), chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(), pfx, s);
             if !self.path.is_empty() {
                 if self.file.is_none() {
                     let f = OpenOptions::new().read(true).write(true).create(true).open(self.path.as_str());

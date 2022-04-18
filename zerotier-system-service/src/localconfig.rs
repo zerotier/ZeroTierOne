@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use zerotier_network_hypervisor::vl1::identity::NetworkId;
 use zerotier_network_hypervisor::vl1::{Address, InetAddress};
 
 pub const UNASSIGNED_PRIVILEGED_PORTS: [u16; 299] = [
@@ -20,6 +21,8 @@ pub const UNASSIGNED_PRIVILEGED_PORTS: [u16; 299] = [
     940, 941, 942, 943, 944, 945, 946, 947, 948, 949, 950, 951, 952, 953, 954, 955, 956, 957, 958, 959, 960, 961, 962, 963, 964, 965, 966, 967, 968, 969, 970, 971, 972, 973, 974, 975, 976, 977, 978, 979, 980, 981, 982, 983, 984, 985, 986, 987, 988, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008,
     1009, 1023,
 ];
+
+pub const DEFAULT_PORT: u16 = 9993;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
@@ -129,7 +132,7 @@ impl Default for LocalConfigSettings {
         }
 
         LocalConfigSettings {
-            primary_port: zerotier_core::DEFAULT_PORT,
+            primary_port: DEFAULT_PORT,
             port_mapping: true,
             log: LocalConfigLogSettings::default(),
             interface_prefix_blacklist: bl,

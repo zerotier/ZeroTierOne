@@ -25,6 +25,8 @@ smol = "^1"
 tide = { version = "^0", features = ["h1-server"], default-features = false }
 digest_auth = "^0"
 chrono = "^0"
+hex = "^0"
+rand = "^0"
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }

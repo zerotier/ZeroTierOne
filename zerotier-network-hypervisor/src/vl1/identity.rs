@@ -17,6 +17,8 @@ use std::str::FromStr;
 
 use lazy_static::lazy_static;
 
+use serde::{Deserialize, Serialize};
+
 use zerotier_core_crypto::c25519::*;
 use zerotier_core_crypto::hash::{hmac_sha512, SHA384, SHA384_HASH_SIZE, SHA512, SHA512_HASH_SIZE};
 use zerotier_core_crypto::hex;
@@ -73,6 +75,9 @@ pub struct Identity {
     pub secret: Option<IdentitySecret>,
     pub fingerprint: [u8; SHA512_HASH_SIZE],
 }
+
+#[derive(Eq, PartialEq, Clone, Debug, Ord, PartialOrd, Deserialize, Serialize)]
+pub struct NetworkId(pub u64);
 
 #[inline(always)]
 fn concat_arrays_2<const A: usize, const B: usize, const S: usize>(a: &[u8; A], b: &[u8; B]) -> [u8; S] {

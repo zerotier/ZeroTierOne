@@ -10,12 +10,14 @@ use std::hash::{Hash, Hasher};
 use std::num::NonZeroU64;
 use std::str::FromStr;
 
+use serde::{Deserialize, Serialize};
+
 use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;
 use crate::util::hex::HEX_CHARS;
 use crate::vl1::protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct Address(NonZeroU64);
 
