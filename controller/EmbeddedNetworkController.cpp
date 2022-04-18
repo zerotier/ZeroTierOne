@@ -1340,6 +1340,29 @@ void EmbeddedNetworkController::_request(
 	bool networkSSOEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
 	bool memberSSOExempt = OSUtils::jsonBool(member["ssoExempt"], false);
 	if (networkSSOEnabled && !memberSSOExempt) {
+		authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
+		info = _db.getSSOAuthInfo(member, _ssoRedirectURL);
+		assert(info.enabled == networkSSOEnabled);
+		if (authenticationExpiryTime <= now) {
+			if (info.version == 0) {
+				Dictionary<4096> authInfo;
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, (uint64_t)0ULL);
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, info.authenticationURL.c_str());
+			} else if (info.version == 1) {
+				Dictionary<8192> authInfo;
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, info.version);
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_ISSUER_URL, info.issuerURL.c_str());
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL, info.centralAuthURL.c_str());
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_NONCE, info.ssoNonce.c_str());
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_STATE, info.ssoState.c_str());
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_CLIENT_ID, info.ssoClientID.c_str());
+				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
+			}
+			DB::cleanMember(member);
+			_db.save(member,true);
+			return;
+		}
+#if 0
 		// TODO:  Get expiry time if auth is still valid
 
 		// else get new auth info & stuff
@@ -1395,6 +1418,7 @@ void EmbeddedNetworkController::_request(
 			fprintf(stderr, "Setting member will expire to: %lld\n", authenticationExpiryTime);
 			//_db.memberWillExpire(authenticationExpiryTime, nwid, identity.address().toInt());
 		}
+#endif
 	}
 
 	if (authorized) {
@@ -1464,7 +1488,7 @@ void EmbeddedNetworkController::_request(
 	nc->mtu = std::max(std::min((unsigned int)OSUtils::jsonInt(network["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
 	nc->multicastLimit = (unsigned int)OSUtils::jsonInt(network["multicastLimit"],32ULL);
 
-	nc->ssoEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
+	nc->ssoEnabled = networkSSOEnabled; //OSUtils::jsonBool(network["ssoEnabled"], false);
 	nc->ssoVersion = info.version;
 
 	if (info.version == 0) {
