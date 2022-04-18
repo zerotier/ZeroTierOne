@@ -123,27 +123,18 @@ where
 
     #[inline(always)]
     pub fn as_bytes(&self) -> Box<Vec<u8>> {
-        let len: usize = BUCKETS * 4 + BUCKETS + BUCKETS * std::mem::size_of::<T>();
+        let check_hash_len = BUCKETS * 4;
+        let t_len = BUCKETS * std::mem::size_of::<T>();
+        let len = check_hash_len + BUCKETS + t_len;
 
         let mut buf = Box::new(Vec::with_capacity(len));
+        buf.resize(len, 0);
 
-        // we can probably make this faster
+        let byt = buf.as_bytes_mut();
 
-        for b in self.check_hash.iter() {
-            for b2 in b.as_bytes() {
-                buf.push(*b2)
-            }
-        }
-
-        for b in self.count.iter() {
-            buf.push(*b as u8)
-        }
-
-        for b in self.key.iter() {
-            for b2 in b.as_bytes() {
-                buf.push(*b2)
-            }
-        }
+        byt[0..check_hash_len].copy_from_slice(self.check_hash.as_bytes());
+        byt[check_hash_len..BUCKETS + check_hash_len].copy_from_slice(self.count.as_bytes());
+        byt[len - t_len..len].copy_from_slice(self.key.as_bytes());
 
         buf
     }
@@ -170,28 +161,15 @@ where
             {
                 let mut tmp = Self::new();
 
-                // FIXME much easier ways to do this with the copy methods; probably ripe for a
-                //       refactor
                 let mut i = 0;
-                let mut y = 0;
 
-                for _ in 0..BUCKETS {
-                    tmp.check_hash.push((b[y] as u32) << 3 | (b[y + 1] as u32) << 2 | (b[y + 2] as u32) << 1 | b[y + 3] as u32);
-                    y += 4;
-                }
+                tmp.check_hash.as_bytes_mut().copy_from_slice(&b[0..BUCKETS * 4]);
+                i += BUCKETS * 4;
 
-                i *= BUCKETS * 4;
-
-                for y in 0..BUCKETS {
-                    tmp.count.push(b[y + i] as i8);
-                }
-
+                tmp.count.as_bytes_mut().copy_from_slice(&b[i..i + BUCKETS]);
                 i += BUCKETS;
 
-                for y in 0..BUCKETS {
-                    let byt = &b[(y * i)..(y * i + std::mem::size_of::<T>())];
-                    tmp.key.push(T::read_from(byt).unwrap());
-                }
+                tmp.key.as_bytes_mut().copy_from_slice(&b[i..i + std::mem::size_of::<T>() * BUCKETS]);
 
                 Some(tmp)
             }
@@ -211,7 +189,7 @@ where
         self.key.resize(BUCKETS, Default::default());
     }
 
-    pub(crate) fn ins_rem(&mut self, key: T, delta: i8) {
+    pub(crate) fn ins_rem(&mut self, key: &T, delta: i8) {
         let check_hash = crc32fast::hash(key.as_bytes());
         let mut iteration_index = u32::from_le(check_hash).wrapping_add(1);
         for _ in 0..(HASHES as u64) {
@@ -226,14 +204,14 @@ where
     /// Insert a set item into this set.
     /// This will panic if the slice is smaller than ITEM_BYTES.
     #[inline(always)]
-    pub fn insert(&mut self, key: T) {
+    pub fn insert(&mut self, key: &T) {
         self.ins_rem(key, 1);
     }
 
     /// Insert a set item into this set.
     /// This will panic if the slice is smaller than ITEM_BYTES.
     #[inline(always)]
-    pub fn remove(&mut self, key: T) {
+    pub fn remove(&mut self, key: &T) {
         self.ins_rem(key, -1);
     }
 
@@ -348,6 +326,15 @@ mod tests {
         assert!(actual.eq(&expected));
     }
 
+    fn typical_iblt() -> IBLT<[u8; 32], 16, 3> {
+        // Typical case
+        let mut tmp = IBLT::<[u8; 32], 16, 3>::new();
+        tmp.check_hash.fill(0x01010101);
+        tmp.count.fill(1);
+        tmp.key.iter_mut().for_each(|x| x.fill(1));
+        tmp
+    }
+
     #[test]
     fn check_xor_with() {
         check_xor_with2::<128>();
@@ -373,11 +360,7 @@ mod tests {
 
     #[test]
     fn struct_packing() {
-        // Typical case
-        let mut tmp = IBLT::<[u8; 32], 16, 3>::new();
-        tmp.check_hash.fill(0x01010101);
-        tmp.count.fill(1);
-        tmp.key.iter_mut().for_each(|x| x.fill(1));
+        let tmp = typical_iblt();
         assert!(tmp.as_bytes().iter().all(|x| *x == 1));
 
         // Pathological alignment case #1
@@ -416,7 +399,7 @@ mod tests {
             for _ in 0..count {
                 rn = rn.wrapping_add(splitmix64(rn as u64) as u128);
                 expected.insert(rn);
-                test.insert(rn.to_le_bytes());
+                test.insert(&rn.to_le_bytes());
             }
 
             let mut list_count = 0;
@@ -439,8 +422,8 @@ mod tests {
         const LENGTH: usize = 16;
         let mut rn: u128 = 0xd3b07384d113edec49eaa6238ad5ff00;
         let mut missing_count = 1024;
-        let mut missing: Box<HashSet<u128>> = Box::new(HashSet::with_capacity(CAPACITY * 2));
-        let mut all: Box<HashSet<u128>> = Box::new(HashSet::with_capacity(REMOTE_SIZE));
+        let mut missing: HashSet<u128> = HashSet::with_capacity(CAPACITY * 2);
+        let mut all: HashSet<u128> = HashSet::with_capacity(REMOTE_SIZE);
         while missing_count <= CAPACITY {
             missing.clear();
             all.clear();
@@ -452,11 +435,11 @@ mod tests {
                 rn = rn.wrapping_add(splitmix64(rn as u64) as u128);
                 if all.insert(rn) {
                     if k >= missing_count {
-                        local.insert(rn.to_le_bytes());
+                        local.insert(&rn.to_le_bytes());
                     } else {
                         missing.insert(rn);
                     }
-                    remote.insert(rn.to_le_bytes());
+                    remote.insert(&rn.to_le_bytes());
                     k += 1;
                 }
             }
@@ -514,55 +497,50 @@ mod tests {
         let mut zero = Box::new(IBLT::<TestType, CAPACITY, HASHES>::new());
 
         for _ in 0..CAPACITY {
-            zero.insert(TestType::zeroed());
-            full.insert(TestType::new());
+            zero.insert(&TestType::zeroed());
+            full.insert(&TestType::new());
         }
 
-        full.subtract(&zero);
+        zero.subtract(&full);
 
         zero.list(|item, new| {
-            if !new {
+            if new {
                 assert_eq!(item, TestType::zeroed());
+            } else {
+                assert_ne!(item, TestType::zeroed());
             }
         });
 
         zero.reset();
+        full.reset();
 
         for _ in 0..CAPACITY {
-            zero.insert(TestType::zeroed());
+            zero.insert(&TestType::zeroed());
+            full.insert(&TestType::new());
         }
 
-        zero.subtract(&full);
+        full.subtract(&zero);
         full.list(|item, new| {
-            if !new {
+            if new {
                 assert_ne!(item, TestType::zeroed());
+            } else {
+                assert_eq!(item, TestType::zeroed());
             }
         });
     }
 
     #[test]
     fn test_to_from_bytes() {
-        // Typical case
-        let mut tmp = IBLT::<[u8; 32], 16, 3>::new();
-        tmp.check_hash.fill(0x01010101);
-        tmp.count.fill(1);
-        tmp.key.iter_mut().for_each(|x| x.fill(1));
-
+        let tmp = typical_iblt();
         let mut tmp2 = IBLT::<[u8; 32], 16, 3>::from_bytes(tmp.as_bytes()).unwrap();
 
         tmp2.subtract(&tmp);
-
         tmp2.list(|_, new| assert!(!new));
     }
 
     #[test]
     fn test_clone() {
-        // Typical case
-        let mut tmp = IBLT::<[u8; 32], 16, 3>::new();
-        tmp.check_hash.fill(0x01010101);
-        tmp.count.fill(1);
-        tmp.key.iter_mut().for_each(|x| x.fill(1));
-
+        let tmp = typical_iblt();
         let mut tmp2 = tmp.clone();
 
         tmp2.subtract(&tmp);
