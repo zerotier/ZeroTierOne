@@ -69,7 +69,7 @@ public:
 	 * @param lastReceivedCredentials Time we last received updated credentials from the controller
 	 * @return True if we haven't pushed credentials in a long time (to cause proactive credential push)
 	 */
-	inline bool shouldPushCredentials(const int64_t now, const lastReceivedCredentials) const
+	inline bool shouldPushCredentials(const int64_t now, const int64_t lastReceivedCredentials) const
 	{
 		return ((now - _lastPushedCredentials) > ZT_PEER_ACTIVITY_TIMEOUT) || (lastReceivedCredentials > _lastPushedCredentials);
 	}
