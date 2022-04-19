@@ -67,7 +67,7 @@ public:
 	 * @param tgt Target node whose credential(s) are being revoked
 	 * @param ct Credential type being revoked
 	 */
-	Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const uint64_t thr,const uint64_t fl,const Address &tgt,const Credential::Type ct) :
+	Revocation(const uint32_t i,const uint64_t nwid,const uint32_t cid,const int64_t thr,const uint64_t fl,const Address &tgt,const Credential::Type ct) :
 		_id(i),
 		_credentialId(cid),
 		_networkId(nwid),
@@ -155,7 +155,7 @@ public:
 		_networkId = b.template at<uint64_t>(p); p += 8;
 		p += 4; // 4 bytes, currently unused
 		_credentialId = b.template at<uint32_t>(p); p += 4;
-		_threshold = b.template at<uint64_t>(p); p += 8;
+		_threshold = (int64_t)b.template at<uint64_t>(p); p += 8;
 		_flags = b.template at<uint64_t>(p); p += 8;
 		_target.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
 		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;

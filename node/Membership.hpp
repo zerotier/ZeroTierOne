@@ -65,11 +65,13 @@ public:
 	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf);
 
 	/**
+	 * @param now Current time
+	 * @param lastReceivedCredentials Time we last received updated credentials from the controller
 	 * @return True if we haven't pushed credentials in a long time (to cause proactive credential push)
 	 */
-	inline bool shouldPushCredentials(const int64_t now) const
+	inline bool shouldPushCredentials(const int64_t now, const lastReceivedCredentials) const
 	{
-		return ((now - _lastPushedCredentials) > ZT_PEER_ACTIVITY_TIMEOUT);
+		return ((now - _lastPushedCredentials) > ZT_PEER_ACTIVITY_TIMEOUT) || (lastReceivedCredentials > _lastPushedCredentials);
 	}
 
 	/**

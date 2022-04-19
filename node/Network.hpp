@@ -389,7 +389,7 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		Membership &m = _membership(to);
-		if (m.shouldPushCredentials(now))
+		if (m.shouldPushCredentials(now, _lastConfigUpdate))
 			m.pushCredentials(RR,tPtr,now,to,_config);
 	}
 
@@ -439,7 +439,7 @@ private:
 	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
 	NetworkConfig _config;
-	uint64_t _lastConfigUpdate;
+	int64_t _lastConfigUpdate;
 
 	struct _IncomingConfigChunk
 	{

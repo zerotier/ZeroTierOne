@@ -1344,10 +1344,6 @@ void EmbeddedNetworkController::_request(
 		authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
 		info = _db.getSSOAuthInfo(member, _ssoRedirectURL);
 		assert(info.enabled == networkSSOEnabled);
-
-		std::lock_guard<std::mutex> l(_expiringSoon_l);
-		_expiringSoon.insert(std::pair<int64_t, _MemberStatusKey>(authenticationExpiryTime, msk));
-
 		if (authenticationExpiryTime <= now) {
 			if (info.version == 0) {
 				Dictionary<4096> authInfo;
@@ -1393,6 +1389,11 @@ void EmbeddedNetworkController::_request(
 				ms.vProto = (int)vProto;
 				ms.lastRequestMetaData = metaData;
 				ms.identity = identity;
+			}
+
+			if (authenticationExpiryTime > 0) {
+				std::lock_guard<std::mutex> l(_expiringSoon_l);
+				_expiringSoon.insert(std::pair<int64_t, _MemberStatusKey>(authenticationExpiryTime, msk));
 			}
 		}
 	} else {
@@ -1853,6 +1854,7 @@ void EmbeddedNetworkController::_startThreads()
 					for(auto s=_expiringSoon.begin();s!=_expiringSoon.end();) {
 						const int64_t when = s->first;
 						if (when <= now) {
+							// The user MAY have re-authorized, so we must actually look it up and check.
 							network.clear();
 							member.clear();
 							if (_db.get(s->second.networkId, network, s->second.nodeId, member)) {

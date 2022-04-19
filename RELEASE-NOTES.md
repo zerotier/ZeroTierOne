@@ -3,8 +3,8 @@ ZeroTier Release Notes
 
 # 2022-04-15 -- Version 1.8.9
 
- * Fixed a weird bug that was causing sporadic "phantom" packet authentication failures. Not a security problem but could be behind spordaic reports of link failures under some conditions.
- * Fixed numerous issues with SSO/OIDC support.
+ * Fixed a long-standing and strange bug that was causing sporadic "phantom" packet authentication failures. Not a security problem but could be behind spordaic reports of link failures under some conditions.
+ * Fized a memory leak in SSO/OIDC support.
 
 # 2022-04-11 -- Version 1.8.8
 
