@@ -375,7 +375,10 @@ public:
 	inline void peerRequestedCredentials(void *tPtr,const Address &to,const int64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		_membership(to).pushCredentials(RR,tPtr,now,to,_config);
+		Membership &m = _membership(to);
+		const int64_t lastPushed = m.lastPushedCredentials();
+		if ((lastPushed < _lastConfigUpdate)||((now - lastPushed) > ZT_PEER_CREDENTIALS_REQUEST_RATE_LIMIT))
+			m.pushCredentials(RR,tPtr,now,to,_config);
 	}
 
 	/**

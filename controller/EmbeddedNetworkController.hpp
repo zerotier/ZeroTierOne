@@ -117,6 +117,7 @@ private:
 		uint64_t networkId;
 		uint64_t nodeId;
 		inline bool operator==(const _MemberStatusKey &k) const { return ((k.networkId == networkId)&&(k.nodeId == nodeId)); }
+		inline bool operator<(const _MemberStatusKey &k) const { return (k.networkId < networkId) || ((k.networkId == networkId)&&(k.nodeId < nodeId)); }
 	};
 	struct _MemberStatus
 	{
@@ -154,7 +155,7 @@ private:
 	std::unordered_map< _MemberStatusKey,_MemberStatus,_MemberStatusHash > _memberStatus;
 	std::mutex _memberStatus_l;
 
-	std::multimap< int64_t, _MemberStatusKey > _expiringSoon;
+	std::set< std::pair<int64_t, _MemberStatusKey> > _expiringSoon;
 	std::mutex _expiringSoon_l;
 
 	RedisConfig *_rc;

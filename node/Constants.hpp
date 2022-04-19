@@ -540,6 +540,11 @@
 #define ZT_PEER_CREDENTIALS_CUTOFF_LIMIT 15
 
 /**
+ * Rate limit for responding to peer credential requests
+ */
+#define ZT_PEER_CREDENTIALS_REQUEST_RATE_LIMIT 1000
+
+/**
  * WHOIS rate limit (we allow these to be pretty fast)
  */
 #define ZT_PEER_WHOIS_RATE_LIMIT 100

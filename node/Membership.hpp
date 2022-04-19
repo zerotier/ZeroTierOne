@@ -90,7 +90,7 @@ public:
 	 */
 	inline bool isAllowedOnNetwork(const NetworkConfig &thisNodeNetworkConfig, const Identity &otherNodeIdentity) const
 	{
-		return (thisNodeNetworkConfig.isPublic() || (((_com.timestamp() > _comRevocationThreshold) && (thisNodeNetworkConfig.com.agreesWith(_com, otherNodeIdentity)))));
+		return thisNodeNetworkConfig.isPublic() || (((_com.timestamp() > _comRevocationThreshold) && (thisNodeNetworkConfig.com.agreesWith(_com, otherNodeIdentity))));
 	}
 
 	inline bool recentlyAssociated(const int64_t now) const

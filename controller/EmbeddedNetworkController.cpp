@@ -1854,7 +1854,7 @@ void EmbeddedNetworkController::_startThreads()
 					for(auto s=_expiringSoon.begin();s!=_expiringSoon.end();) {
 						const int64_t when = s->first;
 						if (when <= now) {
-							// The user MAY have re-authorized, so we must actually look it up and check.
+							// The user may have re-authorized, so we must actually look it up and check.
 							network.clear();
 							member.clear();
 							if (_db.get(s->second.networkId, network, s->second.nodeId, member)) {

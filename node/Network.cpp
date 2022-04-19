@@ -1237,6 +1237,7 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 			}
 		}
 	} catch ( ... ) {}
+	//printf("%.16llx %.10llx not allowed\n", _id, peer->address().toInt()); fflush(stdout);
 	return false;
 }
 

@@ -1098,16 +1098,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 		} catch ( ... ) {} // discard invalid COMs
 	}
 
-	bool trustEstablished = false;
-	if (network) {
-		if (network->gate(tPtr,peer)) {
-			trustEstablished = true;
-		} else {
-			_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
-			return false;
-		}
-	}
-
+	const bool trustEstablished = (network) ? network->gate(tPtr,peer) : false;
 	const int64_t now = RR->node->now();
 	if ((gatherLimit > 0)&&((trustEstablished)||(RR->topology->amUpstream())||(RR->node->localControllerHasAuthorized(now,nwid,peer->address())))) {
 		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
@@ -1224,9 +1215,6 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 		}
 
 		peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,true,nwid,ZT_QOS_NO_FLOW);
-	} else {
-		_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
-		return false;
 	}
 
 	return true;
