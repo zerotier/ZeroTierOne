@@ -372,7 +372,7 @@ public:
 	 * @param to Destination peer address
 	 * @param now Current time
 	 */
-	inline void pushCredentialsNow(void *tPtr,const Address &to,const int64_t now)
+	inline void peerRequestedCredentials(void *tPtr,const Address &to,const int64_t now)
 	{
 		Mutex::Lock _l(_lock);
 		_membership(to).pushCredentials(RR,tPtr,now,to,_config);
@@ -389,7 +389,8 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		Membership &m = _membership(to);
-		if (m.shouldPushCredentials(now, _lastConfigUpdate))
+		const int64_t lastPushed = m.lastPushedCredentials();
+		if ((lastPushed < _lastConfigUpdate)||((now - lastPushed) > ZT_PEER_ACTIVITY_TIMEOUT))
 			m.pushCredentials(RR,tPtr,now,to,_config);
 	}
 

@@ -169,7 +169,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			const SharedPtr<Network> network(RR->node->network(networkId));
 			const int64_t now = RR->node->now();
 			if ((network)&&(network->config().com))
-				network->pushCredentialsNow(tPtr,peer->address(),now);
+				network->peerRequestedCredentials(tPtr,peer->address(),now);
 		}	break;
 
 		case Packet::ERROR_NETWORK_ACCESS_DENIED_: {
