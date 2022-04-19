@@ -10,12 +10,14 @@ use std::hash::{Hash, Hasher};
 use std::num::NonZeroU64;
 use std::str::FromStr;
 
+use serde::{Deserialize, Serialize};
+
 use crate::error::InvalidFormatError;
-use crate::util::hex::HEX_CHARS;
 use crate::util::buffer::Buffer;
+use crate::util::hex::HEX_CHARS;
 use crate::vl1::protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct Address(NonZeroU64);
 
@@ -24,13 +26,7 @@ impl Address {
     #[inline(always)]
     pub fn from_u64(mut i: u64) -> Option<Address> {
         i &= 0xffffffffff;
-        NonZeroU64::new(i).and_then(|ii| {
-            if (i >> 32) != ADDRESS_RESERVED_PREFIX as u64 {
-                Some(Address(ii))
-            } else {
-                None
-            }
-        })
+        NonZeroU64::new(i).and_then(|ii| if (i >> 32) != ADDRESS_RESERVED_PREFIX as u64 { Some(Address(ii)) } else { None })
     }
 
     #[inline(always)]
@@ -54,7 +50,9 @@ impl Address {
     }
 
     #[inline(always)]
-    pub fn to_u64(&self) -> u64 { self.0.get() }
+    pub fn to_u64(&self) -> u64 {
+        self.0.get()
+    }
 
     #[inline(always)]
     pub(crate) fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {

@@ -129,13 +129,11 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
     #[inline(always)]
     pub fn get(&self) -> Pooled<O, F> {
         //let _ = self.0.outstanding_count.fetch_add(1, Ordering::Acquire);
-        Pooled::<O, F>(self.0.pool.lock().pop().unwrap_or_else(|| {
-            unsafe {
-                NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
-                    obj: self.0.factory.create(),
-                    return_pool: Arc::downgrade(&self.0),
-                })))
-            }
+        Pooled::<O, F>(self.0.pool.lock().pop().unwrap_or_else(|| unsafe {
+            NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
+                obj: self.0.factory.create(),
+                return_pool: Arc::downgrade(&self.0),
+            })))
         }))
     }
 
@@ -169,8 +167,8 @@ unsafe impl<O, F: PoolFactory<O>> Send for Pool<O, F> {}
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
     use std::time::Duration;
 
     use crate::util::pool::*;
@@ -189,7 +187,7 @@ mod tests {
 
     #[test]
     fn threaded_pool_use() {
-        let p: Arc<Pool<String, TestPoolFactory>> = Arc::new(Pool::new(2, TestPoolFactory{}));
+        let p: Arc<Pool<String, TestPoolFactory>> = Arc::new(Pool::new(2, TestPoolFactory {}));
         let ctr = Arc::new(AtomicUsize::new(0));
         for _ in 0..64 {
             let p2 = p.clone();

@@ -6,9 +6,9 @@
  * https://www.zerotier.com/
  */
 
+use std::hash::{Hash, Hasher};
 use std::num::NonZeroU64;
 use std::str::FromStr;
-use std::hash::{Hash, Hasher};
 
 use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;
@@ -19,7 +19,9 @@ pub struct MAC(NonZeroU64);
 
 impl MAC {
     #[inline(always)]
-    pub fn from_u64(i: u64) -> Option<MAC> { NonZeroU64::new(i & 0xffffffffffff).map(|i| MAC(i)) }
+    pub fn from_u64(i: u64) -> Option<MAC> {
+        NonZeroU64::new(i & 0xffffffffffff).map(|i| MAC(i))
+    }
 
     #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> Option<MAC> {
@@ -42,7 +44,9 @@ impl MAC {
     }
 
     #[inline(always)]
-    pub fn to_u64(&self) -> u64 { self.0.get() }
+    pub fn to_u64(&self) -> u64 {
+        self.0.get()
+    }
 
     #[inline(always)]
     pub(crate) fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {

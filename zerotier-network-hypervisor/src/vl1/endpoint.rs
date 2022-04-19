@@ -11,9 +11,9 @@ use std::hash::{Hash, Hasher};
 
 use zerotier_core_crypto::hash::SHA384_HASH_SIZE;
 
-use crate::vl1::{Address, MAC};
-use crate::vl1::inetaddress::InetAddress;
 use crate::util::buffer::Buffer;
+use crate::vl1::inetaddress::InetAddress;
+use crate::vl1::{Address, MAC};
 
 pub const TYPE_NIL: u8 = 0;
 pub const TYPE_ZEROTIER: u8 = 1;
@@ -70,7 +70,9 @@ pub enum Endpoint {
 
 impl Default for Endpoint {
     #[inline(always)]
-    fn default() -> Endpoint { Endpoint::Nil }
+    fn default() -> Endpoint {
+        Endpoint::Nil
+    }
 }
 
 impl Endpoint {
@@ -81,7 +83,7 @@ impl Endpoint {
             Endpoint::Ip(ip) => Some((&ip, TYPE_IP)),
             Endpoint::IpUdp(ip) => Some((&ip, TYPE_IPUDP)),
             Endpoint::IpTcp(ip) => Some((&ip, TYPE_IPTCP)),
-            _ => None
+            _ => None,
         }
     }
 
@@ -102,7 +104,9 @@ impl Endpoint {
     }
 
     #[inline(always)]
-    pub fn is_nil(&self) -> bool { matches!(self, Endpoint::Nil) }
+    pub fn is_nil(&self) -> bool {
+        matches!(self, Endpoint::Nil)
+    }
 
     #[inline(always)]
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -113,9 +117,7 @@ impl Endpoint {
 
     pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         match self {
-            Endpoint::Nil => {
-                buf.append_u8(TYPE_NIL)
-            }
+            Endpoint::Nil => buf.append_u8(TYPE_NIL),
             Endpoint::ZeroTier(a, h) => {
                 buf.append_u8(16 + TYPE_ZEROTIER)?;
                 buf.append_bytes_fixed(&a.to_bytes())?;
@@ -201,7 +203,7 @@ impl Endpoint {
                     } else {
                         Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid ZeroTier address"))
                     }
-                },
+                }
                 TYPE_ETHERNET => Ok(Endpoint::Ethernet(read_mac(buf, cursor)?)),
                 TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(read_mac(buf, cursor)?)),
                 TYPE_BLUETOOTH => Ok(Endpoint::Bluetooth(read_mac(buf, cursor)?)),
@@ -218,8 +220,8 @@ impl Endpoint {
                     } else {
                         Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid ZeroTier address"))
                     }
-                },
-                _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream"))
+                }
+                _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream")),
             }
         }
     }
@@ -290,14 +292,16 @@ impl Ord for Endpoint {
             (Endpoint::Http(a), Endpoint::Http(b)) => a.cmp(b),
             (Endpoint::WebRTC(a), Endpoint::WebRTC(b)) => a.cmp(b),
             (Endpoint::ZeroTierEncap(a, ah), Endpoint::ZeroTierEncap(b, bh)) => a.cmp(b).then_with(|| ah.cmp(bh)),
-            _ => self.type_id().cmp(&other.type_id())
+            _ => self.type_id().cmp(&other.type_id()),
         }
     }
 }
 
 impl PartialOrd for Endpoint {
     #[inline(always)]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl ToString for Endpoint {

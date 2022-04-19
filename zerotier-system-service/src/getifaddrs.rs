@@ -13,7 +13,9 @@ use zerotier_network_hypervisor::vl1::InetAddress;
 
 #[allow(unused)]
 #[inline(always)]
-fn s6_addr_as_ptr<A>(a: &A) -> *const A { a as *const A }
+fn s6_addr_as_ptr<A>(a: &A) -> *const A {
+    a as *const A
+}
 
 /// Call supplied function or closure for each physical IP address in the system.
 #[cfg(unix)]
@@ -88,9 +90,7 @@ mod tests {
     #[test]
     fn test_getifaddrs() {
         println!("starting getifaddrs...");
-        crate::getifaddrs::for_each_address(|a: &InetAddress, dev: &str| {
-            println!("  {} {}", dev, a.to_string())
-        });
+        crate::getifaddrs::for_each_address(|a: &InetAddress, dev: &str| println!("  {} {}", dev, a.to_string()));
         println!("done.")
     }
 }

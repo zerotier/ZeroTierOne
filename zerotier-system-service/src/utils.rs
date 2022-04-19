@@ -11,17 +11,18 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::str::FromStr;
+use std::time::UNIX_EPOCH;
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use zerotier_network_hypervisor::vl1::Identity;
 use zerotier_core_crypto::hex;
+use zerotier_network_hypervisor::vl1::Identity;
 
-use crate::osdep;
+//use crate::osdep;
 
 pub fn ms_since_epoch() -> i64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64
+    std::time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
 }
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -30,7 +31,8 @@ pub fn ms_monotonic() -> i64 {
         let mut tb: mach::mach_time::mach_timebase_info_data_t = std::mem::zeroed();
         if mach::mach_time::mach_timebase_info(&mut tb) == 0 {
             let mt = mach::mach_time::mach_continuous_approximate_time(); // ZT doesn't need it to be *that* exact, and this is faster
-            (((mt as u128) * tb.numer as u128 * 1000000_u128) / (tb.denom as u128)) as i64 // milliseconds since X
+            (((mt as u128) * tb.numer as u128 * 1000000_u128) / (tb.denom as u128)) as i64
+        // milliseconds since X
         } else {
             panic!("FATAL: mach_timebase_info() failed");
         }
@@ -39,20 +41,27 @@ pub fn ms_monotonic() -> i64 {
 
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 pub fn ms_monotonic() -> i64 {
+    std::time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
 }
 
 pub fn parse_bool(v: &str) -> Result<bool, String> {
     if !v.is_empty() {
         match v.chars().next().unwrap() {
-            'y' | 'Y' | '1' | 't' | 'T' => { return Ok(true); }
-            'n' | 'N' | '0' | 'f' | 'F' => { return Ok(false); }
+            'y' | 'Y' | '1' | 't' | 'T' => {
+                return Ok(true);
+            }
+            'n' | 'N' | '0' | 'f' | 'F' => {
+                return Ok(false);
+            }
             _ => {}
         }
     }
     Err(format!("invalid boolean value: '{}'", v))
 }
 
-pub fn is_valid_bool(v: String) -> Result<(), String> { parse_bool(v.as_str()).map(|_| ()) }
+pub fn is_valid_bool(v: String) -> Result<(), String> {
+    parse_bool(v.as_str()).map(|_| ())
+}
 
 pub fn is_valid_port(v: String) -> Result<(), String> {
     let i = u16::from_str(v.as_str()).unwrap_or(0);
@@ -73,26 +82,19 @@ pub fn read_limit<P: AsRef<Path>>(path: P, limit: usize) -> std::io::Result<Vec<
 /// Read an identity as either a literal or from a file.
 pub fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity, String> {
     let parse_func = |s: &str| {
-        Identity::new_from_string(s).map_or_else(|e| {
-            Err(format!("invalid identity: {}", e.to_str()))
-        }, |id| {
-            if !validate || id.validate() {
-                Ok(id)
-            } else {
-                Err(String::from("invalid identity: local validation failed"))
-            }
-        })
+        Identity::new_from_string(s).map_or_else(
+            |e| Err(format!("invalid identity: {}", e.to_str())),
+            |id| {
+                if !validate || id.validate() {
+                    Ok(id)
+                } else {
+                    Err(String::from("invalid identity: local validation failed"))
+                }
+            },
+        )
     };
     if Path::new(input).exists() {
-        read_limit(input, 16384).map_or_else(|e| {
-            Err(e.to_string())
-        }, |v| {
-            String::from_utf8(v).map_or_else(|e| {
-                Err(e.to_string())
-            }, |s| {
-                parse_func(s.as_str())
-            })
-        })
+        read_limit(input, 16384).map_or_else(|e| Err(e.to_string()), |v| String::from_utf8(v).map_or_else(|e| Err(e.to_string()), |s| parse_func(s.as_str())))
     } else {
         parse_func(input)
     }
@@ -105,20 +107,20 @@ pub fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity, Strin
 pub fn create_http_auth_nonce(timestamp: i64) -> String {
     let mut nonce_plaintext: [u64; 2] = [timestamp as u64, timestamp as u64];
     unsafe {
-        osdep::encryptHttpAuthNonce(nonce_plaintext.as_mut_ptr().cast());
-        hex::encode(*nonce_plaintext.as_ptr().cast::<[u8; 16]>())
+        //osdep::encryptHttpAuthNonce(nonce_plaintext.as_mut_ptr().cast());
+        hex::to_string(&nonce_plaintext.as_ptr().cast::<[u8]>())
     }
 }
 
 /// Decrypt HTTP auth nonce encrypted by this process and return the timestamp.
 /// This returns zero if the input was not valid.
 pub fn decrypt_http_auth_nonce(nonce: &str) -> i64 {
-    let nonce = hex::decode(nonce.trim());
+    let nonce = hex::from_string(nonce.trim());
     if !nonce.is_err() {
         let mut nonce = nonce.unwrap();
         if nonce.len() == 16 {
             unsafe {
-                osdep::decryptHttpAuthNonce(nonce.as_mut_ptr().cast());
+                //osdep::decryptHttpAuthNonce(nonce.as_mut_ptr().cast());
                 let nonce = *nonce.as_ptr().cast::<[u64; 2]>();
                 if nonce[0] == nonce[1] {
                     return nonce[0] as i64;
@@ -172,24 +174,33 @@ pub fn json_patch(target: &mut serde_json::value::Value, source: &serde_json::va
 /// If there are no changes, None is returned. The depth limit is passed through to json_patch and
 /// should be set to a sanity check value to prevent overflows.
 pub fn json_patch_object<O: Serialize + DeserializeOwned + Eq>(obj: O, patch: &str, depth_limit: usize) -> Result<Option<O>, serde_json::Error> {
-    serde_json::from_str::<serde_json::value::Value>(patch).map_or_else(|e| Err(e), |patch| {
-        serde_json::value::to_value(obj.borrow()).map_or_else(|e| Err(e), |mut obj_value| {
-            json_patch(&mut obj_value, &patch, depth_limit);
-            serde_json::value::from_value::<O>(obj_value).map_or_else(|e| Err(e), |obj_merged| {
-                if obj == obj_merged {
-                    Ok(None)
-                } else {
-                    Ok(Some(obj_merged))
-                }
-            })
-        })
-    })
+    serde_json::from_str::<serde_json::value::Value>(patch).map_or_else(
+        |e| Err(e),
+        |patch| {
+            serde_json::value::to_value(obj.borrow()).map_or_else(
+                |e| Err(e),
+                |mut obj_value| {
+                    json_patch(&mut obj_value, &patch, depth_limit);
+                    serde_json::value::from_value::<O>(obj_value).map_or_else(
+                        |e| Err(e),
+                        |obj_merged| {
+                            if obj == obj_merged {
+                                Ok(None)
+                            } else {
+                                Ok(Some(obj_merged))
+                            }
+                        },
+                    )
+                },
+            )
+        },
+    )
 }
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
     use crate::utils::ms_monotonic;
+    use std::time::Duration;
 
     #[test]
     fn monotonic_clock_sanity_check() {

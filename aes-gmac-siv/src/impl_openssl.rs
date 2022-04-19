@@ -8,7 +8,7 @@
 
 // AES-GMAC-SIV implemented using OpenSSL.
 
-use openssl::symm::{Crypter, Cipher, Mode};
+use openssl::symm::{Cipher, Crypter, Mode};
 
 fn aes_ctr_by_key_size(ks: usize) -> Cipher {
     match ks {
@@ -145,7 +145,8 @@ impl AesGmacSiv {
         let gmac = self.gmac.as_mut().unwrap();
         let _ = gmac.finalize(&mut self.tmp);
         let _ = gmac.get_tag(&mut self.tmp);
-        unsafe { // tag[8..16] = tmp[0..8] ^ tmp[8..16]
+        unsafe {
+            // tag[8..16] = tmp[0..8] ^ tmp[8..16]
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
             *self.tag.as_mut_ptr().cast::<u64>().offset(1) = *tmp ^ *tmp.offset(1);
         }
@@ -185,7 +186,8 @@ impl AesGmacSiv {
         let mut tag_tmp = [0_u8; 32];
         let _ = Crypter::new(aes_ecb_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), None).unwrap().update(&self.tag, &mut tag_tmp);
         self.tag.copy_from_slice(&tag_tmp[0..16]);
-        unsafe { // tmp[0..8] = tag[0..8], tmp[8..16] = 0
+        unsafe {
+            // tmp[0..8] = tag[0..8], tmp[8..16] = 0
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
             *tmp = *self.tag.as_mut_ptr().cast::<u64>();
             *tmp.offset(1) = 0;
@@ -227,13 +229,18 @@ impl AesGmacSiv {
     /// Finish decryption and return true if authentication appears valid.
     /// If this returns false the message should be dropped.
     #[inline(always)]
-    pub fn decrypt_finish(&mut self) -> bool {
+    pub fn decrypt_finish(&mut self) -> Option<&[u8; 16]> {
         let gmac = self.gmac.as_mut().unwrap();
         let _ = gmac.finalize(&mut self.tmp);
         let _ = gmac.get_tag(&mut self.tmp);
-        unsafe { // tag[8..16] == tmp[0..8] ^ tmp[8..16]
+        unsafe {
+            // tag[8..16] == tmp[0..8] ^ tmp[8..16]
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
-            *self.tag.as_mut_ptr().cast::<u64>().offset(1) == *tmp ^ *tmp.offset(1)
+            if *self.tag.as_mut_ptr().cast::<u64>().offset(1) == *tmp ^ *tmp.offset(1) {
+                Some(&self.tag)
+            } else {
+                None
+            }
         }
     }
 }

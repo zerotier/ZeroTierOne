@@ -7,21 +7,21 @@
  */
 
 use std::num::NonZeroI64;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use zerotier_network_hypervisor::{Interface, NetworkHypervisor};
+use crate::fastudpsocket::{fast_udp_socket_sendto, FastUDPRawOsSocket};
 use zerotier_network_hypervisor::vl1::{Endpoint, Identity, IdentityType, Node, VL1SystemInterface};
 use zerotier_network_hypervisor::vl2::SwitchInterface;
-use crate::fastudpsocket::{fast_udp_socket_sendto, FastUDPRawOsSocket};
+use zerotier_network_hypervisor::{Interface, NetworkHypervisor};
 
-use crate::GlobalCommandLineFlags;
-use crate::log::Log;
-use crate::utils::{ms_monotonic, ms_since_epoch};
 use crate::localconfig::LocalConfig;
-use crate::store::{platform_default_home_path, StateObjectType, Store};
+use crate::log::Log;
+use crate::store::{StateObjectType, Store};
+use crate::utils::{ms_monotonic, ms_since_epoch};
+use crate::GlobalCommandLineFlags;
 
 struct ServiceInterface {
     pub store: Store,
@@ -59,23 +59,26 @@ impl VL1SystemInterface for ServiceInterface {
     fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>, data: &[&[u8]], packet_ttl: u8) -> bool {
         match endpoint {
             Endpoint::IpUdp(ip) => {
-                local_socket.map_or_else(|| {
-                    let ptr = self.all_sockets_spin_ptr.fetch_add(1, Ordering::Relaxed);
-                    let all_sockets = self.all_sockets.lock();
-                    if !all_sockets.is_empty() {
-                        let s = unsafe { all_sockets.get_unchecked(ptr % all_sockets.len()) }.clone();
-                        drop(all_sockets); // release mutex
-                        fast_udp_socket_sendto(&s, ip, data, packet_ttl);
+                local_socket.map_or_else(
+                    || {
+                        let ptr = self.all_sockets_spin_ptr.fetch_add(1, Ordering::Relaxed);
+                        let all_sockets = self.all_sockets.lock();
+                        if !all_sockets.is_empty() {
+                            let s = unsafe { all_sockets.get_unchecked(ptr % all_sockets.len()) }.clone();
+                            drop(all_sockets); // release mutex
+                            fast_udp_socket_sendto(&s, ip, data, packet_ttl);
+                            true
+                        } else {
+                            false
+                        }
+                    },
+                    |local_socket| {
+                        fast_udp_socket_sendto(&local_socket, ip, data, packet_ttl);
                         true
-                    } else {
-                        false
-                    }
-                }, |local_socket| {
-                    fast_udp_socket_sendto(&local_socket, ip, data, packet_ttl);
-                    true
-                })
+                    },
+                )
             }
-            _ => false
+            _ => false,
         }
     }
 
@@ -90,20 +93,23 @@ impl VL1SystemInterface for ServiceInterface {
     }
 
     #[inline(always)]
-    fn time_ticks(&self) -> i64 { ms_monotonic() }
+    fn time_ticks(&self) -> i64 {
+        ms_monotonic()
+    }
 
     #[inline(always)]
-    fn time_clock(&self) -> i64 { ms_since_epoch() }
+    fn time_clock(&self) -> i64 {
+        ms_since_epoch()
+    }
 }
 
 impl SwitchInterface for ServiceInterface {}
 
-impl Interface for ServiceInterface {}
+//impl Interface for ServiceInterface {}
 
 pub fn run(global_cli_flags: &GlobalCommandLineFlags) -> i32 {
     let store = Store::new(global_cli_flags.base_path.as_str(), &global_cli_flags.auth_token_path_override, &global_cli_flags.auth_token_override);
-    if store.is_err() {
-    }
+    if store.is_err() {}
 
     let si = ServiceInterface {
         store: store.unwrap(),

@@ -10,7 +10,7 @@ use std::num::NonZeroI64;
 use std::time::Duration;
 
 use crate::error::InvalidParameterError;
-use crate::vl1::{Address, Identity, Endpoint, SystemInterface, Node};
+use crate::vl1::{Address, Endpoint, Identity, Node, SystemInterface};
 use crate::vl2::{Switch, SwitchInterface};
 use crate::PacketBuffer;
 
@@ -33,13 +33,19 @@ impl NetworkHypervisor {
     ///
     /// The returned object is a Pooled<Buffer<>> instance. The buffer is returned to the pool when the container is destroyed.
     #[inline(always)]
-    pub fn get_packet_buffer(&self) -> PacketBuffer { self.vl1.get_packet_buffer() }
+    pub fn get_packet_buffer(&self) -> PacketBuffer {
+        self.vl1.get_packet_buffer()
+    }
 
     #[inline(always)]
-    pub fn address(&self) -> Address { self.vl1.identity.address }
+    pub fn address(&self) -> Address {
+        self.vl1.identity.address
+    }
 
     #[inline(always)]
-    pub fn identity(&self) -> &Identity { &self.vl1.identity }
+    pub fn identity(&self) -> &Identity {
+        &self.vl1.identity
+    }
 
     pub fn do_background_tasks<I: Interface>(&self, ii: &I) -> Duration {
         self.vl1.do_background_tasks(ii)

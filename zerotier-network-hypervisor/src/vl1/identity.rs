@@ -17,6 +17,8 @@ use std::str::FromStr;
 
 use lazy_static::lazy_static;
 
+use serde::{Deserialize, Serialize};
+
 use zerotier_core_crypto::c25519::*;
 use zerotier_core_crypto::hash::{hmac_sha512, SHA384, SHA384_HASH_SIZE, SHA512, SHA512_HASH_SIZE};
 use zerotier_core_crypto::hex;
@@ -26,9 +28,9 @@ use zerotier_core_crypto::secret::Secret;
 
 use crate::error::{InvalidFormatError, InvalidParameterError};
 use crate::util::buffer::Buffer;
-use crate::util::pool::{Pool, Pooled, PoolFactory};
-use crate::vl1::Address;
+use crate::util::pool::{Pool, PoolFactory, Pooled};
 use crate::vl1::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_POW_THRESHOLD};
+use crate::vl1::Address;
 
 /// Curve25519 and Ed25519
 pub const IDENTITY_ALGORITHM_X25519: u8 = 0x01;
@@ -40,7 +42,8 @@ pub const IDENTITY_ALGORITHM_EC_NIST_P384: u8 = 0x02;
 pub const IDENTITY_ALGORITHM_ALL: u8 = 0xff;
 
 /// Current sanity limit for the size of a marshaled Identity (can be increased if needed).
-pub const MAX_MARSHAL_SIZE: usize = ADDRESS_SIZE + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + 16;
+pub const MAX_MARSHAL_SIZE: usize =
+    ADDRESS_SIZE + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + 16;
 
 #[derive(Clone)]
 pub struct IdentityP384Secret {
@@ -70,8 +73,11 @@ pub struct Identity {
     pub ed25519: [u8; ED25519_PUBLIC_KEY_SIZE],
     pub p384: Option<IdentityP384Public>,
     pub secret: Option<IdentitySecret>,
-    pub fingerprint: [u8; SHA512_HASH_SIZE]
+    pub fingerprint: [u8; SHA512_HASH_SIZE],
 }
+
+#[derive(Eq, PartialEq, Clone, Debug, Ord, PartialOrd, Deserialize, Serialize)]
+pub struct NetworkId(pub u64);
 
 #[inline(always)]
 fn concat_arrays_2<const A: usize, const B: usize, const S: usize>(a: &[u8; A], b: &[u8; B]) -> [u8; S] {
@@ -129,12 +135,8 @@ impl Identity {
             c25519: c25519_pub,
             ed25519: ed25519_pub,
             p384: None,
-            secret: Some(IdentitySecret {
-                c25519,
-                ed25519,
-                p384: None,
-            }),
-            fingerprint: [0_u8; 64] // replaced in upgrade()
+            secret: Some(IdentitySecret { c25519, ed25519, p384: None }),
+            fingerprint: [0_u8; 64], // replaced in upgrade()
         };
         assert!(id.upgrade().is_ok());
         assert!(id.p384.is_some() && id.secret.as_ref().unwrap().p384.is_some());
@@ -176,10 +178,7 @@ impl Identity {
                 ecdsa_self_signature,
                 ed25519_self_signature,
             });
-            let _ = self.secret.as_mut().unwrap().p384.insert(IdentityP384Secret {
-                ecdh: p384_ecdh,
-                ecdsa: p384_ecdsa,
-            });
+            let _ = self.secret.as_mut().unwrap().p384.insert(IdentityP384Secret { ecdh: p384_ecdh, ecdsa: p384_ecdsa });
             self.fingerprint = SHA512::hash(self_sign_buf.as_slice());
 
             return Ok(true);
@@ -251,9 +250,7 @@ impl Identity {
             // for the final result to be technically FIPS compliant. Non-FIPS algorithm secrets are considered
             // a salt in the HMAC(salt, key) HKDF construction.
             if secret.p384.is_some() && other.p384.is_some() {
-                secret.p384.as_ref().unwrap().ecdh.agree(&other.p384.as_ref().unwrap().ecdh).map(|p384_secret| {
-                    Secret(hmac_sha512(&c25519_secret.0, &p384_secret.0))
-                })
+                secret.p384.as_ref().unwrap().ecdh.agree(&other.p384.as_ref().unwrap().ecdh).map(|p384_secret| Secret(hmac_sha512(&c25519_secret.0, &p384_secret.0)))
             } else {
                 Some(c25519_secret)
             }
@@ -291,7 +288,8 @@ impl Identity {
 
     /// Verify a signature against this identity.
     pub fn verify(&self, msg: &[u8], mut signature: &[u8]) -> bool {
-        if signature.len() == 96 { // legacy ed25519-only signature with hash included
+        if signature.len() == 96 {
+            // legacy ed25519-only signature with hash included
             ed25519_verify(&self.ed25519, signature, msg)
         } else if signature.len() > 1 {
             let algorithms = signature[0];
@@ -519,7 +517,7 @@ impl Identity {
             } else {
                 None
             },
-            fingerprint: sha.finish()
+            fingerprint: sha.finish(),
         })
     }
 
@@ -532,46 +530,42 @@ impl Identity {
                 let p384 = self.p384.as_ref().unwrap();
                 let p384_secret_joined: [u8; P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE] = concat_arrays_2(p384_secret.ecdh.secret_key_bytes().as_bytes(), p384_secret.ecdsa.secret_key_bytes().as_bytes());
                 let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(p384.ecdh.as_bytes(), p384.ecdsa.as_bytes(), &p384.ecdsa_self_signature, &p384.ed25519_self_signature);
-                format!("{}:0:{}{}:{}{}:2:{}:{}",
+                format!(
+                    "{}:0:{}{}:{}{}:2:{}:{}",
                     self.address.to_string(),
                     hex::to_string(&self.c25519),
                     hex::to_string(&self.ed25519),
                     hex::to_string(&secret.c25519.secret_bytes().0),
                     hex::to_string(&secret.ed25519.secret_bytes().0),
                     base64::encode_config(p384_joined, base64::URL_SAFE_NO_PAD),
-                    base64::encode_config(p384_secret_joined, base64::URL_SAFE_NO_PAD))
+                    base64::encode_config(p384_secret_joined, base64::URL_SAFE_NO_PAD)
+                )
             } else {
-                format!("{}:0:{}{}:{}{}",
-                    self.address.to_string(),
-                    hex::to_string(&self.c25519),
-                    hex::to_string(&self.ed25519),
-                    hex::to_string(&secret.c25519.secret_bytes().0),
-                    hex::to_string(&secret.ed25519.secret_bytes().0))
+                format!("{}:0:{}{}:{}{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519), hex::to_string(&secret.c25519.secret_bytes().0), hex::to_string(&secret.ed25519.secret_bytes().0))
             }
         } else {
-            self.p384.as_ref().map_or_else(|| {
-                format!("{}:0:{}{}",
-                    self.address.to_string(),
-                    hex::to_string(&self.c25519),hex::to_string(&self.ed25519))
-            }, |p384| {
-                let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(p384.ecdh.as_bytes(), p384.ecdsa.as_bytes(), &p384.ecdsa_self_signature, &p384.ed25519_self_signature);
-                format!("{}:0:{}{}::2:{}",
-                    self.address.to_string(),
-                    hex::to_string(&self.c25519),
-                    hex::to_string(&self.ed25519),
-                    base64::encode_config(p384_joined, base64::URL_SAFE_NO_PAD))
-            })
+            self.p384.as_ref().map_or_else(
+                || format!("{}:0:{}{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519)),
+                |p384| {
+                    let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(p384.ecdh.as_bytes(), p384.ecdsa.as_bytes(), &p384.ecdsa_self_signature, &p384.ed25519_self_signature);
+                    format!("{}:0:{}{}::2:{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519), base64::encode_config(p384_joined, base64::URL_SAFE_NO_PAD))
+                },
+            )
         }
     }
 
     /// Get this identity in string form with all ciphers and with secrets (if present)
-    pub fn to_secret_string(&self) -> String { self.to_string_with_options(IDENTITY_ALGORITHM_ALL, true) }
+    pub fn to_secret_string(&self) -> String {
+        self.to_string_with_options(IDENTITY_ALGORITHM_ALL, true)
+    }
 }
 
 impl ToString for Identity {
     /// Get only the public portion of this identity as a string, including all cipher suites.
     #[inline(always)]
-    fn to_string(&self) -> String { self.to_string_with_options(IDENTITY_ALGORITHM_ALL, false) }
+    fn to_string(&self) -> String {
+        self.to_string_with_options(IDENTITY_ALGORITHM_ALL, false)
+    }
 }
 
 impl FromStr for Identity {
@@ -616,7 +610,8 @@ impl FromStr for Identity {
             ptr += 1;
         }
 
-        let keys = [hex::from_string(keys[0].unwrap_or("")), hex::from_string(keys[1].unwrap_or("")), base64::decode_config(keys[2].unwrap_or(""), base64::URL_SAFE_NO_PAD).unwrap_or_else(|_| Vec::new()), base64::decode_config(keys[3].unwrap_or(""), base64::URL_SAFE_NO_PAD).unwrap_or_else(|_| Vec::new())];
+        let keys =
+            [hex::from_string(keys[0].unwrap_or("")), hex::from_string(keys[1].unwrap_or("")), base64::decode_config(keys[2].unwrap_or(""), base64::URL_SAFE_NO_PAD).unwrap_or_else(|_| Vec::new()), base64::decode_config(keys[3].unwrap_or(""), base64::URL_SAFE_NO_PAD).unwrap_or_else(|_| Vec::new())];
         if keys[0].len() != C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE {
             return Err(InvalidFormatError);
         }
@@ -697,30 +692,38 @@ impl FromStr for Identity {
                     },
                 })
             },
-            fingerprint: sha.finish()
+            fingerprint: sha.finish(),
         })
     }
 }
 
 impl PartialEq for Identity {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool { self.fingerprint == other.fingerprint }
+    fn eq(&self, other: &Self) -> bool {
+        self.fingerprint == other.fingerprint
+    }
 }
 
 impl Eq for Identity {}
 
 impl Ord for Identity {
-    fn cmp(&self, other: &Self) -> Ordering { self.address.cmp(&other.address).then_with(|| self.fingerprint.cmp(&other.fingerprint)) }
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.address.cmp(&other.address).then_with(|| self.fingerprint.cmp(&other.fingerprint))
+    }
 }
 
 impl PartialOrd for Identity {
     #[inline(always)]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl Hash for Identity {
     #[inline(always)]
-    fn hash<H: Hasher>(&self, state: &mut H) { state.write_u64(self.address.to_u64()) }
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u64(self.address.to_u64())
+    }
 }
 
 const ADDRESS_DERIVATION_HASH_MEMORY_SIZE: usize = 2097152;
@@ -767,19 +770,25 @@ struct AddressDerivationMemory(*mut u8);
 
 impl AddressDerivationMemory {
     #[inline(always)]
-    fn get_memory(&mut self) -> *mut u8 { self.0 }
+    fn get_memory(&mut self) -> *mut u8 {
+        self.0
+    }
 }
 
 impl Drop for AddressDerivationMemory {
     #[inline(always)]
-    fn drop(&mut self) { unsafe { dealloc(self.0, Layout::from_size_align(ADDRESS_DERIVATION_HASH_MEMORY_SIZE, 8).unwrap()) }; }
+    fn drop(&mut self) {
+        unsafe { dealloc(self.0, Layout::from_size_align(ADDRESS_DERIVATION_HASH_MEMORY_SIZE, 8).unwrap()) };
+    }
 }
 
 struct AddressDerivationMemoryFactory;
 
 impl PoolFactory<AddressDerivationMemory> for AddressDerivationMemoryFactory {
     #[inline(always)]
-    fn create(&self) -> AddressDerivationMemory { AddressDerivationMemory(unsafe { alloc(Layout::from_size_align(ADDRESS_DERIVATION_HASH_MEMORY_SIZE, 8).unwrap()) }) }
+    fn create(&self) -> AddressDerivationMemory {
+        AddressDerivationMemory(unsafe { alloc(Layout::from_size_align(ADDRESS_DERIVATION_HASH_MEMORY_SIZE, 8).unwrap()) })
+    }
 
     #[inline(always)]
     fn reset(&self, _: &mut AddressDerivationMemory) {}
@@ -799,10 +808,10 @@ pub(crate) fn purge_verification_memory_pool() {
 
 #[cfg(test)]
 mod tests {
+    use crate::vl1::identity::{Identity, IDENTITY_ALGORITHM_ALL};
     use std::str::FromStr;
     use std::time::{Duration, SystemTime};
     use zerotier_core_crypto::hex;
-    use crate::vl1::identity::{Identity, IDENTITY_ALGORITHM_ALL};
 
     const GOOD_V0_IDENTITIES: [&'static str; 10] = [
         "51ef313c3a:0:79fee239cf79833be3a9068565661dc33e04759fa0f7e2218d10f1a51d441f1bf71332eba26dfc3755ce60e14650fe68dede66cf145e429972a7f51e026374de:6d12b1c5e0eae3983a5ee5872fa9061963d9e2f8cdd85adab54bdec4bd67f538cafc91b8b5b93fca658a630aab030ec10d66235f2443ccf362c55c41ae01b46e",
@@ -814,7 +823,7 @@ mod tests {
         "c5bdb4a6a6:0:e0a8575bc0277ecf59aaa4a2724acc55554151fff510c8211b0b863398a04224ed918c16405552336ad4c4da3b98eb6224574f1cacaa69e19cdfde184fd9292d:0d45f17d73337cc1898f7be6aae54a050b39ed0259b608b80619c3f898caf8a3a48ae56e51c3d7d8426ef295c0628d81b1a99616a3ed28da49bf8f81e1bec863",
         "c622dedbe4:0:0cfec354be26b4b2fa9ea29166b4acaf9476d169d51fd741d7e4cd9de93f321c6b80628c50da566d0a6b07d58d651eba8af63e0edc36202c05c3f97c828788ad:31a75d2b46c1b0f33228d3869bc807b42b371bbcef4c96f7232a27c62f56397568558f115d9cff3d6f7b8efb726a1ea49a591662d9aacd1049e295cbb0cf3197",
         "e28829ab3c:0:8e36c4f6cb524cae6bbea5f26dadb601a76f2a3793961779317365effb17ac6cde4ff4149a1b3480fbdbdbabfe62e1f264e764f95540b63158d1ea8b1eb0df5b:957508a7546df18784cd285da2e6216e4265906c6c7fba9a895f29a724d63a2e0268128c0c9c2cc304c8c3304863cdfe437a7b93b12dc778c0372a116088e9cd",
-        "aec623e59d:0:d7b1a715d95490611b8d467bbee442e3c88949f677371d3692da92f5b23d9e01bb916596cc1ddd2d5e0e5ecd6c750bb71ad2ba594b614b771c6f07b39dbe4126:ae4e4759d67158dcc54ede8c8ddb08acac49baf8b816883fc0ac5b6e328d17ced5f05ee0b4cd20b03bc5005471795c29206b835081b873fef26d3941416bd626"
+        "aec623e59d:0:d7b1a715d95490611b8d467bbee442e3c88949f677371d3692da92f5b23d9e01bb916596cc1ddd2d5e0e5ecd6c750bb71ad2ba594b614b771c6f07b39dbe4126:ae4e4759d67158dcc54ede8c8ddb08acac49baf8b816883fc0ac5b6e328d17ced5f05ee0b4cd20b03bc5005471795c29206b835081b873fef26d3941416bd626",
     ];
     const GOOD_V1_IDENTITIES: [&'static str; 10] = [
         "a8f6e0566e:0:a13a6394de205384eb75eb62179ef11423295c5ecdccfeed7f2eff6c7a74f8059c99eed164c5dfaf2a4cf395ec7b72b68ee1c3c31916de4bc57c07abfe77f9c2::2:A1Cj2O0hKLlhDQ6guCCv5H1UgzbegZwse0iqTaaZov9LpKifyKH0e1VzmHrPmoKcvgJyzI-BAqRQzBiUjScXIjojneNKOywc0Gvq-zeDCYPcXN393xi3q25mB3ud9iEN-GN6wiXPWFjHy-CBD9tGDJzr-G3ZJZvrdiLGT5rZ5W2cZtx8ORYnp9L9HJJOeb8qgdfVr67B5pT9jPsxSsw8P4qlzFFOlX2WN9Hvvu0TO6S_N4yq173deyr-f-ehcBFiBXsSG96p44oU4uRRBEDZWhzHDuD22Vw8PhsB8mko9IRqVXCGbvlaKJ0vyAZ_PyVRM9n_Z-HAEvLveAT-f61mh4YP",

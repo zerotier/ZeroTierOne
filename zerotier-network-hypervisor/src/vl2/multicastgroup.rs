@@ -19,20 +19,14 @@ pub struct MulticastGroup {
 impl From<&MAC> for MulticastGroup {
     #[inline(always)]
     fn from(mac: &MAC) -> Self {
-        Self {
-            mac: mac.clone(),
-            adi: 0,
-        }
+        Self { mac: mac.clone(), adi: 0 }
     }
 }
 
 impl From<MAC> for MulticastGroup {
     #[inline(always)]
     fn from(mac: MAC) -> Self {
-        Self {
-            mac,
-            adi: 0,
-        }
+        Self { mac, adi: 0 }
     }
 }
 
@@ -42,14 +36,16 @@ impl Ord for MulticastGroup {
         let o = self.mac.cmp(&other.mac);
         match o {
             Ordering::Equal => self.adi.cmp(&other.adi),
-            _ => o
+            _ => o,
         }
     }
 }
 
 impl PartialOrd for MulticastGroup {
     #[inline(always)]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl Hash for MulticastGroup {

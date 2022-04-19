@@ -8,13 +8,13 @@
 
 pub mod c25519;
 pub mod hash;
-pub mod p384;
-pub mod salsa;
-pub mod poly1305;
-pub mod kbkdf;
-pub mod random;
-pub mod secret;
 pub mod hex;
+pub mod kbkdf;
+pub mod p384;
+pub mod poly1305;
+pub mod random;
+pub mod salsa;
+pub mod secret;
 pub mod varint;
 
 pub use aes_gmac_siv;

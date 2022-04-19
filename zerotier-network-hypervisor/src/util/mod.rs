@@ -6,9 +6,9 @@
  * https://www.zerotier.com/
  */
 
-pub(crate) mod pool;
-pub(crate) mod gate;
 pub mod buffer;
+pub(crate) mod gate;
+pub(crate) mod pool;
 
 pub use zerotier_core_crypto::hex;
 pub use zerotier_core_crypto::varint;
@@ -31,7 +31,9 @@ pub(crate) fn array_range_mut<T, const A: usize, const START: usize, const LEN: 
 
 /// Cast a u64 to a byte array.
 #[inline(always)]
-pub(crate) fn u64_as_bytes(i: &u64) -> &[u8; 8] { unsafe { &*(i as *const u64).cast() } }
+pub(crate) fn u64_as_bytes(i: &u64) -> &[u8; 8] {
+    unsafe { &*(i as *const u64).cast() }
+}
 
 lazy_static! {
     static ref HIGHWAYHASHER_KEY: [u64; 4] = [zerotier_core_crypto::random::next_u64_secure(), zerotier_core_crypto::random::next_u64_secure(), zerotier_core_crypto::random::next_u64_secure(), zerotier_core_crypto::random::next_u64_secure()];
@@ -40,7 +42,9 @@ lazy_static! {
 /// Get an instance of HighwayHasher initialized with a secret per-process random salt.
 /// The random salt is generated at process start and so will differ for each invocation of whatever process this is inside.
 #[inline(always)]
-pub(crate) fn highwayhasher() -> highway::HighwayHasher { highway::HighwayHasher::new(highway::Key(HIGHWAYHASHER_KEY.clone())) }
+pub(crate) fn highwayhasher() -> highway::HighwayHasher {
+    highway::HighwayHasher::new(highway::Key(HIGHWAYHASHER_KEY.clone()))
+}
 
 /// Non-cryptographic 64-bit bit mixer for things like local hashing.
 #[inline(always)]
@@ -59,12 +63,16 @@ pub(crate) struct U64NoOpHasher(u64);
 
 impl U64NoOpHasher {
     #[inline(always)]
-    pub fn new() -> Self { Self(0) }
+    pub fn new() -> Self {
+        Self(0)
+    }
 }
 
 impl std::hash::Hasher for U64NoOpHasher {
     #[inline(always)]
-    fn finish(&self) -> u64 { self.0 }
+    fn finish(&self) -> u64 {
+        self.0
+    }
 
     #[inline(always)]
     fn write(&mut self, _: &[u8]) {
@@ -72,15 +80,21 @@ impl std::hash::Hasher for U64NoOpHasher {
     }
 
     #[inline(always)]
-    fn write_u64(&mut self, i: u64) { self.0 += i; }
+    fn write_u64(&mut self, i: u64) {
+        self.0 += i;
+    }
 
     #[inline(always)]
-    fn write_i64(&mut self, i: i64) { self.0 += i as u64; }
+    fn write_i64(&mut self, i: i64) {
+        self.0 += i as u64;
+    }
 }
 
 impl std::hash::BuildHasher for U64NoOpHasher {
     type Hasher = Self;
 
     #[inline(always)]
-    fn build_hasher(&self) -> Self::Hasher { Self(0) }
+    fn build_hasher(&self) -> Self::Hasher {
+        Self(0)
+    }
 }

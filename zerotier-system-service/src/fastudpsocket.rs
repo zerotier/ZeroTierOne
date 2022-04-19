@@ -12,18 +12,18 @@
  * for each thread using options like SO_REUSEPORT and concurrent packet listening.
  */
 
-use std::mem::{MaybeUninit, transmute, zeroed};
+use std::mem::{transmute, zeroed, MaybeUninit};
 use std::num::NonZeroI64;
 use std::os::raw::c_int;
 use std::ptr::null_mut;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use num_traits::cast::AsPrimitive;
 
-use zerotier_network_hypervisor::vl1::InetAddress;
+//use crate::debug;
+use zerotier_network_hypervisor::vl1::{InetAddress, InetAddressFamily};
 use zerotier_network_hypervisor::{PacketBuffer, PacketBufferPool};
-use crate::debug;
 
 const FAST_UDP_SOCKET_MAX_THREADS: usize = 4;
 
@@ -65,12 +65,14 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
             setsockopt_results |= libc::setsockopt(s, libc::IPPROTO_IPV6.as_(), libc::IPV6_V6ONLY.as_(), (&mut fl as *mut c_int).cast(), fl_size);
         }
 
-        #[cfg(any(target_os = "macos", target_os = "ios"))] {
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
+        {
             fl = 1;
             setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_NOSIGPIPE.as_(), (&mut fl as *mut c_int).cast(), fl_size)
         }
 
-        #[cfg(target_os = "linux")] {
+        #[cfg(target_os = "linux")]
+        {
             if !_device_name.is_empty() {
                 let _ = std::ffi::CString::new(_device_name).map(|dn| {
                     let dnb = dn.as_bytes_with_nul();
@@ -85,11 +87,13 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
         }
 
         if af == libc::AF_INET {
-            #[cfg(not(target_os = "linux"))] {
+            #[cfg(not(target_os = "linux"))]
+            {
                 fl = 0;
                 libc::setsockopt(s, libc::IPPROTO_IP.as_(), libc::IP_DF.as_(), (&mut fl as *mut c_int).cast(), fl_size);
             }
-            #[cfg(target_os = "linux")] {
+            #[cfg(target_os = "linux")]
+            {
                 fl = libc::IP_PMTUDISC_DONT as c_int;
                 libc::setsockopt(s, libc::IPPROTO_IP.as_(), libc::IP_MTU_DISCOVER.as_(), (&mut fl as *mut c_int).cast(), fl_size);
             }
@@ -135,7 +139,9 @@ pub(crate) struct FastUDPSocket {
 #[cfg(unix)]
 #[inline(always)]
 fn fast_udp_socket_close(socket: &FastUDPRawOsSocket) {
-    unsafe { libc::close(socket.get().as_()); }
+    unsafe {
+        libc::close(socket.get().as_());
+    }
 }
 
 /// Send to a raw UDP socket with optional packet TTL.
@@ -165,7 +171,7 @@ pub(crate) fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &I
             msg_iovlen: data_len.as_(),
             msg_control: null_mut(),
             msg_controllen: 0,
-            msg_flags: 0
+            msg_flags: 0,
         };
 
         if packet_ttl == 0 || to_address.is_ipv6() {
@@ -216,18 +222,23 @@ impl FastUDPSocket {
                 let thread_run = s.thread_run.clone();
                 let handler_copy = handler.clone();
                 let packet_buffer_pool_copy = packet_buffer_pool.clone();
-                s.threads.push(std::thread::Builder::new().stack_size(zerotier_core::RECOMMENDED_THREAD_STACK_SIZE).spawn(move || {
-                    let mut from_address = InetAddress::new();
-                    while thread_run.load(Ordering::Relaxed) {
-                        let mut buf = packet_buffer_pool_copy.get_packet_buffer();
-                        let s = fast_udp_socket_recvfrom(&thread_socket, &mut buf, &mut from_address);
-                        if s > 0 {
-                            handler_copy(&thread_socket, &from_address, buf);
-                        } else if s < 0 {
-                            break;
-                        }
-                    }
-                }).unwrap());
+                s.threads.push(
+                    std::thread::Builder::new()
+                        //.stack_size(zerotier_core::RECOMMENDED_THREAD_STACK_SIZE)
+                        .spawn(move || {
+                            let mut from_address = InetAddress::new();
+                            while thread_run.load(Ordering::Relaxed) {
+                                let mut buf = packet_buffer_pool_copy.get_packet_buffer();
+                                let s = fast_udp_socket_recvfrom(&thread_socket, &mut buf, &mut from_address);
+                                if s > 0 {
+                                    handler_copy(&thread_socket, &from_address, buf);
+                                } else if s < 0 {
+                                    break;
+                                }
+                            }
+                        })
+                        .unwrap(),
+                );
             } else {
                 bind_failed_reason = thread_socket.err().unwrap();
             }
@@ -244,7 +255,7 @@ impl FastUDPSocket {
     }
 
     #[inline(always)]
-    pub fn send(&self, to_address: &InetAddress, data: &[u8], packet_ttl: i32) {
+    pub fn send(&self, to_address: &InetAddress, data: &[&[u8]], packet_ttl: u8) {
         debug_assert!(!self.sockets.is_empty());
         fast_udp_socket_sendto(unsafe { self.sockets.get_unchecked(0) }, to_address, data, packet_ttl);
     }
@@ -268,7 +279,7 @@ impl Drop for FastUDPSocket {
         self.thread_run.store(false, Ordering::Relaxed);
         for s in self.sockets.iter() {
             unsafe {
-                libc::sendto(s.get().as_(), tmp.as_ptr().cast(), 0, 0, (&self.bind_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as osdep::socklen_t);
+                libc::sendto(s.get().as_(), tmp.as_ptr().cast(), 0, 0, (&self.bind_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as libc::socklen_t);
             }
         }
         for s in self.sockets.iter() {
@@ -292,19 +303,19 @@ mod tests {
     use std::sync::atomic::{AtomicU32, Ordering};
 
     use crate::fastudpsocket::*;
-    use zerotier_network_hypervisor::{PacketBufferPool, PacketBufferFactory, PacketBuffer};
+    use zerotier_network_hypervisor::{PacketBuffer, PacketBufferFactory, PacketBufferPool};
 
     #[test]
     fn test_udp_bind_and_transfer() {
         {
-            let pool = Arc::new(PacketBufferPool::new(64, PacketBufferFactory));
+            let pool = Arc::new(PacketBufferPool::new(64, PacketBufferFactory::new()));
 
             let ba0 = InetAddress::new_from_string("127.0.0.1/23333");
             assert!(ba0.is_some());
             let ba0 = ba0.unwrap();
             let cnt0 = Arc::new(AtomicU32::new(0));
             let cnt0c = cnt0.clone();
-            let s0 = FastUDPSocket::new("", &ba0, &pool,  move |sock: &FastUDPRawOsSocket, _: &InetAddress, data: PacketBuffer| {
+            let s0 = FastUDPSocket::new("", &ba0, &pool, move |sock: &FastUDPRawOsSocket, _: &InetAddress, data: PacketBuffer| {
                 cnt0c.fetch_add(1, Ordering::Relaxed);
             });
             assert!(s0.is_ok());
@@ -323,8 +334,8 @@ mod tests {
 
             let data_bytes = [0_u8; 1024];
             loop {
-                s0.send(&ba1, &data_bytes, 0);
-                s1.send(&ba0, &data_bytes, 0);
+                s0.send(&ba1, &[&data_bytes], 0);
+                s1.send(&ba0, &[&data_bytes], 0);
                 if cnt0.load(Ordering::Relaxed) > 10000 && cnt1.load(Ordering::Relaxed) > 10000 {
                     break;
                 }

@@ -6,8 +6,8 @@
  * https://www.zerotier.com/
  */
 
-use crate::PacketBuffer;
 use crate::vl1::protocol::*;
+use crate::PacketBuffer;
 
 /// Packet fragment re-assembler and container.
 ///

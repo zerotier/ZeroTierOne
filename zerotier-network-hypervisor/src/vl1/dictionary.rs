@@ -25,12 +25,24 @@ fn write_escaped<W: Write>(b: &[u8], w: &mut W) -> std::io::Result<()> {
     while i < l {
         let ii = i + 1;
         match b[i] {
-            0 => { w.write_all(&[b'\\', b'0'])?; }
-            b'\n' => { w.write_all(&[b'\\', b'n'])?; }
-            b'\r' => { w.write_all(&[b'\\', b'r'])?; }
-            b'=' => { w.write_all(&[b'\\', b'e'])?; }
-            b'\\' => { w.write_all(&[b'\\', b'\\'])?; }
-            _ => { w.write_all(&b[i..ii])?; }
+            0 => {
+                w.write_all(&[b'\\', b'0'])?;
+            }
+            b'\n' => {
+                w.write_all(&[b'\\', b'n'])?;
+            }
+            b'\r' => {
+                w.write_all(&[b'\\', b'r'])?;
+            }
+            b'=' => {
+                w.write_all(&[b'\\', b'e'])?;
+            }
+            b'\\' => {
+                w.write_all(&[b'\\', b'\\'])?;
+            }
+            _ => {
+                w.write_all(&b[i..ii])?;
+            }
         }
         i = ii;
     }
@@ -52,15 +64,23 @@ fn append_printable(s: &mut String, b: &[u8]) {
 }
 
 impl Dictionary {
-    pub fn new() -> Self { Self(BTreeMap::new()) }
+    pub fn new() -> Self {
+        Self(BTreeMap::new())
+    }
 
-    pub fn clear(&mut self) { self.0.clear() }
+    pub fn clear(&mut self) {
+        self.0.clear()
+    }
 
     #[inline(always)]
-    pub fn len(&self) -> usize { self.0.len() }
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
 
     #[inline(always)]
-    pub fn is_empty(&self) -> bool { self.0.is_empty() }
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 
     pub fn get_str(&self, k: &str) -> Option<&str> {
         self.0.get(k).map_or(None, |v| std::str::from_utf8(v.as_slice()).map_or(None, |s| Some(s)))
@@ -131,7 +151,7 @@ impl Dictionary {
                     b'0' => 0,
                     b'n' => b'\n',
                     b'r' => b'\r',
-                    _ => c // =, \, and escapes before other characters are unnecessary but not errors
+                    _ => c, // =, \, and escapes before other characters are unnecessary but not errors
                 });
             } else if c == b'\\' {
                 escape = true;
@@ -187,7 +207,7 @@ mod tests {
         let mut d = Dictionary::new();
         d.set_str("foo", "bar");
         d.set_u64("bar", 0xfeedcafebabebeef);
-        d.set_bytes("baz", vec![1,2,3,4,5,6,7,8,9]);
+        d.set_bytes("baz", vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
         d.set_bool("lala", true);
         d.set_bool("haha", false);
         let bytes = d.to_bytes();

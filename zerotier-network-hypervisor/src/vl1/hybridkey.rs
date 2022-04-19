@@ -8,9 +8,9 @@
 
 use std::io::Write;
 
-use zerotier_core_crypto::c25519::{C25519_PUBLIC_KEY_SIZE, C25519KeyPair};
+use zerotier_core_crypto::c25519::{C25519KeyPair, C25519_PUBLIC_KEY_SIZE};
 use zerotier_core_crypto::hash::{hmac_sha512, SHA512};
-use zerotier_core_crypto::p384::{P384_PUBLIC_KEY_SIZE, P384KeyPair, P384PublicKey};
+use zerotier_core_crypto::p384::{P384KeyPair, P384PublicKey, P384_PUBLIC_KEY_SIZE};
 use zerotier_core_crypto::secret::Secret;
 
 pub const ALGORITHM_C25519: u8 = 0x01;
@@ -22,14 +22,14 @@ pub const ALGORITHM_ECC_NIST_P384: u8 = 0x02;
 #[derive(Clone)]
 pub struct HybridKeyPair {
     pub c25519: C25519KeyPair,
-    pub p384: P384KeyPair
+    pub p384: P384KeyPair,
 }
 
 impl HybridKeyPair {
     pub fn generate() -> HybridKeyPair {
         Self {
             c25519: C25519KeyPair::generate(),
-            p384: P384KeyPair::generate()
+            p384: P384KeyPair::generate(),
         }
     }
 
@@ -77,7 +77,7 @@ unsafe impl Send for HybridKeyPair {}
 #[derive(Clone)]
 pub struct HybridPublicKey {
     pub c25519: Option<[u8; C25519_PUBLIC_KEY_SIZE]>,
-    pub p384: Option<P384PublicKey>
+    pub p384: Option<P384PublicKey>,
 }
 
 impl HybridPublicKey {
