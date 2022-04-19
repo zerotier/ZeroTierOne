@@ -41,9 +41,9 @@
 #include "Trace.hpp"
 
 /**
- * Default maximum time delta for COMs, tags, and capabilities
+ * Default time delta for COMs, tags, and capabilities
  */
-#define ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_DFL_MAX_DELTA ((int64_t)(1000 * 60 * 15))
+#define ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_DFL_MAX_DELTA ((int64_t)(1000 * 60 * 30))
 
 /**
  * Maximum time delta for COMs, tags, and capabilities

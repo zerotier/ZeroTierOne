@@ -1262,6 +1262,7 @@ void EmbeddedNetworkController::_request(
 	}
 	const bool newMember = ((!member.is_object())||(member.empty()));
 	DB::initMember(member);
+	_MemberStatusKey msk(nwid,identity.address().toInt());
 
 	{
 		const std::string haveIdStr(OSUtils::jsonString(member["identity"],""));
@@ -1343,6 +1344,10 @@ void EmbeddedNetworkController::_request(
 		authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
 		info = _db.getSSOAuthInfo(member, _ssoRedirectURL);
 		assert(info.enabled == networkSSOEnabled);
+
+		std::lock_guard<std::mutex> l(_expiringSoon_l);
+		_expiringSoon.insert(std::pair<int64_t, _MemberStatusKey>(authenticationExpiryTime, msk));
+
 		if (authenticationExpiryTime <= now) {
 			if (info.version == 0) {
 				Dictionary<4096> authInfo;
@@ -1363,63 +1368,6 @@ void EmbeddedNetworkController::_request(
 			_db.save(member,true);
 			return;
 		}
-#if 0
-		// TODO:  Get expiry time if auth is still valid
-
-		// else get new auth info & stuff
-		info = _db.getSSOAuthInfo(member, _ssoRedirectURL);
-		assert(info.enabled == networkSSOEnabled);
-
-		std::string memberId = member["id"];
-		//fprintf(stderr, "ssoEnabled && !ssoExempt %s-%s\n", nwids, memberId.c_str());
-		authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
-		fprintf(stderr, "authExpiryTime: %lld\n", authenticationExpiryTime);
-		if (authenticationExpiryTime < now) {
-			fprintf(stderr, "Handling expired member\n");
-			if (info.version == 0) {
-				if (!info.authenticationURL.empty()) {
-					_db.networkMemberSSOHasExpired(nwid, now);
-					onNetworkMemberDeauthorize(&_db, nwid, identity.address().toInt());
-
-					Dictionary<4096> authInfo;
-					authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, (uint64_t)0ULL);
-					authInfo.add(ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL, info.authenticationURL.c_str());
-					//fprintf(stderr, "sending auth URL: %s\n", authenticationURL.c_str());
-
-					DB::cleanMember(member);
-					_db.save(member,true);
-
-					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
-					return;
-				}
-			}
-			else if (info.version == 1) {
-				_db.networkMemberSSOHasExpired(nwid, now);
-				onNetworkMemberDeauthorize(&_db, nwid, identity.address().toInt());
-
-				Dictionary<8192> authInfo;
-				authInfo.add(ZT_AUTHINFO_DICT_KEY_VERSION, info.version);
-				authInfo.add(ZT_AUTHINFO_DICT_KEY_ISSUER_URL, info.issuerURL.c_str());
-				authInfo.add(ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL, info.centralAuthURL.c_str());
-				authInfo.add(ZT_AUTHINFO_DICT_KEY_NONCE, info.ssoNonce.c_str());
-				authInfo.add(ZT_AUTHINFO_DICT_KEY_STATE, info.ssoState.c_str());
-				authInfo.add(ZT_AUTHINFO_DICT_KEY_CLIENT_ID, info.ssoClientID.c_str());
-
-				DB::cleanMember(member);
-				_db.save(member, true);
-
-				fprintf(stderr, "Sending NC_ERROR_AUTHENTICATION_REQUIRED\n");
-				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
-				return;
-			}
-			else {
-				fprintf(stderr, "invalid sso info.version %llu\n", info.version);
-			}
-		} else if (authorized) {
-			fprintf(stderr, "Setting member will expire to: %lld\n", authenticationExpiryTime);
-			//_db.memberWillExpire(authenticationExpiryTime, nwid, identity.address().toInt());
-		}
-#endif
 	}
 
 	if (authorized) {
@@ -1435,8 +1383,6 @@ void EmbeddedNetworkController::_request(
 			member["vRev"] = vRev;
 			member["vProto"] = vProto;
 
-			_MemberStatusKey msk(nwid,identity.address().toInt());
-
 			{
 				std::lock_guard<std::mutex> l(_memberStatus_l);
 				_MemberStatus &ms = _memberStatus[msk];
@@ -1448,13 +1394,6 @@ void EmbeddedNetworkController::_request(
 				ms.lastRequestMetaData = metaData;
 				ms.identity = identity;
 			}
-
-			/*
-			if (authenticationExpiryTime > 0) {
-				std::lock_guard<std::mutex> l(_expiringSoon_l);
-				_expiringSoon.insert(std::pair<int64_t, _MemberStatusKey>(authenticationExpiryTime, msk));
-			}
-			*/
 		}
 	} else {
 		// If they are not authorized, STOP!
@@ -1887,7 +1826,8 @@ void EmbeddedNetworkController::_startThreads()
 	const long hwc = std::max((long)std::thread::hardware_concurrency(),(long)1);
 	for(long t=0;t<hwc;++t) {
 		_threads.emplace_back([this]() {
-			std::vector< std::pair<uint64_t, uint64_t> > expired;
+			std::vector<_MemberStatusKey> expired;
+			nlohmann::json network, member;
 			for(;;) {
 				_RQEntry *qe = (_RQEntry *)0;
 				auto timedWaitResult = _queue.get(qe, 1000);
@@ -1906,7 +1846,6 @@ void EmbeddedNetworkController::_startThreads()
 					}
 				}
 
-				/*
 				expired.clear();
 				int64_t now = OSUtils::now();
 				{
@@ -1914,27 +1853,24 @@ void EmbeddedNetworkController::_startThreads()
 					for(auto s=_expiringSoon.begin();s!=_expiringSoon.end();) {
 						const int64_t when = s->first;
 						if (when <= now) {
-							// Remove expired entries and if they are still correct as per the network status, deauth them.
-							std::lock_guard<std::mutex> l(_memberStatus_l);
-							_MemberStatus &ms = _memberStatus[s->second];
-							if ((ms.authenticationExpiryTime > 0)&&(ms.authenticationExpiryTime <= now)) {
-								expired.push_back(std::pair<uint64_t, uint64_t>(s->second.networkId, s->second.nodeId));
+							network.clear();
+							member.clear();
+							if (_db.get(s->second.networkId, network, s->second.nodeId, member)) {
+								int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
+								if (authenticationExpiryTime <= now) {
+									expired.push_back(s->second);
+								}
 							}
 							_expiringSoon.erase(s++);
-						} else if ((when - now) > 500) {
+						} else {
 							// Don't bother going further into the future than necessary.
 							break;
-						} else {
-							// Skip not yet expired entries.
-							++s;
 						}
 					}
 				}
-
 				for(auto e=expired.begin();e!=expired.end();++e) {
-					onNetworkMemberDeauthorize(nullptr, e->first, e->second);
+					onNetworkMemberDeauthorize(nullptr, e->networkId, e->nodeId);
 				}
-				*/
 			}
 		});
 	}
