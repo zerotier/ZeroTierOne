@@ -50,6 +50,7 @@ pub fn splitmix64(mut x: u64) -> u64 {
     x
 }
 
+/*
 #[inline(always)]
 pub fn splitmix64_inverse(mut x: u64) -> u64 {
     x ^= x.wrapping_shr(31) ^ x.wrapping_shr(62);
@@ -59,6 +60,7 @@ pub fn splitmix64_inverse(mut x: u64) -> u64 {
     x ^= x.wrapping_shr(30) ^ x.wrapping_shr(60);
     x
 }
+*/
 
 static mut RANDOM_STATE_0: u64 = 0;
 static mut RANDOM_STATE_1: u64 = 0;

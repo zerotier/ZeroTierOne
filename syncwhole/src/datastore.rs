@@ -26,32 +26,16 @@ pub enum StoreResult {
     Rejected,
 }
 
-/// Convert a prefix into an inclusive range of keys.
-///
-/// This is a convenience function for implementing keys_under() with data stores that support
-/// straightforward range queries with full keys.
-pub fn prefix_to_range(prefix: u64, prefix_bits: u32) -> ([u8; KEY_SIZE], [u8; KEY_SIZE]) {
-    let mut a = [0_u8; KEY_SIZE];
-    a[0..8].copy_from_slice(&((prefix & 0xffffffffffffffff_u64.wrapping_shl(64 - prefix_bits)).to_be_bytes()));
-    let mut b = [0xff_u8; KEY_SIZE];
-    b[0..8].copy_from_slice(&((prefix | 0xffffffffffffffff_u64.wrapping_shr(prefix_bits)).to_be_bytes()));
-    (a, b)
-}
-
 /// API to be implemented by the data set we want to replicate.
 ///
-/// Keys as understood by syncwhole are SHA512 hashes of values. The user can of course
-/// have their own concept of a "key" separate from this, but that would not be used
-/// for data set replication. Replication is content identity based.
+/// Keys as used in this API are SHA512 hashes of values.
 ///
-/// The API specified here supports temporally subjective data sets. These are data sets
-/// where the existence or non-existence of a record may depend on the (real world) time.
-/// A parameter for reference time allows a remote querying node to send its own "this is
-/// what time I think it is" value to be considered locally so that data can be replicated
-/// as of any given time.
-///
-/// In any call with a reference_time it should be ignored if it's zero. A zero reference
-/// time should mean include all data that we have.
+/// Range queries take an optional subset parameter. The format and interpretation of
+/// this is entirely up to the implementer of DataStore. It could contain a time, a SQL
+/// query, a set of certificates, anything. Its purpose is to select which items we want
+/// from remote nodes so that we can replicate only a subset of a larger set of data.
+/// Other nodes can also supply a subset to this one, so it's important that remote subset
+/// values supplied to the local data store be handled correctly.
 #[async_trait]
 pub trait DataStore: Sync + Send {
     /// Container for values returned by load().
@@ -66,17 +50,8 @@ pub trait DataStore: Sync + Send {
     /// Maximum size of a value in bytes.
     const MAX_VALUE_SIZE: usize;
 
-    /// Get the domain of this data store.
-    ///
-    /// This is an arbitrary unique identifier that must be the same for all nodes that
-    /// are replicating the same data. It's checked on connect to avoid trying to share
-    /// data across data sets if this is not desired.
-    fn domain(&self) -> &str;
-
-    /// Get the reference time that should be used on this side to query remote peers.
-    ///
-    /// This is typically the local "wall clock" time in milliseconds since Unix epoch.
-    fn reference_time(&self) -> i64;
+    /// Get the subset that should be sent to remote nodes in queries.
+    async fn local_subset(&self) -> Option<Self::ValueRef>;
 
     /// Get an item by identity hash key if it exists.
     async fn load(&self, key: &[u8; KEY_SIZE]) -> Option<Self::ValueRef>;
@@ -106,17 +81,13 @@ pub trait DataStore: Sync + Send {
     /// returned if the value is valid but is too old or was rejected for some other normal reason.
     async fn store(&self, key: &[u8; KEY_SIZE], value: &[u8]) -> StoreResult;
 
-    /// Iterate through keys under a given key prefix.
-    ///
-    /// The prefix is a bit string up to 64 bits long. The implementation can technically interpret this
-    /// any way it wants, but usually this would be the first 64 bits of the key as a big-endian bit string.
+    /// Iterate through keys in a range.
     ///
     /// Keys MUST be output in ascending binary sort order.
-    async fn keys_under<F: Send + FnMut(&[u8]) -> bool>(&self, reference_time: i64, prefix: u64, prefix_bits: u32, f: F);
+    async fn keys<F: Send + FnMut(&[u8]) -> bool>(&self, subset: Option<&[u8]>, range_start: &[u8; KEY_SIZE], range_end: &[u8; KEY_SIZE], f: F);
 
-    /// Load all record values under a given key prefix.
+    /// Iterate through values in a range.
     ///
-    /// This should clear and fill the result, fetching up to the limit values under a given key prefix.
-    /// Values may be pushed into the vector in any order.
-    async fn values_under(&self, prefix: u64, prefix_bits: u32, result: &mut Vec<Option<Self::ValueRef>>, limit: usize);
+    /// Entries MUST be output in ascending binary sort order.
+    async fn values<F: Send + FnMut(&[u8], &[u8]) -> bool>(&self, subset: Option<&[u8]>, range_start: &[u8; KEY_SIZE], range_end: &[u8; KEY_SIZE], f: F);
 }

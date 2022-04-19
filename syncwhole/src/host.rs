@@ -7,6 +7,7 @@
  */
 
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 #[cfg(feature = "include_sha2_lib")]
 use sha2::digest::{Digest, FixedOutput};
@@ -22,14 +23,24 @@ pub struct Config {
     /// The library will try to maintain connectivity to these regardless of connection limits.
     pub anchors: Vec<SocketAddr>,
 
-    /// A list of peer addresses that we can try in order to achieve desired_connection_count.
-    pub seeds: Vec<SocketAddr>,
+    /// A list of other peer addresses that we can try in order to achieve desired_connection_count.
+    /// If this includes the anchors too there will be no effect since the anchors are tried first anyway.
+    pub peers: Vec<SocketAddr>,
 
     /// The maximum number of TCP connections we should allow.
     pub max_connection_count: usize,
 
     /// The desired number of peering links.
     pub desired_connection_count: usize,
+
+    /// Synchronization interval in milliseconds.
+    pub sync_interval: u64,
+
+    /// Connection inactivity timeout in milliseconds.
+    pub connection_timeout: u64,
+
+    /// An arbitrary name for this data set to avoid connecting to irrelevant nodes.
+    pub domain: String,
 
     /// An optional name for this node to advertise to other nodes.
     pub name: String,
@@ -43,9 +54,12 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             anchors: Vec::new(),
-            seeds: Vec::new(),
+            peers: Vec::new(),
             max_connection_count: 128,
             desired_connection_count: 64,
+            sync_interval: 500,
+            connection_timeout: 500 * 10,
+            domain: String::new(),
             name: String::new(),
             contact: String::new(),
         }
@@ -54,14 +68,16 @@ impl Default for Config {
 
 /// A trait that users of syncwhole implement to provide configuration information and listen for events.
 pub trait Host: Sync + Send {
-    /// Get a copy of the current configuration for this syncwhole node.
-    fn node_config(&self) -> Config;
+    /// Get the current configuration for this node.
+    fn node_config(&self) -> Arc<Config>;
 
     /// Test whether an inbound connection should be allowed from an address.
     ///
     /// This is called on first incoming connection before any init is received. The authenticate()
     /// method is called once init has been received and is another decision point. The default
     /// implementation of this always returns true.
+    ///
+    /// This is not called for outbound connections.
     #[allow(unused_variables)]
     fn allow(&self, remote_address: &SocketAddr) -> bool {
         true
@@ -98,7 +114,7 @@ pub trait Host: Sync + Send {
 
     /// Fill a buffer with secure random bytes.
     ///
-    /// This is supplied to reduce inherent dependencies and allow the user to choose the implementation.
+    /// The implementer must call a secure random number generator or source to implement this.
     fn get_secure_random(&self, buf: &mut [u8]);
 
     /// Compute a SHA512 digest of the input.
@@ -106,7 +122,8 @@ pub trait Host: Sync + Send {
     /// Input can consist of one or more slices that will be processed in order.
     ///
     /// If the feature "include_sha2_lib" is enabled a default implementation in terms of the
-    /// Rust sha2 crate is generated. Otherwise the user must supply their own implementation.
+    /// Rust sha2 crate is generated. Otherwise the implementer must supply their own
+    /// SHA512 function.
     #[cfg(not(feature = "include_sha2_lib"))]
     fn sha512(msg: &[&[u8]]) -> [u8; 64];
     #[cfg(feature = "include_sha2_lib")]

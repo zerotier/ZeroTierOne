@@ -11,10 +11,13 @@ use std::io::IoSlice;
 use std::mem::MaybeUninit;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::ops::Add;
-use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Arc;
 
+use iblt::IBLT;
+
 use serde::{Deserialize, Serialize};
+
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpListener, TcpSocket, TcpStream};
@@ -27,13 +30,9 @@ use crate::host::Host;
 use crate::protocol::*;
 use crate::utils::*;
 use crate::varint;
-use iblt::IBLT;
 
-/// Period for running main housekeeping pass.
-const HOUSEKEEPING_PERIOD: i64 = SYNC_STATUS_PERIOD;
-
-/// Inactivity timeout for connections in milliseconds.
-const CONNECTION_TIMEOUT: i64 = SYNC_STATUS_PERIOD * 4;
+// Interval for announcing queued HaveRecords items, in milliseconds.
+const ANNOUNCE_PERIOD: i64 = 100;
 
 /// Information about a remote node to which we are connected.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -89,8 +88,9 @@ impl<D: DataStore + 'static, H: Host + 'static> Node<D, H> {
             },
             datastore: db.clone(),
             host: host.clone(),
-            connections: Mutex::new(HashMap::with_capacity(64)),
-            announce_queue: Mutex::new(HashMap::with_capacity(256)),
+            connections: Mutex::new(HashMap::new()),
+            connecting_to: Mutex::new(HashSet::new()),
+            announce_queue: Mutex::new(HashMap::new()),
             bind_address,
             starting_instant: Instant::now(),
         });
@@ -114,11 +114,18 @@ impl<D: DataStore + 'static, H: Host + 'static> Node<D, H> {
     }
 
     /// Attempt to connect to an explicitly specified TCP endpoint.
-    pub async fn connect(&self, endpoint: &SocketAddr) -> std::io::Result<bool> {
-        self.internal.clone().connect(endpoint, Instant::now().add(Duration::from_millis(CONNECTION_TIMEOUT as u64))).await
+    ///
+    /// Ok(true) is returned if a new connection was made. Ok(false) means there is already a connection
+    /// to the endpoint. An error is returned if the connection fails.
+    pub async fn connect(&self, address: &SocketAddr) -> std::io::Result<bool> {
+        if self.internal.connecting_to.lock().await.insert(address.clone()) {
+            self.internal.connect(address, Instant::now().add(Duration::from_millis(self.internal.host.node_config().connection_timeout))).await
+        } else {
+            Ok(false)
+        }
     }
 
-    /// Get open peer to peer connections.
+    /// Get a list of all open peer to peer connections.
     pub async fn list_connections(&self) -> Vec<RemoteNodeInfo> {
         let connections = self.internal.connections.lock().await;
         let mut cl: Vec<RemoteNodeInfo> = Vec::with_capacity(connections.len());
@@ -168,8 +175,11 @@ pub struct NodeInternal<D: DataStore + 'static, H: Host + 'static> {
     // Connections and their task join handles, by remote endpoint address.
     connections: Mutex<HashMap<SocketAddr, Arc<Connection>>>,
 
+    // Outgoing connections in progress.
+    connecting_to: Mutex<HashSet<SocketAddr>>,
+
     // Records received since last announce and the endpoints that we know already have them.
-    announce_queue: Mutex<HashMap<[u8; ANNOUNCE_KEY_LEN], Vec<SocketAddr>>>,
+    announce_queue: Mutex<HashMap<[u8; KEY_SIZE], Vec<SocketAddr>>>,
 
     // Local address to which this node is bound
     bind_address: SocketAddr,
@@ -184,38 +194,36 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
     }
 
     async fn housekeeping_task_main(self: Arc<Self>) {
-        let mut tasks: Vec<JoinHandle<()>> = Vec::new();
-        let mut counts: Vec<u64> = Vec::new();
-        let mut connected_to_addresses: HashSet<SocketAddr> = HashSet::new();
-        let mut sleep_until = Instant::now().add(Duration::from_millis(500));
+        let tasks = AsyncTaskReaper::new();
+        let mut sleep_for = Duration::from_millis(500);
         loop {
-            tokio::time::sleep_until(sleep_until).await;
-            sleep_until = sleep_until.add(Duration::from_millis(HOUSEKEEPING_PERIOD as u64));
+            tokio::time::sleep(sleep_for).await;
 
-            tasks.clear();
-            counts.clear();
-            connected_to_addresses.clear();
+            let config = self.host.node_config();
+            let mut connections = self.connections.lock().await;
+            let mut connecting_to = self.connecting_to.lock().await;
             let now = self.ms_monotonic();
 
-            self.connections.lock().await.retain(|sa, c| {
+            // Drop dead or timed out connections, and for live connections handle sending sync requests.
+            connections.retain(|_, c| {
                 if !c.closed.load(Ordering::Relaxed) {
                     let cc = c.clone();
-                    if (now - c.last_receive_time.load(Ordering::Relaxed)) < CONNECTION_TIMEOUT {
-                        connected_to_addresses.insert(sa.clone());
+                    if (now - c.last_receive_time.load(Ordering::Relaxed)) < (config.connection_timeout as i64) {
+                        // TODO: sync init if not waiting for a sync response
                         true // keep connection
                     } else {
                         let _ = c.read_task.lock().unwrap().take().map(|j| j.abort());
                         let host = self.host.clone();
-                        tasks.push(tokio::spawn(async move {
+                        tasks.spawn(async move {
                             host.on_connection_closed(&*cc.info.lock().unwrap(), "timeout".to_string());
-                        }));
+                        });
                         false // discard connection
                     }
                 } else {
                     let host = self.host.clone();
                     let cc = c.clone();
                     let j = c.read_task.lock().unwrap().take();
-                    tasks.push(tokio::spawn(async move {
+                    tasks.spawn(async move {
                         if j.is_some() {
                             let e = j.unwrap().await;
                             if e.is_ok() {
@@ -227,83 +235,73 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                         } else {
                             host.on_connection_closed(&*cc.info.lock().unwrap(), "remote host closed connection".to_string());
                         }
-                    }));
+                    });
                     false // discard connection
                 }
             });
 
-            let config = self.host.node_config();
+            let connect_timeout_at = Instant::now().add(Duration::from_millis(config.connection_timeout));
 
             // Always try to connect to anchor peers.
             for sa in config.anchors.iter() {
-                if !connected_to_addresses.contains(sa) {
-                    let sa = sa.clone();
+                if !connections.contains_key(sa) && connecting_to.insert(sa.clone()) {
                     let self2 = self.clone();
-                    tasks.push(tokio::spawn(async move {
-                        let _ = self2.connect(&sa, sleep_until).await;
-                    }));
-                    connected_to_addresses.insert(sa.clone());
+                    let sa = sa.clone();
+                    tasks.spawn(async move {
+                        let _ = self2.connect(&sa, connect_timeout_at).await;
+                    });
                 }
             }
 
             // Try to connect to more peers until desired connection count is reached.
             let desired_connection_count = config.desired_connection_count.min(config.max_connection_count);
-            for sa in config.seeds.iter() {
-                if connected_to_addresses.len() >= desired_connection_count {
+            for sa in config.peers.iter() {
+                if (connections.len() + connecting_to.len()) >= desired_connection_count {
                     break;
                 }
-                if !connected_to_addresses.contains(sa) {
-                    connected_to_addresses.insert(sa.clone());
+                if !connections.contains_key(sa) && connecting_to.insert(sa.clone()) {
                     let self2 = self.clone();
                     let sa = sa.clone();
-                    tasks.push(tokio::spawn(async move {
-                        let _ = self2.connect(&sa, sleep_until).await;
-                    }));
+                    tasks.spawn(async move {
+                        let _ = self2.connect(&sa, connect_timeout_at).await;
+                    });
                 }
             }
 
-            // Wait for this iteration's batched background tasks to complete.
-            loop {
-                let s = tasks.pop();
-                if s.is_some() {
-                    let _ = s.unwrap().await;
-                } else {
-                    break;
-                }
-            }
+            sleep_for = Duration::from_millis(config.sync_interval.min(config.connection_timeout));
         }
     }
 
     async fn announce_task_main(self: Arc<Self>) {
-        let mut sleep_until = Instant::now().add(Duration::from_millis(ANNOUNCE_PERIOD as u64));
-        let mut to_announce: Vec<([u8; ANNOUNCE_KEY_LEN], Vec<SocketAddr>)> = Vec::with_capacity(256);
+        let sleep_for = Duration::from_millis(ANNOUNCE_PERIOD as u64);
+        let mut to_announce: Vec<([u8; KEY_SIZE], Vec<SocketAddr>)> = Vec::new();
         let background_tasks = AsyncTaskReaper::new();
-        let announce_timeout = Duration::from_millis(CONNECTION_TIMEOUT as u64);
+        let announce_timeout = Duration::from_millis(self.host.node_config().connection_timeout);
         loop {
-            tokio::time::sleep_until(sleep_until).await;
-            sleep_until = sleep_until.add(Duration::from_millis(ANNOUNCE_PERIOD as u64));
+            tokio::time::sleep(sleep_for).await;
 
             for (key, already_has) in self.announce_queue.lock().await.drain() {
                 to_announce.push((key, already_has));
             }
 
             let now = self.ms_monotonic();
+            let have_records_est_size = (to_announce.len() * KEY_SIZE) + 2;
+            let mut have_records: Vec<u8> = Vec::with_capacity(have_records_est_size);
             for c in self.connections.lock().await.iter() {
                 if c.1.announce_new_records.load(Ordering::Relaxed) {
-                    let mut have_records: Vec<u8> = Vec::with_capacity((to_announce.len() * ANNOUNCE_KEY_LEN) + 4);
-                    have_records.push(ANNOUNCE_KEY_LEN as u8);
                     for (key, already_has) in to_announce.iter() {
                         if !already_has.contains(c.0) {
                             let _ = std::io::Write::write_all(&mut have_records, key);
                         }
                     }
-                    if have_records.len() > 1 {
+                    if !have_records.is_empty() {
                         let c2 = c.1.clone();
                         background_tasks.spawn(async move {
                             // If the connection dies this will either fail or time out in 1s. Usually these execute instantly due to
                             // write buffering but a short timeout prevents them from building up too much.
                             let _ = tokio::time::timeout(announce_timeout, c2.send_msg(MessageType::HaveRecords, have_records.as_slice(), now));
-                        })
+                        });
+                        have_records = Vec::with_capacity(have_records_est_size);
                     }
                 }
             }
@@ -327,19 +325,33 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
         }
     }
 
-    async fn connect(self: Arc<Self>, address: &SocketAddr, deadline: Instant) -> std::io::Result<bool> {
-        self.host.on_connect_attempt(address);
-        let stream = if address.is_ipv4() { TcpSocket::new_v4() } else { TcpSocket::new_v6() }?;
-        configure_tcp_socket(&stream)?;
-        stream.bind(self.bind_address.clone())?;
-        let stream = tokio::time::timeout_at(deadline, stream.connect(address.clone())).await;
-        if stream.is_ok() {
-            Ok(self.connection_start(address.clone(), stream.unwrap()?, false).await)
-        } else {
-            Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "connect timed out"))
-        }
+    /// Internal connection method.
+    ///
+    /// Note that this does not add the address to connecting_to. Instead it's done by the caller
+    /// to avoid races and similar things. It is removed from connecting_to once the connection
+    /// either succeeds or fails.
+    async fn connect(self: &Arc<Self>, address: &SocketAddr, deadline: Instant) -> std::io::Result<bool> {
+        let f = async {
+            let stream = if address.is_ipv4() { TcpSocket::new_v4() } else { TcpSocket::new_v6() }?;
+            configure_tcp_socket(&stream)?;
+            stream.bind(self.bind_address.clone())?;
+
+            let stream = tokio::time::timeout_at(deadline, stream.connect(address.clone()));
+            self.host.on_connect_attempt(address);
+            let stream = stream.await;
+
+            if stream.is_ok() {
+                Ok(self.connection_start(address.clone(), stream.unwrap()?, false).await)
+            } else {
+                Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "connect timed out"))
+            }
+        };
+        let r = f.await;
+        let _ = self.connecting_to.lock().await.remove(address);
+        r
     }
 
+    /// Initialize and start a connection whether incoming or outgoing.
     async fn connection_start(self: &Arc<Self>, address: SocketAddr, stream: TcpStream, inbound: bool) -> bool {
         let mut ok = false;
         let _ = self.connections.lock().await.entry(address.clone()).or_insert_with(|| {
@@ -447,7 +459,7 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                     }
                 }
             }
-            let mut message = &read_buffer.as_slice()[header_size..total_size];
+            let message = &read_buffer.as_slice()[header_size..total_size];
 
             let now = self.ms_monotonic();
             connection.last_receive_time.store(now, Ordering::Relaxed);
@@ -480,7 +492,7 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                         }
                         let auth_challenge_response = auth_challenge_response.unwrap();
 
-                        (H::hmac_sha512(&self.anti_loopback_secret, msg.anti_loopback_challenge), H::hmac_sha512(&H::sha512(&[self.datastore.domain().as_bytes()]), msg.domain_challenge), auth_challenge_response)
+                        (H::hmac_sha512(&self.anti_loopback_secret, msg.anti_loopback_challenge), H::hmac_sha512(&H::sha512(&[self.host.node_config().domain.as_bytes()]), msg.domain_challenge), auth_challenge_response)
                     };
 
                     connection
@@ -508,7 +520,7 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                     if msg.anti_loopback_response.eq(&H::hmac_sha512(&self.anti_loopback_secret, &anti_loopback_challenge_sent)) {
                         return Err(std::io::Error::new(std::io::ErrorKind::Other, "rejected connection to self"));
                     }
-                    if !msg.domain_response.eq(&H::hmac_sha512(&H::sha512(&[self.datastore.domain().as_bytes()]), &domain_challenge_sent)) {
+                    if !msg.domain_response.eq(&H::hmac_sha512(&H::sha512(&[self.host.node_config().domain.as_bytes()]), &domain_challenge_sent)) {
                         return Err(std::io::Error::new(std::io::ErrorKind::Other, "domain mismatch"));
                     }
                     if !self.host.authenticate(&info, &auth_challenge_sent).map_or(false, |cr| msg.auth_response.eq(&cr)) {
@@ -516,7 +528,6 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                     }
 
                     initialized = true;
-
                     info.initialized = true;
 
                     let info = info.clone(); // also releases lock since info is replaced/destroyed
@@ -538,9 +549,8 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                             let key = H::sha512(&[message]);
                             match self.datastore.store(&key, message).await {
                                 StoreResult::Ok => {
-                                    let announce_key: [u8; ANNOUNCE_KEY_LEN] = (&key[..ANNOUNCE_KEY_LEN]).try_into().unwrap();
                                     let mut q = self.announce_queue.lock().await;
-                                    let ql = q.entry(announce_key).or_insert_with(|| Vec::with_capacity(2));
+                                    let ql = q.entry(key).or_insert_with(|| Vec::with_capacity(2));
                                     if !ql.contains(&remote_address) {
                                         ql.push(remote_address.clone());
                                     }
@@ -550,6 +560,10 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                                 }
                                 _ => {}
                             }
+                        }
+
+                        MessageType::SyncRequest => {
+                            let msg: msg::SyncRequest = decode_msgpack(message)?;
                         }
 
                         MessageType::Sync => {

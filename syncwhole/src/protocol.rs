@@ -6,15 +6,6 @@
  * https://www.zerotier.com/
  */
 
-/// Number of bytes of SHA512 to announce, should be high enough to make collisions virtually impossible.
-pub const ANNOUNCE_KEY_LEN: usize = 24;
-
-/// Send SyncStatus this frequently, in milliseconds.
-pub const SYNC_STATUS_PERIOD: i64 = 5000;
-
-/// Check for and announce that we "have" records this often in milliseconds.
-pub const ANNOUNCE_PERIOD: i64 = 100;
-
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
 pub enum MessageType {
@@ -36,15 +27,20 @@ pub enum MessageType {
     /// <record>
     Record = 5_u8,
 
+    /// msg::SyncRequest (msgpack)
+    SyncRequest = 6_u8,
+
     /// msg::Sync (msgpack)
     Sync = 7_u8,
 }
+
+const MESSAGE_TYPE_MAX: u8 = 7;
 
 impl From<u8> for MessageType {
     /// Get a type from a byte, returning the Nop type if the byte is out of range.
     #[inline(always)]
     fn from(b: u8) -> Self {
-        if b <= 7 {
+        if b <= MESSAGE_TYPE_MAX {
             unsafe { std::mem::transmute(b) }
         } else {
             Self::Nop
@@ -62,6 +58,7 @@ impl MessageType {
             Self::HaveRecords => "HAVE_RECORDS",
             Self::GetRecords => "GET_RECORDS",
             Self::Record => "RECORD",
+            Self::SyncRequest => "SYNC_REQUEST",
             Self::Sync => "SYNC",
         }
     }
@@ -134,30 +131,46 @@ pub mod msg {
 
     #[derive(Serialize, Deserialize)]
     pub struct SyncRequest<'a> {
-        /// 64-bit prefix of record keys for this request
-        #[serde(rename = "p")]
-        pub prefix: u64,
+        /// Starting range to query, padded with zeroes if shorter than KEY_SIZE.
+        #[serde(with = "serde_bytes")]
+        #[serde(rename = "s")]
+        pub range_start: &'a [u8],
 
-        /// Number of bits in prefix that are meaningful
-        #[serde(rename = "b")]
-        pub prefix_bits: u8,
+        /// Ending range to query, padded with 0xff if shorter than KEY_SIZE.
+        #[serde(with = "serde_bytes")]
+        #[serde(rename = "e")]
+        pub range_end: &'a [u8],
 
         /// Data-store-specific subset selector indicating what subset of items desired
-        pub subset: &'a [u8],
+        #[serde(with = "serde_bytes")]
+        #[serde(rename = "q")]
+        pub subset: Option<&'a [u8]>,
     }
 
     #[derive(Serialize, Deserialize)]
     pub struct Sync<'a> {
-        /// 64-bit prefix of record keys for this request
-        #[serde(rename = "p")]
-        pub prefix: u64,
+        /// Starting range summarized, padded with zeroes if shorter than KEY_SIZE.
+        #[serde(with = "serde_bytes")]
+        #[serde(rename = "s")]
+        pub range_start: &'a [u8],
 
-        /// Number of bits in prefix that are meaningful
-        #[serde(rename = "b")]
-        pub prefix_bits: u8,
+        /// Ending range summarized, padded with 0xff if shorter than KEY_SIZE.
+        #[serde(with = "serde_bytes")]
+        #[serde(rename = "e")]
+        pub range_end: &'a [u8],
 
         /// Data-store-specific subset selector indicating what subset of items were included
-        pub subset: &'a [u8],
+        #[serde(with = "serde_bytes")]
+        #[serde(rename = "q")]
+        pub subset: Option<&'a [u8]>,
+
+        /// Number of buckets in IBLT
+        #[serde(rename = "b")]
+        pub iblt_buckets: usize,
+
+        /// Number of bytes in each IBLT item (key prefix)
+        #[serde(rename = "l")]
+        pub iblt_item_bytes: usize,
 
         /// Set summary for keys under prefix within subset
         #[serde(with = "serde_bytes")]
