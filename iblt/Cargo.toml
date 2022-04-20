@@ -13,26 +13,3 @@ panic = 'abort'
 
 [dependencies]
 crc32fast = "^1"
-zerocopy = { version = "0.6.1", features = ["alloc"] }
-
-[dev-dependencies]
-rand = ">=0"
-criterion = ">=0"
-
-[lib]
-
-[[bench]]
-name = "to_from_bytes"
-harness = false
-
-[[bench]]
-name = "clone"
-harness = false
-
-[[bench]]
-name = "list"
-harness = false
-
-[[bench]]
-name = "merge"
-harness = false
