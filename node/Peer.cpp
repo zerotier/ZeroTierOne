@@ -47,7 +47,6 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_vRevision(0),
 	_id(peerIdentity),
 	_directPathPushCutoffCount(0),
-	_credentialsCutoffCount(0),
 	_echoRequestCutoffCount(0),
 	_localMultipathSupported(false),
 	_lastComputedAggregateMeanLatency(0)
