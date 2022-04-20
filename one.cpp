@@ -775,7 +775,12 @@ static int cli(int argc,char **argv)
 								if (status == "AUTHENTICATION_REQUIRED") {
 									printf("    AUTH EXPIRED, URL: %s" ZT_EOL_S, OSUtils::jsonString(n["authenticationURL"], "(null)").c_str());
 								} else if (status == "OK") {
-									printf("    AUTH OK, expires in: %lld seconds" ZT_EOL_S, ((int64_t)authenticationExpiryTime - OSUtils::now()) / 1000LL);
+									int64_t expiresIn = ((int64_t)authenticationExpiryTime - OSUtils::now()) / 1000LL;
+									if (expiresIn >= 0) {
+										printf("    AUTH OK, expires in: %lld seconds" ZT_EOL_S, expiresIn);
+									} else {
+										printf("    AUTH OK, refreshing..." ZT_EOL_S);
+									}
 								}
 							}
 						}

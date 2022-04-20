@@ -530,14 +530,9 @@
 #define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 8
 
 /**
- * Time horizon for VERB_NETWORK_CREDENTIALS cutoff
+ * Rate limit for network credential pushes from peer.
  */
-#define ZT_PEER_CREDENTIALS_CUTOFF_TIME 60000
-
-/**
- * Maximum number of VERB_NETWORK_CREDENTIALS within cutoff time
- */
-#define ZT_PEER_CREDENTIALS_CUTOFF_LIMIT 15
+#define ZT_PEER_CREDENTIALS_RATE_LIMIT 1000
 
 /**
  * Rate limit for responding to peer credential requests

@@ -390,11 +390,11 @@ public:
 	 */
 	inline bool rateGateCredentialsReceived(const int64_t now)
 	{
-		if ((now - _lastCredentialsReceived) <= ZT_PEER_CREDENTIALS_CUTOFF_TIME)
-			++_credentialsCutoffCount;
-		else _credentialsCutoffCount = 0;
-		_lastCredentialsReceived = now;
-		return (_credentialsCutoffCount < ZT_PEER_CREDENTIALS_CUTOFF_LIMIT);
+		if ((now - _lastCredentialsReceived) >= ZT_PEER_CREDENTIALS_RATE_LIMIT) {
+			_lastCredentialsReceived = now;
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -563,7 +563,6 @@ private:
 	Identity _id;
 
 	unsigned int _directPathPushCutoffCount;
-	unsigned int _credentialsCutoffCount;
 	unsigned int _echoRequestCutoffCount;
 
 	AtomicCounter __refCount;

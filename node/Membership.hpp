@@ -65,6 +65,8 @@ public:
 	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf);
 
 	inline int64_t lastPushedCredentials() { return _lastPushedCredentials; }
+	inline int64_t comTimestamp() { return _com.timestamp(); }
+	inline int64_t comRevocationThreshold() { return _comRevocationThreshold; }
 
 	/**
 	 * Check whether we should push MULTICAST_LIKEs to this peer, and update last sent time if true

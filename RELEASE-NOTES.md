@@ -5,6 +5,8 @@ ZeroTier Release Notes
 
  * Fixed a long-standing and strange bug that was causing sporadic "phantom" packet authentication failures. Not a security problem but could be behind spordaic reports of link failures under some conditions.
  * Fized a memory leak in SSO/OIDC support.
+ * Fixed a network certificate P2P distribution bug that affected SSO/OIDC support.
+ * Fixed SSO/OIDC display error on CLI.
 
 # 2022-04-11 -- Version 1.8.8
 

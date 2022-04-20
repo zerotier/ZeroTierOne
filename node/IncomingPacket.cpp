@@ -1057,10 +1057,8 @@ bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,c
 {
 	const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PACKET_IDX_PAYLOAD)));
 	if (network) {
-		//fprintf(stderr, "IncomingPacket::_doNETWORK_CONFIG %.16llx\n", network->id());
 		const uint64_t configUpdateId = network->handleConfigChunk(tPtr,packetId(),source(),*this,ZT_PACKET_IDX_PAYLOAD);
 		if (configUpdateId) {
-			//fprintf(stderr, "Have config update ID: %llu\n", configUpdateId);
 			Packet outp(peer->address(), RR->identity.address(), Packet::VERB_OK);
 			outp.append((uint8_t)Packet::VERB_ECHO);
 			outp.append((uint64_t)packetId());
@@ -1069,9 +1067,7 @@ bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,c
 			const int64_t now = RR->node->now();
 			outp.armor(peer->key(),true,peer->aesKeysIfSupported());
 			peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
-			if (!_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now())) {
-				//fprintf(stderr, "Error sending VERB_OK after NETWORK_CONFIG packet for %.16llx\n", network->id());
-			}
+			_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 		}
 	}
 
