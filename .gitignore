@@ -16,4 +16,5 @@
 *.dSYM
 *.a
 /.idea
+/.nova
 *.secret
