@@ -7,6 +7,7 @@ ZeroTier Release Notes
  * Fized a memory leak in SSO/OIDC support.
  * Fixed a network certificate P2P distribution bug that affected SSO/OIDC support.
  * Fixed SSO/OIDC display error on CLI.
+ * Special thanks to Andrej Binder of Big Network for debugging assistance and insight.
 
 # 2022-04-11 -- Version 1.8.8
 
