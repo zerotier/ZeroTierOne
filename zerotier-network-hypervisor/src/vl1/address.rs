@@ -10,7 +10,7 @@ use std::hash::{Hash, Hasher};
 use std::num::NonZeroU64;
 use std::str::FromStr;
 
-use serde::{Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 
 use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;

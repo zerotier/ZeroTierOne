@@ -17,7 +17,7 @@ use std::str::FromStr;
 
 use lazy_static::lazy_static;
 
-use serde::{Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 
 use zerotier_core_crypto::c25519::*;
 use zerotier_core_crypto::hash::{hmac_sha512, SHA384, SHA384_HASH_SIZE, SHA512, SHA512_HASH_SIZE};

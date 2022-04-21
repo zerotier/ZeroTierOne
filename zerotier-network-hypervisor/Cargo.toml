@@ -20,6 +20,7 @@ parking_lot = "^0"
 lazy_static = "^1"
 highway = "^0"
 serde = "^1"
+serde_derive = "^1"
 serde_json = "^1"
 
 [target."cfg(not(windows))".dependencies]
