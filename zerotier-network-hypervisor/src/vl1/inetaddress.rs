@@ -9,7 +9,7 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::mem::{size_of, transmute_copy, zeroed, MaybeUninit};
-use std::net::{IpAddr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::ptr::{copy_nonoverlapping, null, slice_from_raw_parts, write_bytes};
 use std::str::FromStr;
 
@@ -72,6 +72,16 @@ pub union InetAddress {
     ss: sockaddr_storage, // some external code may expect the struct to be this full length
 }
 
+impl Into<IpAddr> for InetAddress {
+    fn into(self) -> IpAddr {
+        if self.is_ipv4() {
+            IpAddr::V4(Ipv4Addr::from(self.to_bytes::<4>()))
+        } else {
+            IpAddr::V6(Ipv6Addr::from(self.to_bytes::<16>()))
+        }
+    }
+}
+
 impl Clone for InetAddress {
     #[inline(always)]
     fn clone(&self) -> Self {
@@ -83,6 +93,12 @@ impl Default for InetAddress {
     #[inline(always)]
     fn default() -> InetAddress {
         unsafe { zeroed() }
+    }
+}
+
+impl std::fmt::Debug for InetAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.to_string())
     }
 }
 
@@ -224,6 +240,21 @@ impl InetAddress {
                 _ => &[],
             }
         }
+    }
+
+    pub fn to_bytes<const LEN: usize>(&self) -> [u8; LEN] {
+        if LEN != 4 && LEN != 16 {
+            panic!("LEN was not 4 or 16, cannot convert");
+        }
+
+        let mut res = [0u8; LEN];
+
+        if LEN == 4 && !self.is_ipv4() {
+            panic!("Non-IPv4 address expected for 4 byte array");
+        }
+
+        res.copy_from_slice(&self.ip_bytes()[0..LEN]);
+        res
     }
 
     /// Get raw IP bytes packed into a u128.
