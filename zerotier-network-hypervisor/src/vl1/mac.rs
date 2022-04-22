@@ -6,6 +6,7 @@
  * https://www.zerotier.com/
  */
 
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroU64;
 use std::str::FromStr;
@@ -16,6 +17,12 @@ use crate::util::buffer::Buffer;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct MAC(NonZeroU64);
+
+impl Debug for MAC {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.to_string())
+    }
+}
 
 impl MAC {
     #[inline(always)]
