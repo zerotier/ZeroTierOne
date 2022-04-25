@@ -1,13 +1,13 @@
 ZeroTier Release Notes
 ======
 
-# 2022-04-15 -- Version 1.8.9
+# 2022-04-25 -- Version 1.8.9
 
  * Fixed a long-standing and strange bug that was causing sporadic "phantom" packet authentication failures. Not a security problem but could be behind spordaic reports of link failures under some conditions.
  * Fized a memory leak in SSO/OIDC support.
- * Fixed a network certificate P2P distribution bug that affected SSO/OIDC support.
  * Fixed SSO/OIDC display error on CLI.
- * Special thanks to Andrej Binder of Big Network for debugging assistance and insight.
+ * Fixed a bug causing nodes to sometimes fail to push certs to each other (primarily affects SSO/OIDC use cases).
+ * Added some new Linux distributions to the build subsystem.
 
 # 2022-04-11 -- Version 1.8.8
 
