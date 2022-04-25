@@ -80,6 +80,12 @@ pub extern "C" fn zeroidc_delete(ptr: *mut ZeroIDC) {
     if ptr.is_null() {
         return;
     }
+    let idc = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    idc.stop();
+    
     unsafe {
         Box::from_raw(ptr);
     }

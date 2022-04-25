@@ -311,7 +311,9 @@ impl ZeroIDC {
                     }
 
                     sleep(Duration::from_secs(1));
-                    running = (*inner_local.lock().unwrap()).running;
+                    {
+                        running = (*inner_local.lock().unwrap()).running;
+                    }
                 }
 
                 println!("thread done!")
@@ -321,21 +323,16 @@ impl ZeroIDC {
 
     pub fn stop(&mut self) {
         let local = self.inner.clone();
-        if (*local.lock().unwrap()).running {
-            if let Some(u) = (*local.lock().unwrap()).oidc_thread.take() {
-                u.join().expect("join failed");
-            }
+        if self.is_running(){
+            (*local.lock().unwrap()).running = false;
         }
     }
 
     pub fn is_running(&mut self) -> bool {
         let local = Arc::clone(&self.inner);
+        let running = (*local.lock().unwrap()).running;
 
-        if (*local.lock().unwrap()).running {
-            true
-        } else {
-            false
-        }
+        running
     }
 
     pub fn get_exp_time(&mut self) -> u64 {
