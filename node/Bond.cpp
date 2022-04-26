@@ -12,11 +12,12 @@
 /****/
 
 #include "Bond.hpp"
+
 #include "Switch.hpp"
 
 #include <cmath>
-#include <string>
 #include <cstdio>
+#include <string>
 
 namespace ZeroTier {
 
@@ -319,7 +320,7 @@ SharedPtr<Path> Bond::getAppropriatePath(int64_t now, int32_t flowId)
 			}
 			// Reset striping counter
 			_rrPacketsSentOnCurrLink = 0;
-			if (_numBondedPaths == 1 || _rrIdx >= (ZT_MAX_PEER_NETWORK_PATHS-1)) {
+			if (_numBondedPaths == 1 || _rrIdx >= (ZT_MAX_PEER_NETWORK_PATHS - 1)) {
 				_rrIdx = 0;
 			}
 			else {
@@ -772,7 +773,7 @@ void Bond::processBackgroundBondTasks(void* tPtr, int64_t now)
 			if (_isLeaf) {
 				if ((_monitorInterval > 0) && (((now - _paths[i].p->_lastIn) >= (_paths[i].alive ? _monitorInterval : _failoverInterval)))) {
 					if ((_peer->remoteVersionProtocol() >= 5) && (! ((_peer->remoteVersionMajor() == 1) && (_peer->remoteVersionMinor() == 1) && (_peer->remoteVersionRevision() == 0)))) {
-						Packet outp(_peer->address(), RR->identity.address(), Packet::VERB_ECHO); // ECHO (this is our bond's heartbeat)
+						Packet outp(_peer->address(), RR->identity.address(), Packet::VERB_ECHO);	// ECHO (this is our bond's heartbeat)
 						outp.armor(_peer->key(), true, _peer->aesKeysIfSupported());
 						RR->node->expectReplyTo(outp.packetId());
 						RR->node->putPacket(tPtr, _paths[i].p->localSocket(), _paths[i].p->address(), outp.data(), outp.size());
@@ -1226,7 +1227,7 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 	int nonPreferredPathIdx;
 	bool bFoundPrimaryLink = false;
 
-	if (_abPathIdx != ZT_MAX_PEER_NETWORK_PATHS && !_paths[_abPathIdx].p) {
+	if (_abPathIdx != ZT_MAX_PEER_NETWORK_PATHS && ! _paths[_abPathIdx].p) {
 		_abPathIdx = ZT_MAX_PEER_NETWORK_PATHS;
 		log("main active-backup path has been removed");
 	}
@@ -1331,7 +1332,7 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 	}
 
 	// Short-circuit if we don't have an active link yet. Everything below is optimization from the base case
-	if (_abPathIdx < 0 || _abPathIdx == ZT_MAX_PEER_NETWORK_PATHS || (!_paths[_abPathIdx].p)) {
+	if (_abPathIdx < 0 || _abPathIdx == ZT_MAX_PEER_NETWORK_PATHS || (! _paths[_abPathIdx].p)) {
 		return;
 	}
 
@@ -1534,11 +1535,7 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 					if ((failoverScoreDifference > 0) && (failoverScoreDifference > thresholdQuantity)) {
 						SharedPtr<Path> oldPath = _paths[_abPathIdx].p;
 						dequeueNextActiveBackupPath(now);
-						log("switch from %s (score: %d) to better link %s (score: %d) (select mode: optimize)",
-							pathToStr(oldPath).c_str(),
-							prevFScore,
-							pathToStr(_paths[_abPathIdx].p).c_str(),
-							newFScore);
+						log("switch from %s (score: %d) to better link %s (score: %d) (select mode: optimize)", pathToStr(oldPath).c_str(), prevFScore, pathToStr(_paths[_abPathIdx].p).c_str(), newFScore);
 					}
 				}
 			}
@@ -1673,7 +1670,7 @@ void Bond::setBondParameters(int policy, SharedPtr<Bond> templateBond, bool useT
 		memcpy(_qw, templateBond->_qw, ZT_QOS_WEIGHT_SIZE * sizeof(float));
 	}
 
-	if (!_isLeaf) {
+	if (! _isLeaf) {
 		_policy = ZT_BOND_POLICY_ACTIVE_BACKUP;
 	}
 

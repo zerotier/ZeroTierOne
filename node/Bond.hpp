@@ -1343,7 +1343,7 @@ class Bond {
 		int packetsIn;
 		int packetsOut;
 
-		//AtomicCounter __refCount;
+		// AtomicCounter __refCount;
 
 		SharedPtr<Path> p;
 		void set(uint64_t now, const SharedPtr<Path>& path)
