@@ -5,7 +5,7 @@ build_packages()
   sudo docker run -v $(pwd):/zto ztwd
 }
 
-build_dockerfile()
+build_container()
 {
   sudo docker build -t ztwd . --load
 }

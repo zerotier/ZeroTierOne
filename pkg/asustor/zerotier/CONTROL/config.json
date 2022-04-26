@@ -1,0 +1,15 @@
+{
+  "general": {
+    "package": "zerotier",
+    "name": "ZeroTier",
+    "version": "1.8.6",
+    "depends": [],
+    "conflicts": [],
+    "developer": "ZeroTier, Inc.",
+    "maintainer": "ZeroTier, Inc.",
+    "email": "support@zerotier.com",
+    "website": "http://www.zerotier.com/",
+    "architecture": "any",
+    "firmware": "2.1.0"
+  }
+}
