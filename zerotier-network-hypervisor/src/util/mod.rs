@@ -15,35 +15,18 @@ pub use zerotier_core_crypto::varint;
 
 pub(crate) const ZEROES: [u8; 64] = [0_u8; 64];
 
-/// Obtain a reference to a sub-array within an existing array.
+/// Obtain a reference to a sub-array within an existing byte array.
 #[inline(always)]
-pub(crate) fn array_range<T, const A: usize, const START: usize, const LEN: usize>(a: &[T; A]) -> &[T; LEN] {
+pub(crate) fn byte_array_range<const A: usize, const START: usize, const LEN: usize>(a: &[u8; A]) -> &[u8; LEN] {
     assert!((START + LEN) <= A);
-    unsafe { &*a.as_ptr().add(START).cast::<[T; LEN]>() }
+    unsafe { &*a.as_ptr().add(START).cast::<[u8; LEN]>() }
 }
 
-/// Obtain a reference to a sub-array within an existing array.
+/// Obtain a reference to a sub-array within an existing byte array.
 #[inline(always)]
-pub(crate) fn array_range_mut<T, const A: usize, const START: usize, const LEN: usize>(a: &mut [T; A]) -> &mut [T; LEN] {
+pub(crate) fn byte_array_range_mut<const A: usize, const START: usize, const LEN: usize>(a: &mut [u8; A]) -> &mut [u8; LEN] {
     assert!((START + LEN) <= A);
-    unsafe { &mut *a.as_mut_ptr().add(START).cast::<[T; LEN]>() }
-}
-
-/// Cast a u64 to a byte array.
-#[inline(always)]
-pub(crate) fn u64_as_bytes(i: &u64) -> &[u8; 8] {
-    unsafe { &*(i as *const u64).cast() }
-}
-
-lazy_static! {
-    static ref HIGHWAYHASHER_KEY: [u64; 4] = [zerotier_core_crypto::random::next_u64_secure(), zerotier_core_crypto::random::next_u64_secure(), zerotier_core_crypto::random::next_u64_secure(), zerotier_core_crypto::random::next_u64_secure()];
-}
-
-/// Get an instance of HighwayHasher initialized with a secret per-process random salt.
-/// The random salt is generated at process start and so will differ for each invocation of whatever process this is inside.
-#[inline(always)]
-pub(crate) fn highwayhasher() -> highway::HighwayHasher {
-    highway::HighwayHasher::new(highway::Key(HIGHWAYHASHER_KEY.clone()))
+    unsafe { &mut *a.as_mut_ptr().add(START).cast::<[u8; LEN]>() }
 }
 
 /// Non-cryptographic 64-bit bit mixer for things like local hashing.
@@ -56,7 +39,8 @@ pub(crate) fn hash64_noncrypt(mut x: u64) -> u64 {
     x ^ x.wrapping_shr(31)
 }
 
-/// A hasher for maps that just returns u64 values as-is.
+/// A hasher for u64 maps that just returns u64 values as-is.
+///
 /// Used with things like ZeroTier addresses and network IDs that are already randomly distributed.
 #[derive(Copy, Clone)]
 pub(crate) struct U64NoOpHasher(u64);

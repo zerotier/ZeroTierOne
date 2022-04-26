@@ -25,24 +25,7 @@ pub fn ms_since_epoch() -> i64 {
     std::time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
-pub fn ms_monotonic() -> i64 {
-    unsafe {
-        let mut tb: mach::mach_time::mach_timebase_info_data_t = std::mem::zeroed();
-        if mach::mach_time::mach_timebase_info(&mut tb) == 0 {
-            let mt = mach::mach_time::mach_continuous_approximate_time(); // ZT doesn't need it to be *that* exact, and this is faster
-            (((mt as u128) * tb.numer as u128 * 1000000_u128) / (tb.denom as u128)) as i64
-        // milliseconds since X
-        } else {
-            panic!("FATAL: mach_timebase_info() failed");
-        }
-    }
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "ios")))]
-pub fn ms_monotonic() -> i64 {
-    std::time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
-}
+pub fn ms_monotonic() -> i64 {}
 
 pub fn parse_bool(v: &str) -> Result<bool, String> {
     if !v.is_empty() {

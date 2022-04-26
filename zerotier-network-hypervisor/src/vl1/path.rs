@@ -8,16 +8,14 @@
 
 use std::collections::HashMap;
 use std::hash::Hasher;
-use std::io::Write;
 use std::num::NonZeroI64;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Arc;
 
-use highway::HighwayHash;
 use parking_lot::Mutex;
 use zerotier_core_crypto::hash::SHA384_HASH_SIZE;
 
-use crate::util::{array_range, highwayhasher, U64NoOpHasher};
+use crate::util::*;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::SystemInterface;
 use crate::vl1::protocol::*;
@@ -27,10 +25,13 @@ use crate::PacketBuffer;
 /// Keepalive interval for paths in milliseconds.
 pub(crate) const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
 
+// A bunch of random values used to randomize the local_lookup_key() function's mappings of addresses to 128-bit internal keys.
 lazy_static! {
     static ref RANDOM_64BIT_SALT_0: u64 = zerotier_core_crypto::random::next_u64_secure();
     static ref RANDOM_64BIT_SALT_1: u64 = zerotier_core_crypto::random::next_u64_secure();
     static ref RANDOM_64BIT_SALT_2: u64 = zerotier_core_crypto::random::next_u64_secure();
+    static ref RANDOM_128BIT_SALT_0: u128 = (zerotier_core_crypto::random::next_u64_secure().wrapping_shl(64) as u128) ^ (zerotier_core_crypto::random::next_u64_secure() as u128);
+    static ref RANDOM_128BIT_SALT_1: u128 = (zerotier_core_crypto::random::next_u64_secure().wrapping_shl(64) as u128) ^ (zerotier_core_crypto::random::next_u64_secure() as u128);
 }
 
 /// A remote endpoint paired with a local socket and a local interface.
@@ -55,7 +56,7 @@ impl Path {
         let lsi = (local_socket as u128).wrapping_shl(64) | (local_interface as u128);
         match endpoint {
             Endpoint::Nil => 0,
-            Endpoint::ZeroTier(_, h) => u128::from_ne_bytes(*array_range::<u8, SHA384_HASH_SIZE, 0, 16>(h)),
+            Endpoint::ZeroTier(_, h) => u128::from_ne_bytes(*byte_array_range::<SHA384_HASH_SIZE, 0, 16>(h)),
             Endpoint::Ethernet(m) => (m.to_u64() | 0x0100000000000000) as u128 ^ lsi,
             Endpoint::WifiDirect(m) => (m.to_u64() | 0x0200000000000000) as u128 ^ lsi,
             Endpoint::Bluetooth(m) => (m.to_u64() | 0x0400000000000000) as u128 ^ lsi,
@@ -63,24 +64,23 @@ impl Path {
             Endpoint::IpUdp(ip) => ip.ip_as_native_u128().wrapping_add(lsi), // UDP maintains one path per IP but merely learns the most recent port
             Endpoint::IpTcp(ip) => ip.ip_as_native_u128().wrapping_sub(crate::util::hash64_noncrypt((ip.port() as u64).wrapping_add(*RANDOM_64BIT_SALT_2)) as u128).wrapping_sub(lsi),
             Endpoint::Http(s) => {
-                let mut hh = highwayhasher();
-                let _ = hh.write_all(s.as_bytes());
-                let _ = hh.write_u64(local_socket);
-                let _ = hh.write_u64(local_interface);
-                u128::from_ne_bytes(unsafe { *hh.finalize128().as_ptr().cast() })
+                let mut hh = std::collections::hash_map::DefaultHasher::new();
+                hh.write_u64(local_socket);
+                hh.write_u64(local_interface);
+                hh.write(s.as_bytes());
+                RANDOM_128BIT_SALT_0.wrapping_add(hh.finish() as u128)
             }
             Endpoint::WebRTC(b) => {
-                let mut hh = highwayhasher();
-                let _ = hh.write_u64(local_socket);
-                let _ = hh.write_u64(local_interface);
-                let _ = hh.write_all(b.as_slice());
-                u128::from_ne_bytes(unsafe { *hh.finalize128().as_ptr().cast() })
+                let mut hh = std::collections::hash_map::DefaultHasher::new();
+                hh.write_u64(local_socket);
+                hh.write_u64(local_interface);
+                hh.write(b.as_slice());
+                RANDOM_128BIT_SALT_1.wrapping_add(hh.finish() as u128)
             }
-            Endpoint::ZeroTierEncap(_, h) => u128::from_ne_bytes(*array_range::<u8, SHA384_HASH_SIZE, 16, 16>(h)),
+            Endpoint::ZeroTierEncap(_, h) => u128::from_ne_bytes(*byte_array_range::<SHA384_HASH_SIZE, 16, 16>(h)),
         }
     }
 
-    #[inline(always)]
     pub fn new(endpoint: Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Self {
         Self {
             endpoint: Mutex::new(Arc::new(endpoint)),
@@ -119,7 +119,6 @@ impl Path {
 
     /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.
     /// This returns None if more fragments are needed to assemble the packet.
-    #[inline(always)]
     pub(crate) fn receive_fragment(&self, packet_id: u64, fragment_no: u8, fragment_expecting_count: u8, packet: PacketBuffer, time_ticks: i64) -> Option<FragmentedPacket> {
         let mut fp = self.fragmented_packets.lock();
 
@@ -150,7 +149,6 @@ impl Path {
         self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
     }
 
-    #[inline(always)]
     pub(crate) fn log_receive_authenticated_packet(&self, _bytes: usize, source_endpoint: &Endpoint) {
         let mut replace = false;
         match source_endpoint {
@@ -180,7 +178,6 @@ impl Path {
 
     pub(crate) const CALL_EVERY_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
 
-    #[inline(always)]
     pub(crate) fn call_every_interval<SI: SystemInterface>(&self, _si: &SI, time_ticks: i64) {
         self.fragmented_packets.lock().retain(|_, frag| (time_ticks - frag.ts_ticks) < PACKET_FRAGMENT_EXPIRATION);
     }

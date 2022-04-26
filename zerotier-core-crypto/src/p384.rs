@@ -76,9 +76,16 @@ impl P384PublicKey {
             let r = BigNum::from_slice(&signature[0..48]);
             let s = BigNum::from_slice(&signature[48..96]);
             if r.is_ok() && s.is_ok() {
-                let sig = EcdsaSig::from_private_components(r.unwrap(), s.unwrap());
-                if sig.is_ok() {
-                    return sig.unwrap().verify(&SHA384::hash(msg), self.key.as_ref()).unwrap_or(false);
+                let r = r.unwrap();
+                let s = s.unwrap();
+                let z = BigNum::from_u32(0).unwrap();
+                // Check that r and s are >=1 just in case the OpenSSL version or an OpenSSL API lookalike is
+                // vulnerable to this, since a bunch of vulnerabilities involving zero r/s just made the rounds.
+                if r.gt(&z) && s.gt(&z) {
+                    let sig = EcdsaSig::from_private_components(r, s);
+                    if sig.is_ok() {
+                        return sig.unwrap().verify(&SHA384::hash(msg), self.key.as_ref()).unwrap_or(false);
+                    }
                 }
             }
         }

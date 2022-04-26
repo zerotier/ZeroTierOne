@@ -56,14 +56,7 @@ impl Address {
 
     #[inline(always)]
     pub(crate) fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
-        let b = buf.append_bytes_fixed_get_mut::<ADDRESS_SIZE>()?;
-        let i = self.0.get();
-        (*b)[0] = (i >> 32) as u8;
-        (*b)[1] = (i >> 24) as u8;
-        (*b)[2] = (i >> 16) as u8;
-        (*b)[3] = (i >> 8) as u8;
-        (*b)[4] = i as u8;
-        Ok(())
+        buf.append_bytes(&self.0.get().to_be_bytes()[8 - ADDRESS_SIZE..])
     }
 
     #[inline(always)]

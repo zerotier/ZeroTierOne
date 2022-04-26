@@ -82,8 +82,8 @@ pub trait SystemInterface: Sync + Send {
 /// Interface between VL1 and higher/inner protocol layers.
 ///
 /// This is implemented by Switch in VL2. It's usually not used outside of VL2 in the core but
-/// it could also be implemented for testing or "off label" use of VL1.
-pub trait VL1VirtualInterface: Sync + Send {
+/// it could also be implemented for testing or "off label" use of VL1 to carry different protocols.
+pub trait InnerProtocolInterface: Sync + Send {
     /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
@@ -232,7 +232,7 @@ impl Node {
     }
 
     /// Called when a packet is received on the physical wire.
-    pub fn wire_receive<SI: SystemInterface, PH: VL1VirtualInterface>(&self, si: &SI, ph: &PH, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
+    pub fn wire_receive<SI: SystemInterface, PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
         if let Ok(fragment_header) = data.struct_mut_at::<FragmentHeader>(0) {
             if let Some(dest) = Address::from_bytes(&fragment_header.dest) {
                 let time_ticks = si.time_ticks();

@@ -6,7 +6,6 @@
  * https://www.zerotier.com/
  */
 
-use crate::util::{array_range, array_range_mut};
 use std::io::Write;
 use std::mem::{size_of, MaybeUninit};
 
@@ -77,7 +76,7 @@ impl<const L: usize> Buffer<L> {
 
     #[inline(always)]
     pub fn as_range_fixed<const START: usize, const LEN: usize>(&self) -> &[u8; LEN] {
-        array_range::<u8, L, START, LEN>(&self.1)
+        crate::util::byte_array_range::<L, START, LEN>(&self.1)
     }
 
     #[inline(always)]
@@ -92,7 +91,7 @@ impl<const L: usize> Buffer<L> {
 
     #[inline(always)]
     pub fn as_mut_range_fixed<const START: usize, const LEN: usize>(&mut self) -> &mut [u8; LEN] {
-        array_range_mut::<u8, L, START, LEN>(&mut self.1)
+        crate::util::byte_array_range_mut::<L, START, LEN>(&mut self.1)
     }
 
     /// Get all bytes after a given position.

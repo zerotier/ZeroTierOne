@@ -9,9 +9,11 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::mem::{size_of, transmute_copy, zeroed, MaybeUninit};
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::ptr::{copy_nonoverlapping, null, slice_from_raw_parts, write_bytes};
 use std::str::FromStr;
+
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[cfg(windows)]
 use winapi::um::winsock2;
@@ -62,6 +64,10 @@ pub enum IpScope {
 /// The ZeroTier core uses this in preference to std::net stuff so this can be
 /// directly used via the C API or with C socket I/O functions.
 ///
+/// This supports into() and from() the std::net types and also has a custom
+/// serde serializer that serializes it in ZT protocol binary form for binary
+/// formats and canonical ZT string form for string formats.
+///
 /// Unfortunately this is full of unsafe because it's a union, but the code is
 /// not complex and doesn't allocate anything.
 #[repr(C)]
@@ -72,13 +78,165 @@ pub union InetAddress {
     ss: sockaddr_storage, // some external code may expect the struct to be this full length
 }
 
-impl Into<IpAddr> for InetAddress {
-    fn into(self) -> IpAddr {
-        if self.is_ipv4() {
-            IpAddr::V4(Ipv4Addr::from(self.to_bytes::<4>()))
-        } else {
-            IpAddr::V6(Ipv6Addr::from(self.to_bytes::<16>()))
+impl TryInto<IpAddr> for InetAddress {
+    type Error = crate::error::InvalidParameterError;
+
+    fn try_into(self) -> Result<IpAddr, Self::Error> {
+        match unsafe { self.sa.sa_family } {
+            AF_INET => Ok(IpAddr::V4(Ipv4Addr::from(unsafe { self.sin.sin_addr.s_addr.to_ne_bytes() }))),
+            AF_INET6 => Ok(IpAddr::V6(Ipv6Addr::from(unsafe { self.sin6.sin6_addr.s6_addr }))),
+            _ => Err(crate::error::InvalidParameterError("not an IP address")),
         }
+    }
+}
+
+impl TryInto<Ipv4Addr> for InetAddress {
+    type Error = crate::error::InvalidParameterError;
+
+    fn try_into(self) -> Result<Ipv4Addr, Self::Error> {
+        match unsafe { self.sa.sa_family } {
+            AF_INET => Ok(Ipv4Addr::from(unsafe { self.sin.sin_addr.s_addr.to_ne_bytes() })),
+            _ => Err(crate::error::InvalidParameterError("not an IPv4 address")),
+        }
+    }
+}
+
+impl TryInto<Ipv6Addr> for InetAddress {
+    type Error = crate::error::InvalidParameterError;
+
+    fn try_into(self) -> Result<Ipv6Addr, Self::Error> {
+        match unsafe { self.sa.sa_family } {
+            AF_INET6 => Ok(Ipv6Addr::from(unsafe { self.sin6.sin6_addr.s6_addr })),
+            _ => Err(crate::error::InvalidParameterError("not an IPv6 address")),
+        }
+    }
+}
+
+impl TryInto<SocketAddr> for InetAddress {
+    type Error = crate::error::InvalidParameterError;
+
+    fn try_into(self) -> Result<SocketAddr, Self::Error> {
+        unsafe {
+            match self.sa.sa_family {
+                AF_INET => Ok(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()), u16::from_be(self.sin.sin_port as u16)))),
+                AF_INET6 => Ok(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from(self.sin6.sin6_addr.s6_addr), u16::from_be(self.sin6.sin6_port as u16), 0, 0))),
+                _ => Err(crate::error::InvalidParameterError("not an IP address")),
+            }
+        }
+    }
+}
+
+impl TryInto<SocketAddrV4> for InetAddress {
+    type Error = crate::error::InvalidParameterError;
+
+    fn try_into(self) -> Result<SocketAddrV4, Self::Error> {
+        unsafe {
+            match self.sa.sa_family {
+                AF_INET => Ok(SocketAddrV4::new(Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()), u16::from_be(self.sin.sin_port as u16))),
+                _ => Err(crate::error::InvalidParameterError("not an IPv4 address")),
+            }
+        }
+    }
+}
+
+impl TryInto<SocketAddrV6> for InetAddress {
+    type Error = crate::error::InvalidParameterError;
+
+    fn try_into(self) -> Result<SocketAddrV6, Self::Error> {
+        unsafe {
+            match self.sa.sa_family {
+                AF_INET6 => Ok(SocketAddrV6::new(Ipv6Addr::from(self.sin6.sin6_addr.s6_addr), u16::from_be(self.sin6.sin6_port as u16), 0, 0)),
+                _ => Err(crate::error::InvalidParameterError("not an IPv6 address")),
+            }
+        }
+    }
+}
+
+impl From<&IpAddr> for InetAddress {
+    fn from(ip: &IpAddr) -> Self {
+        match ip {
+            IpAddr::V4(ip4) => Self::from(ip4),
+            IpAddr::V6(ip6) => Self::from(ip6),
+        }
+    }
+}
+
+impl From<IpAddr> for InetAddress {
+    #[inline(always)]
+    fn from(ip: IpAddr) -> Self {
+        Self::from(&ip)
+    }
+}
+
+impl From<&Ipv4Addr> for InetAddress {
+    #[inline(always)]
+    fn from(ip4: &Ipv4Addr) -> Self {
+        Self::from_ip_port(&ip4.octets(), 0)
+    }
+}
+
+impl From<Ipv4Addr> for InetAddress {
+    #[inline(always)]
+    fn from(ip4: Ipv4Addr) -> Self {
+        Self::from_ip_port(&ip4.octets(), 0)
+    }
+}
+
+impl From<&Ipv6Addr> for InetAddress {
+    #[inline(always)]
+    fn from(ip6: &Ipv6Addr) -> Self {
+        Self::from_ip_port(&ip6.octets(), 0)
+    }
+}
+
+impl From<Ipv6Addr> for InetAddress {
+    #[inline(always)]
+    fn from(ip6: Ipv6Addr) -> Self {
+        Self::from_ip_port(&ip6.octets(), 0)
+    }
+}
+
+impl From<&SocketAddr> for InetAddress {
+    fn from(sa: &SocketAddr) -> Self {
+        match sa {
+            SocketAddr::V4(sa4) => Self::from(sa4),
+            SocketAddr::V6(sa6) => Self::from(sa6),
+        }
+    }
+}
+
+impl From<SocketAddr> for InetAddress {
+    #[inline(always)]
+    fn from(sa: SocketAddr) -> Self {
+        Self::from(&sa)
+    }
+}
+
+impl From<&SocketAddrV4> for InetAddress {
+    #[inline(always)]
+    fn from(sa: &SocketAddrV4) -> Self {
+        Self::from_ip_port(&sa.ip().octets(), sa.port())
+    }
+}
+
+impl From<SocketAddrV4> for InetAddress {
+    #[inline(always)]
+    fn from(sa: SocketAddrV4) -> Self {
+        Self::from_ip_port(&sa.ip().octets(), sa.port())
+    }
+}
+
+impl From<&SocketAddrV6> for InetAddress {
+    #[inline(always)]
+    fn from(sa: &SocketAddrV6) -> Self {
+        Self::from_ip_port(&sa.ip().octets(), sa.port())
+    }
+}
+
+impl From<SocketAddrV6> for InetAddress {
+    #[inline(always)]
+    fn from(sa: SocketAddrV6) -> Self {
+        Self::from_ip_port(&sa.ip().octets(), sa.port())
     }
 }
 
@@ -91,14 +249,76 @@ impl Clone for InetAddress {
 
 impl Default for InetAddress {
     #[inline(always)]
-    fn default() -> InetAddress {
-        unsafe { zeroed() }
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 impl std::fmt::Debug for InetAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.to_string())
+    }
+}
+
+// Just has to be large enough to store any binary marshalled InetAddress
+const TEMP_SERIALIZE_BUFFER_SIZE: usize = 24;
+
+impl Serialize for InetAddress {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            serializer.serialize_str(self.to_string().as_str())
+        } else {
+            let mut tmp: Buffer<TEMP_SERIALIZE_BUFFER_SIZE> = Buffer::new();
+            assert!(self.marshal(&mut tmp).is_ok());
+            serializer.serialize_bytes(tmp.as_bytes())
+        }
+    }
+}
+
+struct InetAddressVisitor;
+
+impl<'de> serde::de::Visitor<'de> for InetAddressVisitor {
+    type Value = InetAddress;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("an InetAddress")
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        if v.len() <= TEMP_SERIALIZE_BUFFER_SIZE {
+            let mut tmp: Buffer<TEMP_SERIALIZE_BUFFER_SIZE> = Buffer::new();
+            let _ = tmp.append_bytes(v);
+            let mut cursor = 0;
+            InetAddress::unmarshal(&tmp, &mut cursor).map_err(|e| E::custom(e.to_string()))
+        } else {
+            Err(E::custom("object too large"))
+        }
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        InetAddress::from_str(v).map_err(|e| E::custom(e.to_string()))
+    }
+}
+
+impl<'de> Deserialize<'de> for InetAddress {
+    fn deserialize<D>(deserializer: D) -> Result<InetAddress, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_str(InetAddressVisitor)
+        } else {
+            deserializer.deserialize_bytes(InetAddressVisitor)
+        }
     }
 }
 
@@ -114,7 +334,7 @@ impl InetAddress {
     #[inline(always)]
     pub fn from_ip_port(ip: &[u8], port: u16) -> InetAddress {
         unsafe {
-            let mut c = MaybeUninit::<InetAddress>::uninit().assume_init();
+            let mut c = MaybeUninit::<InetAddress>::uninit().assume_init(); // gets zeroed in set()
             c.set(ip, port);
             c
         }
@@ -176,6 +396,13 @@ impl InetAddress {
     #[inline(always)]
     pub fn is_ipv6(&self) -> bool {
         unsafe { self.sa.sa_family as u8 == AF_INET6 }
+    }
+
+    /// Check if this is either an IPv4 or an IPv6 address.
+    #[inline(always)]
+    pub fn is_ip(&self) -> bool {
+        let family = unsafe { self.sa.sa_family };
+        family == AF_INET || family == AF_INET6
     }
 
     /// Get the address family of this InetAddress: AF_INET, AF_INET6, or 0 if uninitialized.
@@ -240,21 +467,6 @@ impl InetAddress {
                 _ => &[],
             }
         }
-    }
-
-    pub fn to_bytes<const LEN: usize>(&self) -> [u8; LEN] {
-        if LEN != 4 && LEN != 16 {
-            panic!("LEN was not 4 or 16, cannot convert");
-        }
-
-        let mut res = [0u8; LEN];
-
-        if LEN == 4 && !self.is_ipv4() {
-            panic!("Non-IPv4 address expected for 4 byte array");
-        }
-
-        res.copy_from_slice(&self.ip_bytes()[0..LEN]);
-        res
     }
 
     /// Get raw IP bytes packed into a u128.
@@ -499,39 +711,44 @@ impl ToString for InetAddress {
 impl FromStr for InetAddress {
     type Err = InvalidFormatError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(ip_string: &str) -> Result<Self, Self::Err> {
         let mut addr = InetAddress::new();
-        let (ip_str, port) = s.find('/').map_or_else(
-            || (s, 0),
-            |pos| {
-                let ss = s.split_at(pos);
-                let mut port_str = ss.1;
-                if port_str.starts_with('/') {
-                    port_str = &port_str[1..];
-                }
-                (ss.0, u16::from_str_radix(port_str, 10).unwrap_or(0).to_be())
-            },
-        );
-        IpAddr::from_str(ip_str).map_or_else(
-            |_| Err(InvalidFormatError),
-            |ip| {
-                unsafe {
-                    match ip {
-                        IpAddr::V4(v4) => {
-                            addr.sin.sin_family = AF_INET.into();
-                            addr.sin.sin_port = port.into();
-                            copy_nonoverlapping(v4.octets().as_ptr(), (&mut (addr.sin.sin_addr.s_addr) as *mut u32).cast(), 4);
-                        }
-                        IpAddr::V6(v6) => {
-                            addr.sin6.sin6_family = AF_INET6.into();
-                            addr.sin6.sin6_port = port.into();
-                            copy_nonoverlapping(v6.octets().as_ptr(), (&mut (addr.sin6.sin6_addr) as *mut in6_addr).cast(), 16);
+        let s = ip_string.trim();
+        if !s.is_empty() {
+            let (ip_str, port) = s.find('/').map_or_else(
+                || (s, 0),
+                |pos| {
+                    let ss = s.split_at(pos);
+                    let mut port_str = ss.1;
+                    if port_str.starts_with('/') {
+                        port_str = &port_str[1..];
+                    }
+                    (ss.0, u16::from_str_radix(port_str, 10).unwrap_or(0).to_be())
+                },
+            );
+            IpAddr::from_str(ip_str).map_or_else(
+                |_| Err(InvalidFormatError),
+                |ip| {
+                    unsafe {
+                        match ip {
+                            IpAddr::V4(v4) => {
+                                addr.sin.sin_family = AF_INET.into();
+                                addr.sin.sin_port = port.into();
+                                copy_nonoverlapping(v4.octets().as_ptr(), (&mut (addr.sin.sin_addr.s_addr) as *mut u32).cast(), 4);
+                            }
+                            IpAddr::V6(v6) => {
+                                addr.sin6.sin6_family = AF_INET6.into();
+                                addr.sin6.sin6_port = port.into();
+                                copy_nonoverlapping(v6.octets().as_ptr(), (&mut (addr.sin6.sin6_addr) as *mut in6_addr).cast(), 16);
+                            }
                         }
                     }
-                }
-                Ok(addr)
-            },
-        )
+                    Ok(addr)
+                },
+            )
+        } else {
+            Ok(addr)
+        }
     }
 }
 
@@ -642,6 +859,8 @@ impl Hash for InetAddress {
         }
     }
 }
+
+unsafe impl Send for InetAddress {}
 
 #[cfg(test)]
 mod tests {

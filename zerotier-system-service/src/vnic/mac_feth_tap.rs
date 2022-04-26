@@ -31,18 +31,16 @@
  */
 
 use std::cell::Cell;
-use std::collections::HashSet;
-use std::error::Error;
+use std::collections::{BTreeSet, HashSet};
 use std::ffi::CString;
 use std::mem::{transmute, zeroed};
 use std::os::raw::{c_char, c_int, c_short, c_uchar, c_uint, c_void};
 use std::process::Command;
-use std::ptr::{copy_nonoverlapping, null_mut};
-use std::sync::Mutex;
+use std::ptr::copy_nonoverlapping;
 use std::thread::JoinHandle;
 
 use lazy_static::lazy_static;
-use num_traits::cast::AsPrimitive;
+use parking_lot::Mutex;
 
 use zerotier_network_hypervisor::vl1::{InetAddress, MAC};
 
@@ -178,6 +176,7 @@ struct in6_ifreq {
 */
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(C)]
 struct icmp6_ifstat {
     ifs6_in_msg: u64,
@@ -217,6 +216,7 @@ struct icmp6_ifstat {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(C)]
 struct in6_ifstat {
     ifs6_in_receive: u64,
@@ -247,6 +247,7 @@ struct in6_ifstat {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(C)]
 struct in6_addrlifetime {
     ia6t_expire: libc::time_t,
@@ -422,6 +423,7 @@ struct sockaddr_ndrv {
 */
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(C)]
 struct ifkpi {
     ifk_module_id: c_uint,
@@ -430,6 +432,7 @@ struct ifkpi {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 #[repr(C)]
 struct ifdevmtu {
     ifdm_current: c_int,
@@ -480,7 +483,7 @@ impl MacFethTap {
     /// given will not remain valid after it returns. Also note that F will be called
     /// from another thread that is spawned here, so all its bound references must
     /// be "Send" and "Sync" e.g. Arc<>.
-    pub fn new<F: Fn(&[u8]) + Send + Sync + 'static>(nwid: &NetworkId, mac: &MAC, mtu: i32, metric: i32, eth_frame_func: F) -> Result<MacFethTap, String> {
+    pub fn new<F: Fn(&[u8]) + Send + Sync + 'static>(nwid: u64, mac: &MAC, mtu: i32, metric: i32, eth_frame_func: F) -> Result<MacFethTap, String> {
         // This tracks BPF devices we are using so we don't try to reopen them, and also
         // doubles as a global lock to ensure that only one feth tap is created at once per
         // ZeroTier process per system.
@@ -668,7 +671,7 @@ impl MacFethTap {
         }
 
         // Create BPF listener thread, which calls the supplied function on each incoming packet.
-        let t = std::thread::Builder::new().stack_size(zerotier_core::RECOMMENDED_THREAD_STACK_SIZE).spawn(move || {
+        let t = std::thread::Builder::new().stack_size(524288).spawn(move || {
             let mut buf: [u8; BPF_BUFFER_SIZE] = [0_u8; BPF_BUFFER_SIZE];
             let hdr_struct_size = std::mem::size_of::<libc::bpf_hdr>() as isize;
             loop {
@@ -808,7 +811,7 @@ impl VNIC for MacFethTap {
     }
 
     #[inline(always)]
-    fn put(&self, source_mac: &zerotier_core::MAC, dest_mac: &zerotier_core::MAC, ethertype: u16, _vlan_id: u16, data: *const u8, len: usize) -> bool {
+    fn put(&self, source_mac: &zerotier_network_hypervisor::vl1::MAC, dest_mac: &zerotier_network_hypervisor::vl1::MAC, ethertype: u16, _vlan_id: u16, data: *const u8, len: usize) -> bool {
         let dm = dest_mac.0;
         let sm = source_mac.0;
         let mut hdr: [u8; 14] = [(dm >> 40) as u8, (dm >> 32) as u8, (dm >> 24) as u8, (dm >> 16) as u8, (dm >> 8) as u8, dm as u8, (sm >> 40) as u8, (sm >> 32) as u8, (sm >> 24) as u8, (sm >> 16) as u8, (sm >> 8) as u8, sm as u8, (ethertype >> 8) as u8, ethertype as u8];

@@ -18,13 +18,13 @@ use zerotier_core_crypto::aes_gmac_siv::AesCtr;
 use zerotier_core_crypto::hash::*;
 use zerotier_core_crypto::kbkdf::zt_kbkdf_hmac_sha384;
 use zerotier_core_crypto::poly1305::Poly1305;
-use zerotier_core_crypto::random::{fill_bytes_secure, get_bytes_secure, next_u64_secure};
+use zerotier_core_crypto::random::{get_bytes_secure, next_u64_secure};
 use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
 use crate::util::buffer::Buffer;
-use crate::util::{array_range, u64_as_bytes};
-use crate::vl1::hybridkey::{HybridKeyPair, HybridPublicKey};
+use crate::util::byte_array_range;
+use crate::vl1::hybridkey::HybridKeyPair;
 use crate::vl1::identity::{IDENTITY_ALGORITHM_ALL, IDENTITY_ALGORITHM_X25519};
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
@@ -172,7 +172,7 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
                     // AES-GMAC-SIV encrypts the packet ID too as part of its computation of a single
                     // opaque 128-bit tag, so to get the original packet ID we have to grab it from the
                     // decrypted tag.
-                    Some(u64::from_ne_bytes(*array_range::<u8, 16, 0, 8>(tag)))
+                    Some(u64::from_ne_bytes(*byte_array_range::<16, 0, 8>(tag)))
                 })
             }
 
@@ -221,7 +221,7 @@ impl Peer {
     ///
     /// If the packet comes in multiple fragments, the fragments slice should contain all
     /// those fragments after the main packet header and first chunk.
-    pub(crate) fn receive<SI: SystemInterface, VI: VL1VirtualInterface>(&self, node: &Node, si: &SI, vi: &VI, time_ticks: i64, source_endpoint: &Endpoint, source_path: &Arc<Path>, header: &PacketHeader, frag0: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
+    pub(crate) fn receive<SI: SystemInterface, VI: InnerProtocolInterface>(&self, node: &Node, si: &SI, vi: &VI, time_ticks: i64, source_endpoint: &Endpoint, source_path: &Arc<Path>, header: &PacketHeader, frag0: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
         let _ = frag0.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_without_memzero() };
 
@@ -502,7 +502,7 @@ impl Peer {
 
         // Add extended HMAC-SHA512 authentication.
         let mut hmac = HMACSHA512::new(self.identity_symmetric_key.packet_hmac_key.as_bytes());
-        hmac.update(u64_as_bytes(&message_id));
+        hmac.update(&message_id.to_ne_bytes());
         hmac.update(&packet.as_bytes()[PACKET_HEADER_SIZE..]);
         assert!(packet.append_bytes_fixed(&hmac.finish()).is_ok());
 
@@ -537,7 +537,7 @@ impl Peer {
     fn receive_hello<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
 
     #[inline(always)]
-    fn receive_error<SI: SystemInterface, PH: VL1VirtualInterface>(&self, si: &SI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_error<SI: SystemInterface, PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor).map(|error_header| {
             let in_re_message_id = u64::from_ne_bytes(error_header.in_re_message_id);
@@ -553,7 +553,7 @@ impl Peer {
     }
 
     #[inline(always)]
-    fn receive_ok<SI: SystemInterface, PH: VL1VirtualInterface>(&self, si: &SI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_ok<SI: SystemInterface, PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor).map(|ok_header| {
             let in_re_message_id = u64::from_ne_bytes(ok_header.in_re_message_id);

@@ -17,22 +17,12 @@ zerotier-network-hypervisor = { path = "../zerotier-network-hypervisor" }
 zerotier-core-crypto = { path = "../zerotier-core-crypto" }
 serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = [], default-features = false }
-clap = { version = "^2", features = ["suggestions", "wrap_help"] }
-colored = "^2"
 num_cpus = "^1"
 parking_lot = "^0"
-smol = "^1"
-tide = { version = "^0", features = ["h1-server"], default-features = false }
-digest_auth = "^0"
-chrono = "^0"
-hex = "^0"
-rand = "^0"
+lazy_static = "^1"
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
 
 [target."cfg(not(windows))".dependencies]
 libc = "^0"
-
-[target."cfg(any(target_os = \"macos\", target_os = \"ios\"))".dependencies]
-mach = "^0"

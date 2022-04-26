@@ -128,7 +128,7 @@ impl Store {
             if token2.is_empty() {
                 if generate_if_missing {
                     let mut rb = [0_u8; 32];
-                    unsafe { rb.fill_with(rand::random) };
+                    zerotier_core_crypto::random::fill_bytes_secure(&mut rb);
                     token.reserve(rb.len());
                     for b in rb.iter() {
                         if *b > 127_u8 {

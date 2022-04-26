@@ -20,7 +20,7 @@ use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
 
 use zerotier_core_crypto::c25519::*;
-use zerotier_core_crypto::hash::{hmac_sha512, SHA384, SHA384_HASH_SIZE, SHA512, SHA512_HASH_SIZE};
+use zerotier_core_crypto::hash::*;
 use zerotier_core_crypto::hex;
 use zerotier_core_crypto::p384::*;
 use zerotier_core_crypto::salsa::Salsa;
@@ -811,6 +811,7 @@ mod tests {
     use crate::vl1::identity::{Identity, IDENTITY_ALGORITHM_ALL};
     use std::str::FromStr;
     use std::time::{Duration, SystemTime};
+    #[allow(unused_imports)]
     use zerotier_core_crypto::hex;
 
     const GOOD_V0_IDENTITIES: [&'static str; 10] = [

@@ -9,7 +9,7 @@
 use std::sync::Arc;
 
 use crate::util::buffer::Buffer;
-use crate::vl1::node::VL1VirtualInterface;
+use crate::vl1::node::InnerProtocolInterface;
 use crate::vl1::protocol::*;
 use crate::vl1::{Identity, Path, Peer};
 
@@ -17,7 +17,7 @@ pub trait SwitchInterface: Sync + Send {}
 
 pub struct Switch {}
 
-impl VL1VirtualInterface for Switch {
+impl InnerProtocolInterface for Switch {
     fn handle_packet(&self, peer: &Peer, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, verb: u8, payload: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         false
     }
