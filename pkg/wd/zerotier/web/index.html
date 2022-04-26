@@ -1,0 +1,58 @@
+<div class="header">
+  <h2 id="zerotier">ZeroTier</h2>
+</div>
+
+<p>Welcome! ZeroTier is a peer-to-peer encrypted virtual networking solution that enables you to create Local Area Networks with static IP assignments for all of your devices. Access your NAS from anywhere in the world with a single IP and without the need of cloud services backhauling your traffic. To use the CLI:</p>
+<h2 id="using-the-cli-via-ssh-">Using the CLI via SSH:</h2>
+<ol>
+<li><p>Using your (sshd) account, enable SSH:</p>
+<ul>
+<li><strong><code>Settings</code></strong> -&gt; <strong><code>Network</code></strong> -&gt; <strong><code>SSH</code></strong></li>
+</ul>
+</li>
+<li><p>From a computer, open a terminal and SSH into your NAS device:</p>
+<ul>
+<li><strong><code>ssh sshd@your_nas_device_lan_ip</code></strong></li>
+</ul>
+</li>
+<li><p>Create account and network ID at <a href="https://my.zerotier.com">my.zerotier.com</a></p>
+<ul>
+<li><em>Note: This account is merely to administer your network. Your traffic is not handled by ZeroTier except in the case where a direct connection cannot be established. This is a courtesy service we offer for free that you can disable if you&#39;d like. In any case, your traffic is <a href="https://www.zerotier.com/manual/#2_1_3">fully encrypted</a> end-to-end.</em></li>
+</ul>
+</li>
+<li><p>Join your device to the network:</p>
+<ul>
+<li><strong><code>zerotier-cli join your_network_id</code></strong></li>
+</ul>
+</li>
+<li><p>Use <a href="https://my.zerotier.com">my.zerotier.com</a> to authorize your NAS device to join your network.</p>
+</li>
+</ol>
+<h2 id="help-and-support-in-order-of-relevance-">Help and support (in order of relevance)</h2>
+<ul>
+<li>Github Repository: <a href="https://github.com/zerotier/ZeroTierNAS/issues">https://github.com/zerotier/ZeroTierNAS</a></li>
+<li>Forums: <a href="https://discuss.zerotier.com">https://discuss.zerotier.com</a></li>
+<li>Contact: <a href="mailto:contact@zerotier.com">contact@zerotier.com</a></li>
+</ul>
+
+<div class="footer">
+  <h2 id="zerotier"><h2>
+</div>
+
+<style>
+.header {
+  padding: 1px;
+  text-align: center;
+  background: #F2B464;
+  color: black;
+  font-size: 30px;
+}
+
+.footer {
+  padding: 1px;
+  text-align: center;
+  background: #F2B464;
+  color: black;
+  font-size: 30px;
+}
+</style>
