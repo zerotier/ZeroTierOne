@@ -21,7 +21,6 @@ use crate::util::hex::HEX_CHARS;
 pub struct NetworkId(NonZeroU64);
 
 impl NetworkId {
-    /// Get an address from a 64-bit integer or return None if it is zero or reserved.
     #[inline(always)]
     pub fn from_u64(i: u64) -> Option<NetworkId> {
         NonZeroU64::new(i).map(|i| Self(i))
