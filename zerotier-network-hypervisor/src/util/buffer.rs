@@ -13,10 +13,9 @@ use crate::util::pool::PoolFactory;
 
 /// Annotates a structure as containing only primitive types.
 ///
-/// This indicates structs that are safe to abuse like raw memory by casting from
-/// byte arrays of the same size, etc. It also generally implies packed representation
-/// and alignment should not be assumed since these can be fetched using struct
-/// extracting methods of Buffer that do not check alignment.
+/// The structure must be safe to copy in raw form and access without concern for alignment, or if
+/// it does contain elements that require alignment special care must be taken when accessing them
+/// at least on platforms where it matters.
 pub unsafe trait RawObject: Sized {}
 
 /// A safe bounds checked I/O buffer with extensions for convenient appending of RawObject types.
@@ -27,25 +26,27 @@ unsafe impl<const L: usize> RawObject for Buffer<L> {}
 impl<const L: usize> Default for Buffer<L> {
     #[inline(always)]
     fn default() -> Self {
-        Self(0, [0_u8; L])
+        Self::new()
     }
 }
 
-const OVERFLOW_ERR_MSG: &'static str = "overflow";
+fn overflow_err() -> std::io::Error {
+    std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "buffer overflow")
+}
 
 impl<const L: usize> Buffer<L> {
     pub const CAPACITY: usize = L;
 
-    pub const fn capacity(&self) -> usize {
-        L
-    }
-
+    /// Create an empty zeroed buffer.
     #[inline(always)]
     pub fn new() -> Self {
         Self(0, [0_u8; L])
     }
 
-    /// Create an empty buffer without zeroing its memory (saving a bit of CPU).
+    /// Create an empty buffer without internally zeroing its memory.
+    ///
+    /// This is technically unsafe because unwritten memory in the buffer will have undefined contents.
+    /// Otherwise it behaves exactly like new().
     #[inline(always)]
     pub unsafe fn new_without_memzero() -> Self {
         Self(0, MaybeUninit::uninit().assume_init())
@@ -60,7 +61,7 @@ impl<const L: usize> Buffer<L> {
             tmp.1[0..l].copy_from_slice(b);
             Ok(tmp)
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -75,11 +76,6 @@ impl<const L: usize> Buffer<L> {
     }
 
     #[inline(always)]
-    pub fn as_range_fixed<const START: usize, const LEN: usize>(&self) -> &[u8; LEN] {
-        crate::util::byte_array_range::<L, START, LEN>(&self.1)
-    }
-
-    #[inline(always)]
     pub fn as_ptr(&self) -> *const u8 {
         self.1.as_ptr()
     }
@@ -89,39 +85,28 @@ impl<const L: usize> Buffer<L> {
         self.1.as_mut_ptr()
     }
 
-    #[inline(always)]
-    pub fn as_mut_range_fixed<const START: usize, const LEN: usize>(&mut self) -> &mut [u8; LEN] {
-        crate::util::byte_array_range_mut::<L, START, LEN>(&mut self.1)
-    }
-
     /// Get all bytes after a given position.
     #[inline(always)]
     pub fn as_bytes_starting_at(&self, start: usize) -> std::io::Result<&[u8]> {
         if start <= self.0 {
             Ok(&self.1[start..])
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
     #[inline(always)]
     pub fn clear(&mut self) {
-        let prev_len = self.0;
+        self.1[0..self.0].fill(0);
         self.0 = 0;
-        self.1[0..prev_len].fill(0);
     }
 
     /// Load array into buffer.
     /// This will panic if the array is larger than L.
-    #[inline(always)]
     pub fn set_to(&mut self, b: &[u8]) {
-        let prev_len = self.0;
         let len = b.len();
         self.0 = len;
         self.1[0..len].copy_from_slice(b);
-        if len < prev_len {
-            self.1[len..prev_len].fill(0);
-        }
     }
 
     #[inline(always)]
@@ -136,24 +121,24 @@ impl<const L: usize> Buffer<L> {
 
     /// Set the size of this buffer's data.
     ///
-    /// If the new size is larger than L (the capacity) it will be limited to L. Any new
-    /// space will be filled with zeroes.
+    /// This will panic if the specified size is larger than L. If the size is larger
+    /// than the current size uninitialized space will be zeroed.
     #[inline(always)]
     pub fn set_size(&mut self, s: usize) {
         let prev_len = self.0;
-        if s < prev_len {
-            self.0 = s;
-            self.1[s..prev_len].fill(0);
-        } else {
-            self.0 = s.min(L);
+        self.0 = s;
+        if s > prev_len {
+            self.1[prev_len..s].fill(0);
         }
     }
 
+    /// Set the size of the data in this buffer without checking bounds or zeroing new space.
     #[inline(always)]
     pub unsafe fn set_size_unchecked(&mut self, s: usize) {
         self.0 = s;
     }
 
+    /// Get a byte from this buffer without checking bounds.
     #[inline(always)]
     pub unsafe fn get_unchecked(&self, i: usize) -> u8 {
         *self.1.get_unchecked(i)
@@ -168,7 +153,7 @@ impl<const L: usize> Buffer<L> {
             self.0 = end;
             Ok(unsafe { &mut *self.1.as_mut_ptr().add(ptr).cast() })
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -181,11 +166,12 @@ impl<const L: usize> Buffer<L> {
             self.0 = end;
             Ok(unsafe { &mut *self.1.as_mut_ptr().add(ptr).cast() })
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
     /// Append a runtime sized array and return a mutable reference to its memory.
+    #[inline(always)]
     pub fn append_bytes_get_mut(&mut self, s: usize) -> std::io::Result<&mut [u8]> {
         let ptr = self.0;
         let end = ptr + s;
@@ -193,11 +179,10 @@ impl<const L: usize> Buffer<L> {
             self.0 = end;
             Ok(&mut self.1[ptr..end])
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
-    #[inline(always)]
     pub fn append_padding(&mut self, b: u8, count: usize) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + count;
@@ -206,11 +191,10 @@ impl<const L: usize> Buffer<L> {
             self.1[ptr..end].fill(b);
             Ok(())
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
-    #[inline(always)]
     pub fn append_bytes(&mut self, buf: &[u8]) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + buf.len();
@@ -219,11 +203,10 @@ impl<const L: usize> Buffer<L> {
             self.1[ptr..end].copy_from_slice(buf);
             Ok(())
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
-    #[inline(always)]
     pub fn append_bytes_fixed<const S: usize>(&mut self, buf: &[u8; S]) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + S;
@@ -232,7 +215,7 @@ impl<const L: usize> Buffer<L> {
             self.1[ptr..end].copy_from_slice(buf);
             Ok(())
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -249,7 +232,7 @@ impl<const L: usize> Buffer<L> {
             self.1[ptr] = i;
             Ok(())
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -263,7 +246,7 @@ impl<const L: usize> Buffer<L> {
             unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u16>() = i.to_be() };
             Ok(())
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -277,7 +260,7 @@ impl<const L: usize> Buffer<L> {
             self.1[ptr..end].copy_from_slice(&i.to_be_bytes());
             Ok(())
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -291,7 +274,7 @@ impl<const L: usize> Buffer<L> {
             unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u32>() = i.to_be() };
             Ok(())
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -305,7 +288,7 @@ impl<const L: usize> Buffer<L> {
             self.1[ptr..end].copy_from_slice(&i.to_be_bytes());
             Ok(())
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -319,7 +302,7 @@ impl<const L: usize> Buffer<L> {
             unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u64>() = i.to_be() };
             Ok(())
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -333,7 +316,7 @@ impl<const L: usize> Buffer<L> {
             self.1[ptr..end].copy_from_slice(&i.to_be_bytes());
             Ok(())
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -343,7 +326,7 @@ impl<const L: usize> Buffer<L> {
         if (ptr + size_of::<T>()) <= self.0 {
             unsafe { Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()) }
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -353,7 +336,7 @@ impl<const L: usize> Buffer<L> {
         if (ptr + size_of::<T>()) <= self.0 {
             unsafe { Ok(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()) }
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -362,7 +345,7 @@ impl<const L: usize> Buffer<L> {
         if ptr < self.0 {
             Ok(self.1[ptr])
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -376,7 +359,7 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             unsafe { Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()) }
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -389,7 +372,7 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             unsafe { Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<[u8; S]>()) }
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -402,7 +385,7 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             Ok(&self.1[ptr..end])
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -417,7 +400,7 @@ impl<const L: usize> Buffer<L> {
                 r.0
             })
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -429,7 +412,7 @@ impl<const L: usize> Buffer<L> {
             *cursor = ptr + 1;
             Ok(self.1[ptr])
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -443,7 +426,7 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             Ok(u16::from_be(unsafe { *self.1.as_ptr().add(ptr).cast::<u16>() }))
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -457,7 +440,7 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             Ok(u16::from_be_bytes(*self.1[ptr..end]))
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -471,7 +454,7 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             Ok(u32::from_be(unsafe { *self.1.as_ptr().add(ptr).cast::<u32>() }))
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -485,7 +468,7 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             Ok(u32::from_be_bytes(*self.1[ptr..end]))
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -499,7 +482,7 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             Ok(u64::from_be(unsafe { *self.1.as_ptr().add(ptr).cast::<u64>() }))
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 
@@ -513,7 +496,7 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             Ok(u64::from_be_bytes(*self.1[ptr..end]))
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 }
@@ -537,7 +520,7 @@ impl<const L: usize> Write for Buffer<L> {
             self.1[ptr..end].copy_from_slice(buf);
             Ok(buf.len())
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, OVERFLOW_ERR_MSG))
+            Err(overflow_err())
         }
     }
 

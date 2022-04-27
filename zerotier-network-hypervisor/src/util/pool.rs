@@ -46,7 +46,9 @@ impl<O, F: PoolFactory<O>> Pooled<O, F> {
     /// from_raw() or memory will leak.
     #[inline(always)]
     pub unsafe fn into_raw(self) -> *mut O {
+        // Verify that the structure is not padded before 'obj'.
         debug_assert_eq!((&self.0.as_ref().obj as *const O).cast::<u8>(), (self.0.as_ref() as *const PoolEntry<O, F>).cast::<u8>());
+
         let ptr = self.0.as_ptr().cast::<O>();
         std::mem::forget(self);
         ptr
@@ -100,9 +102,10 @@ impl<O, F: PoolFactory<O>> Drop for Pooled<O, F> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe {
+            // Return to pool if the pool still exists. Deallocate otherwise.
             let p = Weak::upgrade(&self.0.as_ref().return_pool);
             if p.is_some() {
-                let p = p.unwrap();
+                let p = p.unwrap_unchecked();
                 p.factory.reset(&mut self.0.as_mut().obj);
                 p.pool.lock().push(self.0);
             } else {
@@ -128,7 +131,6 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
     /// Get a pooled object, or allocate one if the pool is empty.
     #[inline(always)]
     pub fn get(&self) -> Pooled<O, F> {
-        //let _ = self.0.outstanding_count.fetch_add(1, Ordering::Acquire);
         Pooled::<O, F>(self.0.pool.lock().pop().unwrap_or_else(|| unsafe {
             NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
                 obj: self.0.factory.create(),

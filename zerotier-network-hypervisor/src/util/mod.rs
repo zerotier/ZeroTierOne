@@ -39,9 +39,7 @@ pub(crate) fn hash64_noncrypt(mut x: u64) -> u64 {
     x ^ x.wrapping_shr(31)
 }
 
-/// A hasher for u64 maps that just returns u64 values as-is.
-///
-/// Used with things like ZeroTier addresses and network IDs that are already randomly distributed.
+/// A super-minimal hasher for u64 keys for keys already fairly randomly distributed like addresses and network IDs.
 #[derive(Copy, Clone)]
 pub(crate) struct U64NoOpHasher(u64);
 
@@ -55,7 +53,7 @@ impl U64NoOpHasher {
 impl std::hash::Hasher for U64NoOpHasher {
     #[inline(always)]
     fn finish(&self) -> u64 {
-        self.0
+        self.0.wrapping_add(self.0.wrapping_shr(32))
     }
 
     #[inline(always)]
@@ -65,12 +63,12 @@ impl std::hash::Hasher for U64NoOpHasher {
 
     #[inline(always)]
     fn write_u64(&mut self, i: u64) {
-        self.0 += i;
+        self.0 = self.0.wrapping_add(i);
     }
 
     #[inline(always)]
     fn write_i64(&mut self, i: i64) {
-        self.0 += i as u64;
+        self.0 = self.0.wrapping_add(i as u64);
     }
 }
 

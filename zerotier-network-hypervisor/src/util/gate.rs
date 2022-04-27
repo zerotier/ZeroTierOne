@@ -8,7 +8,7 @@
 
 use std::sync::atomic::{AtomicI64, Ordering};
 
-/// Boolean rate limiter with normal (non-atomic) semantics.
+/// Boolean rate limiter with normal (non-atomic, thread unsafe) semantics.
 #[repr(transparent)]
 pub struct IntervalGate<const FREQ: i64>(i64);
 
@@ -26,11 +26,6 @@ impl<const FREQ: i64> IntervalGate<FREQ> {
     }
 
     #[inline(always)]
-    pub fn reset(&mut self) {
-        self.0 = 0;
-    }
-
-    #[inline(always)]
     pub fn gate(&mut self, time: i64) -> bool {
         if (time - self.0) >= FREQ {
             self.0 = time;
@@ -41,7 +36,9 @@ impl<const FREQ: i64> IntervalGate<FREQ> {
     }
 }
 
-/// Boolean rate limiter with atomic semantics.
+unsafe impl<const FREQ: i64> Send for IntervalGate<FREQ> {}
+
+/// Boolean rate limiter with atomic (thread safe) semantics.
 #[repr(transparent)]
 pub struct AtomicIntervalGate<const FREQ: i64>(AtomicI64);
 
@@ -59,18 +56,13 @@ impl<const FREQ: i64> AtomicIntervalGate<FREQ> {
     }
 
     #[inline(always)]
-    pub fn reset(&self) {
-        self.0.store(0, Ordering::Relaxed);
-    }
-
-    #[inline(always)]
     pub fn gate(&self, mut time: i64) -> bool {
-        let prev_time = self.0.load(Ordering::Relaxed);
+        let prev_time = self.0.load(Ordering::Acquire);
         if (time - prev_time) < FREQ {
             false
         } else {
             loop {
-                let pt = self.0.swap(time, Ordering::Relaxed);
+                let pt = self.0.swap(time, Ordering::AcqRel);
                 if pt <= time {
                     break;
                 } else {
@@ -81,3 +73,7 @@ impl<const FREQ: i64> AtomicIntervalGate<FREQ> {
         }
     }
 }
+
+unsafe impl<const FREQ: i64> Send for AtomicIntervalGate<FREQ> {}
+
+unsafe impl<const FREQ: i64> Sync for AtomicIntervalGate<FREQ> {}

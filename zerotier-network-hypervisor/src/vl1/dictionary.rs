@@ -12,6 +12,7 @@ use std::io::Write;
 use crate::util::hex::HEX_CHARS;
 
 /// Dictionary is an extremely simple key=value serialization format.
+///
 /// It's designed for extreme parsing simplicity and is human readable if keys and values are strings.
 /// It also supports binary keys and values which will be minimally escaped but render the result not
 /// entirely human readable. Keys are serialized in natural sort order so the result can be consistently
