@@ -406,17 +406,8 @@ impl InetAddress {
     }
 
     /// Get the address family of this InetAddress: AF_INET, AF_INET6, or 0 if uninitialized.
-    #[inline(always)]
-    #[cfg(not(target_os = "linux"))]
     pub fn family(&self) -> u8 {
-        unsafe { self.sa.sa_family }
-    }
-
-    /// Get the address family of this InetAddress: AF_INET, AF_INET6, or 0 if uninitialized.
-    #[inline(always)]
-    #[cfg(target_os = "linux")]
-    pub fn family(&self) -> u16 {
-        unsafe { self.sa.sa_family }
+        unsafe { self.sa.sa_family as u8 }
     }
 
     /// Get a pointer to the C "sockaddr" structure and the size of the returned structure in bytes.

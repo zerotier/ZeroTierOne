@@ -12,6 +12,7 @@ use std::num::NonZeroI64;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Arc;
 
+use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use zerotier_core_crypto::hash::SHA384_HASH_SIZE;
 
