@@ -11,9 +11,12 @@ use std::hash::{Hash, Hasher};
 use std::num::NonZeroU64;
 use std::str::FromStr;
 
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
 use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;
 
+/// An Ethernet MAC address.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct MAC(NonZeroU64);
@@ -85,5 +88,59 @@ impl Hash for MAC {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write_u64(self.0.get());
+    }
+}
+
+impl Serialize for MAC {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            serializer.serialize_str(self.to_string().as_str())
+        } else {
+            serializer.serialize_bytes(&self.to_bytes())
+        }
+    }
+}
+
+struct MACVisitor;
+
+impl<'de> serde::de::Visitor<'de> for MACVisitor {
+    type Value = MAC;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a ZeroTier address")
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        if v.len() == 6 {
+            MAC::from_bytes(v).map_or_else(|| Err(E::custom("object too large")), |a| Ok(a))
+        } else {
+            Err(E::custom("object too large"))
+        }
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        MAC::from_str(v).map_err(|e| E::custom(e.to_string()))
+    }
+}
+
+impl<'de> Deserialize<'de> for MAC {
+    fn deserialize<D>(deserializer: D) -> Result<MAC, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_str(MACVisitor)
+        } else {
+            deserializer.deserialize_bytes(MACVisitor)
+        }
     }
 }

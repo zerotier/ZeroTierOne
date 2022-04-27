@@ -48,13 +48,13 @@ pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_KEY: u8 = b'e';
 pub const EPHEMERAL_SECRET_REKEY_AFTER_TIME: i64 = 300000; // 5 minutes
 
 /// Maximum number of times to use an ephemeral secret before trying to replace it.
-pub const EPHEMERAL_SECRET_REKEY_AFTER_USES: u32 = 536870912; // 1/4 the NIST/FIPS security bound of 2^31
+pub const EPHEMERAL_SECRET_REKEY_AFTER_USES: usize = 536870912; // 1/4 the NIST/FIPS security bound of 2^31
 
 /// Ephemeral secret reject after time.
 pub const EPHEMERAL_SECRET_REJECT_AFTER_TIME: i64 = EPHEMERAL_SECRET_REKEY_AFTER_TIME * 2;
 
 /// Ephemeral secret reject after uses.
-pub const EPHEMERAL_SECRET_REJECT_AFTER_USES: u32 = 2147483648; // NIST/FIPS security bound
+pub const EPHEMERAL_SECRET_REJECT_AFTER_USES: usize = 2147483648; // NIST/FIPS security bound
 
 pub const SESSION_METADATA_INSTANCE_ID: &'static str = "i";
 pub const SESSION_METADATA_CLOCK: &'static str = "t";
@@ -211,7 +211,7 @@ pub fn compress_packet(src: &[u8], dest: &mut Buffer<{ PACKET_SIZE_MAX }>) -> bo
 ///
 /// This is the header for a complete packet. If the fragmented flag is set, it will
 /// arrive with one or more fragments that must be assembled to complete it.
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct PacketHeader {
     pub id: [u8; 8],
     pub dest: [u8; 5],
@@ -275,7 +275,7 @@ impl PacketHeader {
 /// is normally illegal since addresses can't begin with that. Fragmented packets
 /// will arrive with the first fragment carrying a normal header with the fragment
 /// bit set and remaining fragments being these.
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct FragmentHeader {
     pub id: [u8; 8],               // (outer) packet ID
     pub dest: [u8; 5],             // destination address
@@ -324,7 +324,7 @@ impl FragmentHeader {
 pub(crate) mod message_component_structs {
     use crate::util::buffer::RawObject;
 
-    #[repr(packed)]
+    #[repr(C, packed)]
     pub struct OkHeader {
         pub in_re_verb: u8,
         pub in_re_message_id: [u8; 8],
@@ -332,7 +332,7 @@ pub(crate) mod message_component_structs {
 
     unsafe impl RawObject for OkHeader {}
 
-    #[repr(packed)]
+    #[repr(C, packed)]
     pub struct ErrorHeader {
         pub in_re_verb: u8,
         pub in_re_message_id: [u8; 8],
@@ -341,7 +341,7 @@ pub(crate) mod message_component_structs {
 
     unsafe impl RawObject for ErrorHeader {}
 
-    #[repr(packed)]
+    #[repr(C, packed)]
     pub struct HelloFixedHeaderFields {
         pub verb: u8,
         pub version_proto: u8,
@@ -353,7 +353,7 @@ pub(crate) mod message_component_structs {
 
     unsafe impl RawObject for HelloFixedHeaderFields {}
 
-    #[repr(packed)]
+    #[repr(C, packed)]
     pub struct OkHelloFixedHeaderFields {
         pub timestamp_echo: [u8; 8], // u64
         pub version_proto: u8,

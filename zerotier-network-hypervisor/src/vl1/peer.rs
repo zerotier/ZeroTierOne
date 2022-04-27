@@ -509,7 +509,7 @@ impl Peer {
         // Set legacy poly1305 MAC in packet header. Newer nodes check HMAC-SHA512 but older ones only use this.
         let (_, mut poly) = salsa_poly_create(&self.identity_symmetric_key, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
         poly.update(packet.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap());
-        packet.as_mut_range_fixed::<HEADER_MAC_FIELD_INDEX, { HEADER_MAC_FIELD_INDEX + 8 }>().copy_from_slice(&poly.finish()[0..8]);
+        packet.as_mut()[HEADER_MAC_FIELD_INDEX..HEADER_MAC_FIELD_INDEX + 8].copy_from_slice(&poly.finish()[0..8]);
 
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
         self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);

@@ -868,8 +868,6 @@ dependencies = [
  "lz4_flex",
  "parking_lot",
  "serde",
- "serde_derive",
- "serde_json",
  "winapi",
  "zerotier-core-crypto",
 ]

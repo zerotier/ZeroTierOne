@@ -10,14 +10,15 @@ use std::hash::{Hash, Hasher};
 use std::num::NonZeroU64;
 use std::str::FromStr;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;
 use crate::util::hex::HEX_CHARS;
 use crate::vl1::protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+/// A unique address on the global ZeroTier VL1 network.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct Address(NonZeroU64);
 
@@ -89,5 +90,59 @@ impl Hash for Address {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write_u64(self.0.get());
+    }
+}
+
+impl Serialize for Address {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            serializer.serialize_str(self.to_string().as_str())
+        } else {
+            serializer.serialize_bytes(&self.to_bytes())
+        }
+    }
+}
+
+struct AddressVisitor;
+
+impl<'de> serde::de::Visitor<'de> for AddressVisitor {
+    type Value = Address;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a ZeroTier address")
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        if v.len() == ADDRESS_SIZE {
+            Address::from_bytes(v).map_or_else(|| Err(E::custom("object too large")), |a| Ok(a))
+        } else {
+            Err(E::custom("object too large"))
+        }
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Address::from_str(v).map_err(|e| E::custom(e.to_string()))
+    }
+}
+
+impl<'de> Deserialize<'de> for Address {
+    fn deserialize<D>(deserializer: D) -> Result<Address, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_str(AddressVisitor)
+        } else {
+            deserializer.deserialize_bytes(AddressVisitor)
+        }
     }
 }

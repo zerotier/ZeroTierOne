@@ -6,7 +6,8 @@
  * https://www.zerotier.com/
  */
 
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use zerotier_core_crypto::aes_gmac_siv::AesGmacSiv;
 use zerotier_core_crypto::kbkdf::*;
 use zerotier_core_crypto::secret::Secret;
@@ -20,7 +21,7 @@ pub(crate) struct AesGmacSivPoolFactory(Secret<32>, Secret<32>);
 impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
     #[inline(always)]
     fn create(&self) -> AesGmacSiv {
-        AesGmacSiv::new(&self.0 .0, &self.1 .0)
+        AesGmacSiv::new(self.0.as_bytes(), self.1.as_bytes())
     }
 
     #[inline(always)]
@@ -33,16 +34,23 @@ impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
 ///
 /// This contains the key and several sub-keys and ciphers keyed with sub-keys.
 pub(crate) struct SymmetricSecret {
+    /// Master key from which other keys are derived.
     pub key: Secret<64>,
+
+    /// Key used for HMAC extended validation on packets like HELLO.
     pub packet_hmac_key: Secret<64>,
+
+    /// Key used with ephemeral keying/re-keying.
     pub ephemeral_ratchet_key: Secret<64>,
+
+    /// Pool of keyed AES-GMAC-SIV engines (pooled to avoid AES re-init every time).
     pub aes_gmac_siv: Pool<AesGmacSiv, AesGmacSivPoolFactory>,
 }
 
 impl PartialEq for SymmetricSecret {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        self.key.0.eq(&other.key.0)
+        self.key == other.key
     }
 }
 
@@ -70,8 +78,8 @@ pub(crate) struct EphemeralSymmetricSecret {
     pub rekey_time: i64,
     pub expire_time: i64,
     pub ratchet_count: u64,
-    pub encrypt_uses: AtomicU32,
-    pub decrypt_uses: AtomicU32,
+    pub encrypt_uses: AtomicUsize,
+    pub decrypt_uses: AtomicUsize,
     pub fips_compliant_exchange: bool,
 }
 

@@ -17,7 +17,7 @@ use std::str::FromStr;
 
 use lazy_static::lazy_static;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use zerotier_core_crypto::c25519::*;
 use zerotier_core_crypto::hash::*;
@@ -45,12 +45,14 @@ pub const IDENTITY_ALGORITHM_ALL: u8 = 0xff;
 pub const MAX_MARSHAL_SIZE: usize =
     ADDRESS_SIZE + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + 16;
 
+/// Secret keys associated with NIST P-384 public keys.
 #[derive(Clone)]
 pub struct IdentityP384Secret {
     pub ecdh: P384KeyPair,
     pub ecdsa: P384KeyPair,
 }
 
+/// NIST P-384 public keys and signatures binding them bidirectionally to V0 c25519 keys.
 #[derive(Clone)]
 pub struct IdentityP384Public {
     pub ecdh: P384PublicKey,
@@ -59,6 +61,7 @@ pub struct IdentityP384Public {
     pub ed25519_self_signature: [u8; ED25519_SIGNATURE_SIZE],
 }
 
+/// Secret keys associated with an identity.
 #[derive(Clone)]
 pub struct IdentitySecret {
     pub c25519: C25519KeyPair,
@@ -66,6 +69,14 @@ pub struct IdentitySecret {
     pub p384: Option<IdentityP384Secret>,
 }
 
+/// A unique identity on the global VL1 network.
+///
+/// Identity implements serde Serialize and Deserialize. Identities are serialized as strings
+/// for human-readable formats and binary otherwise.
+///
+/// SECURITY NOTE: for security reasons secret keys are NOT exported by default by to_string()
+/// or by the serde serializer. If you want secrets you must use to_string_with_options() or
+/// marshal(). This is to prevent accidental leakage of secrets by naive code.
 #[derive(Clone)]
 pub struct Identity {
     pub address: Address,
@@ -75,9 +86,6 @@ pub struct Identity {
     pub secret: Option<IdentitySecret>,
     pub fingerprint: [u8; SHA512_HASH_SIZE],
 }
-
-#[derive(Eq, PartialEq, Clone, Debug, Ord, PartialOrd, Deserialize, Serialize)]
-pub struct NetworkId(pub u64);
 
 #[inline(always)]
 fn concat_arrays_2<const A: usize, const B: usize, const S: usize>(a: &[u8; A], b: &[u8; B]) -> [u8; S] {
@@ -723,6 +731,65 @@ impl Hash for Identity {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write_u64(self.address.to_u64())
+    }
+}
+
+impl Serialize for Identity {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            serializer.serialize_str(self.to_string_with_options(IDENTITY_ALGORITHM_ALL, false).as_str())
+        } else {
+            let mut tmp: Buffer<MAX_MARSHAL_SIZE> = Buffer::new();
+            assert!(self.marshal(&mut tmp, IDENTITY_ALGORITHM_ALL, false).is_ok());
+            serializer.serialize_bytes(tmp.as_bytes())
+        }
+    }
+}
+
+struct IdentityVisitor;
+
+impl<'de> serde::de::Visitor<'de> for IdentityVisitor {
+    type Value = Identity;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a ZeroTier identity")
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        if v.len() <= MAX_MARSHAL_SIZE {
+            let mut tmp: Buffer<MAX_MARSHAL_SIZE> = Buffer::new();
+            let _ = tmp.append_bytes(v);
+            let mut cursor = 0;
+            Identity::unmarshal(&tmp, &mut cursor).map_err(|e| E::custom(e.to_string()))
+        } else {
+            Err(E::custom("object too large"))
+        }
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Identity::from_str(v).map_err(|e| E::custom(e.to_string()))
+    }
+}
+
+impl<'de> Deserialize<'de> for Identity {
+    fn deserialize<D>(deserializer: D) -> Result<Identity, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_str(IdentityVisitor)
+        } else {
+            deserializer.deserialize_bytes(IdentityVisitor)
+        }
     }
 }
 
