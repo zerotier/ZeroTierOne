@@ -8,9 +8,13 @@
 
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
-use zerotier_core_crypto::hash::SHA384_HASH_SIZE;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use zerotier_core_crypto::hash::SHA512_HASH_SIZE;
+
+use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;
 use crate::vl1::inetaddress::InetAddress;
 use crate::vl1::{Address, MAC};
@@ -37,7 +41,7 @@ pub enum Endpoint {
 
     /// Via another node using unencapsulated relaying (e.g. via a root)
     /// Hash is a full hash of the identity for strong verification.
-    ZeroTier(Address, [u8; SHA384_HASH_SIZE]),
+    ZeroTier(Address, [u8; SHA512_HASH_SIZE]),
 
     /// Direct L2 Ethernet
     Ethernet(MAC),
@@ -65,7 +69,7 @@ pub enum Endpoint {
 
     /// Via another node using inner encapsulation via VERB_ENCAP.
     /// Hash is a full hash of the identity for strong verification.
-    ZeroTierEncap(Address, [u8; SHA384_HASH_SIZE]),
+    ZeroTierEncap(Address, [u8; SHA512_HASH_SIZE]),
 }
 
 impl Default for Endpoint {
@@ -198,7 +202,7 @@ impl Endpoint {
                 TYPE_ZEROTIER => {
                     let zt = Address::unmarshal(buf, cursor)?;
                     if zt.is_some() {
-                        let h = buf.read_bytes_fixed::<SHA384_HASH_SIZE>(cursor)?;
+                        let h = buf.read_bytes_fixed::<SHA512_HASH_SIZE>(cursor)?;
                         Ok(Endpoint::ZeroTier(zt.unwrap(), h.clone()))
                     } else {
                         Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid ZeroTier address"))
@@ -215,7 +219,7 @@ impl Endpoint {
                 TYPE_ZEROTIER_ENCAP => {
                     let zt = Address::unmarshal(buf, cursor)?;
                     if zt.is_some() {
-                        let h = buf.read_bytes_fixed::<SHA384_HASH_SIZE>(cursor)?;
+                        let h = buf.read_bytes_fixed::<SHA512_HASH_SIZE>(cursor)?;
                         Ok(Endpoint::ZeroTierEncap(zt.unwrap(), h.clone()))
                     } else {
                         Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid ZeroTier address"))
@@ -315,9 +319,120 @@ impl ToString for Endpoint {
             Endpoint::Ip(ip) => format!("ip:{}", ip.to_ip_string()),
             Endpoint::IpUdp(ip) => format!("udp:{}", ip.to_string()),
             Endpoint::IpTcp(ip) => format!("tcp:{}", ip.to_string()),
-            Endpoint::Http(url) => url.clone(),
+            Endpoint::Http(url) => url.clone(), // http or https
             Endpoint::WebRTC(offer) => format!("webrtc:{}", base64::encode_config(offer.as_slice(), base64::URL_SAFE_NO_PAD)),
-            Endpoint::ZeroTierEncap(a, ah) => format!("ztzt:{}-{}", a.to_string(), base64::encode_config(ah, base64::URL_SAFE_NO_PAD)),
+            Endpoint::ZeroTierEncap(a, ah) => format!("zte:{}-{}", a.to_string(), base64::encode_config(ah, base64::URL_SAFE_NO_PAD)),
+        }
+    }
+}
+
+impl FromStr for Endpoint {
+    type Err = InvalidFormatError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let ss = s.trim();
+        if ss.is_empty() || ss == "nil" {
+            return Ok(Endpoint::Nil);
+        }
+        let ss = ss.split_once(":");
+        if ss.is_none() {
+            return Err(InvalidFormatError);
+        }
+        let (endpoint_type, endpoint_data) = ss.unwrap();
+        match endpoint_type {
+            "zt" | "zte" => {
+                let address_and_hash = endpoint_data.split_once("-");
+                if address_and_hash.is_some() {
+                    let (address, hash) = address_and_hash.unwrap();
+                    let hash = base64::decode_config(hash, base64::URL_SAFE_NO_PAD);
+                    if hash.is_ok() {
+                        let hash = hash.unwrap();
+                        if hash.len() == SHA512_HASH_SIZE {
+                            if endpoint_type == "zt" {
+                                return Ok(Endpoint::ZeroTier(Address::from_str(address)?, hash.as_slice().try_into().unwrap()));
+                            } else {
+                                return Ok(Endpoint::ZeroTierEncap(Address::from_str(address)?, hash.as_slice().try_into().unwrap()));
+                            }
+                        }
+                    }
+                }
+            }
+            "eth" => return Ok(Endpoint::Ethernet(MAC::from_str(endpoint_data)?)),
+            "wifip2p" => return Ok(Endpoint::WifiDirect(MAC::from_str(endpoint_data)?)),
+            "bt" => return Ok(Endpoint::Bluetooth(MAC::from_str(endpoint_data)?)),
+            "ip" => return Ok(Endpoint::Ip(InetAddress::from_str(endpoint_data)?)),
+            "udp" => return Ok(Endpoint::IpUdp(InetAddress::from_str(endpoint_data)?)),
+            "tcp" => return Ok(Endpoint::IpTcp(InetAddress::from_str(endpoint_data)?)),
+            "http" | "https" => return Ok(Endpoint::Http(endpoint_data.into())),
+            "webrtc" => {
+                let offer = base64::decode_config(endpoint_data, base64::URL_SAFE_NO_PAD);
+                if offer.is_ok() {
+                    return Ok(Endpoint::WebRTC(offer.unwrap()));
+                }
+            }
+            _ => {}
+        }
+        return Err(InvalidFormatError);
+    }
+}
+
+const TEMP_SERIALIZE_BUFFER_SIZE: usize = 1024;
+
+impl Serialize for Endpoint {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            serializer.serialize_str(self.to_string().as_str())
+        } else {
+            let mut tmp: Buffer<TEMP_SERIALIZE_BUFFER_SIZE> = Buffer::new();
+            assert!(self.marshal(&mut tmp).is_ok());
+            serializer.serialize_bytes(tmp.as_bytes())
+        }
+    }
+}
+
+struct EndpointVisitor;
+
+impl<'de> serde::de::Visitor<'de> for EndpointVisitor {
+    type Value = Endpoint;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("an Endpoint")
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        if v.len() <= TEMP_SERIALIZE_BUFFER_SIZE {
+            let mut tmp: Buffer<TEMP_SERIALIZE_BUFFER_SIZE> = Buffer::new();
+            let _ = tmp.append_bytes(v);
+            let mut cursor = 0;
+            Endpoint::unmarshal(&tmp, &mut cursor).map_err(|e| E::custom(e.to_string()))
+        } else {
+            Err(E::custom("object too large"))
+        }
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Endpoint::from_str(v).map_err(|e| E::custom(e.to_string()))
+    }
+}
+
+impl<'de> Deserialize<'de> for Endpoint {
+    fn deserialize<D>(deserializer: D) -> Result<Endpoint, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_str(EndpointVisitor)
+        } else {
+            deserializer.deserialize_bytes(EndpointVisitor)
         }
     }
 }

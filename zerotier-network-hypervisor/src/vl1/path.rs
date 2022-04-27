@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-use zerotier_core_crypto::hash::SHA384_HASH_SIZE;
+use zerotier_core_crypto::hash::SHA512_HASH_SIZE;
 
 use crate::util::*;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
@@ -57,7 +57,7 @@ impl Path {
         let lsi = (local_socket as u128).wrapping_shl(64) | (local_interface as u128);
         match endpoint {
             Endpoint::Nil => 0,
-            Endpoint::ZeroTier(_, h) => u128::from_ne_bytes(*byte_array_range::<SHA384_HASH_SIZE, 0, 16>(h)),
+            Endpoint::ZeroTier(_, h) => u128::from_ne_bytes(*byte_array_range::<SHA512_HASH_SIZE, 0, 16>(h)),
             Endpoint::Ethernet(m) => (m.to_u64() | 0x0100000000000000) as u128 ^ lsi,
             Endpoint::WifiDirect(m) => (m.to_u64() | 0x0200000000000000) as u128 ^ lsi,
             Endpoint::Bluetooth(m) => (m.to_u64() | 0x0400000000000000) as u128 ^ lsi,
@@ -78,7 +78,7 @@ impl Path {
                 hh.write(b.as_slice());
                 RANDOM_128BIT_SALT_1.wrapping_add(hh.finish() as u128)
             }
-            Endpoint::ZeroTierEncap(_, h) => u128::from_ne_bytes(*byte_array_range::<SHA384_HASH_SIZE, 16, 16>(h)),
+            Endpoint::ZeroTierEncap(_, h) => u128::from_ne_bytes(*byte_array_range::<SHA512_HASH_SIZE, 16, 16>(h)),
         }
     }
 
