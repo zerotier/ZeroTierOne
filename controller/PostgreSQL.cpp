@@ -944,9 +944,9 @@ void PostgreSQL::_membersWatcher_Redis() {
 			json tmp;
 			std::unordered_map<std::string, ItemStream> result;
 			if (_rc->clusterMode) {
-				_cluster->xread(key, lastID, std::chrono::seconds(1), 10, std::inserter(result, result.end()));
+				_cluster->xread(key, lastID, std::chrono::seconds(1), 0, std::inserter(result, result.end()));
 			} else {
-				_redis->xread(key, lastID, std::chrono::seconds(1), 10, std::inserter(result, result.end()));
+				_redis->xread(key, lastID, std::chrono::seconds(1), 0, std::inserter(result, result.end()));
 			}
 			if (!result.empty()) {
 				for (auto element : result) {
