@@ -19,12 +19,12 @@ use lazy_static::lazy_static;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use zerotier_core_crypto::c25519::*;
 use zerotier_core_crypto::hash::*;
 use zerotier_core_crypto::hex;
 use zerotier_core_crypto::p384::*;
 use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
+use zerotier_core_crypto::x25519::*;
 
 use crate::error::{InvalidFormatError, InvalidParameterError};
 use crate::util::buffer::Buffer;

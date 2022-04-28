@@ -8,10 +8,10 @@
 
 use std::io::Write;
 
-use zerotier_core_crypto::c25519::{C25519KeyPair, C25519_PUBLIC_KEY_SIZE};
 use zerotier_core_crypto::hash::{hmac_sha512, SHA512};
 use zerotier_core_crypto::p384::{P384KeyPair, P384PublicKey, P384_PUBLIC_KEY_SIZE};
 use zerotier_core_crypto::secret::Secret;
+use zerotier_core_crypto::x25519::{C25519KeyPair, C25519_PUBLIC_KEY_SIZE};
 
 pub const ALGORITHM_C25519: u8 = 0x01;
 pub const ALGORITHM_ECC_NIST_P384: u8 = 0x02;

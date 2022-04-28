@@ -6,7 +6,6 @@
  * https://www.zerotier.com/
  */
 
-pub mod c25519;
 pub mod hash;
 pub mod hex;
 pub mod kbkdf;
@@ -16,6 +15,7 @@ pub mod random;
 pub mod salsa;
 pub mod secret;
 pub mod varint;
+pub mod x25519;
 
 pub use aes_gmac_siv;
 pub use rand_core;
