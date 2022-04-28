@@ -28,7 +28,7 @@
 #include <chrono>
 
 
-// #define ZT_TRACE 1
+// #define REDIS_TRACE 1
 
 using json = nlohmann::json;
 
@@ -950,18 +950,18 @@ void PostgreSQL::_membersWatcher_Redis() {
 			}
 			if (!result.empty()) {
 				for (auto element : result) {
-	#ifdef ZT_TRACE
+	#ifdef REDIS_TRACE
 					fprintf(stdout, "Received notification from: %s\n", element.first.c_str());
 	#endif
 					for (auto rec : element.second) {
 						std::string id = rec.first;
 						auto attrs = rec.second;
-	#ifdef ZT_TRACE
+	#ifdef REDIS_TRACE
 						fprintf(stdout, "Record ID: %s\n", id.c_str());
 						fprintf(stdout, "attrs len: %lu\n", attrs.size());
 	#endif
 						for (auto a : attrs) {
-	#ifdef ZT_TRACE
+	#ifdef REDIS_TRACE
 							fprintf(stdout, "key: %s\nvalue: %s\n", a.first.c_str(), a.second.c_str());
 	#endif
 							try {
@@ -1039,18 +1039,18 @@ void PostgreSQL::_networksWatcher_Redis() {
 			
 			if (!result.empty()) {
 				for (auto element : result) {
-#ifdef ZT_TRACE
+#ifdef REDIS_TRACE
 					fprintf(stdout, "Received notification from: %s\n", element.first.c_str());
 #endif
 					for (auto rec : element.second) {
 						std::string id = rec.first;
 						auto attrs = rec.second;
-#ifdef ZT_TRACE
+#ifdef REDIS_TRACE
 						fprintf(stdout, "Record ID: %s\n", id.c_str());
 						fprintf(stdout, "attrs len: %lu\n", attrs.size());
 #endif
 						for (auto a : attrs) {
-#ifdef ZT_TRACE
+#ifdef REDIS_TRACE
 							fprintf(stdout, "key: %s\nvalue: %s\n", a.first.c_str(), a.second.c_str());
 #endif
 							try {
@@ -1515,7 +1515,7 @@ void PostgreSQL::onlineNotification_Redis()
 				}
 			}
 		} catch (sw::redis::Error &e) {
-#ifdef ZT_TRACE
+#ifdef REDIS_TRACE
 			fprintf(stderr, "Error in online notification thread (redis): %s\n", e.what());
 #endif
 		}
