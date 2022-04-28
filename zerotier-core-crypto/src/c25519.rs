@@ -22,23 +22,39 @@ pub const ED25519_SECRET_KEY_SIZE: usize = 32;
 pub const ED25519_SIGNATURE_SIZE: usize = 64;
 
 /// Curve25519 key pair for ECDH key agreement.
-pub struct C25519KeyPair(x25519_dalek::StaticSecret, x25519_dalek::PublicKey);
+pub struct C25519KeyPair(x25519_dalek::StaticSecret, Secret<32>, x25519_dalek::PublicKey);
 
 impl C25519KeyPair {
     #[inline(always)]
     pub fn generate() -> C25519KeyPair {
         let sk = x25519_dalek::StaticSecret::new(SecureRandom::get());
+        let sk2 = Secret(sk.to_bytes());
         let pk = x25519_dalek::PublicKey::from(&sk);
-        C25519KeyPair(sk, pk)
+        C25519KeyPair(sk, sk2, pk)
     }
 
     pub fn from_bytes(public_key: &[u8], secret_key: &[u8]) -> Option<C25519KeyPair> {
         if public_key.len() == 32 && secret_key.len() == 32 {
+            // NOTE: we keep the original secret separately from x25519_dalek's StaticSecret
+            // due to how "clamping" is done in the old C++ code vs x25519_dalek. Clamping
+            // is explained here:
+            //
+            // https://www.jcraige.com/an-explainer-on-ed25519-clamping
+            //
+            // In the old C++ code clamping is done when the secret key is actually used.
+            // In x25519_dalek it's done when the key is loaded into one of the secret
+            // containers. Unfortunately this means that identities' secret keys won't look
+            // the same in the actual identity structure vs. what you would get from the C++
+            // v0 ZeroTier implementation. The cryptographic results are identical but we
+            // still need to have our identity spit out identical bits when exported.
+            //
+            // Newly generated keys will be clamped at generation time, which will also yield
+            // identical results in both cases.
             let pk: [u8; 32] = public_key.try_into().unwrap();
-            let sk: [u8; 32] = secret_key.try_into().unwrap();
+            let sk_orig: Secret<32> = Secret(secret_key.try_into().unwrap());
             let pk = x25519_dalek::PublicKey::from(pk);
-            let sk = x25519_dalek::StaticSecret::from(sk);
-            Some(C25519KeyPair(sk, pk))
+            let sk = x25519_dalek::StaticSecret::from(sk_orig.0.clone());
+            Some(C25519KeyPair(sk, sk_orig, pk))
         } else {
             None
         }
@@ -46,12 +62,12 @@ impl C25519KeyPair {
 
     #[inline(always)]
     pub fn public_bytes(&self) -> [u8; C25519_PUBLIC_KEY_SIZE] {
-        self.1.to_bytes()
+        self.2.to_bytes()
     }
 
     #[inline(always)]
-    pub fn secret_bytes(&self) -> Secret<{ C25519_SECRET_KEY_SIZE }> {
-        Secret(self.0.to_bytes())
+    pub fn secret_bytes(&self) -> &Secret<32> {
+        &self.1
     }
 
     /// Execute ECDH agreement and return a raw (un-hashed) shared secret key.
@@ -65,18 +81,20 @@ impl C25519KeyPair {
 
 impl Clone for C25519KeyPair {
     fn clone(&self) -> Self {
-        Self(x25519_dalek::StaticSecret::from(self.0.to_bytes()), x25519_dalek::PublicKey::from(self.1.to_bytes()))
+        Self(x25519_dalek::StaticSecret::from(self.0.to_bytes()), self.1.clone(), x25519_dalek::PublicKey::from(self.1 .0.clone()))
     }
 }
 
 /// Ed25519 key pair for EDDSA signatures.
-pub struct Ed25519KeyPair(ed25519_dalek::Keypair);
+pub struct Ed25519KeyPair(ed25519_dalek::Keypair, Secret<32>);
 
 impl Ed25519KeyPair {
     #[inline(always)]
     pub fn generate() -> Ed25519KeyPair {
         let mut rng = SecureRandom::get();
-        Ed25519KeyPair(ed25519_dalek::Keypair::generate(&mut rng))
+        let kp = ed25519_dalek::Keypair::generate(&mut rng);
+        let sk2 = Secret(kp.secret.to_bytes());
+        Ed25519KeyPair(kp, sk2)
     }
 
     pub fn from_bytes(public_bytes: &[u8], secret_bytes: &[u8]) -> Option<Ed25519KeyPair> {
@@ -84,7 +102,11 @@ impl Ed25519KeyPair {
             let pk = ed25519_dalek::PublicKey::from_bytes(public_bytes);
             let sk = ed25519_dalek::SecretKey::from_bytes(secret_bytes);
             if pk.is_ok() && sk.is_ok() {
-                Some(Ed25519KeyPair(ed25519_dalek::Keypair { public: pk.unwrap(), secret: sk.unwrap() }))
+                // See comment in from_bytes() in C25519KeyPair for an explanation of the copy of the secret here.
+                let pk = pk.unwrap();
+                let sk = sk.unwrap();
+                let sk2 = Secret(sk.to_bytes());
+                Some(Ed25519KeyPair(ed25519_dalek::Keypair { public: pk, secret: sk }, sk2))
             } else {
                 None
             }
@@ -99,8 +121,8 @@ impl Ed25519KeyPair {
     }
 
     #[inline(always)]
-    pub fn secret_bytes(&self) -> Secret<{ ED25519_SECRET_KEY_SIZE }> {
-        Secret(self.0.secret.to_bytes())
+    pub fn secret_bytes(&self) -> &Secret<32> {
+        &self.1
     }
 
     pub fn sign(&self, msg: &[u8]) -> [u8; ED25519_SIGNATURE_SIZE] {
@@ -126,7 +148,7 @@ impl Ed25519KeyPair {
 
 impl Clone for Ed25519KeyPair {
     fn clone(&self) -> Self {
-        Self(ed25519_dalek::Keypair::from_bytes(&self.0.to_bytes()).unwrap())
+        Self(ed25519_dalek::Keypair::from_bytes(&self.0.to_bytes()).unwrap(), self.1.clone())
     }
 }
 

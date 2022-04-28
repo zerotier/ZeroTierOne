@@ -36,7 +36,7 @@ impl<const L: usize> Secret<L> {
 
     #[inline(always)]
     pub fn as_bytes(&self) -> &[u8; L] {
-        return &self.0;
+        &self.0
     }
 
     /// Get a clone of the first N bytes of this secret.

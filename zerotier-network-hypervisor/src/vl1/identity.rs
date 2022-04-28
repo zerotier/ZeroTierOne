@@ -41,9 +41,20 @@ pub const IDENTITY_ALGORITHM_EC_NIST_P384: u8 = 0x02;
 /// Bit mask to include all algorithms.
 pub const IDENTITY_ALGORITHM_ALL: u8 = 0xff;
 
-/// Current sanity limit for the size of a marshaled Identity (can be increased if needed).
-pub const MAX_MARSHAL_SIZE: usize =
-    ADDRESS_SIZE + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + 16;
+/// Current sanity limit for the size of a marshaled Identity
+/// This is padded just a little up to 512 and can be increased if new key types are ever added.
+pub const MAX_MARSHAL_SIZE: usize = 25
+    + ADDRESS_SIZE
+    + C25519_PUBLIC_KEY_SIZE
+    + ED25519_PUBLIC_KEY_SIZE
+    + C25519_SECRET_KEY_SIZE
+    + ED25519_SECRET_KEY_SIZE
+    + P384_PUBLIC_KEY_SIZE
+    + P384_PUBLIC_KEY_SIZE
+    + P384_SECRET_KEY_SIZE
+    + P384_SECRET_KEY_SIZE
+    + P384_ECDSA_SIGNATURE_SIZE
+    + ED25519_SIGNATURE_SIZE;
 
 /// Secret keys associated with NIST P-384 public keys.
 #[derive(Clone)]
@@ -110,6 +121,7 @@ fn concat_arrays_4<const A: usize, const B: usize, const C: usize, const D: usiz
 impl Identity {
     /// Generate a new identity.
     pub fn generate() -> Self {
+        // First generate an identity with just x25519 keys.
         let mut sha = SHA512::new();
         let ed25519 = Ed25519KeyPair::generate();
         let ed25519_pub = ed25519.public_bytes();
@@ -137,7 +149,6 @@ impl Identity {
             sha.reset();
         }
         drop(genmem_pool_obj);
-
         let mut id = Self {
             address,
             c25519: c25519_pub,
@@ -146,8 +157,11 @@ impl Identity {
             secret: Some(IdentitySecret { c25519, ed25519, p384: None }),
             fingerprint: [0_u8; 64], // replaced in upgrade()
         };
+
+        // Then "upgrade" to add NIST P-384 keys and compute fingerprint.
         assert!(id.upgrade().is_ok());
         assert!(id.p384.is_some() && id.secret.as_ref().unwrap().p384.is_some());
+
         id
     }
 
@@ -194,6 +208,7 @@ impl Identity {
         return Ok(false);
     }
 
+    /// Get a bit mask of algorithms present in this identity.
     #[inline(always)]
     pub fn algorithms(&self) -> u8 {
         if self.p384.is_some() {
@@ -248,8 +263,7 @@ impl Identity {
     /// NIST P-384 and the result is HMAC(Curve25519 secret, NIST P-384 secret).
     ///
     /// Nothing actually uses a 512-bit secret directly, but if the base secret is 512 bits then
-    /// no entropy is lost when deriving secrets with a KDF. Ciphers like AES use the first 256 bits
-    /// of these keys.
+    /// no entropy is lost when deriving smaller secrets with a KDF.
     pub fn agree(&self, other: &Identity) -> Option<Secret<64>> {
         self.secret.as_ref().and_then(|secret| {
             let c25519_secret = Secret(SHA512::hash(&secret.c25519.agree(&other.c25519).0));
@@ -267,27 +281,33 @@ impl Identity {
 
     /// Sign a message with this identity.
     ///
-    /// If legacy_compatibility is true this generates only an ed25519 signature. Otherwise it
-    /// will generate a signature using both the ed25519 key and the P-384 key if the latter
-    /// is present in the identity.
+    /// If legacy_compatibility is true this generates only an ed25519 signature and uses the old
+    /// format that also includes part of the plaintext hash at the end. The include_algorithms mask
+    /// will be ignored. Otherwise it will generate a signature for every algorithm with a secret
+    /// in this identity and that is specified in the include_algorithms bit mask.
     ///
     /// A return of None happens if we don't have our secret key(s) or some other error occurs.
-    pub fn sign(&self, msg: &[u8], legacy_compatibility: bool) -> Option<Vec<u8>> {
+    pub fn sign(&self, msg: &[u8], include_algorithms: u8, legacy_compatibility: bool) -> Option<Vec<u8>> {
         if self.secret.is_some() {
             let secret = self.secret.as_ref().unwrap();
             if legacy_compatibility {
                 Some(secret.ed25519.sign_zt(msg).to_vec())
-            } else if secret.p384.is_some() {
-                let mut tmp: Vec<u8> = Vec::with_capacity(1 + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE);
-                tmp.push(IDENTITY_ALGORITHM_X25519 | IDENTITY_ALGORITHM_EC_NIST_P384);
-                let _ = tmp.write_all(&secret.p384.as_ref().unwrap().ecdsa.sign(msg));
-                let _ = tmp.write_all(&secret.ed25519.sign(msg));
-                Some(tmp)
             } else {
-                let mut tmp: Vec<u8> = Vec::with_capacity(1 + ED25519_SIGNATURE_SIZE);
-                tmp.push(IDENTITY_ALGORITHM_X25519);
-                let _ = tmp.write_all(&secret.ed25519.sign(msg));
-                Some(tmp)
+                let mut tmp: Vec<u8> = Vec::with_capacity(1 + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE);
+                tmp.push(0);
+                if secret.p384.is_some() && (include_algorithms & IDENTITY_ALGORITHM_EC_NIST_P384) != 0 {
+                    *tmp.first_mut().unwrap() |= IDENTITY_ALGORITHM_EC_NIST_P384;
+                    let _ = tmp.write_all(&secret.p384.as_ref().unwrap().ecdsa.sign(msg));
+                }
+                if (include_algorithms & IDENTITY_ALGORITHM_X25519) != 0 {
+                    *tmp.first_mut().unwrap() |= IDENTITY_ALGORITHM_X25519;
+                    let _ = tmp.write_all(&secret.ed25519.sign(msg));
+                }
+                if tmp.len() > 1 {
+                    Some(tmp)
+                } else {
+                    None
+                }
             }
         } else {
             None
@@ -297,33 +317,42 @@ impl Identity {
     /// Verify a signature against this identity.
     pub fn verify(&self, msg: &[u8], mut signature: &[u8]) -> bool {
         if signature.len() == 96 {
-            // legacy ed25519-only signature with hash included
-            ed25519_verify(&self.ed25519, signature, msg)
+            // legacy ed25519-only signature with hash included detected by their unique size.
+            return ed25519_verify(&self.ed25519, signature, msg);
         } else if signature.len() > 1 {
+            // Otherwise we support compound signatures. Note that it's possible for there to be
+            // unknown algorithms here if we ever add e.g. a PQ signature scheme and older nodes
+            // don't support it, and therefore it's valid if all algorithms that are present and
+            // understood pass signature check. The 'passed' variable makes sure we can't pass without
+            // verifying at least one signature. If any present and understood algorithm fails the
+            // whole check fails, so you can't have one good and one bad signature.
             let algorithms = signature[0];
             signature = &signature[1..];
-            let mut ok = true;
-            let mut checked = false;
-            if ok && (algorithms & IDENTITY_ALGORITHM_EC_NIST_P384) != 0 && signature.len() >= P384_ECDSA_SIGNATURE_SIZE && self.p384.is_some() {
-                ok = self.p384.as_ref().unwrap().ecdsa.verify(msg, &signature[..P384_ECDSA_SIGNATURE_SIZE]);
+            let mut passed = false; // makes sure we can't pass with an empty signature!
+            if (algorithms & IDENTITY_ALGORITHM_EC_NIST_P384) != 0 && signature.len() >= P384_ECDSA_SIGNATURE_SIZE && self.p384.is_some() {
+                if !self.p384.as_ref().unwrap().ecdsa.verify(msg, &signature[..P384_ECDSA_SIGNATURE_SIZE]) {
+                    return false;
+                }
                 signature = &signature[P384_ECDSA_SIGNATURE_SIZE..];
-                checked = true;
+                passed = true;
             }
-            if ok && (algorithms & IDENTITY_ALGORITHM_X25519) != 0 && signature.len() >= ED25519_SIGNATURE_SIZE {
-                ok = ed25519_verify(&self.ed25519, &signature[..ED25519_SIGNATURE_SIZE], msg);
-                signature = &signature[ED25519_SIGNATURE_SIZE..];
-                checked = true;
+            if (algorithms & IDENTITY_ALGORITHM_X25519) != 0 && signature.len() >= ED25519_SIGNATURE_SIZE {
+                if !ed25519_verify(&self.ed25519, &signature[..ED25519_SIGNATURE_SIZE], msg) {
+                    return false;
+                }
+                //signature = &signature[ED25519_SIGNATURE_SIZE..];
+                passed = true;
             }
-            checked && ok
+            return passed;
         } else {
-            false
+            return false;
         }
     }
 
     #[inline(always)]
     pub fn to_bytes(&self, include_algorithms: u8, include_private: bool) -> Buffer<MAX_MARSHAL_SIZE> {
         let mut b: Buffer<MAX_MARSHAL_SIZE> = Buffer::new();
-        self.marshal(&mut b, include_algorithms, include_private).expect("internal error marshaling Identity");
+        assert!(self.marshal(&mut b, include_algorithms, include_private).is_ok());
         b
     }
 
@@ -335,16 +364,19 @@ impl Identity {
         let secret = self.secret.as_ref();
 
         buf.append_bytes_fixed(&self.address.to_bytes())?;
-        buf.append_u8(0x00)?; // LEGACY: 0x00 here for backward compatibility
-        buf.append_bytes_fixed(&self.c25519)?;
-        buf.append_bytes_fixed(&self.ed25519)?;
-        if include_private && secret.is_some() {
-            let secret = secret.unwrap();
-            buf.append_u8((C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8)?;
-            buf.append_bytes_fixed(&secret.c25519.secret_bytes().0)?;
-            buf.append_bytes_fixed(&secret.ed25519.secret_bytes().0)?;
-        } else {
-            buf.append_u8(0)?;
+
+        if (algorithms & IDENTITY_ALGORITHM_X25519) != 0 {
+            buf.append_u8(0x00)?; // 0x00 is used for X25519 for backward compatibility with v0 identities
+            buf.append_bytes_fixed(&self.c25519)?;
+            buf.append_bytes_fixed(&self.ed25519)?;
+            if include_private && secret.is_some() {
+                let secret = secret.unwrap();
+                buf.append_u8((C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8)?;
+                buf.append_bytes_fixed(&secret.c25519.secret_bytes().0)?;
+                buf.append_bytes_fixed(&secret.ed25519.secret_bytes().0)?;
+            } else {
+                buf.append_u8(0)?;
+            }
         }
 
         if (algorithms & IDENTITY_ALGORITHM_EC_NIST_P384) != 0 && self.p384.is_some() {
@@ -529,37 +561,48 @@ impl Identity {
         })
     }
 
-    /// Marshal this identity as a string with options to control which ciphers are included and whether private keys are included.
+    /// Marshal this identity as a string.
+    ///
+    /// The include_algorithms bitmap controls which algorithms will be included, provided we have them.
+    /// If include_private is true private keys will be included, again if we have them.
     pub fn to_string_with_options(&self, include_algorithms: u8, include_private: bool) -> String {
-        if include_private && self.secret.is_some() {
-            let secret = self.secret.as_ref().unwrap();
-            if (include_algorithms & IDENTITY_ALGORITHM_EC_NIST_P384) == IDENTITY_ALGORITHM_EC_NIST_P384 && secret.p384.is_some() && self.p384.is_some() {
-                let p384_secret = secret.p384.as_ref().unwrap();
-                let p384 = self.p384.as_ref().unwrap();
-                let p384_secret_joined: [u8; P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE] = concat_arrays_2(p384_secret.ecdh.secret_key_bytes().as_bytes(), p384_secret.ecdsa.secret_key_bytes().as_bytes());
-                let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(p384.ecdh.as_bytes(), p384.ecdsa.as_bytes(), &p384.ecdsa_self_signature, &p384.ed25519_self_signature);
-                format!(
-                    "{}:0:{}{}:{}{}:2:{}:{}",
-                    self.address.to_string(),
-                    hex::to_string(&self.c25519),
-                    hex::to_string(&self.ed25519),
-                    hex::to_string(&secret.c25519.secret_bytes().0),
-                    hex::to_string(&secret.ed25519.secret_bytes().0),
-                    base64::encode_config(p384_joined, base64::URL_SAFE_NO_PAD),
-                    base64::encode_config(p384_secret_joined, base64::URL_SAFE_NO_PAD)
-                )
-            } else {
-                format!("{}:0:{}{}:{}{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519), hex::to_string(&secret.c25519.secret_bytes().0), hex::to_string(&secret.ed25519.secret_bytes().0))
+        let include_p384 = self.p384.is_some() && ((include_algorithms & IDENTITY_ALGORITHM_EC_NIST_P384) != 0);
+
+        let mut s = String::with_capacity(MAX_MARSHAL_SIZE * 2);
+        s.push_str(self.address.to_string().as_str());
+
+        if (include_algorithms & IDENTITY_ALGORITHM_X25519) != 0 {
+            s.push_str(":0:"); // 0 used for x25519 for legacy reasons just like in marshal()
+            s.push_str(hex::to_string(&self.c25519).as_str());
+            s.push_str(hex::to_string(&self.ed25519).as_str());
+            if self.secret.is_some() && include_private {
+                let secret = self.secret.as_ref().unwrap();
+                s.push(':');
+                s.push_str(hex::to_string(secret.c25519.secret_bytes().as_bytes()).as_str());
+                s.push_str(hex::to_string(secret.ed25519.secret_bytes().as_bytes()).as_str());
+            } else if include_p384 {
+                s.push(':');
             }
-        } else {
-            self.p384.as_ref().map_or_else(
-                || format!("{}:0:{}{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519)),
-                |p384| {
-                    let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(p384.ecdh.as_bytes(), p384.ecdsa.as_bytes(), &p384.ecdsa_self_signature, &p384.ed25519_self_signature);
-                    format!("{}:0:{}{}::2:{}", self.address.to_string(), hex::to_string(&self.c25519), hex::to_string(&self.ed25519), base64::encode_config(p384_joined, base64::URL_SAFE_NO_PAD))
-                },
-            )
         }
+
+        if include_p384 {
+            let p384 = self.p384.as_ref().unwrap();
+
+            s.push_str(":2:"); // 2 == IDENTITY_ALGORITHM_EC_NIST_P384
+            let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(p384.ecdh.as_bytes(), p384.ecdsa.as_bytes(), &p384.ecdsa_self_signature, &p384.ed25519_self_signature);
+            s.push_str(base64::encode_config(p384_joined, base64::URL_SAFE_NO_PAD).as_str());
+            if self.secret.is_some() && include_private {
+                let secret = self.secret.as_ref().unwrap();
+                if secret.p384.is_some() {
+                    let p384_secret = secret.p384.as_ref().unwrap();
+                    let p384_secret_joined: [u8; P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE] = concat_arrays_2(p384_secret.ecdh.secret_key_bytes().as_bytes(), p384_secret.ecdsa.secret_key_bytes().as_bytes());
+                    s.push(':');
+                    s.push_str(base64::encode_config(p384_secret_joined, base64::URL_SAFE_NO_PAD).as_str());
+                }
+            }
+        }
+
+        s
     }
 
     /// Get this identity in string form with all ciphers and with secrets (if present)
@@ -618,8 +661,12 @@ impl FromStr for Identity {
             ptr += 1;
         }
 
-        let keys =
-            [hex::from_string(keys[0].unwrap_or("")), hex::from_string(keys[1].unwrap_or("")), base64::decode_config(keys[2].unwrap_or(""), base64::URL_SAFE_NO_PAD).unwrap_or_else(|_| Vec::new()), base64::decode_config(keys[3].unwrap_or(""), base64::URL_SAFE_NO_PAD).unwrap_or_else(|_| Vec::new())];
+        let keys = [
+            hex::from_string(keys[0].unwrap_or("")),
+            hex::from_string(keys[1].unwrap_or("")),
+            base64::decode_config(keys[2].unwrap_or(""), base64::URL_SAFE_NO_PAD).unwrap_or_else(|_| Vec::new()),
+            base64::decode_config(keys[3].unwrap_or(""), base64::URL_SAFE_NO_PAD).unwrap_or_else(|_| Vec::new()),
+        ];
         if keys[0].len() != C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE {
             return Err(InvalidFormatError);
         }
@@ -868,6 +915,7 @@ lazy_static! {
 /// Purge the memory pool used to verify identities. This can be called periodically
 /// from the maintenance function to prevent memory buildup from bursts of identity
 /// verification.
+#[allow(unused)]
 #[inline(always)]
 pub(crate) fn purge_verification_memory_pool() {
     ADDRESS_DERVIATION_MEMORY_POOL.purge();
@@ -926,6 +974,7 @@ mod tests {
 
         for id_str in GOOD_V0_IDENTITIES {
             let mut id = Identity::from_str(id_str).unwrap();
+            assert_eq!(id.to_string_with_options(IDENTITY_ALGORITHM_ALL, true).as_str(), id_str);
 
             assert!(id.validate_identity());
             assert!(id.p384.is_none());
@@ -956,6 +1005,7 @@ mod tests {
         }
         for id_str in GOOD_V1_IDENTITIES {
             let id = Identity::from_str(id_str).unwrap();
+            assert_eq!(id.to_string_with_options(IDENTITY_ALGORITHM_ALL, false).as_str(), id_str);
 
             assert!(id.validate_identity());
             assert!(id.p384.is_some());

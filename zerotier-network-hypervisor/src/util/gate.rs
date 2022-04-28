@@ -61,14 +61,7 @@ impl<const FREQ: i64> AtomicIntervalGate<FREQ> {
         if (time - prev_time) < FREQ {
             false
         } else {
-            loop {
-                let pt = self.0.swap(time, Ordering::AcqRel);
-                if pt <= time {
-                    break;
-                } else {
-                    time = pt;
-                }
-            }
+            self.0.store(time, Ordering::Release);
             true
         }
     }
