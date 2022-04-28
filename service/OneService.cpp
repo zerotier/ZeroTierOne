@@ -568,6 +568,7 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 		j["active"] = (bool)(peer->paths[i].expired == 0);
 		j["expired"] = (bool)(peer->paths[i].expired != 0);
 		j["preferred"] = (bool)(peer->paths[i].preferred != 0);
+		j["localSocket"] = peer->paths[i].localSocket;
 		pa.push_back(j);
 	}
 	pj["paths"] = pa;
