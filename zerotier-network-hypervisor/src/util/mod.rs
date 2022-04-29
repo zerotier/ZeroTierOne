@@ -57,11 +57,6 @@ impl std::hash::Hasher for U64NoOpHasher {
     }
 
     #[inline(always)]
-    fn write(&mut self, _: &[u8]) {
-        panic!("U64NoOpHasher should only be used with u64 and i64 types");
-    }
-
-    #[inline(always)]
     fn write_u64(&mut self, i: u64) {
         self.0 = self.0.wrapping_add(i);
     }
@@ -69,6 +64,31 @@ impl std::hash::Hasher for U64NoOpHasher {
     #[inline(always)]
     fn write_i64(&mut self, i: i64) {
         self.0 = self.0.wrapping_add(i as u64);
+    }
+
+    #[inline(always)]
+    fn write_usize(&mut self, i: usize) {
+        self.0 = self.0.wrapping_add(i as u64);
+    }
+
+    #[inline(always)]
+    fn write_isize(&mut self, i: isize) {
+        self.0 = self.0.wrapping_add(i as u64);
+    }
+
+    #[inline(always)]
+    fn write_u32(&mut self, i: u32) {
+        self.0 = self.0.wrapping_add(i as u64);
+    }
+
+    #[inline(always)]
+    fn write_i32(&mut self, i: i32) {
+        self.0 = self.0.wrapping_add(i as u64);
+    }
+
+    #[inline(always)]
+    fn write(&mut self, _: &[u8]) {
+        panic!("U64NoOpHasher should only be used with u64 and i64 types");
     }
 }
 

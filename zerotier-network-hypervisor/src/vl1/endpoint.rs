@@ -40,7 +40,7 @@ pub enum Endpoint {
     Nil,
 
     /// Via another node using unencapsulated relaying (e.g. via a root)
-    /// Hash is a full hash of the identity for strong verification.
+    /// This is the address and the full identity fingerprint.
     ZeroTier(Address, [u8; SHA512_HASH_SIZE]),
 
     /// Direct L2 Ethernet
@@ -68,7 +68,7 @@ pub enum Endpoint {
     WebRTC(Vec<u8>),
 
     /// Via another node using inner encapsulation via VERB_ENCAP.
-    /// Hash is a full hash of the identity for strong verification.
+    /// This is the address and the full identity fingerprint.
     ZeroTierEncap(Address, [u8; SHA512_HASH_SIZE]),
 }
 

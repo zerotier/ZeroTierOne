@@ -41,8 +41,8 @@ lazy_static! {
 /// for them and uniform application of things like keepalives.
 pub struct Path {
     endpoint: Mutex<Arc<Endpoint>>,
-    local_socket: Option<NonZeroI64>,
-    local_interface: Option<NonZeroI64>,
+    pub(crate) local_socket: Option<NonZeroI64>,
+    pub(crate) local_interface: Option<NonZeroI64>,
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     fragmented_packets: Mutex<HashMap<u64, FragmentedPacket, U64NoOpHasher>>,
@@ -98,26 +98,6 @@ impl Path {
         self.endpoint.lock().clone()
     }
 
-    #[inline(always)]
-    pub fn local_socket(&self) -> Option<NonZeroI64> {
-        self.local_socket
-    }
-
-    #[inline(always)]
-    pub fn local_interface(&self) -> Option<NonZeroI64> {
-        self.local_interface
-    }
-
-    #[inline(always)]
-    pub fn last_send_time_ticks(&self) -> i64 {
-        self.last_send_time_ticks.load(Ordering::Relaxed)
-    }
-
-    #[inline(always)]
-    pub fn last_receive_time_ticks(&self) -> i64 {
-        self.last_receive_time_ticks.load(Ordering::Relaxed)
-    }
-
     /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.
     /// This returns None if more fragments are needed to assemble the packet.
     pub(crate) fn receive_fragment(&self, packet_id: u64, fragment_no: u8, fragment_expecting_count: u8, packet: PacketBuffer, time_ticks: i64) -> Option<FragmentedPacket> {
@@ -145,30 +125,33 @@ impl Path {
         }
     }
 
+    /// Called when any packet is received.
     #[inline(always)]
     pub(crate) fn log_receive_anything(&self, time_ticks: i64) {
         self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
     }
 
+    /// Called when a real packet is received and passes authentication checks.
     pub(crate) fn log_receive_authenticated_packet(&self, _bytes: usize, source_endpoint: &Endpoint) {
-        let mut replace = false;
         match source_endpoint {
             Endpoint::IpUdp(ip) => {
-                let ep = self.endpoint.lock().clone();
-                match ep.as_ref() {
-                    Endpoint::IpUdp(ip_orig) => {
-                        debug_assert!(ip_orig.ip_bytes().eq(ip.ip_bytes()));
-                        if ip_orig.port() != ip.port() {
-                            replace = true;
+                // If an IPv4 UDP remote IP is the same but the port changes, learn the new port by replacing the
+                // endpoint with the new one. This is because IPv4 NATs will occasionally remap IPs at random.
+                if ip.is_ipv4() {
+                    let mut ep = self.endpoint.lock();
+                    match ep.as_ref() {
+                        Endpoint::IpUdp(ip_orig) => {
+                            // These should always be equal because this path would have been looked up by IP, but sanity check in debug.
+                            debug_assert_eq!(ip_orig.ip_bytes(), ip.ip_bytes());
+                            if ip_orig.port() != ip.port() {
+                                (*ep) = Arc::new(source_endpoint.clone());
+                            }
                         }
+                        _ => {}
                     }
-                    _ => {}
                 }
             }
             _ => {}
-        }
-        if replace {
-            (*self.endpoint.lock()) = Arc::new(source_endpoint.clone());
         }
     }
 
@@ -178,7 +161,6 @@ impl Path {
     }
 
     pub(crate) const CALL_EVERY_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
-
     pub(crate) fn call_every_interval<SI: SystemInterface>(&self, _si: &SI, time_ticks: i64) {
         self.fragmented_packets.lock().retain(|_, frag| (time_ticks - frag.ts_ticks) < PACKET_FRAGMENT_EXPIRATION);
     }

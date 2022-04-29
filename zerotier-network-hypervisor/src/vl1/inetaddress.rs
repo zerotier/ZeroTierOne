@@ -81,6 +81,7 @@ pub union InetAddress {
 impl TryInto<IpAddr> for InetAddress {
     type Error = crate::error::InvalidParameterError;
 
+    #[inline(always)]
     fn try_into(self) -> Result<IpAddr, Self::Error> {
         match unsafe { self.sa.sa_family } {
             AF_INET => Ok(IpAddr::V4(Ipv4Addr::from(unsafe { self.sin.sin_addr.s_addr.to_ne_bytes() }))),
@@ -93,6 +94,7 @@ impl TryInto<IpAddr> for InetAddress {
 impl TryInto<Ipv4Addr> for InetAddress {
     type Error = crate::error::InvalidParameterError;
 
+    #[inline(always)]
     fn try_into(self) -> Result<Ipv4Addr, Self::Error> {
         match unsafe { self.sa.sa_family } {
             AF_INET => Ok(Ipv4Addr::from(unsafe { self.sin.sin_addr.s_addr.to_ne_bytes() })),
@@ -104,6 +106,7 @@ impl TryInto<Ipv4Addr> for InetAddress {
 impl TryInto<Ipv6Addr> for InetAddress {
     type Error = crate::error::InvalidParameterError;
 
+    #[inline(always)]
     fn try_into(self) -> Result<Ipv6Addr, Self::Error> {
         match unsafe { self.sa.sa_family } {
             AF_INET6 => Ok(Ipv6Addr::from(unsafe { self.sin6.sin6_addr.s6_addr })),
@@ -115,6 +118,7 @@ impl TryInto<Ipv6Addr> for InetAddress {
 impl TryInto<SocketAddr> for InetAddress {
     type Error = crate::error::InvalidParameterError;
 
+    #[inline(always)]
     fn try_into(self) -> Result<SocketAddr, Self::Error> {
         unsafe {
             match self.sa.sa_family {
@@ -129,6 +133,7 @@ impl TryInto<SocketAddr> for InetAddress {
 impl TryInto<SocketAddrV4> for InetAddress {
     type Error = crate::error::InvalidParameterError;
 
+    #[inline(always)]
     fn try_into(self) -> Result<SocketAddrV4, Self::Error> {
         unsafe {
             match self.sa.sa_family {
@@ -142,6 +147,7 @@ impl TryInto<SocketAddrV4> for InetAddress {
 impl TryInto<SocketAddrV6> for InetAddress {
     type Error = crate::error::InvalidParameterError;
 
+    #[inline(always)]
     fn try_into(self) -> Result<SocketAddrV6, Self::Error> {
         unsafe {
             match self.sa.sa_family {
@@ -153,6 +159,7 @@ impl TryInto<SocketAddrV6> for InetAddress {
 }
 
 impl From<&IpAddr> for InetAddress {
+    #[inline(always)]
     fn from(ip: &IpAddr) -> Self {
         match ip {
             IpAddr::V4(ip4) => Self::from(ip4),
@@ -197,6 +204,7 @@ impl From<Ipv6Addr> for InetAddress {
 }
 
 impl From<&SocketAddr> for InetAddress {
+    #[inline(always)]
     fn from(sa: &SocketAddr) -> Self {
         match sa {
             SocketAddr::V4(sa4) => Self::from(sa4),
@@ -255,6 +263,7 @@ impl Default for InetAddress {
 }
 
 impl std::fmt::Debug for InetAddress {
+    #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.to_string())
     }
@@ -406,6 +415,7 @@ impl InetAddress {
     }
 
     /// Get the address family of this InetAddress: AF_INET, AF_INET6, or 0 if uninitialized.
+    #[inline(always)]
     pub fn family(&self) -> u8 {
         unsafe { self.sa.sa_family as u8 }
     }
@@ -449,7 +459,6 @@ impl InetAddress {
     }
 
     /// Get raw IP bytes, with length dependent on address family (4 or 16).
-    #[inline(always)]
     pub fn ip_bytes(&self) -> &[u8] {
         unsafe {
             match self.sa.sa_family as u8 {
@@ -464,7 +473,7 @@ impl InetAddress {
     /// Bytes are packed in native endian so the resulting u128 may not be the same between systems.
     /// This value is intended for local lookup use only.
     #[inline(always)]
-    pub fn ip_as_native_u128(&self) -> u128 {
+    pub(crate) fn ip_as_native_u128(&self) -> u128 {
         unsafe {
             match self.sa.sa_family as u8 {
                 AF_INET => self.sin.sin_addr.s_addr as u128,
@@ -475,7 +484,6 @@ impl InetAddress {
     }
 
     /// Get the IP port for this InetAddress.
-    #[inline(always)]
     pub fn port(&self) -> u16 {
         unsafe {
             u16::from_be(match self.sa.sa_family as u8 {
@@ -490,7 +498,6 @@ impl InetAddress {
     ///
     /// This does nothing on uninitialized InetAddress objects. An address must first
     /// be initialized with an IP to select the correct address type.
-    #[inline(always)]
     pub fn set_port(&mut self, port: u16) {
         let port = port.to_be();
         unsafe {

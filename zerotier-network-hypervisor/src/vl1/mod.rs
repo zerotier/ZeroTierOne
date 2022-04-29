@@ -10,14 +10,15 @@ pub mod endpoint;
 pub mod identity;
 pub mod inetaddress;
 
-pub(crate) mod address;
-pub(crate) mod dictionary;
+mod address;
+mod dictionary;
+mod mac;
+mod path;
+mod peer;
+
 pub(crate) mod fragmentedpacket;
 pub(crate) mod hybridkey;
-pub(crate) mod mac;
 pub(crate) mod node;
-pub(crate) mod path;
-pub(crate) mod peer;
 #[allow(unused)]
 pub(crate) mod protocol;
 pub(crate) mod symmetricsecret;
@@ -32,5 +33,3 @@ pub use mac::MAC;
 pub use node::{Node, SystemInterface};
 pub use path::Path;
 pub use peer::Peer;
-
-pub use protocol::{PACKET_FRAGMENT_COUNT_MAX, PACKET_SIZE_MAX};

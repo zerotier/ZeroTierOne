@@ -35,21 +35,30 @@ impl C25519KeyPair {
 
     pub fn from_bytes(public_key: &[u8], secret_key: &[u8]) -> Option<C25519KeyPair> {
         if public_key.len() == 32 && secret_key.len() == 32 {
-            // NOTE: we keep the original secret separately from x25519_dalek's StaticSecret
-            // due to how "clamping" is done in the old C++ code vs x25519_dalek. Clamping
-            // is explained here:
-            //
-            // https://www.jcraige.com/an-explainer-on-ed25519-clamping
-            //
-            // In the old C++ code clamping is done when the secret key is actually used.
-            // In x25519_dalek it's done when the key is loaded into one of the secret
-            // containers. Unfortunately this means that identities' secret keys won't look
-            // the same in the actual identity structure vs. what you would get from the C++
-            // v0 ZeroTier implementation. The cryptographic results are identical but we
-            // still need to have our identity spit out identical bits when exported.
-            //
-            // Newly generated keys will be clamped at generation time, which will also yield
-            // identical results in both cases.
+            /* NOTE: we keep the original secret separately from x25519_dalek's StaticSecret
+             * due to how "clamping" is done in the old C++ code vs x25519_dalek. Clamping
+             * is explained here:
+             *
+             * https://www.jcraige.com/an-explainer-on-ed25519-clamping
+             *
+             * The old code does clamping at the time of use. In other words the code that
+             * performs things like key agreement or signing clamps the secret before doing
+             * the operation. The x25519_dalek code does clamping at generation or when
+             * from() is used to get a key from a raw byte array.
+             *
+             * Unfortunately this introduces issues when interoperating with old code. The
+             * old system generates secrets that are not clamped (since they're clamped at
+             * use!) and assumes that these exact binary keys will be preserved in e.g.
+             * identities. So to preserve this behavior we store the secret separately
+             * so secret_bytes() will return it as-is.
+             *
+             * The new code will still clamp at generation resulting in secrets that are
+             * pre-clamped, but the old code won't care about this. It's only a problem when
+             * going the other way.
+             *
+             * This has no cryptographic implication since regardless of where, the clamping
+             * is done. It's just an API thing.
+             */
             let pk: [u8; 32] = public_key.try_into().unwrap();
             let sk_orig: Secret<32> = Secret(secret_key.try_into().unwrap());
             let pk = x25519_dalek::PublicKey::from(pk);

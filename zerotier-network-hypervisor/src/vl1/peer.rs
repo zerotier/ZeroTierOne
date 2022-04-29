@@ -221,7 +221,18 @@ impl Peer {
     ///
     /// If the packet comes in multiple fragments, the fragments slice should contain all
     /// those fragments after the main packet header and first chunk.
-    pub(crate) fn receive<SI: SystemInterface, VI: InnerProtocolInterface>(&self, node: &Node, si: &SI, vi: &VI, time_ticks: i64, source_endpoint: &Endpoint, source_path: &Arc<Path>, header: &PacketHeader, frag0: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
+    pub(crate) fn receive<SI: SystemInterface, VI: InnerProtocolInterface>(
+        &self,
+        node: &Node,
+        si: &SI,
+        vi: &VI,
+        time_ticks: i64,
+        source_endpoint: &Endpoint,
+        source_path: &Arc<Path>,
+        header: &PacketHeader,
+        frag0: &Buffer<{ PACKET_SIZE_MAX }>,
+        fragments: &[Option<PacketBuffer>],
+    ) {
         let _ = frag0.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_without_memzero() };
 
@@ -375,7 +386,7 @@ impl Peer {
     /// via a root or some other route.
     pub(crate) fn send<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.path(node).map_or(false, |path| {
-            if self.send_to_endpoint(si, path.endpoint().as_ref(), path.local_socket(), path.local_interface(), packet) {
+            if self.send_to_endpoint(si, path.endpoint().as_ref(), path.local_socket, path.local_interface, packet) {
                 self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
                 self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
                 true
@@ -394,7 +405,7 @@ impl Peer {
     /// Intermediates don't need to adjust fragmentation.
     pub(crate) fn forward<SI: SystemInterface>(&self, si: &SI, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.direct_path().map_or(false, |path| {
-            if si.wire_send(path.endpoint().as_ref(), path.local_socket(), path.local_interface(), &[packet.as_bytes()], 0) {
+            if si.wire_send(path.endpoint().as_ref(), path.local_socket, path.local_interface, &[packet.as_bytes()], 0) {
                 self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
                 self.total_bytes_forwarded.fetch_add(packet.len() as u64, Ordering::Relaxed);
                 true
@@ -517,7 +528,7 @@ impl Peer {
         path.map_or_else(
             || self.send_to_endpoint(si, &destination, None, None, &packet),
             |p| {
-                if self.send_to_endpoint(si, &destination, p.local_socket(), p.local_interface(), &packet) {
+                if self.send_to_endpoint(si, &destination, p.local_socket, p.local_interface, &packet) {
                     p.log_send_anything(time_ticks);
                     true
                 } else {

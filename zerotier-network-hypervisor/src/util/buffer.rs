@@ -13,15 +13,20 @@ use crate::util::pool::PoolFactory;
 
 /// Annotates a structure as containing only primitive types.
 ///
-/// The structure must be safe to copy in raw form and access without concern for alignment, or if
-/// it does contain elements that require alignment special care must be taken when accessing them
-/// at least on platforms where it matters.
-pub unsafe trait RawObject: Sized {}
+/// This means the structure is safe to copy in raw form, does not need to be dropped, and otherwise
+/// contains nothing complex that requires any special handling. It also implies that it is safe to
+/// access without concern for alignment on platforms on which this is an issue, or at least that
+/// the implementer must take care to guard any unaligned access in appropriate ways. FlatBlob
+/// structures are generally repr(C, packed) as well to make them deterministic across systems.
+///
+/// The Buffer has special methods allowing these structs to be read and written in place, which
+/// would be unsafe without these concerns being flagged as not applicable.
+pub unsafe trait FlatBlob: Sized {}
 
 /// A safe bounds checked I/O buffer with extensions for convenient appending of RawObject types.
 pub struct Buffer<const L: usize>(usize, [u8; L]);
 
-unsafe impl<const L: usize> RawObject for Buffer<L> {}
+unsafe impl<const L: usize> FlatBlob for Buffer<L> {}
 
 impl<const L: usize> Default for Buffer<L> {
     #[inline(always)]
@@ -146,7 +151,7 @@ impl<const L: usize> Buffer<L> {
 
     /// Append a structure and return a mutable reference to its memory.
     #[inline(always)]
-    pub fn append_struct_get_mut<T: RawObject>(&mut self) -> std::io::Result<&mut T> {
+    pub fn append_struct_get_mut<T: FlatBlob>(&mut self) -> std::io::Result<&mut T> {
         let ptr = self.0;
         let end = ptr + size_of::<T>();
         if end <= L {
@@ -322,7 +327,7 @@ impl<const L: usize> Buffer<L> {
 
     /// Get a structure at a given position in the buffer.
     #[inline(always)]
-    pub fn struct_at<T: RawObject>(&self, ptr: usize) -> std::io::Result<&T> {
+    pub fn struct_at<T: FlatBlob>(&self, ptr: usize) -> std::io::Result<&T> {
         if (ptr + size_of::<T>()) <= self.0 {
             unsafe { Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()) }
         } else {
@@ -332,7 +337,7 @@ impl<const L: usize> Buffer<L> {
 
     /// Get a structure at a given position in the buffer.
     #[inline(always)]
-    pub fn struct_mut_at<T: RawObject>(&mut self, ptr: usize) -> std::io::Result<&mut T> {
+    pub fn struct_mut_at<T: FlatBlob>(&mut self, ptr: usize) -> std::io::Result<&mut T> {
         if (ptr + size_of::<T>()) <= self.0 {
             unsafe { Ok(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()) }
         } else {
@@ -351,7 +356,7 @@ impl<const L: usize> Buffer<L> {
 
     /// Get a structure at a given position in the buffer and advance the cursor.
     #[inline(always)]
-    pub fn read_struct<T: RawObject>(&self, cursor: &mut usize) -> std::io::Result<&T> {
+    pub fn read_struct<T: FlatBlob>(&self, cursor: &mut usize) -> std::io::Result<&T> {
         let ptr = *cursor;
         let end = ptr + size_of::<T>();
         debug_assert!(end <= L);

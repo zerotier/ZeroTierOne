@@ -349,7 +349,6 @@ impl Identity {
         }
     }
 
-    #[inline(always)]
     pub fn to_bytes(&self, include_algorithms: u8, include_private: bool) -> Buffer<MAX_MARSHAL_SIZE> {
         let mut b: Buffer<MAX_MARSHAL_SIZE> = Buffer::new();
         assert!(self.marshal(&mut b, include_algorithms, include_private).is_ok());

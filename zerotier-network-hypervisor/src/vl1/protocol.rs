@@ -9,7 +9,7 @@
 use std::convert::TryFrom;
 use std::mem::MaybeUninit;
 
-use crate::util::buffer::{Buffer, RawObject};
+use crate::util::buffer::{Buffer, FlatBlob};
 use crate::vl1::Address;
 
 pub const VERB_VL1_NOP: u8 = 0x00;
@@ -220,7 +220,7 @@ pub struct PacketHeader {
     pub mac: [u8; 8],
 }
 
-unsafe impl RawObject for PacketHeader {}
+unsafe impl FlatBlob for PacketHeader {}
 
 impl PacketHeader {
     #[inline(always)]
@@ -284,7 +284,7 @@ pub struct FragmentHeader {
     pub reserved_hops: u8,         // rrrrrHHH (3 hops bits, rest reserved)
 }
 
-unsafe impl RawObject for FragmentHeader {}
+unsafe impl FlatBlob for FragmentHeader {}
 
 impl FragmentHeader {
     #[inline(always)]
@@ -322,7 +322,7 @@ impl FragmentHeader {
 }
 
 pub(crate) mod message_component_structs {
-    use crate::util::buffer::RawObject;
+    use crate::util::buffer::FlatBlob;
 
     #[repr(C, packed)]
     pub struct OkHeader {
@@ -330,7 +330,7 @@ pub(crate) mod message_component_structs {
         pub in_re_message_id: [u8; 8],
     }
 
-    unsafe impl RawObject for OkHeader {}
+    unsafe impl FlatBlob for OkHeader {}
 
     #[repr(C, packed)]
     pub struct ErrorHeader {
@@ -339,7 +339,7 @@ pub(crate) mod message_component_structs {
         pub error_code: u8,
     }
 
-    unsafe impl RawObject for ErrorHeader {}
+    unsafe impl FlatBlob for ErrorHeader {}
 
     #[repr(C, packed)]
     pub struct HelloFixedHeaderFields {
@@ -351,7 +351,7 @@ pub(crate) mod message_component_structs {
         pub timestamp: [u8; 8],        // u64
     }
 
-    unsafe impl RawObject for HelloFixedHeaderFields {}
+    unsafe impl FlatBlob for HelloFixedHeaderFields {}
 
     #[repr(C, packed)]
     pub struct OkHelloFixedHeaderFields {
@@ -362,7 +362,7 @@ pub(crate) mod message_component_structs {
         pub version_revision: [u8; 2], // u16
     }
 
-    unsafe impl RawObject for OkHelloFixedHeaderFields {}
+    unsafe impl FlatBlob for OkHelloFixedHeaderFields {}
 }
 
 #[cfg(test)]
