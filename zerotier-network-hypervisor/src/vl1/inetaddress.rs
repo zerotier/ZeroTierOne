@@ -15,6 +15,8 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use crate::util::marshalable::Marshalable;
+
 #[cfg(windows)]
 use winapi::um::winsock2;
 
@@ -647,8 +649,12 @@ impl InetAddress {
             }
         }
     }
+}
 
-    pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
+impl Marshalable for InetAddress {
+    const MAX_MARSHAL_SIZE: usize = 19;
+
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         unsafe {
             match self.sa.sa_family as u8 {
                 AF_INET => {
@@ -672,7 +678,7 @@ impl InetAddress {
         }
     }
 
-    pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<InetAddress> {
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<InetAddress> {
         let t = buf.read_u8(cursor)?;
         if t == 4 {
             let b: &[u8; 6] = buf.read_bytes_fixed(cursor)?;

@@ -104,11 +104,20 @@ pub trait InnerProtocolInterface: Sync + Send {
     fn has_trust_relationship(&self, id: &Identity) -> bool;
 }
 
+/// Trait for objects that are serviced in the background loop (the actual loop is external).
+pub(crate) trait BackgroundServicable {
+    /// How often in milliseconds to call service().
+    const SERVICE_INTERVAL_MS: i64;
+
+    /// Service object and return true if the object should be retained (if applicable).
+    fn service<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64) -> bool;
+}
+
 #[derive(Default)]
 struct BackgroundTaskIntervals {
-    whois: IntervalGate<{ WhoisQueue::INTERVAL }>,
-    paths: IntervalGate<{ Path::CALL_EVERY_INTERVAL_MS }>,
-    peers: IntervalGate<{ Peer::CALL_EVERY_INTERVAL_MS }>,
+    whois: IntervalGate<{ WhoisQueue::SERVICE_INTERVAL_MS }>,
+    paths: IntervalGate<{ Path::SERVICE_INTERVAL_MS }>,
+    peers: IntervalGate<{ Peer::SERVICE_INTERVAL_MS }>,
 }
 
 pub struct Node {
@@ -152,7 +161,7 @@ impl Node {
                 }
             } else {
                 let id_str = String::from_utf8_lossy(id_str.as_ref().unwrap().as_slice());
-                let id = Identity::from_str(id_str.as_ref());
+                let id = Identity::from_str(id_str.as_ref().trim());
                 if id.is_err() {
                     return Err(InvalidParameterError("invalid identity"));
                 } else {
@@ -170,7 +179,7 @@ impl Node {
             instance_id: zerotier_core_crypto::random::next_u64_secure(),
             identity: id,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
-            paths: DashMap::with_capacity(128),
+            paths: DashMap::with_capacity(256),
             peers: DashMap::with_capacity(128),
             roots: Mutex::new(Vec::new()),
             whois: WhoisQueue::new(),
@@ -208,27 +217,18 @@ impl Node {
         let tt = si.time_ticks();
 
         if intervals.peers.gate(tt) {
-            self.peers.retain(|_, peer| {
-                peer.call_every_interval(si, tt);
-                todo!();
-                true
-            });
+            self.peers.retain(|_, peer| peer.service(si, self, tt));
         }
 
         if intervals.paths.gate(tt) {
-            self.paths.retain(|_, path| {
-                path.upgrade().map_or(false, |p| {
-                    p.call_every_interval(si, tt);
-                    true
-                })
-            });
+            self.paths.retain(|_, path| path.upgrade().map_or(false, |p| p.service(si, self, tt)));
         }
 
         if intervals.whois.gate(tt) {
-            self.whois.call_every_interval(self, si, tt);
+            let _ = self.whois.service(si, self, tt);
         }
 
-        Duration::from_millis(WhoisQueue::INTERVAL.min(Path::CALL_EVERY_INTERVAL_MS).min(Peer::CALL_EVERY_INTERVAL_MS) as u64 / 4)
+        Duration::from_millis((WhoisQueue::SERVICE_INTERVAL_MS.min(Path::SERVICE_INTERVAL_MS).min(Peer::SERVICE_INTERVAL_MS) as u64) / 2)
     }
 
     /// Called when a packet is received on the physical wire.
@@ -237,14 +237,16 @@ impl Node {
             if let Some(dest) = Address::from_bytes(&fragment_header.dest) {
                 let time_ticks = si.time_ticks();
                 if dest == self.identity.address {
-                    // Handle packets addressed to this node.
+                    // Handle packets (seemingly) addressed to this node.
 
-                    let path = self.path(source_endpoint, source_local_socket, source_local_interface);
+                    let path = self.path_to_endpoint(source_endpoint, source_local_socket, source_local_interface);
                     path.log_receive_anything(time_ticks);
 
                     if fragment_header.is_fragment() {
                         if let Some(assembled_packet) = path.receive_fragment(u64::from_ne_bytes(fragment_header.id), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks) {
                             if let Some(frag0) = assembled_packet.frags[0].as_ref() {
+                                // Fragmented packet is fully assembled.
+
                                 let packet_header = frag0.struct_at::<PacketHeader>(0);
                                 if packet_header.is_ok() {
                                     let packet_header = packet_header.unwrap();
@@ -260,6 +262,8 @@ impl Node {
                         }
                     } else {
                         if let Ok(packet_header) = data.struct_at::<PacketHeader>(0) {
+                            // Packet is not fragmented.
+
                             if let Some(source) = Address::from_bytes(&packet_header.src) {
                                 if let Some(peer) = self.peer(source) {
                                     peer.receive(self, si, ph, time_ticks, source_endpoint, &path, &packet_header, data.as_ref(), &[]);
@@ -271,7 +275,6 @@ impl Node {
                     }
                 } else {
                     // Forward packets not destined for this node.
-                    // TODO: need to add check for whether this node should forward. Regular nodes should only forward if a trust relationship exists.
 
                     if fragment_header.is_fragment() {
                         if fragment_header.increment_hops() > FORWARD_MAX_HOPS {
@@ -286,6 +289,7 @@ impl Node {
                             return;
                         }
                     }
+
                     if let Some(peer) = self.peer(dest) {
                         peer.forward(si, time_ticks, data.as_ref());
                     }
@@ -308,7 +312,7 @@ impl Node {
     ///
     /// This is a canonicalizing function that returns a unique path object for every tuple
     /// of endpoint, local socket, and local interface.
-    pub fn path(&self, ep: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Arc<Path> {
+    pub fn path_to_endpoint(&self, ep: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Arc<Path> {
         let key = Path::local_lookup_key(ep, local_socket, local_interface);
         let mut path_entry = self.paths.entry(key).or_insert_with(|| Weak::new());
         if let Some(path) = path_entry.value().upgrade() {

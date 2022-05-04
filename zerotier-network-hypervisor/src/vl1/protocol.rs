@@ -180,6 +180,9 @@ pub const WHOIS_RETRY_MAX: u16 = 3;
 /// Maximum number of packets to queue up behind a WHOIS.
 pub const WHOIS_MAX_WAITING_PACKETS: usize = 64;
 
+/// Keepalive interval for paths in milliseconds.
+pub const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
+
 /// Proof of work difficulty (threshold) for identity generation.
 pub const IDENTITY_POW_THRESHOLD: u8 = 17;
 

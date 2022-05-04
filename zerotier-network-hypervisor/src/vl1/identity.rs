@@ -28,6 +28,7 @@ use zerotier_core_crypto::x25519::*;
 
 use crate::error::{InvalidFormatError, InvalidParameterError};
 use crate::util::buffer::Buffer;
+use crate::util::marshalable::Marshalable;
 use crate::util::pool::{Pool, PoolFactory, Pooled};
 use crate::vl1::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_POW_THRESHOLD};
 use crate::vl1::Address;
@@ -43,7 +44,7 @@ pub const IDENTITY_ALGORITHM_ALL: u8 = 0xff;
 
 /// Current sanity limit for the size of a marshaled Identity
 /// This is padded just a little up to 512 and can be increased if new key types are ever added.
-pub const MAX_MARSHAL_SIZE: usize = 25
+pub(crate) const MAX_MARSHAL_SIZE: usize = 25
     + ADDRESS_SIZE
     + C25519_PUBLIC_KEY_SIZE
     + ED25519_PUBLIC_KEY_SIZE
@@ -86,8 +87,10 @@ pub struct IdentitySecret {
 /// for human-readable formats and binary otherwise.
 ///
 /// SECURITY NOTE: for security reasons secret keys are NOT exported by default by to_string()
-/// or by the serde serializer. If you want secrets you must use to_string_with_options() or
-/// marshal(). This is to prevent accidental leakage of secrets by naive code.
+/// or the default marshal() in Marshalable. You must use to_string_with_options() and
+/// marshal_with_options() to get secrets. The clone() method on the other hand does duplicate
+/// secrets so as not to violate the contract of creating an exact duplicate of the object.
+/// There is a clone_without_secrets() if this isn't wanted.
 #[derive(Clone)]
 pub struct Identity {
     pub address: Address,
@@ -121,7 +124,7 @@ fn concat_arrays_4<const A: usize, const B: usize, const C: usize, const D: usiz
 impl Identity {
     /// Generate a new identity.
     pub fn generate() -> Self {
-        // First generate an identity with just x25519 keys.
+        // First generate an identity with just x25519 keys and derive its address.
         let mut sha = SHA512::new();
         let ed25519 = Ed25519KeyPair::generate();
         let ed25519_pub = ed25519.public_bytes();
@@ -185,13 +188,16 @@ impl Identity {
             let _ = self_sign_buf.write_all(p384_ecdh.public_key_bytes());
             let _ = self_sign_buf.write_all(p384_ecdsa.public_key_bytes());
 
+            // Fingerprint includes only the above fields, so calc before appending the ECDSA signature.
+            self.fingerprint = SHA512::hash(self_sign_buf.as_slice());
+
             // Sign all keys including the x25519 ones with the new P-384 keys.
             let ecdsa_self_signature = p384_ecdsa.sign(self_sign_buf.as_slice());
 
-            // Sign everything with the original ed25519 key to bind the new key pairs. Include the ECDSA
-            // signature because these signatures are not deterministic. We don't want the ability to
-            // make a new identity with the same address but a different fingerprint by mangling the
-            // ECDSA signature in some way.
+            // Sign everything with the original ed25519 key to bind the new key pairs. Include ECDSA
+            // signature because ECDSA signatures are randomized and we want only this specific one.
+            // Identities should be rigid. (Ed25519 signatures are deterministic.)
+            let _ = self_sign_buf.write_all(&ecdsa_self_signature);
             let ed25519_self_signature = self.secret.as_ref().unwrap().ed25519.sign(self_sign_buf.as_slice());
 
             let _ = self.p384.insert(IdentityP384Public {
@@ -201,11 +207,22 @@ impl Identity {
                 ed25519_self_signature,
             });
             let _ = self.secret.as_mut().unwrap().p384.insert(IdentityP384Secret { ecdh: p384_ecdh, ecdsa: p384_ecdsa });
-            self.fingerprint = SHA512::hash(self_sign_buf.as_slice());
 
             return Ok(true);
         }
         return Ok(false);
+    }
+
+    /// Create a clone minus any secret key it holds.
+    pub fn clone_without_secret(&self) -> Identity {
+        Self {
+            address: self.address,
+            c25519: self.c25519.clone(),
+            ed25519: self.ed25519.clone(),
+            p384: self.p384.clone(),
+            secret: None,
+            fingerprint: self.fingerprint.clone(),
+        }
     }
 
     /// Get a bit mask of algorithms present in this identity.
@@ -237,12 +254,13 @@ impl Identity {
                 return false;
             }
 
+            let _ = self_sign_buf.write_all(&p384.ecdsa_self_signature);
             if !ed25519_verify(&self.ed25519, &p384.ed25519_self_signature, self_sign_buf.as_slice()) {
                 return false;
             }
         }
 
-        // NOTE: fingerprint is always computed locally, so no need to check it.
+        // NOTE: fingerprint is always computed on generation or deserialize so no need to check.
 
         let mut sha = SHA512::new();
         sha.update(&self.c25519);
@@ -349,16 +367,16 @@ impl Identity {
         }
     }
 
-    pub fn to_bytes(&self, include_algorithms: u8, include_private: bool) -> Buffer<MAX_MARSHAL_SIZE> {
+    pub fn to_buffer_with_options(&self, include_algorithms: u8, include_private: bool) -> Buffer<MAX_MARSHAL_SIZE> {
         let mut b: Buffer<MAX_MARSHAL_SIZE> = Buffer::new();
-        assert!(self.marshal(&mut b, include_algorithms, include_private).is_ok());
+        assert!(self.marshal_with_options(&mut b, include_algorithms, include_private).is_ok());
         b
     }
 
     const P384_PUBLIC_AND_PRIVATE_BUNDLE_SIZE: u16 = (P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE + P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE) as u16;
     const P384_PUBLIC_ONLY_BUNDLE_SIZE: u16 = (P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE) as u16;
 
-    pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_algorithms: u8, include_private: bool) -> std::io::Result<()> {
+    pub fn marshal_with_options<const BL: usize>(&self, buf: &mut Buffer<BL>, include_algorithms: u8, include_private: bool) -> std::io::Result<()> {
         let algorithms = self.algorithms() & include_algorithms;
         let secret = self.secret.as_ref();
 
@@ -423,141 +441,6 @@ impl Identity {
         }
 
         Ok(())
-    }
-
-    pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Identity> {
-        let address = Address::from_bytes(buf.read_bytes_fixed::<ADDRESS_SIZE>(cursor)?);
-        if !address.is_some() {
-            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid address"));
-        }
-        let address = address.unwrap();
-
-        let mut x25519_public: Option<([u8; C25519_PUBLIC_KEY_SIZE], [u8; ED25519_PUBLIC_KEY_SIZE])> = None;
-        let mut x25519_secret: Option<([u8; C25519_SECRET_KEY_SIZE], [u8; ED25519_SECRET_KEY_SIZE])> = None;
-        let mut p384_ecdh_ecdsa_public: Option<(P384PublicKey, P384PublicKey, [u8; P384_ECDSA_SIGNATURE_SIZE], [u8; ED25519_SIGNATURE_SIZE])> = None;
-        let mut p384_ecdh_ecdsa_secret: Option<([u8; P384_SECRET_KEY_SIZE], [u8; P384_SECRET_KEY_SIZE])> = None;
-
-        loop {
-            let algorithm = buf.read_u8(cursor);
-            if algorithm.is_err() {
-                break;
-            }
-            match algorithm.unwrap() {
-                0x00 | IDENTITY_ALGORITHM_X25519 => {
-                    let a = buf.read_bytes_fixed::<C25519_PUBLIC_KEY_SIZE>(cursor)?;
-                    let b = buf.read_bytes_fixed::<ED25519_PUBLIC_KEY_SIZE>(cursor)?;
-                    x25519_public = Some((a.clone(), b.clone()));
-                    let sec_size = buf.read_u8(cursor)?;
-                    if sec_size == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8 {
-                        let a = buf.read_bytes_fixed::<C25519_SECRET_KEY_SIZE>(cursor)?;
-                        let b = buf.read_bytes_fixed::<ED25519_SECRET_KEY_SIZE>(cursor)?;
-                        x25519_secret = Some((a.clone(), b.clone()));
-                    } else if sec_size != 0 {
-                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid x25519 secret"));
-                    }
-                }
-                0x03 => {
-                    // This isn't an algorithm; each algorithm is identified by just one bit. This
-                    // indicates the total size of the section after the x25519 keys for backward
-                    // compatibility. See comments in marshal(). New versions can ignore this field.
-                    *cursor += 2;
-                }
-                IDENTITY_ALGORITHM_EC_NIST_P384 => {
-                    let size = buf.read_u16(cursor)?;
-                    if size < Self::P384_PUBLIC_ONLY_BUNDLE_SIZE {
-                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p384 public key"));
-                    }
-                    let a = buf.read_bytes_fixed::<P384_PUBLIC_KEY_SIZE>(cursor)?;
-                    let b = buf.read_bytes_fixed::<P384_PUBLIC_KEY_SIZE>(cursor)?;
-                    let c = buf.read_bytes_fixed::<P384_ECDSA_SIGNATURE_SIZE>(cursor)?;
-                    let d = buf.read_bytes_fixed::<ED25519_SIGNATURE_SIZE>(cursor)?;
-                    let a = P384PublicKey::from_bytes(a);
-                    let b = P384PublicKey::from_bytes(b);
-                    if a.is_none() || b.is_none() {
-                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p384 public key"));
-                    }
-                    p384_ecdh_ecdsa_public = Some((a.unwrap(), b.unwrap(), c.clone(), d.clone()));
-                    if size > Self::P384_PUBLIC_ONLY_BUNDLE_SIZE {
-                        if size != Self::P384_PUBLIC_AND_PRIVATE_BUNDLE_SIZE {
-                            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p384 secret key"));
-                        }
-                        let a = buf.read_bytes_fixed::<P384_SECRET_KEY_SIZE>(cursor)?;
-                        let b = buf.read_bytes_fixed::<P384_SECRET_KEY_SIZE>(cursor)?;
-                        p384_ecdh_ecdsa_secret = Some((a.clone(), b.clone()));
-                    }
-                }
-                _ => {
-                    // Skip any unrecognized cipher suites, all of which will be prefixed by a size.
-                    *cursor += buf.read_u16(cursor)? as usize;
-                    if *cursor > buf.len() {
-                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid field length"));
-                    }
-                }
-            }
-        }
-
-        if x25519_public.is_none() {
-            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "x25519 key missing"));
-        }
-        let x25519_public = x25519_public.unwrap();
-
-        let mut sha = SHA512::new();
-        sha.update(&address.to_bytes());
-        sha.update(&x25519_public.0);
-        sha.update(&x25519_public.1);
-        if p384_ecdh_ecdsa_public.is_some() {
-            let p384 = p384_ecdh_ecdsa_public.as_ref().unwrap();
-            sha.update(&[IDENTITY_ALGORITHM_EC_NIST_P384]);
-            sha.update(p384.0.as_bytes());
-            sha.update(p384.1.as_bytes());
-        }
-
-        Ok(Identity {
-            address,
-            c25519: x25519_public.0.clone(),
-            ed25519: x25519_public.1.clone(),
-            p384: if p384_ecdh_ecdsa_public.is_some() {
-                let p384_ecdh_ecdsa_public = p384_ecdh_ecdsa_public.as_ref().unwrap();
-                Some(IdentityP384Public {
-                    ecdh: p384_ecdh_ecdsa_public.0.clone(),
-                    ecdsa: p384_ecdh_ecdsa_public.1.clone(),
-                    ecdsa_self_signature: p384_ecdh_ecdsa_public.2.clone(),
-                    ed25519_self_signature: p384_ecdh_ecdsa_public.3.clone(),
-                })
-            } else {
-                None
-            },
-            secret: if x25519_secret.is_some() {
-                let x25519_secret = x25519_secret.unwrap();
-                let c25519_secret = C25519KeyPair::from_bytes(&x25519_public.0, &x25519_secret.0);
-                let ed25519_secret = Ed25519KeyPair::from_bytes(&x25519_public.1, &x25519_secret.1);
-                if c25519_secret.is_none() || ed25519_secret.is_none() {
-                    return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "x25519 public key invalid"));
-                }
-                Some(IdentitySecret {
-                    c25519: c25519_secret.unwrap(),
-                    ed25519: ed25519_secret.unwrap(),
-                    p384: if p384_ecdh_ecdsa_secret.is_some() && p384_ecdh_ecdsa_public.is_some() {
-                        let p384_ecdh_ecdsa_public = p384_ecdh_ecdsa_public.as_ref().unwrap();
-                        let p384_ecdh_ecdsa_secret = p384_ecdh_ecdsa_secret.as_ref().unwrap();
-                        let p384_ecdh_secret = P384KeyPair::from_bytes(p384_ecdh_ecdsa_public.0.as_bytes(), &p384_ecdh_ecdsa_secret.0);
-                        let p384_ecdsa_secret = P384KeyPair::from_bytes(p384_ecdh_ecdsa_public.1.as_bytes(), &p384_ecdh_ecdsa_secret.1);
-                        if p384_ecdh_secret.is_none() || p384_ecdsa_secret.is_none() {
-                            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "p384 secret key invalid"));
-                        }
-                        Some(IdentityP384Secret {
-                            ecdh: p384_ecdh_secret.unwrap(),
-                            ecdsa: p384_ecdsa_secret.unwrap(),
-                        })
-                    } else {
-                        None
-                    },
-                })
-            } else {
-                None
-            },
-            fingerprint: sha.finish(),
-        })
     }
 
     /// Marshal this identity as a string.
@@ -751,6 +634,150 @@ impl FromStr for Identity {
     }
 }
 
+impl Marshalable for Identity {
+    const MAX_MARSHAL_SIZE: usize = MAX_MARSHAL_SIZE;
+
+    #[inline(always)]
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
+        self.marshal_with_options(buf, IDENTITY_ALGORITHM_ALL, false)
+    }
+
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Identity> {
+        let address = Address::from_bytes(buf.read_bytes_fixed::<ADDRESS_SIZE>(cursor)?);
+        if !address.is_some() {
+            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid address"));
+        }
+        let address = address.unwrap();
+
+        let mut x25519_public: Option<([u8; C25519_PUBLIC_KEY_SIZE], [u8; ED25519_PUBLIC_KEY_SIZE])> = None;
+        let mut x25519_secret: Option<([u8; C25519_SECRET_KEY_SIZE], [u8; ED25519_SECRET_KEY_SIZE])> = None;
+        let mut p384_ecdh_ecdsa_public: Option<(P384PublicKey, P384PublicKey, [u8; P384_ECDSA_SIGNATURE_SIZE], [u8; ED25519_SIGNATURE_SIZE])> = None;
+        let mut p384_ecdh_ecdsa_secret: Option<([u8; P384_SECRET_KEY_SIZE], [u8; P384_SECRET_KEY_SIZE])> = None;
+
+        loop {
+            let algorithm = buf.read_u8(cursor);
+            if algorithm.is_err() {
+                break;
+            }
+            match algorithm.unwrap() {
+                0x00 | IDENTITY_ALGORITHM_X25519 => {
+                    let a = buf.read_bytes_fixed::<C25519_PUBLIC_KEY_SIZE>(cursor)?;
+                    let b = buf.read_bytes_fixed::<ED25519_PUBLIC_KEY_SIZE>(cursor)?;
+                    x25519_public = Some((a.clone(), b.clone()));
+                    let sec_size = buf.read_u8(cursor)?;
+                    if sec_size == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8 {
+                        let a = buf.read_bytes_fixed::<C25519_SECRET_KEY_SIZE>(cursor)?;
+                        let b = buf.read_bytes_fixed::<ED25519_SECRET_KEY_SIZE>(cursor)?;
+                        x25519_secret = Some((a.clone(), b.clone()));
+                    } else if sec_size != 0 {
+                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid x25519 secret"));
+                    }
+                }
+                0x03 => {
+                    // This isn't an algorithm; each algorithm is identified by just one bit. This
+                    // indicates the total size of the section after the x25519 keys for backward
+                    // compatibility. See comments in marshal(). New versions can ignore this field.
+                    *cursor += 2;
+                }
+                IDENTITY_ALGORITHM_EC_NIST_P384 => {
+                    let size = buf.read_u16(cursor)?;
+                    if size < Self::P384_PUBLIC_ONLY_BUNDLE_SIZE {
+                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p384 public key"));
+                    }
+                    let a = buf.read_bytes_fixed::<P384_PUBLIC_KEY_SIZE>(cursor)?;
+                    let b = buf.read_bytes_fixed::<P384_PUBLIC_KEY_SIZE>(cursor)?;
+                    let c = buf.read_bytes_fixed::<P384_ECDSA_SIGNATURE_SIZE>(cursor)?;
+                    let d = buf.read_bytes_fixed::<ED25519_SIGNATURE_SIZE>(cursor)?;
+                    let a = P384PublicKey::from_bytes(a);
+                    let b = P384PublicKey::from_bytes(b);
+                    if a.is_none() || b.is_none() {
+                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p384 public key"));
+                    }
+                    p384_ecdh_ecdsa_public = Some((a.unwrap(), b.unwrap(), c.clone(), d.clone()));
+                    if size > Self::P384_PUBLIC_ONLY_BUNDLE_SIZE {
+                        if size != Self::P384_PUBLIC_AND_PRIVATE_BUNDLE_SIZE {
+                            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid p384 secret key"));
+                        }
+                        let a = buf.read_bytes_fixed::<P384_SECRET_KEY_SIZE>(cursor)?;
+                        let b = buf.read_bytes_fixed::<P384_SECRET_KEY_SIZE>(cursor)?;
+                        p384_ecdh_ecdsa_secret = Some((a.clone(), b.clone()));
+                    }
+                }
+                _ => {
+                    // Skip any unrecognized cipher suites, all of which will be prefixed by a size.
+                    *cursor += buf.read_u16(cursor)? as usize;
+                    if *cursor > buf.len() {
+                        return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid field length"));
+                    }
+                }
+            }
+        }
+
+        if x25519_public.is_none() {
+            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "x25519 key missing"));
+        }
+        let x25519_public = x25519_public.unwrap();
+
+        let mut sha = SHA512::new();
+        sha.update(&address.to_bytes());
+        sha.update(&x25519_public.0);
+        sha.update(&x25519_public.1);
+        if p384_ecdh_ecdsa_public.is_some() {
+            let p384 = p384_ecdh_ecdsa_public.as_ref().unwrap();
+            sha.update(&[IDENTITY_ALGORITHM_EC_NIST_P384]);
+            sha.update(p384.0.as_bytes());
+            sha.update(p384.1.as_bytes());
+        }
+
+        Ok(Identity {
+            address,
+            c25519: x25519_public.0.clone(),
+            ed25519: x25519_public.1.clone(),
+            p384: if p384_ecdh_ecdsa_public.is_some() {
+                let p384_ecdh_ecdsa_public = p384_ecdh_ecdsa_public.as_ref().unwrap();
+                Some(IdentityP384Public {
+                    ecdh: p384_ecdh_ecdsa_public.0.clone(),
+                    ecdsa: p384_ecdh_ecdsa_public.1.clone(),
+                    ecdsa_self_signature: p384_ecdh_ecdsa_public.2.clone(),
+                    ed25519_self_signature: p384_ecdh_ecdsa_public.3.clone(),
+                })
+            } else {
+                None
+            },
+            secret: if x25519_secret.is_some() {
+                let x25519_secret = x25519_secret.unwrap();
+                let c25519_secret = C25519KeyPair::from_bytes(&x25519_public.0, &x25519_secret.0);
+                let ed25519_secret = Ed25519KeyPair::from_bytes(&x25519_public.1, &x25519_secret.1);
+                if c25519_secret.is_none() || ed25519_secret.is_none() {
+                    return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "x25519 public key invalid"));
+                }
+                Some(IdentitySecret {
+                    c25519: c25519_secret.unwrap(),
+                    ed25519: ed25519_secret.unwrap(),
+                    p384: if p384_ecdh_ecdsa_secret.is_some() && p384_ecdh_ecdsa_public.is_some() {
+                        let p384_ecdh_ecdsa_public = p384_ecdh_ecdsa_public.as_ref().unwrap();
+                        let p384_ecdh_ecdsa_secret = p384_ecdh_ecdsa_secret.as_ref().unwrap();
+                        let p384_ecdh_secret = P384KeyPair::from_bytes(p384_ecdh_ecdsa_public.0.as_bytes(), &p384_ecdh_ecdsa_secret.0);
+                        let p384_ecdsa_secret = P384KeyPair::from_bytes(p384_ecdh_ecdsa_public.1.as_bytes(), &p384_ecdh_ecdsa_secret.1);
+                        if p384_ecdh_secret.is_none() || p384_ecdsa_secret.is_none() {
+                            return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "p384 secret key invalid"));
+                        }
+                        Some(IdentityP384Secret {
+                            ecdh: p384_ecdh_secret.unwrap(),
+                            ecdsa: p384_ecdsa_secret.unwrap(),
+                        })
+                    } else {
+                        None
+                    },
+                })
+            } else {
+                None
+            },
+            fingerprint: sha.finish(),
+        })
+    }
+}
+
 impl PartialEq for Identity {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
@@ -789,7 +816,7 @@ impl Serialize for Identity {
             serializer.serialize_str(self.to_string_with_options(IDENTITY_ALGORITHM_ALL, false).as_str())
         } else {
             let mut tmp: Buffer<MAX_MARSHAL_SIZE> = Buffer::new();
-            assert!(self.marshal(&mut tmp, IDENTITY_ALGORITHM_ALL, false).is_ok());
+            assert!(self.marshal_with_options(&mut tmp, IDENTITY_ALGORITHM_ALL, false).is_ok());
             serializer.serialize_bytes(tmp.as_bytes())
         }
     }
@@ -922,6 +949,7 @@ pub(crate) fn purge_verification_memory_pool() {
 
 #[cfg(test)]
 mod tests {
+    use crate::util::marshalable::Marshalable;
     use crate::vl1::identity::{Identity, IDENTITY_ALGORITHM_ALL};
     use std::str::FromStr;
     use std::time::{Duration, SystemTime};
@@ -941,16 +969,16 @@ mod tests {
         "aec623e59d:0:d7b1a715d95490611b8d467bbee442e3c88949f677371d3692da92f5b23d9e01bb916596cc1ddd2d5e0e5ecd6c750bb71ad2ba594b614b771c6f07b39dbe4126:ae4e4759d67158dcc54ede8c8ddb08acac49baf8b816883fc0ac5b6e328d17ced5f05ee0b4cd20b03bc5005471795c29206b835081b873fef26d3941416bd626",
     ];
     const GOOD_V1_IDENTITIES: [&'static str; 10] = [
-        "a8f6e0566e:0:a13a6394de205384eb75eb62179ef11423295c5ecdccfeed7f2eff6c7a74f8059c99eed164c5dfaf2a4cf395ec7b72b68ee1c3c31916de4bc57c07abfe77f9c2::2:A1Cj2O0hKLlhDQ6guCCv5H1UgzbegZwse0iqTaaZov9LpKifyKH0e1VzmHrPmoKcvgJyzI-BAqRQzBiUjScXIjojneNKOywc0Gvq-zeDCYPcXN393xi3q25mB3ud9iEN-GN6wiXPWFjHy-CBD9tGDJzr-G3ZJZvrdiLGT5rZ5W2cZtx8ORYnp9L9HJJOeb8qgdfVr67B5pT9jPsxSsw8P4qlzFFOlX2WN9Hvvu0TO6S_N4yq173deyr-f-ehcBFiBXsSG96p44oU4uRRBEDZWhzHDuD22Vw8PhsB8mko9IRqVXCGbvlaKJ0vyAZ_PyVRM9n_Z-HAEvLveAT-f61mh4YP",
-        "d913346e57:0:afa3bb56d4f8aae1f91205e3629fa80db32f8a67698a0ba4e5a948105572b91f7f5368d4bcbf99424e359d8ac461ebd075d336a91651968d31c625d2c6dcd7ca::2:A_ApZGZgN_ImMs7FawasAsthZ5NIqcjp1vAj0Gjcrl8ugwY2CXbHIKFCertcdPNEuQM5HIYmfIB3iTXN3-CtjgBgI5KpJ_Jzm-BoTQKgSHlhVfiSbUQkgmlntXK8yG165rYDdAyA4U7vAipOT9kdeolr4WddCso11M0B_V7O72u0Nmquaw0KRF-GpS_LaM96LHJBKoTSwKrymmgelXV8VYnO-tY_YJPWtdtfXjoI9nz6q4cTHgQDw3NlUDMt1Zd7c9d7jrKI-FOca2GycVtDEHGq2yxZl7dPHWrpP96yr9NXrziXJo9UWaxJW0nMka7eTRwzzhhdIsM9Ra-2k4pZmvEH",
-        "ad52ee12b3:0:e8cafd1e4794f259a481b466009b3d1a267653246d21ba9c5feb803ff63cc829f6e45070585f069440cb5ad46b8f17ab90894be7efce7d3d1de6ee00ce7d3fe5::2:A_DC0dhns3PEzcdo6HKr83BSZ-Jc7R25HTkAq9r7HHAhC7Fg49ijzTJ9FT5p0_t-7AKZHxLpCOf8h4bwTCSqUDl5UT5_5m4X3aHCEyUwZR0CjbNaXL2lZVlPn3EnuBEq5w3zKHO8LeYPIXPgmsG0KkUk3eRXDjgZF24YNY4Iu10IMVLgiSAMWRveh5Dg_ShkEWWsbBK5IHkWm9tqkthm61sg9FgLbyWRsj3D-GF_X6g3Tz3a9iOKiTzTX2roR4OERbxnWV5lFggrlkoJFEUm0MsKTCX8ul_gO_bhYUIXSqibVn7XlIF_fj69frWgDgBB4ehCuBDuoMopRgbTZYWw9BEP",
-        "2e7864c663:0:6564af3f6feb9a8239ec9d7e4e8f1ded503dbac95d5f197c73103b4f9e325c322f82284a22e4eefa9a4077d7b25d335845858fdae85f2b0eef1fca27f45015e9::2:AyvRLX_lyzC6DTtK6JSd-Gxk954kHWDIuUwY8PFCUv-xrzmWKIJqNM_FWkFhzlon9wKaqWbTzHm3Frb39zzvC-24-AkYVnnvkoOlUaifnk8a0ndfvTHruYoBZ_ojJqsonErET-cZrRZ_QjeShHYmlggz1W_Ipkcut7R0vjLev5jHGQSZh7CYNo7FsGc7POjxUKgUD7F1DNnbb623Ecq9A7uZoTDcER5wjNhjR9ov1cVUExPHD_BLiszRMCFvTxqPDZB-_1HUw3KhRjUed0k_pF2HQkbfggiQ9ZPcGTNur17Y2fc8-P1hcH5LIZA6bt1AjXAM4R1bfTHUpiA01WJHe5QL",
-        "3ab7e39024:0:44f07b42dad081542e3c24f39b39fe6ca6b168236578a8360600682cd98bb904636a2f90ef5e3f09bb690362383e9a5fcd84a6b4cd74ac5fe73e2514eb701471::2:Ar7x1arjl5HnkLCufDF-QpD2n9UqfaMvZXCcxVGVyfDfWnwCzEkzPFJwmrRYXoRW2ANnkjijRfJI4aADvd0rxthp4NLkkXdWIyzifnLVgPO0ieRTv6wveAPYGHFHpi6wnKiUEq40zcAXe4XEdY1YHeMyTaArg33vQSw9lUvHmvxIsh1BErYe1_TSxkxqogVu_X_9QXiIu6fn1BXTuYcLDOKOQzPurl_1g2uILhow9wV_jlMsmEIIA6LNgcmQtR-Qyvl4j9--cmQyZ3GNw1Qx5EnTwCkiLyoLGnrynqxVFBriJTU6wYvZEHBgPGBy9AtkI9B7J4IMTNi6RM1fcu6Kv4QH",
-        "d29e7b84cf:0:b1d15bfd75bedfafe92b556deee8c9c820d6ef7688d4020f7032bee59a1d3a5f6afa74d06c6391f0c7dba12eb2501b737abc5a64c16dae54fe4b63b575930363::2:Apad_7rAJvntlpC1-ikl174cAHI7iHUOWiTk3XOMmAUVkmwWO-qUoDkpsYd6jrSCzAIyopjlJIlK0Fw8O8Y4n4njLzVqXsWTGE61CBouoYcMwm0qNVbu6R8RiYnWTg247dvfttQCzLu66ZKwsMTl7_iS52FnUdNC-nznYvqSHRQYOVTamVTWfMxIc0tsYcyRumkLn0q9bzvOarHCuxB2oV2Wu1sLpPQEqe3qNThtxObfFcTVsDcMCSq8gcii0jLJxSrK7Bv7ZkoIq4Q0lD_JH9bp-v_52l7CRye8gZaa-3wScenW9VnxAEWly7YiHgRIF2oNZMbavXyM2PJuv4CvAnUJ",
-        "2e9dc1b7fc:0:4bb7eda550d7fe1f50b9bf473d9141d086728f773755abb66c45ba35e134264e80e26d77944a1a7e2aecb3000117735f0b74a2efa4fb2e4f3ca8d2346ea39485::2:A6B4txc97pW0JR3bXm-90_OuOJBs54p0gD9crTVnHi6mMTAujELLh7_E3aNh6XKviwNi-UXZgI5ip21RayLH3EiUOErSWO2sxQWi-lUY5XyeSwp-sOqDuRtgZVXDdBUsWf4X5lW2K_Oly5gD7InS29QVu2kkHxnd_FEKvC0-EF_jCr_UTiR_Mki0MZIGoecP_5a_CRTsLuVg7i0c5_pEypNcys6flXtNSpzev0ramywTkIN7IU3b-9lL4nsxwMlTHS2qXR-NQP-Ic9yIZ-NR-wr6tW7IcsTR9D0jB5H8SZyBMzXF90zaRLL_YgUZKRJ6TFlvHu2moNHdqSjvnklf1UoE",
-        "37cab19425:0:d9c9e16a56dc1a7e51b575b9a2d63a39c4d2d4d3b7b6ec9120a434aff0f3d54e09ac0fc5452b78613154611944d4d0372a8cab42e29dd2c062375f21f750f12f::2:A9ACtecFby8mpN9nAGc_UE7AMBS035_z28KiXHfbqL7T2uoI2ig0HRYjAB_E_WYhzgJb6AykhZtQ6wUInzSZCttpxSgnbnvJQ56bkkKa-QIlE68KlG8DBt0rIvf9T30q3z_Yd9NVsqJhpJJyQMin1juqpQ7rKNNQLe95XXv28lWrELYgXroDnnF2RWJF4BBDcISx4mNLaXJgojAaT6EqoletIA-9_71rl0SeKDh6cV8leMGYkdkFsqPXhvf3-mx9_seuTOFmQvohXf3pGjWjK0jJGEiQHblo2h7KEMnuwDSsZNjx7UsiqyXEH98jP-haXmuLyWgOkSIj6FeaYBn8ir4D",
-        "d9b3ef808f:0:fff56156ccbb67cfbcb22f8e11360e1f72049c607b0d037ef0502d6332c1dc4ac52caad347fd1a797272b1afe1cdd78203e0672d50af3d349e1db3c8f73f815e::2:A2XJ4QNrEQC9sh_dNrhDre2YkX4IWesb9H6c466Tg99sWEpDPOxsSLkflPj0uLL3wQJHlCgBwpd6zQJRaxABCaQzri-ODlN_z58M1casR47Ez_E3ZoznKG3I3Dh4cTo0fchudJiPF2sE66cRI_in20-95LpbbQeP6_PquiG0z_C9zEbIOopfllM4GlsXx_KKV6pYHooWNpai6QEGU9KRyJJqOVY3wh3v0lYJNNN8BG00rj_TQBR0ZuPhEE5pM2KiOWkhpgC-P3AChn1oQp78fH08FVoW9TXyQMArsGp7Cj-j-jvG6PyRfLUxI90h_taqPrLPnGHYZ5wqkFlsRDs86pIE",
-        "637cb047d7:0:fe11b6f03dc441f6070b631d2f948d74381b7b6da83cbfbdc859bbc7c7ee6675963576322830f52d01929b47703151cb9462f82103781a172a5542aec3d69f88::2:AzLuKAy1qkieKWN6fYDduBzkK7m330NJoLByI6S8-LeyfsWNXxn6XLO1mFklAPwvnAOdatyaEUYE5S2zGIdRFkWOBiTXNnzCTNBVhVQC0VXua4tqIL8BlumH_unK4oAEIRGWlt5gyU9wmpFJtA27b0YUUwUzR9V1cSnze5oxwheWlsT5befZQbR8sNOP89Jh9fkYxoHCWTiaBT7LtmD_kGCahXZXt6EK5nypJkyN_Pkj7Csyk2Y7gCFjo4kz86UFa-wM88zDFzrxrM4cnQT2unatIoiTATTZBOg7hRM5elvtWt5P-4sUMHHmsQwukF6bgYuQkpgD2AZ3o6y7pIYWrUIE"
+        "b9553fc08f:0:e5b69b67aba3fbb35fb5b26e3f8d98bd081944c0153350c2fbd0e5d4d68c4d19b0c33c44c7933c9e7d02162a56abad2de4ebe9e2bf606d7021b92e7412e20270:487b70af891cfd47d847e12739623abd67ed1a3554c4bcaf73a7e44178b1c04a9e59f4b4cedc17b6de00f8f7b26880fea6f82fdc67e371f5cfcab7a1f44dd267:2:AjvDSgtrnnkvMheXcH8P42wXPjPNVYedfvFldPUr7Xn_icixyCAoNGkXwTNEMN9xpwNqq9mvfqQa-mOUJUz8yiWTNqnw8T1Esaf-OGZSu-leWOEbmCswVIl94qNsjS5g8Kx4BHzTtkx2t_quKMoelK5EOscwAwEiFS94r1nUau3H9QBQWNr9v44_8_Dbj-V6Eeo70ZwiU2bCUlsvoBS5ae1Aepktv6Usi1Yzl9L-6v22VH0RLLinY_b_r63sdf4LSay9YZ8b4GnMYkXb_0KqDTSZXxsiDUb1lhmE63ARsLo9b9X8oKm_Kog5ZXhnMUUjN6DObiDjJ5pdyjvPEXlxzOoD:IKPkJFOW9NbDYSl2Aagb1OQ4HyDDN6iQpDhECBE84nUQj5KbN-IGU5a-IVvO3K1UyYcDfKnb2PMycSungUWO9LKbWFykXDKDmoWL0Sz7yEmfshDn96KTevLNpCbRNiAj",
+        "2f67e50239:0:a79b755302a4fd4805bea5b4e3f12cbf75e9adee50dce2cff48252eeb5e9803b8cf677cc5488851e5c64796b251ac9eca78af01a1825966e3d7d1fc06da4779e:48815d7f81db7709d88067d14fc8cb8a91b24eea70b791603002812619c73f4dabbba724dfb76d188c9150daef9ff4d650a5825752840683027c569fa478ca41:2:AmVWC14Qx4OEERfjBRvECvsbPPgRmuJr2N6ypX-ewfyEsZwQ8kVX2c3mrTsyfnUSuQJrjLh9p7L7G2Fv6LI0T7AXlL8_Hczk_81UlhV9eG9Dj70p4NtPWcAeH-osDJPCDTZmNx4cke6DQ8XwDeU_NFLOm_GKniNj85oO9iVRt40BZLD89S-bloPxptd4vT4QP07YL3VnRyLNUEn1PLnvedBwfU9WSSbGtYVOTYNElr4Jgmt6WK78Yq4bgQogayu8eKCb5AeS0A4vwVf0Ii7nsYOHnEQE-g7MSmV01awR2PC9hL8_uviZQKdNROYx9LKQrXLeszxl0cHawmB8hoOAnxkH:D0lKhr2LBBY8wTlrI2RaxI3bq9fZeJuU6xTbCOfF442YFjTIrqtGokDzirUYpVfMsCyT2nS-xmYDGBmDDAIEdG3x9fWuCjD1trib9ZKCB-1bX21ZOOUzsux9q6EByox9",
+        "484d3aabbc:0:0574978881591073ecdfa9e48ae0dce17b285896695e12e7f4f1c76f4abf0a03e22d12d97363542cdb59c0387533f49295a5831de758901328392021e28488fb:58ae228ba918e8558e1f8167b0e3612d9f58e48ff3caaa5c1aafd9cc4e81c7634a7d6b6c5859f539836e28bcd6d7a0d14760134b643d89bdc8d369765501fce8:2:AwTUxHZP6YGmdUzno2_JW6RLRaR8Qr_jyUXcbRVXTismnvzr2ERwSqXMlc3I3qvTBgOUFhl2oNXDNdiuCPsDINJuSiez9sm5nx3yzfYdwP636VjoLzjdGBnh82Sp9jNsYx1ZlK8ZWl2zzlNtdLs30OKvm-xhSmr5Mpkx9VK12j5jm8VDsoTMwAW3kjOBjCIy7kQ7gd61I89W4f7KIntjz1ZW9yuon3XWfFDbskUqbe7sQIldAvOKcggaZQWWljVrnn6hT4k6UwjDPyA_i2CaUTJmn_lVxilsW6UGXeIFyo-opG62zpVeBQcOhblIu9ndkAXpK0KJLjdppvDAwmTk8cEH:grMfFb7ZGfz5-SBX-JLoiY2BW5DJ5rvAsO0Aop1npYMnSHL2VM_56eiYiBlwZ7zdKyYWdA_BRApPl5x0iCQcqXLhgQAVn-iL5edFHTGIF8HLRVcLn6_XIz7_u5TAydXp",
+        "210ae3e250:0:d3fb8d2c651a4b5d2cdfe8ac07ed3aa2c303ff5250990d08aa5998fa8017335d2aff2b82bb153cb349c91e4177e16e718bcc74586644a582d8702481e30a813d:f8d31b46693c013f392da1180806edfaa7c389c1040f8e772195c086fd0d44617b9eb809e21e9de0e44b06236a5997b04522dc78218eca76b6c66f6ab8034770:2:Ai6daBUu73oul4o4lpH-xt2jufhIOIeZFR34vrO4MlY8oC258FPdg-e57467BS8pfQKkSh_Qvrarwl4kHgpCfANqWhFS7jdnvRTwWXPNESwsP04y8ZoGtR3-p8eaq9qUYWiZg7qnfvcoqecvySpk3gZIthZOXEtchID0InjYmkbCipHZcyzUDP82hkbrWlZWFySMVwP2sDUc_WT6Lyx4aMP83R1ZMTVw1-Q-peK8Ihevw4yCfOuF_iJOMxsek-NAA4R9n2gYhQJIDOn8Hj7zuNIffjcgoDOSX-pJr0mke_elL0u5Hgnko9qAPIH6PGQJRt5U5tpa5E-beJ0_aGaBWMwK:YC-wYTJu8l_7ZfUoK4xXP6fdVjon4QPQXE92fVgvs7-B2Sw2bsbus9-QGmWcUmJPWvrnpmkT14sgoyf7mWWoJFo93DCHm8dWheC8-cDUMIQ12uHgBKL33r6Ka57kgY71",
+        "f947dd72f4:0:5221ae17483f5dfe954a0240ebf0d2b466ff7f7f67cdd702eeadbe2e510dd26a795e15b2c84f85e610becb2ca049c73687dbcc8c6407cfade6a191c6e7f70377:501adf90810f5cd095581dd0f2929184db36278fd6b48909e3a10d80560bf5603d2750143063730932b31f240ea1c30f0349d017a363a75c6c1b95b8d0c659e5:2:AvXfGGmMG2OZRaamtGYJkatdUSHv4Z1PfbdKExOGwWnOewYGcPTvBDChtlAg9IwqOgJ9-XSnSFxgskoQtI8wDFXRhrr659_FFAzM-oyQ9sj3ZrSXYnFNPpfoyiennT2nsQmP2MoahrQCMerQIIO86EXc98BWVZJO79LC5fxhTK1EWzE9APvOBFulv6c-W9dxVlD9CT-oIAjqIBL8hVUgKLdWPmtzGmAd4NnfrfiHDx4zaAkoSmFxyuUOCvfp8AioGXNLrHwIPqquOqQKw2tcIHnDaHA72JpjOV7787Eb_2pTwFhyzJVKixDrESNqhI-35SHrcsaJel1mUOGcweliqEkB:NHS7hGLadxiuFWRqT48kp1NvZ0jf4Po861scAhIFRP4hLMe6Uuk4TGmajBEzZhQjz-60as3nQN5VaHg1NjE5eFUbJuijAagi4dEyvzsQWg4HPUYn8hNe9Z95vz-n5DgO",
+        "e11c31a215:0:db25e87625513ba531ac19eff743bf6e769517776e964bec1eaed38c559de3518167075d21ea4d89d611628c559ee52336537583201dcf46f2546e3f8bcdc7ec:40a09a8a1bd5f071262a79ad52c5a6b485318ad58ec38bebf432236bece7624c96b9ef2737eb992ae15c0d63c439c384b63aa35467aee5c686c5201cf7617158:2:A4VDDuVuH4UpctYg5_-rDhLduiHcColHzGAVudbe9ri0kTx7D_paVFYG-YUZaJu4LALW8FgWbjoEYjXepWErZWrZJk-MxrA-8IfeotLDZQbBNC5V_UxpDlPt-gRdyYpz-mN5KLe21shP0JiO7eL-rnGqYS4lmw8Fk_vHDq0AL1rNCIQn6x0k0jVZsXE0SUq_8BfrC3ufI4-D-KuqpdozdR54E4vUxT6WZpoeahMFlT0w87XPbeIp4RerWw4tuuBMfvyvm9cQCqQkAaOPNT4TEzLQwlQasf1pFE3aCguvdU4i2SuIhGIXaukHoXP5nWLibQpILd71bEnwX7wBCgIrBjUM:7IXCtpXjI0RQ2I478353Ab-7iFXv9VNa9SPR18M8ra1CpZWgPD5hkfl0PRyaHkBdzvpb2VkZ0TFTIigh8ZkFUeJxgu84i_AXIaPEsTa9fevCagbR57caRa-xqLRe4Onl",
+        "69fc019ddf:0:ebb1b3c67b2c658e60afa1d14fc5586946aeb5f3abb42e3deb684d4eaa4ed04ff758e4af6770184e6aecc52d090a7992279886c88de1ca99ce80bf04d01a48e9:6011b9bed796b82bf2f981a92fdc94b62d6942a25323208ab193227935c429412a239889c8a5c07960706d936d3497db5c5bef80f5ca3f162d96d305374e3dd9:2:AiFYEjbjMSSYf8gXtV-r9YDnl6RVgKmckZi25ss3yLLi5hvdB92I8Vr80QiHcXbGkgO2YBJ1_EUMTQAeiL1VlaY3mSKf0Q892yjeoqe7sOJiWrvx1x2Xl4zD2kHi2pbLy1NA7NUkroJamJ4Z5J__rq8yNv4bsqEr2iaTiADWxKfpLRc29cjA11eiUq_Xjj72gBpr78DmT_-N63OAUhBPSHHrA60NannkvkRKcy7WsCr9pB9L0QSZd3BgoYE78VAfaOx9gJw4vihkel3lFEXEaIyoJhwcFxEBIsnfl0gagQ7NeCqRkEzeiXDVS1pFOY3BCu6zV5Q-Aqtw5yqozSXxa9QN:jmOd2wCLT5z09JXJMXOMPk91I1in7qhq0Rsdsi-xEYenHs3nPX5k___FZ3bpFYqjx914Yy65QrXKkThr3hysgiXztEtILYOr8yXf56O16Io-XB6L6CK0VrKnSb4p40Lf",
+        "74152a45b9:0:11a049ebf24d6e9911c68e1c849b4290c8b72bff2954699e54138446573e041346fa34e09b697ae3a9d7c6f94aeb1b21e54745fab10f7a56df22947ef20a5c7d:e8d19530a8ce8685ba39ca69eabfb3d0fad5ed63bf59f025a3658f33e6c629737e49e57b3c91026ef8648d6a473c8ee9f7a27a040c822a0fff44adc0079aa969:2:Ak86tzCx95V6u5t4Ty2OrAWN9PSOjIWQkk0g28VBEwo84HFVVLSl2gBKV2HYDpO2TAJlLNFxhDynea4XdHrbA6Cdv1nsNdWsaizHiClZ3qoBEf9riSimVLpwPI5BMC-1vznYivS-_gMKYmSX5D20UDKZwK3bM-p3wLwcwslurLzsv4KMk2DTzkExdWGjHkZhOC6754YLgdjM6UsYgohPHnqZNUCLo288BFxBhYshmOxrAjnFzapp67dzf5SfV9hiwhWhblEEFYa2FC1lm8WQC3dPVJwg6Bmkw8pMBzN_qoQZYAOVanzu2dUisCx0oLIVW4-AzPJOqHH1DkiUl4opkZEO:rNVgOQsylq8Xi-wnW__VvcHjqert2hl8mLhlHBu9IG4SDelD9c24Bs6skvwxV2QRBQwbvmv11f6MNkhA6PK5W22OMOmHMG8GsnXlORRH5HMfBzVBdffK_91lfBkB67pP",
+        "fe63ec5d9a:0:cb64b8f27bc6ed0c2875e98d988e11db3d1f2016d14787ed51fbc0493b58aa3b8329d49142fc9acce421b7d3a9b9908a5afed3367b589bc1b0c94ae04c8a383d:e81cc452f9f616210295f96d2034ac715c3b87ca95dbc1e77bd3dcc798719558a4ca82befa391aaffd8099787a60086b35cc6a2390c55720716ac05d2a7b116f:2:Aor2te5DUyKXFFrvOyegql5i0XOleTu4d1AfEl-SE0KZ_PiQeVsWiWsy57SXVZtFTQL7YNyV5dd3oRUmPqcFzNlfY7RnJnKwf-OfmFzin4VeCqqw-d4eAfgNaav2Y5qVC_uc-VuPdRONqSqd04n6RG9Gyz9XvMqXH8Dk6L2iVkP3y1TjyzapIbNQC8pRnsRJaPafN2QVG6qhu7clFAoOzsgkM8BKaxrTLvbznrTpjGAZk5ocb_gLZiDDwOzUsMoUI4Zi3Gky4TyHFAWX9ifJgeSh_D9gj_oGCvsQhF8xVkgsXDTkHAN4hmIEJM_myzL-XnpROFGcaN6m8y085HS7UCcB:6HVliM67dmXAgYPs-z75TTz3m6tSVX6-EpEsy6N-TsX2a_5czJImDXQ-Qhi3524tDIIktWJcUv8JGA7kTPHkqr4Jrnt6JJXG4DVf6xw-n-GpRje-EwyW4Q378tomPpw5",
+        "99ff6d1b10:0:20148e36a3dec6f91537e0bc0e2a852b6cc0fac6c664ef8ce453d7cc404b2b7c5f30bcd244d68ca009f4be0be6ad9a8ea51452d4bb8f7872cb8dacb5d1cdbc25:489fc570d4086ee0bf160d2dc8cc4547b4d3e4336c97b46d45b38064cb19087057adee0ecac1a3fc398627772407f7b814d1292db1ab8eecfdaf6177a7c09870:2:AlLlDYoNRBKH038FnkvZPXfQ1w9T19Df1AW8cav-mrJH524nbtxHI_t-cBorpm8i1wOPnYH96Bkr2LH9UeXaR0xHSNW-dqDTdWbu7uz7sqseULAq7izA8k5VcRQH9YesrcsgASmEOKxJZAc1CkjJpoCj8cwKHZECx5EE3rNFEF4ZxQth5AYg6P8isEpjMw7zBQOGlIRWV5sjVSml_JUKMnB3H9ZOE4UTxTXKVUEUJwHcp_9tXVv_RYuQOarzIRq0-jpod1kamOcLXFsYAiQbg_DwW7F2kQMdqUWJ7tHVwOxfb2CbwD40Yo_-VZ3ZJ8AGm-eY0ngO3PDBbUyKwct_ljwO:29hzAxGQd6oGze7c8XxqueXF_OnZ5WHtpAGQt3RhG2UPEl4uUximYMS25uAqARmZe4VIkwWJ16_IO7nTaizC3feRDWl1BpePoFVuUoFGsK303kUL6IH6xsqdXup2Uahg"
     ];
 
     #[test]
@@ -958,8 +986,9 @@ mod tests {
         let gen = Identity::generate();
         assert!(gen.agree(&gen).is_some());
         assert!(gen.validate_identity());
-        let bytes = gen.to_bytes(IDENTITY_ALGORITHM_ALL, true);
+        let bytes = gen.to_buffer_with_options(IDENTITY_ALGORITHM_ALL, true);
         let string = gen.to_string_with_options(IDENTITY_ALGORITHM_ALL, true);
+        //println!("{}", string);
         assert!(Identity::from_str(string.as_str()).unwrap().eq(&gen));
         let mut cursor = 0_usize;
         assert!(Identity::unmarshal(&bytes, &mut cursor).unwrap().eq(&gen));
@@ -978,13 +1007,13 @@ mod tests {
             assert!(id.validate_identity());
             assert!(id.p384.is_none());
 
-            let idb = id.to_bytes(IDENTITY_ALGORITHM_ALL, true);
+            let idb = id.to_buffer_with_options(IDENTITY_ALGORITHM_ALL, true);
             let mut cursor = 0;
             let id_unmarshal = Identity::unmarshal(&idb, &mut cursor).unwrap();
             assert!(id == id_unmarshal);
             assert!(id_unmarshal.secret.is_some());
 
-            let idb2 = id_unmarshal.to_bytes(IDENTITY_ALGORITHM_ALL, false);
+            let idb2 = id_unmarshal.to_buffer_with_options(IDENTITY_ALGORITHM_ALL, false);
             cursor = 0;
             let id_unmarshal2 = Identity::unmarshal(&idb2, &mut cursor).unwrap();
             assert!(id_unmarshal2 == id_unmarshal);
@@ -1004,18 +1033,18 @@ mod tests {
         }
         for id_str in GOOD_V1_IDENTITIES {
             let id = Identity::from_str(id_str).unwrap();
-            assert_eq!(id.to_string_with_options(IDENTITY_ALGORITHM_ALL, false).as_str(), id_str);
+            assert_eq!(id.to_string_with_options(IDENTITY_ALGORITHM_ALL, true).as_str(), id_str);
 
             assert!(id.validate_identity());
             assert!(id.p384.is_some());
 
-            let idb = id.to_bytes(IDENTITY_ALGORITHM_ALL, true);
+            let idb = id.to_buffer_with_options(IDENTITY_ALGORITHM_ALL, true);
             let mut cursor = 0;
             let id_unmarshal = Identity::unmarshal(&idb, &mut cursor).unwrap();
             assert!(id == id_unmarshal);
 
             cursor = 0;
-            let idb2 = id_unmarshal.to_bytes(IDENTITY_ALGORITHM_ALL, false);
+            let idb2 = id_unmarshal.to_buffer_with_options(IDENTITY_ALGORITHM_ALL, false);
             let id_unmarshal2 = Identity::unmarshal(&idb2, &mut cursor).unwrap();
             assert!(id_unmarshal2 == id_unmarshal);
             assert!(id_unmarshal2 == id);

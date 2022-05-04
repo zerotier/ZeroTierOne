@@ -18,13 +18,10 @@ use zerotier_core_crypto::hash::SHA512_HASH_SIZE;
 
 use crate::util::*;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
-use crate::vl1::node::SystemInterface;
+use crate::vl1::node::*;
 use crate::vl1::protocol::*;
 use crate::vl1::Endpoint;
 use crate::PacketBuffer;
-
-/// Keepalive interval for paths in milliseconds.
-pub(crate) const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
 
 // A bunch of random values used to randomize the local_lookup_key() function's mappings of addresses to 128-bit internal keys.
 lazy_static! {
@@ -33,6 +30,9 @@ lazy_static! {
     static ref RANDOM_64BIT_SALT_2: u64 = zerotier_core_crypto::random::next_u64_secure();
     static ref RANDOM_128BIT_SALT_0: u128 = (zerotier_core_crypto::random::next_u64_secure().wrapping_shl(64) as u128) ^ (zerotier_core_crypto::random::next_u64_secure() as u128);
     static ref RANDOM_128BIT_SALT_1: u128 = (zerotier_core_crypto::random::next_u64_secure().wrapping_shl(64) as u128) ^ (zerotier_core_crypto::random::next_u64_secure() as u128);
+    static ref RANDOM_128BIT_SALT_2: u128 = (zerotier_core_crypto::random::next_u64_secure().wrapping_shl(64) as u128) ^ (zerotier_core_crypto::random::next_u64_secure() as u128);
+    static ref RANDOM_128BIT_SALT_3: u128 = (zerotier_core_crypto::random::next_u64_secure().wrapping_shl(64) as u128) ^ (zerotier_core_crypto::random::next_u64_secure() as u128);
+    static ref RANDOM_128BIT_SALT_4: u128 = (zerotier_core_crypto::random::next_u64_secure().wrapping_shl(64) as u128) ^ (zerotier_core_crypto::random::next_u64_secure() as u128);
 }
 
 /// A remote endpoint paired with a local socket and a local interface.
@@ -58,9 +58,9 @@ impl Path {
         match endpoint {
             Endpoint::Nil => 0,
             Endpoint::ZeroTier(_, h) => u128::from_ne_bytes(*byte_array_range::<SHA512_HASH_SIZE, 0, 16>(h)),
-            Endpoint::Ethernet(m) => (m.to_u64() | 0x0100000000000000) as u128 ^ lsi,
-            Endpoint::WifiDirect(m) => (m.to_u64() | 0x0200000000000000) as u128 ^ lsi,
-            Endpoint::Bluetooth(m) => (m.to_u64() | 0x0400000000000000) as u128 ^ lsi,
+            Endpoint::Ethernet(m) => RANDOM_128BIT_SALT_0.wrapping_add(lsi as u128).wrapping_add(m.to_u64() as u128),
+            Endpoint::WifiDirect(m) => RANDOM_128BIT_SALT_1.wrapping_add(lsi as u128).wrapping_add(m.to_u64() as u128),
+            Endpoint::Bluetooth(m) => RANDOM_128BIT_SALT_2.wrapping_add(lsi as u128).wrapping_add(m.to_u64() as u128),
             Endpoint::Ip(ip) => ip.ip_as_native_u128().wrapping_sub(lsi),    // naked IP has no port
             Endpoint::IpUdp(ip) => ip.ip_as_native_u128().wrapping_add(lsi), // UDP maintains one path per IP but merely learns the most recent port
             Endpoint::IpTcp(ip) => ip.ip_as_native_u128().wrapping_sub(crate::util::hash64_noncrypt((ip.port() as u64).wrapping_add(*RANDOM_64BIT_SALT_2)) as u128).wrapping_sub(lsi),
@@ -69,14 +69,14 @@ impl Path {
                 hh.write_u64(local_socket);
                 hh.write_u64(local_interface);
                 hh.write(s.as_bytes());
-                RANDOM_128BIT_SALT_0.wrapping_add(hh.finish() as u128)
+                RANDOM_128BIT_SALT_3.wrapping_add(hh.finish() as u128)
             }
             Endpoint::WebRTC(b) => {
                 let mut hh = std::collections::hash_map::DefaultHasher::new();
                 hh.write_u64(local_socket);
                 hh.write_u64(local_interface);
                 hh.write(b.as_slice());
-                RANDOM_128BIT_SALT_1.wrapping_add(hh.finish() as u128)
+                RANDOM_128BIT_SALT_4.wrapping_add(hh.finish() as u128)
             }
             Endpoint::ZeroTierEncap(_, h) => u128::from_ne_bytes(*byte_array_range::<SHA512_HASH_SIZE, 16, 16>(h)),
         }
@@ -159,9 +159,14 @@ impl Path {
     pub(crate) fn log_send_anything(&self, time_ticks: i64) {
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
     }
+}
 
-    pub(crate) const CALL_EVERY_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
-    pub(crate) fn call_every_interval<SI: SystemInterface>(&self, _si: &SI, time_ticks: i64) {
+impl BackgroundServicable for Path {
+    const SERVICE_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
+
+    fn service<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64) -> bool {
         self.fragmented_packets.lock().retain(|_, frag| (time_ticks - frag.ts_ticks) < PACKET_FRAGMENT_EXPIRATION);
+        // TODO: keepalives
+        true
     }
 }

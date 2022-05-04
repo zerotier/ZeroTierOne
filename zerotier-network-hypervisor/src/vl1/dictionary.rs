@@ -18,7 +18,7 @@ use crate::util::hex::HEX_CHARS;
 /// entirely human readable. Keys are serialized in natural sort order so the result can be consistently
 /// checksummed or hashed.
 #[derive(Clone, PartialEq, Eq)]
-pub struct Dictionary(BTreeMap<String, Vec<u8>>);
+pub struct Dictionary(pub(crate) BTreeMap<String, Vec<u8>>);
 
 fn write_escaped<W: Write>(b: &[u8], w: &mut W) -> std::io::Result<()> {
     let mut i = 0_usize;

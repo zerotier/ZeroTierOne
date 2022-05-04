@@ -15,6 +15,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;
+use crate::util::marshalable::Marshalable;
 
 /// An Ethernet MAC address.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -57,15 +58,19 @@ impl MAC {
     pub fn to_u64(&self) -> u64 {
         self.0.get()
     }
+}
+
+impl Marshalable for MAC {
+    const MAX_MARSHAL_SIZE: usize = 6;
 
     #[inline(always)]
-    pub(crate) fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         buf.append_bytes(&self.0.get().to_be_bytes()[2..])
     }
 
     #[inline(always)]
-    pub(crate) fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Option<Self>> {
-        buf.read_bytes_fixed::<6>(cursor).map(|b| Self::from_bytes_fixed(b))
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Self> {
+        Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).map_or_else(|| Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "cannot be zero")), |a| Ok(a))
     }
 }
 

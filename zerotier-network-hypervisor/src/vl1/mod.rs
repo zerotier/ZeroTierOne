@@ -15,6 +15,7 @@ mod dictionary;
 mod mac;
 mod path;
 mod peer;
+mod rootcluster;
 
 pub(crate) mod fragmentedpacket;
 pub(crate) mod hybridkey;
@@ -33,3 +34,4 @@ pub use mac::MAC;
 pub use node::{Node, SystemInterface};
 pub use path::Path;
 pub use peer::Peer;
+pub use rootcluster::{Root, RootCluster};

@@ -42,10 +42,42 @@ fn overflow_err() -> std::io::Error {
 impl<const L: usize> Buffer<L> {
     pub const CAPACITY: usize = L;
 
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
+    #[inline(always)]
+    fn read_obj_internal<T: Sized + Copy>(&self, i: usize) -> T {
+        unsafe { *self.1.as_ptr().add(i).cast() }
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
+    #[inline(always)]
+    fn read_obj_internal<T: Sized + Copy>(&self, i: usize) -> T {
+        unsafe { std::mem::transmute_copy(&*self.1.as_ptr().add(i).cast::<T>()) }
+    }
+
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
+    #[inline(always)]
+    fn write_obj_internal<T: Sized + Copy>(&mut self, i: usize, o: T) {
+        unsafe { *self.1.as_mut_ptr().add(i).cast::<T>() = o };
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
+    #[inline(always)]
+    fn write_obj_internal<T: Sized + Copy>(&mut self, i: usize, o: T) {
+        unsafe {
+            std::ptr::copy_nonoverlapping((&o as *const T).cast::<u8>(), self.1.as_mut_ptr().add(i), size_of::<T>());
+        }
+    }
+
     /// Create an empty zeroed buffer.
     #[inline(always)]
     pub fn new() -> Self {
         Self(0, [0_u8; L])
+    }
+
+    /// Create an empty zeroed buffer on the heap without intermediate stack allocation.
+    /// This can be used to allocate buffers too large for the stack.
+    pub fn new_boxed() -> Box<Self> {
+        unsafe { Box::from_raw(std::alloc::alloc_zeroed(std::alloc::Layout::new::<Self>()).cast()) }
     }
 
     /// Create an empty buffer without internally zeroing its memory.
@@ -241,84 +273,39 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
     #[inline(always)]
     pub fn append_u16(&mut self, i: u16) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + 2;
         if end <= L {
             self.0 = end;
-            unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u16>() = i.to_be() };
+            self.write_obj_internal(ptr, i.to_be());
             Ok(())
         } else {
             Err(overflow_err())
         }
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
-    #[inline(always)]
-    pub fn append_u16(&mut self, i: u16) -> std::io::Result<()> {
-        let ptr = self.0;
-        let end = ptr + 2;
-        if end <= L {
-            self.0 = end;
-            self.1[ptr..end].copy_from_slice(&i.to_be_bytes());
-            Ok(())
-        } else {
-            Err(overflow_err())
-        }
-    }
-
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
     #[inline(always)]
     pub fn append_u32(&mut self, i: u32) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + 4;
         if end <= L {
             self.0 = end;
-            unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u32>() = i.to_be() };
+            self.write_obj_internal(ptr, i.to_be());
             Ok(())
         } else {
             Err(overflow_err())
         }
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
-    #[inline(always)]
-    pub fn append_u32(&mut self, i: u32) -> std::io::Result<()> {
-        let ptr = self.0;
-        let end = ptr + 4;
-        if end <= L {
-            self.0 = end;
-            self.1[ptr..end].copy_from_slice(&i.to_be_bytes());
-            Ok(())
-        } else {
-            Err(overflow_err())
-        }
-    }
-
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
     #[inline(always)]
     pub fn append_u64(&mut self, i: u64) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + 8;
         if end <= L {
             self.0 = end;
-            unsafe { *self.1.as_mut_ptr().add(ptr).cast::<u64>() = i.to_be() };
-            Ok(())
-        } else {
-            Err(overflow_err())
-        }
-    }
-
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
-    #[inline(always)]
-    pub fn append_u64(&mut self, i: u64) -> std::io::Result<()> {
-        let ptr = self.0;
-        let end = ptr + 8;
-        if end <= L {
-            self.0 = end;
-            self.1[ptr..end].copy_from_slice(&i.to_be_bytes());
+            self.write_obj_internal(ptr, i.to_be());
             Ok(())
         } else {
             Err(overflow_err())
@@ -421,7 +408,6 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
     #[inline(always)]
     pub fn read_u16(&self, cursor: &mut usize) -> std::io::Result<u16> {
         let ptr = *cursor;
@@ -429,27 +415,12 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(u16::from_be(unsafe { *self.1.as_ptr().add(ptr).cast::<u16>() }))
+            Ok(u16::from_be(self.read_obj_internal(ptr)))
         } else {
             Err(overflow_err())
         }
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
-    #[inline(always)]
-    pub fn read_u16(&self, cursor: &mut usize) -> std::io::Result<u16> {
-        let ptr = *cursor;
-        let end = ptr + 2;
-        debug_assert!(end <= L);
-        if end <= self.0 {
-            *cursor = end;
-            Ok(u16::from_be_bytes(*self.1[ptr..end]))
-        } else {
-            Err(overflow_err())
-        }
-    }
-
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
     #[inline(always)]
     pub fn read_u32(&self, cursor: &mut usize) -> std::io::Result<u32> {
         let ptr = *cursor;
@@ -457,27 +428,12 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(u32::from_be(unsafe { *self.1.as_ptr().add(ptr).cast::<u32>() }))
+            Ok(u32::from_be(self.read_obj_internal(ptr)))
         } else {
             Err(overflow_err())
         }
     }
 
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
-    #[inline(always)]
-    pub fn read_u32(&self, cursor: &mut usize) -> std::io::Result<u16> {
-        let ptr = *cursor;
-        let end = ptr + 4;
-        debug_assert!(end <= L);
-        if end <= self.0 {
-            *cursor = end;
-            Ok(u32::from_be_bytes(*self.1[ptr..end]))
-        } else {
-            Err(overflow_err())
-        }
-    }
-
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
     #[inline(always)]
     pub fn read_u64(&self, cursor: &mut usize) -> std::io::Result<u64> {
         let ptr = *cursor;
@@ -485,21 +441,7 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(u64::from_be(unsafe { *self.1.as_ptr().add(ptr).cast::<u64>() }))
-        } else {
-            Err(overflow_err())
-        }
-    }
-
-    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
-    #[inline(always)]
-    pub fn read_u64(&self, cursor: &mut usize) -> std::io::Result<u16> {
-        let ptr = *cursor;
-        let end = ptr + 8;
-        debug_assert!(end <= L);
-        if end <= self.0 {
-            *cursor = end;
-            Ok(u64::from_be_bytes(*self.1[ptr..end]))
+            Ok(u64::from_be(self.read_obj_internal(ptr)))
         } else {
             Err(overflow_err())
         }

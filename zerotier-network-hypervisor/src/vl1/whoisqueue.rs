@@ -12,7 +12,7 @@ use parking_lot::Mutex;
 
 use crate::util::gate::IntervalGate;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
-use crate::vl1::node::{Node, SystemInterface};
+use crate::vl1::node::{BackgroundServicable, Node, SystemInterface};
 use crate::vl1::protocol::{WHOIS_MAX_WAITING_PACKETS, WHOIS_RETRY_INTERVAL, WHOIS_RETRY_MAX};
 use crate::vl1::Address;
 use crate::PacketBuffer;
@@ -31,8 +31,6 @@ struct WhoisQueueItem {
 pub(crate) struct WhoisQueue(Mutex<HashMap<Address, WhoisQueueItem>>);
 
 impl WhoisQueue {
-    pub(crate) const INTERVAL: i64 = WHOIS_RETRY_INTERVAL;
-
     pub fn new() -> Self {
         Self(Mutex::new(HashMap::new()))
     }
@@ -65,8 +63,15 @@ impl WhoisQueue {
         let _ = qi.map(|mut qi| qi.packet_queue.iter_mut().for_each(packet_handler));
     }
 
-    /// Called every INTERVAL during background tasks.
-    pub fn call_every_interval<SI: SystemInterface>(&self, node: &Node, si: &SI, time_ticks: i64) {
+    fn send_whois<SI: SystemInterface>(&self, node: &Node, si: &SI, targets: &[Address]) {
+        todo!()
+    }
+}
+
+impl BackgroundServicable for WhoisQueue {
+    const SERVICE_INTERVAL_MS: i64 = WHOIS_RETRY_INTERVAL;
+
+    fn service<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64) -> bool {
         let mut targets: Vec<Address> = Vec::new();
         self.0.lock().retain(|target, qi| {
             if qi.retry_count < WHOIS_RETRY_MAX {
@@ -82,9 +87,6 @@ impl WhoisQueue {
         if !targets.is_empty() {
             self.send_whois(node, si, targets.as_slice());
         }
-    }
-
-    fn send_whois<SI: SystemInterface>(&self, node: &Node, si: &SI, targets: &[Address]) {
-        todo!()
+        true
     }
 }

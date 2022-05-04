@@ -16,6 +16,7 @@ use zerotier_core_crypto::hash::SHA512_HASH_SIZE;
 
 use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;
+use crate::util::marshalable::Marshalable;
 use crate::vl1::inetaddress::InetAddress;
 use crate::vl1::{Address, MAC};
 
@@ -30,6 +31,8 @@ pub const TYPE_IPTCP: u8 = 7;
 pub const TYPE_HTTP: u8 = 8;
 pub const TYPE_WEBRTC: u8 = 9;
 pub const TYPE_ZEROTIER_ENCAP: u8 = 10;
+
+pub(crate) const MAX_MARSHAL_SIZE: usize = 1024;
 
 /// A communication endpoint on the network where a ZeroTier node can be reached.
 ///
@@ -112,14 +115,26 @@ impl Endpoint {
         matches!(self, Endpoint::Nil)
     }
 
-    #[inline(always)]
+    pub fn from_bytes(bytes: &[u8]) -> Option<Endpoint> {
+        if bytes.len() < MAX_MARSHAL_SIZE {
+            let mut cursor = 0;
+            Self::unmarshal(&Buffer::<MAX_MARSHAL_SIZE>::from_bytes(bytes).unwrap(), &mut cursor).map_or(None, |e| Some(e))
+        } else {
+            None
+        }
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut b: Buffer<256> = Buffer::new();
+        let mut b: Buffer<MAX_MARSHAL_SIZE> = Buffer::new();
         self.marshal(&mut b).expect("internal error marshaling Endpoint");
         b.as_bytes().to_vec()
     }
+}
 
-    pub fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
+impl Marshalable for Endpoint {
+    const MAX_MARSHAL_SIZE: usize = MAX_MARSHAL_SIZE;
+
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         match self {
             Endpoint::Nil => buf.append_u8(TYPE_NIL),
             Endpoint::ZeroTier(a, h) => {
@@ -175,7 +190,7 @@ impl Endpoint {
         }
     }
 
-    pub fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Endpoint> {
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Endpoint> {
         let type_byte = buf.read_u8(cursor)?;
         if type_byte < 16 {
             if type_byte == 4 {
@@ -188,29 +203,15 @@ impl Endpoint {
                 Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream"))
             }
         } else {
-            let read_mac = |buf: &Buffer<BL>, cursor: &mut usize| {
-                let m = MAC::unmarshal(buf, cursor)?;
-                if m.is_some() {
-                    Ok(m.unwrap())
-                } else {
-                    Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid MAC address"))
-                }
-            };
-
             match type_byte - 16 {
                 TYPE_NIL => Ok(Endpoint::Nil),
                 TYPE_ZEROTIER => {
                     let zt = Address::unmarshal(buf, cursor)?;
-                    if zt.is_some() {
-                        let h = buf.read_bytes_fixed::<SHA512_HASH_SIZE>(cursor)?;
-                        Ok(Endpoint::ZeroTier(zt.unwrap(), h.clone()))
-                    } else {
-                        Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid ZeroTier address"))
-                    }
+                    Ok(Endpoint::ZeroTier(zt, buf.read_bytes_fixed::<SHA512_HASH_SIZE>(cursor)?.clone()))
                 }
-                TYPE_ETHERNET => Ok(Endpoint::Ethernet(read_mac(buf, cursor)?)),
-                TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(read_mac(buf, cursor)?)),
-                TYPE_BLUETOOTH => Ok(Endpoint::Bluetooth(read_mac(buf, cursor)?)),
+                TYPE_ETHERNET => Ok(Endpoint::Ethernet(MAC::unmarshal(buf, cursor)?)),
+                TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(MAC::unmarshal(buf, cursor)?)),
+                TYPE_BLUETOOTH => Ok(Endpoint::Bluetooth(MAC::unmarshal(buf, cursor)?)),
                 TYPE_IP => Ok(Endpoint::Ip(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_IPUDP => Ok(Endpoint::IpUdp(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_IPTCP => Ok(Endpoint::IpTcp(InetAddress::unmarshal(buf, cursor)?)),
@@ -218,19 +219,13 @@ impl Endpoint {
                 TYPE_WEBRTC => Ok(Endpoint::WebRTC(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?.to_vec())),
                 TYPE_ZEROTIER_ENCAP => {
                     let zt = Address::unmarshal(buf, cursor)?;
-                    if zt.is_some() {
-                        let h = buf.read_bytes_fixed::<SHA512_HASH_SIZE>(cursor)?;
-                        Ok(Endpoint::ZeroTierEncap(zt.unwrap(), h.clone()))
-                    } else {
-                        Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid ZeroTier address"))
-                    }
+                    Ok(Endpoint::ZeroTierEncap(zt, buf.read_bytes_fixed::<SHA512_HASH_SIZE>(cursor)?.clone()))
                 }
                 _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream")),
             }
         }
     }
 }
-
 impl Hash for Endpoint {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
@@ -376,8 +371,6 @@ impl FromStr for Endpoint {
     }
 }
 
-const TEMP_SERIALIZE_BUFFER_SIZE: usize = 1024;
-
 impl Serialize for Endpoint {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -386,7 +379,7 @@ impl Serialize for Endpoint {
         if serializer.is_human_readable() {
             serializer.serialize_str(self.to_string().as_str())
         } else {
-            let mut tmp: Buffer<TEMP_SERIALIZE_BUFFER_SIZE> = Buffer::new();
+            let mut tmp: Buffer<MAX_MARSHAL_SIZE> = Buffer::new();
             assert!(self.marshal(&mut tmp).is_ok());
             serializer.serialize_bytes(tmp.as_bytes())
         }
@@ -406,8 +399,8 @@ impl<'de> serde::de::Visitor<'de> for EndpointVisitor {
     where
         E: serde::de::Error,
     {
-        if v.len() <= TEMP_SERIALIZE_BUFFER_SIZE {
-            let mut tmp: Buffer<TEMP_SERIALIZE_BUFFER_SIZE> = Buffer::new();
+        if v.len() <= MAX_MARSHAL_SIZE {
+            let mut tmp: Buffer<MAX_MARSHAL_SIZE> = Buffer::new();
             let _ = tmp.append_bytes(v);
             let mut cursor = 0;
             Endpoint::unmarshal(&tmp, &mut cursor).map_err(|e| E::custom(e.to_string()))

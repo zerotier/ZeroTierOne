@@ -8,6 +8,7 @@
 
 pub mod buffer;
 pub(crate) mod gate;
+pub mod marshalable;
 pub(crate) mod pool;
 
 pub use zerotier_core_crypto::hex;

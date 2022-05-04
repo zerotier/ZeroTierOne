@@ -467,7 +467,7 @@ impl Peer {
         }
 
         // Add this node's identity.
-        assert!(self.identity.marshal(&mut packet, IDENTITY_ALGORITHM_ALL, false).is_ok());
+        assert!(self.identity.marshal_with_options(&mut packet, IDENTITY_ALGORITHM_ALL, false).is_ok());
         if self.identity.algorithms() == IDENTITY_ALGORITHM_X25519 {
             // LEGACY: append an extra zero when marshaling identities containing only x25519 keys.
             // See comments in Identity::marshal().
@@ -538,17 +538,11 @@ impl Peer {
         )
     }
 
-    pub(crate) const CALL_EVERY_INTERVAL_MS: i64 = EPHEMERAL_SECRET_REKEY_AFTER_TIME / 10;
-
-    /// Called every INTERVAL during background tasks.
     #[inline(always)]
-    pub(crate) fn call_every_interval<SI: SystemInterface>(&self, si: &SI, time_ticks: i64) {}
+    fn receive_hello<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<PACKET_SIZE_MAX>) {}
 
     #[inline(always)]
-    fn receive_hello<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64, source_path: &Arc<Path>, payload: &Buffer<{ PACKET_SIZE_MAX }>) {}
-
-    #[inline(always)]
-    fn receive_error<SI: SystemInterface, PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_error<SI: SystemInterface, PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<PACKET_SIZE_MAX>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor).map(|error_header| {
             let in_re_message_id = u64::from_ne_bytes(error_header.in_re_message_id);
@@ -564,7 +558,7 @@ impl Peer {
     }
 
     #[inline(always)]
-    fn receive_ok<SI: SystemInterface, PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<{ PACKET_SIZE_MAX }>) {
+    fn receive_ok<SI: SystemInterface, PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node, time_ticks: i64, source_path: &Arc<Path>, forward_secrecy: bool, extended_authentication: bool, payload: &Buffer<PACKET_SIZE_MAX>) {
         let mut cursor: usize = 0;
         let _ = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor).map(|ok_header| {
             let in_re_message_id = u64::from_ne_bytes(ok_header.in_re_message_id);
@@ -626,5 +620,14 @@ impl Peer {
         } else {
             None
         }
+    }
+}
+
+impl BackgroundServicable for Peer {
+    const SERVICE_INTERVAL_MS: i64 = EPHEMERAL_SECRET_REKEY_AFTER_TIME / 10;
+
+    #[inline(always)]
+    fn service<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64) -> bool {
+        true
     }
 }
