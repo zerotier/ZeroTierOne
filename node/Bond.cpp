@@ -1224,7 +1224,7 @@ bool Bond::abForciblyRotateLink()
 void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 {
 	int prevActiveBackupPathIdx = _abPathIdx;
-	int nonPreferredPathIdx;
+	int nonPreferredPathIdx = ZT_MAX_PEER_NETWORK_PATHS;
 	bool bFoundPrimaryLink = false;
 
 	if (_abPathIdx != ZT_MAX_PEER_NETWORK_PATHS && ! _paths[_abPathIdx].p) {
@@ -1247,7 +1247,6 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 			log("failover queue is empty, bond is no longer fault-tolerant");
 		}
 	}
-
 	/**
 	 * Select initial "active" active-backup link
 	 */
@@ -1272,6 +1271,7 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 				}
 			}
 		}
+
 		/**
 		 * [Manual mode]
 		 * The user has specified links or failover rules that the bonding policy should adhere to.
@@ -1302,7 +1302,7 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 						}
 					}
 				}
-				if (bFoundPrimaryLink && nonPreferredPathIdx) {
+				if (bFoundPrimaryLink && (nonPreferredPathIdx != ZT_MAX_PEER_NETWORK_PATHS)) {
 					log("found non-preferred primary link");
 					_abPathIdx = nonPreferredPathIdx;
 				}
@@ -1311,6 +1311,7 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 					// TODO: Should wait for some time (failover interval?) and then switch to spare link
 				}
 			}
+
 			else if (! userHasSpecifiedPrimaryLink()) {
 				log("user did not specify a primary link, select first available link");
 				for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
