@@ -6,13 +6,16 @@
  * https://www.zerotier.com/
  */
 
+use std::collections::HashMap;
 use std::num::NonZeroI64;
 use std::str::FromStr;
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 
 use dashmap::DashMap;
-use parking_lot::Mutex;
+use lazy_static::lazy_static;
+use parking_lot::{Mutex, RwLock};
 
 use crate::error::InvalidParameterError;
 use crate::util::buffer::Buffer;
@@ -21,7 +24,7 @@ use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
 use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
-use crate::vl1::{Address, Endpoint, Identity};
+use crate::vl1::{Address, Endpoint, Identity, RootCluster};
 use crate::{PacketBuffer, PacketBufferFactory, PacketBufferPool};
 
 /// Trait implemented by external code to handle events and provide an interface to the system or application.
@@ -40,6 +43,9 @@ pub trait SystemInterface: Sync + Send {
 
     /// A USER_MESSAGE packet was received.
     fn event_user_message(&self, source: &Identity, message_type: u64, message: &[u8]);
+
+    /// VL1 core generated a security warning.
+    fn event_security_warning(&self, warning: &str);
 
     /// Load this node's identity from the data store.
     fn load_node_identity(&self) -> Option<Vec<u8>>;
@@ -64,11 +70,8 @@ pub trait SystemInterface: Sync + Send {
     /// Called to check and see if a physical address should be used for ZeroTier traffic to a node.
     fn check_path(&self, id: &Identity, endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> bool;
 
-    /// Called to look up a path to a known node.
-    ///
-    /// If a path is found, this returns a tuple of an endpoint and optional local socket and local
-    /// interface IDs. If these are None they will be None when this is sent with wire_send.
-    fn get_path_hints(&self, id: &Identity) -> Option<&[(&Endpoint, Option<NonZeroI64>, Option<NonZeroI64>)]>;
+    /// Called to look up any statically defined or memorized paths to known nodes.
+    fn get_path_hints(&self, id: &Identity) -> Option<Vec<(Endpoint, Option<NonZeroI64>, Option<NonZeroI64>)>>;
 
     /// Called to get the current time in milliseconds from the system monotonically increasing clock.
     /// This needs to be accurate to about 250 milliseconds resolution or better.
@@ -113,13 +116,23 @@ pub(crate) trait BackgroundServicable {
     fn service<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64) -> bool;
 }
 
+/// How often to check the root cluster definitions against the root list and update.
+const ROOT_SYNC_INTERVAL_MS: i64 = 1000;
+
+lazy_static! {
+    static ref BACKGROUND_TASK_INTERVAL: Duration = Duration::from_millis((ROOT_SYNC_INTERVAL_MS.min(WhoisQueue::SERVICE_INTERVAL_MS).min(Path::SERVICE_INTERVAL_MS).min(Peer::SERVICE_INTERVAL_MS) as u64) / 2);
+}
+
 #[derive(Default)]
 struct BackgroundTaskIntervals {
     whois: IntervalGate<{ WhoisQueue::SERVICE_INTERVAL_MS }>,
     paths: IntervalGate<{ Path::SERVICE_INTERVAL_MS }>,
     peers: IntervalGate<{ Peer::SERVICE_INTERVAL_MS }>,
+    root_sync: IntervalGate<ROOT_SYNC_INTERVAL_MS>,
+    root_hello: IntervalGate<ROOT_HELLO_INTERVAL>,
 }
 
+/// A VL1 global P2P network node.
 pub struct Node {
     /// A random ID generated to identify this particular running instance.
     pub instance_id: u64,
@@ -136,14 +149,17 @@ pub struct Node {
     /// Peers with which we are currently communicating.
     peers: DashMap<Address, Arc<Peer>>,
 
-    /// This node's trusted roots, sorted in descending order of preference.
-    roots: Mutex<Vec<Arc<Peer>>>,
+    /// This node's trusted roots, sorted in ascending order of quality/preference, and cluster definitions.
+    roots: Mutex<(Vec<Arc<Peer>>, Vec<RootCluster>)>,
+
+    /// Current best root.
+    best_root: RwLock<Option<Arc<Peer>>>,
 
     /// Identity lookup queue, also holds packets waiting on a lookup.
     whois: WhoisQueue,
 
     /// Reusable network buffer pool.
-    buffer_pool: Arc<PacketBufferPool>,
+    buffer_pool: PacketBufferPool,
 }
 
 impl Node {
@@ -179,11 +195,12 @@ impl Node {
             instance_id: zerotier_core_crypto::random::next_u64_secure(),
             identity: id,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
-            paths: DashMap::with_capacity(256),
-            peers: DashMap::with_capacity(128),
-            roots: Mutex::new(Vec::new()),
+            paths: DashMap::new(),
+            peers: DashMap::new(),
+            roots: Mutex::new((Vec::new(), Vec::new())),
+            best_root: RwLock::new(None),
             whois: WhoisQueue::new(),
-            buffer_pool: Arc::new(PacketBufferPool::new(64, PacketBufferFactory::new())),
+            buffer_pool: PacketBufferPool::new(64, PacketBufferFactory::new()),
         })
     }
 
@@ -194,6 +211,7 @@ impl Node {
     }
 
     /// Get a peer by address.
+    #[inline(always)]
     pub fn peer(&self, a: Address) -> Option<Arc<Peer>> {
         self.peers.get(&a).map(|peer| peer.value().clone())
     }
@@ -216,8 +234,91 @@ impl Node {
         let mut intervals = self.intervals.lock();
         let tt = si.time_ticks();
 
+        if intervals.root_sync.gate(tt) {
+            let mut roots_lock = self.roots.lock();
+            let (roots, root_clusters) = &mut *roots_lock;
+
+            // Look at root cluster definitions and make sure all have corresponding root peers.
+            let mut root_endpoints = HashMap::with_capacity(roots.len() * 2);
+            for rc in root_clusters.iter() {
+                for m in rc.members.iter() {
+                    if m.endpoints.is_some() {
+                        let endpoints = m.endpoints.as_ref().unwrap();
+
+                        /*
+                         * SECURITY NOTE: we take extra care to handle the case where we have a peer whose identity
+                         * differs from that of a root but whose address is the same. It should be impossible to
+                         * make this happen, but we check anyway. It would require a colliding identity to be
+                         * approved by one of your existing roots and somehow retrieved via WHOIS, but this would
+                         * be hard because this background task loop populates the peer list with specified root
+                         * identities before this happens. It could also happen if you have two root cluster
+                         * definitions with a colliding address, which would itself be hard to produce and would
+                         * probably mean someone is doing something nasty.
+                         *
+                         * In this case the response is to ignore this root entirely and generate a warning.
+                         */
+
+                        // This functional stuff on entry() is to do all this atomically while holding the map's entry
+                        // object, since this is a "lock-free" structure.
+                        let _ = self
+                            .peers
+                            .entry(m.identity.address)
+                            .or_try_insert_with(|| {
+                                Peer::new(&self.identity, m.identity.clone(), tt).map_or(Err(crate::error::UnexpectedError), |new_root| {
+                                    let new_root = Arc::new(new_root);
+                                    roots.retain(|r| r.identity.address != m.identity.address); // sanity check, should be impossible
+                                    roots.push(new_root.clone());
+                                    Ok(new_root)
+                                })
+                            })
+                            .and_then(|root_peer_entry| {
+                                let rp = root_peer_entry.value();
+                                if rp.identity.eq(&m.identity) {
+                                    Ok(root_peer_entry)
+                                } else {
+                                    roots.retain(|r| r.identity.address != m.identity.address);
+                                    si.event_security_warning(format!("address/identity collision between root {} (from root cluster definition '{}') and known peer {}", m.identity.address.to_string(), rc.name, rp.identity.to_string()).as_str());
+                                    Err(crate::error::UnexpectedError)
+                                }
+                            })
+                            .map(|_| {
+                                let _ = root_endpoints.insert(m.identity.address, endpoints);
+                            });
+                    }
+                }
+            }
+
+            // Remove all roots not in any current root cluster definition.
+            roots.retain(|r| root_endpoints.contains_key(&r.identity.address));
+
+            // Say HELLO to all roots periodically. For roots we send HELLO to every single endpoint
+            // they have, which is a behavior that differs from normal peers. This allows roots to
+            // e.g. see our IPv4 and our IPv6 address which can be important for us to learn our
+            // external addresses from them.
+            assert!(ROOT_SYNC_INTERVAL_MS <= (ROOT_HELLO_INTERVAL / 2));
+            if intervals.root_hello.gate(tt) {
+                for r in roots.iter() {
+                    for ep in root_endpoints.get(&r.identity.address).unwrap().iter() {
+                        r.send_hello(si, self, Some(ep));
+                    }
+                }
+            }
+
+            // Update best root fast lookup field.
+            if !roots.is_empty() {
+                let _ = self.best_root.write().insert(roots.last().unwrap().clone());
+            } else {
+                // The best root is the one that has replied to a HELLO most recently. Since we send HELLOs in unison
+                // this is a proxy for latency and also causes roots that fail to reply to drop out quickly.
+                roots.sort_unstable_by(|a, b| a.last_hello_reply_time_ticks.load(Ordering::Relaxed).cmp(&b.last_hello_reply_time_ticks.load(Ordering::Relaxed)));
+                let _ = self.best_root.write().take();
+            }
+        }
+
         if intervals.peers.gate(tt) {
-            self.peers.retain(|_, peer| peer.service(si, self, tt));
+            // Service all peers, removing any whose service() method returns false AND that are not
+            // roots. Roots on the other hand remain in the peer list as long as they are roots.
+            self.peers.retain(|_, peer| if peer.service(si, self, tt) { true } else { !self.roots.lock().0.iter().any(|r| Arc::ptr_eq(peer, r)) });
         }
 
         if intervals.paths.gate(tt) {
@@ -228,7 +329,7 @@ impl Node {
             let _ = self.whois.service(si, self, tt);
         }
 
-        Duration::from_millis((WhoisQueue::SERVICE_INTERVAL_MS.min(Path::SERVICE_INTERVAL_MS).min(Peer::SERVICE_INTERVAL_MS) as u64) / 2)
+        *BACKGROUND_TASK_INTERVAL
     }
 
     /// Called when a packet is received on the physical wire.
@@ -252,7 +353,7 @@ impl Node {
                                     let packet_header = packet_header.unwrap();
                                     if let Some(source) = Address::from_bytes(&packet_header.src) {
                                         if let Some(peer) = self.peer(source) {
-                                            peer.receive(self, si, ph, time_ticks, source_endpoint, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]);
+                                            peer.receive(self, si, ph, time_ticks, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]);
                                         } else {
                                             self.whois.query(self, si, source, Some(QueuedPacket::Fragmented(assembled_packet)));
                                         }
@@ -266,7 +367,7 @@ impl Node {
 
                             if let Some(source) = Address::from_bytes(&packet_header.src) {
                                 if let Some(peer) = self.peer(source) {
-                                    peer.receive(self, si, ph, time_ticks, source_endpoint, &path, &packet_header, data.as_ref(), &[]);
+                                    peer.receive(self, si, ph, time_ticks, &path, &packet_header, data.as_ref(), &[]);
                                 } else {
                                     self.whois.query(self, si, source, Some(QueuedPacket::Unfragmented(data)));
                                 }
@@ -275,6 +376,7 @@ impl Node {
                     }
                 } else {
                     // Forward packets not destined for this node.
+                    // TODO: SHOULD we forward? Need a way to check.
 
                     if fragment_header.is_fragment() {
                         if fragment_header.increment_hops() > FORWARD_MAX_HOPS {
@@ -299,13 +401,14 @@ impl Node {
     }
 
     /// Get the current best root peer that we should use for WHOIS, relaying, etc.
+    #[inline(always)]
     pub fn root(&self) -> Option<Arc<Peer>> {
-        self.roots.lock().first().cloned()
+        self.best_root.read().clone()
     }
 
     /// Return true if a peer is a root.
     pub fn is_peer_root(&self, peer: &Peer) -> bool {
-        self.roots.lock().iter().any(|p| Arc::as_ptr(p) == (peer as *const Peer))
+        self.roots.lock().0.iter().any(|p| Arc::as_ptr(p) == (peer as *const Peer))
     }
 
     /// Get the canonical Path object for a given endpoint and local socket information.

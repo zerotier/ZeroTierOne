@@ -471,20 +471,6 @@ impl InetAddress {
         }
     }
 
-    /// Get raw IP bytes packed into a u128.
-    /// Bytes are packed in native endian so the resulting u128 may not be the same between systems.
-    /// This value is intended for local lookup use only.
-    #[inline(always)]
-    pub(crate) fn ip_as_native_u128(&self) -> u128 {
-        unsafe {
-            match self.sa.sa_family as u8 {
-                AF_INET => self.sin.sin_addr.s_addr as u128,
-                AF_INET6 => u128::from_ne_bytes(*(&self.sin6.sin6_addr as *const in6_addr).cast::<[u8; 16]>()),
-                _ => 0,
-            }
-        }
-    }
-
     /// Get the IP port for this InetAddress.
     pub fn port(&self) -> u16 {
         unsafe {

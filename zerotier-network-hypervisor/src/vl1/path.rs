@@ -7,32 +7,24 @@
  */
 
 use std::collections::HashMap;
-use std::hash::Hasher;
+use std::hash::{Hash, Hasher};
 use std::num::NonZeroI64;
 use std::sync::atomic::{AtomicI64, Ordering};
-use std::sync::Arc;
 
 use lazy_static::lazy_static;
+use metrohash::MetroHash128;
 use parking_lot::Mutex;
-use zerotier_core_crypto::hash::SHA512_HASH_SIZE;
+use zerotier_core_crypto::random;
 
 use crate::util::*;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
-use crate::vl1::Endpoint;
+use crate::vl1::{endpoint, Endpoint};
 use crate::PacketBuffer;
 
-// A bunch of random values used to randomize the local_lookup_key() function's mappings of addresses to 128-bit internal keys.
 lazy_static! {
-    static ref RANDOM_64BIT_SALT_0: u64 = zerotier_core_crypto::random::next_u64_secure();
-    static ref RANDOM_64BIT_SALT_1: u64 = zerotier_core_crypto::random::next_u64_secure();
-    static ref RANDOM_64BIT_SALT_2: u64 = zerotier_core_crypto::random::next_u64_secure();
-    static ref RANDOM_128BIT_SALT_0: u128 = (zerotier_core_crypto::random::next_u64_secure().wrapping_shl(64) as u128) ^ (zerotier_core_crypto::random::next_u64_secure() as u128);
-    static ref RANDOM_128BIT_SALT_1: u128 = (zerotier_core_crypto::random::next_u64_secure().wrapping_shl(64) as u128) ^ (zerotier_core_crypto::random::next_u64_secure() as u128);
-    static ref RANDOM_128BIT_SALT_2: u128 = (zerotier_core_crypto::random::next_u64_secure().wrapping_shl(64) as u128) ^ (zerotier_core_crypto::random::next_u64_secure() as u128);
-    static ref RANDOM_128BIT_SALT_3: u128 = (zerotier_core_crypto::random::next_u64_secure().wrapping_shl(64) as u128) ^ (zerotier_core_crypto::random::next_u64_secure() as u128);
-    static ref RANDOM_128BIT_SALT_4: u128 = (zerotier_core_crypto::random::next_u64_secure().wrapping_shl(64) as u128) ^ (zerotier_core_crypto::random::next_u64_secure() as u128);
+    static ref METROHASH_SEED: u64 = random::next_u64_secure();
 }
 
 /// A remote endpoint paired with a local socket and a local interface.
@@ -40,9 +32,9 @@ lazy_static! {
 /// one and only one unique path object. That enables statistics to be tracked
 /// for them and uniform application of things like keepalives.
 pub struct Path {
-    endpoint: Mutex<Arc<Endpoint>>,
-    pub(crate) local_socket: Option<NonZeroI64>,
-    pub(crate) local_interface: Option<NonZeroI64>,
+    pub endpoint: Endpoint,
+    pub local_socket: Option<NonZeroI64>,
+    pub local_interface: Option<NonZeroI64>,
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     fragmented_packets: Mutex<HashMap<u64, FragmentedPacket, U64NoOpHasher>>,
@@ -50,52 +42,66 @@ pub struct Path {
 
 impl Path {
     /// Get a 128-bit key to look up this endpoint in the local node path map.
-    #[inline(always)]
     pub(crate) fn local_lookup_key(endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> u128 {
-        let local_socket = local_socket.map_or(0, |s| crate::util::hash64_noncrypt(*RANDOM_64BIT_SALT_0 + s.get() as u64));
-        let local_interface = local_interface.map_or(0, |s| crate::util::hash64_noncrypt(*RANDOM_64BIT_SALT_1 + s.get() as u64));
-        let lsi = (local_socket as u128).wrapping_shl(64) | (local_interface as u128);
+        let mut h = MetroHash128::with_seed(*METROHASH_SEED);
+        h.write_u64(local_socket.map_or(0, |s| s.get() as u64));
+        h.write_u64(local_interface.map_or(0, |s| s.get() as u64));
         match endpoint {
-            Endpoint::Nil => 0,
-            Endpoint::ZeroTier(_, h) => u128::from_ne_bytes(*byte_array_range::<SHA512_HASH_SIZE, 0, 16>(h)),
-            Endpoint::Ethernet(m) => RANDOM_128BIT_SALT_0.wrapping_add(lsi as u128).wrapping_add(m.to_u64() as u128),
-            Endpoint::WifiDirect(m) => RANDOM_128BIT_SALT_1.wrapping_add(lsi as u128).wrapping_add(m.to_u64() as u128),
-            Endpoint::Bluetooth(m) => RANDOM_128BIT_SALT_2.wrapping_add(lsi as u128).wrapping_add(m.to_u64() as u128),
-            Endpoint::Ip(ip) => ip.ip_as_native_u128().wrapping_sub(lsi),    // naked IP has no port
-            Endpoint::IpUdp(ip) => ip.ip_as_native_u128().wrapping_add(lsi), // UDP maintains one path per IP but merely learns the most recent port
-            Endpoint::IpTcp(ip) => ip.ip_as_native_u128().wrapping_sub(crate::util::hash64_noncrypt((ip.port() as u64).wrapping_add(*RANDOM_64BIT_SALT_2)) as u128).wrapping_sub(lsi),
+            Endpoint::Nil => h.write_u8(endpoint::TYPE_NIL),
+            Endpoint::ZeroTier(_, fingerprint) => {
+                h.write_u8(endpoint::TYPE_ZEROTIER);
+                h.write(fingerprint);
+            }
+            Endpoint::Ethernet(m) => {
+                h.write_u8(endpoint::TYPE_ETHERNET);
+                h.write_u64(m.to_u64());
+            }
+            Endpoint::WifiDirect(m) => {
+                h.write_u8(endpoint::TYPE_WIFIDIRECT);
+                h.write_u64(m.to_u64());
+            }
+            Endpoint::Bluetooth(m) => {
+                h.write_u8(endpoint::TYPE_BLUETOOTH);
+                h.write_u64(m.to_u64());
+            }
+            Endpoint::Ip(ip) => {
+                h.write_u8(endpoint::TYPE_IP);
+                h.write(ip.ip_bytes());
+            }
+            Endpoint::IpUdp(ip) => {
+                h.write_u8(endpoint::TYPE_IPUDP);
+                ip.hash(&mut h);
+            }
+            Endpoint::IpTcp(ip) => {
+                h.write_u8(endpoint::TYPE_IPTCP);
+                ip.hash(&mut h);
+            }
             Endpoint::Http(s) => {
-                let mut hh = std::collections::hash_map::DefaultHasher::new();
-                hh.write_u64(local_socket);
-                hh.write_u64(local_interface);
-                hh.write(s.as_bytes());
-                RANDOM_128BIT_SALT_3.wrapping_add(hh.finish() as u128)
+                h.write_u8(endpoint::TYPE_HTTP);
+                h.write(s.as_bytes());
             }
             Endpoint::WebRTC(b) => {
-                let mut hh = std::collections::hash_map::DefaultHasher::new();
-                hh.write_u64(local_socket);
-                hh.write_u64(local_interface);
-                hh.write(b.as_slice());
-                RANDOM_128BIT_SALT_4.wrapping_add(hh.finish() as u128)
+                h.write_u8(endpoint::TYPE_WEBRTC);
+                h.write(b.as_slice());
             }
-            Endpoint::ZeroTierEncap(_, h) => u128::from_ne_bytes(*byte_array_range::<SHA512_HASH_SIZE, 16, 16>(h)),
+            Endpoint::ZeroTierEncap(_, fingerprint) => {
+                h.write_u8(endpoint::TYPE_ZEROTIER_ENCAP);
+                h.write(fingerprint);
+            }
         }
+        assert_eq!(std::mem::size_of::<(u64, u64)>(), std::mem::size_of::<u128>());
+        unsafe { std::mem::transmute(h.finish128()) }
     }
 
     pub fn new(endpoint: Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Self {
         Self {
-            endpoint: Mutex::new(Arc::new(endpoint)),
+            endpoint,
             local_socket,
             local_interface,
             last_send_time_ticks: AtomicI64::new(0),
             last_receive_time_ticks: AtomicI64::new(0),
             fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, U64NoOpHasher::new())),
         }
-    }
-
-    #[inline(always)]
-    pub fn endpoint(&self) -> Arc<Endpoint> {
-        self.endpoint.lock().clone()
     }
 
     /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.
@@ -131,30 +137,6 @@ impl Path {
         self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
     }
 
-    /// Called when a real packet is received and passes authentication checks.
-    pub(crate) fn log_receive_authenticated_packet(&self, _bytes: usize, source_endpoint: &Endpoint) {
-        match source_endpoint {
-            Endpoint::IpUdp(ip) => {
-                // If an IPv4 UDP remote IP is the same but the port changes, learn the new port by replacing the
-                // endpoint with the new one. This is because IPv4 NATs will occasionally remap IPs at random.
-                if ip.is_ipv4() {
-                    let mut ep = self.endpoint.lock();
-                    match ep.as_ref() {
-                        Endpoint::IpUdp(ip_orig) => {
-                            // These should always be equal because this path would have been looked up by IP, but sanity check in debug.
-                            debug_assert_eq!(ip_orig.ip_bytes(), ip.ip_bytes());
-                            if ip_orig.port() != ip.port() {
-                                (*ep) = Arc::new(source_endpoint.clone());
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
-
     #[inline(always)]
     pub(crate) fn log_send_anything(&self, time_ticks: i64) {
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
@@ -164,9 +146,12 @@ impl Path {
 impl BackgroundServicable for Path {
     const SERVICE_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
 
-    fn service<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64) -> bool {
+    fn service<SI: SystemInterface>(&self, si: &SI, _: &Node, time_ticks: i64) -> bool {
         self.fragmented_packets.lock().retain(|_, frag| (time_ticks - frag.ts_ticks) < PACKET_FRAGMENT_EXPIRATION);
-        // TODO: keepalives
+        if (time_ticks - self.last_send_time_ticks.load(Ordering::Relaxed)) >= PATH_KEEPALIVE_INTERVAL {
+            self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
+            si.wire_send(&self.endpoint, self.local_socket, self.local_interface, &[&ZEROES[..1]], 0);
+        }
         true
     }
 }

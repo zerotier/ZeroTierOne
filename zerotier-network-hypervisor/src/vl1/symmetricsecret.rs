@@ -37,6 +37,9 @@ pub(crate) struct SymmetricSecret {
     /// Master key from which other keys are derived.
     pub key: Secret<64>,
 
+    /// Key for private fields in HELLO packets.
+    pub hello_private_section_key: Secret<48>,
+
     /// Key used for HMAC extended validation on packets like HELLO.
     pub packet_hmac_key: Secret<64>,
 
@@ -59,11 +62,13 @@ impl Eq for SymmetricSecret {}
 impl SymmetricSecret {
     /// Create a new symmetric secret, deriving all sub-keys and such.
     pub fn new(key: Secret<64>) -> SymmetricSecret {
+        let hello_private_section_key = zt_kbkdf_hmac_sha384(&key.0, KBKDF_KEY_USAGE_LABEL_HELLO_PRIVATE_SECTION, 0, 0);
         let packet_hmac_key = zt_kbkdf_hmac_sha512(&key.0, KBKDF_KEY_USAGE_LABEL_PACKET_HMAC, 0, 0);
         let ephemeral_ratchet_key = zt_kbkdf_hmac_sha512(&key.0, KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_KEY, 0, 0);
         let aes_factory = AesGmacSivPoolFactory(zt_kbkdf_hmac_sha384(&key.0[0..48], KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0, 0, 0).first_n(), zt_kbkdf_hmac_sha384(&key.0[0..48], KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1, 0, 0).first_n());
         SymmetricSecret {
             key,
+            hello_private_section_key,
             packet_hmac_key,
             ephemeral_ratchet_key,
             aes_gmac_siv: Pool::new(2, aes_factory),

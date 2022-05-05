@@ -21,8 +21,8 @@ pub struct Root {
     /// Full identity of this node.
     pub identity: Identity,
 
-    /// Addresses of this root or None if this is a former member attesting to an update that removes it.
-    pub addresses: Option<BTreeSet<Endpoint>>,
+    /// Endpoints for this root or None if this is a former member attesting to an update that removes it.
+    pub endpoints: Option<BTreeSet<Endpoint>>,
 
     /// Signature of entire cluster by this identity.
     pub cluster_signature: Vec<u8>,
@@ -80,10 +80,10 @@ impl RootCluster {
         buf.append_varint(self.members.len() as u64)?;
         for m in self.members.iter() {
             m.identity.marshal_with_options(buf, IDENTITY_ALGORITHM_ALL, false)?;
-            if m.addresses.is_some() {
-                let addresses = m.addresses.as_ref().unwrap();
-                buf.append_varint(addresses.len() as u64)?;
-                for a in addresses.iter() {
+            if m.endpoints.is_some() {
+                let endpoints = m.endpoints.as_ref().unwrap();
+                buf.append_varint(endpoints.len() as u64)?;
+                for a in endpoints.iter() {
                     a.marshal(buf)?;
                 }
             } else {
@@ -124,13 +124,13 @@ impl RootCluster {
     }
 
     /// Add a member to this definition, replacing any current entry for this identity.
-    pub fn add<'a, I: Iterator<Item = &'a Endpoint>>(&mut self, member_identity: &Identity, addresses: Option<I>) {
+    pub fn add<'a, I: Iterator<Item = &'a Endpoint>>(&mut self, member_identity: &Identity, endpoints: Option<I>) {
         self.members.retain(|m| !m.identity.eq(member_identity));
         let _ = self.members.push(Root {
             identity: member_identity.clone_without_secret(),
-            addresses: addresses.map(|addresses| {
+            endpoints: endpoints.map(|endpoints| {
                 let mut tmp = BTreeSet::new();
-                for a in addresses {
+                for a in endpoints {
                     tmp.insert(a.clone());
                 }
                 tmp
@@ -156,7 +156,7 @@ impl RootCluster {
             self.members.retain(|m| !m.identity.eq(member_identity));
             let _ = self.members.push(Root {
                 identity: unsigned_entry.identity,
-                addresses: unsigned_entry.addresses,
+                endpoints: unsigned_entry.endpoints,
                 cluster_signature: signature.unwrap(),
                 flags: unsigned_entry.flags,
             });
@@ -195,7 +195,7 @@ impl RootCluster {
             let mut previous_count: isize = 0;
             let mut witness_count: isize = 0;
             for m in previous.members.iter() {
-                if m.addresses.is_some() {
+                if m.endpoints.is_some() {
                     previous_count += 1;
                     witness_count += my_signers.contains(&m.identity.fingerprint) as isize;
                 }
@@ -231,18 +231,18 @@ impl Marshalable for RootCluster {
         for _ in 0..member_count {
             let mut m = Root {
                 identity: Identity::unmarshal(buf, cursor)?,
-                addresses: None,
+                endpoints: None,
                 cluster_signature: Vec::new(),
                 flags: 0,
             };
 
-            let address_count = buf.read_varint(cursor)?;
-            if address_count > 0 {
-                let mut addresses = BTreeSet::new();
-                for _ in 0..address_count {
-                    addresses.insert(Endpoint::unmarshal(buf, cursor)?);
+            let endpoint_count = buf.read_varint(cursor)?;
+            if endpoint_count > 0 {
+                let mut endpoints = BTreeSet::new();
+                for _ in 0..endpoint_count {
+                    endpoints.insert(Endpoint::unmarshal(buf, cursor)?);
                 }
-                let _ = m.addresses.insert(addresses);
+                let _ = m.endpoints.insert(endpoints);
             }
 
             let signature_size = buf.read_varint(cursor)?;

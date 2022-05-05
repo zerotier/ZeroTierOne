@@ -23,13 +23,6 @@ pub(crate) fn byte_array_range<const A: usize, const START: usize, const LEN: us
     unsafe { &*a.as_ptr().add(START).cast::<[u8; LEN]>() }
 }
 
-/// Obtain a reference to a sub-array within an existing byte array.
-//#[inline(always)]
-//pub(crate) fn byte_array_range_mut<const A: usize, const START: usize, const LEN: usize>(a: &mut [u8; A]) -> &mut [u8; LEN] {
-//    assert!((START + LEN) <= A);
-//    unsafe { &mut *a.as_mut_ptr().add(START).cast::<[u8; LEN]>() }
-//}
-
 /// Non-cryptographic 64-bit bit mixer for things like local hashing.
 #[inline(always)]
 pub(crate) fn hash64_noncrypt(mut x: u64) -> u64 {

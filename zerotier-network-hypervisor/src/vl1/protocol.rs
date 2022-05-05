@@ -183,6 +183,9 @@ pub const WHOIS_MAX_WAITING_PACKETS: usize = 64;
 /// Keepalive interval for paths in milliseconds.
 pub const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
 
+/// How often to send HELLOs to roots, which is more often than normal peers.
+pub const ROOT_HELLO_INTERVAL: i64 = PATH_KEEPALIVE_INTERVAL * 2;
+
 /// Proof of work difficulty (threshold) for identity generation.
 pub const IDENTITY_POW_THRESHOLD: u8 = 17;
 

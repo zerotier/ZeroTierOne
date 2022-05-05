@@ -123,12 +123,6 @@ impl Endpoint {
             None
         }
     }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut b: Buffer<MAX_MARSHAL_SIZE> = Buffer::new();
-        self.marshal(&mut b).expect("internal error marshaling Endpoint");
-        b.as_bytes().to_vec()
-    }
 }
 
 impl Marshalable for Endpoint {

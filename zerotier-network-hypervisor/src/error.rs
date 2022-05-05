@@ -9,6 +9,23 @@
 use std::error::Error;
 use std::fmt::{Debug, Display};
 
+pub struct UnexpectedError;
+
+impl Display for UnexpectedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("UnexpectedError")
+    }
+}
+
+impl Debug for UnexpectedError {
+    #[inline(always)]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <Self as Display>::fmt(self, f)
+    }
+}
+
+impl Error for UnexpectedError {}
+
 pub struct InvalidFormatError;
 
 impl Display for InvalidFormatError {
@@ -26,8 +43,6 @@ impl Debug for InvalidFormatError {
 
 impl Error for InvalidFormatError {}
 
-/****/
-
 pub struct InvalidParameterError(pub(crate) &'static str);
 
 impl Display for InvalidParameterError {
@@ -44,8 +59,6 @@ impl Debug for InvalidParameterError {
 }
 
 impl Error for InvalidParameterError {}
-
-/****/
 
 pub struct MalformedRecordError(pub(crate) &'static str);
 

@@ -16,7 +16,6 @@ use parking_lot::Mutex;
 
 use zerotier_core_crypto::aes_gmac_siv::AesCtr;
 use zerotier_core_crypto::hash::*;
-use zerotier_core_crypto::kbkdf::zt_kbkdf_hmac_sha384;
 use zerotier_core_crypto::poly1305::Poly1305;
 use zerotier_core_crypto::random::{get_bytes_secure, next_u64_secure};
 use zerotier_core_crypto::salsa::Salsa;
@@ -24,6 +23,7 @@ use zerotier_core_crypto::secret::Secret;
 
 use crate::util::buffer::Buffer;
 use crate::util::byte_array_range;
+use crate::util::marshalable::Marshalable;
 use crate::vl1::hybridkey::HybridKeyPair;
 use crate::vl1::identity::{IDENTITY_ALGORITHM_ALL, IDENTITY_ALGORITHM_X25519};
 use crate::vl1::node::*;
@@ -37,7 +37,7 @@ use crate::{PacketBuffer, VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_R
 /// send/receive is not uncommon.
 pub struct Peer {
     // This peer's identity.
-    identity: Identity,
+    pub(crate) identity: Identity,
 
     // Static shared secret computed from agreement with identity.
     identity_symmetric_key: SymmetricSecret,
@@ -58,8 +58,9 @@ pub struct Peer {
     reported_local_ip: Mutex<Option<InetAddress>>,
 
     // Statistics and times of events.
-    last_send_time_ticks: AtomicI64,
-    last_receive_time_ticks: AtomicI64,
+    pub(crate) last_send_time_ticks: AtomicI64,
+    pub(crate) last_receive_time_ticks: AtomicI64,
+    pub(crate) last_hello_reply_time_ticks: AtomicI64,
     last_forward_time_ticks: AtomicI64,
     total_bytes_sent: AtomicU64,
     total_bytes_sent_indirect: AtomicU64,
@@ -198,6 +199,7 @@ impl Peer {
                 reported_local_ip: Mutex::new(None),
                 last_send_time_ticks: AtomicI64::new(0),
                 last_receive_time_ticks: AtomicI64::new(0),
+                last_hello_reply_time_ticks: AtomicI64::new(0),
                 last_forward_time_ticks: AtomicI64::new(0),
                 total_bytes_sent: AtomicU64::new(0),
                 total_bytes_sent_indirect: AtomicU64::new(0),
@@ -221,18 +223,7 @@ impl Peer {
     ///
     /// If the packet comes in multiple fragments, the fragments slice should contain all
     /// those fragments after the main packet header and first chunk.
-    pub(crate) fn receive<SI: SystemInterface, VI: InnerProtocolInterface>(
-        &self,
-        node: &Node,
-        si: &SI,
-        vi: &VI,
-        time_ticks: i64,
-        source_endpoint: &Endpoint,
-        source_path: &Arc<Path>,
-        header: &PacketHeader,
-        frag0: &Buffer<{ PACKET_SIZE_MAX }>,
-        fragments: &[Option<PacketBuffer>],
-    ) {
+    pub(crate) fn receive<SI: SystemInterface, VI: InnerProtocolInterface>(&self, node: &Node, si: &SI, vi: &VI, time_ticks: i64, source_path: &Arc<Path>, header: &PacketHeader, frag0: &Buffer<{ PACKET_SIZE_MAX }>, fragments: &[Option<PacketBuffer>]) {
         let _ = frag0.as_bytes_starting_at(PACKET_VERB_INDEX).map(|packet_frag0_payload_bytes| {
             let mut payload: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_without_memzero() };
 
@@ -266,7 +257,6 @@ impl Peer {
 
             self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
             self.total_bytes_received.fetch_add((payload.len() + PACKET_HEADER_SIZE) as u64, Ordering::Relaxed);
-            source_path.log_receive_authenticated_packet(payload.len() + PACKET_HEADER_SIZE, source_endpoint);
 
             let mut verb = payload.as_bytes()[0];
 
@@ -386,7 +376,7 @@ impl Peer {
     /// via a root or some other route.
     pub(crate) fn send<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.path(node).map_or(false, |path| {
-            if self.send_to_endpoint(si, path.endpoint().as_ref(), path.local_socket, path.local_interface, packet) {
+            if self.send_to_endpoint(si, &path.endpoint, path.local_socket, path.local_interface, packet) {
                 self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
                 self.total_bytes_sent.fetch_add(packet.len() as u64, Ordering::Relaxed);
                 true
@@ -405,7 +395,7 @@ impl Peer {
     /// Intermediates don't need to adjust fragmentation.
     pub(crate) fn forward<SI: SystemInterface>(&self, si: &SI, time_ticks: i64, packet: &Buffer<{ PACKET_SIZE_MAX }>) -> bool {
         self.direct_path().map_or(false, |path| {
-            if si.wire_send(path.endpoint().as_ref(), path.local_socket, path.local_interface, &[packet.as_bytes()], 0) {
+            if si.wire_send(&path.endpoint, path.local_socket, path.local_interface, &[packet.as_bytes()], 0) {
                 self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
                 self.total_bytes_forwarded.fetch_add(packet.len() as u64, Ordering::Relaxed);
                 true
@@ -428,7 +418,7 @@ impl Peer {
             || {
                 self.path(node).map_or(None, |p| {
                     path = Some(p.clone());
-                    Some(p.endpoint().as_ref().clone())
+                    Some(p.endpoint.clone())
                 })
             },
             |endpoint| Some(endpoint.clone()),
@@ -438,11 +428,10 @@ impl Peer {
         }
         let destination = destination.unwrap();
 
-        let mut packet: Buffer<{ PACKET_SIZE_MAX }> = Buffer::new();
+        let mut packet: Buffer<PACKET_SIZE_MAX> = unsafe { Buffer::new_without_memzero() };
         let time_ticks = si.time_ticks();
-
-        // Create packet headers and the first fixed-size fields in HELLO.
         let message_id = self.next_message_id();
+
         {
             let packet_header: &mut PacketHeader = packet.append_struct_get_mut().unwrap();
             packet_header.id = message_id.to_ne_bytes(); // packet ID and message ID are the same when Poly1305 MAC is used
@@ -450,27 +439,21 @@ impl Peer {
             packet_header.src = node.identity.address.to_bytes();
             packet_header.flags_cipher_hops = CIPHER_NOCRYPT_POLY1305;
         }
+
         {
             let hello_fixed_headers: &mut message_component_structs::HelloFixedHeaderFields = packet.append_struct_get_mut().unwrap();
             hello_fixed_headers.verb = VERB_VL1_HELLO | VERB_FLAG_EXTENDED_AUTHENTICATION;
-
-            // Protocol version so remote can do version-dependent things.
             hello_fixed_headers.version_proto = VERSION_PROTO;
-
-            // Software version (if this is the "official" ZeroTier implementation).
             hello_fixed_headers.version_major = VERSION_MAJOR;
             hello_fixed_headers.version_minor = VERSION_MINOR;
             hello_fixed_headers.version_revision = (VERSION_REVISION as u16).to_be_bytes();
-
-            // Timestamp for purposes of latency determination (not wall clock).
             hello_fixed_headers.timestamp = (time_ticks as u64).to_be_bytes();
         }
 
-        // Add this node's identity.
         assert!(self.identity.marshal_with_options(&mut packet, IDENTITY_ALGORITHM_ALL, false).is_ok());
         if self.identity.algorithms() == IDENTITY_ALGORITHM_X25519 {
             // LEGACY: append an extra zero when marshaling identities containing only x25519 keys.
-            // See comments in Identity::marshal().
+            // See comments in Identity::marshal(). This can go away eventually.
             assert!(packet.append_u8(0).is_ok());
         }
 
@@ -495,29 +478,25 @@ impl Peer {
         let mut fields = Dictionary::new();
         fields.set_u64(SESSION_METADATA_INSTANCE_ID, node.instance_id);
         fields.set_u64(SESSION_METADATA_CLOCK, si.time_clock() as u64);
-        fields.set_bytes(SESSION_METADATA_SENT_TO, destination.to_bytes());
-        let ephemeral_secret = self.ephemeral_symmetric_key.lock();
-        let _ = ephemeral_secret.as_ref().map(|s| fields.set_bytes(SESSION_METADATA_EPHEMERAL_CURRENT_SYMMETRIC_KEY_ID, s.id.to_vec()));
-        drop(ephemeral_secret); // release lock
-        let ephemeral_offer = self.ephemeral_offer.lock();
-        let _ = ephemeral_offer.as_ref().map(|p| fields.set_bytes(SESSION_METADATA_EPHEMERAL_PUBLIC_OFFER, p.0.public_bytes()));
-        drop(ephemeral_offer); // release lock
+        fields.set_bytes(SESSION_METADATA_SENT_TO, destination.to_buffer::<{ Endpoint::MAX_MARSHAL_SIZE }>().unwrap().as_bytes().to_vec());
         let fields = fields.to_bytes();
         assert!(fields.len() <= 0xffff); // sanity check, should be impossible
         assert!(packet.append_u16(fields.len() as u16).is_ok()); // prefix with unencrypted size
         let private_section_start = packet.len();
         assert!(packet.append_bytes(fields.as_slice()).is_ok());
-        let mut aes = AesCtr::new(&zt_kbkdf_hmac_sha384(&self.identity_symmetric_key.key.as_bytes()[0..48], KBKDF_KEY_USAGE_LABEL_HELLO_PRIVATE_SECTION, 0, 0).as_bytes()[0..32]);
+        let mut aes = AesCtr::new(&self.identity_symmetric_key.hello_private_section_key.as_bytes()[0..32]);
         aes.init(&nonce);
         aes.crypt_in_place(&mut packet.as_mut()[private_section_start..]);
+        drop(aes);
+        drop(fields);
 
-        // Add extended HMAC-SHA512 authentication.
+        // Add extended authentication at end of packet.
         let mut hmac = HMACSHA512::new(self.identity_symmetric_key.packet_hmac_key.as_bytes());
         hmac.update(&message_id.to_ne_bytes());
         hmac.update(&packet.as_bytes()[PACKET_HEADER_SIZE..]);
         assert!(packet.append_bytes_fixed(&hmac.finish()).is_ok());
 
-        // Set legacy poly1305 MAC in packet header. Newer nodes check HMAC-SHA512 but older ones only use this.
+        // Set legacy poly1305 MAC in packet header. Newer nodes also check HMAC-SHA512 but older ones only use this.
         let (_, mut poly) = salsa_poly_create(&self.identity_symmetric_key, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
         poly.update(packet.as_bytes_starting_at(PACKET_HEADER_SIZE).unwrap());
         packet.as_mut()[HEADER_MAC_FIELD_INDEX..HEADER_MAC_FIELD_INDEX + 8].copy_from_slice(&poly.finish()[0..8]);
@@ -565,7 +544,10 @@ impl Peer {
             let current_packet_id_counter = self.message_id_counter.load(Ordering::Relaxed);
             if current_packet_id_counter.wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match ok_header.in_re_verb {
-                    VERB_VL1_HELLO => {}
+                    VERB_VL1_HELLO => {
+                        // TODO
+                        self.last_hello_reply_time_ticks.store(time_ticks, Ordering::Relaxed);
+                    }
                     VERB_VL1_WHOIS => {}
                     _ => {
                         ph.handle_ok(self, source_path, forward_secrecy, extended_authentication, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor);
