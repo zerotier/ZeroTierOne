@@ -6,30 +6,37 @@
  * https://www.zerotier.com/
  */
 
-use std::borrow::Borrow;
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
 use std::str::FromStr;
-use std::time::UNIX_EPOCH;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use zerotier_core_crypto::hex;
+use lazy_static::lazy_static;
+
+use tokio::fs::File;
+use tokio::io::{AsyncRead, AsyncReadExt};
+
 use zerotier_network_hypervisor::vl1::Identity;
 
-//use crate::osdep;
-
-pub fn ms_since_epoch() -> i64 {
-    std::time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
+lazy_static! {
+    static ref STARTUP_INSTANT: Instant = Instant::now();
 }
 
-pub fn ms_monotonic() -> i64 {}
+/// Get milliseconds since unix epoch.
+pub fn ms_since_epoch() -> i64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
+}
 
+/// Get milliseconds since an arbitrary time in the past, guaranteed to monotonically increase.
+pub fn ms_monotonic() -> i64 {
+    Instant::now().duration_since(*STARTUP_INSTANT).as_millis() as i64
+}
+
+/// Returns true if the string starts with [yY1tT] or false for [nN0fF].
 pub fn parse_bool(v: &str) -> Result<bool, String> {
     if !v.is_empty() {
-        match v.chars().next().unwrap() {
+        match v.trim().chars().next().unwrap() {
             'y' | 'Y' | '1' | 't' | 'T' => {
                 return Ok(true);
             }
@@ -42,76 +49,18 @@ pub fn parse_bool(v: &str) -> Result<bool, String> {
     Err(format!("invalid boolean value: '{}'", v))
 }
 
-pub fn is_valid_bool(v: String) -> Result<(), String> {
-    parse_bool(v.as_str()).map(|_| ())
+/// Returns a non-error if a string is a valid boolean.
+pub fn is_valid_bool(v: &str) -> Result<(), String> {
+    parse_bool(v).map(|_| ())
 }
 
-pub fn is_valid_port(v: String) -> Result<(), String> {
-    let i = u16::from_str(v.as_str()).unwrap_or(0);
-    if i >= 1 {
+/// Returns a non-error if the string is a valid port number.
+pub fn is_valid_port(v: &str) -> Result<(), String> {
+    let i = isize::from_str(v).unwrap_or(0);
+    if i >= 0x0001 && i <= 0xffff {
         return Ok(());
     }
     Err(format!("invalid TCP/IP port number: {}", v))
-}
-
-/// Convenience function to read up to limit bytes from a file.
-/// If the file is larger than limit, the excess is not read.
-pub fn read_limit<P: AsRef<Path>>(path: P, limit: usize) -> std::io::Result<Vec<u8>> {
-    let mut v: Vec<u8> = Vec::new();
-    let _ = File::open(path)?.take(limit as u64).read_to_end(&mut v)?;
-    Ok(v)
-}
-
-/// Read an identity as either a literal or from a file.
-pub fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity, String> {
-    let parse_func = |s: &str| {
-        Identity::new_from_string(s).map_or_else(
-            |e| Err(format!("invalid identity: {}", e.to_str())),
-            |id| {
-                if !validate || id.validate() {
-                    Ok(id)
-                } else {
-                    Err(String::from("invalid identity: local validation failed"))
-                }
-            },
-        )
-    };
-    if Path::new(input).exists() {
-        read_limit(input, 16384).map_or_else(|e| Err(e.to_string()), |v| String::from_utf8(v).map_or_else(|e| Err(e.to_string()), |s| parse_func(s.as_str())))
-    } else {
-        parse_func(input)
-    }
-}
-
-/// Create a new HTTP authorization nonce by encrypting the current time.
-/// The key used to encrypt the current time is random and is re-created for
-/// each execution of the process. By decrypting this nonce when it is returned,
-/// the client and server may check the age of a digest auth exchange.
-pub fn create_http_auth_nonce(timestamp: i64) -> String {
-    let mut nonce_plaintext: [u64; 2] = [timestamp as u64, timestamp as u64];
-    unsafe {
-        //osdep::encryptHttpAuthNonce(nonce_plaintext.as_mut_ptr().cast());
-        hex::to_string(&nonce_plaintext.as_ptr().cast::<[u8]>())
-    }
-}
-
-/// Decrypt HTTP auth nonce encrypted by this process and return the timestamp.
-/// This returns zero if the input was not valid.
-pub fn decrypt_http_auth_nonce(nonce: &str) -> i64 {
-    let nonce = hex::from_string(nonce.trim());
-    if !nonce.is_err() {
-        let mut nonce = nonce.unwrap();
-        if nonce.len() == 16 {
-            unsafe {
-                //osdep::decryptHttpAuthNonce(nonce.as_mut_ptr().cast());
-                let nonce = *nonce.as_ptr().cast::<[u64; 2]>();
-                if nonce[0] == nonce[1] {
-                    return nonce[0] as i64;
-                }
-            }
-        }
-    }
-    return 0;
 }
 
 /// Shortcut to use serde_json to serialize an object, returns "null" on error.
@@ -125,6 +74,7 @@ pub fn to_json_pretty<O: serde::Serialize>(o: &O) -> String {
 }
 
 /// Recursively patch a JSON object.
+///
 /// This is slightly different from a usual JSON merge. For objects in the target their fields
 /// are updated by recursively calling json_patch if the same field is present in the source.
 /// If the source tries to set an object to something other than another object, this is ignored.
@@ -133,7 +83,7 @@ pub fn to_json_pretty<O: serde::Serialize>(o: &O) -> String {
 pub fn json_patch(target: &mut serde_json::value::Value, source: &serde_json::value::Value, depth_limit: usize) {
     if target.is_object() {
         if source.is_object() {
-            let mut target = target.as_object_mut().unwrap();
+            let target = target.as_object_mut().unwrap();
             let source = source.as_object().unwrap();
             for kv in target.iter_mut() {
                 let _ = source.get(kv.0).map(|new_value| {
@@ -154,13 +104,14 @@ pub fn json_patch(target: &mut serde_json::value::Value, source: &serde_json::va
 }
 
 /// Patch a serializable object with the fields present in a JSON object.
+///
 /// If there are no changes, None is returned. The depth limit is passed through to json_patch and
 /// should be set to a sanity check value to prevent overflows.
 pub fn json_patch_object<O: Serialize + DeserializeOwned + Eq>(obj: O, patch: &str, depth_limit: usize) -> Result<Option<O>, serde_json::Error> {
     serde_json::from_str::<serde_json::value::Value>(patch).map_or_else(
         |e| Err(e),
         |patch| {
-            serde_json::value::to_value(obj.borrow()).map_or_else(
+            serde_json::value::to_value(&obj).map_or_else(
                 |e| Err(e),
                 |mut obj_value| {
                     json_patch(&mut obj_value, &patch, depth_limit);
@@ -178,6 +129,44 @@ pub fn json_patch_object<O: Serialize + DeserializeOwned + Eq>(obj: O, patch: &s
             )
         },
     )
+}
+
+/// Convenience function to read up to limit bytes from a file.
+///
+/// If the file is larger than limit, the excess is not read.
+pub async fn read_limit(path: &str, limit: usize) -> std::io::Result<Vec<u8>> {
+    let mut f = File::open(path).await?;
+    let bytes = f.metadata().await?.len().min(limit as u64) as usize;
+    let mut v: Vec<u8> = Vec::with_capacity(bytes);
+    v.resize(bytes, 0);
+    f.read_exact(v.as_mut_slice()).await?;
+    Ok(v)
+}
+
+/// Returns true if the file exists and is a regular file (or a link to one).
+pub async fn file_exists(path: &str) -> bool {
+    tokio::fs::metadata(path).await.is_ok()
+}
+
+/// Read an identity as either a literal or from a file.
+pub async fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity, String> {
+    let parse_func = |s: &str| {
+        Identity::from_str(s).map_or_else(
+            |e| Err(format!("invalid identity: {}", e.to_string())),
+            |id| {
+                if !validate || id.validate_identity() {
+                    Ok(id)
+                } else {
+                    Err(String::from("invalid identity: local validation failed"))
+                }
+            },
+        )
+    };
+    if file_exists(input).await {
+        read_limit(input, 16384).await.map_or_else(|e| Err(e.to_string()), |v| String::from_utf8(v).map_or_else(|e| Err(e.to_string()), |s| parse_func(s.as_str())))
+    } else {
+        parse_func(input)
+    }
 }
 
 #[cfg(test)]

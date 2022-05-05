@@ -6,8 +6,8 @@
  * https://www.zerotier.com/
  */
 
-mod common;
+//mod common;
 mod vnic;
 
-#[cfg(target_os = "macos")]
-mod mac_feth_tap;
+//#[cfg(target_os = "macos")]
+//mod mac_feth_tap;

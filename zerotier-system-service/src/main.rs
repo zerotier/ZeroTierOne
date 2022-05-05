@@ -7,30 +7,20 @@
  */
 
 use std::io::Write;
-use std::str::FromStr;
 
-use clap::{App, Arg, ArgMatches, ErrorKind};
+use clap::{Arg, ArgMatches, Command};
 
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
-use crate::store::platform_default_home_path;
-
-mod fastudpsocket;
-mod getifaddrs;
-mod localconfig;
-#[macro_use]
-mod log;
-mod service;
-mod store;
-mod utils;
-mod vnic;
-
-pub const HTTP_API_OBJECT_SIZE_LIMIT: usize = 131072;
+pub mod getifaddrs;
+pub mod localconfig;
+pub mod utils;
+pub mod vnic;
 
 fn make_help(long_help: bool) -> String {
     format!(
         r###"ZeroTier Network Hypervisor Service Version {}.{}.{}
-(c)2013-2021 ZeroTier, Inc.
+(c)2013-2022 ZeroTier, Inc.
 Licensed under the Mozilla Public License (MPL) 2.0 (see LICENSE.txt)
 
 Usage: zerotier [-...] <command> [command args]
@@ -45,7 +35,6 @@ Global Options:
 Common Operations:
 
   help                                     Show this help
-  longhelp                                 Show help with advanced commands
   oldhelp                                  Show v1.x legacy commands
   version                                  Print version (of this binary)
 
@@ -126,111 +115,100 @@ pub struct GlobalCommandLineFlags {
     pub auth_token_override: Option<String>,
 }
 
+#[cfg(any(target_os = "macos"))]
+pub fn platform_default_home_path() -> String {
+    "/Library/Application Support/ZeroTier".into()
+}
+
+async fn async_main(cli_args: Box<ArgMatches>) -> i32 {
+    let global_cli_flags = GlobalCommandLineFlags {
+        json_output: cli_args.is_present("json"),
+        base_path: cli_args.value_of("path").map_or_else(|| platform_default_home_path(), |p| p.to_string()),
+        auth_token_path_override: cli_args.value_of("token_path").map(|p| p.to_string()),
+        auth_token_override: cli_args.value_of("token").map(|t| t.to_string()),
+    };
+
+    return match cli_args.subcommand() {
+        Some(("help", _)) => {
+            print_help(false);
+            0
+        }
+        Some(("oldhelp", _)) => todo!(),
+        Some(("version", _)) => {
+            println!("{}.{}.{}", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION);
+            0
+        }
+        Some(("status", _)) => todo!(),
+        Some(("set", sub_cli_args)) => todo!(),
+        Some(("peer", sub_cli_args)) => todo!(),
+        Some(("network", sub_cli_args)) => todo!(),
+        Some(("join", sub_cli_args)) => todo!(),
+        Some(("leave", sub_cli_args)) => todo!(),
+        Some(("service", _)) => todo!(),
+        Some(("controller", sub_cli_args)) => todo!(),
+        Some(("identity", sub_cli_args)) => todo!(),
+        _ => {
+            print_help(false);
+            1
+        }
+    };
+}
+
 fn main() {
     let cli_args = Box::new({
         let help = make_help(false);
-        let args = App::new("zerotier")
-            .arg(Arg::with_name("json").short("j"))
-            .arg(Arg::with_name("path").short("p").takes_value(true))
-            .arg(Arg::with_name("token_path").short("t").takes_value(true))
-            .arg(Arg::with_name("token").short("T").takes_value(true))
-            .subcommand(App::new("help"))
-            .subcommand(App::new("version"))
-            .subcommand(App::new("status"))
+        Command::new("zerotier")
+            .arg(Arg::new("json").short('j'))
+            .arg(Arg::new("path").short('p').takes_value(true))
+            .arg(Arg::new("token_path").short('t').takes_value(true))
+            .arg(Arg::new("token").short('T').takes_value(true))
+            .subcommand(Command::new("help"))
+            .subcommand(Command::new("version"))
+            .subcommand(Command::new("status"))
             .subcommand(
-                App::new("set")
-                    .subcommand(App::new("port").arg(Arg::with_name("port#").index(1).validator(utils::is_valid_port)))
-                    .subcommand(App::new("secondaryport").arg(Arg::with_name("port#").index(1).validator(utils::is_valid_port)))
+                Command::new("set")
+                    .subcommand(Command::new("port").arg(Arg::new("port#").index(1).validator(utils::is_valid_port)))
+                    .subcommand(Command::new("secondaryport").arg(Arg::new("port#").index(1).validator(utils::is_valid_port)))
                     .subcommand(
-                        App::new("blacklist")
-                            .subcommand(App::new("cidr").arg(Arg::with_name("ip_bits").index(1)).arg(Arg::with_name("boolean").index(2).validator(utils::is_valid_bool)))
-                            .subcommand(App::new("if").arg(Arg::with_name("prefix").index(1)).arg(Arg::with_name("boolean").index(2).validator(utils::is_valid_bool))),
+                        Command::new("blacklist")
+                            .subcommand(Command::new("cidr").arg(Arg::new("ip_bits").index(1)).arg(Arg::new("boolean").index(2).validator(utils::is_valid_bool)))
+                            .subcommand(Command::new("if").arg(Arg::new("prefix").index(1)).arg(Arg::new("boolean").index(2).validator(utils::is_valid_bool))),
                     )
-                    .subcommand(App::new("portmap").arg(Arg::with_name("boolean").index(1).validator(utils::is_valid_bool))),
+                    .subcommand(Command::new("portmap").arg(Arg::new("boolean").index(1).validator(utils::is_valid_bool))),
             )
-            .subcommand(App::new("peer").subcommand(App::new("show").arg(Arg::with_name("address").index(1).required(true))).subcommand(App::new("list")).subcommand(App::new("listroots")).subcommand(App::new("try")))
+            .subcommand(Command::new("peer").subcommand(Command::new("show").arg(Arg::new("address").index(1).required(true))).subcommand(Command::new("list")).subcommand(Command::new("listroots")).subcommand(Command::new("try")))
             .subcommand(
-                App::new("network")
-                    .subcommand(App::new("show").arg(Arg::with_name("nwid").index(1).required(true)))
-                    .subcommand(App::new("list"))
-                    .subcommand(App::new("set").arg(Arg::with_name("nwid").index(1).required(true)).arg(Arg::with_name("setting").index(2).required(false)).arg(Arg::with_name("value").index(3).required(false))),
+                Command::new("network")
+                    .subcommand(Command::new("show").arg(Arg::new("nwid").index(1).required(true)))
+                    .subcommand(Command::new("list"))
+                    .subcommand(Command::new("set").arg(Arg::new("nwid").index(1).required(true)).arg(Arg::new("setting").index(2).required(false)).arg(Arg::new("value").index(3).required(false))),
             )
-            .subcommand(App::new("join").arg(Arg::with_name("nwid").index(1).required(true)))
-            .subcommand(App::new("leave").arg(Arg::with_name("nwid").index(1).required(true)))
-            .subcommand(App::new("service"))
+            .subcommand(Command::new("join").arg(Arg::new("nwid").index(1).required(true)))
+            .subcommand(Command::new("leave").arg(Arg::new("nwid").index(1).required(true)))
+            .subcommand(Command::new("service"))
             .subcommand(
-                App::new("controller")
-                    .subcommand(App::new("list"))
-                    .subcommand(App::new("new"))
-                    .subcommand(App::new("set").arg(Arg::with_name("id").index(1).required(true)).arg(Arg::with_name("setting").index(2)).arg(Arg::with_name("value").index(3)))
-                    .subcommand(App::new("show").arg(Arg::with_name("id").index(1).required(true)).arg(Arg::with_name("member").index(2)))
-                    .subcommand(App::new("auth").arg(Arg::with_name("member").index(1).required(true)))
-                    .subcommand(App::new("deauth").arg(Arg::with_name("member").index(1).required(true))),
+                Command::new("controller")
+                    .subcommand(Command::new("list"))
+                    .subcommand(Command::new("new"))
+                    .subcommand(Command::new("set").arg(Arg::new("id").index(1).required(true)).arg(Arg::new("setting").index(2)).arg(Arg::new("value").index(3)))
+                    .subcommand(Command::new("show").arg(Arg::new("id").index(1).required(true)).arg(Arg::new("member").index(2)))
+                    .subcommand(Command::new("auth").arg(Arg::new("member").index(1).required(true)))
+                    .subcommand(Command::new("deauth").arg(Arg::new("member").index(1).required(true))),
             )
             .subcommand(
-                App::new("identity")
-                    .subcommand(App::new("new").arg(Arg::with_name("type").possible_value("p384").possible_value("c25519").default_value("c25519").index(1)))
-                    .subcommand(App::new("getpublic").arg(Arg::with_name("identity").index(1).required(true)))
-                    .subcommand(App::new("fingerprint").arg(Arg::with_name("identity").index(1).required(true)))
-                    .subcommand(App::new("validate").arg(Arg::with_name("identity").index(1).required(true)))
-                    .subcommand(App::new("sign").arg(Arg::with_name("identity").index(1).required(true)).arg(Arg::with_name("path").index(2).required(true)))
-                    .subcommand(App::new("verify").arg(Arg::with_name("identity").index(1).required(true)).arg(Arg::with_name("path").index(2).required(true)).arg(Arg::with_name("signature").index(3).required(true))),
+                Command::new("identity")
+                    .subcommand(Command::new("new").arg(Arg::new("type").possible_value("p384").possible_value("c25519").default_value("c25519").index(1)))
+                    .subcommand(Command::new("getpublic").arg(Arg::new("identity").index(1).required(true)))
+                    .subcommand(Command::new("fingerprint").arg(Arg::new("identity").index(1).required(true)))
+                    .subcommand(Command::new("validate").arg(Arg::new("identity").index(1).required(true)))
+                    .subcommand(Command::new("sign").arg(Arg::new("identity").index(1).required(true)).arg(Arg::new("path").index(2).required(true)))
+                    .subcommand(Command::new("verify").arg(Arg::new("identity").index(1).required(true)).arg(Arg::new("path").index(2).required(true)).arg(Arg::new("signature").index(3).required(true))),
             )
-            .help(help.as_str())
-            .get_matches_from_safe(std::env::args());
-        if args.is_err() {
-            let e = args.err().unwrap();
-            if e.kind != ErrorKind::HelpDisplayed {
-                print_help(false);
-            }
-            std::process::exit(1);
-        }
-        let args = args.unwrap();
-        if args.subcommand_name().is_none() {
-            print_help(false);
-            std::process::exit(1);
-        }
-        args
+            .override_help(help.as_str())
+            .override_usage(help.as_str())
+            .disable_help_flag(true)
+            .get_matches_from(std::env::args())
     });
 
-    let global_cli_flags = GlobalCommandLineFlags {
-        json_output: cli_args.is_present("json"),
-        base_path: cli_args.value_of("path").map_or_else(|| platform_default_home_path(), |p| p.into_string()),
-        auth_token_path_override: cli_args.value_of("token_path").map(|p| p.into_string()),
-        auth_token_override: cli_args.value_of("token").map(|t| t.into_string()),
-    };
-
-    std::process::exit({
-        match cli_args.subcommand() {
-            ("help", None) => {
-                print_help(false);
-                0
-            }
-            ("longhelp", None) => {
-                print_help(true);
-                0
-            }
-            ("oldhelp", None) => todo!(),
-            ("version", None) => {
-                println!("{}.{}.{}", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION);
-                0
-            }
-            ("status", None) => todo!(),
-            ("set", Some(sub_cli_args)) => todo!(),
-            ("peer", Some(sub_cli_args)) => todo!(),
-            ("network", Some(sub_cli_args)) => todo!(),
-            ("join", Some(sub_cli_args)) => todo!(),
-            ("leave", Some(sub_cli_args)) => todo!(),
-            ("service", None) => {
-                drop(cli_args); // free no longer needed memory before entering service
-                service::run(&global_cli_flags)
-            }
-            ("controller", Some(sub_cli_args)) => todo!(),
-            ("identity", Some(sub_cli_args)) => todo!(),
-            _ => {
-                print_help(false);
-                1
-            }
-        }
-    });
+    std::process::exit(tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap().block_on(async_main(cli_args)));
 }

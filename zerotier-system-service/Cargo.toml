@@ -12,14 +12,16 @@ codegen-units = 1
 panic = 'abort'
 
 [dependencies]
-num-traits = "^0"
 zerotier-network-hypervisor = { path = "../zerotier-network-hypervisor" }
 zerotier-core-crypto = { path = "../zerotier-core-crypto" }
+num-traits = "^0"
+tokio = { version = "^1", features = ["full"], default-features = false }
 serde = { version = "^1", features = ["derive"], default-features = false }
-serde_json = { version = "^1", features = [], default-features = false }
-num_cpus = "^1"
+serde_json = { version = "^1", features = ["std"], default-features = false }
 parking_lot = "^0"
 lazy_static = "^1"
+clap = "^3"
+#async-trait = "^0"
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
