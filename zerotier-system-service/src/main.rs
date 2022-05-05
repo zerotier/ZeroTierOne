@@ -77,14 +77,6 @@ Advanced Operations:
   service                                  Start local service
                                            (usually not invoked manually)
 
-  controller <command> [option]
-·   list                                   List networks on controller
-·   new                                    Create a new network
-·   set <network> [setting] [value]        Show or modify network settings
-·   show <network> [<address>]             Show network or member status
-·   auth <address>                         Authorize a peer
-·   deauth <address>                       Deauthorize a peer
-
   identity <command> [args]
     new [c25519 | p384]                    Create identity (default: c25519)
     getpublic <?identity>                  Extract public part of identity
@@ -128,6 +120,7 @@ async fn async_main(cli_args: Box<ArgMatches>) -> i32 {
         auth_token_override: cli_args.value_of("token").map(|t| t.to_string()),
     };
 
+    #[allow(unused)]
     return match cli_args.subcommand() {
         Some(("help", _)) => {
             print_help(false);
@@ -145,7 +138,6 @@ async fn async_main(cli_args: Box<ArgMatches>) -> i32 {
         Some(("join", sub_cli_args)) => todo!(),
         Some(("leave", sub_cli_args)) => todo!(),
         Some(("service", _)) => todo!(),
-        Some(("controller", sub_cli_args)) => todo!(),
         Some(("identity", sub_cli_args)) => todo!(),
         _ => {
             print_help(false);
@@ -186,15 +178,6 @@ fn main() {
             .subcommand(Command::new("join").arg(Arg::new("nwid").index(1).required(true)))
             .subcommand(Command::new("leave").arg(Arg::new("nwid").index(1).required(true)))
             .subcommand(Command::new("service"))
-            .subcommand(
-                Command::new("controller")
-                    .subcommand(Command::new("list"))
-                    .subcommand(Command::new("new"))
-                    .subcommand(Command::new("set").arg(Arg::new("id").index(1).required(true)).arg(Arg::new("setting").index(2)).arg(Arg::new("value").index(3)))
-                    .subcommand(Command::new("show").arg(Arg::new("id").index(1).required(true)).arg(Arg::new("member").index(2)))
-                    .subcommand(Command::new("auth").arg(Arg::new("member").index(1).required(true)))
-                    .subcommand(Command::new("deauth").arg(Arg::new("member").index(1).required(true))),
-            )
             .subcommand(
                 Command::new("identity")
                     .subcommand(Command::new("new").arg(Arg::new("type").possible_value("p384").possible_value("c25519").default_value("c25519").index(1)))
