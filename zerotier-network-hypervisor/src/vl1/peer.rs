@@ -24,12 +24,11 @@ use zerotier_core_crypto::secret::Secret;
 use crate::util::buffer::Buffer;
 use crate::util::byte_array_range;
 use crate::util::marshalable::Marshalable;
-use crate::vl1::hybridkey::HybridKeyPair;
 use crate::vl1::identity::{IDENTITY_ALGORITHM_ALL, IDENTITY_ALGORITHM_X25519};
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
 use crate::vl1::symmetricsecret::{EphemeralSymmetricSecret, SymmetricSecret};
-use crate::vl1::{Dictionary, Endpoint, Identity, InetAddress, Path};
+use crate::vl1::{Dictionary, Endpoint, Identity, Path};
 use crate::{PacketBuffer, VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
 
 /// A remote peer known to this node.
@@ -45,19 +44,11 @@ pub struct Peer {
     // Latest ephemeral secret or None if not yet negotiated.
     ephemeral_symmetric_key: Mutex<Option<Arc<EphemeralSymmetricSecret>>>,
 
-    // Pending symmetric secret key that has not been ACKed yet.
-    ephemeral_pending_symmetric_key: Mutex<Option<Arc<EphemeralSymmetricSecret>>>,
-
-    // Locally generated ephemeral key pair on offer if we are re-keying, and when it was generated.
-    ephemeral_offer: Mutex<Option<(HybridKeyPair, i64)>>,
-
     // Paths sorted in descending order of quality / preference.
     paths: Mutex<Vec<Arc<Path>>>,
 
-    // Local external address most recently reported by this peer (IP transport only).
-    reported_local_ip: Mutex<Option<InetAddress>>,
-
     // Statistics and times of events.
+    create_time_ticks: i64,
     pub(crate) last_send_time_ticks: AtomicI64,
     pub(crate) last_receive_time_ticks: AtomicI64,
     pub(crate) last_hello_reply_time_ticks: AtomicI64,
@@ -193,10 +184,8 @@ impl Peer {
                 identity: id,
                 identity_symmetric_key: SymmetricSecret::new(static_secret),
                 ephemeral_symmetric_key: Mutex::new(None),
-                ephemeral_pending_symmetric_key: Mutex::new(None),
-                ephemeral_offer: Mutex::new(Some((HybridKeyPair::generate(), time_ticks))),
                 paths: Mutex::new(Vec::new()),
-                reported_local_ip: Mutex::new(None),
+                create_time_ticks: time_ticks,
                 last_send_time_ticks: AtomicI64::new(0),
                 last_receive_time_ticks: AtomicI64::new(0),
                 last_hello_reply_time_ticks: AtomicI64::new(0),
@@ -305,17 +294,6 @@ impl Peer {
                     VERB_VL1_USER_MESSAGE => self.receive_user_message(si, node, time_ticks, source_path, &payload),
                     _ => {}
                 }
-            } else {
-                // In debug build check to make sure the next layer (VL2) is complying with the API contract.
-                #[cfg(debug)]
-                {
-                    if match verb {
-                        VERB_VL1_NOP | VERB_VL1_HELLO | VERB_VL1_ERROR | VERB_VL1_OK | VERB_VL1_WHOIS | VERB_VL1_RENDEZVOUS | VERB_VL1_ECHO | VERB_VL1_PUSH_DIRECT_PATHS | VERB_VL1_USER_MESSAGE => true,
-                        _ => false,
-                    } {
-                        panic!("The next layer handled a VL1 packet! It should not do this.");
-                    }
-                }
             }
         });
     }
@@ -417,7 +395,7 @@ impl Peer {
         let destination = explicit_endpoint.map_or_else(
             || {
                 self.path(node).map_or(None, |p| {
-                    path = Some(p.clone());
+                    let _ = path.insert(p.clone());
                     Some(p.endpoint.clone())
                 })
             },

@@ -304,13 +304,12 @@ impl Node {
                 }
             }
 
-            // Update best root fast lookup field.
+            // The best root is the one that has replied to a HELLO most recently. Since we send HELLOs in unison
+            // this is a proxy for latency and also causes roots that fail to reply to drop out quickly.
             if !roots.is_empty() {
+                roots.sort_unstable_by(|a, b| a.last_hello_reply_time_ticks.load(Ordering::Relaxed).cmp(&b.last_hello_reply_time_ticks.load(Ordering::Relaxed)));
                 let _ = self.best_root.write().insert(roots.last().unwrap().clone());
             } else {
-                // The best root is the one that has replied to a HELLO most recently. Since we send HELLOs in unison
-                // this is a proxy for latency and also causes roots that fail to reply to drop out quickly.
-                roots.sort_unstable_by(|a, b| a.last_hello_reply_time_ticks.load(Ordering::Relaxed).cmp(&b.last_hello_reply_time_ticks.load(Ordering::Relaxed)));
                 let _ = self.best_root.write().take();
             }
         }
