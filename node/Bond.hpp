@@ -1143,9 +1143,6 @@ class Bond {
 	 */
 	void log(const char* fmt, ...)
 	{
-#ifdef __GNUC__
-		__attribute__((format(printf, 2, 3)))
-#endif
 #ifdef ZT_TRACE
 		time_t rawtime;
 		struct tm* timeinfo;
@@ -1175,9 +1172,6 @@ class Bond {
 	 */
 	void debug(const char* fmt, ...)
 	{
-#ifdef __GNUC__
-		__attribute__((format(printf, 2, 3)))
-#endif
 #ifdef ZT_DEBUG
 		time_t rawtime;
 		struct tm* timeinfo;
