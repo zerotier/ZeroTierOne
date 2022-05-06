@@ -1724,11 +1724,11 @@ void Bond::dumpPathStatus(int64_t now, int pathIdx)
 	std::string aliveOrDead = _paths[pathIdx].alive ? std::string("alive") : std::string("dead");
 	std::string eligibleOrNot = _paths[pathIdx].eligible ? std::string("eligible") : std::string("ineligible");
 	std::string bondedOrNot = _paths[pathIdx].bonded ? std::string("bonded") : std::string("unbonded");
-	log("path[%2d] --- %5s (in %7d, out: %7d), %10s, %8s, flows=%-6d lat=%-8.3f pdv=%-7.3f err=%-6.4f loss=%-6.4f alloc=%-3d --- (%s)",
+	log("path[%2d] --- %5s (in %7lld, out: %7lld), %10s, %8s, flows=%-6d lat=%-8.3f pdv=%-7.3f err=%-6.4f loss=%-6.4f alloc=%-3d --- (%s)",
 		pathIdx,
 		aliveOrDead.c_str(),
-		_paths[pathIdx].p->age(now),
-		(now - _paths[pathIdx].p->_lastOut),
+		static_cast<long long int>(_paths[pathIdx].p->age(now)),
+		static_cast<long long int>(now - _paths[pathIdx].p->_lastOut),
 		eligibleOrNot.c_str(),
 		bondedOrNot.c_str(),
 		_paths[pathIdx].assignedFlowCount,
