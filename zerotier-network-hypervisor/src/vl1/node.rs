@@ -24,7 +24,7 @@ use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
 use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
-use crate::vl1::{Address, Endpoint, Identity, RootCluster};
+use crate::vl1::{Address, Endpoint, Identity, RootSet};
 use crate::{PacketBuffer, PacketBufferFactory, PacketBufferPool};
 
 /// Trait implemented by external code to handle events and provide an interface to the system or application.
@@ -132,6 +132,12 @@ struct BackgroundTaskIntervals {
     root_hello: IntervalGate<ROOT_HELLO_INTERVAL>,
 }
 
+struct RootInfo {
+    roots: HashMap<Arc<Peer>, Vec<Endpoint>>,
+    sets: HashMap<String, RootSet>,
+    sets_modified: bool,
+}
+
 /// A VL1 global P2P network node.
 pub struct Node {
     /// A random ID generated to identify this particular running instance.
@@ -144,13 +150,13 @@ pub struct Node {
     intervals: Mutex<BackgroundTaskIntervals>,
 
     /// Canonicalized network paths, held as Weak<> to be automatically cleaned when no longer in use.
-    paths: DashMap<u128, Weak<Path>>,
+    paths: DashMap<(u64, u64), Weak<Path>>,
 
     /// Peers with which we are currently communicating.
     peers: DashMap<Address, Arc<Peer>>,
 
     /// This node's trusted roots, sorted in ascending order of quality/preference, and cluster definitions.
-    roots: Mutex<(Vec<Arc<Peer>>, Vec<RootCluster>)>,
+    roots: Mutex<RootInfo>,
 
     /// Current best root.
     best_root: RwLock<Option<Arc<Peer>>>,
@@ -197,7 +203,11 @@ impl Node {
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
             paths: DashMap::new(),
             peers: DashMap::new(),
-            roots: Mutex::new((Vec::new(), Vec::new())),
+            roots: Mutex::new(RootInfo {
+                roots: HashMap::new(),
+                sets: HashMap::new(),
+                sets_modified: false,
+            }),
             best_root: RwLock::new(None),
             whois: WhoisQueue::new(),
             buffer_pool: PacketBufferPool::new(64, PacketBufferFactory::new()),
@@ -235,89 +245,83 @@ impl Node {
         let tt = si.time_ticks();
 
         if intervals.root_sync.gate(tt) {
-            let mut roots_lock = self.roots.lock();
-            let (roots, root_clusters) = &mut *roots_lock;
+            match &mut (*self.roots.lock()) {
+                RootInfo { roots, sets, sets_modified } => {
+                    // Sychronize root info with root sets info if the latter has changed.
+                    if *sets_modified {
+                        *sets_modified = false;
+                        roots.clear();
+                        let mut colliding_root_addresses = Vec::new(); // see security note below
+                        for (_, rc) in sets.iter() {
+                            for m in rc.members.iter() {
+                                if m.endpoints.is_some() && !colliding_root_addresses.contains(&m.identity.address) {
+                                    /*
+                                     * SECURITY NOTE: it should be impossible to get an address/identity collision here unless
+                                     * the user adds a maliciously crafted root set with an identity that collides another. Under
+                                     * normal circumstances the root backplane combined with the address PoW should rule this
+                                     * out. However since we trust roots as identity lookup authorities it's important to take
+                                     * extra care to check for this case. If it's detected, all roots with the offending
+                                     * address are ignored/disabled.
+                                     *
+                                     * The apparently over-thought functional chain here on peers.entry() is to make access to
+                                     * the peer map atomic since we use a "lock-free" data structure here (DashMap).
+                                     */
 
-            // Look at root cluster definitions and make sure all have corresponding root peers.
-            let mut root_endpoints = HashMap::with_capacity(roots.len() * 2);
-            for rc in root_clusters.iter() {
-                for m in rc.members.iter() {
-                    if m.endpoints.is_some() {
-                        let endpoints = m.endpoints.as_ref().unwrap();
-
-                        /*
-                         * SECURITY NOTE: we take extra care to handle the case where we have a peer whose identity
-                         * differs from that of a root but whose address is the same. It should be impossible to
-                         * make this happen, but we check anyway. It would require a colliding identity to be
-                         * approved by one of your existing roots and somehow retrieved via WHOIS, but this would
-                         * be hard because this background task loop populates the peer list with specified root
-                         * identities before this happens. It could also happen if you have two root cluster
-                         * definitions with a colliding address, which would itself be hard to produce and would
-                         * probably mean someone is doing something nasty.
-                         *
-                         * In this case the response is to ignore this root entirely and generate a warning.
-                         */
-
-                        // This functional stuff on entry() is to do all this atomically while holding the map's entry
-                        // object, since this is a "lock-free" structure.
-                        let _ = self
-                            .peers
-                            .entry(m.identity.address)
-                            .or_try_insert_with(|| {
-                                Peer::new(&self.identity, m.identity.clone(), tt).map_or(Err(crate::error::UnexpectedError), |new_root| {
-                                    let new_root = Arc::new(new_root);
-                                    roots.retain(|r| r.identity.address != m.identity.address); // sanity check, should be impossible
-                                    roots.push(new_root.clone());
-                                    Ok(new_root)
-                                })
-                            })
-                            .and_then(|root_peer_entry| {
-                                let rp = root_peer_entry.value();
-                                if rp.identity.eq(&m.identity) {
-                                    Ok(root_peer_entry)
-                                } else {
-                                    roots.retain(|r| r.identity.address != m.identity.address);
-                                    si.event_security_warning(format!("address/identity collision between root {} (from root cluster definition '{}') and known peer {}", m.identity.address.to_string(), rc.name, rp.identity.to_string()).as_str());
-                                    Err(crate::error::UnexpectedError)
+                                    let _ = self
+                                        .peers
+                                        .entry(m.identity.address)
+                                        .or_try_insert_with(|| Peer::new(&self.identity, m.identity.clone(), tt).map_or(Err(crate::error::UnexpectedError), |new_root| Ok(Arc::new(new_root))))
+                                        .and_then(|root_peer_entry| {
+                                            let rp = root_peer_entry.value();
+                                            if rp.identity.eq(&m.identity) {
+                                                Ok(root_peer_entry)
+                                            } else {
+                                                colliding_root_addresses.push(m.identity.address);
+                                                si.event_security_warning(
+                                                    format!("address/identity collision between root {} (from root cluster definition '{}') and known peer {}", m.identity.address.to_string(), rc.name, rp.identity.to_string()).as_str(),
+                                                );
+                                                Err(crate::error::UnexpectedError)
+                                            }
+                                        })
+                                        .map(|r| roots.insert(r.value().clone(), m.endpoints.as_ref().unwrap().iter().map(|e| e.clone()).collect()));
                                 }
-                            })
-                            .map(|_| {
-                                let _ = root_endpoints.insert(m.identity.address, endpoints);
-                            });
+                            }
+                        }
                     }
-                }
-            }
 
-            // Remove all roots not in any current root cluster definition.
-            roots.retain(|r| root_endpoints.contains_key(&r.identity.address));
-
-            // Say HELLO to all roots periodically. For roots we send HELLO to every single endpoint
-            // they have, which is a behavior that differs from normal peers. This allows roots to
-            // e.g. see our IPv4 and our IPv6 address which can be important for us to learn our
-            // external addresses from them.
-            assert!(ROOT_SYNC_INTERVAL_MS <= (ROOT_HELLO_INTERVAL / 2));
-            if intervals.root_hello.gate(tt) {
-                for r in roots.iter() {
-                    for ep in root_endpoints.get(&r.identity.address).unwrap().iter() {
-                        r.send_hello(si, self, Some(ep));
+                    // Say HELLO to all roots periodically. For roots we send HELLO to every single endpoint
+                    // they have, which is a behavior that differs from normal peers. This allows roots to
+                    // e.g. see our IPv4 and our IPv6 address which can be important for us to learn our
+                    // external addresses from them.
+                    assert!(ROOT_SYNC_INTERVAL_MS <= (ROOT_HELLO_INTERVAL / 2));
+                    if intervals.root_hello.gate(tt) {
+                        for (root, endpoints) in roots.iter() {
+                            for ep in endpoints.iter() {
+                                root.send_hello(si, self, Some(ep));
+                            }
+                        }
                     }
-                }
-            }
 
-            // The best root is the one that has replied to a HELLO most recently. Since we send HELLOs in unison
-            // this is a proxy for latency and also causes roots that fail to reply to drop out quickly.
-            if !roots.is_empty() {
-                roots.sort_unstable_by(|a, b| a.last_hello_reply_time_ticks.load(Ordering::Relaxed).cmp(&b.last_hello_reply_time_ticks.load(Ordering::Relaxed)));
-                let _ = self.best_root.write().insert(roots.last().unwrap().clone());
-            } else {
-                let _ = self.best_root.write().take();
+                    // The best root is the one that has replied to a HELLO most recently. Since we send HELLOs in unison
+                    // this is a proxy for latency and also causes roots that fail to reply to drop out quickly.
+                    let mut latest_hello_reply = 0;
+                    let mut best: Option<&Arc<Peer>> = None;
+                    for (r, _) in roots.iter() {
+                        let t = r.last_hello_reply_time_ticks.load(Ordering::Relaxed);
+                        if t >= latest_hello_reply {
+                            latest_hello_reply = t;
+                            let _ = best.insert(r);
+                        }
+                    }
+                    *(self.best_root.write()) = best.cloned();
+                }
             }
         }
 
         if intervals.peers.gate(tt) {
             // Service all peers, removing any whose service() method returns false AND that are not
             // roots. Roots on the other hand remain in the peer list as long as they are roots.
-            self.peers.retain(|_, peer| if peer.service(si, self, tt) { true } else { !self.roots.lock().0.iter().any(|r| Arc::ptr_eq(peer, r)) });
+            self.peers.retain(|_, peer| if peer.service(si, self, tt) { true } else { !self.roots.lock().roots.contains_key(peer) });
         }
 
         if intervals.paths.gate(tt) {
@@ -339,7 +343,7 @@ impl Node {
                 if dest == self.identity.address {
                     // Handle packets (seemingly) addressed to this node.
 
-                    let path = self.path_to_endpoint(source_endpoint, source_local_socket, source_local_interface);
+                    let path = self.canonical_path(source_endpoint, source_local_socket, source_local_interface);
                     path.log_receive_anything(time_ticks);
 
                     if fragment_header.is_fragment() {
@@ -407,16 +411,35 @@ impl Node {
 
     /// Return true if a peer is a root.
     pub fn is_peer_root(&self, peer: &Peer) -> bool {
-        self.roots.lock().0.iter().any(|p| Arc::as_ptr(p) == (peer as *const Peer))
+        self.roots.lock().roots.contains_key(peer)
+    }
+
+    pub fn add_update_root_set(&self, rs: RootSet) -> bool {
+        let mut roots = self.roots.lock();
+        let entry = roots.sets.get_mut(&rs.name);
+        if entry.is_some() {
+            let old_rs = entry.unwrap();
+            if rs.should_replace(old_rs) {
+                *old_rs = rs;
+                roots.sets_modified = true;
+                return true;
+            }
+        } else {
+            if rs.verify() {
+                roots.sets.insert(rs.name.clone(), rs);
+                roots.sets_modified = true;
+                return true;
+            }
+        }
+        return false;
     }
 
     /// Get the canonical Path object for a given endpoint and local socket information.
     ///
     /// This is a canonicalizing function that returns a unique path object for every tuple
     /// of endpoint, local socket, and local interface.
-    pub fn path_to_endpoint(&self, ep: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Arc<Path> {
-        let key = Path::local_lookup_key(ep, local_socket, local_interface);
-        let mut path_entry = self.paths.entry(key).or_insert_with(|| Weak::new());
+    pub fn canonical_path(&self, ep: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Arc<Path> {
+        let mut path_entry = self.paths.entry(Path::local_lookup_key(ep, local_socket, local_interface)).or_default();
         if let Some(path) = path_entry.value().upgrade() {
             path
         } else {
@@ -426,7 +449,3 @@ impl Node {
         }
     }
 }
-
-unsafe impl Send for Node {}
-
-unsafe impl Sync for Node {}

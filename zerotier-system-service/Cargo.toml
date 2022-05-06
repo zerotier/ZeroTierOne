@@ -20,8 +20,7 @@ serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = ["std"], default-features = false }
 parking_lot = "^0"
 lazy_static = "^1"
-clap = "^3"
-#async-trait = "^0"
+clap = { version = "^3", features = ["std", "suggestions"], default-features = false }
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }

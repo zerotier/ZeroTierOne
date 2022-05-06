@@ -112,6 +112,12 @@ impl<const L: usize> Buffer<L> {
         &mut self.1[0..self.0]
     }
 
+    /// Get a mutable reference to the entire buffer regardless of the current 'size'.
+    #[inline(always)]
+    pub unsafe fn entire_buffer_mut(&mut self) -> &mut [u8; L] {
+        &mut self.1
+    }
+
     #[inline(always)]
     pub fn as_ptr(&self) -> *const u8 {
         self.1.as_ptr()

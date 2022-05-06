@@ -220,6 +220,7 @@ impl Marshalable for Endpoint {
         }
     }
 }
+
 impl Hash for Endpoint {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
@@ -244,7 +245,7 @@ impl Hash for Endpoint {
             }
             Endpoint::Ip(ip) => {
                 state.write_u8(TYPE_IP);
-                ip.hash(state);
+                ip.ip_bytes().hash(state);
             }
             Endpoint::IpUdp(ip) => {
                 state.write_u8(TYPE_IPUDP);

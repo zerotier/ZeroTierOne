@@ -8,20 +8,22 @@
 
 use std::io::Write;
 
+use clap::error::{ContextKind, ContextValue};
 use clap::{Arg, ArgMatches, Command};
 
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
+pub mod exitcode;
 pub mod getifaddrs;
 pub mod localconfig;
 pub mod utils;
 pub mod vnic;
 
-fn make_help(long_help: bool) -> String {
+fn make_help() -> String {
     format!(
         r###"ZeroTier Network Hypervisor Service Version {}.{}.{}
 (c)2013-2022 ZeroTier, Inc.
-Licensed under the Mozilla Public License (MPL) 2.0 (see LICENSE.txt)
+Licensed under the Mozilla Public License (MPL) 2.0
 
 Usage: zerotier [-...] <command> [command args]
 
@@ -35,7 +37,6 @@ Global Options:
 Common Operations:
 
   help                                     Show this help
-  oldhelp                                  Show v1.x legacy commands
   version                                  Print version (of this binary)
 
 · status                                   Show node status and configuration
@@ -66,37 +67,37 @@ Common Operations:
 
 · join <network>                           Join a virtual network
 · leave <network>                          Leave a virtual network
-{}"###,
-        VERSION_MAJOR,
-        VERSION_MINOR,
-        VERSION_REVISION,
-        if long_help {
-            r###"
+
 Advanced Operations:
 
-  service                                  Start local service
-                                           (usually not invoked manually)
-
   identity <command> [args]
-    new [c25519 | p384]                    Create identity (default: c25519)
+    new                                    Create new identity
     getpublic <?identity>                  Extract public part of identity
     fingerprint <?identity>                Get an identity's fingerprint
     validate <?identity>                   Locally validate an identity
     sign <?identity> <@file>               Sign a file with an identity's key
     verify <?identity> <@file> <sig>       Verify a signature
 
-    · Command (or command with argument type) requires a running node.
+  rootset <command> [args]
+·   trust <@root set>                      Add or update a root set
+·   untrust <root set name>                Stop using a root set
+·   list                                   List root sets in use
+    sign <path> <?identity secret>         Sign a root set with an identity
+
+  service                                  Start local service
+   (usually not invoked manually)
+
+    · Command requires a running node to control.
     @ Argument is the path to a file containing the object.
     ? Argument can be either the object or a path to it (auto-detected).
-"###
-        } else {
-            ""
-        }
+
+"###,
+        VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION,
     )
 }
 
-pub fn print_help(long_help: bool) {
-    let h = make_help(long_help);
+pub fn print_help() {
+    let h = make_help();
     let _ = std::io::stdout().write_all(h.as_bytes());
 }
 
@@ -112,10 +113,15 @@ pub fn platform_default_home_path() -> String {
     "/Library/Application Support/ZeroTier".into()
 }
 
+#[cfg(any(target_os = "linux"))]
+pub fn platform_default_home_path() -> String {
+    "/var/lib/zerotier".into()
+}
+
 async fn async_main(cli_args: Box<ArgMatches>) -> i32 {
     let global_cli_flags = GlobalCommandLineFlags {
         json_output: cli_args.is_present("json"),
-        base_path: cli_args.value_of("path").map_or_else(|| platform_default_home_path(), |p| p.to_string()),
+        base_path: cli_args.value_of("path").map_or_else(platform_default_home_path, |p| p.to_string()),
         auth_token_path_override: cli_args.value_of("token_path").map(|p| p.to_string()),
         auth_token_override: cli_args.value_of("token").map(|t| t.to_string()),
     };
@@ -123,32 +129,32 @@ async fn async_main(cli_args: Box<ArgMatches>) -> i32 {
     #[allow(unused)]
     return match cli_args.subcommand() {
         Some(("help", _)) => {
-            print_help(false);
-            0
+            print_help();
+            exitcode::OK
         }
-        Some(("oldhelp", _)) => todo!(),
         Some(("version", _)) => {
             println!("{}.{}.{}", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION);
-            0
+            exitcode::OK
         }
         Some(("status", _)) => todo!(),
-        Some(("set", sub_cli_args)) => todo!(),
-        Some(("peer", sub_cli_args)) => todo!(),
-        Some(("network", sub_cli_args)) => todo!(),
-        Some(("join", sub_cli_args)) => todo!(),
-        Some(("leave", sub_cli_args)) => todo!(),
+        Some(("set", args)) => todo!(),
+        Some(("peer", args)) => todo!(),
+        Some(("network", args)) => todo!(),
+        Some(("join", args)) => todo!(),
+        Some(("leave", args)) => todo!(),
         Some(("service", _)) => todo!(),
-        Some(("identity", sub_cli_args)) => todo!(),
+        Some(("identity", args)) => todo!(),
+        Some(("rootset", args)) => todo!(),
         _ => {
-            print_help(false);
-            1
+            print_help();
+            exitcode::ERR_USAGE
         }
     };
 }
 
 fn main() {
     let cli_args = Box::new({
-        let help = make_help(false);
+        let help = make_help();
         Command::new("zerotier")
             .arg(Arg::new("json").short('j'))
             .arg(Arg::new("path").short('p').takes_value(true))
@@ -180,17 +186,56 @@ fn main() {
             .subcommand(Command::new("service"))
             .subcommand(
                 Command::new("identity")
-                    .subcommand(Command::new("new").arg(Arg::new("type").possible_value("p384").possible_value("c25519").default_value("c25519").index(1)))
+                    .subcommand(Command::new("new"))
                     .subcommand(Command::new("getpublic").arg(Arg::new("identity").index(1).required(true)))
                     .subcommand(Command::new("fingerprint").arg(Arg::new("identity").index(1).required(true)))
                     .subcommand(Command::new("validate").arg(Arg::new("identity").index(1).required(true)))
                     .subcommand(Command::new("sign").arg(Arg::new("identity").index(1).required(true)).arg(Arg::new("path").index(2).required(true)))
                     .subcommand(Command::new("verify").arg(Arg::new("identity").index(1).required(true)).arg(Arg::new("path").index(2).required(true)).arg(Arg::new("signature").index(3).required(true))),
             )
+            .subcommand(
+                Command::new("rootset")
+                    .subcommand(Command::new("trust").arg(Arg::new("path").index(1).required(true)))
+                    .subcommand(Command::new("untrust").arg(Arg::new("name").index(1).required(true)))
+                    .subcommand(Command::new("list"))
+                    .subcommand(Command::new("sign").arg(Arg::new("path").index(1).required(true)).arg(Arg::new("secret").index(2).required(true))),
+            )
             .override_help(help.as_str())
-            .override_usage(help.as_str())
+            .override_usage("")
+            .disable_version_flag(true)
+            .disable_help_subcommand(false)
             .disable_help_flag(true)
-            .get_matches_from(std::env::args())
+            .try_get_matches_from(std::env::args())
+            .unwrap_or_else(|e| {
+                if e.kind() == clap::ErrorKind::DisplayHelp {
+                    print_help();
+                    std::process::exit(exitcode::OK);
+                } else {
+                    let mut invalid = String::default();
+                    let mut suggested = String::default();
+                    for c in e.context() {
+                        match c {
+                            (ContextKind::SuggestedSubcommand | ContextKind::SuggestedArg, ContextValue::String(name)) => {
+                                suggested = name.clone();
+                            }
+                            (ContextKind::InvalidArg | ContextKind::InvalidSubcommand, ContextValue::String(name)) => {
+                                invalid = name.clone();
+                            }
+                            _ => {}
+                        }
+                    }
+                    if invalid.is_empty() {
+                        println!("Invalid command line. Use 'help' for help.");
+                    } else {
+                        if suggested.is_empty() {
+                            println!("Unrecognized option '{}'. Use 'help' for help.", invalid);
+                        } else {
+                            println!("Unrecognized option '{}', did you mean {}? Use 'help' for help.", invalid, suggested);
+                        }
+                    }
+                    std::process::exit(exitcode::ERR_USAGE);
+                }
+            })
     });
 
     std::process::exit(tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap().block_on(async_main(cli_args)));

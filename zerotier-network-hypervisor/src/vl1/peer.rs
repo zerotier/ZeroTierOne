@@ -7,6 +7,7 @@
  */
 
 use std::convert::TryInto;
+use std::hash::{Hash, Hasher};
 use std::mem::MaybeUninit;
 use std::num::NonZeroI64;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
@@ -32,8 +33,11 @@ use crate::vl1::{Dictionary, Endpoint, Identity, Path};
 use crate::{PacketBuffer, VERSION_MAJOR, VERSION_MINOR, VERSION_PROTO, VERSION_REVISION};
 
 /// A remote peer known to this node.
-/// Sending-related and receiving-related fields are locked separately since concurrent
-/// send/receive is not uncommon.
+///
+/// NOTE: this implements PartialEq/Eq and Hash in terms of the pointer identity of
+/// the structure. This means two peers are equal only if they are the same instance in
+/// memory. This is done because they are only stored in an Arc<> internally and we want
+/// to use these as efficient hash map keys.
 pub struct Peer {
     // This peer's identity.
     pub(crate) identity: Identity,
@@ -580,6 +584,22 @@ impl Peer {
         } else {
             None
         }
+    }
+}
+
+impl PartialEq for Peer {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self as *const Peer, other as *const Peer)
+    }
+}
+
+impl Eq for Peer {}
+
+impl Hash for Peer {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_usize((self as *const Peer) as usize)
     }
 }
 

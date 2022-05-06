@@ -15,8 +15,10 @@ use crate::vl1::identity::*;
 use crate::vl1::protocol::PACKET_SIZE_MAX;
 use crate::vl1::Endpoint;
 
+use serde::{Deserialize, Serialize};
+
 /// Description of a member of a root cluster.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Root {
     /// Full identity of this node.
     pub identity: Identity,
@@ -24,10 +26,12 @@ pub struct Root {
     /// Endpoints for this root or None if this is a former member attesting to an update that removes it.
     pub endpoints: Option<BTreeSet<Endpoint>>,
 
-    /// Signature of entire cluster by this identity.
-    pub cluster_signature: Vec<u8>,
+    /// Signature of entire root set by this identity.
+    #[serde(default)]
+    pub signature: Vec<u8>,
 
     /// Flags field (currently unused).
+    #[serde(default)]
     pub flags: u64,
 }
 
@@ -54,8 +58,8 @@ impl Ord for Root {
 /// To build a cluster definition first use new(), then use add() to add all members, then have each member
 /// use sign() to sign its entry. All members must sign after all calls to add() have been made since everyone
 /// must sign the same definition.
-#[derive(Clone, PartialEq, Eq)]
-pub struct RootCluster {
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RootSet {
     /// An arbitrary name, which could be something like a domain.
     pub name: String,
 
@@ -67,7 +71,7 @@ pub struct RootCluster {
     pub members: Vec<Root>,
 }
 
-impl RootCluster {
+impl RootSet {
     pub fn new(name: String, revision: u64) -> Self {
         Self { name, revision, members: Vec::new() }
     }
@@ -90,8 +94,8 @@ impl RootCluster {
                 buf.append_varint(0)?;
             }
             if include_signatures {
-                buf.append_varint(m.cluster_signature.len() as u64)?;
-                buf.append_bytes(m.cluster_signature.as_slice())?;
+                buf.append_varint(m.signature.len() as u64)?;
+                buf.append_bytes(m.signature.as_slice())?;
             }
             buf.append_varint(m.flags)?;
             buf.append_varint(0)?; // size of additional fields for future use
@@ -115,7 +119,7 @@ impl RootCluster {
 
         let tmp = self.marshal_for_signing();
         for m in self.members.iter() {
-            if m.cluster_signature.is_empty() || !m.identity.verify(tmp.as_bytes(), m.cluster_signature.as_slice()) {
+            if m.signature.is_empty() || !m.identity.verify(tmp.as_bytes(), m.signature.as_slice()) {
                 return false;
             }
         }
@@ -135,7 +139,7 @@ impl RootCluster {
                 }
                 tmp
             }),
-            cluster_signature: Vec::new(),
+            signature: Vec::new(),
             flags: 0,
         });
         self.members.sort();
@@ -157,7 +161,7 @@ impl RootCluster {
             let _ = self.members.push(Root {
                 identity: unsigned_entry.identity,
                 endpoints: unsigned_entry.endpoints,
-                cluster_signature: signature.unwrap(),
+                signature: signature.unwrap(),
                 flags: unsigned_entry.flags,
             });
             self.members.sort();
@@ -208,7 +212,7 @@ impl RootCluster {
     }
 }
 
-impl Marshalable for RootCluster {
+impl Marshalable for RootSet {
     const MAX_MARSHAL_SIZE: usize = PACKET_SIZE_MAX;
 
     #[inline(always)]
@@ -232,7 +236,7 @@ impl Marshalable for RootCluster {
             let mut m = Root {
                 identity: Identity::unmarshal(buf, cursor)?,
                 endpoints: None,
-                cluster_signature: Vec::new(),
+                signature: Vec::new(),
                 flags: 0,
             };
 
@@ -246,7 +250,7 @@ impl Marshalable for RootCluster {
             }
 
             let signature_size = buf.read_varint(cursor)?;
-            let _ = m.cluster_signature.write_all(buf.read_bytes(signature_size as usize, cursor)?);
+            let _ = m.signature.write_all(buf.read_bytes(signature_size as usize, cursor)?);
 
             m.flags = buf.read_varint(cursor)?;
 

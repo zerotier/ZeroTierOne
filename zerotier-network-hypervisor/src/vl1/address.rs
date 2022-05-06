@@ -127,7 +127,7 @@ impl<'de> serde::de::Visitor<'de> for AddressVisitor {
         if v.len() == ADDRESS_SIZE {
             Address::from_bytes(v).map_or_else(|| Err(E::custom("object too large")), |a| Ok(a))
         } else {
-            Err(E::custom("object too large"))
+            Err(E::custom("object size incorrect"))
         }
     }
 

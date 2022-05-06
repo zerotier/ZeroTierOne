@@ -19,7 +19,7 @@ metrohash = "^1"
 dashmap = "^5"
 parking_lot = "^0"
 lazy_static = "^1"
-serde = { version = "^1", features = [], default-features = false }
+serde = { version = "^1", features = ["derive"], default-features = false }
 
 [target."cfg(not(windows))".dependencies]
 libc = "^0"

@@ -42,7 +42,7 @@ pub struct Path {
 
 impl Path {
     /// Get a 128-bit key to look up this endpoint in the local node path map.
-    pub(crate) fn local_lookup_key(endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> u128 {
+    pub(crate) fn local_lookup_key(endpoint: &Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> (u64, u64) {
         let mut h = MetroHash128::with_seed(*METROHASH_SEED);
         h.write_u64(local_socket.map_or(0, |s| s.get() as u64));
         h.write_u64(local_interface.map_or(0, |s| s.get() as u64));
@@ -89,8 +89,7 @@ impl Path {
                 h.write(fingerprint);
             }
         }
-        assert_eq!(std::mem::size_of::<(u64, u64)>(), std::mem::size_of::<u128>());
-        unsafe { std::mem::transmute(h.finish128()) }
+        h.finish128()
     }
 
     pub fn new(endpoint: Endpoint, local_socket: Option<NonZeroI64>, local_interface: Option<NonZeroI64>) -> Self {

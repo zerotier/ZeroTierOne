@@ -189,23 +189,23 @@ pub const ROOT_HELLO_INTERVAL: i64 = PATH_KEEPALIVE_INTERVAL * 2;
 /// Proof of work difficulty (threshold) for identity generation.
 pub const IDENTITY_POW_THRESHOLD: u8 = 17;
 
-/// Compress a packet and return true if compressed.
-/// The 'dest' buffer must be empty (will panic otherwise). A return value of false indicates an error or
-/// that the data was not compressible. The state of the destination buffer is undefined on a return
-/// value of false.
-pub fn compress_packet(src: &[u8], dest: &mut Buffer<{ PACKET_SIZE_MAX }>) -> bool {
-    if src.len() > PACKET_VERB_INDEX {
-        debug_assert!(dest.is_empty());
-        let cs = {
-            let d = dest.as_bytes_mut();
+/// Attempt to compress a packet's payload with LZ4
+///
+/// If this returns true the destination buffer will contain a compressed packet. If false is
+/// returned the contents of 'dest' are entirely undefined. This indicates that the data was not
+/// compressable or some other error occurred.
+pub fn compress_packet(src: &[u8], dest: &mut Buffer<PACKET_SIZE_MAX>) -> bool {
+    if src.len() > (PACKET_VERB_INDEX + 16) {
+        let compressed_data_size = {
+            let d = unsafe { dest.entire_buffer_mut() };
             d[0..PACKET_VERB_INDEX].copy_from_slice(&src[0..PACKET_VERB_INDEX]);
             d[PACKET_VERB_INDEX] = src[PACKET_VERB_INDEX] | VERB_FLAG_COMPRESSED;
             lz4_flex::block::compress_into(&src[PACKET_VERB_INDEX + 1..], &mut d[PACKET_VERB_INDEX + 1..])
         };
-        if cs.is_ok() {
-            let cs = cs.unwrap();
-            if cs > 0 && cs < (src.len() - PACKET_VERB_INDEX) {
-                unsafe { dest.set_size_unchecked(PACKET_VERB_INDEX + 1 + cs) };
+        if compressed_data_size.is_ok() {
+            let compressed_data_size = compressed_data_size.unwrap();
+            if compressed_data_size > 0 && compressed_data_size < (src.len() - PACKET_VERB_INDEX) {
+                unsafe { dest.set_size_unchecked(PACKET_VERB_INDEX + 1 + compressed_data_size) };
                 return true;
             }
         }
