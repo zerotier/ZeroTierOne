@@ -458,9 +458,10 @@ class Bond {
 	 *
 	 * @param policyAlias Policy in use
 	 * @param localSocket Local source socket
+	 * @param createIfNeeded Whether a Link object is created if the name wasn't previously in the link map
 	 * @return Physical link definition
 	 */
-	static SharedPtr<Link> getLinkBySocket(const std::string& policyAlias, uint64_t localSocket);
+	static SharedPtr<Link> getLinkBySocket(const std::string& policyAlias, uint64_t localSocket, bool createIfNeeded);
 
 	/**
 	 * Gets a reference to a physical link definition given its human-readable system name.
@@ -1141,10 +1142,10 @@ class Bond {
 	 *
 	 */
 	void log(const char* fmt, ...)
+	{
 #ifdef __GNUC__
 		__attribute__((format(printf, 2, 3)))
 #endif
-	{
 #ifdef ZT_TRACE
 		time_t rawtime;
 		struct tm* timeinfo;
@@ -1173,10 +1174,10 @@ class Bond {
 	 *
 	 */
 	void debug(const char* fmt, ...)
+	{
 #ifdef __GNUC__
 		__attribute__((format(printf, 2, 3)))
 #endif
-	{
 #ifdef ZT_DEBUG
 		time_t rawtime;
 		struct tm* timeinfo;
