@@ -6,16 +6,19 @@
  * https://www.zerotier.com/
  */
 
+use std::error::Error;
 use std::str::FromStr;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 
 use lazy_static::lazy_static;
 
 use tokio::fs::File;
 use tokio::io::{AsyncRead, AsyncReadExt};
+
+use crate::jsonformatter::JsonFormatter;
 
 use zerotier_network_hypervisor::vl1::Identity;
 
@@ -61,16 +64,6 @@ pub fn is_valid_port(v: &str) -> Result<(), String> {
         return Ok(());
     }
     Err(format!("invalid TCP/IP port number: {}", v))
-}
-
-/// Shortcut to use serde_json to serialize an object, returns "null" on error.
-pub fn to_json<O: serde::Serialize>(o: &O) -> String {
-    serde_json::to_string(o).unwrap_or("null".into())
-}
-
-/// Shortcut to use serde_json to serialize an object, returns "null" on error.
-pub fn to_json_pretty<O: serde::Serialize>(o: &O) -> String {
-    serde_json::to_string_pretty(o).unwrap_or("null".into())
 }
 
 /// Recursively patch a JSON object.
@@ -129,6 +122,22 @@ pub fn json_patch_object<O: Serialize + DeserializeOwned + Eq>(obj: O, patch: &s
             )
         },
     )
+}
+
+/// Shortcut to use serde_json to serialize an object, returns "null" on error.
+pub fn to_json<O: serde::Serialize>(o: &O) -> String {
+    serde_json::to_string(o).unwrap_or("null".into())
+}
+
+/// Shortcut to use serde_json to serialize an object, returns "null" on error.
+pub fn to_json_pretty<O: serde::Serialize>(o: &O) -> String {
+    let mut buf = Vec::new();
+    let mut ser = serde_json::Serializer::with_formatter(&mut buf, JsonFormatter::new());
+    if o.serialize(&mut ser).is_ok() {
+        String::from_utf8(buf).unwrap_or_else(|_| "null".into())
+    } else {
+        "null".into()
+    }
 }
 
 /// Convenience function to read up to limit bytes from a file.

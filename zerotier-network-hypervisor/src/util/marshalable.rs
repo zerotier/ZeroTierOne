@@ -8,6 +8,10 @@
 
 use crate::util::buffer::Buffer;
 
+/// Must be larger than any object we want to use with to_bytes() or from_bytes().
+/// This hack can go away once Rust allows us to reference trait consts as generics.
+const TEMP_BUF_SIZE: usize = 131072;
+
 /// A super-lightweight zero-allocation serialization interface.
 pub trait Marshalable: Sized {
     const MAX_MARSHAL_SIZE: usize;
@@ -26,7 +30,6 @@ pub trait Marshalable: Sized {
     ///
     /// This will return an Err if the buffer is too small or some other error occurs. It's just
     /// a shortcut to creating a buffer and marshaling into it.
-    #[inline(always)]
     fn to_buffer<const BL: usize>(&self) -> std::io::Result<Buffer<BL>> {
         assert!(BL >= Self::MAX_MARSHAL_SIZE);
         let mut tmp = Buffer::new();
@@ -37,9 +40,28 @@ pub trait Marshalable: Sized {
     /// Unmarshal this object from a buffer.
     ///
     /// This is just a shortcut to calling unmarshal() with a zero cursor and then discarding the cursor.
-    #[inline(always)]
     fn from_buffer<const BL: usize>(buf: &Buffer<BL>) -> std::io::Result<Self> {
         let mut tmp = 0;
         Self::unmarshal(buf, &mut tmp)
+    }
+
+    /// Marshal and convert to a Rust vector.
+    fn to_bytes(&self) -> Vec<u8> {
+        assert!(Self::MAX_MARSHAL_SIZE <= TEMP_BUF_SIZE);
+        let mut tmp = Buffer::<TEMP_BUF_SIZE>::new_boxed();
+        assert!(self.marshal(&mut tmp).is_ok());
+        tmp.as_bytes().to_vec()
+    }
+
+    /// Unmarshal from a raw slice.
+    fn from_bytes(b: &[u8]) -> std::io::Result<Self> {
+        if b.len() <= TEMP_BUF_SIZE {
+            let mut tmp = Buffer::<TEMP_BUF_SIZE>::new_boxed();
+            assert!(tmp.append_bytes(b).is_ok());
+            let mut cursor = 0;
+            Self::unmarshal(&tmp, &mut cursor)
+        } else {
+            Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "object too large"))
+        }
     }
 }

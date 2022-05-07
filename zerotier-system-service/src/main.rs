@@ -13,8 +13,10 @@ use clap::{Arg, ArgMatches, Command};
 
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
+pub mod cli;
 pub mod exitcode;
 pub mod getifaddrs;
+pub mod jsonformatter;
 pub mod localconfig;
 pub mod utils;
 pub mod vnic;
@@ -83,6 +85,8 @@ Advanced Operations:
 ·   untrust <root set name>                Stop using a root set
 ·   list                                   List root sets in use
     sign <path> <?identity secret>         Sign a root set with an identity
+    verify <path>                          Load and verify a root set
+    marshal <path>                         Dump root set as binary to stdout
 
   service                                  Start local service
    (usually not invoked manually)
@@ -101,13 +105,6 @@ pub fn print_help() {
     let _ = std::io::stdout().write_all(h.as_bytes());
 }
 
-pub struct GlobalCommandLineFlags {
-    pub json_output: bool,
-    pub base_path: String,
-    pub auth_token_path_override: Option<String>,
-    pub auth_token_override: Option<String>,
-}
-
 #[cfg(any(target_os = "macos"))]
 pub fn platform_default_home_path() -> String {
     "/Library/Application Support/ZeroTier".into()
@@ -118,16 +115,16 @@ pub fn platform_default_home_path() -> String {
     "/var/lib/zerotier".into()
 }
 
-async fn async_main(cli_args: Box<ArgMatches>) -> i32 {
-    let global_cli_flags = GlobalCommandLineFlags {
-        json_output: cli_args.is_present("json"),
-        base_path: cli_args.value_of("path").map_or_else(platform_default_home_path, |p| p.to_string()),
-        auth_token_path_override: cli_args.value_of("token_path").map(|p| p.to_string()),
-        auth_token_override: cli_args.value_of("token").map(|t| t.to_string()),
-    };
+pub struct Flags {
+    pub json_output: bool,
+    pub base_path: String,
+    pub auth_token_path_override: Option<String>,
+    pub auth_token_override: Option<String>,
+}
 
+async fn async_main(flags: Flags, global_args: ArgMatches) -> i32 {
     #[allow(unused)]
-    return match cli_args.subcommand() {
+    return match global_args.subcommand() {
         Some(("help", _)) => {
             print_help();
             exitcode::OK
@@ -137,29 +134,30 @@ async fn async_main(cli_args: Box<ArgMatches>) -> i32 {
             exitcode::OK
         }
         Some(("status", _)) => todo!(),
-        Some(("set", args)) => todo!(),
-        Some(("peer", args)) => todo!(),
-        Some(("network", args)) => todo!(),
-        Some(("join", args)) => todo!(),
-        Some(("leave", args)) => todo!(),
+        Some(("set", cmd_args)) => todo!(),
+        Some(("peer", cmd_args)) => todo!(),
+        Some(("network", cmd_args)) => todo!(),
+        Some(("join", cmd_args)) => todo!(),
+        Some(("leave", cmd_args)) => todo!(),
         Some(("service", _)) => todo!(),
-        Some(("identity", args)) => todo!(),
-        Some(("rootset", args)) => todo!(),
+        Some(("identity", cmd_args)) => todo!(),
+        Some(("rootset", cmd_args)) => cli::rootset::cmd(flags, cmd_args).await,
         _ => {
-            print_help();
+            eprintln!("Invalid command line. Use 'help' for help.");
             exitcode::ERR_USAGE
         }
     };
 }
 
 fn main() {
-    let cli_args = Box::new({
+    let global_args = {
         let help = make_help();
         Command::new("zerotier")
             .arg(Arg::new("json").short('j'))
             .arg(Arg::new("path").short('p').takes_value(true))
             .arg(Arg::new("token_path").short('t').takes_value(true))
             .arg(Arg::new("token").short('T').takes_value(true))
+            .subcommand_required(true)
             .subcommand(Command::new("help"))
             .subcommand(Command::new("version"))
             .subcommand(Command::new("status"))
@@ -198,7 +196,9 @@ fn main() {
                     .subcommand(Command::new("trust").arg(Arg::new("path").index(1).required(true)))
                     .subcommand(Command::new("untrust").arg(Arg::new("name").index(1).required(true)))
                     .subcommand(Command::new("list"))
-                    .subcommand(Command::new("sign").arg(Arg::new("path").index(1).required(true)).arg(Arg::new("secret").index(2).required(true))),
+                    .subcommand(Command::new("sign").arg(Arg::new("path").index(1).required(true)).arg(Arg::new("secret").index(2).required(true)))
+                    .subcommand(Command::new("verify").arg(Arg::new("path").index(1).required(true)))
+                    .subcommand(Command::new("marshal").arg(Arg::new("path").index(1).required(true))),
             )
             .override_help(help.as_str())
             .override_usage("")
@@ -207,7 +207,7 @@ fn main() {
             .disable_help_flag(true)
             .try_get_matches_from(std::env::args())
             .unwrap_or_else(|e| {
-                if e.kind() == clap::ErrorKind::DisplayHelp {
+                if e.kind() == clap::ErrorKind::DisplayHelp || e.kind() == clap::ErrorKind::MissingSubcommand {
                     print_help();
                     std::process::exit(exitcode::OK);
                 } else {
@@ -225,18 +225,25 @@ fn main() {
                         }
                     }
                     if invalid.is_empty() {
-                        println!("Invalid command line. Use 'help' for help.");
+                        eprintln!("Invalid command line. Use 'help' for help.");
                     } else {
                         if suggested.is_empty() {
-                            println!("Unrecognized option '{}'. Use 'help' for help.", invalid);
+                            eprintln!("Unrecognized option '{}'. Use 'help' for help.", invalid);
                         } else {
-                            println!("Unrecognized option '{}', did you mean {}? Use 'help' for help.", invalid, suggested);
+                            eprintln!("Unrecognized option '{}', did you mean {}? Use 'help' for help.", invalid, suggested);
                         }
                     }
                     std::process::exit(exitcode::ERR_USAGE);
                 }
             })
-    });
+    };
 
-    std::process::exit(tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap().block_on(async_main(cli_args)));
+    let flags = Flags {
+        json_output: global_args.is_present("json"),
+        base_path: global_args.value_of("path").map_or_else(platform_default_home_path, |p| p.to_string()),
+        auth_token_path_override: global_args.value_of("token_path").map(|p| p.to_string()),
+        auth_token_override: global_args.value_of("token").map(|t| t.to_string()),
+    };
+
+    std::process::exit(tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap().block_on(async_main(flags, global_args)));
 }
