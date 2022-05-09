@@ -30,7 +30,7 @@ pub async fn cmd(flags: Flags, cmd_args: &ArgMatches) -> i32 {
                 let path = path.unwrap();
                 let secret_arg = secret_arg.unwrap();
                 let secret = crate::utils::parse_cli_identity(secret_arg, true).await;
-                let json_data = crate::utils::read_limit(path, 1048576).await;
+                let json_data = crate::utils::read_limit(path, crate::utils::DEFAULT_FILE_IO_READ_LIMIT).await;
                 if secret.is_err() {
                     eprintln!("ERROR: unable to parse '{}' or read as a file.", secret_arg);
                     return exitcode::ERR_IOERR;
@@ -66,7 +66,7 @@ pub async fn cmd(flags: Flags, cmd_args: &ArgMatches) -> i32 {
             let path = sc_args.value_of("path");
             if path.is_some() {
                 let path = path.unwrap();
-                let json_data = crate::utils::read_limit(path, 1048576).await;
+                let json_data = crate::utils::read_limit(path, crate::utils::DEFAULT_FILE_IO_READ_LIMIT).await;
                 if json_data.is_err() {
                     eprintln!("ERROR: unable to read '{}'.", path);
                     return exitcode::ERR_IOERR;

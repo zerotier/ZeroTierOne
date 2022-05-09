@@ -6,21 +6,23 @@
  * https://www.zerotier.com/
  */
 
-use std::error::Error;
 use std::str::FromStr;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde::de::DeserializeOwned;
-use serde::{Serialize, Serializer};
+use serde::Serialize;
 
 use lazy_static::lazy_static;
 
 use tokio::fs::File;
-use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::io::AsyncReadExt;
 
 use crate::jsonformatter::JsonFormatter;
 
 use zerotier_network_hypervisor::vl1::Identity;
+
+/// Default sanity limit parameter for read_limit() used throughout the service.
+pub const DEFAULT_FILE_IO_READ_LIMIT: usize = 1048576;
 
 lazy_static! {
     static ref STARTUP_INSTANT: Instant = Instant::now();

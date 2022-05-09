@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use zerotier_network_hypervisor::vl1::{Address, InetAddress};
 use zerotier_network_hypervisor::vl2::NetworkId;
 
+/// A list of unassigned or obsolete ports under 1024 that could possibly be squatted.
 pub const UNASSIGNED_PRIVILEGED_PORTS: [u16; 299] = [
     4, 6, 8, 10, 12, 14, 15, 16, 26, 28, 30, 32, 34, 36, 40, 60, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 285, 288, 289, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 323, 324, 325, 326, 327, 328,
     329, 330, 331, 332, 334, 335, 336, 337, 338, 339, 340, 341, 342, 343, 703, 708, 713, 714, 715, 716, 717, 718, 719, 720, 721, 722, 723, 724, 725, 726, 727, 728, 732, 733, 734, 735, 736, 737, 738, 739, 740, 743, 745, 746, 755, 756, 766, 768, 778, 779,
@@ -22,36 +23,37 @@ pub const UNASSIGNED_PRIVILEGED_PORTS: [u16; 299] = [
     954, 955, 956, 957, 958, 959, 960, 961, 962, 963, 964, 965, 966, 967, 968, 969, 970, 971, 972, 973, 974, 975, 976, 977, 978, 979, 980, 981, 982, 983, 984, 985, 986, 987, 988, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1023,
 ];
 
+/// Default primary ZeroTier port.
 pub const DEFAULT_PORT: u16 = 9993;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
-pub struct LocalConfigPhysicalPathConfig {
+pub struct PhysicalPathSettings {
     pub blacklist: bool,
 }
 
-impl Default for LocalConfigPhysicalPathConfig {
+impl Default for PhysicalPathSettings {
     fn default() -> Self {
-        LocalConfigPhysicalPathConfig { blacklist: false }
+        Self { blacklist: false }
     }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
-pub struct LocalConfigVirtualConfig {
+pub struct VirtualNetworkSettings {
     #[serde(rename = "try")]
     pub try_: Vec<InetAddress>,
 }
 
-impl Default for LocalConfigVirtualConfig {
+impl Default for VirtualNetworkSettings {
     fn default() -> Self {
-        LocalConfigVirtualConfig { try_: Vec::new() }
+        Self { try_: Vec::new() }
     }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
-pub struct LocalConfigNetworkSettings {
+pub struct NetworkSettings {
     #[serde(rename = "allowManagedIPs")]
     pub allow_managed_ips: bool,
     #[serde(rename = "allowGlobalIPs")]
@@ -64,9 +66,9 @@ pub struct LocalConfigNetworkSettings {
     pub allow_default_route_override: bool,
 }
 
-impl Default for LocalConfigNetworkSettings {
+impl Default for NetworkSettings {
     fn default() -> Self {
-        LocalConfigNetworkSettings {
+        Self {
             allow_managed_ips: true,
             allow_global_ips: false,
             allow_managed_routes: true,
@@ -78,78 +80,43 @@ impl Default for LocalConfigNetworkSettings {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
-pub struct LocalConfigLogSettings {
-    pub path: Option<String>,
-    #[serde(rename = "maxSize")]
-    pub max_size: usize,
-    pub vl1: bool,
-    pub vl2: bool,
-    #[serde(rename = "vl2TraceRules")]
-    pub vl2_trace_rules: bool,
-    #[serde(rename = "vl2TraceMulticast")]
-    pub vl2_trace_multicast: bool,
-    pub debug: bool,
-    pub stderr: bool,
-}
-
-impl Default for LocalConfigLogSettings {
-    fn default() -> Self {
-        // TODO: change before release to saner defaults
-        LocalConfigLogSettings {
-            path: None,
-            max_size: 131072,
-            vl1: true,
-            vl2: true,
-            vl2_trace_rules: true,
-            vl2_trace_multicast: true,
-            debug: true,
-            stderr: true,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
-#[serde(default)]
-pub struct LocalConfigSettings {
+pub struct GlobalSettings {
     #[serde(rename = "primaryPort")]
     pub primary_port: u16,
     #[serde(rename = "portMapping")]
     pub port_mapping: bool,
-    #[serde(rename = "log")]
-    pub log: LocalConfigLogSettings,
     #[serde(rename = "interfacePrefixBlacklist")]
     pub interface_prefix_blacklist: Vec<String>,
     #[serde(rename = "explicitAddresses")]
     pub explicit_addresses: Vec<InetAddress>,
 }
 
-impl Default for LocalConfigSettings {
+impl Default for GlobalSettings {
     fn default() -> Self {
         let mut bl: Vec<String> = Vec::new();
-        bl.reserve(LocalConfigSettings::DEFAULT_PREFIX_BLACKLIST.len());
-        for n in LocalConfigSettings::DEFAULT_PREFIX_BLACKLIST.iter() {
+        bl.reserve(Self::DEFAULT_PREFIX_BLACKLIST.len());
+        for n in Self::DEFAULT_PREFIX_BLACKLIST.iter() {
             bl.push(String::from(*n));
         }
 
-        LocalConfigSettings {
+        Self {
             primary_port: DEFAULT_PORT,
             port_mapping: true,
-            log: LocalConfigLogSettings::default(),
             interface_prefix_blacklist: bl,
             explicit_addresses: Vec::new(),
         }
     }
 }
 
-impl LocalConfigSettings {
+impl GlobalSettings {
     #[cfg(target_os = "macos")]
-    const DEFAULT_PREFIX_BLACKLIST: [&'static str; 9] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth", "zt", "llw"];
+    pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 9] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth", "zt", "llw"];
 
     #[cfg(target_os = "linux")]
-    const DEFAULT_PREFIX_BLACKLIST: [&'static str; 5] = ["lo", "tun", "tap", "ipsec", "zt"];
+    pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 5] = ["lo", "tun", "tap", "ipsec", "zt", "tailscale"];
 
     #[cfg(windows)]
-    const DEFAULT_PREFIX_BLACKLIST: [&'static str; 0] = [];
+    pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 0] = [];
 
     pub fn is_interface_blacklisted(&self, ifname: &str) -> bool {
         for p in self.interface_prefix_blacklist.iter() {
@@ -163,21 +130,66 @@ impl LocalConfigSettings {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
-pub struct LocalConfig {
-    pub physical: BTreeMap<InetAddress, LocalConfigPhysicalPathConfig>,
+pub struct Config {
+    pub physical: BTreeMap<InetAddress, PhysicalPathSettings>,
     #[serde(rename = "virtual")]
-    pub virtual_: BTreeMap<Address, LocalConfigVirtualConfig>,
-    pub network: BTreeMap<NetworkId, LocalConfigNetworkSettings>,
-    pub settings: LocalConfigSettings,
+    pub virtual_: BTreeMap<Address, VirtualNetworkSettings>,
+    pub network: BTreeMap<NetworkId, NetworkSettings>,
+    pub settings: GlobalSettings,
+
+    #[serde(skip_serializing, skip_deserializing)]
+    file_content_hash: [u8; 48],
 }
 
-impl Default for LocalConfig {
+impl Default for Config {
     fn default() -> Self {
-        LocalConfig {
+        Self {
             physical: BTreeMap::new(),
             virtual_: BTreeMap::new(),
             network: BTreeMap::new(),
-            settings: LocalConfigSettings::default(),
+            settings: GlobalSettings::default(),
+            file_content_hash: [0_u8; 48],
+        }
+    }
+}
+
+impl Config {
+    /// Load this configuration from disk.
+    pub async fn load(path: &str) -> std::io::Result<Self> {
+        let mut t = Self::default();
+        t.reload(path).await.map(|_| t)
+    }
+
+    /// Load this configuration from disk if its contents have changed.
+    ///
+    /// This returns true if a new configuration was loaded, false if the file hasn't changed, or an error.
+    pub async fn reload(&mut self, path: &str) -> std::io::Result<bool> {
+        let config_data = crate::utils::read_limit(path, crate::utils::DEFAULT_FILE_IO_READ_LIMIT).await?;
+        let hash = zerotier_core_crypto::hash::SHA384::hash(config_data.as_slice());
+        Ok(if hash != self.file_content_hash {
+            let config = serde_json::from_slice(config_data.as_slice());
+            if config.is_err() {
+                return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, config.err().unwrap().to_string()));
+            }
+            *self = config.unwrap();
+            self.file_content_hash = hash;
+            true
+        } else {
+            false
+        })
+    }
+
+    /// Write this configuration to a file (with human-friendly formatting).
+    ///
+    /// This is mutable because it updates an external state if the write is successful.
+    pub async fn save(&mut self, path: &str) -> std::io::Result<()> {
+        let config_data = crate::utils::to_json_pretty(self);
+        let result = tokio::fs::write(path, &config_data).await;
+        if result.is_ok() {
+            self.file_content_hash = zerotier_core_crypto::hash::SHA384::hash(config_data.as_bytes());
+            Ok(())
+        } else {
+            result
         }
     }
 }

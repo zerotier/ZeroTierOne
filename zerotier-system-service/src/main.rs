@@ -86,7 +86,6 @@ Advanced Operations:
 ·   list                                   List root sets in use
     sign <path> <?identity secret>         Sign a root set with an identity
     verify <path>                          Load and verify a root set
-    marshal <path>                         Dump root set as binary to stdout
 
   service                                  Start local service
    (usually not invoked manually)
@@ -105,12 +104,12 @@ pub fn print_help() {
     let _ = std::io::stdout().write_all(h.as_bytes());
 }
 
-#[cfg(any(target_os = "macos"))]
+#[cfg(target_os = "macos")]
 pub fn platform_default_home_path() -> String {
     "/Library/Application Support/ZeroTier".into()
 }
 
-#[cfg(any(target_os = "linux"))]
+#[cfg(target_os = "linux")]
 pub fn platform_default_home_path() -> String {
     "/var/lib/zerotier".into()
 }

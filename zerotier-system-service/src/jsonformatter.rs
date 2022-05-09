@@ -7,7 +7,6 @@
 
 use serde_json::ser::Formatter;
 
-#[derive(Clone, Debug)]
 pub struct JsonFormatter<'a> {
     current_indent: usize,
     has_value: bool,

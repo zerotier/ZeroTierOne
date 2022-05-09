@@ -18,34 +18,44 @@ use crate::vl1::Endpoint;
 use serde::{Deserialize, Serialize};
 
 /// Description of a member of a root cluster.
+///
+/// Natural sort order is in order of identity address.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Root {
-    /// Full identity of this node.
+    /// Identity of this node (not including secret).
     pub identity: Identity,
 
-    /// Endpoints for this root or None if this is a former member attesting to an update that removes it.
+    /// Endpoints for this root or None if this is a disabled entry.
+    ///
+    /// Disabled entries typically exist when a former member is needed to sign a new revision to
+    /// achieve N-1 quorum and issue an update.
     pub endpoints: Option<BTreeSet<Endpoint>>,
 
     /// Signature of entire root set by this identity.
+    ///
+    /// This is populated by the sign() method when the completed root set is signed by each member.
+    /// All member roots must sign.
     #[serde(default)]
     pub signature: Vec<u8>,
 
-    /// Flags field (currently unused).
+    /// Priority (higher number is lower priority, 0 is default).
+    ///
+    /// Lower priority roots are only used if NO roots of a higher priority can be reached (in any root set).
     #[serde(default)]
-    pub flags: u64,
+    pub priority: u8,
 }
 
 impl PartialOrd for Root {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.identity.partial_cmp(&other.identity)
+        self.identity.address.partial_cmp(&other.identity.address)
     }
 }
 
 impl Ord for Root {
     #[inline(always)]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.identity.cmp(&other.identity)
+        self.identity.address.cmp(&other.identity.address)
     }
 }
 
@@ -67,13 +77,20 @@ pub struct RootSet {
     pub revision: u64,
 
     /// A set of Root nodes that are current or immediately former members of this cluster.
-    /// This will always be sorted by member identity.
+    ///
+    /// This will always be sorted by member identity address. Duplicate addresses are not allowed.
     pub members: Vec<Root>,
 }
 
 impl RootSet {
     pub fn new(name: String, revision: u64) -> Self {
         Self { name, revision, members: Vec::new() }
+    }
+
+    /// Get the ZeroTier default root set, which contains roots run by ZeroTier Inc.
+    pub fn zerotier_default() -> Self {
+        let mut cursor = 0;
+        Self::unmarshal(&Buffer::from(include_bytes!("../../default-rootset/root.zerotier.com.json")), &mut cursor).unwrap()
     }
 
     fn marshal_internal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_signatures: bool) -> std::io::Result<()> {
@@ -97,7 +114,8 @@ impl RootSet {
                 buf.append_varint(m.signature.len() as u64)?;
                 buf.append_bytes(m.signature.as_slice())?;
             }
-            buf.append_varint(m.flags)?;
+            buf.append_varint(0)?; // flags, currently always 0
+            buf.append_u8(m.priority)?;
             buf.append_varint(0)?; // size of additional fields for future use
         }
         buf.append_varint(0)?; // size of additional fields for future use
@@ -127,9 +145,9 @@ impl RootSet {
         return true;
     }
 
-    /// Add a member to this definition, replacing any current entry for this identity.
-    pub fn add<'a, I: Iterator<Item = &'a Endpoint>>(&mut self, member_identity: &Identity, endpoints: Option<I>) {
-        self.members.retain(|m| !m.identity.eq(member_identity));
+    /// Add a member to this definition, replacing any current entry with this address.
+    pub fn add<'a, I: Iterator<Item = &'a Endpoint>>(&mut self, member_identity: &Identity, endpoints: Option<I>, priority: u8) {
+        self.members.retain(|m| m.identity.address != member_identity.address);
         let _ = self.members.push(Root {
             identity: member_identity.clone_without_secret(),
             endpoints: endpoints.map(|endpoints| {
@@ -140,7 +158,7 @@ impl RootSet {
                 tmp
             }),
             signature: Vec::new(),
-            flags: 0,
+            priority,
         });
         self.members.sort();
     }
@@ -162,7 +180,7 @@ impl RootSet {
                 identity: unsigned_entry.identity,
                 endpoints: unsigned_entry.endpoints,
                 signature: signature.unwrap(),
-                flags: unsigned_entry.flags,
+                priority: unsigned_entry.priority,
             });
             self.members.sort();
             return true;
@@ -178,7 +196,7 @@ impl RootSet {
     /// root nodes can replace one member if three cluster members sign the update, but to
     /// remove two at a time one of the exiting members would have to sign. This is done by
     /// adding it with None as its address list, making it disabled. Disabled members function
-    /// only as signers (witnesses).
+    /// only as signers (witnesses) and only if they were enabled previously.
     ///
     /// There is one edge case though. If a cluster definition has only one member, that one
     /// member must sign the next update. N-1 is not permitted to be less than one. If that was
@@ -237,7 +255,7 @@ impl Marshalable for RootSet {
                 identity: Identity::unmarshal(buf, cursor)?,
                 endpoints: None,
                 signature: Vec::new(),
-                flags: 0,
+                priority: 0,
             };
 
             let endpoint_count = buf.read_varint(cursor)?;
@@ -252,7 +270,8 @@ impl Marshalable for RootSet {
             let signature_size = buf.read_varint(cursor)?;
             let _ = m.signature.write_all(buf.read_bytes(signature_size as usize, cursor)?);
 
-            m.flags = buf.read_varint(cursor)?;
+            let _ = buf.read_varint(cursor)?; // flags, currently unused
+            m.priority = buf.read_u8(cursor)?;
 
             *cursor += buf.read_varint(cursor)? as usize;
 

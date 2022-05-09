@@ -497,6 +497,20 @@ impl<const L: usize> AsMut<[u8]> for Buffer<L> {
     }
 }
 
+impl<const L: usize> From<[u8; L]> for Buffer<L> {
+    #[inline(always)]
+    fn from(a: [u8; L]) -> Self {
+        Self(L, a)
+    }
+}
+
+impl<const L: usize> From<&[u8; L]> for Buffer<L> {
+    #[inline(always)]
+    fn from(a: &[u8; L]) -> Self {
+        Self(L, a.clone())
+    }
+}
+
 pub struct PooledBufferFactory<const L: usize>;
 
 impl<const L: usize> PooledBufferFactory<L> {
