@@ -750,7 +750,7 @@ public:
 	PhySocket *_localControlSocket6;
 	bool _updateAutoApply;
 	bool _allowTcpFallbackRelay;
-	bool _allowSecondaryPort;
+	bool _allowEphemeralPorts;
 
 	unsigned int _primaryPort;
 	unsigned int _secondaryPort;
@@ -996,28 +996,28 @@ public:
 			// and mis-detect ZeroTier traffic as malicious and block it resulting
 			// in a node that appears to be in a coma.  Secondary ports are now 
 			// randomized on startup.
-			if (_allowSecondaryPort) {
+			if (_allowEphemeralPorts) {
 				if (_secondaryPort) {
 					_ports[1] = _secondaryPort;
 				} else {
 					_ports[1] = _getRandomPort();
 				}
-			}
 #ifdef ZT_USE_MINIUPNPC
-			if (_portMappingEnabled) {
-				// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
-				// use the other two ports for that because some NATs do really funky
-				// stuff with ports that are explicitly mapped that breaks things.
-				if (_tertiaryPort) {
-					_ports[2] = _tertiaryPort;
-				} else {
-					_ports[2] = _getRandomPort();
-				}
+				if (_portMappingEnabled) {
+					// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
+					// use the other two ports for that because some NATs do really funky
+					// stuff with ports that are explicitly mapped that breaks things.
+					if (_tertiaryPort) {
+						_ports[2] = _tertiaryPort;
+					} else {
+						_ports[2] = _getRandomPort();
+					}
 
-				if (_ports[2]) {
-					char uniqueName[64];
-					OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
-					_portMapper = new PortMapper(_ports[2],uniqueName);
+					if (_ports[2]) {
+						char uniqueName[64];
+						OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
+						_portMapper = new PortMapper(_ports[2],uniqueName);
+					}
 				}
 			}
 #endif
@@ -2154,7 +2154,7 @@ public:
 		_fallbackRelayAddress = InetAddress(OSUtils::jsonString("tcpFallbackRelay", ZT_TCP_FALLBACK_RELAY).c_str());
 #endif
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
-		_allowSecondaryPort = OSUtils::jsonBool(settings["allowSecondaryPort"],true);
+		_allowEphemeralPorts = OSUtils::jsonBool(settings["allowEphemeralPorts"],true);
 		_secondaryPort = (unsigned int)OSUtils::jsonInt(settings["secondaryPort"],0);
 		_tertiaryPort = (unsigned int)OSUtils::jsonInt(settings["tertiaryPort"],0);
 		if (_secondaryPort != 0 || _tertiaryPort != 0) {
