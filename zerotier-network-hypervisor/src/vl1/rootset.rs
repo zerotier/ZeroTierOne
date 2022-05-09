@@ -73,6 +73,9 @@ pub struct RootSet {
     /// An arbitrary name, which could be something like a domain.
     pub name: String,
 
+    /// Optional URL where root set can be fetched, can be used as a secondary update channel.
+    pub url: Option<String>,
+
     /// A monotonically increasing revision number (doesn't have to be sequential).
     pub revision: u64,
 
@@ -83,20 +86,29 @@ pub struct RootSet {
 }
 
 impl RootSet {
-    pub fn new(name: String, revision: u64) -> Self {
-        Self { name, revision, members: Vec::new() }
+    pub fn new(name: String, url: Option<String>, revision: u64) -> Self {
+        Self { name, url, revision, members: Vec::new() }
     }
 
     /// Get the ZeroTier default root set, which contains roots run by ZeroTier Inc.
     pub fn zerotier_default() -> Self {
         let mut cursor = 0;
-        Self::unmarshal(&Buffer::from(include_bytes!("../../default-rootset/root.zerotier.com.json")), &mut cursor).unwrap()
+        let rs = Self::unmarshal(&Buffer::from(include_bytes!("../../default-rootset/root.zerotier.com.json")), &mut cursor).unwrap();
+        assert!(rs.verify());
+        rs
     }
 
     fn marshal_internal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_signatures: bool) -> std::io::Result<()> {
         buf.append_u8(0)?; // version byte for future use
         buf.append_varint(self.name.as_bytes().len() as u64)?;
         buf.append_bytes(self.name.as_bytes())?;
+        if self.url.is_some() {
+            let url = self.url.as_ref().unwrap().as_bytes();
+            buf.append_varint(url.len() as u64)?;
+            buf.append_bytes(url);
+        } else {
+            buf.append_varint(0)?;
+        }
         buf.append_varint(self.revision)?;
         buf.append_varint(self.members.len() as u64)?;
         for m in self.members.iter() {
@@ -239,13 +251,18 @@ impl Marshalable for RootSet {
     }
 
     fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Self> {
-        let mut rc = Self::new(String::new(), 0);
+        let mut rc = Self::new(String::new(), None, 0);
         if buf.read_u8(cursor)? != 0 {
             return std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unsupported version"));
         }
 
         let name_len = buf.read_varint(cursor)?;
         rc.name = String::from_utf8(buf.read_bytes(name_len as usize, cursor)?.to_vec()).map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid UTF8"))?;
+
+        let url_len = buf.read_varint(cursor)?;
+        if url_len > 0 {
+            rc.url = Some(String::from_utf8(buf.read_bytes(url_len as usize, cursor)?.to_vec()).map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid UTF8"))?);
+        }
 
         rc.revision = buf.read_varint(cursor)?;
 
