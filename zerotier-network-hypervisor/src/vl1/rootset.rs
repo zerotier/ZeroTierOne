@@ -93,7 +93,7 @@ impl RootSet {
     /// Get the ZeroTier default root set, which contains roots run by ZeroTier Inc.
     pub fn zerotier_default() -> Self {
         let mut cursor = 0;
-        let rs = Self::unmarshal(&Buffer::from(include_bytes!("../../default-rootset/root.zerotier.com.json")), &mut cursor).unwrap();
+        let rs = Self::unmarshal(&Buffer::from(include_bytes!("../../default-rootset/root.zerotier.com.bin")), &mut cursor).unwrap();
         assert!(rs.verify());
         rs
     }
@@ -105,7 +105,7 @@ impl RootSet {
         if self.url.is_some() {
             let url = self.url.as_ref().unwrap().as_bytes();
             buf.append_varint(url.len() as u64)?;
-            buf.append_bytes(url);
+            buf.append_bytes(url)?;
         } else {
             buf.append_varint(0)?;
         }

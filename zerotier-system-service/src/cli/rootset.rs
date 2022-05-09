@@ -112,6 +112,10 @@ pub async fn cmd(flags: Flags, cmd_args: &ArgMatches) -> i32 {
             }
         }
 
+        Some(("default", _)) => {
+            let _ = std::io::stdout().write_all(crate::utils::to_json_pretty(&RootSet::zerotier_default()).as_bytes());
+        }
+
         _ => panic!(),
     }
     return exitcode::OK;

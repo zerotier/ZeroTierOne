@@ -86,6 +86,8 @@ Advanced Operations:
 ·   list                                   List root sets in use
     sign <path> <?identity secret>         Sign a root set with an identity
     verify <path>                          Load and verify a root set
+    marshal <path>                         Dump root set as binary to stdout
+    default                                Dump the default root set as JSON
 
   service                                  Start local service
    (usually not invoked manually)
@@ -197,7 +199,8 @@ fn main() {
                     .subcommand(Command::new("list"))
                     .subcommand(Command::new("sign").arg(Arg::new("path").index(1).required(true)).arg(Arg::new("secret").index(2).required(true)))
                     .subcommand(Command::new("verify").arg(Arg::new("path").index(1).required(true)))
-                    .subcommand(Command::new("marshal").arg(Arg::new("path").index(1).required(true))),
+                    .subcommand(Command::new("marshal").arg(Arg::new("path").index(1).required(true)))
+                    .subcommand(Command::new("default")),
             )
             .override_help(help.as_str())
             .override_usage("")

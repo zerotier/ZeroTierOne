@@ -394,7 +394,7 @@ impl<const L: usize> Buffer<L> {
             let mut a = &self.1[c..];
             crate::util::varint::read(&mut a).map(|r| {
                 *cursor = c + r.1;
-                debug_assert!(*cursor < self.0);
+                debug_assert!(*cursor <= self.0);
                 r.0
             })
         } else {

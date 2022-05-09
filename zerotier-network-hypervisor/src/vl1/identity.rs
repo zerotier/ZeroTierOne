@@ -440,6 +440,10 @@ impl Identity {
             }
         }
 
+        // A size of zero tells unmarshal() to stop.
+        buf.append_u8(0x03)?;
+        buf.append_u16(0)?;
+
         Ok(())
     }
 
@@ -659,7 +663,8 @@ impl Marshalable for Identity {
             if algorithm.is_err() {
                 break;
             }
-            match algorithm.unwrap() {
+            let algorithm = algorithm.unwrap();
+            match algorithm {
                 0x00 | IDENTITY_ALGORITHM_X25519 => {
                     let a = buf.read_bytes_fixed::<C25519_PUBLIC_KEY_SIZE>(cursor)?;
                     let b = buf.read_bytes_fixed::<ED25519_PUBLIC_KEY_SIZE>(cursor)?;
@@ -677,7 +682,12 @@ impl Marshalable for Identity {
                     // This isn't an algorithm; each algorithm is identified by just one bit. This
                     // indicates the total size of the section after the x25519 keys for backward
                     // compatibility. See comments in marshal(). New versions can ignore this field.
-                    *cursor += 2;
+                    let size = buf.read_u16(cursor)?;
+                    if size == 0 {
+                        break;
+                    } else {
+                        *cursor += size as usize;
+                    }
                 }
                 IDENTITY_ALGORITHM_EC_NIST_P384 => {
                     let size = buf.read_u16(cursor)?;
