@@ -25,4 +25,5 @@ case $GOARCH in
 esac
 
 docker run --privileged --rm tonistiigi/binfmt --install all
+docker pull registry.sean.farm/sid-builder
 docker buildx build --platform ${GOOS}/${ARCH} -f ci/Dockerfile.sid --target export -t test . --output out/${GOOS}/${GOARCH}
