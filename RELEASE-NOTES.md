@@ -1,6 +1,10 @@
 ZeroTier Release Notes
 ======
 
+# 2022-05-10 -- Version 1.8.10
+
+ * Fixed a bug preventing SSO sign-on on Windows.
+
 # 2022-04-25 -- Version 1.8.9
 
  * Fixed a long-standing and strange bug that was causing sporadic "phantom" packet authentication failures. Not a security problem but could be behind spordaic reports of link failures under some conditions.
