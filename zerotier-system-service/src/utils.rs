@@ -6,6 +6,7 @@
  * https://www.zerotier.com/
  */
 
+use std::path::Path;
 use std::str::FromStr;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
@@ -145,7 +146,7 @@ pub fn to_json_pretty<O: serde::Serialize>(o: &O) -> String {
 /// Convenience function to read up to limit bytes from a file.
 ///
 /// If the file is larger than limit, the excess is not read.
-pub async fn read_limit(path: &str, limit: usize) -> std::io::Result<Vec<u8>> {
+pub async fn read_limit<P: AsRef<Path>>(path: P, limit: usize) -> std::io::Result<Vec<u8>> {
     let mut f = File::open(path).await?;
     let bytes = f.metadata().await?.len().min(limit as u64) as usize;
     let mut v: Vec<u8> = Vec::with_capacity(bytes);
@@ -154,9 +155,13 @@ pub async fn read_limit(path: &str, limit: usize) -> std::io::Result<Vec<u8>> {
     Ok(v)
 }
 
-/// Returns true if the file exists and is a regular file (or a link to one).
-pub async fn file_exists(path: &str) -> bool {
-    tokio::fs::metadata(path).await.is_ok()
+/// Set permissions on a file or directory to be most restrictive (visible only to the service's user).
+#[cfg(unix)]
+pub fn fs_restrict_permissions<P: AsRef<Path>>(path: P) -> bool {
+    unsafe {
+        let c_path = std::ffi::CString::new(path.as_ref().to_str().unwrap()).unwrap();
+        libc::chmod(c_path.as_ptr(), if path.as_ref().is_dir() { 0o700 } else { 0o600 }) == 0
+    }
 }
 
 /// Read an identity as either a literal or from a file.
@@ -173,8 +178,10 @@ pub async fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity,
             },
         )
     };
-    if file_exists(input).await {
-        read_limit(input, 16384).await.map_or_else(|e| Err(e.to_string()), |v| String::from_utf8(v).map_or_else(|e| Err(e.to_string()), |s| parse_func(s.as_str())))
+
+    let input_p = Path::new(input);
+    if input_p.is_file() {
+        read_limit(input_p, 16384).await.map_or_else(|e| Err(e.to_string()), |v| String::from_utf8(v).map_or_else(|e| Err(e.to_string()), |s| parse_func(s.as_str())))
     } else {
         parse_func(input)
     }

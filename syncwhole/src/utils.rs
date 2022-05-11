@@ -72,7 +72,7 @@ pub fn random() -> u64 {
         s0 = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos() as u64;
     }
     if s1 == 0 {
-        s1 = splitmix64((std::process::id() as u64).wrapping_add((unsafe { &RANDOM_STATE_0 } as *const u64) as u64));
+        s1 = splitmix64(std::process::id() as u64);
     }
     let s1_new = xorshift64(s1);
     s0 = splitmix64(s0.wrapping_add(s1));

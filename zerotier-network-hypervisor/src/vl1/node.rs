@@ -414,6 +414,16 @@ impl Node {
         self.roots.lock().roots.contains_key(peer)
     }
 
+    /// Add or update a root set.
+    ///
+    /// If no root set exists by this name, a new root set is added. If one already
+    /// exists it's checked against the new one and updated if the new set is valid
+    /// and should supersede it.
+    ///
+    /// Changes will take effect within a few seconds when root sets are next
+    /// examined and synchronized with peer and root list state.
+    ///
+    /// This returns true if the new root set was accepted and false otherwise.
     pub fn add_update_root_set(&self, rs: RootSet) -> bool {
         let mut roots = self.roots.lock();
         let entry = roots.sets.get_mut(&rs.name);
@@ -422,16 +432,17 @@ impl Node {
             if rs.should_replace(old_rs) {
                 *old_rs = rs;
                 roots.sets_modified = true;
-                return true;
+                true
+            } else {
+                false
             }
+        } else if rs.verify() {
+            roots.sets.insert(rs.name.clone(), rs);
+            roots.sets_modified = true;
+            true
         } else {
-            if rs.verify() {
-                roots.sets.insert(rs.name.clone(), rs);
-                roots.sets_modified = true;
-                return true;
-            }
+            false
         }
-        return false;
     }
 
     /// Get the canonical Path object for a given endpoint and local socket information.

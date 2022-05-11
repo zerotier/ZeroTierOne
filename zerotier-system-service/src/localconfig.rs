@@ -136,9 +136,6 @@ pub struct Config {
     pub virtual_: BTreeMap<Address, VirtualNetworkSettings>,
     pub network: BTreeMap<NetworkId, NetworkSettings>,
     pub settings: GlobalSettings,
-
-    #[serde(skip_serializing, skip_deserializing)]
-    file_content_hash: [u8; 48],
 }
 
 impl Default for Config {
@@ -148,48 +145,6 @@ impl Default for Config {
             virtual_: BTreeMap::new(),
             network: BTreeMap::new(),
             settings: GlobalSettings::default(),
-            file_content_hash: [0_u8; 48],
-        }
-    }
-}
-
-impl Config {
-    /// Load this configuration from disk.
-    pub async fn load(path: &str) -> std::io::Result<Self> {
-        let mut t = Self::default();
-        t.reload(path).await.map(|_| t)
-    }
-
-    /// Load this configuration from disk if its contents have changed.
-    ///
-    /// This returns true if a new configuration was loaded, false if the file hasn't changed, or an error.
-    pub async fn reload(&mut self, path: &str) -> std::io::Result<bool> {
-        let config_data = crate::utils::read_limit(path, crate::utils::DEFAULT_FILE_IO_READ_LIMIT).await?;
-        let hash = zerotier_core_crypto::hash::SHA384::hash(config_data.as_slice());
-        Ok(if hash != self.file_content_hash {
-            let config = serde_json::from_slice(config_data.as_slice());
-            if config.is_err() {
-                return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, config.err().unwrap().to_string()));
-            }
-            *self = config.unwrap();
-            self.file_content_hash = hash;
-            true
-        } else {
-            false
-        })
-    }
-
-    /// Write this configuration to a file (with human-friendly formatting).
-    ///
-    /// This is mutable because it updates an external state if the write is successful.
-    pub async fn save(&mut self, path: &str) -> std::io::Result<()> {
-        let config_data = crate::utils::to_json_pretty(self);
-        let result = tokio::fs::write(path, &config_data).await;
-        if result.is_ok() {
-            self.file_content_hash = zerotier_core_crypto::hash::SHA384::hash(config_data.as_bytes());
-            Ok(())
-        } else {
-            result
         }
     }
 }

@@ -14,6 +14,7 @@ use clap::{Arg, ArgMatches, Command};
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
 pub mod cli;
+pub mod datadir;
 pub mod exitcode;
 pub mod getifaddrs;
 pub mod jsonformatter;

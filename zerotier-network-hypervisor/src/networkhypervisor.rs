@@ -10,7 +10,7 @@ use std::num::NonZeroI64;
 use std::time::Duration;
 
 use crate::error::InvalidParameterError;
-use crate::vl1::{Address, Endpoint, Identity, Node, SystemInterface};
+use crate::vl1::{Address, Endpoint, Identity, Node, RootSet, SystemInterface};
 use crate::vl2::{Switch, SwitchInterface};
 use crate::PacketBuffer;
 
@@ -29,9 +29,6 @@ impl NetworkHypervisor {
         })
     }
 
-    /// Obtain a new packet buffer from the buffer pool.
-    ///
-    /// The returned object is a Pooled<Buffer<>> instance. The buffer is returned to the pool when the container is destroyed.
     #[inline(always)]
     pub fn get_packet_buffer(&self) -> PacketBuffer {
         self.vl1.get_packet_buffer()
@@ -47,12 +44,18 @@ impl NetworkHypervisor {
         &self.vl1.identity
     }
 
+    #[inline(always)]
     pub fn do_background_tasks<I: Interface>(&self, ii: &I) -> Duration {
         self.vl1.do_background_tasks(ii)
     }
 
     #[inline(always)]
-    pub fn wire_receive<I: SystemInterface>(&self, ii: &I, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, mut data: PacketBuffer) {
+    pub fn wire_receive<I: Interface>(&self, ii: &I, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, data: PacketBuffer) {
         self.vl1.wire_receive(ii, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data)
+    }
+
+    #[inline(always)]
+    pub fn add_update_root_set(&self, rs: RootSet) -> bool {
+        self.vl1.add_update_root_set(rs)
     }
 }
