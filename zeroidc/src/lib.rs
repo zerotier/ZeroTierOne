@@ -19,7 +19,7 @@ extern crate openidconnect;
 extern crate time;
 extern crate url;
 
-use crate::error::ZeroIDCError;
+use crate::error::*;
 
 use bytes::Bytes;
 use jwt::{Token};
@@ -415,7 +415,7 @@ impl ZeroIDC {
         }
     }
 
-    pub fn do_token_exchange(&mut self, code: &str) -> String {
+    pub fn do_token_exchange(&mut self, code: &str) -> Result<String, SSOExchangeError> {
         let local = Arc::clone(&self.inner);
         let mut should_start = false;
         let res = (*local.lock().unwrap()).as_opt().map(|i| {
@@ -530,7 +530,7 @@ impl ZeroIDC {
                                             println!("Set exp time to: {:?}", i.exp_time);
                                         },
                                         None => {
-                                            panic!("expiration is None.  This shouldn't happen")
+                                            panic!("expiration is None.  This shouldn't happen");
                                         }
                                     }
                                 } 
@@ -558,30 +558,38 @@ impl ZeroIDC {
                                     Err(_) => "".to_string(),
                                 };
 
-                                return bytes;
+                                return Ok(bytes);
                             },
                             Err(res) => {
+                                println!("error result: {}", res);
                                 println!("hit url: {}", res.url().unwrap().as_str());
                                 println!("Status: {}", res.status().unwrap());
                                 println!("Post error: {}", res.to_string());
                                 i.exp_time = 0;
+                                return Err(SSOExchangeError::new("error from central endpoint".to_string()));
                             }
                         }
-
-                        
                     } else {
-                        println!("invalid split length?!?");
+                        return Err(SSOExchangeError::new("error splitting state token".to_string()));
                     }
+                } else {
+                    return Err(SSOExchangeError::new("invalid token response".to_string()));
                 }
+            } else {
+                return Err(SSOExchangeError::new("invalid pkce verifier".to_string()));
             }
-            "".to_string()
+
         });
         if should_start {
             self.start();
         }
-        return match res {
-            Some(res) => res,
-            _ => "".to_string(),
+        match res {
+            Some(res) => {
+                return res;
+            },
+            _ => {
+                return Err(SSOExchangeError::new("invalid result".to_string()));
+            },
         };
     }
 }

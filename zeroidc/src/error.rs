@@ -21,3 +21,17 @@ pub enum ZeroIDCError
     #[error(transparent)]
     ParseError(#[from] url::ParseError),
 }
+
+#[derive(Error, Debug)]
+#[error("SSO Exchange Error: {message:}")]
+pub struct SSOExchangeError {
+    message: String,
+}
+
+impl SSOExchangeError {
+    pub fn new(message: String) -> Self {
+        SSOExchangeError{
+            message
+        }
+    }
+}

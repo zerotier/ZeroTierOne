@@ -267,9 +267,19 @@ pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char 
 
     let code = unsafe{CStr::from_ptr(code)}.to_str().unwrap();
 
-    let ret = idc.do_token_exchange( code);
-    let ret = CString::new(ret).unwrap();
-    return ret.into_raw();
+    let ret = idc.do_token_exchange(code);
+    match ret {
+        Ok(ret) => {
+            let ret = CString::new(ret).unwrap();
+            return ret.into_raw();
+
+        },
+        Err(e) => {
+            let errstr = format!("{{\"message\":\"{}\"\"}}", e).to_string();
+            let ret = CString::new(errstr).unwrap();
+            return ret.into_raw();
+        }
+    }
 }
 
 #[no_mangle]
