@@ -1729,9 +1729,24 @@ public:
 					NetworkState& ns = _nets[id];
 					char* code = zeroidc::zeroidc_get_url_param_value("code", path.c_str());
 					char *ret = ns.doTokenExchange(code);
-					scode = 200;
-					sprintf(resBuf, ssoResponseTemplate, "Authentication Successful. You may now access the network.");
-					responseBody = std::string(resBuf);
+					json ssoResult = json::parse(ret);
+					if (ssoResult.is_object()) {
+						if (ssoResult.contains("errorMessage")) {
+							std::string errorMessage = ssoResult["errorMessage"];
+							char errBuff[256] = {0};
+							sprintf(errBuff, "ERROR: %s", errorMessage.c_str());
+							sprintf(resBuf, ssoResponseTemplate, errBuff);
+							scode = 500;
+						} else {
+							scode = 200;
+							sprintf(resBuf, ssoResponseTemplate, "Authentication Successful. You may now access the network.");
+							responseBody = std::string(resBuf);
+						}
+					} else {
+						// not an object? We got a problem
+						sprintf(resBuf, ssoResponseTemplate, "Error: Unknown SSO response.");
+						scode= 500;
+					}
 
 					zeroidc::free_cstr(code);
 					zeroidc::free_cstr(ret);

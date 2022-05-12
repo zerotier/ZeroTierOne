@@ -275,7 +275,7 @@ pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char 
 
         },
         Err(e) => {
-            let errstr = format!("{{\"message\":\"{}\"\"}}", e).to_string();
+            let errstr = format!("{{\"errorMessage\":\"{}\"\"}}", e).to_string();
             let ret = CString::new(errstr).unwrap();
             return ret.into_raw();
         }
