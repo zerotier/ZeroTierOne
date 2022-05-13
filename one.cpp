@@ -88,7 +88,7 @@
 
 #include "service/OneService.hpp"
 
-#include "ext/json/json.hpp"
+#include <nlohmann/json.hpp>
 
 #ifdef __APPLE__
 #include <SystemConfiguration/SystemConfiguration.h>

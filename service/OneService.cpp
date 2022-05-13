@@ -92,7 +92,8 @@ extern "C" {
 }
 #endif
 
-#include "../ext/json/json.hpp"
+#include <nlohmann/json.hpp>
+#include <inja/inja.hpp>
 
 using json = nlohmann::json;
 

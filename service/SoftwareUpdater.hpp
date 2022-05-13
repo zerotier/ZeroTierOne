@@ -27,7 +27,7 @@
 #include "../node/Identity.hpp"
 #include "../node/Packet.hpp"
 
-#include "../ext/json/json.hpp"
+#include <nlohmann/json.hpp>
 
 /**
  * VERB_USER_MESSAGE type ID for software update messages
