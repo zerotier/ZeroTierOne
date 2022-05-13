@@ -151,43 +151,54 @@ size_t curlResponseWrite(void *ptr, size_t size, size_t nmemb, std::string *data
 
 namespace ZeroTier {
 
-const char *ssoResponseTemplate = "<html>\
-<head>\
-<style type=\"text/css\">\
-html,body {\
-	background: #eeeeee;\
-	margin: 0;\
-	padding: 0;\
-	font-family: \"Helvetica\";\
-	font-weight: bold;\
-	font-size: 12pt;\
-	height: 100%;\
-	width: 100%;\
-}\
-div.icon {\
-	background: #ffb354;\
-	color: #000000;\
-	font-size: 120pt;\
-	border-radius: 2.5rem;\
-	display: inline-block;\
-	width: 1.3em;\
-	height: 1.3em;\
-	padding: 0;\
-	margin: 15;\
-	line-height: 1.4em;\
-	vertical-align: middle;\
-	text-align: center;\
-}\
-</style>\
-</head>\
-<body>\
-<br><br><br><br><br><br>\
-<center>\
-<div class=\"icon\">&#x23c1;</div>\
-<div class=\"text\">%s</div>\
-</center>\
-</body>\
-</html>";
+std::string ssoResponseTemplate = R"""(
+<!doctype html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title>Network SSO Login {{ networkId }}</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style type=\"text/css\">
+         html,body {
+             background: #eeeeee;
+             margin: 0;
+             padding: 0;
+             font-family: "Helvetica";
+             font-weight: bold;
+             font-size: 12pt;
+             height: 100%;
+             width: 100%;
+         }
+         div.icon {
+             background: #ffb354;
+             color: #000000;
+             font-size: 120pt;
+             border-radius: 2.5rem;
+             display: inline-block;
+             width: 1.3em;
+             height: 1.3em;
+             padding: 0;
+             margin: 15;
+             line-height: 1.4em;
+             vertical-align: middle;
+             text-align: center;
+         }
+         .container {
+             vertical-align: center;
+             text-align: center;
+         }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="icon">&#x23c1;</div>
+            <div class="text">{{ messageText }}</div>
+        </div>
+    </body>
+</html>
+)""";
 
 // Configured networks
 class NetworkState
@@ -287,16 +298,9 @@ public:
 	}
 
 	void setConfig(const ZT_VirtualNetworkConfig *nwc) {
-		char nwbuf[17] = {};
-		const char* nwid = Utils::hex(nwc->nwid, nwbuf);
-		// fprintf(stderr, "NetworkState::setConfig(%s)\n", nwid);
-
 		memcpy(&_config, nwc, sizeof(ZT_VirtualNetworkConfig));
-		// fprintf(stderr, "ssoEnabled: %s, ssoVersion: %d\n", 
-		// 	_config.ssoEnabled ? "true" : "false", _config.ssoVersion);
 
 		if (_config.ssoEnabled && _config.ssoVersion == 1) {
-			//  fprintf(stderr, "ssoEnabled for %s\n", nwid);
 #if ZT_SSO_ENABLED
 			if (_idc == nullptr)
 			{
@@ -304,10 +308,6 @@ public:
 				assert(_config.ssoClientID != nullptr);
 				assert(_config.centralAuthURL != nullptr);
 
-				// fprintf(stderr, "Issuer URL: %s\n", _config.issuerURL);
-				// fprintf(stderr, "Client ID: %s\n", _config.ssoClientID);
-				// fprintf(stderr, "Central Auth URL: %s\n", _config.centralAuthURL);
-				
 				_idc = zeroidc::zeroidc_new(
 					_config.issuerURL,
 					_config.ssoClientID,
@@ -319,8 +319,6 @@ public:
 					fprintf(stderr, "idc is null\n");
 					return;
 				}
-
-				// fprintf(stderr, "idc created (%s, %s, %s)\n", _config.issuerURL, _config.ssoClientID, _config.centralAuthURL);
 			}
 
 			zeroidc::zeroidc_set_nonce_and_csrf(
@@ -335,7 +333,6 @@ public:
 			zeroidc::free_cstr(url);
 
 			if (zeroidc::zeroidc_is_running(_idc) && nwc->status == ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED) {
-				// TODO: kick the refresh thread
 				zeroidc::zeroidc_kick_refresh_thread(_idc);
 			}
 #endif
@@ -1704,29 +1701,33 @@ public:
 				std::string htmlTemplatePath = _homePath + ZT_PATH_SEPARATOR + "sso-auth.template.html";
 				std::string htmlTemplate;
 				if (!OSUtils::readFile(htmlTemplatePath.c_str(), htmlTemplate)) {
-					fprintf(stderr, "ERROR: unable to read sso result template");
-					exit(1);
+					htmlTemplate = ssoResponseTemplate;
 				}
-
 
 				responseContentType = "text/html";
 				json outData;
 
-				const char *error = zeroidc::zeroidc_get_url_param_value("error", path.c_str());
+				char *error = zeroidc::zeroidc_get_url_param_value("error", path.c_str());
 				if (error != nullptr) {
-					const char *desc = zeroidc::zeroidc_get_url_param_value("error_description", path.c_str());
+					char *desc = zeroidc::zeroidc_get_url_param_value("error_description", path.c_str());
 					scode = 500;
 
 					json data;
 					outData["messageText"] = (std::string("ERROR ") + error + std::string(": ") + desc);
 					responseBody = inja::render(htmlTemplate, outData);
+
+					zeroidc::free_cstr(desc);
+					zeroidc::free_cstr(error);
+
 					return scode;
 				} 
 
 				// SSO redirect handling
 				char* state = zeroidc::zeroidc_get_url_param_value("state", path.c_str());
 				char* nwid = zeroidc::zeroidc_network_id_from_state(state);
-				
+
+				outData["networkId"] = std::string(nwid);
+
 				const uint64_t id = Utils::hexStrToU64(nwid);
 				
 				zeroidc::free_cstr(nwid);
