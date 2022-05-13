@@ -369,7 +369,7 @@ public:
 #if ZT_SSO_ENABLED
 		if (_idc == nullptr) {
 			fprintf(stderr, "ainfo or idc null\n");
-			return "";
+			return ret;
 		}
 
 		ret = zeroidc::zeroidc_token_exchange(_idc, code);
