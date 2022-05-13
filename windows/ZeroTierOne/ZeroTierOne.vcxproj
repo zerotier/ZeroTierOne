@@ -410,11 +410,11 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_SSO_ENABLED=1;ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
@@ -432,11 +432,11 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_SSO_ENABLED=1;ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
@@ -453,12 +453,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_SSO_ENABLED=1;ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_RULES_ENGINE_DEBUGGING;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
       <GuardEHContMetadata>false</GuardEHContMetadata>
@@ -476,7 +476,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_RULES_ENGINE_DEBUGGING;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
@@ -499,12 +499,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_SSO_ENABLED=1;ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
       <GuardEHContMetadata>false</GuardEHContMetadata>
@@ -521,12 +521,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
       <GuardEHContMetadata>false</GuardEHContMetadata>
@@ -545,7 +545,7 @@
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_SSO_ENABLED=1;ZT_EXPORT;FD_SETSIZE=1024;STATICLIB;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;ZT_SOFTWARE_UPDATE_DEFAULT="apply";ZT_BUILD_PLATFORM=2;ZT_BUILD_ARCHITECTURE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <StringPooling>true</StringPooling>
@@ -555,7 +555,7 @@
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <DebugInformationFormat>None</DebugInformationFormat>
       <CompileAsManaged>false</CompileAsManaged>
       <CompileAsWinRT>false</CompileAsWinRT>
@@ -581,7 +581,7 @@
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_SSO_ENABLED=1;ZT_EXPORT;FD_SETSIZE=1024;STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="apply";ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;ZT_BUILD_PLATFORM=2;ZT_BUILD_ARCHITECTURE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
@@ -594,7 +594,7 @@
       <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
       <CallingConvention>Cdecl</CallingConvention>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <DebugInformationFormat>None</DebugInformationFormat>
       <CompileAsManaged>false</CompileAsManaged>
       <CompileAsWinRT>false</CompileAsWinRT>
@@ -619,7 +619,7 @@
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\zeroidc\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_EXPORT;FD_SETSIZE=1024;STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="apply";ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;ZT_BUILD_PLATFORM=2;ZT_BUILD_ARCHITECTURE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
@@ -632,7 +632,7 @@
       <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
       <CallingConvention>Cdecl</CallingConvention>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <DebugInformationFormat>None</DebugInformationFormat>
       <CompileAsManaged>false</CompileAsManaged>
       <CompileAsWinRT>false</CompileAsWinRT>
