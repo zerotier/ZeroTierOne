@@ -364,13 +364,14 @@ public:
 	}
 
 	char* doTokenExchange(const char *code) {
+		char *ret = nullptr;
 #if ZT_SSO_ENABLED
 		if (_idc == nullptr) {
 			fprintf(stderr, "ainfo or idc null\n");
 			return "";
 		}
 
-		char *ret = zeroidc::zeroidc_token_exchange(_idc, code);
+		ret = zeroidc::zeroidc_token_exchange(_idc, code);
 		zeroidc::zeroidc_set_nonce_and_csrf(
 			_idc,
 			_config.ssoState,
@@ -381,11 +382,8 @@ public:
 		memcpy(_config.authenticationURL, url, strlen(url));
 		_config.authenticationURL[strlen(url)] = 0;
 		zeroidc::free_cstr(url);
-		
-		return ret;
-#else
-		return "";
 #endif
+		return ret;
 	}
 
 	uint64_t getExpiryTime() {
@@ -1899,8 +1897,7 @@ public:
 						scode = _controller->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 					else scode = 404;
 				}
-			}
-			else {
+			} else {
 				scode = 401; // isAuth == false
 			}
 		} else if (httpMethod == HTTP_DELETE) {

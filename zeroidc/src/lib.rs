@@ -337,10 +337,7 @@ impl ZeroIDC {
                                                         }
                                                     }
                                                     Err(e) => {
-                                                        println!(
-                                                            "Central post failed: {}",
-                                                            e.to_string()
-                                                        );
+                                                        println!("Central post failed: {}", e);
                                                         println!(
                                                             "hit url: {}",
                                                             e.url().unwrap().as_str()
@@ -403,7 +400,7 @@ impl ZeroIDC {
 
     pub fn set_nonce_and_csrf(&mut self, csrf_token: String, nonce: String) {
         let local = Arc::clone(&self.inner);
-        (*local.lock().expect("can't lock inner"))
+        let _ = (*local.lock().expect("can't lock inner"))
             .as_opt()
             .map(|i| {
                 if i.running {
@@ -411,27 +408,16 @@ impl ZeroIDC {
                     return;
                 }
 
-                let need_verifier = match i.pkce_verifier {
-                    None => true,
-                    _ => false,
-                };
+                let need_verifier = matches!(i.pkce_verifier, None);
 
                 let csrf_diff = if let Some(csrf) = i.csrf_token.clone() {
-                    if *csrf.secret() != csrf_token {
-                        true
-                    } else {
-                        false
-                    }
+                    *csrf.secret() != csrf_token
                 } else {
                     false
                 };
 
                 let nonce_diff = if let Some(n) = i.nonce.clone() {
-                    if *n.secret() != nonce {
-                        true
-                    } else {
-                        false
-                    }
+                    *n.secret() != nonce
                 } else {
                     false
                 };
@@ -474,7 +460,7 @@ impl ZeroIDC {
             });
 
         match url {
-            Some(url) => url.to_string(),
+            Some(url) => url,
             None => "".to_string(),
         }
     }
@@ -631,16 +617,14 @@ impl ZeroIDC {
                                     };
 
                                     Ok(bytes)
-                                } else {
-                                    if res.status() == 402 {
+                                } else if res.status() == 402 {
                                         Err(SSOExchangeError::new(
                                             "additional license seats required. Please contact your network administrator.".to_string(),
                                         ))
-                                    } else {
-                                        Err(SSOExchangeError::new(
-                                            "error from central endpoint".to_string(),
-                                        ))
-                                    }
+                                } else {
+                                    Err(SSOExchangeError::new(
+                                        "error from central endpoint".to_string(),
+                                    ))
                                 }
                             }
                             Err(res) => {

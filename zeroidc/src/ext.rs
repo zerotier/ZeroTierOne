@@ -219,7 +219,7 @@ pub extern "C" fn zeroidc_get_auth_url(ptr: *mut ZeroIDC) -> *mut c_char {
     let idc = unsafe { &mut *ptr };
 
     let s = CString::new(idc.auth_url()).unwrap();
-    return s.into_raw();
+    s.into_raw()
 }
 
 #[cfg(any(
