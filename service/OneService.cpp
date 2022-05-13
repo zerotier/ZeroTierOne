@@ -1701,16 +1701,25 @@ public:
 				}
 #if ZT_SSO_ENABLED
 			} else if (ps[0] == "sso") {
-				char resBuf[4096] = {0};
+				std::string htmlTemplatePath = _homePath + ZT_PATH_SEPARATOR + "sso-auth.template.html";
+				std::string htmlTemplate;
+				if (!OSUtils::readFile(htmlTemplatePath.c_str(), htmlTemplate)) {
+					fprintf(stderr, "ERROR: unable to read sso result template");
+					exit(1);
+				}
+
+
+				responseContentType = "text/html";
+				json outData;
+
 				const char *error = zeroidc::zeroidc_get_url_param_value("error", path.c_str());
 				if (error != nullptr) {
 					const char *desc = zeroidc::zeroidc_get_url_param_value("error_description", path.c_str());
 					scode = 500;
-					char errBuff[256] = {0};
-					sprintf(errBuff, "ERROR %s: %s", error, desc);
-					sprintf(resBuf, ssoResponseTemplate, errBuff);
-					responseBody = std::string(resBuf);
-					responseContentType = "text/html";
+
+					json data;
+					outData["messageText"] = (std::string("ERROR ") + error + std::string(": ") + desc);
+					responseBody = inja::render(htmlTemplate, outData);
 					return scode;
 				} 
 
@@ -1731,26 +1740,24 @@ public:
 					json ssoResult = json::parse(ret);
 					if (ssoResult.is_object()) {
 						if (ssoResult.contains("errorMessage")) {
-							std::string errorMessage = ssoResult["errorMessage"];
-							char errBuff[256] = {0};
-							sprintf(errBuff, "ERROR: %s", errorMessage.c_str());
-							sprintf(resBuf, ssoResponseTemplate, errBuff);
+							outData["messageText"] = ssoResult["errorMessage"];
+							responseBody = inja::render(htmlTemplate, outData);
 							scode = 500;
 						} else {
 							scode = 200;
-							sprintf(resBuf, ssoResponseTemplate, "Authentication Successful. You may now access the network.");
+							outData["messageText"] = "Authentication Successful. You may now access the network.";
+							responseBody = inja::render(htmlTemplate, outData);
 						}
 					} else {
 						// not an object? We got a problem
-						sprintf(resBuf, ssoResponseTemplate, "Error: Unknown SSO response.");
+						outData["messageText"] = "ERROR: Unkown SSO response. Please contact your administrator.";
+						responseBody = inja::render(htmlTemplate, outData);
 						scode= 500;
 					}
 
 					zeroidc::free_cstr(code);
 					zeroidc::free_cstr(ret);
 
-					responseBody = std::string(resBuf);
-					responseContentType = "text/html";
 					return scode;
 				} else {
 					scode = 404;
