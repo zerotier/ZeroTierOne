@@ -247,11 +247,19 @@ pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char)
     let ret = idc.do_token_exchange(code);
     match ret {
         Ok(ret) => {
+            #[cfg(debug_assertions)]
+            {
+                println!("do_token_exchange ret: {}", ret);
+            }
             let ret = CString::new(ret).unwrap();
             ret.into_raw()
         }
         Err(e) => {
-            let errstr = format!("{{\"errorMessage\":\"{}\"\"}}", e);
+            #[cfg(debug_assertions)]
+            {
+                println!("do_token_exchange err: {}", e);
+            }
+            let errstr = format!("{{\"errorMessage\": \"{}\"}}", e);
             let ret = CString::new(errstr).unwrap();
             ret.into_raw()
         }

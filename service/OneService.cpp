@@ -1740,7 +1740,6 @@ public:
 						} else {
 							scode = 200;
 							sprintf(resBuf, ssoResponseTemplate, "Authentication Successful. You may now access the network.");
-							responseBody = std::string(resBuf);
 						}
 					} else {
 						// not an object? We got a problem
@@ -1750,7 +1749,8 @@ public:
 
 					zeroidc::free_cstr(code);
 					zeroidc::free_cstr(ret);
-					
+
+					responseBody = std::string(resBuf);
 					responseContentType = "text/html";
 					return scode;
 				} else {

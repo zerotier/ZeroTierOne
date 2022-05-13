@@ -579,57 +579,69 @@ impl ZeroIDC {
 
                         match res {
                             Ok(res) => {
-                                #[cfg(debug_assertions)]
-                                {
-                                    println!("hit url: {}", res.url().as_str());
-                                    println!("Status: {}", res.status());
-                                }
+                                if res.status() == 200 {
+                                    #[cfg(debug_assertions)]
+                                    {
+                                        println!("hit url: {}", res.url().as_str());
+                                        println!("Status: {}", res.status());
+                                    }
 
-                                let idt = &id_token.to_string();
+                                    let idt = &id_token.to_string();
 
-                                let t: Result<
-                                    Token<jwt::Header, jwt::Claims, jwt::Unverified<'_>>,
-                                    jwt::Error,
-                                > = Token::parse_unverified(idt);
+                                    let t: Result<
+                                        Token<jwt::Header, jwt::Claims, jwt::Unverified<'_>>,
+                                        jwt::Error,
+                                    > = Token::parse_unverified(idt);
 
-                                if let Ok(t) = t {
-                                    let claims = t.claims().registered.clone();
-                                    match claims.expiration {
-                                        Some(exp) => {
-                                            i.exp_time = exp;
-                                            println!("Set exp time to: {:?}", i.exp_time);
-                                        }
-                                        None => {
-                                            panic!("expiration is None.  This shouldn't happen");
+                                    if let Ok(t) = t {
+                                        let claims = t.claims().registered.clone();
+                                        match claims.expiration {
+                                            Some(exp) => {
+                                                i.exp_time = exp;
+                                                println!("Set exp time to: {:?}", i.exp_time);
+                                            }
+                                            None => {
+                                                panic!("expiration is None.  This shouldn't happen");
+                                            }
                                         }
                                     }
+
+                                    i.access_token = Some(tok.access_token().clone());
+                                    if let Some(t) = tok.refresh_token() {
+                                        i.refresh_token = Some(t.clone());
+                                        should_start = true;
+                                    }
+                                    #[cfg(debug_assertions)]
+                                    {
+                                        let access_token = tok.access_token();
+                                        println!("Access Token: {}", access_token.secret());
+
+                                        let refresh_token = tok.refresh_token();
+                                        println!("Refresh Token: {}", refresh_token.unwrap().secret());
+                                    }
+
+                                    let bytes = match res.bytes() {
+                                        Ok(bytes) => bytes,
+                                        Err(_) => Bytes::from(""),
+                                    };
+
+                                    let bytes = match from_utf8(bytes.as_ref()) {
+                                        Ok(bytes) => bytes.to_string(),
+                                        Err(_) => "".to_string(),
+                                    };
+
+                                    Ok(bytes)
+                                } else {
+                                    if res.status() == 402 {
+                                        Err(SSOExchangeError::new(
+                                            "additional license seats required. Please contact your network administrator.".to_string(),
+                                        ))
+                                    } else {
+                                        Err(SSOExchangeError::new(
+                                            "error from central endpoint".to_string(),
+                                        ))
+                                    }
                                 }
-
-                                i.access_token = Some(tok.access_token().clone());
-                                if let Some(t) = tok.refresh_token() {
-                                    i.refresh_token = Some(t.clone());
-                                    should_start = true;
-                                }
-                                #[cfg(debug_assertions)]
-                                {
-                                    let access_token = tok.access_token();
-                                    println!("Access Token: {}", access_token.secret());
-
-                                    let refresh_token = tok.refresh_token();
-                                    println!("Refresh Token: {}", refresh_token.unwrap().secret());
-                                }
-
-                                let bytes = match res.bytes() {
-                                    Ok(bytes) => bytes,
-                                    Err(_) => Bytes::from(""),
-                                };
-
-                                let bytes = match from_utf8(bytes.as_ref()) {
-                                    Ok(bytes) => bytes.to_string(),
-                                    Err(_) => "".to_string(),
-                                };
-
-                                Ok(bytes)
                             }
                             Err(res) => {
                                 println!("error result: {}", res);
