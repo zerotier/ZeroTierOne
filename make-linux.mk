@@ -31,7 +31,7 @@ ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
 	override DEFS+=-DZT_USE_SYSTEM_MINIUPNPC
 	LDLIBS+=-lminiupnpc
 else
-	override DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+	override DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING="\"Linux\"" -DMINIUPNPC_VERSION_STRING="\"2.0\"" -DUPNP_VERSION_STRING="\"UPnP/1.1\"" -DENABLE_STRNATPMPERR
 	ONE_OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
 endif
 ifeq ($(wildcard /usr/include/natpmp.h),)
@@ -66,9 +66,9 @@ ifeq ($(ZT_DEBUG),1)
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS?=-O3 -fstack-protector -fPIE
+	CFLAGS?=-O3 -fstack-protector
 	override CFLAGS+=-Wall -Wno-deprecated -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	CXXFLAGS?=-O3 -fstack-protector -fPIE
+	CXXFLAGS?=-O3 -fstack-protector
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	RUSTFLAGS=--release
@@ -84,8 +84,6 @@ ifeq ($(ZT_UBIQUITI), 1)
 endif
 
 ifeq ($(ZT_SYNOLOGY), 1)
-	override CFLAGS+=-fPIC
-	override CXXFLAGS+=-fPIC
 	override DEFS+=-D__SYNOLOGY__
 	ZT_EMBEDDED=1
 endif
@@ -336,11 +334,19 @@ ifeq ($(ZT_USE_ARM32_NEON_ASM_CRYPTO),1)
 	override CORE_OBJS+=ext/arm32-neon-salsa2012-asm/salsa2012.o
 endif
 
+# Position Independence
+override CFLAGS+=-fPIC -fPIE
+override CXXFLAGS+=-fPIC -fPIE
+
 .PHONY: all
 all:	one
 
 .PHONY: one
 one: zerotier-one zerotier-idtool zerotier-cli
+
+from_builder:
+	ln -sf zerotier-one zerotier-idtool
+	ln -sf zerotier-one zerotier-cli
 
 zerotier-one:	$(CORE_OBJS) $(ONE_OBJS) one.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LDLIBS)
@@ -452,6 +458,20 @@ uninstall:	FORCE
 
 # These are just for convenience for building Linux packages
 
+echo_flags:
+	@echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~"
+	@echo "echo_flags :: CC=$(CC)"
+	@echo "echo_flags :: CXX=$(CXX)"
+	@echo "echo_flags :: CFLAGS=$(CFLAGS)"
+	@echo "echo_flags :: CXXFLAGS=$(CXXFLAGS)"
+	@echo "echo_flags :: LDFLAGS=$(LDFLAGS)"
+	@echo "echo_flags :: RUSTFLAGS=$(RUSTFLAGS)"
+	@echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~"
+
+# debian: echo_flags
+# 	@echo "building deb package"
+# 	debuild --no-lintian -b -uc -us
+
 debian:	FORCE
 	debuild --no-lintian -I -i -us -uc -nc -b
 
@@ -495,5 +515,15 @@ synology-pkg: FORCE
 
 synology-docker: FORCE
 	cd synology/dsm7-docker/; ./build.sh build
+
+munge_rpm:
+	@:$(call check_defined, VERSION)
+	@echo "Updating rpm spec to $(VERSION)"
+	ci/scripts/munge_rpm_spec.sh zerotier-one.spec $(VERSION) "Adam Ierymenko <adam.ierymenko@zerotier.com>" "see https://github.com/zerotier/ZeroTierOne for release notes"
+
+munge_deb:
+	@:$(call check_defined, VERSION)
+	@echo "Updating debian/changelog to $(VERSION)"
+	ci/scripts/munge_debian_changelog.sh debian/changelog $(VERSION) "Adam Ierymenko <adam.ierymenko@zerotier.com>" "see https://github.com/zerotier/ZeroTierOne for release notes"
 
 FORCE:

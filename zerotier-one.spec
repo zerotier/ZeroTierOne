@@ -6,28 +6,56 @@ Summary:        ZeroTier network virtualization service
 License:        ZeroTier BSL 1.1
 URL:            https://www.zerotier.com
 
-%if 0%{?rhel} >= 7
-BuildRequires:  systemd
-%endif
+# Fedora
 
-%if 0%{?fedora} >= 21
-BuildRequires:  systemd
-%endif
-
-Requires:       iproute libstdc++ openssl
-AutoReqProv:    no
-
-%if 0%{?rhel} >= 7
-Requires:       systemd
+%if "%{?dist}" == ".fc35"
+BuildRequires: systemd clang openssl openssl-devel
+Requires:      systemd openssl
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
-%if 0%{?rhel} <= 6
-Requires:       chkconfig
+%if "%{?dist}" == ".fc36"
+BuildRequires: systemd clang openssl1.1 openssl1.1-devel
+Requires:      systemd openssl1.1
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
-%if 0%{?fedora} >= 21
-Requires:       systemd
+%if "%{?dist}" == ".fc37"
+BuildRequires: systemd clang openssl1.1 openssl1.1-devel
+Requires:      systemd openssl1.1
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+%endif
+
+# RHEL
+
+%if "%{?dist}" == ".el6"
+Requires: chkconfig
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+%endif
+
+%if "%{?dist}" == ".el7"
+BuildRequires: systemd openssl11-devel
+Requires:      systemd openssl11
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+%endif
+
+%if "%{?dist}" == ".el8"
+BuildRequires: systemd openssl-devel
+Requires:      systemd openssl
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+%endif
+
+%if "%{?dist}" == ".el9"
+BuildRequires: systemd openssl-devel
+Requires:      systemd openssl
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+%endif
+
+# Amazon
+
+%if "%{?dist}" == ".amzn2"
+BuildRequires:  systemd openssl-devel
+Requires:       systemd openssl
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
@@ -44,123 +72,60 @@ like conventional VPNs or VLANs. It can run on native systems, VMs, or
 containers (Docker, OpenVZ, etc.).
 
 %prep
-%if 0%{?rhel} >= 7
-rm -rf *
-ln -s %{getenv:PWD} %{name}-%{version}
-tar --exclude=%{name}-%{version}/.git --exclude=%{name}-%{version}/%{name}-%{version} -czf %{_sourcedir}/%{name}-%{version}.tar.gz %{name}-%{version}/*
-rm -f %{name}-%{version}
-cp -a %{getenv:PWD}/* .
-%endif
+# ls -la
+# %if 0%{?rhel} && 0%{?rhel} >= 7
+# rm -rf *
+# ln -s %{getenv:PWD} %{name}-%{version}
+# tar --exclude=%{name}-%{version}/.git --exclude=%{name}-%{version}/%{name}-%{version} -czf %{_sourcedir}/%{name}-%{version}.tar.gz %{name}-%{version}/*
+# rm -f %{name}-%{version}
+# cp -a %{getenv:PWD}/* .
+# %endif
 
 %build
-#%if 0%{?rhel} <= 7
-#make CFLAGS="`echo %{optflags} | sed s/stack-protector-strong/stack-protector/`" CXXFLAGS="`echo %{optflags} | sed s/stack-protector-strong/stack-protector/`" ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one manpages selftest
-#%else
-%if 0%{?rhel} >= 7
-make ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one
+%if "%{?dist}" == ".el6"
+make RUST_BACKTRACE=full ZT_USE_MINIUPNPC=1 %{?_smp_mflags} from_builder
+%else
+make RUST_BACKTRACE=full ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one
 %endif
 
 %pre
-%if 0%{?rhel} >= 7
 /usr/bin/getent passwd zerotier-one || /usr/sbin/useradd -r -d /var/lib/zerotier-one -s /sbin/nologin zerotier-one
-%endif
-%if 0%{?fedora} >= 21
-/usr/bin/getent passwd zerotier-one || /usr/sbin/useradd -r -d /var/lib/zerotier-one -s /sbin/nologin zerotier-one
-%endif
 
 %install
-rm -rf $RPM_BUILD_ROOT
-%if 0%{?rhel} < 7
-pushd %{getenv:PWD}
-%endif
+# rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT
-%if 0%{?rhel} < 7
-popd
-%endif
-%if 0%{?rhel} >= 7
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 cp %{getenv:PWD}/debian/zerotier-one.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
-%endif
-%if 0%{?fedora} >= 21
-mkdir -p $RPM_BUILD_ROOT%{_unitdir}
-cp ${getenv:PWD}/debian/zerotier-one.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
-%endif
-%if 0%{?rhel} <= 6
-mkdir -p $RPM_BUILD_ROOT/etc/init.d
+
+%if 0%{?rhel} && 0%{?rhel} <= 6
+mkdir -p $RPM_BUILD_ROOT/etc/init.d/
 cp %{getenv:PWD}/ext/installfiles/linux/zerotier-one.init.rhel6 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
-chmod 0755 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
+chmod 700 $RPM_BUILD_ROOT/etc/init.d/${name}
 %endif
 
 %files
 %{_sbindir}/*
 %{_mandir}/*
 %{_localstatedir}/*
-%if 0%{?rhel} >= 7
-%{_unitdir}/%{name}.service
-%endif
-%if 0%{?fedora} >= 21
-%{_unitdir}/%{name}.service
-%endif
-%if 0%{?rhel} <= 6
+
+%if 0%{?rhel} && 0%{?rhel} <= 6
 /etc/init.d/zerotier-one
+%else
+%{_unitdir}/%{name}.service
 %endif
 
 %post
-%if 0%{?rhel} >= 7
+%if ! 0%{?rhel} && 0%{?rhel} <= 6
 %systemd_post zerotier-one.service
-%endif
-%if 0%{?fedora} >= 21
-%systemd_post zerotier-one.service
-%endif
-%if 0%{?rhel} <= 6
-case "$1" in
-  1)
-    chkconfig --add zerotier-one
-  ;;
-  2)
-    chkconfig --del zerotier-one
-    chkconfig --add zerotier-one
-  ;;
-esac
-if [ -x /usr/bin/checkmodule -a -x /usr/bin/semodule_package -a -x /usr/sbin/semodule ]; then
-  rm -f /var/lib/zerotier-one/zerotier-one.mod
-  /usr/bin/checkmodule -M -m -o /var/lib/zerotier-one/zerotier-one.mod /var/lib/zerotier-one/zerotier-one.te
-  if [ -f /var/lib/zerotier-one/zerotier-one.pp ]; then
-    rm -f /var/lib/zerotier-one/zerotier-one.pp
-    /usr/bin/semodule_package -o /var/lib/zerotier-one/zerotier-one.pp -m /var/lib/zerotier-one/zerotier-one.mod
-    /usr/sbin/semodule -u /var/lib/zerotier-one/zerotier-one.pp
-  else
-    /usr/bin/semodule_package -o /var/lib/zerotier-one/zerotier-one.pp -m /var/lib/zerotier-one/zerotier-one.mod
-    /usr/sbin/semodule -i /var/lib/zerotier-one/zerotier-one.pp
-  fi
-fi
 %endif
 
 %preun
-%if 0%{?rhel} >= 7
+%if ! 0%{?rhel} && 0%{?rhel} <= 6
 %systemd_preun zerotier-one.service
-%endif
-%if 0%{?fedora} >= 21
-%systemd_preun zerotier-one.service
-%endif
-%if 0%{?rhel} <= 6
-case "$1" in
-  0)
-    service zerotier-one stop
-    chkconfig --del zerotier-one
-  ;;
-  1)
-    # This is an upgrade.
-    :
-  ;;
-esac
 %endif
 
 %postun
-%if 0%{?rhel} >= 7
-%systemd_postun_with_restart zerotier-one.service
-%endif
-%if 0%{?fedora} >= 21
+%if ! 0%{?rhel} && 0%{?rhel} <= 6
 %systemd_postun_with_restart zerotier-one.service
 %endif
 
@@ -168,16 +133,16 @@ esac
 * Tue May 10 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.10
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
-* Fri Apr 25 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.9
+* Mon Apr 25 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.9
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
-* Fri Apr 11 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.8
+* Mon Apr 11 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.8
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
-* Fri Mar 21 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.7
+* Mon Mar 21 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.7
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
-* Fri Mar 07 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.6
+* Mon Mar 07 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.6
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
 * Fri Dec 17 2021 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.5
@@ -195,7 +160,7 @@ esac
 * Wed Oct 20 2021 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.1
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
-* Tue Sep 15 2021 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.0
+* Wed Sep 15 2021 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.8.0
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
 * Tue Apr 13 2021 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.6.5
