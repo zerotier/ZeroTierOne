@@ -9,7 +9,7 @@ ifeq ($(origin CXX),default)
 	CXX:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/g++ ]; then echo /opt/rh/devtoolset-8/root/usr/bin/g++; else echo $(CXX); fi)
 endif
 
-INCLUDES?=-Izeroidc/target
+INCLUDES?=-Izeroidc/target -isystem ext
 DEFS?=
 LDLIBS?=
 DESTDIR?=
@@ -59,7 +59,7 @@ ifeq ($(ZT_SANITIZE),1)
 endif
 ifeq ($(ZT_DEBUG),1)
 	override CFLAGS+=-Wall -Wno-deprecated -g -O -pthread $(INCLUDES) $(DEFS)
-	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++11 -pthread $(INCLUDES) $(DEFS)
+	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++17 -pthread $(INCLUDES) $(DEFS)
 	ZT_TRACE=1
 	RUSTFLAGS=
 	# The following line enables optimization for the crypto code, since
@@ -69,7 +69,7 @@ else
 	CFLAGS?=-O3 -fstack-protector
 	override CFLAGS+=-Wall -Wno-deprecated -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-O3 -fstack-protector
-	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	RUSTFLAGS=--release
 endif
@@ -360,7 +360,7 @@ zerotier-cli: zerotier-one
 $(ONE_OBJS): zeroidc
 
 libzerotiercore.a:	FORCE
-	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++11 -fstack-protector -fPIC" $(CORE_OBJS)
+	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++17 -fstack-protector -fPIC" $(CORE_OBJS)
 	ar rcs libzerotiercore.a $(CORE_OBJS)
 	ranlib libzerotiercore.a
 

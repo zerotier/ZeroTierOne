@@ -43,7 +43,7 @@
 #endif
 
 #ifndef OMIT_JSON_SUPPORT
-#include "../ext/json/json.hpp"
+#include <nlohmann/json.hpp>
 #endif
 
 namespace ZeroTier {

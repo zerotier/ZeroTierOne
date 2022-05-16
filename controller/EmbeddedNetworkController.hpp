@@ -35,7 +35,7 @@
 #include "../osdep/Thread.hpp"
 #include "../osdep/BlockingQueue.hpp"
 
-#include "../ext/json/json.hpp"
+#include <nlohmann/json.hpp>
 
 #include "DB.hpp"
 #include "DBMirrorSet.hpp"
