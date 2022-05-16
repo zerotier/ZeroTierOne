@@ -1713,6 +1713,7 @@ public:
 					scode = 500;
 
 					json data;
+					outData["isError"] = true;
 					outData["messageText"] = (std::string("ERROR ") + error + std::string(": ") + desc);
 					responseBody = inja::render(htmlTemplate, outData);
 
@@ -1741,16 +1742,19 @@ public:
 					json ssoResult = json::parse(ret);
 					if (ssoResult.is_object()) {
 						if (ssoResult.contains("errorMessage")) {
+							outData["isError"] = true;
 							outData["messageText"] = ssoResult["errorMessage"];
 							responseBody = inja::render(htmlTemplate, outData);
 							scode = 500;
 						} else {
 							scode = 200;
+							outData["isError"] = false;
 							outData["messageText"] = "Authentication Successful. You may now access the network.";
 							responseBody = inja::render(htmlTemplate, outData);
 						}
 					} else {
 						// not an object? We got a problem
+						outData["isError"] = true;
 						outData["messageText"] = "ERROR: Unkown SSO response. Please contact your administrator.";
 						responseBody = inja::render(htmlTemplate, outData);
 						scode= 500;
