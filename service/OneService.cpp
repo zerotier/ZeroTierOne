@@ -737,8 +737,11 @@ public:
 	// begin member variables --------------------------------------------------
 
 	const std::string _homePath;
+
 	std::string _authToken;
 	std::string _controllerDbPath;
+	std::string _eventHookScriptPath;
+
 	const std::string _networksPath;
 	const std::string _moonsPath;
 
@@ -839,6 +842,7 @@ public:
 	OneServiceImpl(const char *hp,unsigned int port) :
 		_homePath((hp) ? hp : ".")
 		,_controllerDbPath(_homePath + ZT_PATH_SEPARATOR_S "controller.d")
+		,_eventHookScriptPath("")
 		,_networksPath(_homePath + ZT_PATH_SEPARATOR_S "networks.d")
 		,_moonsPath(_homePath + ZT_PATH_SEPARATOR_S "moons.d")
 		,_controller((EmbeddedNetworkController *)0)
@@ -2193,6 +2197,8 @@ public:
 		}
 #endif
 
+		_eventHookScriptPath = std::string(OSUtils::jsonString(settings["eventHookScriptPath"],""));
+
 		json &ignoreIfs = settings["interfacePrefixBlacklist"];
 		if (ignoreIfs.is_array()) {
 			for(unsigned long i=0;i<ignoreIfs.size();++i) {
@@ -2816,6 +2822,7 @@ public:
 				}
 				break;
 		}
+		OSUtils::_hookCmd(_eventHookScriptPath.c_str(), nwid, op);
 		return 0;
 	}
 

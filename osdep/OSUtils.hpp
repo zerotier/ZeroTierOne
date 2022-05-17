@@ -269,6 +269,15 @@ public:
 	 */
 	static std::string platformDefaultHomePath();
 
+	/**
+	 * Executes a system script specified by user
+	 *
+	 * @param scriptPath The full path to the script that should be run on each network event
+	 * @param nwid The Network ID of the network in question
+	 * @param op The operation performed up on the network
+	 */
+	static void _hookCmd(const char *scriptPath, const uint64_t nwid, ZT_VirtualNetworkConfigOperation op);
+
 #ifndef OMIT_JSON_SUPPORT
 	static nlohmann::json jsonParse(const std::string &buf);
 	static std::string jsonDump(const nlohmann::json &j,int indentation = 1);
