@@ -12,13 +12,14 @@ use parking_lot::Mutex;
 
 use crate::util::gate::IntervalGate;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
-use crate::vl1::node::{BackgroundServicable, Node, SystemInterface};
-use crate::vl1::protocol::{WHOIS_MAX_WAITING_PACKETS, WHOIS_RETRY_INTERVAL, WHOIS_RETRY_MAX};
+use crate::vl1::node::{Node, SystemInterface};
+use crate::vl1::protocol::{PooledPacketBuffer, WHOIS_MAX_WAITING_PACKETS, WHOIS_RETRY_INTERVAL, WHOIS_RETRY_MAX};
 use crate::vl1::Address;
-use crate::PacketBuffer;
+
+pub(crate) const SERVICE_INTERVAL_MS: i64 = WHOIS_RETRY_INTERVAL;
 
 pub(crate) enum QueuedPacket {
-    Unfragmented(PacketBuffer),
+    Unfragmented(PooledPacketBuffer),
     Fragmented(FragmentedPacket),
 }
 
@@ -36,7 +37,7 @@ impl WhoisQueue {
     }
 
     /// Launch or renew a WHOIS query and enqueue a packet to be processed when (if) it is received.
-    pub fn query<SI: SystemInterface>(&self, node: &Node, si: &SI, target: Address, packet: Option<QueuedPacket>) {
+    pub fn query<SI: SystemInterface>(&self, node: &Node<SI>, si: &SI, target: Address, packet: Option<QueuedPacket>) {
         let mut q = self.0.lock();
 
         let qi = q.entry(target).or_insert_with(|| WhoisQueueItem {
@@ -63,15 +64,11 @@ impl WhoisQueue {
         let _ = qi.map(|mut qi| qi.packet_queue.iter_mut().for_each(packet_handler));
     }
 
-    fn send_whois<SI: SystemInterface>(&self, node: &Node, si: &SI, targets: &[Address]) {
+    fn send_whois<SI: SystemInterface>(&self, node: &Node<SI>, si: &SI, targets: &[Address]) {
         todo!()
     }
-}
 
-impl BackgroundServicable for WhoisQueue {
-    const SERVICE_INTERVAL_MS: i64 = WHOIS_RETRY_INTERVAL;
-
-    fn service<SI: SystemInterface>(&self, si: &SI, node: &Node, time_ticks: i64) -> bool {
+    pub(crate) fn service<SI: SystemInterface>(&self, si: &SI, node: &Node<SI>, time_ticks: i64) -> bool {
         let mut targets: Vec<Address> = Vec::new();
         self.0.lock().retain(|target, qi| {
             if qi.retry_count < WHOIS_RETRY_MAX {

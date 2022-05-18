@@ -7,7 +7,6 @@
  */
 
 use crate::vl1::protocol::*;
-use crate::PacketBuffer;
 
 /// Packet fragment re-assembler and container.
 ///
@@ -19,15 +18,14 @@ use crate::PacketBuffer;
 /// the size of frags[] and the number of bits in 'have' and 'expecting'.
 pub(crate) struct FragmentedPacket {
     pub ts_ticks: i64,
-    pub frags: [Option<PacketBuffer>; PACKET_FRAGMENT_COUNT_MAX],
+    pub frags: [Option<PooledPacketBuffer>; packet_constants::FRAGMENT_COUNT_MAX],
     pub have: u8,
     pub expecting: u8,
 }
 
 impl FragmentedPacket {
-    #[inline(always)]
+    #[inline]
     pub fn new(ts: i64) -> Self {
-        debug_assert_eq!(PACKET_FRAGMENT_COUNT_MAX, 8);
         Self {
             ts_ticks: ts,
             frags: [None, None, None, None, None, None, None, None],
@@ -37,8 +35,8 @@ impl FragmentedPacket {
     }
 
     /// Add a fragment to this fragment set and return true if all fragments are present.
-    #[inline(always)]
-    pub fn add_fragment(&mut self, frag: PacketBuffer, no: u8, expecting: u8) -> bool {
+    #[inline]
+    pub fn add_fragment(&mut self, frag: PooledPacketBuffer, no: u8, expecting: u8) -> bool {
         self.frags.get_mut(no as usize).map_or(false, |entry| {
             /*
              * This works by setting bit N in the 'have' bit mask and then setting X bits

@@ -19,7 +19,7 @@ fn s6_addr_as_ptr<A>(a: &A) -> *const A {
 
 /// Call supplied function or closure for each physical IP address in the system.
 #[cfg(unix)]
-pub(crate) fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
+pub fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
     unsafe {
         let mut ifa_name = [0_u8; libc::IFNAMSIZ as usize];
         let mut ifap: *mut libc::ifaddrs = null_mut();
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn test_getifaddrs() {
         println!("starting getifaddrs...");
-        crate::getifaddrs::for_each_address(|a: &InetAddress, dev: &str| println!("  {} {}", dev, a.to_string()));
+        crate::vnic::getifaddrs::for_each_address(|a: &InetAddress, dev: &str| println!("  {} {}", dev, a.to_string()));
         println!("done.")
     }
 }

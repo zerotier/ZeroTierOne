@@ -6,23 +6,22 @@
  * https://www.zerotier.com/
  */
 
-use std::num::NonZeroI64;
 use std::time::Duration;
 
 use crate::error::InvalidParameterError;
+use crate::vl1::protocol::PooledPacketBuffer;
 use crate::vl1::{Address, Endpoint, Identity, Node, RootSet, SystemInterface};
 use crate::vl2::{Switch, SwitchInterface};
-use crate::PacketBuffer;
 
 pub trait Interface: SystemInterface + SwitchInterface {}
 
-pub struct NetworkHypervisor {
-    vl1: Node,
+pub struct NetworkHypervisor<I: Interface> {
+    vl1: Node<I>,
     vl2: Switch,
 }
 
-impl NetworkHypervisor {
-    pub fn new<I: Interface>(ii: &I, auto_generate_identity: bool) -> Result<NetworkHypervisor, InvalidParameterError> {
+impl<I: Interface> NetworkHypervisor<I> {
+    pub fn new(ii: &I, auto_generate_identity: bool) -> Result<Self, InvalidParameterError> {
         Ok(NetworkHypervisor {
             vl1: Node::new(ii, auto_generate_identity)?,
             vl2: Switch::new(),
@@ -30,7 +29,7 @@ impl NetworkHypervisor {
     }
 
     #[inline(always)]
-    pub fn get_packet_buffer(&self) -> PacketBuffer {
+    pub fn get_packet_buffer(&self) -> PooledPacketBuffer {
         self.vl1.get_packet_buffer()
     }
 
@@ -45,12 +44,12 @@ impl NetworkHypervisor {
     }
 
     #[inline(always)]
-    pub fn do_background_tasks<I: Interface>(&self, ii: &I) -> Duration {
+    pub fn do_background_tasks(&self, ii: &I) -> Duration {
         self.vl1.do_background_tasks(ii)
     }
 
     #[inline(always)]
-    pub fn wire_receive<I: Interface>(&self, ii: &I, source_endpoint: &Endpoint, source_local_socket: Option<NonZeroI64>, source_local_interface: Option<NonZeroI64>, data: PacketBuffer) {
+    pub fn wire_receive(&self, ii: &I, source_endpoint: &Endpoint, source_local_socket: &I::LocalSocket, source_local_interface: &I::LocalInterface, data: PooledPacketBuffer) {
         self.vl1.wire_receive(ii, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data)
     }
 

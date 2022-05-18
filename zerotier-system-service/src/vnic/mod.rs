@@ -6,8 +6,9 @@
  * https://www.zerotier.com/
  */
 
+pub mod vnic;
+
 //mod common;
-mod vnic;
 
 //#[cfg(target_os = "macos")]
 //mod mac_feth_tap;

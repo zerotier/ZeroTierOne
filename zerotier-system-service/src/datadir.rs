@@ -15,9 +15,9 @@ use crate::utils::{read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 use tokio::sync::{Mutex, RwLock, RwLockReadGuard};
 
 use zerotier_core_crypto::random::next_u32_secure;
-use zerotier_network_hypervisor::vl1::identity::{Identity, IDENTITY_ALGORITHM_ALL};
+use zerotier_network_hypervisor::vl1::Identity;
 
-const AUTH_TOKEN_DEFAULT_LENGTH: usize = 64;
+const AUTH_TOKEN_DEFAULT_LENGTH: usize = 48;
 const AUTH_TOKEN_POSSIBLE_CHARS: &'static str = "0123456789abcdefghijklmnopqrstuvwxyz";
 const AUTH_TOKEN_FILENAME: &'static str = "authtoken.secret";
 const IDENTITY_PUBLIC_FILENAME: &'static str = "identity.public";
@@ -72,8 +72,8 @@ impl DataDir {
     /// Save identity.secret and identity.public to data directory.
     pub async fn save_identity(&self, id: &Identity) -> std::io::Result<()> {
         assert!(id.secret.is_some());
-        let id_secret_str = id.to_string_with_options(IDENTITY_ALGORITHM_ALL, true);
-        let id_public_str = id.to_string_with_options(IDENTITY_ALGORITHM_ALL, false);
+        let id_secret_str = id.to_string_with_options(Identity::ALGORITHM_ALL, true);
+        let id_public_str = id.to_string_with_options(Identity::ALGORITHM_ALL, false);
         let secret_path = self.base_path.join(IDENTITY_SECRET_FILENAME);
         tokio::fs::write(&secret_path, id_secret_str.as_bytes()).await?;
         assert!(crate::utils::fs_restrict_permissions(&secret_path));

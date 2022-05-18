@@ -6,31 +6,30 @@
  * https://www.zerotier.com/
  */
 
-pub mod endpoint;
-pub mod identity;
-pub mod inetaddress;
-
 mod address;
 mod dictionary;
+mod endpoint;
+mod fragmentedpacket;
+mod identity;
+mod inetaddress;
 mod mac;
 mod path;
 mod peer;
 mod rootset;
+mod symmetricsecret;
+mod whoisqueue;
 
-pub(crate) mod fragmentedpacket;
 pub(crate) mod node;
 #[allow(unused)]
 pub(crate) mod protocol;
-pub(crate) mod symmetricsecret;
-pub(crate) mod whoisqueue;
 
 pub use address::Address;
 pub use dictionary::Dictionary;
 pub use endpoint::Endpoint;
-pub use identity::Identity;
-pub use inetaddress::InetAddress;
+pub use identity::*;
+pub use inetaddress::{InetAddress, IpScope};
 pub use mac::MAC;
-pub use node::{Node, SystemInterface};
+pub use node::{InnerProtocolInterface, Node, SystemInterface};
 pub use path::Path;
 pub use peer::Peer;
 pub use rootset::{Root, RootSet};

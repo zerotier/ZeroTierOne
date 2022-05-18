@@ -11,12 +11,13 @@ use std::sync::{Arc, Weak};
 
 use parking_lot::Mutex;
 
-/// Trait for objects that create and reset poolable objects.
+/// Each pool requires a factory that creates and resets (for re-use) pooled objects.
 pub trait PoolFactory<O> {
     fn create(&self) -> O;
     fn reset(&self, obj: &mut O);
 }
 
+#[repr(C)]
 struct PoolEntry<O, F: PoolFactory<O>> {
     obj: O,
     return_pool: Weak<PoolInner<O, F>>,
@@ -102,10 +103,7 @@ impl<O, F: PoolFactory<O>> Drop for Pooled<O, F> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe {
-            // Return to pool if the pool still exists. Deallocate otherwise.
-            let p = Weak::upgrade(&self.0.as_ref().return_pool);
-            if p.is_some() {
-                let p = p.unwrap_unchecked();
+            if let Some(p) = self.0.as_ref().return_pool.upgrade() {
                 p.factory.reset(&mut self.0.as_mut().obj);
                 p.pool.lock().push(self.0);
             } else {
@@ -129,14 +127,16 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
     }
 
     /// Get a pooled object, or allocate one if the pool is empty.
-    #[inline(always)]
     pub fn get(&self) -> Pooled<O, F> {
-        Pooled::<O, F>(self.0.pool.lock().pop().unwrap_or_else(|| unsafe {
-            NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
-                obj: self.0.factory.create(),
-                return_pool: Arc::downgrade(&self.0),
-            })))
-        }))
+        Pooled::<O, F>(self.0.pool.lock().pop().unwrap_or_else(
+            #[inline(always)]
+            || unsafe {
+                NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
+                    obj: self.0.factory.create(),
+                    return_pool: Arc::downgrade(&self.0),
+                })))
+            },
+        ))
     }
 
     /// Dispose of all pooled objects, freeing any memory they use.
@@ -145,14 +145,8 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
     /// objects will still be returned on drop unless the pool itself is dropped. This can
     /// be done to free some memory if there has been a spike in memory use.
     pub fn purge(&self) {
-        let mut p = self.0.pool.lock();
-        loop {
-            let o = p.pop();
-            if o.is_some() {
-                drop(unsafe { Box::from_raw(o.unwrap().as_ptr()) })
-            } else {
-                break;
-            }
+        for o in self.0.pool.lock().drain(..) {
+            drop(unsafe { Box::from_raw(o.as_ptr()) })
         }
     }
 }

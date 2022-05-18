@@ -96,85 +96,6 @@ lazy_static! {
     static ref MAC_FETH_BPF_DEVICES_USED: Mutex<BTreeSet<u32>> = Mutex::new(BTreeSet::new());
 }
 
-/*
-struct nd_ifinfo {
-    u_int32_t linkmtu;		/* LinkMTU */
-    u_int32_t maxmtu;		/* Upper bound of LinkMTU */
-    u_int32_t basereachable;	/* BaseReachableTime */
-    u_int32_t reachable;		/* Reachable Time */
-    u_int32_t retrans;		/* Retrans Timer */
-    u_int32_t flags;		/* Flags */
-    int recalctm;			/* BaseReacable re-calculation timer */
-    u_int8_t chlim;			/* CurHopLimit */
-    u_int8_t receivedra;
-};
-struct	in6_ndireq {
-    char ifname[IFNAMSIZ];
-    struct nd_ifinfo ndi;
-};
-struct in6_addrlifetime {
-    time_t ia6t_expire;     /* valid lifetime expiration time */
-    time_t ia6t_preferred;  /* preferred lifetime expiration time */
-    u_int32_t ia6t_vltime;  /* valid lifetime */
-    u_int32_t ia6t_pltime;  /* prefix lifetime */
-};
-struct in6_ifstat {
-    ifs6_in_receive;       /* # of total input datagram */
-    ifs6_in_hdrerr;        /* # of datagrams with invalid hdr */
-    ifs6_in_toobig;        /* # of datagrams exceeded MTU */
-    ifs6_in_noroute;       /* # of datagrams with no route */
-    ifs6_in_addrerr;       /* # of datagrams with invalid dst */
-    ifs6_in_protounknown;  /* # of datagrams with unknown proto */
-                                    /* NOTE: increment on final dst if */
-    ifs6_in_truncated;     /* # of truncated datagrams */
-    ifs6_in_discard;       /* # of discarded datagrams */
-                                    /* NOTE: fragment timeout is not here */
-    ifs6_in_deliver;       /* # of datagrams delivered to ULP */
-                                    /* NOTE: increment on final dst if */
-    ifs6_out_forward;      /* # of datagrams forwarded */
-                                    /* NOTE: increment on outgoing if */
-    ifs6_out_request;      /* # of outgoing datagrams from ULP */
-                                    /* NOTE: does not include forwrads */
-    ifs6_out_discard;      /* # of discarded datagrams */
-    ifs6_out_fragok;       /* # of datagrams fragmented */
-    ifs6_out_fragfail;     /* # of datagrams failed on fragment */
-    ifs6_out_fragcreat;    /* # of fragment datagrams */
-                                    /* NOTE: this is # after fragment */
-    ifs6_reass_reqd;       /* # of incoming fragmented packets */
-                                    /* NOTE: increment on final dst if */
-    ifs6_reass_ok;         /* # of reassembled packets */
-                                    /* NOTE: this is # after reass */
-                                    /* NOTE: increment on final dst if */
-    ifs6_atmfrag_rcvd;     /* # of atomic fragments received */
-    ifs6_reass_fail;       /* # of reass failures */
-                                    /* NOTE: may not be packet count */
-                                    /* NOTE: increment on final dst if */
-    ifs6_in_mcast;         /* # of inbound multicast datagrams */
-    ifs6_out_mcast;        /* # of outbound multicast datagrams */
-
-    ifs6_cantfoward_icmp6; /* # of ICMPv6 packets received for unreachable dest */
-    ifs6_addr_expiry_cnt;  /* # of address expiry events (excluding privacy addresses) */
-    ifs6_pfx_expiry_cnt;   /* # of prefix expiry events */
-    ifs6_defrtr_expiry_cnt;        /* # of default router expiry events */
-};
-struct in6_ifreq {
-    char    ifr_name[IFNAMSIZ];
-    union {
-        struct  sockaddr_in6 ifru_addr;
-        struct  sockaddr_in6 ifru_dstaddr;
-        int     ifru_flags;
-        int     ifru_flags6;
-        int     ifru_metric;
-        int     ifru_intval;
-        caddr_t ifru_data;
-        struct in6_addrlifetime ifru_lifetime;
-        struct in6_ifstat ifru_stat;
-        struct icmp6_ifstat ifru_icmp6stat;
-        u_int32_t ifru_scope_id[SCOPE6_ID_MAX];
-    } ifr_ifru;
-};
-*/
-
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy)]
 #[repr(C)]
@@ -346,81 +267,6 @@ fn device_ipv6_set_params(device: &String, perform_nud: bool, accept_ra: bool) -
     }
     ok
 }
-
-/*
-struct ifkpi {
-    unsigned int    ifk_module_id;
-    unsigned int    ifk_type;
-    union {
-        void            *ifk_ptr;
-        int             ifk_value;
-    } ifk_data;
-};
-struct ifdevmtu {
-    int     ifdm_current;
-    int     ifdm_min;
-    int     ifdm_max;
-};
-struct  ifreq {
-#ifndef IFNAMSIZ
-#define IFNAMSIZ        IF_NAMESIZE
-#endif
-    char    ifr_name[IFNAMSIZ];             /* if name, e.g. "en0" */
-    union {
-        struct  sockaddr ifru_addr;
-        struct  sockaddr ifru_dstaddr;
-        struct  sockaddr ifru_broadaddr;
-        short   ifru_flags;
-        int     ifru_metric;
-        int     ifru_mtu;
-        int     ifru_phys;
-        int     ifru_media;
-        int     ifru_intval;
-        caddr_t ifru_data;
-        struct  ifdevmtu ifru_devmtu;
-        struct  ifkpi   ifru_kpi;
-        u_int32_t ifru_wake_flags;
-        u_int32_t ifru_route_refcnt;
-        int     ifru_cap[2];
-        u_int32_t ifru_functional_type;
-#define IFRTYPE_FUNCTIONAL_UNKNOWN              0
-#define IFRTYPE_FUNCTIONAL_LOOPBACK             1
-#define IFRTYPE_FUNCTIONAL_WIRED                2
-#define IFRTYPE_FUNCTIONAL_WIFI_INFRA           3
-#define IFRTYPE_FUNCTIONAL_WIFI_AWDL            4
-#define IFRTYPE_FUNCTIONAL_CELLULAR             5
-#define IFRTYPE_FUNCTIONAL_INTCOPROC            6
-#define IFRTYPE_FUNCTIONAL_COMPANIONLINK        7
-#define IFRTYPE_FUNCTIONAL_LAST                 7
-    } ifr_ifru;
-#define ifr_addr        ifr_ifru.ifru_addr      /* address */
-#define ifr_dstaddr     ifr_ifru.ifru_dstaddr   /* other end of p-to-p link */
-#define ifr_broadaddr   ifr_ifru.ifru_broadaddr /* broadcast address */
-#ifdef __APPLE__
-#define ifr_flags       ifr_ifru.ifru_flags     /* flags */
-#else
-#define ifr_flags       ifr_ifru.ifru_flags[0]  /* flags */
-#define ifr_prevflags   ifr_ifru.ifru_flags[1]  /* flags */
-#endif /* __APPLE__ */
-#define ifr_metric      ifr_ifru.ifru_metric    /* metric */
-#define ifr_mtu         ifr_ifru.ifru_mtu       /* mtu */
-#define ifr_phys        ifr_ifru.ifru_phys      /* physical wire */
-#define ifr_media       ifr_ifru.ifru_media     /* physical media */
-#define ifr_data        ifr_ifru.ifru_data      /* for use by interface */
-#define ifr_devmtu      ifr_ifru.ifru_devmtu
-#define ifr_intval      ifr_ifru.ifru_intval    /* integer value */
-#define ifr_kpi         ifr_ifru.ifru_kpi
-#define ifr_wake_flags  ifr_ifru.ifru_wake_flags /* wake capabilities */
-#define ifr_route_refcnt ifr_ifru.ifru_route_refcnt /* route references count */
-#define ifr_reqcap      ifr_ifru.ifru_cap[0]    /* requested capabilities */
-#define ifr_curcap      ifr_ifru.ifru_cap[1]    /* current capabilities */
-};
-struct sockaddr_ndrv {
-    unsigned char snd_len;
-    unsigned char snd_family;
-    unsigned char snd_name[IFNAMSIZ]; /* from if.h */
-};
-*/
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy)]
@@ -814,7 +660,8 @@ impl VNIC for MacFethTap {
     fn put(&self, source_mac: &zerotier_network_hypervisor::vl1::MAC, dest_mac: &zerotier_network_hypervisor::vl1::MAC, ethertype: u16, _vlan_id: u16, data: *const u8, len: usize) -> bool {
         let dm = dest_mac.0;
         let sm = source_mac.0;
-        let mut hdr: [u8; 14] = [(dm >> 40) as u8, (dm >> 32) as u8, (dm >> 24) as u8, (dm >> 16) as u8, (dm >> 8) as u8, dm as u8, (sm >> 40) as u8, (sm >> 32) as u8, (sm >> 24) as u8, (sm >> 16) as u8, (sm >> 8) as u8, sm as u8, (ethertype >> 8) as u8, ethertype as u8];
+        let mut hdr: [u8; 14] =
+            [(dm >> 40) as u8, (dm >> 32) as u8, (dm >> 24) as u8, (dm >> 16) as u8, (dm >> 8) as u8, dm as u8, (sm >> 40) as u8, (sm >> 32) as u8, (sm >> 24) as u8, (sm >> 16) as u8, (sm >> 8) as u8, sm as u8, (ethertype >> 8) as u8, ethertype as u8];
         unsafe {
             let iov: [libc::iovec; 2] = [
                 libc::iovec { iov_base: hdr.as_mut_ptr().cast(), iov_len: 14 },

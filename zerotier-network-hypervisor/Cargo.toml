@@ -15,7 +15,6 @@ panic = 'abort'
 zerotier-core-crypto = { path = "../zerotier-core-crypto" }
 base64 = "^0"
 lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }
-metrohash = "^1"
 dashmap = "^5"
 parking_lot = "^0"
 lazy_static = "^1"

@@ -25,13 +25,13 @@ pub struct Address(NonZeroU64);
 
 impl Address {
     /// Get an address from a 64-bit integer or return None if it is zero or reserved.
-    #[inline(always)]
+    #[inline]
     pub fn from_u64(mut i: u64) -> Option<Address> {
         i &= 0xffffffffff;
         NonZeroU64::new(i).and_then(|ii| if (i >> 32) != ADDRESS_RESERVED_PREFIX as u64 { Some(Address(ii)) } else { None })
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn from_bytes(b: &[u8]) -> Option<Address> {
         if b.len() >= ADDRESS_SIZE {
             Self::from_u64((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64)
@@ -40,12 +40,12 @@ impl Address {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn from_bytes_fixed(b: &[u8; ADDRESS_SIZE]) -> Option<Address> {
         Self::from_u64((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn to_bytes(&self) -> [u8; ADDRESS_SIZE] {
         let i = self.0.get();
         [(i >> 32) as u8, (i >> 24) as u8, (i >> 16) as u8, (i >> 8) as u8, i as u8]
@@ -60,12 +60,12 @@ impl Address {
 impl Marshalable for Address {
     const MAX_MARSHAL_SIZE: usize = ADDRESS_SIZE;
 
-    #[inline(always)]
+    #[inline]
     fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         buf.append_bytes(&self.0.get().to_be_bytes()[8 - ADDRESS_SIZE..])
     }
 
-    #[inline(always)]
+    #[inline]
     fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Self> {
         Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).map_or_else(|| Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "cannot be zero")), |a| Ok(a))
     }

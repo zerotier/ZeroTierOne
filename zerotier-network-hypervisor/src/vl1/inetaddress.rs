@@ -267,7 +267,7 @@ impl Default for InetAddress {
 impl std::fmt::Debug for InetAddress {
     #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.to_string())
+        f.write_str(self.to_string().as_str())
     }
 }
 
@@ -471,6 +471,17 @@ impl InetAddress {
         }
     }
 
+    /// Get a Rust stdlib SocketAddr structure from this InetAddress.
+    pub fn to_socketaddr(&self) -> Option<SocketAddr> {
+        unsafe {
+            match self.sa.sa_family {
+                AF_INET => Some(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()), u16::from_be(self.sin.sin_port as u16)))),
+                AF_INET6 => Some(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from(self.sin6.sin6_addr.s6_addr), u16::from_be(self.sin6.sin6_port as u16), 0, 0))),
+                _ => None,
+            }
+        }
+    }
+
     /// Get the IP port for this InetAddress.
     pub fn port(&self) -> u16 {
         unsafe {
@@ -495,6 +506,47 @@ impl InetAddress {
                 _ => {}
             }
         }
+    }
+
+    /// Check whether this IP address is within a CIDR range
+    ///
+    /// The argument is a CIDR range in which the port is interpreted as the number of bits, e.g. 10.0.0.0/24.
+    pub fn is_within(&self, cidr: &InetAddress) -> bool {
+        unsafe {
+            if self.sa.sa_family == cidr.sa.sa_family {
+                let mut cidr_bits = cidr.port() as u32;
+                match self.sa.sa_family as u8 {
+                    AF_INET => {
+                        if cidr_bits <= 32 {
+                            let discard_bits = 32 - cidr_bits;
+                            if u32::from_be(self.sin.sin_addr.s_addr as u32).wrapping_shr(discard_bits) == u32::from_be(cidr.sin.sin_addr.s_addr as u32).wrapping_shr(discard_bits) {
+                                return true;
+                            }
+                        }
+                    }
+                    AF_INET6 => {
+                        if cidr_bits <= 128 {
+                            let a = &self.sin6.sin6_addr.s6_addr;
+                            let b = &cidr.sin6.sin6_addr.s6_addr;
+                            let mut p = 0;
+                            while cidr_bits >= 8 {
+                                cidr_bits -= 8;
+                                if a[p] != b[p] {
+                                    return false;
+                                }
+                                p += 1;
+                            }
+                            let discard_bits = 8 - cidr_bits;
+                            if a[p].wrapping_shr(discard_bits) == b[p].wrapping_shr(discard_bits) {
+                                return true;
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        return false;
     }
 
     /// Get this IP address's scope as per RFC documents and what is advertised via BGP.

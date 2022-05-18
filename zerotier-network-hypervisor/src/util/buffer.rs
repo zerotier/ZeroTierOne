@@ -11,22 +11,9 @@ use std::mem::{size_of, MaybeUninit};
 
 use crate::util::pool::PoolFactory;
 
-/// Annotates a structure as containing only primitive types.
-///
-/// This means the structure is safe to copy in raw form, does not need to be dropped, and otherwise
-/// contains nothing complex that requires any special handling. It also implies that it is safe to
-/// access without concern for alignment on platforms on which this is an issue, or at least that
-/// the implementer must take care to guard any unaligned access in appropriate ways. FlatBlob
-/// structures are generally repr(C, packed) as well to make them deterministic across systems.
-///
-/// The Buffer has special methods allowing these structs to be read and written in place, which
-/// would be unsafe without these concerns being flagged as not applicable.
-pub unsafe trait FlatBlob: Sized {}
-
 /// A safe bounds checked I/O buffer with extensions for convenient appending of RawObject types.
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Buffer<const L: usize>(usize, [u8; L]);
-
-unsafe impl<const L: usize> FlatBlob for Buffer<L> {}
 
 impl<const L: usize> Default for Buffer<L> {
     #[inline(always)]
@@ -76,20 +63,21 @@ impl<const L: usize> Buffer<L> {
 
     /// Create an empty zeroed buffer on the heap without intermediate stack allocation.
     /// This can be used to allocate buffers too large for the stack.
+    #[inline(always)]
     pub fn new_boxed() -> Box<Self> {
         unsafe { Box::from_raw(std::alloc::alloc_zeroed(std::alloc::Layout::new::<Self>()).cast()) }
     }
 
     /// Create an empty buffer without internally zeroing its memory.
     ///
-    /// This is technically unsafe because unwritten memory in the buffer will have undefined contents.
-    /// Otherwise it behaves exactly like new().
+    /// This is unsafe because unwritten memory in the buffer will have undefined contents.
+    /// This means that some of the append_X_get_mut() functions may return mutable references to
+    /// undefined memory contents rather than zeroed memory.
     #[inline(always)]
     pub unsafe fn new_without_memzero() -> Self {
         Self(0, MaybeUninit::uninit().assume_init())
     }
 
-    #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> std::io::Result<Self> {
         let l = b.len();
         if l <= L {
@@ -138,7 +126,6 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    #[inline(always)]
     pub fn clear(&mut self) {
         self.1[0..self.0].fill(0);
         self.0 = 0;
@@ -189,7 +176,7 @@ impl<const L: usize> Buffer<L> {
 
     /// Append a structure and return a mutable reference to its memory.
     #[inline(always)]
-    pub fn append_struct_get_mut<T: FlatBlob>(&mut self) -> std::io::Result<&mut T> {
+    pub fn append_struct_get_mut<T: Copy>(&mut self) -> std::io::Result<&mut T> {
         let ptr = self.0;
         let end = ptr + size_of::<T>();
         if end <= L {
@@ -226,6 +213,7 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
+    #[inline(always)]
     pub fn append_padding(&mut self, b: u8, count: usize) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + count;
@@ -238,6 +226,7 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
+    #[inline(always)]
     pub fn append_bytes(&mut self, buf: &[u8]) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + buf.len();
@@ -250,6 +239,7 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
+    #[inline(always)]
     pub fn append_bytes_fixed<const S: usize>(&mut self, buf: &[u8; S]) -> std::io::Result<()> {
         let ptr = self.0;
         let end = ptr + S;
@@ -318,19 +308,35 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Get a structure at a given position in the buffer.
     #[inline(always)]
-    pub fn struct_at<T: FlatBlob>(&self, ptr: usize) -> std::io::Result<&T> {
-        if (ptr + size_of::<T>()) <= self.0 {
-            unsafe { Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()) }
+    pub fn bytes_fixed_at<const S: usize>(&self, ptr: usize) -> std::io::Result<&[u8; S]> {
+        if (ptr + S) <= self.0 {
+            unsafe { Ok(&*self.1.as_ptr().cast::<u8>().add(ptr).cast::<[u8; S]>()) }
         } else {
             Err(overflow_err())
         }
     }
 
-    /// Get a structure at a given position in the buffer.
     #[inline(always)]
-    pub fn struct_mut_at<T: FlatBlob>(&mut self, ptr: usize) -> std::io::Result<&mut T> {
+    pub fn bytes_fixed_mut_at<const S: usize>(&mut self, ptr: usize) -> std::io::Result<&mut [u8; S]> {
+        if (ptr + S) <= self.0 {
+            unsafe { Ok(&mut *self.1.as_mut_ptr().cast::<u8>().add(ptr).cast::<[u8; S]>()) }
+        } else {
+            Err(overflow_err())
+        }
+    }
+
+    #[inline(always)]
+    pub fn struct_at<T: Copy>(&self, ptr: usize) -> std::io::Result<&T> {
+        if (ptr + size_of::<T>()) <= self.0 {
+            unsafe { Ok(&*self.1.as_ptr().cast::<u8>().add(ptr).cast::<T>()) }
+        } else {
+            Err(overflow_err())
+        }
+    }
+
+    #[inline(always)]
+    pub fn struct_mut_at<T: Copy>(&mut self, ptr: usize) -> std::io::Result<&mut T> {
         if (ptr + size_of::<T>()) <= self.0 {
             unsafe { Ok(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()) }
         } else {
@@ -347,9 +353,8 @@ impl<const L: usize> Buffer<L> {
         }
     }
 
-    /// Get a structure at a given position in the buffer and advance the cursor.
     #[inline(always)]
-    pub fn read_struct<T: FlatBlob>(&self, cursor: &mut usize) -> std::io::Result<&T> {
+    pub fn read_struct<T: Copy>(&self, cursor: &mut usize) -> std::io::Result<&T> {
         let ptr = *cursor;
         let end = ptr + size_of::<T>();
         debug_assert!(end <= L);
@@ -453,15 +458,6 @@ impl<const L: usize> Buffer<L> {
         }
     }
 }
-
-impl<const L: usize> PartialEq for Buffer<L> {
-    #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        self.1[0..self.0].eq(&other.1[0..other.0])
-    }
-}
-
-impl<const L: usize> Eq for Buffer<L> {}
 
 impl<const L: usize> Write for Buffer<L> {
     #[inline(always)]

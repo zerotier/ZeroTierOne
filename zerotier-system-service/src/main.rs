@@ -6,21 +6,23 @@
  * https://www.zerotier.com/
  */
 
-use std::io::Write;
-
-use clap::error::{ContextKind, ContextValue};
-use clap::{Arg, ArgMatches, Command};
-
-use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
-
 pub mod cli;
 pub mod datadir;
 pub mod exitcode;
 pub mod getifaddrs;
 pub mod jsonformatter;
 pub mod localconfig;
+pub mod service;
+pub mod udp;
 pub mod utils;
 pub mod vnic;
+
+use std::io::Write;
+
+use clap::error::{ContextKind, ContextValue};
+use clap::{Arg, ArgMatches, Command};
+
+use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
 fn make_help() -> String {
     format!(
@@ -124,7 +126,7 @@ pub struct Flags {
     pub auth_token_override: Option<String>,
 }
 
-async fn async_main(flags: Flags, global_args: ArgMatches) -> i32 {
+async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
     #[allow(unused)]
     return match global_args.subcommand() {
         Some(("help", _)) => {
@@ -141,7 +143,10 @@ async fn async_main(flags: Flags, global_args: ArgMatches) -> i32 {
         Some(("network", cmd_args)) => todo!(),
         Some(("join", cmd_args)) => todo!(),
         Some(("leave", cmd_args)) => todo!(),
-        Some(("service", _)) => todo!(),
+        Some(("service", _)) => {
+            drop(global_args); // free unnecessary heap
+            assert!(service::Service::new(flags.base_path.as_str()).await.is_ok());
+        }
         Some(("identity", cmd_args)) => todo!(),
         Some(("rootset", cmd_args)) => cli::rootset::cmd(flags, cmd_args).await,
         _ => {
@@ -152,7 +157,7 @@ async fn async_main(flags: Flags, global_args: ArgMatches) -> i32 {
 }
 
 fn main() {
-    let global_args = {
+    let global_args = Box::new({
         let help = make_help();
         Command::new("zerotier")
             .arg(Arg::new("json").short('j'))
@@ -239,7 +244,7 @@ fn main() {
                     std::process::exit(exitcode::ERR_USAGE);
                 }
             })
-    };
+    });
 
     let flags = Flags {
         json_output: global_args.is_present("json"),

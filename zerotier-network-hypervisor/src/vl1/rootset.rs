@@ -12,7 +12,6 @@ use std::io::Write;
 use crate::util::buffer::Buffer;
 use crate::util::marshalable::Marshalable;
 use crate::vl1::identity::*;
-use crate::vl1::protocol::PACKET_SIZE_MAX;
 use crate::vl1::Endpoint;
 
 use serde::{Deserialize, Serialize};
@@ -48,14 +47,14 @@ pub struct Root {
 impl PartialOrd for Root {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.identity.address.partial_cmp(&other.identity.address)
+        self.identity.partial_cmp(&other.identity)
     }
 }
 
 impl Ord for Root {
     #[inline(always)]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.identity.address.cmp(&other.identity.address)
+        self.identity.cmp(&other.identity)
     }
 }
 
@@ -112,7 +111,7 @@ impl RootSet {
         buf.append_varint(self.revision)?;
         buf.append_varint(self.members.len() as u64)?;
         for m in self.members.iter() {
-            m.identity.marshal_with_options(buf, IDENTITY_ALGORITHM_ALL, false)?;
+            m.identity.marshal_with_options(buf, Identity::ALGORITHM_ALL, false)?;
             if m.endpoints.is_some() {
                 let endpoints = m.endpoints.as_ref().unwrap();
                 buf.append_varint(endpoints.len() as u64)?;
@@ -135,8 +134,8 @@ impl RootSet {
     }
 
     /// Internal method to marshal without signatures for use during sign and verify.
-    fn marshal_for_signing(&self) -> Buffer<MAX_MARSHAL_SIZE> {
-        let mut tmp = Buffer::<MAX_MARSHAL_SIZE>::new();
+    fn marshal_for_signing(&self) -> Buffer<{ Self::MAX_MARSHAL_SIZE }> {
+        let mut tmp = Buffer::<{ Self::MAX_MARSHAL_SIZE }>::new();
         assert!(self.marshal_internal(&mut tmp, false).is_ok());
         tmp
     }
@@ -183,7 +182,7 @@ impl RootSet {
     /// All current members must sign whether they are disabled (witnessing) or active. The verify()
     /// method will return true when signing is complete.
     pub fn sign(&mut self, member_identity: &Identity) -> bool {
-        let signature = member_identity.sign(self.marshal_for_signing().as_bytes(), IDENTITY_ALGORITHM_ALL, false);
+        let signature = member_identity.sign(self.marshal_for_signing().as_bytes(), Identity::ALGORITHM_ALL, false);
         let unsigned_entry = self.members.iter().find_map(|m| if m.identity.eq(member_identity) { Some(m.clone()) } else { None });
         if unsigned_entry.is_some() && signature.is_some() {
             let unsigned_entry = unsigned_entry.unwrap();
@@ -243,7 +242,7 @@ impl RootSet {
 }
 
 impl Marshalable for RootSet {
-    const MAX_MARSHAL_SIZE: usize = PACKET_SIZE_MAX;
+    const MAX_MARSHAL_SIZE: usize = crate::vl1::protocol::packet_constants::SIZE_MAX;
 
     #[inline(always)]
     fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
