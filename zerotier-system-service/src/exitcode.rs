@@ -9,6 +9,7 @@
 // These were taken from BSD sysexits.h to provide some standard.
 
 pub const OK: i32 = 0;
+
 pub const ERR_USAGE: i32 = 64;
 pub const ERR_DATA_FORMAT: i32 = 65;
 pub const ERR_NO_INPUT: i32 = 66;
