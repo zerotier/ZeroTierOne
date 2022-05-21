@@ -23,16 +23,6 @@ pub(crate) fn byte_array_range<const A: usize, const START: usize, const LEN: us
     unsafe { &*a.as_ptr().add(START).cast::<[u8; LEN]>() }
 }
 
-/// Non-cryptographic 64-bit bit mixer for things like local hashing.
-#[inline(always)]
-pub(crate) fn hash64_noncrypt(mut x: u64) -> u64 {
-    x ^= x.wrapping_shr(30);
-    x = x.wrapping_mul(0xbf58476d1ce4e5b9);
-    x ^= x.wrapping_shr(27);
-    x = x.wrapping_mul(0x94d049bb133111eb);
-    x ^ x.wrapping_shr(31)
-}
-
 /// A super-minimal hasher for u64 keys for keys already fairly randomly distributed like addresses and network IDs.
 #[derive(Copy, Clone)]
 pub(crate) struct U64NoOpHasher(u64);

@@ -51,8 +51,24 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
     }
 
     pub fn crypt(&mut self, mut plaintext: &[u8], mut ciphertext: &mut [u8]) {
-        let (j0, j1, j2, j3, j4, j5, j6, j7, mut j8, mut j9, j10, j11, j12, j13, j14, j15) =
-            (self.state[0], self.state[1], self.state[2], self.state[3], self.state[4], self.state[5], self.state[6], self.state[7], self.state[8], self.state[9], self.state[10], self.state[11], self.state[12], self.state[13], self.state[14], self.state[15]);
+        let (j0, j1, j2, j3, j4, j5, j6, j7, mut j8, mut j9, j10, j11, j12, j13, j14, j15) = (
+            self.state[0],
+            self.state[1],
+            self.state[2],
+            self.state[3],
+            self.state[4],
+            self.state[5],
+            self.state[6],
+            self.state[7],
+            self.state[8],
+            self.state[9],
+            self.state[10],
+            self.state[11],
+            self.state[12],
+            self.state[13],
+            self.state[14],
+            self.state[15],
+        );
         loop {
             let (mut x0, mut x1, mut x2, mut x3, mut x4, mut x5, mut x6, mut x7, mut x8, mut x9, mut x10, mut x11, mut x12, mut x13, mut x14, mut x15) = (j0, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10, j11, j12, j13, j14, j15);
 

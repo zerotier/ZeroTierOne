@@ -6,8 +6,12 @@
  * https://www.zerotier.com/
  */
 
+use std::ffi::c_void;
 use std::mem::MaybeUninit;
-use std::ptr::write_volatile;
+
+extern "C" {
+    fn OPENSSL_cleanse(ptr: *mut c_void, len: usize);
+}
 
 /// Container for secrets that clears them on drop.
 ///
@@ -49,12 +53,10 @@ impl<const L: usize> Secret<L> {
 }
 
 impl<const L: usize> Drop for Secret<L> {
+    #[inline(always)]
     fn drop(&mut self) {
-        unsafe {
-            for i in 0..L {
-                write_volatile(self.0.as_mut_ptr().add(i), 0_u8);
-            }
-        }
+        unsafe { OPENSSL_cleanse(self.0.as_mut_ptr().cast(), L) };
+        std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
     }
 }
 
