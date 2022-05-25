@@ -160,6 +160,33 @@ def packageStatic() {
         })
     }
 
+    if (params.BUILD_ALL == true) {
+        def ubi8 = ["ubi"]
+        def ubi8Arch = ["s390x"]
+        tasks << getTasks(ubi8, ubi8Arch, { distro, arch ->
+            def myNode = {
+                node ('linux-build') {
+                    dir ("build") {
+                        checkout scm
+                    }
+                    def runtime = docker.image("ztbuild/${distro}-${arch}:latest")
+                    runtime.inside {
+                        dir("build/") {
+                            unstash "static-${arch}"
+                            sh "mv zerotier-one-static-${arch} zerotier-one && chmod +x zerotier-one"
+                            sh "make redhat"
+                            sh "mkdir -p ${distro}"
+                            sh "cp -av `find ~/rpmbuild/ -type f -name \"*.rpm\"` ${distro}/"
+                            archiveArtifacts artifacts: "${distro}/*.rpm", onlyIfSuccessful: true
+                        }
+                    }
+                    cleanWs deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true
+                }
+            }
+            return myNode
+        })
+    }
+
     def debianJessie = ["debian-jessie"]
     def debianJessieArchs = []
     if (params.BUILD_ALL == true) {
