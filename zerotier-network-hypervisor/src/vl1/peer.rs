@@ -46,10 +46,10 @@ pub struct Peer<SI: SystemInterface> {
     paths: Mutex<Vec<PeerPath<SI>>>,
 
     // Statistics and times of events.
-    pub(crate) last_send_time_ticks: AtomicI64,
-    pub(crate) last_receive_time_ticks: AtomicI64,
+    last_send_time_ticks: AtomicI64,
+    last_receive_time_ticks: AtomicI64,
     pub(crate) last_hello_reply_time_ticks: AtomicI64,
-    pub(crate) last_forward_time_ticks: AtomicI64,
+    last_forward_time_ticks: AtomicI64,
 
     // Counter for assigning sequential message IDs.
     message_id_counter: AtomicU64,
@@ -442,7 +442,7 @@ impl<SI: SystemInterface> Peer<SI> {
         // because the whole packet is authenticated. Data in the session is not technically secret in a
         // cryptographic sense but we encrypt it for privacy and as a defense in depth.
         let mut fields = Dictionary::new();
-        fields.set_u64(session_metadata::INSTANCE_ID, node.instance_id);
+        fields.set_bytes(session_metadata::INSTANCE_ID, node.instance_id.to_vec());
         fields.set_u64(session_metadata::CLOCK, si.time_clock() as u64);
         fields.set_bytes(session_metadata::SENT_TO, destination.to_buffer::<{ Endpoint::MAX_MARSHAL_SIZE }>().unwrap().as_bytes().to_vec());
         let fields = fields.to_bytes();

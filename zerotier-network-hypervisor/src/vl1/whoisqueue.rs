@@ -62,7 +62,7 @@ impl WhoisQueue {
         todo!()
     }
 
-    pub(crate) fn service<SI: SystemInterface>(&self, si: &SI, node: &Node<SI>, time_ticks: i64) -> bool {
+    pub(crate) fn service<SI: SystemInterface>(&self, si: &SI, node: &Node<SI>, time_ticks: i64) {
         let mut targets: Vec<Address> = Vec::new();
         self.0.lock().retain(|target, qi| {
             if qi.retry_count < WHOIS_RETRY_MAX {
@@ -78,6 +78,5 @@ impl WhoisQueue {
         if !targets.is_empty() {
             self.send_whois(node, si, targets.as_slice());
         }
-        true
     }
 }

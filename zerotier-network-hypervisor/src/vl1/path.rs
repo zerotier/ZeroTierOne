@@ -1,6 +1,7 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 use std::collections::HashMap;
+use std::hash::{BuildHasher, Hasher};
 use std::sync::atomic::{AtomicI64, Ordering};
 
 use parking_lot::Mutex;
@@ -21,10 +22,10 @@ pub struct Path<SI: SystemInterface> {
     pub endpoint: Endpoint,
     pub local_socket: SI::LocalSocket,
     pub local_interface: SI::LocalInterface,
-    pub(crate) last_send_time_ticks: AtomicI64,
-    pub(crate) last_receive_time_ticks: AtomicI64,
-    pub(crate) create_time_ticks: i64,
-    fragmented_packets: Mutex<HashMap<u64, FragmentedPacket, U64NoOpHasher>>,
+    last_send_time_ticks: AtomicI64,
+    last_receive_time_ticks: AtomicI64,
+    create_time_ticks: i64,
+    fragmented_packets: Mutex<HashMap<u64, FragmentedPacket, PacketIdHasher>>,
 }
 
 impl<SI: SystemInterface> Path<SI> {
@@ -36,7 +37,7 @@ impl<SI: SystemInterface> Path<SI> {
             last_send_time_ticks: AtomicI64::new(0),
             last_receive_time_ticks: AtomicI64::new(0),
             create_time_ticks: time_ticks,
-            fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, U64NoOpHasher::new())),
+            fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, PacketIdHasher(zerotier_core_crypto::random::xorshift64_random()))),
         }
     }
 
@@ -90,5 +91,38 @@ impl<SI: SystemInterface> Path<SI> {
         } else {
             false
         }
+    }
+}
+
+#[repr(transparent)]
+struct PacketIdHasher(u64);
+
+impl Hasher for PacketIdHasher {
+    #[inline(always)]
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    #[inline(always)]
+    fn write(&mut self, _: &[u8]) {
+        panic!("u64 only");
+    }
+
+    #[inline(always)]
+    fn write_u64(&mut self, i: u64) {
+        let mut x = self.0.wrapping_add(i);
+        x ^= x.wrapping_shl(13);
+        x ^= x.wrapping_shr(7);
+        x ^= x.wrapping_shl(17);
+        self.0 = x;
+    }
+}
+
+impl BuildHasher for PacketIdHasher {
+    type Hasher = Self;
+
+    #[inline(always)]
+    fn build_hasher(&self) -> Self::Hasher {
+        Self(0)
     }
 }

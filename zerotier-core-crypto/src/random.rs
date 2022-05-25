@@ -1,11 +1,12 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use openssl::rand::rand_bytes;
 use std::mem::MaybeUninit;
+use std::sync::atomic::{AtomicU64, Ordering};
 
-pub struct SecureRandom;
+use openssl::rand::rand_bytes;
 
-#[inline(always)]
+use lazy_static::lazy_static;
+
 pub fn next_u32_secure() -> u32 {
     unsafe {
         let mut tmp: [u32; 1] = MaybeUninit::uninit().assume_init();
@@ -14,11 +15,18 @@ pub fn next_u32_secure() -> u32 {
     }
 }
 
-#[inline(always)]
 pub fn next_u64_secure() -> u64 {
     unsafe {
         let mut tmp: [u64; 1] = MaybeUninit::uninit().assume_init();
         assert!(rand_bytes(&mut *(tmp.as_mut_ptr().cast::<[u8; 8]>())).is_ok());
+        tmp[0]
+    }
+}
+
+pub fn next_u128_secure() -> u128 {
+    unsafe {
+        let mut tmp: [u128; 1] = MaybeUninit::uninit().assume_init();
+        assert!(rand_bytes(&mut *(tmp.as_mut_ptr().cast::<[u8; 16]>())).is_ok());
         tmp[0]
     }
 }
@@ -33,6 +41,15 @@ pub fn get_bytes_secure<const COUNT: usize>() -> [u8; COUNT] {
     let mut tmp: [u8; COUNT] = unsafe { MaybeUninit::uninit().assume_init() };
     assert!(rand_bytes(&mut tmp).is_ok());
     tmp
+}
+
+pub struct SecureRandom;
+
+impl Default for SecureRandom {
+    #[inline(always)]
+    fn default() -> Self {
+        Self
+    }
 }
 
 impl SecureRandom {
@@ -66,19 +83,21 @@ impl rand_core::RngCore for SecureRandom {
 
 impl rand_core::CryptoRng for SecureRandom {}
 
+unsafe impl Sync for SecureRandom {}
+
 unsafe impl Send for SecureRandom {}
 
-static mut XORSHIFT64_STATE: u64 = 0;
+lazy_static! {
+    static ref XORSHIFT64_STATE: AtomicU64 = AtomicU64::new(next_u64_secure());
+}
 
 /// Get a non-cryptographic random number.
 pub fn xorshift64_random() -> u64 {
-    let mut x = unsafe { XORSHIFT64_STATE };
-    while x == 0 {
-        x = next_u64_secure();
-    }
+    let mut x = XORSHIFT64_STATE.load(Ordering::Relaxed);
+    x = x.wrapping_add((x == 0) as u64);
     x ^= x.wrapping_shl(13);
     x ^= x.wrapping_shr(7);
     x ^= x.wrapping_shl(17);
-    unsafe { XORSHIFT64_STATE = x };
+    XORSHIFT64_STATE.store(x, Ordering::Relaxed);
     x
 }

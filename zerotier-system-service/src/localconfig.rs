@@ -75,14 +75,21 @@ impl Default for NetworkSettings {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
 pub struct GlobalSettings {
+    /// Primary ZeroTier port that is always bound, default is 9993.
     #[serde(rename = "primaryPort")]
     pub primary_port: u16,
+
+    /// Enable uPnP, NAT-PMP, and other router port mapping technologies?
     #[serde(rename = "portMapping")]
     pub port_mapping: bool,
+
+    /// Interface name prefix blacklist for local bindings (not remote IPs).
     #[serde(rename = "interfacePrefixBlacklist")]
     pub interface_prefix_blacklist: Vec<String>,
-    #[serde(rename = "explicitAddresses")]
-    pub explicit_addresses: Vec<InetAddress>,
+
+    /// IP/bits CIDR blacklist for local bindings (not remote IPs).
+    #[serde(rename = "cidrBlacklist")]
+    pub cidr_blacklist: Vec<InetAddress>,
 }
 
 impl Default for GlobalSettings {
@@ -97,7 +104,7 @@ impl Default for GlobalSettings {
             primary_port: DEFAULT_PORT,
             port_mapping: true,
             interface_prefix_blacklist: bl,
-            explicit_addresses: Vec::new(),
+            cidr_blacklist: Vec::new(),
         }
     }
 }

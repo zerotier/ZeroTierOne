@@ -86,6 +86,7 @@ impl DataDir {
                     tmp.push(AUTH_TOKEN_POSSIBLE_CHARS.as_bytes()[(next_u32_secure() as usize) % AUTH_TOKEN_POSSIBLE_CHARS.len()] as char);
                 }
                 tokio::fs::write(&authtoken_path, tmp.as_bytes()).await?;
+                assert!(crate::utils::fs_restrict_permissions(&authtoken_path));
                 *authtoken = tmp;
             } else {
                 *authtoken = String::from_utf8_lossy(authtoken_bytes.unwrap().as_slice()).into();

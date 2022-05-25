@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicUsize;
 
 use zerotier_core_crypto::aes_gmac_siv::AesGmacSiv;
 use zerotier_core_crypto::kbkdf::*;
@@ -22,9 +22,6 @@ pub(crate) struct SymmetricSecret {
     /// Key used for HMAC extended validation on packets like HELLO.
     pub packet_hmac_key: Secret<64>,
 
-    /// Key used with ephemeral keying/re-keying.
-    pub ephemeral_ratchet_key: Secret<64>,
-
     /// Pool of keyed AES-GMAC-SIV engines (pooled to avoid AES re-init every time).
     pub aes_gmac_siv: Pool<AesGmacSiv, AesGmacSivPoolFactory>,
 }
@@ -34,14 +31,12 @@ impl SymmetricSecret {
     pub fn new(key: Secret<64>) -> SymmetricSecret {
         let hello_private_section_key = zt_kbkdf_hmac_sha384(&key.0, security_constants::KBKDF_KEY_USAGE_LABEL_HELLO_PRIVATE_SECTION);
         let packet_hmac_key = zt_kbkdf_hmac_sha512(&key.0, security_constants::KBKDF_KEY_USAGE_LABEL_PACKET_HMAC);
-        let ephemeral_ratchet_key = zt_kbkdf_hmac_sha512(&key.0, security_constants::KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_KEY);
         let aes_factory =
             AesGmacSivPoolFactory(zt_kbkdf_hmac_sha384(&key.0[..48], security_constants::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0).first_n(), zt_kbkdf_hmac_sha384(&key.0[..48], security_constants::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1).first_n());
         SymmetricSecret {
             key,
             hello_private_section_key,
             packet_hmac_key,
-            ephemeral_ratchet_key,
             aes_gmac_siv: Pool::new(2, aes_factory),
         }
     }
@@ -50,24 +45,7 @@ impl SymmetricSecret {
 /// An ephemeral symmetric secret with usage timers and counters.
 pub(crate) struct EphemeralSymmetricSecret {
     pub secret: SymmetricSecret,
-    pub rekey_time_ticks: i64,
-    pub expire_time_ticks: i64,
-    pub ratchet_count: u64,
-    pub encrypt_uses: AtomicUsize,
     pub decrypt_uses: AtomicUsize,
-    pub fips_compliant_exchange: bool,
-}
-
-impl EphemeralSymmetricSecret {
-    #[inline(always)]
-    pub fn should_rekey(&self, time_ticks: i64) -> bool {
-        time_ticks >= self.rekey_time_ticks || self.encrypt_uses.load(Ordering::Relaxed).max(self.decrypt_uses.load(Ordering::Relaxed)) >= security_constants::EPHEMERAL_SECRET_REKEY_AFTER_USES
-    }
-
-    #[inline(always)]
-    pub fn is_expired(&self, time_ticks: i64) -> bool {
-        time_ticks >= self.expire_time_ticks || self.encrypt_uses.load(Ordering::Relaxed).max(self.decrypt_uses.load(Ordering::Relaxed)) >= security_constants::EPHEMERAL_SECRET_REJECT_AFTER_USES
-    }
 }
 
 pub(crate) struct AesGmacSivPoolFactory(Secret<32>, Secret<32>);

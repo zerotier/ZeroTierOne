@@ -7,9 +7,6 @@ use crate::vl1::protocol::*;
 /// Performance note: PacketBuffer is Pooled<Buffer> which is NotNull<*mut Buffer>.
 /// That means Option<PacketBuffer> is just a pointer, since NotNull permits the
 /// compiler to optimize out any additional state in Option.
-///
-/// This will need to be modified if we ever support more than 8 fragments to increase
-/// the size of frags[] and the number of bits in 'have' and 'expecting'.
 pub(crate) struct FragmentedPacket {
     pub ts_ticks: i64,
     pub frags: [Option<PooledPacketBuffer>; packet_constants::FRAGMENT_COUNT_MAX],
@@ -18,20 +15,22 @@ pub(crate) struct FragmentedPacket {
 }
 
 impl FragmentedPacket {
-    #[inline]
     pub fn new(ts: i64) -> Self {
+        // 'have' and 'expecting' must be expanded if this is >8
+        debug_assert!(packet_constants::FRAGMENT_COUNT_MAX <= 8);
+
         Self {
             ts_ticks: ts,
-            frags: [None, None, None, None, None, None, None, None],
+            frags: Default::default(),
             have: 0,
             expecting: 0,
         }
     }
 
     /// Add a fragment to this fragment set and return true if all fragments are present.
-    #[inline]
+    #[inline(always)]
     pub fn add_fragment(&mut self, frag: PooledPacketBuffer, no: u8, expecting: u8) -> bool {
-        self.frags.get_mut(no as usize).map_or(false, |entry| {
+        if let Some(entry) = self.frags.get_mut(no as usize) {
             /*
              * This works by setting bit N in the 'have' bit mask and then setting X bits
              * in 'expecting' if the 'expecting' field is non-zero. Since the packet head
@@ -59,6 +58,8 @@ impl FragmentedPacket {
             self.have |= 1_u8.wrapping_shl(no as u32);
             self.expecting |= 0xff_u8.wrapping_shr(8 - (expecting as u32));
             self.have == self.expecting
-        })
+        } else {
+            false
+        }
     }
 }

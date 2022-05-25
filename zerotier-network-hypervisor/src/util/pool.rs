@@ -63,6 +63,10 @@ impl<O, F: PoolFactory<O>> Pooled<O, F> {
     }
 }
 
+unsafe impl<O, F: PoolFactory<O>> Send for Pooled<O, F> where O: Send {}
+
+unsafe impl<O, F: PoolFactory<O>> Sync for Pooled<O, F> where O: Sync {}
+
 impl<O, F: PoolFactory<O>> std::ops::Deref for Pooled<O, F> {
     type Target = O;
 

@@ -277,16 +277,16 @@ impl Identity {
 
     /// Sign a message with this identity.
     ///
-    /// If legacy_compatibility is true this generates only an ed25519 signature and uses the old
+    /// If legacy_ed25519_only is true this generates only an ed25519 signature and uses the old
     /// format that also includes part of the plaintext hash at the end. The include_algorithms mask
     /// will be ignored. Otherwise it will generate a signature for every algorithm with a secret
     /// in this identity and that is specified in the include_algorithms bit mask.
     ///
     /// A return of None happens if we don't have our secret key(s) or some other error occurs.
-    pub fn sign(&self, msg: &[u8], include_algorithms: u8, legacy_compatibility: bool) -> Option<Vec<u8>> {
+    pub fn sign(&self, msg: &[u8], include_algorithms: u8, legacy_ed25519_only: bool) -> Option<Vec<u8>> {
         if self.secret.is_some() {
             let secret = self.secret.as_ref().unwrap();
-            if legacy_compatibility {
+            if legacy_ed25519_only {
                 Some(secret.ed25519.sign_zt(msg).to_vec())
             } else {
                 let mut tmp: Vec<u8> = Vec::with_capacity(1 + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE);

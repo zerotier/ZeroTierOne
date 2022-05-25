@@ -3,7 +3,7 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::mem::{size_of, transmute_copy, zeroed, MaybeUninit};
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs};
 use std::ptr::{copy_nonoverlapping, null, slice_from_raw_parts, write_bytes};
 use std::str::FromStr;
 
@@ -74,7 +74,25 @@ pub union InetAddress {
     ss: sockaddr_storage, // some external code may expect the struct to be this full length
 }
 
+impl ToSocketAddrs for InetAddress {
+    type Iter = std::iter::Once<SocketAddr>;
+
+    #[inline(always)]
+    fn to_socket_addrs(&self) -> std::io::Result<Self::Iter> {
+        self.try_into().map_or_else(|_| Err(std::io::Error::new(std::io::ErrorKind::Other, "not an IP address")), |sa| Ok(std::iter::once(sa)))
+    }
+}
+
 impl TryInto<IpAddr> for InetAddress {
+    type Error = crate::error::InvalidParameterError;
+
+    #[inline(always)]
+    fn try_into(self) -> Result<IpAddr, Self::Error> {
+        (&self).try_into()
+    }
+}
+
+impl TryInto<IpAddr> for &InetAddress {
     type Error = crate::error::InvalidParameterError;
 
     #[inline(always)]
@@ -92,6 +110,15 @@ impl TryInto<Ipv4Addr> for InetAddress {
 
     #[inline(always)]
     fn try_into(self) -> Result<Ipv4Addr, Self::Error> {
+        (&self).try_into()
+    }
+}
+
+impl TryInto<Ipv4Addr> for &InetAddress {
+    type Error = crate::error::InvalidParameterError;
+
+    #[inline(always)]
+    fn try_into(self) -> Result<Ipv4Addr, Self::Error> {
         match unsafe { self.sa.sa_family } {
             AF_INET => Ok(Ipv4Addr::from(unsafe { self.sin.sin_addr.s_addr.to_ne_bytes() })),
             _ => Err(crate::error::InvalidParameterError("not an IPv4 address")),
@@ -104,6 +131,15 @@ impl TryInto<Ipv6Addr> for InetAddress {
 
     #[inline(always)]
     fn try_into(self) -> Result<Ipv6Addr, Self::Error> {
+        (&self).try_into()
+    }
+}
+
+impl TryInto<Ipv6Addr> for &InetAddress {
+    type Error = crate::error::InvalidParameterError;
+
+    #[inline(always)]
+    fn try_into(self) -> Result<Ipv6Addr, Self::Error> {
         match unsafe { self.sa.sa_family } {
             AF_INET6 => Ok(Ipv6Addr::from(unsafe { self.sin6.sin6_addr.s6_addr })),
             _ => Err(crate::error::InvalidParameterError("not an IPv6 address")),
@@ -112,6 +148,15 @@ impl TryInto<Ipv6Addr> for InetAddress {
 }
 
 impl TryInto<SocketAddr> for InetAddress {
+    type Error = crate::error::InvalidParameterError;
+
+    #[inline(always)]
+    fn try_into(self) -> Result<SocketAddr, Self::Error> {
+        (&self).try_into()
+    }
+}
+
+impl TryInto<SocketAddr> for &InetAddress {
     type Error = crate::error::InvalidParameterError;
 
     #[inline(always)]
@@ -131,6 +176,15 @@ impl TryInto<SocketAddrV4> for InetAddress {
 
     #[inline(always)]
     fn try_into(self) -> Result<SocketAddrV4, Self::Error> {
+        (&self).try_into()
+    }
+}
+
+impl TryInto<SocketAddrV4> for &InetAddress {
+    type Error = crate::error::InvalidParameterError;
+
+    #[inline(always)]
+    fn try_into(self) -> Result<SocketAddrV4, Self::Error> {
         unsafe {
             match self.sa.sa_family {
                 AF_INET => Ok(SocketAddrV4::new(Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()), u16::from_be(self.sin.sin_port as u16))),
@@ -141,6 +195,15 @@ impl TryInto<SocketAddrV4> for InetAddress {
 }
 
 impl TryInto<SocketAddrV6> for InetAddress {
+    type Error = crate::error::InvalidParameterError;
+
+    #[inline(always)]
+    fn try_into(self) -> Result<SocketAddrV6, Self::Error> {
+        (&self).try_into()
+    }
+}
+
+impl TryInto<SocketAddrV6> for &InetAddress {
     type Error = crate::error::InvalidParameterError;
 
     #[inline(always)]
@@ -328,6 +391,9 @@ impl<'de> Deserialize<'de> for InetAddress {
 }
 
 impl InetAddress {
+    pub const AF_INET: u8 = AF_INET;
+    pub const AF_INET6: u8 = AF_INET6;
+
     /// Get a new zero/nil InetAddress.
     #[inline(always)]
     pub fn new() -> InetAddress {

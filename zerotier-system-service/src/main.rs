@@ -6,6 +6,7 @@ pub mod exitcode;
 pub mod getifaddrs;
 pub mod jsonformatter;
 pub mod localconfig;
+pub mod localinterface;
 pub mod service;
 pub mod udp;
 pub mod utils;
@@ -122,7 +123,7 @@ pub struct Flags {
 
 async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
     #[allow(unused)]
-    return match global_args.subcommand() {
+    match global_args.subcommand() {
         Some(("help", _)) => {
             print_help();
             exitcode::OK
@@ -138,8 +139,9 @@ async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
         Some(("join", cmd_args)) => todo!(),
         Some(("leave", cmd_args)) => todo!(),
         Some(("service", _)) => {
-            drop(global_args); // free unnecessary heap
-            assert!(service::Service::new(flags.base_path.as_str()).await.is_ok());
+            drop(global_args); // free unnecessary heap before starting service as we're done with CLI args
+            assert!(service::Service::new(tokio::runtime::Handle::current(), &flags.base_path, true).await.is_ok());
+            exitcode::OK
         }
         Some(("identity", cmd_args)) => todo!(),
         Some(("rootset", cmd_args)) => cli::rootset::cmd(flags, cmd_args).await,
@@ -147,7 +149,7 @@ async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
             eprintln!("Invalid command line. Use 'help' for help.");
             exitcode::ERR_USAGE
         }
-    };
+    }
 }
 
 fn main() {

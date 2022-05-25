@@ -15,9 +15,9 @@ pub struct NetworkHypervisor<I: Interface> {
 }
 
 impl<I: Interface> NetworkHypervisor<I> {
-    pub fn new(ii: &I, auto_generate_identity: bool) -> Result<Self, InvalidParameterError> {
+    pub fn new(ii: &I, auto_generate_identity: bool, auto_upgrade_identity: bool) -> Result<Self, InvalidParameterError> {
         Ok(NetworkHypervisor {
-            vl1: Node::new(ii, auto_generate_identity)?,
+            vl1: Node::new(ii, auto_generate_identity, auto_upgrade_identity)?,
             vl2: Switch::new(),
         })
     }
@@ -43,8 +43,8 @@ impl<I: Interface> NetworkHypervisor<I> {
     }
 
     #[inline(always)]
-    pub fn wire_receive(&self, ii: &I, source_endpoint: &Endpoint, source_local_socket: &I::LocalSocket, source_local_interface: &I::LocalInterface, data: PooledPacketBuffer) {
-        self.vl1.wire_receive(ii, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data)
+    pub fn handle_incoming_physical_packet(&self, ii: &I, source_endpoint: &Endpoint, source_local_socket: &I::LocalSocket, source_local_interface: &I::LocalInterface, data: PooledPacketBuffer) {
+        self.vl1.handle_incoming_physical_packet(ii, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data)
     }
 
     #[inline(always)]

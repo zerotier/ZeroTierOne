@@ -5,6 +5,8 @@ use std::ptr::{copy_nonoverlapping, null_mut};
 
 use zerotier_network_hypervisor::vl1::InetAddress;
 
+use crate::localinterface::LocalInterface;
+
 #[allow(unused)]
 #[inline(always)]
 fn s6_addr_as_ptr<A>(a: &A) -> *const A {
@@ -13,7 +15,7 @@ fn s6_addr_as_ptr<A>(a: &A) -> *const A {
 
 /// Call supplied function or closure for each physical IP address in the system.
 #[cfg(unix)]
-pub fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
+pub fn for_each_address<F: FnMut(&InetAddress, &LocalInterface)>(mut f: F) {
     unsafe {
         let mut ifa_name = [0_u8; libc::IFNAMSIZ as usize];
         let mut ifap: *mut libc::ifaddrs = null_mut();
@@ -66,7 +68,7 @@ pub fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
                     if namlen > 0 {
                         let dev = String::from_utf8_lossy(&ifa_name[0..namlen]);
                         if dev.len() > 0 {
-                            f(&a, dev.as_ref());
+                            f(&a, &LocalInterface::from_unix_interface_name(dev.as_ref()));
                         }
                     }
                 }
@@ -79,12 +81,13 @@ pub fn for_each_address<F: FnMut(&InetAddress, &str)>(mut f: F) {
 
 #[cfg(test)]
 mod tests {
+    use crate::localinterface::LocalInterface;
     use zerotier_network_hypervisor::vl1::InetAddress;
 
     #[test]
     fn test_getifaddrs() {
         println!("starting getifaddrs...");
-        crate::vnic::getifaddrs::for_each_address(|a: &InetAddress, dev: &str| println!("  {} {}", dev, a.to_string()));
+        crate::getifaddrs::for_each_address(|a: &InetAddress, interface: &LocalInterface| println!("  {} {}", interface.to_string(), a.to_string()));
         println!("done.")
     }
 }

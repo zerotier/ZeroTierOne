@@ -4,7 +4,7 @@ use crate::util::buffer::Buffer;
 
 /// Must be larger than any object we want to use with to_bytes() or from_bytes().
 /// This hack can go away once Rust allows us to reference trait consts as generics.
-const TEMP_BUF_SIZE: usize = 16384;
+const TEMP_BUF_SIZE: usize = 8192;
 
 /// A super-lightweight zero-allocation serialization interface.
 pub trait Marshalable: Sized {
@@ -25,7 +25,6 @@ pub trait Marshalable: Sized {
     /// This will return an Err if the buffer is too small or some other error occurs. It's just
     /// a shortcut to creating a buffer and marshaling into it.
     fn to_buffer<const BL: usize>(&self) -> std::io::Result<Buffer<BL>> {
-        assert!(BL >= Self::MAX_MARSHAL_SIZE);
         let mut tmp = Buffer::new();
         self.marshal(&mut tmp)?;
         Ok(tmp)
@@ -41,9 +40,8 @@ pub trait Marshalable: Sized {
 
     /// Marshal and convert to a Rust vector.
     fn to_bytes(&self) -> Vec<u8> {
-        assert!(Self::MAX_MARSHAL_SIZE <= TEMP_BUF_SIZE);
         let mut tmp = Buffer::<TEMP_BUF_SIZE>::new();
-        assert!(self.marshal(&mut tmp).is_ok());
+        assert!(self.marshal(&mut tmp).is_ok()); // panics if TEMP_BUF_SIZE is too small
         tmp.as_bytes().to_vec()
     }
 

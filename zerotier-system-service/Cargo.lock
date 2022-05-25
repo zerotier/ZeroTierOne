@@ -1065,6 +1065,7 @@ dependencies = [
  "clap",
  "lazy_static",
  "libc",
+ "log",
  "num-traits",
  "parking_lot",
  "serde",

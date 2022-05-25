@@ -9,6 +9,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;
 use crate::util::hex::HEX_CHARS;
+use crate::util::marshalable::Marshalable;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
@@ -43,15 +44,19 @@ impl NetworkId {
     pub fn to_u64(&self) -> u64 {
         self.0.get()
     }
+}
+
+impl Marshalable for NetworkId {
+    const MAX_MARSHAL_SIZE: usize = 8;
 
     #[inline(always)]
-    pub(crate) fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         buf.append_u64(self.0.get())
     }
 
     #[inline(always)]
-    pub(crate) fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Option<Self>> {
-        Ok(Self::from_u64(buf.read_u64(cursor)?))
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Self> {
+        Self::from_u64(buf.read_u64(cursor)?).map_or_else(|| Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "cannot be zero")), |a| Ok(a))
     }
 }
 
