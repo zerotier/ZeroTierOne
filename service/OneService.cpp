@@ -2039,7 +2039,7 @@ public:
 					fprintf(stderr, "error: custom policy (%s) is invalid, unknown base policy (%s).\n",
 						customPolicyStr.c_str(), basePolicyStr.c_str());
 					continue;
-				} if (_node->bondController()->getPolicyCodeByStr(customPolicyStr) != ZT_BOND_POLICY_NONE) {
+				} else if (_node->bondController()->getPolicyCodeByStr(customPolicyStr) != ZT_BOND_POLICY_NONE) {
 					fprintf(stderr, "error: custom policy (%s) will be ignored, cannot use standard policy names for custom policies.\n",
 						customPolicyStr.c_str());
 					continue;

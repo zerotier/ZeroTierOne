@@ -828,6 +828,7 @@ void WindowsEthernetTap::setFriendlyName(const char *dn)
 	hr = nsm->get_EnumEveryConnection(&nsecc);
 	if (!nsecc) {
 		fprintf(stderr, "Failed to get NSM connections");
+		delete nsm;
 		return;
 	}
 

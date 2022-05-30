@@ -1955,8 +1955,10 @@ static BOOL IsCurrentUserLocalAdministrator(void)
 		if (!SetSecurityDescriptorDacl(psdAdmin, TRUE, pACL, FALSE))
 			__leave;
 
-		SetSecurityDescriptorGroup(psdAdmin, psidAdmin, FALSE);
-		SetSecurityDescriptorOwner(psdAdmin, psidAdmin, FALSE);
+		if (!SetSecurityDescriptorGroup(psdAdmin, psidAdmin, FALSE))
+			__leave;
+		if (!SetSecurityDescriptorOwner(psdAdmin, psidAdmin, FALSE))
+			__leave;
 
 		if (!IsValidSecurityDescriptor(psdAdmin))
 			__leave;

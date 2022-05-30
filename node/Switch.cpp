@@ -626,11 +626,11 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 			if (nqcb->oldQueues[i]->id == qosBucket) {
 				selectedQueue = nqcb->oldQueues[i];
 			}
-		} if (i < nqcb->newQueues.size()) { // search new queues (this would imply not often-used queues)
+		} else if (i < nqcb->newQueues.size()) { // search new queues (this would imply not often-used queues)
 			if (nqcb->newQueues[i]->id == qosBucket) {
 				selectedQueue = nqcb->newQueues[i];
 			}
-		} if (i < nqcb->inactiveQueues.size()) { // search inactive queues
+		} else if (i < nqcb->inactiveQueues.size()) { // search inactive queues
 			if (nqcb->inactiveQueues[i]->id == qosBucket) {
 				selectedQueue = nqcb->inactiveQueues[i];
 				// move queue to end of NEW queue list
@@ -663,12 +663,12 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 					maxQueueLength = nqcb->oldQueues[i]->byteLength;
 					selectedQueueToDropFrom = nqcb->oldQueues[i];
 				}
-			} if (i < nqcb->newQueues.size()) {
+			} else if (i < nqcb->newQueues.size()) {
 				if (nqcb->newQueues[i]->byteLength > maxQueueLength) {
 					maxQueueLength = nqcb->newQueues[i]->byteLength;
 					selectedQueueToDropFrom = nqcb->newQueues[i];
 				}
-			} if (i < nqcb->inactiveQueues.size()) {
+			} else if (i < nqcb->inactiveQueues.size()) {
 				if (nqcb->inactiveQueues[i]->byteLength > maxQueueLength) {
 					maxQueueLength = nqcb->inactiveQueues[i]->byteLength;
 					selectedQueueToDropFrom = nqcb->inactiveQueues[i];
@@ -770,33 +770,35 @@ void Switch::aqm_dequeue(void *tPtr)
 		bool examiningNewQueues = true;
 		while (currQueues->size()) {
 			ManagedQueue *queueAtFrontOfList = currQueues->front();
-			if (queueAtFrontOfList->byteCredit < 0) {
-				queueAtFrontOfList->byteCredit += ZT_AQM_QUANTUM;
-				// Move to list of OLD queues
-				// DEBUG_INFO("moving q=%p from NEW to OLD list", queueAtFrontOfList);
-				oldQueues->push_back(queueAtFrontOfList);
-				currQueues->erase(currQueues->begin());
-			} else {
-				entryToEmit = CoDelDequeue(queueAtFrontOfList, examiningNewQueues, now);
-				if (!entryToEmit) {
-					// Move to end of list of OLD queues
+			if (queueAtFrontOfList) {
+				if (queueAtFrontOfList->byteCredit < 0) {
+					queueAtFrontOfList->byteCredit += ZT_AQM_QUANTUM;
+					// Move to list of OLD queues
 					// DEBUG_INFO("moving q=%p from NEW to OLD list", queueAtFrontOfList);
 					oldQueues->push_back(queueAtFrontOfList);
 					currQueues->erase(currQueues->begin());
 				}
 				else {
-					int len = entryToEmit->packet.payloadLength();
-					queueAtFrontOfList->byteLength -= len;
-					queueAtFrontOfList->byteCredit -= len;
-					// Send the packet!
-					queueAtFrontOfList->q.pop_front();
-					send(tPtr, entryToEmit->packet, entryToEmit->encrypt, entryToEmit->flowId);
-					(*nqcb).second->_currEnqueuedPackets--;
+					entryToEmit = CoDelDequeue(queueAtFrontOfList, examiningNewQueues, now);
+					if (! entryToEmit) {
+						// Move to end of list of OLD queues
+						// DEBUG_INFO("moving q=%p from NEW to OLD list", queueAtFrontOfList);
+						oldQueues->push_back(queueAtFrontOfList);
+						currQueues->erase(currQueues->begin());
+					}
+					else {
+						int len = entryToEmit->packet.payloadLength();
+						queueAtFrontOfList->byteLength -= len;
+						queueAtFrontOfList->byteCredit -= len;
+						// Send the packet!
+						queueAtFrontOfList->q.pop_front();
+						send(tPtr, entryToEmit->packet, entryToEmit->encrypt, entryToEmit->flowId);
+						(*nqcb).second->_currEnqueuedPackets--;
+					}
+
+					// DEBUG_INFO("dequeuing from q=%p, len=%lu in NEW list (byteCredit=%d)", queueAtFrontOfList, queueAtFrontOfList->q.size(), queueAtFrontOfList->byteCredit);
+					break;
 				}
-				if (queueAtFrontOfList) {
-					//DEBUG_INFO("dequeuing from q=%p, len=%lu in NEW list (byteCredit=%d)", queueAtFrontOfList, queueAtFrontOfList->q.size(), queueAtFrontOfList->byteCredit);
-				}
-				break;
 			}
 		}
 
@@ -805,30 +807,32 @@ void Switch::aqm_dequeue(void *tPtr)
 		currQueues = &((*nqcb).second->oldQueues);
 		while (currQueues->size()) {
 			ManagedQueue *queueAtFrontOfList = currQueues->front();
-			if (queueAtFrontOfList->byteCredit < 0) {
-				queueAtFrontOfList->byteCredit += ZT_AQM_QUANTUM;
-				oldQueues->push_back(queueAtFrontOfList);
-				currQueues->erase(currQueues->begin());
-			} else {
-				entryToEmit = CoDelDequeue(queueAtFrontOfList, examiningNewQueues, now);
-				if (!entryToEmit) {
-					//DEBUG_INFO("moving q=%p from OLD to INACTIVE list", queueAtFrontOfList);
-					// Move to inactive list of queues
-					inactiveQueues->push_back(queueAtFrontOfList);
+			if (queueAtFrontOfList) {
+				if (queueAtFrontOfList->byteCredit < 0) {
+					queueAtFrontOfList->byteCredit += ZT_AQM_QUANTUM;
+					oldQueues->push_back(queueAtFrontOfList);
 					currQueues->erase(currQueues->begin());
 				}
 				else {
-					int len = entryToEmit->packet.payloadLength();
-					queueAtFrontOfList->byteLength -= len;
-					queueAtFrontOfList->byteCredit -= len;
-					queueAtFrontOfList->q.pop_front();
-					send(tPtr, entryToEmit->packet, entryToEmit->encrypt, entryToEmit->flowId);
-					(*nqcb).second->_currEnqueuedPackets--;
+					entryToEmit = CoDelDequeue(queueAtFrontOfList, examiningNewQueues, now);
+					if (! entryToEmit) {
+						// DEBUG_INFO("moving q=%p from OLD to INACTIVE list", queueAtFrontOfList);
+						//  Move to inactive list of queues
+						inactiveQueues->push_back(queueAtFrontOfList);
+						currQueues->erase(currQueues->begin());
+					}
+					else {
+						int len = entryToEmit->packet.payloadLength();
+						queueAtFrontOfList->byteLength -= len;
+						queueAtFrontOfList->byteCredit -= len;
+						queueAtFrontOfList->q.pop_front();
+						send(tPtr, entryToEmit->packet, entryToEmit->encrypt, entryToEmit->flowId);
+						(*nqcb).second->_currEnqueuedPackets--;
+					}
+
+					// DEBUG_INFO("dequeuing from q=%p, len=%lu in OLD list (byteCredit=%d)", queueAtFrontOfList, queueAtFrontOfList->q.size(), queueAtFrontOfList->byteCredit);
+					break;
 				}
-				if (queueAtFrontOfList) {
-					//DEBUG_INFO("dequeuing from q=%p, len=%lu in OLD list (byteCredit=%d)", queueAtFrontOfList, queueAtFrontOfList->q.size(), queueAtFrontOfList->byteCredit);
-				}
-				break;
 			}
 		}
 		nqcb++;
