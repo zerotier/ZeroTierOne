@@ -496,4 +496,25 @@ synology-pkg: FORCE
 synology-docker: FORCE
 	cd synology/dsm7-docker/; ./build.sh build
 
+docker-release: FORCE
+	@if [ "${VERSION}" = "" ]; then echo "Please supply VERSION="; exit 1; fi
+	docker build --build-arg VERSION=${VERSION} -t zerotier/zerotier:${VERSION} -f Dockerfile.release .
+	docker tag zerotier/zerotier:${VERSION} zerotier/zerotier:latest
+	docker buildx build --platform linux/arm64/v8 --build-arg VERSION=${VERSION} --build-arg ARCH=arm64 -t zerotier/zerotier:${VERSION}-arm64 -f Dockerfile.release --load .
+	docker tag zerotier/zerotier:${VERSION}-arm64 zerotier/zerotier:latest-arm64
+	docker buildx build --platform linux/s390x --build-arg VERSION=${VERSION} --build-arg ARCH=s390x -t zerotier/zerotier:${VERSION}-s390x -f Dockerfile.release --load .
+	docker tag zerotier/zerotier:${VERSION}-s390x zerotier/zerotier:latest-s390x
+	for image in \
+		zerotier/zerotier:${VERSION} \
+		zerotier/zerotier:${VERSION}-arm64 \
+		zerotier/zerotier:${VERSION}-s390x \
+		zerotier/zerotier:latest \
+		zerotier/zerotier:latest-arm64 \
+		zerotier/zerotier:latest-s390x; \
+	do \
+		docker push $$image; \
+	done
+
 FORCE:
+
+.PHONY: FORCE
