@@ -511,10 +511,10 @@ snap-upload-stable: FORCE
 	done
 
 synology-pkg: FORCE
-	cd synology ; ./build.sh build
+	cd pkg/synology ; ./build.sh build
 
 synology-docker: FORCE
-	cd synology/dsm7-docker/; ./build.sh build
+	cd pkg/synology/dsm7-docker/; ./build.sh build-and-push
 
 munge_rpm:
 	@:$(call check_defined, VERSION)
