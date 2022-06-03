@@ -9,7 +9,7 @@ ifeq ($(origin CXX),default)
 	CXX:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/g++ ]; then echo /opt/rh/devtoolset-8/root/usr/bin/g++; else echo $(CXX); fi)
 endif
 
-INCLUDES?=-Izeroidc/target
+INCLUDES?=-Izeroidc/target -isystem ext
 DEFS?=
 LDLIBS?=
 DESTDIR?=
@@ -31,7 +31,7 @@ ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
 	override DEFS+=-DZT_USE_SYSTEM_MINIUPNPC
 	LDLIBS+=-lminiupnpc
 else
-	override DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+	override DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING="\"Linux\"" -DMINIUPNPC_VERSION_STRING="\"2.0\"" -DUPNP_VERSION_STRING="\"UPnP/1.1\"" -DENABLE_STRNATPMPERR
 	ONE_OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
 endif
 ifeq ($(wildcard /usr/include/natpmp.h),)
@@ -59,17 +59,17 @@ ifeq ($(ZT_SANITIZE),1)
 endif
 ifeq ($(ZT_DEBUG),1)
 	override CFLAGS+=-Wall -Wno-deprecated -g -O -pthread $(INCLUDES) $(DEFS)
-	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++11 -pthread $(INCLUDES) $(DEFS)
+	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++17 -pthread $(INCLUDES) $(DEFS)
 	ZT_TRACE=1
 	RUSTFLAGS=
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS?=-O3 -fstack-protector -fPIE
+	CFLAGS?=-O3 -fstack-protector
 	override CFLAGS+=-Wall -Wno-deprecated -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	CXXFLAGS?=-O3 -fstack-protector -fPIE
-	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	CXXFLAGS?=-O3 -fstack-protector
+	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	RUSTFLAGS=--release
 endif
@@ -84,8 +84,6 @@ ifeq ($(ZT_UBIQUITI), 1)
 endif
 
 ifeq ($(ZT_SYNOLOGY), 1)
-	override CFLAGS+=-fPIC
-	override CXXFLAGS+=-fPIC
 	override DEFS+=-D__SYNOLOGY__
 	ZT_EMBEDDED=1
 endif
@@ -336,11 +334,19 @@ ifeq ($(ZT_USE_ARM32_NEON_ASM_CRYPTO),1)
 	override CORE_OBJS+=ext/arm32-neon-salsa2012-asm/salsa2012.o
 endif
 
+# Position Independence
+override CFLAGS+=-fPIC -fPIE
+override CXXFLAGS+=-fPIC -fPIE
+
 .PHONY: all
 all:	one
 
 .PHONY: one
 one: zerotier-one zerotier-idtool zerotier-cli
+
+from_builder:
+	ln -sf zerotier-one zerotier-idtool
+	ln -sf zerotier-one zerotier-cli
 
 zerotier-one:	$(CORE_OBJS) $(ONE_OBJS) one.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LDLIBS)
@@ -354,7 +360,7 @@ zerotier-cli: zerotier-one
 $(ONE_OBJS): zeroidc
 
 libzerotiercore.a:	FORCE
-	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++11 -fstack-protector -fPIC" $(CORE_OBJS)
+	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++17 -fstack-protector -fPIC" $(CORE_OBJS)
 	ar rcs libzerotiercore.a $(CORE_OBJS)
 	ranlib libzerotiercore.a
 
@@ -452,6 +458,20 @@ uninstall:	FORCE
 
 # These are just for convenience for building Linux packages
 
+echo_flags:
+	@echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~"
+	@echo "echo_flags :: CC=$(CC)"
+	@echo "echo_flags :: CXX=$(CXX)"
+	@echo "echo_flags :: CFLAGS=$(CFLAGS)"
+	@echo "echo_flags :: CXXFLAGS=$(CXXFLAGS)"
+	@echo "echo_flags :: LDFLAGS=$(LDFLAGS)"
+	@echo "echo_flags :: RUSTFLAGS=$(RUSTFLAGS)"
+	@echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~"
+
+# debian: echo_flags
+# 	@echo "building deb package"
+# 	debuild --no-lintian -b -uc -us
+
 debian:	FORCE
 	debuild --no-lintian -I -i -us -uc -nc -b
 
@@ -491,9 +511,19 @@ snap-upload-stable: FORCE
 	done
 
 synology-pkg: FORCE
-	cd synology ; ./build.sh build
+	cd pkg/synology ; ./build.sh build
 
 synology-docker: FORCE
-	cd synology/dsm7-docker/; ./build.sh build
+	cd pkg/synology/dsm7-docker/; ./build.sh build-and-push
+
+munge_rpm:
+	@:$(call check_defined, VERSION)
+	@echo "Updating rpm spec to $(VERSION)"
+	ci/scripts/munge_rpm_spec.sh zerotier-one.spec $(VERSION) "Adam Ierymenko <adam.ierymenko@zerotier.com>" "see https://github.com/zerotier/ZeroTierOne for release notes"
+
+munge_deb:
+	@:$(call check_defined, VERSION)
+	@echo "Updating debian/changelog to $(VERSION)"
+	ci/scripts/munge_debian_changelog.sh debian/changelog $(VERSION) "Adam Ierymenko <adam.ierymenko@zerotier.com>" "see https://github.com/zerotier/ZeroTierOne for release notes"
 
 FORCE:

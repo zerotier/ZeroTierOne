@@ -2,7 +2,7 @@ CC=clang
 CXX=clang++
 TOPDIR=$(shell PWD)
 
-INCLUDES=-I$(shell PWD)/zeroidc/target
+INCLUDES=-I$(shell PWD)/zeroidc/target -isystem $(TOPDIR)/ext
 DEFS=
 LIBS=
 ARCH_FLAGS=-arch x86_64 -arch arm64 
@@ -47,7 +47,7 @@ endif
 # Use fast ASM Salsa20/12 for x64 processors
 DEFS+=-DZT_USE_X64_ASM_SALSA2012
 CORE_OBJS+=ext/x64-salsa2012-asm/salsa2012.o
-CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++
+CXXFLAGS=$(CFLAGS) -std=c++17 -stdlib=libc++
 
 # Build miniupnpc and nat-pmp as included libraries -- extra defs are required for these sources
 DEFS+=-DMACOSX -DZT_SSO_SUPPORTED -DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -D_DARWIN_C_SOURCE -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -DOS_STRING=\"Darwin/15.0.0\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR

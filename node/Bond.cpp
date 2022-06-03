@@ -236,7 +236,7 @@ void Bond::nominatePathToBond(const SharedPtr<Path>& path, int64_t now)
 	/**
 	 * Ensure the link is allowed and the path is not already present
 	 */
-	if (! RR->bc->linkAllowed(_policyAlias, getLink(path))) {
+	if (! RR->bc->linkAllowed(_policyAlias, getLinkBySocket(_policyAlias, path->localSocket(), true))) {
 		debug("link %s is not permitted according to user-specified rules", pathToStr(path).c_str());
 		return;
 	}

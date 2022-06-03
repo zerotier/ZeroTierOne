@@ -53,7 +53,10 @@ To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU 
    - The minimum compiler versions required are GCC/G++ 4.9.3 or CLANG/CLANG++ 3.4.2. (Install `clang` on CentOS 7 as G++ is too old.)
    - Linux makefiles automatically detect and prefer clang/clang++ if present as it produces smaller and slightly faster binaries in most cases. You can override by supplying CC and CXX variables on the make command line.
  - **Windows**
-   - Windows 7 or newer is supported. This *may* work on Vista but isn't officially supported there. It will not work on Windows XP.
+   - Windows 8 or newer is supported.
+   - Windows 7 is supported by versions `<=1.6.6`. 
+   - Windows Vista *may* work but isn't officially supported there.
+   - Windows XP is will not work.
    - We build with Visual Studio 2017. Older versions may not work. Clang or MinGW will also probably work but may require some makefile hacking.
  - **FreeBSD**
    - GNU make is required. Type `gmake` to build.

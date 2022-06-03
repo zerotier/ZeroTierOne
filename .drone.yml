@@ -1,267 +1,2655 @@
 ---
-kind: pipeline
-type: docker
-name: build 386
-
 clone:
   depth: 1
-
-steps:
-  - name: build 386
-    image: registry.sean.farm/honda-builder
-    commands:
-      - ./ci/scripts/build.sh linux 386 $${DRONE_COMMIT_SHA}
-  - name: notify-mattermost
-    pull: always
-    image: registry.sean.farm/mattermost-notify
-    environment:
-      token:
-        from_secret: mattermost-token
-      host:
-        from_secret: mattermost-host
-      channel:
-        from_secret: mattermost-channel
-      maxRetry: 3
-    when:
-      status:
-        - failure
-        - success
-
 image_pull_secrets:
-  - dockerconfigjson
-
----
+- dockerconfigjson
 kind: pipeline
+name: el9 amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh el9 amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la el9
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
 type: docker
-name: build amd64
-
+---
 clone:
   depth: 1
-
-steps:
-  - name: build amd64
-    image: registry.sean.farm/honda-builder
-    commands:
-      - ./ci/scripts/build.sh linux amd64 $${DRONE_COMMIT_SHA}
-  - name: notify-mattermost
-    pull: always
-    image: registry.sean.farm/mattermost-notify
-    environment:
-      token:
-        from_secret: mattermost-token
-      host:
-        from_secret: mattermost-host
-      channel:
-        from_secret: mattermost-channel
-      maxRetry: 3
-    when:
-      status:
-        - failure
-        - success
-
 image_pull_secrets:
-  - dockerconfigjson
-
----
+- dockerconfigjson
 kind: pipeline
-type: docker
-name: build arm64
-
-clone:
-  depth: 1
-
-steps:
-  - name: build arm64
-    image: registry.sean.farm/honda-builder
-    commands:
-      - ./ci/scripts/build.sh linux arm64 $${DRONE_COMMIT_SHA}
-  - name: notify-mattermost
-    pull: always
-    image: registry.sean.farm/mattermost-notify
-    environment:
-      token:
-        from_secret: mattermost-token
-      host:
-        from_secret: mattermost-host
-      channel:
-        from_secret: mattermost-channel
-      maxRetry: 3
-    when:
-      status:
-        - failure
-        - success
-
+name: el9 arm64 build
 platform:
-  os: linux
   arch: arm64
-
-image_pull_secrets:
-  - dockerconfigjson
-
----
-kind: pipeline
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh el9 arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la el9
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
 type: docker
-name: build armv7
-
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: el9 ppc64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh el9 ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la el9
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: el9 s390x build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh el9 s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la el9
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: el8 amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh el8 amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la el8
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: el8 arm64 build
 platform:
-  os: linux
   arch: arm64
-
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh el8 arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la el8
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
 clone:
   depth: 1
-
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: el8 ppc64le build
+pull: always
 steps:
-  - name: build armv7
-    image: registry.sean.farm/honda-builder
-    commands:
-      - ./ci/scripts/build.sh linux armv7 $${DRONE_COMMIT_SHA}
-  - name: notify-mattermost
-    pull: always
-    image: registry.sean.farm/mattermost-notify
-    environment:
-      token:
-        from_secret: mattermost-token
-      host:
-        from_secret: mattermost-host
-      channel:
-        from_secret: mattermost-channel
-      maxRetry: 3
-    when:
-      status:
-        - failure
-        - success
-
+- commands:
+  - ./ci/scripts/build.sh el8 ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la el8
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: el8 s390x build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh el8 s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la el8
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: el7 amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh el7 amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la el7
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: el7 ppc64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh el7 ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la el7
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: el6 amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh el6 amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la el6
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: amzn2 amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh amzn2 amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la amzn2
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: amzn2 arm64 build
 platform:
-  os: linux
   arch: arm64
-  
-image_pull_secrets:
-  - dockerconfigjson
-
----
-kind: pipeline
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh amzn2 arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la amzn2
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
 type: docker
-name: build riscv64
-
+---
 clone:
   depth: 1
-
-steps:
-  - name: build riscv64
-    image: registry.sean.farm/honda-builder
-    commands:
-      - ./ci/scripts/build.sh linux riscv64 $${DRONE_COMMIT_SHA}
-  - name: notify-mattermost
-    pull: always
-    image: registry.sean.farm/mattermost-notify
-    environment:
-      token:
-        from_secret: mattermost-token
-      host:
-        from_secret: mattermost-host
-      channel:
-        from_secret: mattermost-channel
-      maxRetry: 3
-    when:
-      status:
-        - failure
-        - success
-
 image_pull_secrets:
-  - dockerconfigjson
-
----
+- dockerconfigjson
 kind: pipeline
+name: fc37 amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh fc37 amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la fc37
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
 type: docker
-name: build mips64le
-
+---
 clone:
   depth: 1
-
-steps:
-  - name: build mips64le
-    image: registry.sean.farm/honda-builder
-    commands:
-      - ./ci/scripts/build.sh linux mips64le $${DRONE_COMMIT_SHA}
-  - name: notify-mattermost
-    pull: always
-    image: registry.sean.farm/mattermost-notify
-    environment:
-      token:
-        from_secret: mattermost-token
-      host:
-        from_secret: mattermost-host
-      channel:
-        from_secret: mattermost-channel
-      maxRetry: 3
-    when:
-      status:
-        - failure
-        - success
-
 image_pull_secrets:
-  - dockerconfigjson
-
----
+- dockerconfigjson
 kind: pipeline
+name: fc37 arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh fc37 arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la fc37
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
 type: docker
-name: build ppc64le
-
+---
 clone:
   depth: 1
-
-steps:
-  - name: build ppc64le
-    image: registry.sean.farm/honda-builder
-    commands:
-      - ./ci/scripts/build.sh linux ppc64le $${DRONE_COMMIT_SHA}
-  - name: notify-mattermost
-    pull: always
-    image: registry.sean.farm/mattermost-notify
-    environment:
-      token:
-        from_secret: mattermost-token
-      host:
-        from_secret: mattermost-host
-      channel:
-        from_secret: mattermost-channel
-      maxRetry: 3
-    when:
-      status:
-        - failure
-        - success
-
 image_pull_secrets:
-  - dockerconfigjson
-
----
+- dockerconfigjson
 kind: pipeline
+name: fc37 ppc64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh fc37 ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la fc37
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
 type: docker
-name: build s390x
-
+---
 clone:
   depth: 1
-
-steps:
-  - name: build s390x
-    image: registry.sean.farm/honda-builder
-    commands:
-      - ./ci/scripts/build.sh linux s390x $${DRONE_COMMIT_SHA}
-  - name: notify-mattermost
-    pull: always
-    image: registry.sean.farm/mattermost-notify
-    environment:
-      token:
-        from_secret: mattermost-token
-      host:
-        from_secret: mattermost-host
-      channel:
-        from_secret: mattermost-channel
-      maxRetry: 3
-    when:
-      status:
-        - failure
-        - success
-
 image_pull_secrets:
-  - dockerconfigjson
+- dockerconfigjson
+kind: pipeline
+name: fc37 s390x build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh fc37 s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la fc37
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: fc36 amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh fc36 amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la fc36
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: fc36 arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh fc36 arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la fc36
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: fc36 ppc64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh fc36 ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la fc36
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: fc36 s390x build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh fc36 s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la fc36
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: fc35 amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh fc35 amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la fc35
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: fc35 arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh fc35 arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la fc35
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: fc35 ppc64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh fc35 ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la fc35
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: fc35 s390x build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh fc35 s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la fc35
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: jammy amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh jammy amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la jammy
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: jammy arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh jammy arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la jammy
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: jammy armv7 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh jammy armv7 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la jammy
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: jammy riscv64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh jammy riscv64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la jammy
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: jammy ppc64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh jammy ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la jammy
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: jammy s390x build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh jammy s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la jammy
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: focal amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh focal amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la focal
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: focal arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh focal arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la focal
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: focal armv7 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh focal armv7 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la focal
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: focal riscv64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh focal riscv64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la focal
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: focal ppc64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh focal ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la focal
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bionic amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bionic amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bionic
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bionic arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bionic arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bionic
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bionic 386 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bionic 386 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bionic
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bionic ppc64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bionic ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bionic
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bionic s390x build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bionic s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bionic
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: xenial amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh xenial amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la xenial
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: xenial arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh xenial arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la xenial
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: xenial 386 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh xenial 386 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la xenial
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: sid 386 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh sid 386 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la sid
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - push
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: sid amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh sid amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la sid
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - push
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: sid arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh sid arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la sid
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - push
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: sid armv7 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh sid armv7 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la sid
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - push
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: sid riscv64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh sid riscv64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la sid
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - push
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: sid mips64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh sid mips64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la sid
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - push
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: sid ppc64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh sid ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la sid
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - push
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: sid s390x build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh sid s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la sid
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - push
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bookworm amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bookworm amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bookworm
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bookworm arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bookworm arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bookworm
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bookworm armv7 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bookworm armv7 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bookworm
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bookworm 386 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bookworm 386 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bookworm
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bookworm mips64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bookworm mips64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bookworm
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bookworm ppc64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bookworm ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bookworm
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bookworm s390x build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bookworm s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bookworm
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bullseye amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bullseye amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bullseye
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bullseye arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bullseye arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bullseye
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bullseye armv7 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bullseye armv7 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bullseye
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bullseye 386 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bullseye 386 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bullseye
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bullseye mips64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bullseye mips64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bullseye
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bullseye ppc64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bullseye ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bullseye
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: bullseye s390x build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh bullseye s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la bullseye
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: buster amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh buster amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la buster
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: buster arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh buster arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la buster
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: buster armv7 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh buster armv7 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la buster
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: buster 386 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh buster 386 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la buster
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: buster mips64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh buster mips64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la buster
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: buster ppc64le build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh buster ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la buster
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: buster s390x build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh buster s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la buster
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: stretch amd64 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh stretch amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la stretch
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: stretch arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh stretch arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la stretch
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker
+---
+clone:
+  depth: 1
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: stretch 386 build
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh stretch 386 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: registry.sean.farm/honda-builder
+  name: build
+- commands:
+  - ls -la stretch
+  image: registry.sean.farm/honda-builder
+  name: list
+- environment:
+    channel:
+      from_secret: mattermost-channel
+    host:
+      from_secret: mattermost-host
+    maxRetry: 3
+    token:
+      from_secret: mattermost-token
+  image: registry.sean.farm/mattermost-notify
+  name: notify-mattermost
+  when:
+    status:
+    - failure
+trigger:
+  event:
+  - tag
+type: docker

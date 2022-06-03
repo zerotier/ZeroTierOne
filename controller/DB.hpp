@@ -33,7 +33,7 @@
 #include <set>
 #include <map>
 
-#include "../ext/json/json.hpp"
+#include <nlohmann/json.hpp>
 
 #define ZT_MEMBER_AUTH_TIMEOUT_NOTIFY_BEFORE 25000
 
