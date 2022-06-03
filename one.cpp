@@ -778,8 +778,6 @@ static int cli(int argc,char **argv)
 									int64_t expiresIn = ((int64_t)authenticationExpiryTime - OSUtils::now()) / 1000LL;
 									if (expiresIn >= 0) {
 										printf("    AUTH OK, expires in: %lld seconds" ZT_EOL_S, expiresIn);
-									} else {
-										printf("    AUTH OK, refreshing..." ZT_EOL_S);
 									}
 								}
 							}
