@@ -4,8 +4,8 @@ rustflags=["-C", "link-arg=-mmacosx-version-min=10.13"]
 [target.aarch64-apple-darwin]
 rustflags=["-C", "link-arg=-mmacosx-version-min=10.13"]
 
-[target.x86_64-pc-windows-msvc]
-rustflags = ["-C", "target-feature=+crt-static"]
+#[target.x86_64-pc-windows-msvc]
+#rustflags = ["-C", "target-feature=+crt-static"]
 
-[target.i686-pc-windows-msvc]
-rustflags = ["-C", "target-feature=+crt-static"]
+#[target.i686-pc-windows-msvc]
+#rustflags = ["-C", "target-feature=+crt-static"]
