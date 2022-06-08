@@ -72,14 +72,15 @@ like conventional VPNs or VLANs. It can run on native systems, VMs, or
 containers (Docker, OpenVZ, etc.).
 
 %prep
-# ls -la
-# %if 0%{?rhel} && 0%{?rhel} >= 7
-# rm -rf *
-# ln -s %{getenv:PWD} %{name}-%{version}
-# tar --exclude=%{name}-%{version}/.git --exclude=%{name}-%{version}/%{name}-%{version} -czf %{_sourcedir}/%{name}-%{version}.tar.gz %{name}-%{version}/*
-# rm -f %{name}-%{version}
-# cp -a %{getenv:PWD}/* .
-# %endif
+ls -la
+%if 0%{?rhel} && 0%{?rhel} >= 7
+rm -rf BUILD BUILDROOT RPMS SRPMS SOURCES
+mkdir -p SOURCES
+ln -s %{getenv:PWD} %{name}-%{version}
+tar --exclude=%{name}-%{version}/.git --exclude=%{name}-%{version}/%{name}-%{version} -czf SOURCES/%{name}-%{version}.tar.gz %{name}-%{version}/*
+rm -f %{name}-%{version}
+cp -a %{getenv:PWD}/* .
+%endif
 
 %build
 %if "%{?dist}" == ".el6"
