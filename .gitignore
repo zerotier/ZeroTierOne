@@ -62,7 +62,6 @@ zt1-src.tar.gz
 *.opensdf
 *.user
 *.cache
-*.obj
 *.tlog
 *.pid
 *.pkg
