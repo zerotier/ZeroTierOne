@@ -34,8 +34,8 @@ Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
 %if "%{?dist}" == ".el7"
-BuildRequires: systemd openssl11-devel
-Requires:      systemd openssl11
+BuildRequires: systemd openssl-devel
+Requires:      systemd openssl
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
