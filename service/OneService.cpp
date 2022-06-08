@@ -165,35 +165,30 @@ std::string ssoResponseTemplate = R"""(
              background: #eeeeee;
              margin: 0;
              padding: 0;
-             font-family: "Helvetica";
-             font-weight: bold;
+             font-family: "System Sans Serif";
+             font-weight: normal;
              font-size: 12pt;
              height: 100%;
              width: 100%;
          }
-         div.icon {
-             background: #ffb354;
-             color: #000000;
-             font-size: 120pt;
-             border-radius: 2.5rem;
-             display: inline-block;
-             width: 1.3em;
-             height: 1.3em;
-             padding: 0;
-             margin: 15;
-             line-height: 1.4em;
-             vertical-align: middle;
-             text-align: center;
-         }
+
          .container {
-             vertical-align: center;
-             text-align: center;
+             position: absolute;
+             left: 50%;
+             top: 50%;
+             -webkit-transform: translate(-50%, -50%);
+             transform: translate(-50%, -50%);
+         }
+         .iconwrapper {
+             margin: 10px 10px 10px 10px;
          }
         </style>
     </head>
     <body>
         <div class="container">
-            <div class="icon">&#x23c1;</div>
+            <div class="iconwrapper">
+                <svg id="Layer_1" width="225px" height="225px" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 225 225"><defs><style>.cls-1{fill:#fdb25d;}.cls-2{fill:none;stroke:#000;stroke-miterlimit:10;stroke-width:6.99px;}</style></defs><rect class="cls-1" width="225" height="225" rx="35.74"/><line class="cls-2" x1="25.65" y1="32.64" x2="199.35" y2="32.64"/><line class="cls-2" x1="112.5" y1="201.02" x2="112.5" y2="32.64"/><circle class="cls-2" cx="112.5" cy="115.22" r="56.54"/></svg>
+            </div>
             <div class="text">{{ messageText }}</div>
         </div>
     </body>
