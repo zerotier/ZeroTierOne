@@ -373,6 +373,11 @@
 #define ZT_QOS_TABLE_SIZE ((ZT_QOS_MAX_PACKET_SIZE * 8) / (64 + 16))
 
 /**
+ * Maximum number of packets we monitor for ACK information at any given time
+ */
+#define ZT_ACK_MAX_PENDING_RECORDS (32 * 1024)
+
+/**
  * Maximum number of packets we monitor for QoS information at any given time
  */
 #define ZT_QOS_MAX_PENDING_RECORDS (ZT_QOS_TABLE_SIZE * 3)

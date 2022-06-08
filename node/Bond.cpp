@@ -407,8 +407,9 @@ void Bond::recordOutgoingPacket(const SharedPtr<Path>& path, uint64_t packetId, 
 			_lastFrame = now;
 		}
 		if (shouldRecord) {
+			//_paths[pathIdx].expectingAckAsOf = now;
+			//_paths[pathIdx].totalBytesSentSinceLastAckRecieved += payloadLength;
 			//_paths[pathIdx].unackedBytes += payloadLength;
-			// Take note that we're expecting a VERB_ACK on this path as of a specific time
 			if (_paths[pathIdx].qosStatsOut.size() < ZT_QOS_MAX_PENDING_RECORDS) {
 				_paths[pathIdx].qosStatsOut[packetId] = now;
 			}
@@ -443,10 +444,24 @@ void Bond::recordIncomingPacket(const SharedPtr<Path>& path, uint64_t packetId, 
 			}
 			if (shouldRecord) {
 				if (_paths[pathIdx].qosStatsIn.size() < ZT_QOS_MAX_PENDING_RECORDS) {
+					// debug("Recording QoS information (table size = %d)", _paths[pathIdx].qosStatsIn.size());
 					_paths[pathIdx].qosStatsIn[packetId] = now;
 					++(_paths[pathIdx].packetsReceivedSinceLastQoS);
 					//_paths[pathIdx].packetValiditySamples.push(true);
 				}
+				else {
+					debug("QoS buffer full, will not record information");
+				}
+				/*
+				if (_paths[pathIdx].ackStatsIn.size() < ZT_ACK_MAX_PENDING_RECORDS) {
+					//debug("Recording ACK information (table size = %d)", _paths[pathIdx].ackStatsIn.size());
+					_paths[pathIdx].ackStatsIn[packetId] = payloadLength;
+					++(_paths[pathIdx].packetsReceivedSinceLastAck);
+				}
+				else {
+					debug("ACK buffer full, will not record information");
+				}
+				*/
 			}
 		}
 	}
@@ -489,6 +504,16 @@ void Bond::receivedQoS(const SharedPtr<Path>& path, int64_t now, int count, uint
 		}
 	}
 	_paths[pathIdx].qosRecordSize.push(count);
+}
+
+void Bond::receivedAck(int pathIdx, int64_t now, int32_t ackedBytes)
+{
+	/*
+	Mutex::Lock _l(_paths_m);
+	debug("received ACK of %d bytes on path %s, there are still %d un-acked bytes", ackedBytes, pathToStr(_paths[pathIdx].p).c_str(), _paths[pathIdx].unackedBytes);
+	_paths[pathIdx].lastAckReceived = now;
+	_paths[pathIdx].unackedBytes = (ackedBytes > _paths[pathIdx].unackedBytes) ? 0 : _paths[pathIdx].unackedBytes - ackedBytes;
+	*/
 }
 
 int32_t Bond::generateQoSPacket(int pathIdx, int64_t now, char* qosBuffer)
@@ -743,12 +768,38 @@ void Bond::sendPATH_NEGOTIATION_REQUEST(void* tPtr, int pathIdx)
 	}
 }
 
+void Bond::sendACK(void* tPtr, int pathIdx, int64_t localSocket, const InetAddress& atAddress, int64_t now)
+{
+	/*
+	Packet outp(_peer->_id.address(), RR->identity.address(), Packet::VERB_ACK);
+	int32_t bytesToAck = 0;
+	std::map<uint64_t, uint64_t>::iterator it = _paths[pathIdx].ackStatsIn.begin();
+	while (it != _paths[pathIdx].ackStatsIn.end()) {
+		bytesToAck += it->second;
+		++it;
+	}
+	debug("sending ACK of %d bytes on path %s (table size = %d)", bytesToAck, pathToStr(_paths[pathIdx].p).c_str(), _paths[pathIdx].ackStatsIn.size());
+	outp.append<uint32_t>(bytesToAck);
+	if (atAddress) {
+		outp.armor(_peer->key(), false, _peer->aesKeysIfSupported());
+		RR->node->putPacket(tPtr, localSocket, atAddress, outp.data(), outp.size());
+	}
+	else {
+		RR->sw->send(tPtr, outp, false);
+	}
+	_paths[pathIdx].ackStatsIn.clear();
+	_paths[pathIdx].packetsReceivedSinceLastAck = 0;
+	_paths[pathIdx].lastAckSent = now;
+	*/
+}
+
 void Bond::sendQOS_MEASUREMENT(void* tPtr, int pathIdx, int64_t localSocket, const InetAddress& atAddress, int64_t now)
 {
 	int64_t _now = RR->node->now();
 	Packet outp(_peer->_id.address(), RR->identity.address(), Packet::VERB_QOS_MEASUREMENT);
 	char qosData[ZT_QOS_MAX_PACKET_SIZE];
 	int16_t len = generateQoSPacket(pathIdx, _now, qosData);
+	// debug("sending QOS via link %s (len=%d)", pathToStr(_paths[pathIdx].p).c_str(), len);
 	if (len) {
 		outp.append(qosData, len);
 		if (atAddress) {
@@ -762,7 +813,6 @@ void Bond::sendQOS_MEASUREMENT(void* tPtr, int pathIdx, int64_t localSocket, con
 		_paths[pathIdx].lastQoSMeasurement = now;
 		_overheadBytes += outp.size();
 	}
-	// debug("send QOS via link %s (len=%d)", pathToStr(_paths[pathIdx].p).c_str(), len);
 }
 
 void Bond::processBackgroundBondTasks(void* tPtr, int64_t now)
@@ -799,6 +849,12 @@ void Bond::processBackgroundBondTasks(void* tPtr, int64_t now)
 				if (_paths[i].needsToSendQoS(now, _qosSendInterval)) {
 					sendQOS_MEASUREMENT(tPtr, i, _paths[i].p->localSocket(), _paths[i].p->address(), now);
 				}
+				// ACK
+				/*
+				if (_paths[i].needsToSendAck(now, _ackSendInterval)) {
+					sendACK(tPtr, i, _paths[i].p->localSocket(), _paths[i].p->address(), now);
+				}
+				*/
 			}
 		}
 	}
@@ -1095,6 +1151,20 @@ void Bond::estimatePathQuality(int64_t now)
 			log("Dropped %d QOS out-records", numDroppedQosOutRecords);
 		}
 
+		/*
+		for (unsigned int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
+			if (! _paths[i].p) {
+				continue;
+			}
+			// if ((now - _paths[i].lastAckReceived) > ackSendInterval) {
+			//	debug("been a while since ACK");
+			//	if (_paths[i].unackedBytes > 0) {
+			//		_paths[i].unackedBytes / _paths[i].bytesSen
+			//	}
+			// }
+		}
+		*/
+
 		it = _paths[i].qosStatsIn.begin();
 		int numDroppedQosInRecords = 0;
 		while (it != _paths[i].qosStatsIn.end()) {
@@ -1238,6 +1308,7 @@ void Bond::dequeueNextActiveBackupPath(uint64_t now)
 
 bool Bond::abForciblyRotateLink()
 {
+	Mutex::Lock _l(_paths_m);
 	if (_policy == ZT_BOND_POLICY_ACTIVE_BACKUP) {
 		int prevPathIdx = _abPathIdx;
 		dequeueNextActiveBackupPath(RR->node->now());
@@ -1366,12 +1437,18 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 
 	// Remove ineligible paths from the failover link queue
 	for (std::deque<int>::iterator it(_abFailoverQueue.begin()); it != _abFailoverQueue.end();) {
+		if (! _paths[(*it)].p) {
+			log("link is no longer valid, removing from failover queue (%zu links remain in queue)", _abFailoverQueue.size());
+			it = _abFailoverQueue.erase(it);
+			continue;
+		}
 		if (_paths[(*it)].p && ! _paths[(*it)].eligible) {
 			SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[(*it)].p->localSocket());
 			it = _abFailoverQueue.erase(it);
 			if (link) {
-				log("link %s is ineligible, removing from failover queue (%zu links in queue)", pathToStr(_paths[_abPathIdx].p).c_str(), _abFailoverQueue.size());
+				log("link %s is ineligible, removing from failover queue (%zu links remain in queue)", pathToStr(_paths[_abPathIdx].p).c_str(), _abFailoverQueue.size());
 			}
+			continue;
 		}
 		else {
 			++it;
@@ -1533,8 +1610,17 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 	if (prevActiveBackupPathIdx != _abPathIdx) {
 		_lastActiveBackupPathChange = now;
 	}
+	if (_abFailoverQueue.empty()) {
+		return;	  // No sense in continuing since there are no links to switch to
+	}
+
 	if (_abLinkSelectMethod == ZT_BOND_RESELECTION_POLICY_ALWAYS) {
 		SharedPtr<Link> abLink = getLink(_paths[_abPathIdx].p);
+		if (! _paths[_abFailoverQueue.front()].p) {
+			log("invalid link. not switching");
+			return;
+		}
+
 		SharedPtr<Link> abFailoverLink = getLink(_paths[_abFailoverQueue.front()].p);
 		if (abLink && ! abLink->primary() && _paths[_abFailoverQueue.front()].p && abFailoverLink && abFailoverLink->primary()) {
 			dequeueNextActiveBackupPath(now);
@@ -1589,6 +1675,7 @@ void Bond::initTimers()
 	_lastPathNegotiationCheck = 0;
 	_lastPathNegotiationReceived = 0;
 	_lastQoSRateCheck = 0;
+	_lastAckRateCheck = 0;
 	_lastQualityEstimation = 0;
 	_lastBondStatusLog = 0;
 	_lastSummaryDump = 0;
@@ -1620,10 +1707,6 @@ void Bond::setBondParameters(int policy, SharedPtr<Bond> templateBond, bool useT
 	_pathNegotiationCutoffCount = 0;
 	_localUtility = 0;
 	_negotiatedPathIdx = 0;
-
-	// QOS Verb (and related checks)
-
-	_qosCutoffCount = 0;
 
 	// User preferences which may override the default bonding algorithm's behavior
 
@@ -1717,7 +1800,9 @@ void Bond::setBondParameters(int policy, SharedPtr<Bond> templateBond, bool useT
 	_monitorInterval = _failoverInterval / ZT_BOND_ECHOS_PER_FAILOVER_INTERVAL;
 	_qualityEstimationInterval = _failoverInterval * 2;
 	_qosSendInterval = _failoverInterval * 2;
+	_ackSendInterval = _failoverInterval * 2;
 	_qosCutoffCount = 0;
+	_ackCutoffCount = 0;
 	_defaultPathRefractoryPeriod = 8000;
 }
 
@@ -1736,7 +1821,7 @@ void Bond::setUserQualityWeights(float weights[], int len)
 
 SharedPtr<Link> Bond::getLink(const SharedPtr<Path>& path)
 {
-	return RR->bc->getLinkBySocket(_policyAlias, path->localSocket());
+	return ! path ? SharedPtr<Link>() : RR->bc->getLinkBySocket(_policyAlias, path->localSocket());
 }
 
 std::string Bond::pathToStr(const SharedPtr<Path>& path)

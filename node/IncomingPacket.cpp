@@ -88,6 +88,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr,int32_t f
 					peer->received(tPtr,_path,hops(),packetId(),payloadLength(),v,0,Packet::VERB_NOP,false,0,ZT_QOS_NO_FLOW);
 					break;
 				case Packet::VERB_HELLO:                      r = _doHELLO(RR,tPtr,true); break;
+				case Packet::VERB_ACK            :            r = _doACK(RR,tPtr,peer); break;
 				case Packet::VERB_QOS_MEASUREMENT:            r = _doQOS_MEASUREMENT(RR,tPtr,peer); break;
 				case Packet::VERB_ERROR:                      r = _doERROR(RR,tPtr,peer); break;
 				case Packet::VERB_OK:                         r = _doOK(RR,tPtr,peer); break;
@@ -250,28 +251,47 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 	return true;
 }
 
-bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doACK(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer)
+{
+	/*
+	SharedPtr<Bond> bond = peer->bond();
+	if (! bond || ! bond->rateGateACK(RR->node->now())) {
+		return true;
+	}
+	int32_t ackedBytes;
+	if (payloadLength() != sizeof(ackedBytes)) {
+		return true;   // ignore
+	}
+	memcpy(&ackedBytes, payload(), sizeof(ackedBytes));
+	if (bond) {
+		bond->receivedAck(_path, RR->node->now(), Utils::ntoh(ackedBytes));
+	}
+	*/
+	return true;
+}
+
+bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer)
 {
 	SharedPtr<Bond> bond = peer->bond();
-	if (!bond || !bond->rateGateQoS(RR->node->now(), _path)) {
+	if (! bond || ! bond->rateGateQoS(RR->node->now(), _path)) {
 		return true;
 	}
 	if (payloadLength() > ZT_QOS_MAX_PACKET_SIZE || payloadLength() < ZT_QOS_MIN_PACKET_SIZE) {
-		return true; // ignore
+		return true;   // ignore
 	}
 	const int64_t now = RR->node->now();
 	uint64_t rx_id[ZT_QOS_TABLE_SIZE];
 	uint16_t rx_ts[ZT_QOS_TABLE_SIZE];
-	char *begin = (char *)payload();
-	char *ptr = begin;
+	char* begin = (char*)payload();
+	char* ptr = begin;
 	int count = 0;
 	unsigned int len = payloadLength();
 	// Read packet IDs and latency compensation intervals for each packet tracked by this QoS packet
 	while (ptr < (begin + len) && (count < ZT_QOS_TABLE_SIZE)) {
 		memcpy((void*)&rx_id[count], ptr, sizeof(uint64_t));
-		ptr+=sizeof(uint64_t);
+		ptr += sizeof(uint64_t);
 		memcpy((void*)&rx_ts[count], ptr, sizeof(uint16_t));
-		ptr+=sizeof(uint16_t);
+		ptr += sizeof(uint16_t);
 		count++;
 	}
 	if (bond) {
