@@ -107,7 +107,6 @@ windows/ZeroTierOne/Debug/
 *.swp
 *~.nib
 DerivedData/
-build/
 *.pbxuser
 *.mode1v3
 *.mode2v3
@@ -118,7 +117,6 @@ build/
 !default.perspectivev3
 *.xccheckout
 xcuserdata/
-ext/librethinkdbxx/build
 .vscode
 __pycache__
 *~

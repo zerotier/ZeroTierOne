@@ -1,3 +1,19 @@
+# 0.1.35 (June 8, 2022)
+
+This release reduces the overhead of callsite registration by using new
+`tracing-core` APIs.
+
+### Added
+
+- Use `DefaultCallsite` to reduce callsite registration overhead ([#2083])
+
+### Changed
+
+- `tracing-core`: updated to [0.1.27][core-0.1.27]
+
+[core-0.1.27]: https://github.com/tokio-rs/tracing/releases/tag/tracing-core-0.1.27
+[#2088]: https://github.com/tokio-rs/tracing/pull/2083
+
 # 0.1.34 (April 14, 2022)
 
 This release includes bug fixes for the "log" support feature and for the use of
