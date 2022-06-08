@@ -5,7 +5,17 @@ use std::mem::{size_of, MaybeUninit};
 
 use crate::util::pool::PoolFactory;
 
-/// A safe bounds checked I/O buffer with extensions for convenient appending of RawObject types.
+/// An I/O buffer with extensions for efficiently reading and writing various objects.
+///
+/// WARNING: Structures can only be handled through raw read/write here if they are
+/// tagged a Copy, meaning they are safe to just copy as raw memory. Care must also
+/// be taken to ensure that access to them is safe on architectures that do not support
+/// unaligned access. In vl1/protocol.rs this is accomplished by only using byte arrays
+/// (including for integers) and accessing via things like u64::from_be_bytes() etc.
+///
+/// Needless to say anything with non-Copy internal members or that depends on Drop to
+/// not leak resources or other higher level semantics won't work here, but Rust should
+/// not let you tag that as Copy in safe code.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Buffer<const L: usize>(usize, [u8; L]);
 
@@ -25,28 +35,26 @@ impl<const L: usize> Buffer<L> {
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
     #[inline(always)]
-    fn read_obj_internal<T: Sized + Copy>(&self, i: usize) -> T {
-        unsafe { *self.1.as_ptr().add(i).cast() }
+    unsafe fn read_obj_internal<T: Sized + Copy>(&self, i: usize) -> T {
+        *self.1.as_ptr().add(i).cast()
     }
 
     #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
     #[inline(always)]
-    fn read_obj_internal<T: Sized + Copy>(&self, i: usize) -> T {
-        unsafe { std::mem::transmute_copy(&*self.1.as_ptr().add(i).cast::<T>()) }
+    unsafe fn read_obj_internal<T: Sized + Copy>(&self, i: usize) -> T {
+        std::mem::transmute_copy(&*self.1.as_ptr().add(i).cast::<T>())
     }
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
     #[inline(always)]
-    fn write_obj_internal<T: Sized + Copy>(&mut self, i: usize, o: T) {
-        unsafe { *self.1.as_mut_ptr().add(i).cast::<T>() = o };
+    unsafe fn write_obj_internal<T: Sized + Copy>(&mut self, i: usize, o: T) {
+        *self.1.as_mut_ptr().add(i).cast::<T>() = o;
     }
 
     #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
     #[inline(always)]
-    fn write_obj_internal<T: Sized + Copy>(&mut self, i: usize, o: T) {
-        unsafe {
-            std::ptr::copy_nonoverlapping((&o as *const T).cast::<u8>(), self.1.as_mut_ptr().add(i), size_of::<T>());
-        }
+    unsafe fn write_obj_internal<T: Sized + Copy>(&mut self, i: usize, o: T) {
+        std::ptr::copy_nonoverlapping((&o as *const T).cast::<u8>(), self.1.as_mut_ptr().add(i), size_of::<T>())
     }
 
     /// Create an empty zeroed buffer.
@@ -92,12 +100,6 @@ impl<const L: usize> Buffer<L> {
     #[inline(always)]
     pub fn as_bytes_mut(&mut self) -> &mut [u8] {
         &mut self.1[0..self.0]
-    }
-
-    /// Get a mutable reference to the entire buffer regardless of the current 'size'.
-    #[inline(always)]
-    pub unsafe fn entire_buffer_mut(&mut self) -> &mut [u8; L] {
-        &mut self.1
     }
 
     #[inline(always)]
@@ -154,6 +156,12 @@ impl<const L: usize> Buffer<L> {
         if s > prev_len {
             self.1[prev_len..s].fill(0);
         }
+    }
+
+    /// Get a mutable reference to the entire buffer regardless of the current 'size'.
+    #[inline(always)]
+    pub unsafe fn entire_buffer_mut(&mut self) -> &mut [u8; L] {
+        &mut self.1
     }
 
     /// Set the size of the data in this buffer without checking bounds or zeroing new space.
@@ -269,7 +277,7 @@ impl<const L: usize> Buffer<L> {
         let end = ptr + 2;
         if end <= L {
             self.0 = end;
-            self.write_obj_internal(ptr, i.to_be());
+            unsafe { self.write_obj_internal(ptr, i.to_be()) };
             Ok(())
         } else {
             Err(overflow_err())
@@ -282,7 +290,7 @@ impl<const L: usize> Buffer<L> {
         let end = ptr + 4;
         if end <= L {
             self.0 = end;
-            self.write_obj_internal(ptr, i.to_be());
+            unsafe { self.write_obj_internal(ptr, i.to_be()) };
             Ok(())
         } else {
             Err(overflow_err())
@@ -295,7 +303,7 @@ impl<const L: usize> Buffer<L> {
         let end = ptr + 8;
         if end <= L {
             self.0 = end;
-            self.write_obj_internal(ptr, i.to_be());
+            unsafe { self.write_obj_internal(ptr, i.to_be()) };
             Ok(())
         } else {
             Err(overflow_err())
@@ -342,6 +350,39 @@ impl<const L: usize> Buffer<L> {
     pub fn u8_at(&self, ptr: usize) -> std::io::Result<u8> {
         if ptr < self.0 {
             Ok(self.1[ptr])
+        } else {
+            Err(overflow_err())
+        }
+    }
+
+    #[inline(always)]
+    pub fn u16_at(&self, ptr: usize) -> std::io::Result<u64> {
+        let end = ptr + 2;
+        debug_assert!(end <= L);
+        if end <= self.0 {
+            Ok(u64::from_be(unsafe { self.read_obj_internal(ptr) }))
+        } else {
+            Err(overflow_err())
+        }
+    }
+
+    #[inline(always)]
+    pub fn u32_at(&self, ptr: usize) -> std::io::Result<u64> {
+        let end = ptr + 4;
+        debug_assert!(end <= L);
+        if end <= self.0 {
+            Ok(u64::from_be(unsafe { self.read_obj_internal(ptr) }))
+        } else {
+            Err(overflow_err())
+        }
+    }
+
+    #[inline(always)]
+    pub fn u64_at(&self, ptr: usize) -> std::io::Result<u64> {
+        let end = ptr + 8;
+        debug_assert!(end <= L);
+        if end <= self.0 {
+            Ok(u64::from_be(unsafe { self.read_obj_internal(ptr) }))
         } else {
             Err(overflow_err())
         }
@@ -420,7 +461,7 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(u16::from_be(self.read_obj_internal(ptr)))
+            Ok(u16::from_be(unsafe { self.read_obj_internal(ptr) }))
         } else {
             Err(overflow_err())
         }
@@ -433,7 +474,7 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(u32::from_be(self.read_obj_internal(ptr)))
+            Ok(u32::from_be(unsafe { self.read_obj_internal(ptr) }))
         } else {
             Err(overflow_err())
         }
@@ -446,7 +487,7 @@ impl<const L: usize> Buffer<L> {
         debug_assert!(end <= L);
         if end <= self.0 {
             *cursor = end;
-            Ok(u64::from_be(self.read_obj_internal(ptr)))
+            Ok(u64::from_be(unsafe { self.read_obj_internal(ptr) }))
         } else {
             Err(overflow_err())
         }

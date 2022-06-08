@@ -5,7 +5,6 @@ use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
-use std::mem::MaybeUninit;
 use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 use std::str::FromStr;
 
@@ -74,7 +73,7 @@ pub struct Identity {
 #[inline(always)]
 fn concat_arrays_2<const A: usize, const B: usize, const S: usize>(a: &[u8; A], b: &[u8; B]) -> [u8; S] {
     assert_eq!(A + B, S);
-    let mut tmp: [u8; S] = unsafe { MaybeUninit::uninit().assume_init() };
+    let mut tmp = [0_u8; S];
     tmp[..A].copy_from_slice(a);
     tmp[A..].copy_from_slice(b);
     tmp
@@ -83,7 +82,7 @@ fn concat_arrays_2<const A: usize, const B: usize, const S: usize>(a: &[u8; A], 
 #[inline(always)]
 fn concat_arrays_4<const A: usize, const B: usize, const C: usize, const D: usize, const S: usize>(a: &[u8; A], b: &[u8; B], c: &[u8; C], d: &[u8; D]) -> [u8; S] {
     assert_eq!(A + B + C + D, S);
-    let mut tmp: [u8; S] = unsafe { MaybeUninit::uninit().assume_init() };
+    let mut tmp = [0_u8; S];
     tmp[..A].copy_from_slice(a);
     tmp[A..(A + B)].copy_from_slice(b);
     tmp[(A + B)..(A + B + C)].copy_from_slice(c);

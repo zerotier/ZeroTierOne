@@ -43,14 +43,14 @@ pub struct BoundUdpSocket {
     pub interface: LocalInterface,
 
     /// Add tasks here that should be aborted when this socket is closed.
-    pub kill_on_drop: parking_lot::Mutex<Vec<tokio::task::JoinHandle<()>>>,
+    pub socket_associated_tasks: parking_lot::Mutex<Vec<tokio::task::JoinHandle<()>>>,
 
     fd: RawFd,
 }
 
 impl Drop for BoundUdpSocket {
     fn drop(&mut self) {
-        for t in self.kill_on_drop.lock().drain(..) {
+        for t in self.socket_associated_tasks.lock().drain(..) {
             t.abort();
         }
     }
@@ -64,7 +64,7 @@ impl BoundUdpSocket {
         unsafe { libc::setsockopt(self.fd.as_(), libc::IPPROTO_IP.as_(), libc::IP_TOS.as_(), (&ttl as *const c_int).cast(), std::mem::size_of::<c_int>().as_()) };
     }
 
-    #[cfg(any(target_os = "macos", target_os = "freebsd"))]
+    #[cfg(any(target_os = "macos"))]
     pub fn send_sync_nonblock(&self, _: &tokio::runtime::Handle, dest: &InetAddress, b: &[&[u8]], packet_ttl: u8) -> bool {
         let mut ok = false;
         if dest.family() == self.address.family() {
@@ -217,7 +217,7 @@ impl BoundUdpPort {
                             let s = Arc::new(BoundUdpSocket {
                                 address: addr_with_port,
                                 socket: Arc::new(s.unwrap()),
-                                kill_on_drop: parking_lot::Mutex::new(Vec::new()),
+                                socket_associated_tasks: parking_lot::Mutex::new(Vec::new()),
                                 interface: interface.clone(),
                                 fd,
                             });

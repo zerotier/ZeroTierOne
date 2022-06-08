@@ -10,19 +10,22 @@ pub use zerotier_core_crypto::varint;
 
 pub(crate) const ZEROES: [u8; 64] = [0_u8; 64];
 
-#[cfg(target_feature = "zt_trace")]
-macro_rules! zt_trace {
+#[cfg(target_feature = "debug_events")]
+#[allow(unused_macros)]
+macro_rules! debug_event {
     ($si:expr, $fmt:expr $(, $($arg:tt)*)?) => {
-        $si.event(crate::Event::Trace(file!(), line!(), format!($fmt, $($($arg)*)?)));
+        $si.event(crate::Event::Debug(file!(), line!(), format!($fmt, $($($arg)*)?)));
     }
 }
 
-#[cfg(not(target_feature = "zt_trace"))]
-macro_rules! zt_trace {
+#[cfg(not(target_feature = "debug_events"))]
+#[allow(unused_macros)]
+macro_rules! debug_event {
     ($si:expr, $fmt:expr $(, $($arg:tt)*)?) => {};
 }
 
-pub(crate) use zt_trace;
+#[allow(unused_imports)]
+pub(crate) use debug_event;
 
 /// Obtain a reference to a sub-array within an existing byte array.
 #[inline(always)]

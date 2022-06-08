@@ -22,7 +22,7 @@ use crate::utils::{ms_monotonic, ms_since_epoch};
 
 const UDP_UPDATE_BINDINGS_INTERVAL_MS: Duration = Duration::from_millis(2500);
 
-/// ZeroTier system service, which presents virtual networks as VPN connections.
+/// ZeroTier system service, which presents virtual networks as VPN connections on Windows/macOS/Linux/BSD/etc.
 pub struct Service {
     udp_binding_task: tokio::task::JoinHandle<()>,
     core_background_service_task: tokio::task::JoinHandle<()>,
@@ -45,10 +45,6 @@ impl Drop for Service {
             self.udp_binding_task.abort();
             self.core_background_service_task.abort();
 
-            // Wait for all tasks to actually stop.
-            let _ = self.udp_binding_task.await;
-            let _ = self.core_background_service_task.await;
-
             // Drop all bound sockets since these can hold circular Arc<> references to 'internal'.
             self.internal.udp_sockets.write().await.clear();
         });
@@ -68,10 +64,11 @@ impl Service {
         let _ = si._core.insert(NetworkHypervisor::new(&si, true, auto_upgrade_identity)?);
         let si = Arc::new(si);
 
-        let (si1, si2) = (si.clone(), si.clone());
+        si._core.as_ref().unwrap().add_update_default_root_set_if_none();
+
         Ok(Self {
-            udp_binding_task: si.rt.spawn(si1.udp_binding_task_main()),
-            core_background_service_task: si.rt.spawn(si2.core_background_service_task_main()),
+            udp_binding_task: si.rt.spawn(si.clone().udp_binding_task_main()),
+            core_background_service_task: si.rt.spawn(si.clone().core_background_service_task_main()),
             internal: si,
         })
     }
@@ -80,11 +77,11 @@ impl Service {
 impl ServiceImpl {
     #[inline(always)]
     fn core(&self) -> &NetworkHypervisor<ServiceImpl> {
-        debug_assert!(self._core.is_some());
-        unsafe { self._core.as_ref().unwrap_unchecked() }
+        self._core.as_ref().unwrap()
     }
 
-    async fn update_bindings_for_port(self: &Arc<Self>, port: u16, interface_prefix_blacklist: &Vec<String>, cidr_blacklist: &Vec<InetAddress>) -> Option<Vec<(LocalInterface, InetAddress, std::io::Error)>> {
+    /// Called in udp_binding_task_main() to service a particular UDP port.
+    async fn update_udp_bindings_for_port(self: &Arc<Self>, port: u16, interface_prefix_blacklist: &Vec<String>, cidr_blacklist: &Vec<InetAddress>) -> Option<Vec<(LocalInterface, InetAddress, std::io::Error)>> {
         let mut udp_sockets = self.udp_sockets.write().await;
         let bp = udp_sockets.entry(port).or_insert_with(|| BoundUdpPort::new(port));
         let (errors, new_sockets) = bp.update_bindings(interface_prefix_blacklist, cidr_blacklist);
@@ -94,17 +91,20 @@ impl ServiceImpl {
         drop(udp_sockets); // release lock
 
         for ns in new_sockets.iter() {
-            // We start a task for each CPU core. Tokio multiplexes but since each packet takes a bit of CPU
-            // to parse, decrypt, etc. we want to be able to saturate the CPU for any given socket to virtual
-            // network path. The alternative would be to use MPMC channels but that would almost certainly be
-            // a lot slower as it would involve more sync/atomic bottlenecks and probably extra malloc/free.
-            let mut kill_on_drop = ns.kill_on_drop.lock();
+            /*
+             * Start a task (not actual thread) for each CPU core.
+             *
+             * The async runtime is itself multithreaded but each packet takes a little bit of CPU to handle.
+             * This makes sure that when one packet is in processing the async runtime is immediately able to
+             * cue up another receiver for this socket.
+             */
+            let mut socket_associated_tasks = ns.socket_associated_tasks.lock();
             for _ in 0..self.num_listeners_per_socket {
                 let self2 = self.clone();
                 let socket = ns.socket.clone();
                 let interface = ns.interface.clone();
                 let local_socket = LocalSocket(Arc::downgrade(ns), self.local_socket_unique_id_counter.fetch_add(1, Ordering::SeqCst));
-                kill_on_drop.push(self.rt.spawn(async move {
+                socket_associated_tasks.push(self.rt.spawn(async move {
                     let core = self2.core();
                     loop {
                         let mut buf = core.get_packet_buffer();
@@ -122,11 +122,12 @@ impl ServiceImpl {
         return None;
     }
 
+    /// Background task to update per-interface/per-port bindings if system interface configuration changes.
     async fn udp_binding_task_main(self: Arc<Self>) {
         loop {
             let config = self.data.config().await;
 
-            if let Some(errors) = self.update_bindings_for_port(config.settings.primary_port, &config.settings.interface_prefix_blacklist, &config.settings.cidr_blacklist).await {
+            if let Some(errors) = self.update_udp_bindings_for_port(config.settings.primary_port, &config.settings.interface_prefix_blacklist, &config.settings.cidr_blacklist).await {
                 for e in errors.iter() {
                     println!("BIND ERROR: {} {} {}", e.0.to_string(), e.1.to_string(), e.2.to_string());
                 }
@@ -137,6 +138,7 @@ impl ServiceImpl {
         }
     }
 
+    /// Periodically calls do_background_tasks() in the ZeroTier core.
     async fn core_background_service_task_main(self: Arc<Self>) {
         tokio::time::sleep(Duration::from_secs(1)).await;
         loop {
@@ -149,16 +151,16 @@ impl SystemInterface for ServiceImpl {
     type LocalSocket = crate::service::LocalSocket;
     type LocalInterface = crate::localinterface::LocalInterface;
 
-    fn event_node_is_up(&self) {}
+    fn event(&self, event: Event) {
+        println!("{}", event.to_string());
+        match event {
+            _ => {}
+        }
+    }
 
-    fn event_node_is_down(&self) {}
+    fn user_message(&self, _source: &Identity, _message_type: u64, _message: &[u8]) {}
 
-    fn event_online_status_change(&self, online: bool) {}
-
-    fn event_user_message(&self, source: &Identity, message_type: u64, message: &[u8]) {}
-
-    fn event_security_warning(&self, warning: &str) {}
-
+    #[inline(always)]
     fn local_socket_is_valid(&self, socket: &Self::LocalSocket) -> bool {
         socket.0.strong_count() > 0
     }
@@ -223,12 +225,26 @@ impl SystemInterface for ServiceImpl {
         return false;
     }
 
-    fn check_path(&self, id: &Identity, endpoint: &Endpoint, local_socket: Option<&Self::LocalSocket>, local_interface: Option<&Self::LocalInterface>) -> bool {
-        true
+    fn check_path(&self, _id: &Identity, endpoint: &Endpoint, _local_socket: Option<&Self::LocalSocket>, _local_interface: Option<&Self::LocalInterface>) -> bool {
+        self.rt.block_on(async {
+            let config = self.data.config().await;
+            if let Some(pps) = config.physical.get(endpoint) {
+                !pps.blacklist
+            } else {
+                true
+            }
+        })
     }
 
     fn get_path_hints(&self, id: &Identity) -> Option<Vec<(Endpoint, Option<Self::LocalSocket>, Option<Self::LocalInterface>)>> {
-        None
+        self.rt.block_on(async {
+            let config = self.data.config().await;
+            if let Some(vns) = config.virtual_.get(&id.address) {
+                Some(vns.try_.iter().map(|ep| (ep.clone(), None, None)).collect())
+            } else {
+                None
+            }
+        })
     }
 
     #[inline(always)]

@@ -10,8 +10,8 @@ use dashmap::DashMap;
 use parking_lot::{Mutex, RwLock};
 
 use crate::error::InvalidParameterError;
+use crate::util::debug_event;
 use crate::util::gate::IntervalGate;
-use crate::util::zt_trace;
 use crate::vl1::path::Path;
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
@@ -195,32 +195,27 @@ impl<SI: SystemInterface> Node<SI> {
         })
     }
 
-    /// Get a packet buffer that will automatically check itself back into the pool on drop.
     #[inline(always)]
     pub fn get_packet_buffer(&self) -> PooledPacketBuffer {
         self.buffer_pool.get()
     }
 
-    /// Get a peer by address.
     pub fn peer(&self, a: Address) -> Option<Arc<Peer<SI>>> {
         self.peers.get(&a).map(|peer| peer.value().clone())
     }
 
-    /// Run background tasks and return desired delay until next call in milliseconds.
-    ///
-    /// This shouldn't be called concurrently by more than one loop. Doing so would be harmless
-    /// but would be a waste of compute cycles.
     pub fn do_background_tasks(&self, si: &SI) -> Duration {
         let mut intervals = self.intervals.lock();
         let tt = si.time_ticks();
 
+        assert!(ROOT_SYNC_INTERVAL_MS <= (ROOT_HELLO_INTERVAL / 2));
         if intervals.root_sync.gate(tt) {
             match &mut (*self.roots.lock()) {
                 RootInfo { roots, sets, sets_modified } => {
-                    // Sychronize root info with root sets info if the latter has changed.
+                    // Update internal data structures if the root set configuration has changed.
                     if *sets_modified {
                         *sets_modified = false;
-                        zt_trace!(si, "root sets modified, rescanning...");
+                        debug_event!(si, "root sets modified, synchronizing internal data structures");
 
                         let mut old_root_identities: Vec<Identity> = roots.drain().map(|r| r.0.identity.clone()).collect();
                         let mut new_root_identities = Vec::new();
@@ -279,11 +274,10 @@ impl<SI: SystemInterface> Node<SI> {
                     // they have, which is a behavior that differs from normal peers. This allows roots to
                     // e.g. see our IPv4 and our IPv6 address which can be important for us to learn our
                     // external addresses from them.
-                    assert!(ROOT_SYNC_INTERVAL_MS <= (ROOT_HELLO_INTERVAL / 2));
                     if intervals.root_hello.gate(tt) {
                         for (root, endpoints) in roots.iter() {
                             for ep in endpoints.iter() {
-                                zt_trace!(si, "sending HELLO to root {}", root.identity.address.to_string());
+                                debug_event!(si, "sending HELLO to root {} (root interval: {})", root.identity.address.to_string(), ROOT_HELLO_INTERVAL);
                                 root.send_hello(si, self, Some(ep));
                             }
                         }
@@ -300,6 +294,7 @@ impl<SI: SystemInterface> Node<SI> {
                             let _ = best.insert(r);
                         }
                     }
+                    debug_event!(si, "new best root: {}", best.clone().map_or("none".into(), |p| p.identity.address.to_string()));
                     *(self.best_root.write()) = best.cloned();
                 }
             }
@@ -338,23 +333,31 @@ impl<SI: SystemInterface> Node<SI> {
         Duration::from_millis((ROOT_SYNC_INTERVAL_MS.min(crate::vl1::whoisqueue::SERVICE_INTERVAL_MS).min(crate::vl1::path::SERVICE_INTERVAL_MS).min(crate::vl1::peer::SERVICE_INTERVAL_MS) as u64) / 2)
     }
 
-    /// Called when a packet is received on the physical wire.
     pub fn handle_incoming_physical_packet<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, source_endpoint: &Endpoint, source_local_socket: &SI::LocalSocket, source_local_interface: &SI::LocalInterface, mut data: PooledPacketBuffer) {
-        zt_trace!(si, "<< incoming packet from {} length {} via socket {}@{}", source_endpoint.to_string(), data.len(), source_local_socket.to_string(), source_local_interface.to_string());
+        debug_event!(
+            si,
+            "<< #{} ->{} from {} length {} via socket {}@{}",
+            data.bytes_fixed_at::<8>(0).map_or("????????????????".into(), |pid| zerotier_core_crypto::hex::to_string(pid)),
+            data.bytes_fixed_at::<5>(8).map_or("??????????".into(), |dest| zerotier_core_crypto::hex::to_string(dest)),
+            source_endpoint.to_string(),
+            data.len(),
+            source_local_socket.to_string(),
+            source_local_interface.to_string()
+        );
 
         if let Ok(fragment_header) = data.struct_mut_at::<FragmentHeader>(0) {
             if let Some(dest) = Address::from_bytes_fixed(&fragment_header.dest) {
                 let time_ticks = si.time_ticks();
                 if dest == self.identity.address {
-                    // Handle packets addressed to this node.
-
                     let path = self.canonical_path(source_endpoint, source_local_socket, source_local_interface, time_ticks);
                     path.log_receive_anything(time_ticks);
 
                     if fragment_header.is_fragment() {
-                        if let Some(assembled_packet) = path.receive_fragment(u64::from_ne_bytes(fragment_header.id), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks) {
+                        debug_event!(si, "-- #{:0>16x} fragment {} of {} received", u64::from_be_bytes(fragment_header.id), fragment_header.fragment_no(), fragment_header.total_fragments());
+
+                        if let Some(assembled_packet) = path.receive_fragment(fragment_header.packet_id(), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks) {
                             if let Some(frag0) = assembled_packet.frags[0].as_ref() {
-                                zt_trace!(si, "fragmented packet fully assembled!");
+                                debug_event!(si, "-- #{:0>16x} packet fully assembled!", u64::from_be_bytes(fragment_header.id));
 
                                 let packet_header = frag0.struct_at::<PacketHeader>(0);
                                 if packet_header.is_ok() {
@@ -371,7 +374,7 @@ impl<SI: SystemInterface> Node<SI> {
                         }
                     } else {
                         if let Ok(packet_header) = data.struct_at::<PacketHeader>(0) {
-                            zt_trace!(si, "parsing unfragmented packet");
+                            debug_event!(si, "-- #{:0>16x} is unfragmented", u64::from_be_bytes(fragment_header.id));
 
                             if let Some(source) = Address::from_bytes(&packet_header.src) {
                                 if let Some(peer) = self.peer(source) {
@@ -383,16 +386,17 @@ impl<SI: SystemInterface> Node<SI> {
                         }
                     }
                 } else {
-                    // Forward packets not destined for this node.
-                    // TODO: SHOULD we forward? Need a way to check.
-
                     if fragment_header.is_fragment() {
+                        debug_event!(si, "-- #{:0>16x} forwarding packet fragment to {}", u64::from_be_bytes(fragment_header.id), dest.to_string());
                         if fragment_header.increment_hops() > FORWARD_MAX_HOPS {
+                            debug_event!(si, "-- #{:0>16x} discarded: max hops exceeded!", u64::from_be_bytes(fragment_header.id));
                             return;
                         }
                     } else {
                         if let Ok(packet_header) = data.struct_mut_at::<PacketHeader>(0) {
+                            debug_event!(si, "-- #{:0>16x} forwarding packet to {}", u64::from_be_bytes(fragment_header.id), dest.to_string());
                             if packet_header.increment_hops() > FORWARD_MAX_HOPS {
+                                debug_event!(si, "-- #{:0>16x} discarded: max hops exceeded!", u64::from_be_bytes(fragment_header.id));
                                 return;
                             }
                         } else {
@@ -401,33 +405,23 @@ impl<SI: SystemInterface> Node<SI> {
                     }
 
                     if let Some(peer) = self.peer(dest) {
+                        // TODO: SHOULD we forward? Need a way to check.
                         peer.forward(si, time_ticks, data.as_ref());
+                        debug_event!(si, "-- #{:0>16x} forwarded successfully", u64::from_be_bytes(fragment_header.id));
                     }
                 }
             }
         }
     }
 
-    /// Get the current best root peer that we should use for WHOIS, relaying, etc.
     pub fn root(&self) -> Option<Arc<Peer<SI>>> {
         self.best_root.read().clone()
     }
 
-    /// Return true if a peer is a root.
     pub fn is_peer_root(&self, peer: &Peer<SI>) -> bool {
         self.roots.lock().roots.contains_key(peer)
     }
 
-    /// Add or update a root set.
-    ///
-    /// If no root set exists by this name, a new root set is added. If one already
-    /// exists it's checked against the new one and updated if the new set is valid
-    /// and should supersede it.
-    ///
-    /// Changes will take effect within a few seconds when root sets are next
-    /// examined and synchronized with peer and root list state.
-    ///
-    /// This returns true if the new root set was accepted and false otherwise.
     pub fn add_update_root_set(&self, rs: RootSet) -> bool {
         let mut roots = self.roots.lock();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
@@ -444,10 +438,14 @@ impl<SI: SystemInterface> Node<SI> {
         return false;
     }
 
-    /// Get the canonical Path object for a given endpoint and local socket information.
-    ///
-    /// This is a canonicalizing function that returns a unique path object for every tuple
-    /// of endpoint, local socket, and local interface.
+    pub fn has_roots_defined(&self) -> bool {
+        self.roots.lock().sets.iter().any(|rs| !rs.1.members.is_empty())
+    }
+
+    pub fn root_sets(&self) -> Vec<RootSet> {
+        self.roots.lock().sets.values().cloned().collect()
+    }
+
     pub fn canonical_path(&self, ep: &Endpoint, local_socket: &SI::LocalSocket, local_interface: &SI::LocalInterface, time_ticks: i64) -> Arc<Path<SI>> {
         // It's faster to do a read only lookup first since most of the time this will succeed. The second
         // version below this only gets invoked if it's a new path.
@@ -460,7 +458,7 @@ impl<SI: SystemInterface> Node<SI> {
         return self
             .paths
             .entry(ep.clone())
-            .or_insert_with(|| parking_lot::RwLock::new(HashMap::with_capacity(2)))
+            .or_insert_with(|| parking_lot::RwLock::new(HashMap::with_capacity(4)))
             .value_mut()
             .write()
             .entry(local_socket.clone())

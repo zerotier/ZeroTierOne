@@ -79,7 +79,7 @@ fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_siz
 }
 
 /// Attempt AEAD packet encryption and MAC validation. Returns message ID on success.
-fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8], header: &PacketHeader, fragments: &[Option<PooledPacketBuffer>], payload: &mut PacketBuffer) -> Option<u64> {
+fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8], header: &PacketHeader, fragments: &[Option<PooledPacketBuffer>], payload: &mut PacketBuffer) -> Option<MessageId> {
     packet_frag0_payload_bytes.get(0).map_or(None, |verb| {
         match header.cipher() {
             security_constants::CIPHER_NOCRYPT_POLY1305 => {
@@ -173,6 +173,9 @@ impl<SI: SystemInterface> Peer<SI> {
              * still want to avoid it. If the clock is at least marginally correct this will mean that message IDs
              * will remain unique for over a hundred years. Message IDs are kept secret as well because they are
              * encrypted along with a GMAC code to form an opaque 128-bit packet tag.
+             *
+             * Keep in mind that we re-key (when talking to new nodes) so not only are duplicate message IDs not
+             * particularly dangerous in SIV but they'd have to occur while using the same key.
              */
             Self {
                 identity: id,
@@ -192,8 +195,7 @@ impl<SI: SystemInterface> Peer<SI> {
 
     /// Get the next message ID for sending a message to this peer.
     #[inline(always)]
-    pub(crate) fn next_message_id(&self) -> u64 {
-        // SECURITY NOTE: uses the strictest memory ordering to avoid duplicate IDs on loose architectures like ARM64.
+    pub(crate) fn next_message_id(&self) -> MessageId {
         self.message_id_counter.fetch_add(1, Ordering::SeqCst)
     }
 

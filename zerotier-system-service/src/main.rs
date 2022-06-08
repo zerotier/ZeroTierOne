@@ -79,13 +79,13 @@ Advanced Operations:
     verify <?identity> <@file> <sig>       Verify a signature
 
   rootset <command> [args]
-·   trust <@root set>                      Add or update a root set
-·   untrust <root set name>                Stop using a root set
+·   add <@root set>                        Add or update a root set
+·   remove <root set name>                 Stop using a root set
 ·   list                                   List root sets in use
     sign <path> <?identity secret>         Sign a root set with an identity
     verify <path>                          Load and verify a root set
     marshal <path>                         Dump root set as binary to stdout
-    default                                Dump the default root set as JSON
+    restoredefault                         (Re-)add built-in default root set
 
   service                                  Start local service
    (usually not invoked manually)
@@ -196,13 +196,13 @@ fn main() {
             )
             .subcommand(
                 Command::new("rootset")
-                    .subcommand(Command::new("trust").arg(Arg::new("path").index(1).required(true)))
-                    .subcommand(Command::new("untrust").arg(Arg::new("name").index(1).required(true)))
+                    .subcommand(Command::new("add").arg(Arg::new("path").index(1).required(true)))
+                    .subcommand(Command::new("remove").arg(Arg::new("name").index(1).required(true)))
                     .subcommand(Command::new("list"))
                     .subcommand(Command::new("sign").arg(Arg::new("path").index(1).required(true)).arg(Arg::new("secret").index(2).required(true)))
                     .subcommand(Command::new("verify").arg(Arg::new("path").index(1).required(true)))
                     .subcommand(Command::new("marshal").arg(Arg::new("path").index(1).required(true)))
-                    .subcommand(Command::new("default")),
+                    .subcommand(Command::new("restoredefault")),
             )
             .override_help(help.as_str())
             .override_usage("")

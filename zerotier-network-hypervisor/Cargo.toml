@@ -12,8 +12,8 @@ codegen-units = 1
 panic = 'abort'
 
 [features]
-default = ["zt_trace"]
-zt_trace = []
+default = ["debug_events"]
+debug_events = []
 
 [dependencies]
 zerotier-core-crypto = { path = "../zerotier-core-crypto" }

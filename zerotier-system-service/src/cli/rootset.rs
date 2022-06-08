@@ -11,9 +11,9 @@ use zerotier_network_hypervisor::vl1::RootSet;
 
 pub async fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
     match cmd_args.subcommand() {
-        Some(("trust", sc_args)) => todo!(),
+        Some(("add", sc_args)) => todo!(),
 
-        Some(("untrust", sc_args)) => todo!(),
+        Some(("remove", sc_args)) => todo!(),
 
         Some(("list", _)) => todo!(),
 
@@ -106,7 +106,7 @@ pub async fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
             }
         }
 
-        Some(("default", _)) => {
+        Some(("restoredefault", _)) => {
             let _ = std::io::stdout().write_all(crate::utils::to_json_pretty(&RootSet::zerotier_default()).as_bytes());
         }
 

@@ -25,7 +25,7 @@ pub struct Path<SI: SystemInterface> {
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     create_time_ticks: i64,
-    fragmented_packets: Mutex<HashMap<u64, FragmentedPacket, PacketIdHasher>>,
+    fragmented_packets: Mutex<HashMap<PacketId, FragmentedPacket, PacketIdHasher>>,
 }
 
 impl<SI: SystemInterface> Path<SI> {
@@ -43,7 +43,7 @@ impl<SI: SystemInterface> Path<SI> {
 
     /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.
     /// This returns None if more fragments are needed to assemble the packet.
-    pub(crate) fn receive_fragment(&self, packet_id: u64, fragment_no: u8, fragment_expecting_count: u8, packet: PooledPacketBuffer, time_ticks: i64) -> Option<FragmentedPacket> {
+    pub(crate) fn receive_fragment(&self, packet_id: PacketId, fragment_no: u8, fragment_expecting_count: u8, packet: PooledPacketBuffer, time_ticks: i64) -> Option<FragmentedPacket> {
         let mut fp = self.fragmented_packets.lock();
 
         // Discard some old waiting packets if the total incoming fragments for a path exceeds a

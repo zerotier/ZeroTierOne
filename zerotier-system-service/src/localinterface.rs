@@ -20,22 +20,27 @@ impl LocalInterface {
         let l = nb.len();
         assert!(l <= 16); // do any *nix OSes have device names longer than 16 bytes?
         tmp[..l].copy_from_slice(&nb[..l]);
-        Self(u128::from_le_bytes(tmp))
+        Self(u128::from_be_bytes(tmp))
     }
 }
 
 impl ToString for LocalInterface {
     #[cfg(unix)]
     fn to_string(&self) -> String {
-        let b = self.0.to_le_bytes();
+        let b = self.0.to_be_bytes();
         let mut l = 0;
-        for _ in 0..16 {
-            if b[l] > 0 {
+        for bb in b.iter() {
+            if *bb > 0 {
                 l += 1;
             } else {
                 break;
             }
         }
         String::from_utf8_lossy(&b[..l]).to_string()
+    }
+
+    #[cfg(windows)]
+    fn to_string(&self) -> String {
+        zerotier_core_crypto::hex::to_string(&self.0.to_be_bytes())
     }
 }

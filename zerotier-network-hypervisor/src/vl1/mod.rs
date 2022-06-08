@@ -23,7 +23,7 @@ pub use endpoint::Endpoint;
 pub use identity::*;
 pub use inetaddress::{InetAddress, IpScope};
 pub use mac::MAC;
-pub use node::{InnerProtocolInterface, Node, SystemInterface};
+pub use node::SystemInterface;
 pub use path::Path;
 pub use peer::Peer;
 pub use rootset::{Root, RootSet};

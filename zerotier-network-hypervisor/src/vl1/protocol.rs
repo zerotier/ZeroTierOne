@@ -58,6 +58,12 @@ pub type PooledPacketBuffer = crate::util::pool::Pooled<PacketBuffer, PacketBuff
 /// Source for instances of PacketBuffer
 pub type PacketBufferPool = crate::util::pool::Pool<PacketBuffer, PacketBufferFactory>;
 
+/// 64-bit packet (outer) ID.
+pub type PacketId = u64;
+
+/// 64-bit message ID (obtained after AEAD decryption).
+pub type MessageId = u64;
+
 pub mod verbs {
     pub const VL1_NOP: u8 = 0x00;
     pub const VL1_HELLO: u8 = 0x01;
@@ -290,6 +296,11 @@ pub struct PacketHeader {
 
 impl PacketHeader {
     #[inline(always)]
+    pub fn packet_id(&self) -> PacketId {
+        u64::from_ne_bytes(self.id)
+    }
+
+    #[inline(always)]
     pub fn cipher(&self) -> u8 {
         self.flags_cipher_hops & packet_constants::FLAGS_FIELD_MASK_CIPHER
     }
@@ -352,6 +363,11 @@ pub struct FragmentHeader {
 }
 
 impl FragmentHeader {
+    #[inline(always)]
+    pub fn packet_id(&self) -> PacketId {
+        u64::from_ne_bytes(self.id)
+    }
+
     #[inline(always)]
     pub fn is_fragment(&self) -> bool {
         self.fragment_indicator == packet_constants::FRAGMENT_INDICATOR

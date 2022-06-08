@@ -24,11 +24,13 @@ lazy_static! {
 }
 
 /// Get milliseconds since unix epoch.
+#[inline(always)]
 pub fn ms_since_epoch() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
 }
 
 /// Get milliseconds since an arbitrary time in the past, guaranteed to monotonically increase.
+#[inline(always)]
 pub fn ms_monotonic() -> i64 {
     Instant::now().duration_since(*STARTUP_INSTANT).as_millis() as i64
 }

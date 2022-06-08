@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use zerotier_network_hypervisor::vl1::{Address, InetAddress};
+use zerotier_network_hypervisor::vl1::{Address, Endpoint, InetAddress};
 use zerotier_network_hypervisor::vl2::NetworkId;
 
 /// A list of unassigned or obsolete ports under 1024 that could possibly be squatted.
@@ -34,12 +34,12 @@ impl Default for PhysicalPathSettings {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
-pub struct VirtualNetworkSettings {
+pub struct VirtualPathSettings {
     #[serde(rename = "try")]
-    pub try_: Vec<InetAddress>,
+    pub try_: Vec<Endpoint>,
 }
 
-impl Default for VirtualNetworkSettings {
+impl Default for VirtualPathSettings {
     fn default() -> Self {
         Self { try_: Vec::new() }
     }
@@ -132,9 +132,9 @@ impl GlobalSettings {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
 pub struct Config {
-    pub physical: BTreeMap<InetAddress, PhysicalPathSettings>,
+    pub physical: BTreeMap<Endpoint, PhysicalPathSettings>,
     #[serde(rename = "virtual")]
-    pub virtual_: BTreeMap<Address, VirtualNetworkSettings>,
+    pub virtual_: BTreeMap<Address, VirtualPathSettings>,
     pub network: BTreeMap<NetworkId, NetworkSettings>,
     pub settings: GlobalSettings,
 }
