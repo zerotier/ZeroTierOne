@@ -160,7 +160,7 @@ std::string ssoResponseTemplate = R"""(
         <title>Network SSO Login {{ networkId }}</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style type=\"text/css\">
+        <style type="text/css">
          html,body {
              background: #eeeeee;
              margin: 0;
