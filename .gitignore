@@ -125,7 +125,6 @@ attic/world/mkworld
 workspace/
 workspace2/
 zeroidc/target/
-tmp/
 
 #snapcraft specifics
 /parts/
