@@ -119,8 +119,6 @@
 //! tracing = "0.1"
 //! ```
 //!
-//! *Compiler support: [requires `rustc` 1.42+][msrv]*
-//!
 //! ## Recording Spans and Events
 //!
 //! Spans and events are recorded using macros.
@@ -437,9 +435,9 @@
 //! [target]: Metadata::target
 //! [parent span]: span::Attributes::parent
 //! [determined contextually]: span::Attributes::is_contextual
-//! [`fmt::Debug`]: https://doc.rust-lang.org/std/fmt/trait.Debug.html
-//! [`fmt::Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
-//! [fmt]: https://doc.rust-lang.org/std/fmt/#usage
+//! [`fmt::Debug`]: std::fmt::Debug
+//! [`fmt::Display`]: std::fmt::Display
+//! [fmt]: std::fmt#usage
 //! [`Empty`]: field::Empty
 //!
 //! ### Shorthand Macros
@@ -466,7 +464,6 @@
 //! [`info_span!`]: info_span!
 //! [`warn_span!`]: warn_span!
 //! [`error_span!`]: error_span!
-//! [`Level`]: Level
 //!
 //! ### For `log` Users
 //!
@@ -812,7 +809,7 @@
 //!
 //!   ```toml
 //!   [dependencies]
-//!   tracing = { version = "0.1.34", default-features = false }
+//!   tracing = { version = "0.1.35", default-features = false }
 //!   ```
 //!
 //! <pre class="ignore" style="white-space:normal;font:inherit;">
@@ -895,7 +892,7 @@
 //! [flags]: #crate-feature-flags
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg), deny(rustdoc::broken_intra_doc_links))]
-#![doc(html_root_url = "https://docs.rs/tracing/0.1.34")]
+#![doc(html_root_url = "https://docs.rs/tracing/0.1.35")]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/tokio-rs/tracing/master/assets/logo-type.png",
     issue_tracker_base_url = "https://github.com/tokio-rs/tracing/issues/"
@@ -968,13 +965,8 @@ pub mod subscriber;
 #[doc(hidden)]
 pub mod __macro_support {
     pub use crate::callsite::Callsite;
-    use crate::stdlib::{
-        fmt,
-        sync::atomic::{AtomicUsize, Ordering},
-    };
     use crate::{subscriber::Interest, Metadata};
     pub use core::concat;
-    use tracing_core::Once;
 
     /// Callsite implementation used by macro-generated code.
     ///
@@ -984,138 +976,70 @@ pub mod __macro_support {
     /// by the `tracing` macros, but it is not part of the stable versioned API.
     /// Breaking changes to this module may occur in small-numbered versions
     /// without warning.
-    pub struct MacroCallsite {
-        interest: AtomicUsize,
-        meta: &'static Metadata<'static>,
-        registration: Once,
+    pub use tracing_core::callsite::DefaultCallsite as MacroCallsite;
+
+    /// /!\ WARNING: This is *not* a stable API! /!\
+    /// This function, and all code contained in the `__macro_support` module, is
+    /// a *private* API of `tracing`. It is exposed publicly because it is used
+    /// by the `tracing` macros, but it is not part of the stable versioned API.
+    /// Breaking changes to this module may occur in small-numbered versions
+    /// without warning.
+    pub fn __is_enabled(meta: &Metadata<'static>, interest: Interest) -> bool {
+        interest.is_always() || crate::dispatcher::get_default(|default| default.enabled(meta))
     }
 
-    impl MacroCallsite {
-        /// Returns a new `MacroCallsite` with the specified `Metadata`.
-        ///
-        /// /!\ WARNING: This is *not* a stable API! /!\
-        /// This method, and all code contained in the `__macro_support` module, is
-        /// a *private* API of `tracing`. It is exposed publicly because it is used
-        /// by the `tracing` macros, but it is not part of the stable versioned API.
-        /// Breaking changes to this module may occur in small-numbered versions
-        /// without warning.
-        pub const fn new(meta: &'static Metadata<'static>) -> Self {
-            Self {
-                interest: AtomicUsize::new(0xDEAD),
-                meta,
-                registration: Once::new(),
-            }
-        }
-
-        /// Registers this callsite with the global callsite registry.
-        ///
-        /// If the callsite is already registered, this does nothing.
-        ///
-        /// /!\ WARNING: This is *not* a stable API! /!\
-        /// This method, and all code contained in the `__macro_support` module, is
-        /// a *private* API of `tracing`. It is exposed publicly because it is used
-        /// by the `tracing` macros, but it is not part of the stable versioned API.
-        /// Breaking changes to this module may occur in small-numbered versions
-        /// without warning.
-        #[inline(never)]
-        // This only happens once (or if the cached interest value was corrupted).
-        #[cold]
-        pub fn register(&'static self) -> Interest {
-            self.registration
-                .call_once(|| crate::callsite::register(self));
-            match self.interest.load(Ordering::Relaxed) {
-                0 => Interest::never(),
-                2 => Interest::always(),
-                _ => Interest::sometimes(),
-            }
-        }
-
-        /// Returns the callsite's cached Interest, or registers it for the
-        /// first time if it has not yet been registered.
-        ///
-        /// /!\ WARNING: This is *not* a stable API! /!\
-        /// This method, and all code contained in the `__macro_support` module, is
-        /// a *private* API of `tracing`. It is exposed publicly because it is used
-        /// by the `tracing` macros, but it is not part of the stable versioned API.
-        /// Breaking changes to this module may occur in small-numbered versions
-        /// without warning.
-        #[inline]
-        pub fn interest(&'static self) -> Interest {
-            match self.interest.load(Ordering::Relaxed) {
-                0 => Interest::never(),
-                1 => Interest::sometimes(),
-                2 => Interest::always(),
-                _ => self.register(),
-            }
-        }
-
-        pub fn is_enabled(&self, interest: Interest) -> bool {
-            interest.is_always()
-                || crate::dispatcher::get_default(|default| default.enabled(self.meta))
-        }
-
-        #[inline]
-        #[cfg(feature = "log")]
-        pub fn disabled_span(&self) -> crate::Span {
-            crate::Span::new_disabled(self.meta)
-        }
-
-        #[inline]
-        #[cfg(not(feature = "log"))]
-        pub fn disabled_span(&self) -> crate::Span {
-            crate::Span::none()
-        }
-
-        #[cfg(feature = "log")]
-        pub fn log(
-            &self,
-            logger: &'static dyn log::Log,
-            log_meta: log::Metadata<'_>,
-            values: &tracing_core::field::ValueSet<'_>,
-        ) {
-            let meta = self.metadata();
-            logger.log(
-                &crate::log::Record::builder()
-                    .file(meta.file())
-                    .module_path(meta.module_path())
-                    .line(meta.line())
-                    .metadata(log_meta)
-                    .args(format_args!(
-                        "{}",
-                        crate::log::LogValueSet {
-                            values,
-                            is_first: true
-                        }
-                    ))
-                    .build(),
-            );
-        }
+    /// /!\ WARNING: This is *not* a stable API! /!\
+    /// This function, and all code contained in the `__macro_support` module, is
+    /// a *private* API of `tracing`. It is exposed publicly because it is used
+    /// by the `tracing` macros, but it is not part of the stable versioned API.
+    /// Breaking changes to this module may occur in small-numbered versions
+    /// without warning.
+    #[inline]
+    #[cfg(feature = "log")]
+    pub fn __disabled_span(meta: &'static Metadata<'static>) -> crate::Span {
+        crate::Span::new_disabled(meta)
     }
 
-    impl Callsite for MacroCallsite {
-        fn set_interest(&self, interest: Interest) {
-            let interest = match () {
-                _ if interest.is_never() => 0,
-                _ if interest.is_always() => 2,
-                _ => 1,
-            };
-            self.interest.store(interest, Ordering::SeqCst);
-        }
-
-        #[inline(always)]
-        fn metadata(&self) -> &Metadata<'static> {
-            self.meta
-        }
+    /// /!\ WARNING: This is *not* a stable API! /!\
+    /// This function, and all code contained in the `__macro_support` module, is
+    /// a *private* API of `tracing`. It is exposed publicly because it is used
+    /// by the `tracing` macros, but it is not part of the stable versioned API.
+    /// Breaking changes to this module may occur in small-numbered versions
+    /// without warning.
+    #[inline]
+    #[cfg(not(feature = "log"))]
+    pub fn __disabled_span(_: &'static Metadata<'static>) -> crate::Span {
+        crate::Span::none()
     }
 
-    impl fmt::Debug for MacroCallsite {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            f.debug_struct("MacroCallsite")
-                .field("interest", &self.interest)
-                .field("meta", &self.meta)
-                .field("registration", &self.registration)
-                .finish()
-        }
+    /// /!\ WARNING: This is *not* a stable API! /!\
+    /// This function, and all code contained in the `__macro_support` module, is
+    /// a *private* API of `tracing`. It is exposed publicly because it is used
+    /// by the `tracing` macros, but it is not part of the stable versioned API.
+    /// Breaking changes to this module may occur in small-numbered versions
+    /// without warning.
+    #[cfg(feature = "log")]
+    pub fn __tracing_log(
+        meta: &Metadata<'static>,
+        logger: &'static dyn log::Log,
+        log_meta: log::Metadata<'_>,
+        values: &tracing_core::field::ValueSet<'_>,
+    ) {
+        logger.log(
+            &crate::log::Record::builder()
+                .file(meta.file())
+                .module_path(meta.module_path())
+                .line(meta.line())
+                .metadata(log_meta)
+                .args(format_args!(
+                    "{}",
+                    crate::log::LogValueSet {
+                        values,
+                        is_first: true
+                    }
+                ))
+                .build(),
+        );
     }
 }
 
