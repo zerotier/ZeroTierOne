@@ -111,18 +111,20 @@ impl AesGmacSiv {
     #[inline(always)]
     pub fn encrypt_init(&mut self, iv: &[u8]) {
         self.tag[0..8].copy_from_slice(iv);
-        self.tag[8..16].fill(0);
-        let _ = self.gmac.replace(Crypter::new(aes_gcm_by_key_size(self.k0.len()), Mode::Encrypt, self.k0.as_slice(), Some(&self.tag)).unwrap());
+        self.tag[8..12].fill(0);
+        let _ = self.gmac.replace(Crypter::new(aes_gcm_by_key_size(self.k0.len()), Mode::Encrypt, self.k0.as_slice(), Some(&self.tag[0..12])).unwrap());
     }
 
     /// Set additional authenticated data (data to be authenticated but not encrypted).
     /// This can currently only be called once. Multiple calls will result in corrupt data.
     #[inline(always)]
     pub fn encrypt_set_aad(&mut self, data: &[u8]) {
-        let _ = self.gmac.as_mut().unwrap().aad_update(data);
-        let pad = data.len() & 0xf;
+        let gmac = self.gmac.as_mut().unwrap();
+        let _ = gmac.aad_update(data);
+        let mut pad = data.len() & 0xf;
         if pad != 0 {
-            let _ = self.gmac.as_mut().unwrap().aad_update(&crate::ZEROES[0..(16 - pad)]);
+            pad = 16 - pad;
+            let _ = gmac.aad_update(&crate::ZEROES[0..pad]);
         }
     }
 
@@ -139,15 +141,18 @@ impl AesGmacSiv {
         let gmac = self.gmac.as_mut().unwrap();
         let _ = gmac.finalize(&mut self.tmp);
         let _ = gmac.get_tag(&mut self.tmp);
-        unsafe {
-            // tag[8..16] = tmp[0..8] ^ tmp[8..16]
-            let tmp = self.tmp.as_mut_ptr().cast::<u64>();
-            *self.tag.as_mut_ptr().cast::<u64>().offset(1) = *tmp ^ *tmp.offset(1);
-        }
+        self.tag[8] = self.tmp[0] ^ self.tmp[8];
+        self.tag[9] = self.tmp[1] ^ self.tmp[9];
+        self.tag[10] = self.tmp[2] ^ self.tmp[10];
+        self.tag[11] = self.tmp[3] ^ self.tmp[11];
+        self.tag[12] = self.tmp[4] ^ self.tmp[12];
+        self.tag[13] = self.tmp[5] ^ self.tmp[13];
+        self.tag[14] = self.tmp[6] ^ self.tmp[14];
+        self.tag[15] = self.tmp[7] ^ self.tmp[15];
         let mut tag_tmp = [0_u8; 32];
         let _ = Crypter::new(aes_ecb_by_key_size(self.k1.len()), Mode::Encrypt, self.k1.as_slice(), None).unwrap().update(&self.tag, &mut tag_tmp);
         self.tag.copy_from_slice(&tag_tmp[0..16]);
-        self.tmp.copy_from_slice(&self.tag);
+        self.tmp.copy_from_slice(&tag_tmp[0..16]);
         self.tmp[12] &= 0x7f;
         let _ = self.ctr.replace(Crypter::new(aes_ctr_by_key_size(self.k1.len()), Mode::Encrypt, self.k1.as_slice(), Some(&self.tmp)).unwrap());
     }
@@ -181,12 +186,11 @@ impl AesGmacSiv {
         let _ = Crypter::new(aes_ecb_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), None).unwrap().update(&self.tag, &mut tag_tmp);
         self.tag.copy_from_slice(&tag_tmp[0..16]);
         unsafe {
-            // tmp[0..8] = tag[0..8], tmp[8..16] = 0
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
             *tmp = *self.tag.as_mut_ptr().cast::<u64>();
             *tmp.offset(1) = 0;
         }
-        let _ = self.gmac.replace(Crypter::new(aes_gcm_by_key_size(self.k0.len()), Mode::Encrypt, self.k0.as_slice(), Some(&self.tmp)).unwrap());
+        let _ = self.gmac.replace(Crypter::new(aes_gcm_by_key_size(self.k0.len()), Mode::Encrypt, self.k0.as_slice(), Some(&self.tmp[0..12])).unwrap());
     }
 
     /// Initialize this cipher for decryption.

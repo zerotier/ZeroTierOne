@@ -183,9 +183,9 @@ impl AesGmacSiv {
     #[inline(always)]
     pub fn encrypt_init(&mut self, iv: &[u8]) {
         self.tag[0..8].copy_from_slice(iv);
-        self.tag[8..16].fill(0);
+        self.tag[8..12].fill(0);
         unsafe {
-            CCCryptorGCMSetIV(self.gmac, self.tag.as_ptr().cast(), 16);
+            CCCryptorGCMSetIV(self.gmac, self.tag.as_ptr().cast(), 12);
         }
     }
 
@@ -271,8 +271,8 @@ impl AesGmacSiv {
             CCCryptorUpdate(self.ecb_dec, self.tag.as_ptr().cast(), 16, self.tag.as_mut_ptr().cast(), 16, &mut data_out_written);
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
             *tmp = *self.tag.as_mut_ptr().cast::<u64>();
-            *tmp.offset(1) = 0;
-            CCCryptorGCMSetIV(self.gmac, self.tmp.as_ptr().cast(), 16);
+            *tmp.add(1) = 0;
+            CCCryptorGCMSetIV(self.gmac, self.tmp.as_ptr().cast(), 12);
         }
     }
 

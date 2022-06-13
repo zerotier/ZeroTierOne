@@ -4,6 +4,9 @@ version = "0.5.0"
 edition = "2021"
 license = "BSD"
 
+#[dependencies]
+#openssl = "^0"
+
 [target."cfg(not(any(target_os = \"macos\", target_os = \"ios\")))".dependencies]
 openssl = "^0"
 
