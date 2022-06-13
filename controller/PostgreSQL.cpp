@@ -191,7 +191,7 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 		Utils::unhex(ssoPskHex, _ssoPsk, sizeof(_ssoPsk));
 	}
 	const char *redisMemberStatus = getenv("ZT_REDIS_MEMBER_STATUS");
-	if (redisMemberStatus) {
+	if (redisMemberStatus && (strcmp(redisMemberStatus, "true") == 0)) {
 	    _redisMemberStatus = true;
 		fprintf(stderr, "Using redis for member status\n");
 	}
