@@ -1,19 +1,15 @@
 AES-GMAC-SIV
 ======
 
-Rust implementation of AES-GMAC-SIV, a FIPS-compliant SIV mode for AES-256, with underlying cryptographic primitives provided by either macOS CryptoCore, OpenSSL, or (eventually, not implemented yet) WinCrypt. The appropriate API is automatically selected at compile time.
+This is a Rust implementation of AES-GMAC-SIV, a FIPS-compliant SIV mode for AES-256, with underlying cryptographic primitives provided by either macOS CryptoCore, OpenSSL, or (eventually, not implemented yet) WinCrypt. The appropriate API is automatically selected at compile time.
 
-This is designed for use with the ZeroTier protocol but could be used for other message based protocols where a secure authenticated cipher construction is needed and where a FIPS compliant mode with less catastrophic failure modes than AES-GCM is desired.
+This is designed for use with the ZeroTier protocol but could be used for other message based protocols where a secure authenticated cipher construction is needed.
 
 ## Introduction
 
-AES-GMAC-SIV is a "synthetic IV" (SIV) cipher construction implemented using only FIPS and NIST accepted cryptographic building blocks: AES-CTR, AES-ECB (one block), and GMAC (the MAC component of GCM).
+AES-GMAC-SIV is a "synthetic IV" (SIV) cipher construction implemented using only FIPS and NIST approved cryptographic building blocks: AES and GMAC (the MAC component of GCM). It can for FIPS purposes be described as "AES-CTR authenticated with GMAC" both of which are permitted algorithms. It was created because while similar to [AES-GCM-SIV](https://en.wikipedia.org/wiki/AES-GCM-SIV) that mode uses a non-standard MAC called POLYVAL in place of GMAC. POLYVAL is just GMAC in little-endian, but the fact that it is not standard GMAC means it's not found in most cryptographic libraries and is not approved by FIPS and most other cryptographic standards.
 
-AES-GMAC-SIV is similar to [AES-GCM-SIV](https://en.wikipedia.org/wiki/AES-GCM-SIV), but that mode uses a non-standard MAC called POLYVAL in place of GMAC. POLYVAL is just GMAC in little-endian, but the fact that it is not standard GMAC means it's not found in most cryptographic libraries and is not approved by FIPS and most other cryptographic standards. The only real difference here is the use of standard GMAC and a 64-bit salt to match ZeroTier's use of a 64-bit message ID counter as an initialization vector.
-
-The use of standard AES and GMAC also means that the AES-GCM oriented hardware accelerators on most larger desktop, server, and mobile CPUs can be used. This results in excellent performance, often beating ChaCha20/Poly1305 where hardware acceleration is available.
-
-## Why SIV? Why not just GCM?
+## Why SIV?
 
 Stream ciphers like AES-CTR, ChaCha20, and others require a number called an initialization vector (IV) for each use. These and most other stream ciphers work by XORing a key stream with plaintext, so if an IV is used more than once security is compromised. Since XOR is commutative, if two different messages are encrypted with the same key stream a simple XOR can reveal that key stream and decrypt both messages. This is a common pitfall with any XOR based symmetric cipher construction.
 
