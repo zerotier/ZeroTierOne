@@ -6,21 +6,11 @@ mod impl_macos;
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 mod impl_openssl;
 
-//#[cfg(not(any(target_os = "macos", target_os = "ios")))]
-//mod impl_gcrypt;
-
-//mod impl_openssl;
-
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub use impl_macos::{AesCtr, AesGmacSiv};
 
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 pub use impl_openssl::{AesCtr, AesGmacSiv};
-
-//#[cfg(not(any(target_os = "macos", target_os = "ios")))]
-//pub use impl_gcrypt::{AesCtr, AesGmacSiv};
-
-//pub use impl_openssl::{AesCtr, AesGmacSiv};
 
 pub(crate) const ZEROES: [u8; 16] = [0_u8; 16];
 
