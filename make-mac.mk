@@ -2,7 +2,7 @@ CC=clang
 CXX=clang++
 TOPDIR=$(shell PWD)
 
-INCLUDES=-I$(shell PWD)/zeroidc/target
+INCLUDES=-I$(shell PWD)/zeroidc/target -isystem $(TOPDIR)/ext
 DEFS=
 LIBS=
 ARCH_FLAGS=-arch x86_64 -arch arm64 
@@ -47,10 +47,10 @@ endif
 # Use fast ASM Salsa20/12 for x64 processors
 DEFS+=-DZT_USE_X64_ASM_SALSA2012
 CORE_OBJS+=ext/x64-salsa2012-asm/salsa2012.o
-CXXFLAGS=$(CFLAGS) -std=c++11 -stdlib=libc++
+CXXFLAGS=$(CFLAGS) -std=c++17 -stdlib=libc++
 
 # Build miniupnpc and nat-pmp as included libraries -- extra defs are required for these sources
-DEFS+=-DMACOSX -DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -D_DARWIN_C_SOURCE -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -DOS_STRING=\"Darwin/15.0.0\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+DEFS+=-DMACOSX -DZT_SSO_SUPPORTED -DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -D_DARWIN_C_SOURCE -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -DOS_STRING=\"Darwin/15.0.0\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
 ONE_OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o osdep/PortMapper.o
 ifeq ($(ZT_CONTROLLER),1)
 	MACOS_VERSION_MIN=10.15
@@ -153,6 +153,10 @@ selftest: $(CORE_OBJS) $(ONE_OBJS) selftest.o
 	$(STRIP) zerotier-selftest
 
 zerotier-selftest: selftest
+
+# Make compile_commands.json for clangd editor extensions. Probably works on Linux too.
+compile_commands: FORCE
+	compiledb make ZT_DEBUG=1
 
 # Requires Packages: http://s.sudre.free.fr/Software/Packages/about.html
 mac-dist-pkg: FORCE

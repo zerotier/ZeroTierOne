@@ -115,7 +115,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 		RR->t->credentialRejected(tPtr,com,"old");
 		return ADD_REJECTED;
 	}
-	if ((newts == oldts)&&(_com == com))
+	if (_com == com)
 		return ADD_ACCEPTED_REDUNDANT;
 
 	switch(com.verify(RR,tPtr)) {
@@ -123,6 +123,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 			RR->t->credentialRejected(tPtr,com,"invalid");
 			return ADD_REJECTED;
 		case 0:
+			//printf("%.16llx %.10llx replacing COM %lld with %lld\n", com.networkId(), com.issuedTo().toInt(), _com.timestamp(), com.timestamp()); fflush(stdout);
 			_com = com;
 			return ADD_ACCEPTED_NEW;
 		case 1:

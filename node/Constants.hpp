@@ -50,16 +50,17 @@
 #define __UNIX_LIKE__
 #endif
 #include <endian.h>
-
 #if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64) || defined(__aarch64__))
-#define OIDC_SUPPORTED 1
-#else
-#define OIDC_SUPPORTED 0
+#ifdef ZT_SSO_SUPPORTED
+#define ZT_SSO_ENABLED 1
+#endif
 #endif
 #endif
 
 #ifdef __APPLE__
-#define OIDC_SUPPORTED 1
+#ifdef ZT_SSO_SUPPORTED
+#define ZT_SSO_ENABLED 1
+#endif
 #define likely(x) __builtin_expect((x),1)
 #define unlikely(x) __builtin_expect((x),0)
 #include <TargetConditionals.h>
@@ -73,7 +74,9 @@
 #endif
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
-#define OIDC_SUPPORTED 0
+#ifdef ZT_SSO_SUPPORTED
+#define ZT_SSO_ENABLED 0
+#endif
 #ifndef __UNIX_LIKE__
 #define __UNIX_LIKE__
 #endif
@@ -89,7 +92,9 @@
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
-#define OIDC_SUPPORTED 1
+#ifdef ZT_SSO_SUPPORTED
+#define ZT_SSO_ENABLED 1
+#endif
 #ifndef __WINDOWS__
 #define __WINDOWS__
 #endif
@@ -368,9 +373,14 @@
 #define ZT_QOS_TABLE_SIZE ((ZT_QOS_MAX_PACKET_SIZE * 8) / (64 + 16))
 
 /**
- * Maximum number of outgoing packets we monitor for QoS information
+ * Maximum number of packets we monitor for ACK information at any given time
  */
-#define ZT_QOS_MAX_OUTSTANDING_RECORDS (1024 * 16)
+#define ZT_ACK_MAX_PENDING_RECORDS (32 * 1024)
+
+/**
+ * Maximum number of packets we monitor for QoS information at any given time
+ */
+#define ZT_QOS_MAX_PENDING_RECORDS (ZT_QOS_TABLE_SIZE * 3)
 
 /**
  * Interval used for rate-limiting the computation of path quality estimates.
@@ -525,14 +535,14 @@
 #define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 8
 
 /**
- * Time horizon for VERB_NETWORK_CREDENTIALS cutoff
+ * Rate limit for network credential pushes from peer.
  */
-#define ZT_PEER_CREDENTIALS_CUTOFF_TIME 60000
+#define ZT_PEER_CREDENTIALS_RATE_LIMIT 1000
 
 /**
- * Maximum number of VERB_NETWORK_CREDENTIALS within cutoff time
+ * Rate limit for responding to peer credential requests
  */
-#define ZT_PEER_CREDENTIALS_CUTOFF_LIMIT 15
+#define ZT_PEER_CREDENTIALS_REQUEST_RATE_LIMIT 1000
 
 /**
  * WHOIS rate limit (we allow these to be pretty fast)
@@ -571,13 +581,13 @@
  * Anything below this value gets into thrashing territory since we divide
  * this value by ZT_BOND_ECHOS_PER_FAILOVER_INTERVAL to send ECHOs often.
  */
-#define ZT_BOND_FAILOVER_MIN_INTERVAL 250
+#define ZT_BOND_FAILOVER_MIN_INTERVAL 500
 
 /**
  * How many times per failover interval that an ECHO is sent. This should be
  * at least 2. Anything more then 4 starts to increase overhead significantly.
  */
-#define ZT_BOND_ECHOS_PER_FAILOVER_INTERVAL 4
+#define ZT_BOND_ECHOS_PER_FAILOVER_INTERVAL 3
 
 /**
  * A defensive timer to prevent path quality metrics from being

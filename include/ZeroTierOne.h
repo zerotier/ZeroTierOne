@@ -1079,7 +1079,8 @@ enum ZT_Architecture
 	ZT_ARCHITECTURE_DOTNET_CLR = 13,
 	ZT_ARCHITECTURE_JAVA_JVM = 14,
 	ZT_ARCHITECTURE_WEB = 15,
-	ZT_ARCHITECTURE_S390X = 16
+	ZT_ARCHITECTURE_S390X = 16,
+	ZT_ARCHITECTURE_LOONGARCH64 = 17
 };
 
 /**
@@ -1403,11 +1404,6 @@ typedef struct
 	 * The bonding policy used to bond to this peer
 	 */
 	int bondingPolicy;
-
-	/**
-	 * The health status of the bond to this peer
-	 */
-	bool isHealthy;
 
 	/**
 	 * The number of links that comprise the bond to this peer that are considered alive

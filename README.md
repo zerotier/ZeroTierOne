@@ -1,6 +1,7 @@
 ZeroTier - Global Area Networking
 ======
-This document is written for a software developer audience. For information on using ZeroTier, see the: [Website](https://www.zerotier.com), [Documentation Site](https://docs.zerotier.com), and [Discussion Forum](https://discuss.zerotier.com)
+
+*This document is written for a software developer audience. For information on using ZeroTier, see the: [Website](https://www.zerotier.com), [Documentation Site](https://docs.zerotier.com), and [Discussion Forum](https://discuss.zerotier.com).*
 
 ZeroTier is a smart programmable Ethernet switch for planet Earth. It allows all networked devices, VMs, containers, and applications to communicate as if they all reside in the same physical data center or cloud region.
 
@@ -42,24 +43,29 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
  - `rule-compiler/`: JavaScript rules language compiler for defining network-level rules.
  - `service/`: the ZeroTier One service, which wraps the ZeroTier core and provides VPN-like connectivity to virtual networks for desktops, laptops, servers, VMs, and containers.
  - `windows/`: Visual Studio solution files, Windows service code, and the Windows task bar app UI.
+ - `zeroidc/`: OIDC implementation used by ZeroTier service to log into SSO-enabled networks. (This part is written in Rust, and more Rust will be appearing in this repository in the future.)
 
 ### Build and Platform Notes
 
 To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/`.
 
  - **Mac**
-   - Xcode command line tools for OSX 10.8 or newer are required.
+   - Xcode command line tools for macOS 10.13 or newer are required.
+   - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
  - **Linux**
    - The minimum compiler versions required are GCC/G++ 4.9.3 or CLANG/CLANG++ 3.4.2. (Install `clang` on CentOS 7 as G++ is too old.)
    - Linux makefiles automatically detect and prefer clang/clang++ if present as it produces smaller and slightly faster binaries in most cases. You can override by supplying CC and CXX variables on the make command line.
+   - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
  - **Windows**
-   - Windows 7 or newer is supported. This *may* work on Vista but isn't officially supported there. It will not work on Windows XP.
-   - We build with Visual Studio 2017. Older versions may not work. Clang or MinGW will also probably work but may require some makefile hacking.
+   - Visual Studio 2022 on Windows 10 or newer.
+   - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
  - **FreeBSD**
    - GNU make is required. Type `gmake` to build.
+   - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
  - **OpenBSD**
    - There is a limit of four network memberships on OpenBSD as there are only four tap devices (`/dev/tap0` through `/dev/tap3`).
    - GNU make is required. Type `gmake` to build.
+   - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
 
 Typing `make selftest` will build a *zerotier-selftest* binary which unit tests various internals and reports on a few aspects of the build environment. It's a good idea to try this on novel platforms or architectures.
 
@@ -82,7 +88,7 @@ Here's where home folders live (by default) on each OS:
  * **Linux**: `/var/lib/zerotier-one`
  * **FreeBSD** / **OpenBSD**: `/var/db/zerotier-one`
  * **Mac**: `/Library/Application Support/ZeroTier/One`
- * **Windows**: `\ProgramData\ZeroTier\One` (That's for Windows 7. The base 'shared app data' folder might be different on different Windows versions.)
+ * **Windows**: `\ProgramData\ZeroTier\One` (That's the default. The base 'shared app data' folder might be different if Windows is installed with a non-standard drive letter assignment or layout.)
 
 ### Basic Troubleshooting
 

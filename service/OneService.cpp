@@ -53,7 +53,7 @@
 #include "OneService.hpp"
 #include "SoftwareUpdater.hpp"
 
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 #include <zeroidc.h>
 #endif
 
@@ -92,7 +92,8 @@ extern "C" {
 }
 #endif
 
-#include "../ext/json/json.hpp"
+#include <nlohmann/json.hpp>
+#include <inja/inja.hpp>
 
 using json = nlohmann::json;
 
@@ -150,43 +151,49 @@ size_t curlResponseWrite(void *ptr, size_t size, size_t nmemb, std::string *data
 
 namespace ZeroTier {
 
-const char *ssoResponseTemplate = "<html>\
-<head>\
-<style type=\"text/css\">\
-html,body {\
-	background: #eeeeee;\
-	margin: 0;\
-	padding: 0;\
-	font-family: \"Helvetica\";\
-	font-weight: bold;\
-	font-size: 12pt;\
-	height: 100%;\
-	width: 100%;\
-}\
-div.icon {\
-	background: #ffb354;\
-	color: #000000;\
-	font-size: 120pt;\
-	border-radius: 2.5rem;\
-	display: inline-block;\
-	width: 1.3em;\
-	height: 1.3em;\
-	padding: 0;\
-	margin: 15;\
-	line-height: 1.4em;\
-	vertical-align: middle;\
-	text-align: center;\
-}\
-</style>\
-</head>\
-<body>\
-<br><br><br><br><br><br>\
-<center>\
-<div class=\"icon\">&#x23c1;</div>\
-<div class=\"text\">%s</div>\
-</center>\
-</body>\
-</html>";
+std::string ssoResponseTemplate = R"""(
+<!doctype html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title>Network SSO Login {{ networkId }}</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style type="text/css">
+         html,body {
+             background: #eeeeee;
+             margin: 0;
+             padding: 0;
+             font-family: "System Sans Serif";
+             font-weight: normal;
+             font-size: 12pt;
+             height: 100%;
+             width: 100%;
+         }
+
+         .container {
+             position: absolute;
+             left: 50%;
+             top: 50%;
+             -webkit-transform: translate(-50%, -50%);
+             transform: translate(-50%, -50%);
+         }
+         .iconwrapper {
+             margin: 10px 10px 10px 10px;
+         }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="iconwrapper">
+                <svg id="Layer_1" width="225px" height="225px" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 225 225"><defs><style>.cls-1{fill:#fdb25d;}.cls-2{fill:none;stroke:#000;stroke-miterlimit:10;stroke-width:6.99px;}</style></defs><rect class="cls-1" width="225" height="225" rx="35.74"/><line class="cls-2" x1="25.65" y1="32.64" x2="199.35" y2="32.64"/><line class="cls-2" x1="112.5" y1="201.02" x2="112.5" y2="32.64"/><circle class="cls-2" cx="112.5" cy="115.22" r="56.54"/></svg>
+            </div>
+            <div class="text">{{ messageText }}</div>
+        </div>
+    </body>
+</html>
+)""";
 
 // Configured networks
 class NetworkState
@@ -195,7 +202,7 @@ public:
 	NetworkState() 
 		: _webPort(9993)
 		, _tap((EthernetTap *)0)
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 		, _idc(nullptr)
 #endif
 	{
@@ -212,7 +219,7 @@ public:
 		this->_managedRoutes.clear();
 		this->_tap.reset();
 
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 		if (_idc) {
 			zeroidc::zeroidc_stop(_idc);
 			zeroidc::zeroidc_delete(_idc);
@@ -286,27 +293,16 @@ public:
 	}
 
 	void setConfig(const ZT_VirtualNetworkConfig *nwc) {
-		char nwbuf[17] = {};
-		const char* nwid = Utils::hex(nwc->nwid, nwbuf);
-		// fprintf(stderr, "NetworkState::setConfig(%s)\n", nwid);
-
 		memcpy(&_config, nwc, sizeof(ZT_VirtualNetworkConfig));
-		// fprintf(stderr, "ssoEnabled: %s, ssoVersion: %d\n", 
-		// 	_config.ssoEnabled ? "true" : "false", _config.ssoVersion);
 
 		if (_config.ssoEnabled && _config.ssoVersion == 1) {
-			//  fprintf(stderr, "ssoEnabled for %s\n", nwid);
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 			if (_idc == nullptr)
 			{
 				assert(_config.issuerURL != nullptr);
 				assert(_config.ssoClientID != nullptr);
 				assert(_config.centralAuthURL != nullptr);
 
-				// fprintf(stderr, "Issuer URL: %s\n", _config.issuerURL);
-				// fprintf(stderr, "Client ID: %s\n", _config.ssoClientID);
-				// fprintf(stderr, "Central Auth URL: %s\n", _config.centralAuthURL);
-				
 				_idc = zeroidc::zeroidc_new(
 					_config.issuerURL,
 					_config.ssoClientID,
@@ -318,8 +314,6 @@ public:
 					fprintf(stderr, "idc is null\n");
 					return;
 				}
-
-				// fprintf(stderr, "idc created (%s, %s, %s)\n", _config.issuerURL, _config.ssoClientID, _config.centralAuthURL);
 			}
 
 			zeroidc::zeroidc_set_nonce_and_csrf(
@@ -328,12 +322,12 @@ public:
 				_config.ssoNonce
 			);
 
-			const char* url = zeroidc::zeroidc_get_auth_url(_idc);
+			char* url = zeroidc::zeroidc_get_auth_url(_idc);
 			memcpy(_config.authenticationURL, url, strlen(url));
 			_config.authenticationURL[strlen(url)] = 0;
+			zeroidc::free_cstr(url);
 
 			if (zeroidc::zeroidc_is_running(_idc) && nwc->status == ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED) {
-				// TODO: kick the refresh thread
 				zeroidc::zeroidc_kick_refresh_thread(_idc);
 			}
 #endif
@@ -353,7 +347,7 @@ public:
 	}
 
 	const char* getAuthURL() {
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 		if (_idc != nullptr) {
 			return zeroidc::zeroidc_get_auth_url(_idc);
 		}
@@ -362,31 +356,31 @@ public:
 		return "";
 	}
 
-	const char* doTokenExchange(const char *code) {
-#if OIDC_SUPPORTED
+	char* doTokenExchange(const char *code) {
+		char *ret = nullptr;
+#if ZT_SSO_ENABLED
 		if (_idc == nullptr) {
 			fprintf(stderr, "ainfo or idc null\n");
-			return "";
+			return ret;
 		}
 
-		const char *ret = zeroidc::zeroidc_token_exchange(_idc, code);
+		ret = zeroidc::zeroidc_token_exchange(_idc, code);
 		zeroidc::zeroidc_set_nonce_and_csrf(
 			_idc,
 			_config.ssoState,
 			_config.ssoNonce
 		);
 
-		const char* url = zeroidc::zeroidc_get_auth_url(_idc);
+		char* url = zeroidc::zeroidc_get_auth_url(_idc);
 		memcpy(_config.authenticationURL, url, strlen(url));
 		_config.authenticationURL[strlen(url)] = 0;
-		return ret;
-#else
-		return "";
+		zeroidc::free_cstr(url);
 #endif
+		return ret;
 	}
 
 	uint64_t getExpiryTime() {
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 		if (_idc == nullptr) {
 			fprintf(stderr, "idc is null\n");
 			return 0;
@@ -404,7 +398,7 @@ private:
 	std::vector<InetAddress> _managedIps;
 	std::map< InetAddress, SharedPtr<ManagedRoute> > _managedRoutes;
 	OneService::NetworkSettings _settings;
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 	zeroidc::ZeroIDC *_idc;
 #endif
 };
@@ -549,7 +543,6 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 	pj["isBonded"] = peer->isBonded;
 	if (peer->isBonded) {
 		pj["bondingPolicy"] = peer->bondingPolicy;
-		pj["isHealthy"] = peer->isHealthy;
 		pj["numAliveLinks"] = peer->numAliveLinks;
 		pj["numTotalLinks"] = peer->numTotalLinks;
 	}
@@ -566,6 +559,7 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 		j["active"] = (bool)(peer->paths[i].expired == 0);
 		j["expired"] = (bool)(peer->paths[i].expired != 0);
 		j["preferred"] = (bool)(peer->paths[i].preferred != 0);
+		j["localSocket"] = peer->paths[i].localSocket;
 		pa.push_back(j);
 	}
 	pj["paths"] = pa;
@@ -581,7 +575,6 @@ static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 		return;
 	}
 
-	pj["isHealthy"] = bond->isHealthy();
 	pj["numAliveLinks"] = bond->getNumAliveLinks();
 	pj["numTotalLinks"] = bond->getNumTotalLinks();
 	pj["failoverInterval"] = bond->getFailoverInterval();
@@ -786,6 +779,7 @@ public:
 	// Time we last received a packet from a global address
 	uint64_t _lastDirectReceiveFromGlobal;
 #ifdef ZT_TCP_FALLBACK_RELAY
+	InetAddress _fallbackRelayAddress;
 	uint64_t _lastSendToGlobalV4;
 #endif
 
@@ -849,6 +843,7 @@ public:
 		,_udpPortPickerCounter(0)
 		,_lastDirectReceiveFromGlobal(0)
 #ifdef ZT_TCP_FALLBACK_RELAY
+		, _fallbackRelayAddress(ZT_TCP_FALLBACK_RELAY)
 		,_lastSendToGlobalV4(0)
 #endif
 		,_lastRestart(0)
@@ -1004,27 +999,16 @@ public:
 				// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
 				// use the other two ports for that because some NATs do really funky
 				// stuff with ports that are explicitly mapped that breaks things.
-				if (_ports[1]) {
-					if (_tertiaryPort) {
-						_ports[2] = _tertiaryPort;
-					} else {
-						_ports[2] = 20000 + (_ports[0] % 40000);
-						for(int i=0;;++i) {
-							if (i > 1000) {
-								_ports[2] = 0;
-								break;
-							} else if (++_ports[2] >= 65536) {
-								_ports[2] = 20000;
-							}
-							if (_trialBind(_ports[2]))
-								break;
-						}
-						if (_ports[2]) {
-							char uniqueName[64];
-							OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
-							_portMapper = new PortMapper(_ports[2],uniqueName);
-						}
-					}
+				if (_tertiaryPort) {
+					_ports[2] = _tertiaryPort;
+				} else {
+					_ports[2] = _getRandomPort();
+				}
+
+				if (_ports[2]) {
+					char uniqueName[64];
+					OSUtils::ztsnprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx@%u",_node->address(),_ports[2]);
+					_portMapper = new PortMapper(_ports[2],uniqueName);
 				}
 			}
 #endif
@@ -1707,36 +1691,73 @@ public:
 						scode = _controller->handleControlPlaneHttpGET(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 					} else scode = 404;
 				}
-#if OIDC_SUPPORTED
+#if ZT_SSO_ENABLED
 			} else if (ps[0] == "sso") {
-				char resBuf[4096] = {0};
-				const char *error = zeroidc::zeroidc_get_url_param_value("error", path.c_str());
+				std::string htmlTemplatePath = _homePath + ZT_PATH_SEPARATOR + "sso-auth.template.html";
+				std::string htmlTemplate;
+				if (!OSUtils::readFile(htmlTemplatePath.c_str(), htmlTemplate)) {
+					htmlTemplate = ssoResponseTemplate;
+				}
+
+				responseContentType = "text/html";
+				json outData;
+
+				char *error = zeroidc::zeroidc_get_url_param_value("error", path.c_str());
 				if (error != nullptr) {
-					const char *desc = zeroidc::zeroidc_get_url_param_value("error_description", path.c_str());
+					char *desc = zeroidc::zeroidc_get_url_param_value("error_description", path.c_str());
 					scode = 500;
-					char errBuff[256] = {0};
-					sprintf(errBuff, "ERROR %s: %s", error, desc);
-					sprintf(resBuf, ssoResponseTemplate, errBuff);
-					responseBody = std::string(resBuf);
-					responseContentType = "text/html";
+
+					json data;
+					outData["isError"] = true;
+					outData["messageText"] = (std::string("ERROR ") + error + std::string(": ") + desc);
+					responseBody = inja::render(htmlTemplate, outData);
+
+					zeroidc::free_cstr(desc);
+					zeroidc::free_cstr(error);
+
 					return scode;
 				} 
 
 				// SSO redirect handling
-				const char* state = zeroidc::zeroidc_get_url_param_value("state", path.c_str());
-				const char* nwid = zeroidc::zeroidc_network_id_from_state(state);
-				
+				char* state = zeroidc::zeroidc_get_url_param_value("state", path.c_str());
+				char* nwid = zeroidc::zeroidc_network_id_from_state(state);
+
+				outData["networkId"] = std::string(nwid);
+
 				const uint64_t id = Utils::hexStrToU64(nwid);
+				
+				zeroidc::free_cstr(nwid);
+				zeroidc::free_cstr(state);
+
 				Mutex::Lock l(_nets_m);
 				if (_nets.find(id) != _nets.end()) {
 					NetworkState& ns = _nets[id];
-					const char* code = zeroidc::zeroidc_get_url_param_value("code", path.c_str());
-					ns.doTokenExchange(code);
-					scode = 200;
-					sprintf(resBuf, ssoResponseTemplate, "Authentication Successful. You may now access the network.");
-					responseBody = std::string(resBuf);
+					char* code = zeroidc::zeroidc_get_url_param_value("code", path.c_str());
+					char *ret = ns.doTokenExchange(code);
+					json ssoResult = json::parse(ret);
+					if (ssoResult.is_object()) {
+						if (ssoResult.contains("errorMessage")) {
+							outData["isError"] = true;
+							outData["messageText"] = ssoResult["errorMessage"];
+							responseBody = inja::render(htmlTemplate, outData);
+							scode = 500;
+						} else {
+							scode = 200;
+							outData["isError"] = false;
+							outData["messageText"] = "Authentication Successful. You may now access the network.";
+							responseBody = inja::render(htmlTemplate, outData);
+						}
+					} else {
+						// not an object? We got a problem
+						outData["isError"] = true;
+						outData["messageText"] = "ERROR: Unkown SSO response. Please contact your administrator.";
+						responseBody = inja::render(htmlTemplate, outData);
+						scode= 500;
+					}
 
-					responseContentType = "text/html";
+					zeroidc::free_cstr(code);
+					zeroidc::free_cstr(ret);
+
 					return scode;
 				} else {
 					scode = 404;
@@ -1884,8 +1905,7 @@ public:
 						scode = _controller->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 					else scode = 404;
 				}
-			}
-			else {
+			} else {
 				scode = 401; // isAuth == false
 			}
 		} else if (httpMethod == HTTP_DELETE) {
@@ -2149,7 +2169,10 @@ public:
 		}
 
 		// bondingPolicy cannot be used with allowTcpFallbackRelay
-		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true) && !(_node->bondController()->inUse());
+		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
+#ifdef ZT_TCP_FALLBACK_RELAY
+		_fallbackRelayAddress = InetAddress(OSUtils::jsonString("tcpFallbackRelay", ZT_TCP_FALLBACK_RELAY).c_str());
+#endif
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 		_allowSecondaryPort = OSUtils::jsonBool(settings["allowSecondaryPort"],true);
 		_secondaryPort = (unsigned int)OSUtils::jsonInt(settings["secondaryPort"],0);
@@ -2300,10 +2323,7 @@ public:
 						fprintf(stderr,"ERROR: unable to remove ip address %s" ZT_EOL_S, ip->toString(ipbuf));
 				}
 			}
-#ifdef __SYNOLOGY__
-			if (!n.tap->addIpSyn(newManagedIps))
-				fprintf(stderr,"ERROR: unable to add ip addresses to ifcfg" ZT_EOL_S);
-#else
+
 			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
 				if (std::find(n.managedIps().begin(),n.managedIps().end(),*ip) == n.managedIps().end()) {
 					if (!n.tap()->addIp(*ip))
@@ -2314,7 +2334,6 @@ public:
 #ifdef __APPLE__
 			if (!MacDNSHelper::addIps(n.config().nwid, n.config().mac, n.tap()->deviceName().c_str(), newManagedIps))
 				fprintf(stderr, "ERROR: unable to add v6 addresses to system configuration" ZT_EOL_S);
-#endif
 #endif
 			n.setManagedIps(newManagedIps);
 		}
@@ -3161,7 +3180,7 @@ public:
 								phyOnTcpWritable(_tcpFallbackTunnel->sock,&tmpptr);
 							}
 						} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
-							const InetAddress addr(ZT_TCP_FALLBACK_RELAY);
+							const InetAddress addr(_fallbackRelayAddress);
 							TcpConnection *tc = new TcpConnection();
 							{
 								Mutex::Lock _l(_tcpConnections_m);

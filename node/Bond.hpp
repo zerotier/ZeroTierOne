@@ -436,7 +436,14 @@ class Bond {
 	 * @param peer Remote peer that this bond services
 	 * @return A pointer to the newly created Bond
 	 */
-	static SharedPtr<Bond> createTransportTriggeredBond(const RuntimeEnvironment* renv, const SharedPtr<Peer>& peer);
+	static SharedPtr<Bond> createBond(const RuntimeEnvironment* renv, const SharedPtr<Peer>& peer);
+
+	/**
+	 * Remove a bond from the bond controller.
+	 *
+	 * @param peerId Remote peer that this bond services
+	 */
+	static void destroyBond(uint64_t peerId);
 
 	/**
 	 * Periodically perform maintenance tasks for the bonding layer.
@@ -451,9 +458,10 @@ class Bond {
 	 *
 	 * @param policyAlias Policy in use
 	 * @param localSocket Local source socket
+	 * @param createIfNeeded Whether a Link object is created if the name wasn't previously in the link map
 	 * @return Physical link definition
 	 */
-	static SharedPtr<Link> getLinkBySocket(const std::string& policyAlias, uint64_t localSocket);
+	static SharedPtr<Link> getLinkBySocket(const std::string& policyAlias, uint64_t localSocket, bool createIfNeeded);
 
 	/**
 	 * Gets a reference to a physical link definition given its human-readable system name.
@@ -629,6 +637,15 @@ class Bond {
 	 * @param rx_ts table of holding times
 	 */
 	void receivedQoS(const SharedPtr<Path>& path, int64_t now, int count, uint64_t* rx_id, uint16_t* rx_ts);
+
+	/**
+	 * Process the contents of an inbound VERB_ACK to gather path quality observations.
+	 *
+	 * @param pathIdx Path over which packet was received
+	 * @param now Current time
+	 * @param ackedBytes Number of bytes ACKed by this VERB_ACK
+	 */
+	void receivedAck(int pathIdx, int64_t now, int32_t ackedBytes);
 
 	/**
 	 * Generate the contents of a VERB_QOS_MEASUREMENT packet.
@@ -872,6 +889,26 @@ class Bond {
 	void processBackgroundBondTasks(void* tPtr, int64_t now);
 
 	/**
+	 * Rate limit gate for VERB_ACK
+	 *
+	 * @param now Current time
+	 * @return Whether the incoming packet should be rate-gated
+	 */
+	inline bool rateGateACK(const int64_t now)
+	{
+		_ackCutoffCount++;
+		int numToDrain = _lastAckRateCheck ? (now - _lastAckRateCheck) / ZT_ACK_DRAINAGE_DIVISOR : _ackCutoffCount;
+		_lastAckRateCheck = now;
+		if (_ackCutoffCount > numToDrain) {
+			_ackCutoffCount -= numToDrain;
+		}
+		else {
+			_ackCutoffCount = 0;
+		}
+		return (_ackCutoffCount < ZT_ACK_CUTOFF_LIMIT);
+	}
+
+	/**
 	 * Rate limit gate for VERB_QOS_MEASUREMENT
 	 *
 	 * @param now Current time
@@ -1021,14 +1058,6 @@ class Bond {
 	}
 
 	/**
-	 * @return the health status of the bond
-	 */
-	inline bool isHealthy()
-	{
-		return _isHealthy;
-	}
-
-	/**
 	 * @return the number of links comprising this bond which are considered alive
 	 */
 	inline uint8_t getNumAliveLinks()
@@ -1142,6 +1171,9 @@ class Bond {
 	 *
 	 */
 	void log(const char* fmt, ...)
+#ifdef __GNUC__
+		__attribute__((format(printf, 2, 3)))
+#endif
 	{
 #ifdef ZT_TRACE
 		time_t rawtime;
@@ -1171,6 +1203,9 @@ class Bond {
 	 *
 	 */
 	void debug(const char* fmt, ...)
+#ifdef __GNUC__
+		__attribute__((format(printf, 2, 3)))
+#endif
 	{
 #ifdef ZT_DEBUG
 		time_t rawtime;
@@ -1198,7 +1233,11 @@ class Bond {
   private:
 	struct NominatedPath {
 		NominatedPath()
-			: lastQoSMeasurement(0)
+			: lastAckSent(0)
+			, lastAckReceived(0)
+			, unackedBytes(0)
+			, packetsReceivedSinceLastAck(0)
+			, lastQoSMeasurement(0)
 			, lastThroughputEstimation(0)
 			, lastRefractoryUpdate(0)
 			, lastAliveToggle(0)
@@ -1290,6 +1329,15 @@ class Bond {
 		}
 
 		/**
+		 * @param now Current time
+		 * @return Whether an ACK (VERB_ACK) packet needs to be emitted at this time
+		 */
+		inline bool needsToSendAck(int64_t now, int ackSendInterval)
+		{
+			return ((now - lastAckSent) >= ackSendInterval || (packetsReceivedSinceLastAck == ZT_QOS_TABLE_SIZE)) && packetsReceivedSinceLastAck;
+		}
+
+		/**
 		 * Reset packet counters
 		 */
 		inline void resetPacketCounts()
@@ -1300,6 +1348,7 @@ class Bond {
 
 		std::map<uint64_t, uint64_t> qosStatsOut;	// id:egress_time
 		std::map<uint64_t, uint64_t> qosStatsIn;	// id:now
+		std::map<uint64_t, uint64_t> ackStatsIn;	// id:now
 
 		RingBuffer<int, ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE> qosRecordSize;
 		RingBuffer<float, ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE> qosRecordLossSamples;
@@ -1307,6 +1356,11 @@ class Bond {
 		RingBuffer<bool, ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE> packetValiditySamples;
 		RingBuffer<float, ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE> throughputVarianceSamples;
 		RingBuffer<uint16_t, ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE> latencySamples;
+
+		uint64_t lastAckSent;
+		uint64_t lastAckReceived;
+		uint64_t unackedBytes;
+		uint64_t packetsReceivedSinceLastAck;
 
 		uint64_t lastQoSMeasurement;		 // Last time that a VERB_QOS_MEASUREMENT was sent out on this path.
 		uint64_t lastThroughputEstimation;	 // Last time that the path's throughput was estimated.
@@ -1344,7 +1398,7 @@ class Bond {
 		int packetsIn;
 		int packetsOut;
 
-		AtomicCounter __refCount;
+		// AtomicCounter __refCount;
 
 		SharedPtr<Path> p;
 		void set(uint64_t now, const SharedPtr<Path>& path)
@@ -1490,7 +1544,6 @@ class Bond {
 	/**
 	 * Link state reporting
 	 */
-	bool _isHealthy;
 	uint8_t _numAliveLinks;
 	uint8_t _numTotalLinks;
 
@@ -1508,7 +1561,9 @@ class Bond {
 	 * Rate-limiting
 	 */
 	uint16_t _qosCutoffCount;
+	uint16_t _ackCutoffCount;
 	uint64_t _lastQoSRateCheck;
+	uint64_t _lastAckRateCheck;
 	uint16_t _pathNegotiationCutoffCount;
 	uint64_t _lastPathNegotiationReceived;
 

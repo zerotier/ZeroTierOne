@@ -53,7 +53,10 @@ private:
 	Peer() {} // disabled to prevent bugs -- should not be constructed uninitialized
 
 public:
-	~Peer() { Utils::burn(_key,sizeof(_key)); }
+	~Peer() {
+		Utils::burn(_key,sizeof(_key));
+		RR->bc->destroyBond(_id.address().toInt());
+	}
 
 	/**
 	 * Construct a new peer
@@ -387,11 +390,11 @@ public:
 	 */
 	inline bool rateGateCredentialsReceived(const int64_t now)
 	{
-		if ((now - _lastCredentialsReceived) <= ZT_PEER_CREDENTIALS_CUTOFF_TIME)
-			++_credentialsCutoffCount;
-		else _credentialsCutoffCount = 0;
-		_lastCredentialsReceived = now;
-		return (_credentialsCutoffCount < ZT_PEER_CREDENTIALS_CUTOFF_LIMIT);
+		if ((now - _lastCredentialsReceived) >= ZT_PEER_CREDENTIALS_RATE_LIMIT) {
+			_lastCredentialsReceived = now;
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -413,18 +416,6 @@ public:
 	{
 		if ((now - _lastWhoisRequestReceived) >= ZT_PEER_WHOIS_RATE_LIMIT) {
 			_lastWhoisRequestReceived = now;
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * Rate limit gate for inbound ECHO requests
-	 */
-	inline bool rateGateEchoRequest(const int64_t now)
-	{
-		if ((now - _lastEchoRequestReceived) >= ZT_PEER_GENERAL_RATE_LIMIT) {
-			_lastEchoRequestReceived = now;
 			return true;
 		}
 		return false;
@@ -546,7 +537,6 @@ private:
 	int64_t _lastTriedMemorizedPath;
 	int64_t _lastDirectPathPushSent;
 	int64_t _lastDirectPathPushReceive;
-	int64_t _lastEchoRequestReceived;
 	int64_t _lastCredentialRequestSent;
 	int64_t _lastWhoisRequestReceived;
 	int64_t _lastCredentialsReceived;
@@ -573,7 +563,6 @@ private:
 	Identity _id;
 
 	unsigned int _directPathPushCutoffCount;
-	unsigned int _credentialsCutoffCount;
 	unsigned int _echoRequestCutoffCount;
 
 	AtomicCounter __refCount;

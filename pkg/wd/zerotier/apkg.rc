@@ -1,0 +1,21 @@
+Package: zerotier
+Section: Apps
+Version: 1.8.8
+Packager: ZeroTier, Inc.
+Email: contact@zerotier.com
+Homepage: http://www.zerotier.com
+Description: Securely connect any device, anywhere.
+AddonShowName: ZeroTier
+Icon: zerotier.png
+AddonIndexPage: index.html
+AddonUsedPort: 9993
+InstDepend:
+InstConflict:
+StartDepend:
+StartConflict:
+CenterType:1
+UserControl:0
+MinFWVer:
+MaxFWVer:
+IndividualFlag:
+

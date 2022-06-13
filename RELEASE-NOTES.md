@@ -1,11 +1,40 @@
 ZeroTier Release Notes
 ======
 
-# 2022-03-21 -- Version 1.8.7
+# 2022-06-07 -- Version 1.10.0
 
- * Fix for dependency installations in Windows MSI package
- * Fix for privilege escalation in desktop UI when the user is not a current super-user
- * Bug fix in local OIDC / SSO support
+ * Fix formatting problem in `zerotier-cli` when using SSO networks.
+ * Fix a few other minor bugs in SSO signin to prepare for general availability.
+ * Remove requirement for webview in desktop UI and instead just make everything available via the tray pulldown/menu. Use [libui-ng](https://github.com/libui-ng/libui-ng) for minor prompt dialogs. Saves space and eliminates installation headaches on Windows.
+ * Fix SSO "spam" bug in desktop UI.
+ * Use system default browser for SSO login so all your plugins, MFA devices, password managers, etc. will work as you have them configured.
+ * Minor fix for bonding/multipath.
+
+# 2022-05-10 -- Version 1.8.10
+
+ * Fixed a bug preventing SSO sign-on on Windows.
+
+# 2022-04-25 -- Version 1.8.9
+
+ * Fixed a long-standing and strange bug that was causing sporadic "phantom" packet authentication failures. Not a security problem but could be behind spordaic reports of link failures under some conditions.
+ * Fized a memory leak in SSO/OIDC support.
+ * Fixed SSO/OIDC display error on CLI.
+ * Fixed a bug causing nodes to sometimes fail to push certs to each other (primarily affects SSO/OIDC use cases).
+ * Fixed a deadlock bug on leaving SSO/OIDC managed networks.
+ * Added some new Linux distributions to the build subsystem.
+
+# 2022-04-11 -- Version 1.8.8
+
+ * Fix a local privilege escalation bug in the Windows installer.
+ * Dependency fix for some Ubuntu versions.
+ * No changes for other platforms. Windows upgrade recommended, everyone else optional.
+
+# 2022-03-30 -- Version 1.8.7
+
+ * Fix for dependency installations in Windows MSI package.
+ * Fix for desktop UI setup when run by a non-super-user.
+ * Bug fix in local OIDC / SSO support for auth0 and other providers.
+ * Other minor fixes for e.g. old Linux distributions.
 
 # 2022-03-04 -- Version 1.8.6
 

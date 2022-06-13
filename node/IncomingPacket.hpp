@@ -51,7 +51,9 @@ class IncomingPacket : public Packet
 public:
 	IncomingPacket() :
 		Packet(),
-		_receiveTime(0)
+		_receiveTime(0),
+		_path(),
+		_authenticated(false)
 	{
 	}
 
@@ -67,7 +69,8 @@ public:
 	IncomingPacket(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now) :
 		Packet(data,len),
 		_receiveTime(now),
-		_path(path)
+		_path(path),
+		_authenticated(false)
 	{
 	}
 
@@ -85,6 +88,7 @@ public:
 		copyFrom(data,len);
 		_receiveTime = now;
 		_path = path;
+		_authenticated = false;
 	}
 
 	/**
@@ -112,6 +116,7 @@ private:
 	// been authenticated, decrypted, decompressed, and classified.
 	bool _doERROR(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
 	bool _doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool alreadyAuthenticated);
+	bool _doACK(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
 	bool _doQOS_MEASUREMENT(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
 	bool _doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
 	bool _doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
@@ -134,6 +139,7 @@ private:
 
 	uint64_t _receiveTime;
 	SharedPtr<Path> _path;
+	bool _authenticated;
 };
 
 } // namespace ZeroTier

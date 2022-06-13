@@ -1,15 +1,15 @@
 # Automagically pick CLANG or RH/CentOS newer GCC if present
 # This is only done if we have not overridden these with an environment or CLI variable
 ifeq ($(origin CC),default)
-        CC:=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
-        CC:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/gcc ]; then echo /opt/rh/devtoolset-8/root/usr/bin/gcc; else echo $(CC); fi)
+	CC:=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
+	CC:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/gcc ]; then echo /opt/rh/devtoolset-8/root/usr/bin/gcc; else echo $(CC); fi)
 endif
 ifeq ($(origin CXX),default)
-        CXX:=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
-        CXX:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/g++ ]; then echo /opt/rh/devtoolset-8/root/usr/bin/g++; else echo $(CXX); fi)
+	CXX:=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
+	CXX:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/g++ ]; then echo /opt/rh/devtoolset-8/root/usr/bin/g++; else echo $(CXX); fi)
 endif
 
-INCLUDES?=-Izeroidc/target
+INCLUDES?=-Izeroidc/target -isystem ext
 DEFS?=
 LDLIBS?=
 DESTDIR?=
@@ -31,7 +31,7 @@ ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
 	override DEFS+=-DZT_USE_SYSTEM_MINIUPNPC
 	LDLIBS+=-lminiupnpc
 else
-	override DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"2.0\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+	override DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING="\"Linux\"" -DMINIUPNPC_VERSION_STRING="\"2.0\"" -DUPNP_VERSION_STRING="\"UPnP/1.1\"" -DENABLE_STRNATPMPERR
 	ONE_OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
 endif
 ifeq ($(wildcard /usr/include/natpmp.h),)
@@ -59,32 +59,33 @@ ifeq ($(ZT_SANITIZE),1)
 endif
 ifeq ($(ZT_DEBUG),1)
 	override CFLAGS+=-Wall -Wno-deprecated -g -O -pthread $(INCLUDES) $(DEFS)
-	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++11 -pthread $(INCLUDES) $(DEFS)
+	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++17 -pthread $(INCLUDES) $(DEFS)
 	ZT_TRACE=1
 	RUSTFLAGS=
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS?=-O3 -fstack-protector -fPIE
+	CFLAGS?=-O3 -fstack-protector
 	override CFLAGS+=-Wall -Wno-deprecated -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	CXXFLAGS?=-O3 -fstack-protector -fPIE
-	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++11 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	CXXFLAGS?=-O3 -fstack-protector
+	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	RUSTFLAGS=--release
 endif
 
 ifeq ($(ZT_QNAP), 1)
-        override DEFS+=-D__QNAP__
+	override DEFS+=-D__QNAP__
+	ZT_EMBEDDED=1
 endif
 ifeq ($(ZT_UBIQUITI), 1)
-        override DEFS+=-D__UBIQUITI__
+	override DEFS+=-D__UBIQUITI__
+	ZT_EMBEDDED=1
 endif
 
 ifeq ($(ZT_SYNOLOGY), 1)
-	override CFLAGS+=-fPIC
-	override CXXFLAGS+=-fPIC
 	override DEFS+=-D__SYNOLOGY__
+	ZT_EMBEDDED=1
 endif
 
 ifeq ($(ZT_DISABLE_COMPRESSION), 1)
@@ -213,9 +214,9 @@ ifeq ($(CC_MACH),armv7hl)
 	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),armv7ve)
-        ZT_ARCHITECTURE=3
-        override DEFS+=-DZT_NO_TYPE_PUNNING
-        ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+	ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
 ifeq ($(CC_MACH),arm64)
 	ZT_ARCHITECTURE=4
@@ -249,6 +250,10 @@ endif
 ifeq ($(CC_MACH),riscv64)
 	ZT_ARCHITECTURE=0
 endif
+ifeq ($(CC_MACH),loongarch64)
+	ZT_ARCHITECTURE=17
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+endif
 
 # Fail if system architecture could not be determined
 ifeq ($(ZT_ARCHITECTURE),999)
@@ -268,10 +273,13 @@ ifeq ($(ZT_IA32),1)
 endif
 
 ifeq ($(ZT_SSO_SUPPORTED), 1)
-	ifeq ($(ZT_DEBUG),1)
-		LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
-	else
-		LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
+	ifeq ($(ZT_EMBEDDED),)
+		override DEFS+=-DZT_SSO_SUPPORTED=1
+		ifeq ($(ZT_DEBUG),1)
+			LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
+		else
+			LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
+		endif
 	endif
 endif
 
@@ -306,8 +314,8 @@ ifeq ($(ZT_ARCHITECTURE),3)
 		override CXXFLAGS+=-march=armv5t -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	else
-		override CFLAGS+=-mfloat-abi=hard -march=armv6kz -marm -mfpu=vfp -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
-		override CXXFLAGS+=-mfloat-abi=hard -march=armv6kz -marm -mfpu=vfp -fexceptions -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
+		override CFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
+		override CXXFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -fexceptions -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	endif
 endif
@@ -326,11 +334,19 @@ ifeq ($(ZT_USE_ARM32_NEON_ASM_CRYPTO),1)
 	override CORE_OBJS+=ext/arm32-neon-salsa2012-asm/salsa2012.o
 endif
 
+# Position Independence
+override CFLAGS+=-fPIC -fPIE
+override CXXFLAGS+=-fPIC -fPIE
+
 .PHONY: all
 all:	one
 
 .PHONY: one
 one: zerotier-one zerotier-idtool zerotier-cli
+
+from_builder:
+	ln -sf zerotier-one zerotier-idtool
+	ln -sf zerotier-one zerotier-cli
 
 zerotier-one:	$(CORE_OBJS) $(ONE_OBJS) one.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LDLIBS)
@@ -344,7 +360,7 @@ zerotier-cli: zerotier-one
 $(ONE_OBJS): zeroidc
 
 libzerotiercore.a:	FORCE
-	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++11 -fstack-protector -fPIC" $(CORE_OBJS)
+	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++17 -fstack-protector -fPIC" $(CORE_OBJS)
 	ar rcs libzerotiercore.a $(CORE_OBJS)
 	ranlib libzerotiercore.a
 
@@ -384,9 +400,11 @@ debug:	FORCE
 	make ZT_DEBUG=1 selftest
 
 ifeq ($(ZT_SSO_SUPPORTED), 1)
+ifeq ($(ZT_EMBEDDED),)
 zeroidc:	FORCE
 #	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build -j1 $(RUSTFLAGS)
-	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build $(RUSTFLAGS)
+	export PATH=/${HOME}/.cargo/bin:$$PATH; cd zeroidc && cargo build $(RUSTFLAGS)
+endif
 else
 zeroidc:
 endif
@@ -440,6 +458,20 @@ uninstall:	FORCE
 
 # These are just for convenience for building Linux packages
 
+echo_flags:
+	@echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~"
+	@echo "echo_flags :: CC=$(CC)"
+	@echo "echo_flags :: CXX=$(CXX)"
+	@echo "echo_flags :: CFLAGS=$(CFLAGS)"
+	@echo "echo_flags :: CXXFLAGS=$(CXXFLAGS)"
+	@echo "echo_flags :: LDFLAGS=$(LDFLAGS)"
+	@echo "echo_flags :: RUSTFLAGS=$(RUSTFLAGS)"
+	@echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~"
+
+# debian: echo_flags
+# 	@echo "building deb package"
+# 	debuild --no-lintian -b -uc -us
+
 debian:	FORCE
 	debuild --no-lintian -I -i -us -uc -nc -b
 
@@ -477,5 +509,21 @@ snap-upload-stable: FORCE
 	for SNAPFILE in ./*.snap; do\
 		snapcraft upload --release=stable $${SNAPFILE};\
 	done
+
+synology-pkg: FORCE
+	cd pkg/synology ; ./build.sh build
+
+synology-docker: FORCE
+	cd pkg/synology/dsm7-docker/; ./build.sh build-and-push
+
+munge_rpm:
+	@:$(call check_defined, VERSION)
+	@echo "Updating rpm spec to $(VERSION)"
+	ci/scripts/munge_rpm_spec.sh zerotier-one.spec $(VERSION) "Adam Ierymenko <adam.ierymenko@zerotier.com>" "see https://github.com/zerotier/ZeroTierOne for release notes"
+
+munge_deb:
+	@:$(call check_defined, VERSION)
+	@echo "Updating debian/changelog to $(VERSION)"
+	ci/scripts/munge_debian_changelog.sh debian/changelog $(VERSION) "Adam Ierymenko <adam.ierymenko@zerotier.com>" "see https://github.com/zerotier/ZeroTierOne for release notes"
 
 FORCE:

@@ -26,3 +26,7 @@ endif
 ifeq ($(OSTYPE),NetBSD)
 	include make-netbsd.mk
 endif
+
+drone:
+	@echo "rendering .drone.yaml from .drone.jsonnet"
+	drone jsonnet --format --stream

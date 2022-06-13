@@ -34,7 +34,6 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_lastTriedMemorizedPath(0),
 	_lastDirectPathPushSent(0),
 	_lastDirectPathPushReceive(0),
-	_lastEchoRequestReceived(0),
 	_lastCredentialRequestSent(0),
 	_lastWhoisRequestReceived(0),
 	_lastCredentialsReceived(0),
@@ -48,7 +47,6 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_vRevision(0),
 	_id(peerIdentity),
 	_directPathPushCutoffCount(0),
-	_credentialsCutoffCount(0),
 	_echoRequestCutoffCount(0),
 	_localMultipathSupported(false),
 	_lastComputedAggregateMeanLatency(0)
@@ -224,6 +222,8 @@ void Peer::received(
 		if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
 			_lastDirectPathPushSent = now;
 			std::vector<InetAddress> pathsToPush(RR->node->directPaths());
+			std::vector<InetAddress> ma = RR->sa->whoami();
+			pathsToPush.insert(pathsToPush.end(), ma.begin(), ma.end());
 			if (!pathsToPush.empty()) {
 				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
 				while (p != pathsToPush.end()) {
@@ -453,7 +453,7 @@ void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atA
 	if (atAddress) {
 		outp.armor(_key,false,nullptr); // false == don't encrypt full payload, but add MAC
 		RR->node->expectReplyTo(outp.packetId());
-		RR->node->putPacket(tPtr,localSocket,atAddress,outp.data(),outp.size());
+		RR->node->putPacket(tPtr,-1,atAddress,outp.data(),outp.size());
 	} else {
 		RR->node->expectReplyTo(outp.packetId());
 		RR->sw->send(tPtr,outp,false); // false == don't encrypt full payload, but add MAC
@@ -502,7 +502,7 @@ void Peer::performMultipathStateCheck(void *tPtr, int64_t now)
 	_localMultipathSupported = ((numAlivePaths >= 1) && (RR->bc->inUse()) && (ZT_PROTO_VERSION > 9));
 	if (_localMultipathSupported && !_bond) {
 		if (RR->bc) {
-			_bond = RR->bc->createTransportTriggeredBond(RR, this);
+			_bond = RR->bc->createBond(RR, this);
 			/**
 			 * Allow new bond to retroactively learn all paths known to this peer
 			 */

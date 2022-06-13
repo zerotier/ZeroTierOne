@@ -1,15 +1,12 @@
 [package]
 name = "zeroidc"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 build = "build.rs"
 publish = false
 
 [lib]
 crate-type = ["staticlib","rlib"]
-
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 openidconnect = { version = "2.2", default-features = false, features = ["reqwest", "native-tls", "accept-rfc3339-timestamps"] }

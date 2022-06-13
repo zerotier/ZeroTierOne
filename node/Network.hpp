@@ -372,10 +372,13 @@ public:
 	 * @param to Destination peer address
 	 * @param now Current time
 	 */
-	inline void pushCredentialsNow(void *tPtr,const Address &to,const int64_t now)
+	inline void peerRequestedCredentials(void *tPtr,const Address &to,const int64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		_membership(to).pushCredentials(RR,tPtr,now,to,_config);
+		Membership &m = _membership(to);
+		const int64_t lastPushed = m.lastPushedCredentials();
+		if ((lastPushed < _lastConfigUpdate)||((now - lastPushed) > ZT_PEER_CREDENTIALS_REQUEST_RATE_LIMIT))
+			m.pushCredentials(RR,tPtr,now,to,_config);
 	}
 
 	/**
@@ -389,7 +392,8 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		Membership &m = _membership(to);
-		if (m.shouldPushCredentials(now))
+		const int64_t lastPushed = m.lastPushedCredentials();
+		if ((lastPushed < _lastConfigUpdate)||((now - lastPushed) > ZT_PEER_ACTIVITY_TIMEOUT))
 			m.pushCredentials(RR,tPtr,now,to,_config);
 	}
 
@@ -439,7 +443,7 @@ private:
 	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
 	NetworkConfig _config;
-	uint64_t _lastConfigUpdate;
+	int64_t _lastConfigUpdate;
 
 	struct _IncomingConfigChunk
 	{

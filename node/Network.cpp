@@ -1223,10 +1223,16 @@ void Network::requestConfiguration(void *tPtr)
 bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 {
 	const int64_t now = RR->node->now();
+	//int64_t comTimestamp = 0;
+	//int64_t comRevocationThreshold = 0;
 	Mutex::Lock _l(_lock);
 	try {
 		if (_config) {
 			Membership *m = _memberships.get(peer->address());
+			//if (m) {
+			//	comTimestamp = m->comTimestamp();
+			//	comRevocationThreshold = m->comRevocationThreshold();
+			//}
 			if ( (_config.isPublic()) || ((m)&&(m->isAllowedOnNetwork(_config, peer->identity()))) ) {
 				if (!m)
 					m = &(_membership(peer->address()));
@@ -1237,6 +1243,8 @@ bool Network::gate(void *tPtr,const SharedPtr<Peer> &peer)
 			}
 		}
 	} catch ( ... ) {}
+	//printf("%.16llx %.10llx not allowed, COM ts %lld revocation %lld\n", _id, peer->address().toInt(), comTimestamp, comRevocationThreshold); fflush(stdout);
+
 	return false;
 }
 

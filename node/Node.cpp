@@ -509,7 +509,6 @@ ZT_PeerList *Node::peers() const
 		if (pi->second->bond()) {
 			p->isBonded = pi->second->bond();
 			p->bondingPolicy = pi->second->bond()->policy();
-			p->isHealthy = pi->second->bond()->isHealthy();
 			p->numAliveLinks = pi->second->bond()->getNumAliveLinks();
 			p->numTotalLinks = pi->second->bond()->getNumTotalLinks();
 		}
@@ -741,7 +740,7 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 				n->setAccessDenied(nullptr);
 				break;
 			case NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED: {
-				fprintf(stderr, "\n\nGot auth required\n\n");
+				//fprintf(stderr, "\n\nGot auth required\n\n");
 
 				break;
 			} 

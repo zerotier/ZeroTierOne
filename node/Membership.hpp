@@ -64,13 +64,9 @@ public:
 	 */
 	void pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const int64_t now,const Address &peerAddress,const NetworkConfig &nconf);
 
-	/**
-	 * @return True if we haven't pushed credentials in a long time (to cause proactive credential push)
-	 */
-	inline bool shouldPushCredentials(const int64_t now) const
-	{
-		return ((now - _lastPushedCredentials) > ZT_PEER_ACTIVITY_TIMEOUT);
-	}
+	inline int64_t lastPushedCredentials() { return _lastPushedCredentials; }
+	inline int64_t comTimestamp() { return _com.timestamp(); }
+	inline int64_t comRevocationThreshold() { return _comRevocationThreshold; }
 
 	/**
 	 * Check whether we should push MULTICAST_LIKEs to this peer, and update last sent time if true
@@ -96,9 +92,7 @@ public:
 	 */
 	inline bool isAllowedOnNetwork(const NetworkConfig &thisNodeNetworkConfig, const Identity &otherNodeIdentity) const
 	{
-		if (thisNodeNetworkConfig.isPublic()) return true;
-		if (_com.timestamp() <= _comRevocationThreshold) return false;
-		return thisNodeNetworkConfig.com.agreesWith(_com, otherNodeIdentity);
+		return thisNodeNetworkConfig.isPublic() || (((_com.timestamp() > _comRevocationThreshold) && (thisNodeNetworkConfig.com.agreesWith(_com, otherNodeIdentity))));
 	}
 
 	inline bool recentlyAssociated(const int64_t now) const

@@ -33,7 +33,7 @@
 #include <set>
 #include <map>
 
-#include "../ext/json/json.hpp"
+#include <nlohmann/json.hpp>
 
 #define ZT_MEMBER_AUTH_TIMEOUT_NOTIFY_BEFORE 25000
 
@@ -135,7 +135,6 @@ public:
 	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress) = 0;
 
 	virtual AuthInfo getSSOAuthInfo(const nlohmann::json &member, const std::string &redirectURL) { return AuthInfo(); }
-	virtual void networkMemberSSOHasExpired(uint64_t nwid, int64_t ts);
 
 	inline void addListener(DB::ChangeListener *const listener)
 	{

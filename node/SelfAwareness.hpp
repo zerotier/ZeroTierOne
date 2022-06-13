@@ -45,6 +45,13 @@ public:
 	void iam(void *tPtr,const Address &reporter,const int64_t receivedOnLocalSocket,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,int64_t now);
 
 	/**
+	 * Return all known external surface addresses reported by peers
+	 *
+	 * @return A vector of InetAddress(es)
+	 */
+	std::vector<InetAddress> whoami();
+
+	/**
 	 * Clean up database periodically
 	 *
 	 * @param now Current time
