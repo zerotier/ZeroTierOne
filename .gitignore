@@ -1,8 +1,8 @@
 /target
 /**/target
 
-#Cargo.lock
-#!zerotier-system-service/Cargo.lock
+Cargo.lock
+!zerotier-system-service/Cargo.lock
 
 .DS_*
 .Icon*
