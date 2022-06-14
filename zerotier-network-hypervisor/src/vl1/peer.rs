@@ -73,6 +73,7 @@ fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_siz
     key.0[20] ^= packet_size as u8;
 
     let mut salsa = Salsa::<12>::new(&key.0, &header.id);
+
     let mut poly1305_key = [0_u8; 32];
     salsa.crypt_in_place(&mut poly1305_key);
 

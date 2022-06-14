@@ -7,6 +7,7 @@ pub mod getifaddrs;
 pub mod jsonformatter;
 pub mod localconfig;
 pub mod localinterface;
+pub mod localsocket;
 pub mod service;
 pub mod udp;
 pub mod utils;

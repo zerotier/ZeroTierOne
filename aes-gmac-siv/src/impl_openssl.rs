@@ -70,7 +70,6 @@ impl AesCtr {
 }
 
 /// AES-GMAC-SIV encryptor/decryptor.
-#[repr(align(8))] // allow tag and tmp to be accessed as u64 arrays as well
 pub struct AesGmacSiv {
     tag: [u8; 16],
     tmp: [u8; 16],
@@ -149,10 +148,16 @@ impl AesGmacSiv {
         self.tag[13] = self.tmp[5] ^ self.tmp[13];
         self.tag[14] = self.tmp[6] ^ self.tmp[14];
         self.tag[15] = self.tmp[7] ^ self.tmp[15];
+
         let mut tag_tmp = [0_u8; 32];
-        let _ = Crypter::new(aes_ecb_by_key_size(self.k1.len()), Mode::Encrypt, self.k1.as_slice(), None).unwrap().update(&self.tag, &mut tag_tmp);
+        let mut ecb = Crypter::new(aes_ecb_by_key_size(self.k1.len()), Mode::Encrypt, self.k1.as_slice(), None).unwrap();
+        ecb.pad(false);
+        if ecb.update(&self.tag, &mut tag_tmp).unwrap() != 16 {
+            assert_eq!(ecb.finalize(&mut tag_tmp).unwrap(), 16);
+        }
         self.tag.copy_from_slice(&tag_tmp[0..16]);
         self.tmp.copy_from_slice(&tag_tmp[0..16]);
+
         self.tmp[12] &= 0x7f;
         let _ = self.ctr.replace(Crypter::new(aes_ctr_by_key_size(self.k1.len()), Mode::Encrypt, self.k1.as_slice(), Some(&self.tmp)).unwrap());
     }
@@ -178,25 +183,23 @@ impl AesGmacSiv {
         return &self.tag;
     }
 
-    #[inline(always)]
-    fn decrypt_init_internal(&mut self) {
-        self.tmp[12] &= 0x7f;
-        let _ = self.ctr.replace(Crypter::new(aes_ctr_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), Some(&self.tmp)).unwrap());
-        let mut tag_tmp = [0_u8; 32];
-        let _ = Crypter::new(aes_ecb_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), None).unwrap().update(&self.tag, &mut tag_tmp);
-        self.tag.copy_from_slice(&tag_tmp[0..16]);
-        self.tmp[0..8].copy_from_slice(&tag_tmp[0..8]);
-        self.tmp[8..12].fill(0);
-        let _ = self.gmac.replace(Crypter::new(aes_gcm_by_key_size(self.k0.len()), Mode::Encrypt, self.k0.as_slice(), Some(&self.tmp[0..12])).unwrap());
-    }
-
     /// Initialize this cipher for decryption.
     /// The supplied tag must be 16 bytes in length. Any other length will panic.
     #[inline(always)]
     pub fn decrypt_init(&mut self, tag: &[u8]) {
         self.tmp.copy_from_slice(tag);
-        self.tag.copy_from_slice(tag);
-        self.decrypt_init_internal();
+        self.tmp[12] &= 0x7f;
+        let _ = self.ctr.replace(Crypter::new(aes_ctr_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), Some(&self.tmp)).unwrap());
+
+        let mut tag_tmp = [0_u8; 32];
+        let mut ecb = Crypter::new(aes_ecb_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), None).unwrap();
+        ecb.pad(false);
+        if ecb.update(tag, &mut tag_tmp).unwrap() != 16 {
+            assert_eq!(ecb.finalize(&mut tag_tmp).unwrap(), 16);
+        }
+        self.tag.copy_from_slice(&tag_tmp[0..16]);
+        tag_tmp[8..12].fill(0);
+        let _ = self.gmac.replace(Crypter::new(aes_gcm_by_key_size(self.k0.len()), Mode::Encrypt, self.k0.as_slice(), Some(&tag_tmp[0..12])).unwrap());
     }
 
     /// Set additional authenticated data to be checked.
@@ -217,8 +220,7 @@ impl AesGmacSiv {
     /// This may be called more than once.
     #[inline(always)]
     pub fn decrypt_in_place(&mut self, ciphertext_to_plaintext: &mut [u8]) {
-        let _ = self.ctr.as_mut().unwrap().update(unsafe { std::slice::from_raw_parts(ciphertext_to_plaintext.as_ptr(), ciphertext_to_plaintext.len()) }, ciphertext_to_plaintext);
-        let _ = self.gmac.as_mut().unwrap().aad_update(ciphertext_to_plaintext);
+        self.decrypt(unsafe { std::slice::from_raw_parts(ciphertext_to_plaintext.as_ptr(), ciphertext_to_plaintext.len()) }, ciphertext_to_plaintext);
     }
 
     /// Finish decryption and return true if authentication appears valid.
@@ -228,14 +230,18 @@ impl AesGmacSiv {
         let gmac = self.gmac.as_mut().unwrap();
         let _ = gmac.finalize(&mut self.tmp);
         let _ = gmac.get_tag(&mut self.tmp);
-        unsafe {
-            // tag[8..16] == tmp[0..8] ^ tmp[8..16]
-            let tmp = self.tmp.as_mut_ptr().cast::<u64>();
-            if *self.tag.as_mut_ptr().cast::<u64>().offset(1) == *tmp ^ *tmp.add(1) {
-                Some(&self.tag)
-            } else {
-                None
-            }
+        if (self.tag[8] == self.tmp[0] ^ self.tmp[8])
+            && (self.tag[9] == self.tmp[1] ^ self.tmp[9])
+            && (self.tag[10] == self.tmp[2] ^ self.tmp[10])
+            && (self.tag[11] == self.tmp[3] ^ self.tmp[11])
+            && (self.tag[12] == self.tmp[4] ^ self.tmp[12])
+            && (self.tag[13] == self.tmp[5] ^ self.tmp[13])
+            && (self.tag[14] == self.tmp[6] ^ self.tmp[14])
+            && (self.tag[15] == self.tmp[7] ^ self.tmp[15])
+        {
+            Some(&self.tag)
+        } else {
+            None
         }
     }
 }
