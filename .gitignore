@@ -1,11 +1,8 @@
 /target
 /**/target
 
-/aes-gmac-siv/Cargo.lock
-/zerotier-core-crypto/Cargo.lock
-/zerotier-network-hypervisor/Cargo.lock
-/syncwhole/Cargo.lock
-/iblt/Cargo.lock
+#Cargo.lock
+#!zerotier-system-service/Cargo.lock
 
 .DS_*
 .Icon*
