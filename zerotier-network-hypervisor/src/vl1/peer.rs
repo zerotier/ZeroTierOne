@@ -75,7 +75,8 @@ fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_siz
     let mut salsa = Salsa::<12>::new(&key.0, &header.id);
     let mut poly1305_key = [0_u8; 32];
     salsa.crypt_in_place(&mut poly1305_key);
-    (salsa, Poly1305::new(&poly1305_key).unwrap())
+
+    (salsa, Poly1305::new(&poly1305_key))
 }
 
 /// Attempt AEAD packet encryption and MAC validation. Returns message ID on success.

@@ -177,6 +177,8 @@ impl P384KeyPair {
     }
 
     /// Perform ECDH key agreement, returning the raw (un-hashed!) ECDH secret.
+    ///
+    /// This secret should not be used directly. It should be hashed and perhaps used in a KDF.
     pub fn agree(&self, other_public: &P384PublicKey) -> Option<Secret<P384_ECDH_SHARED_SECRET_SIZE>> {
         unsafe {
             let mut s: Secret<P384_ECDH_SHARED_SECRET_SIZE> = Secret::default();

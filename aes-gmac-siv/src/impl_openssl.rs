@@ -185,11 +185,8 @@ impl AesGmacSiv {
         let mut tag_tmp = [0_u8; 32];
         let _ = Crypter::new(aes_ecb_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), None).unwrap().update(&self.tag, &mut tag_tmp);
         self.tag.copy_from_slice(&tag_tmp[0..16]);
-        unsafe {
-            let tmp = self.tmp.as_mut_ptr().cast::<u64>();
-            *tmp = *self.tag.as_mut_ptr().cast::<u64>();
-            *tmp.offset(1) = 0;
-        }
+        self.tmp[0..8].copy_from_slice(&tag_tmp[0..8]);
+        self.tmp[8..12].fill(0);
         let _ = self.gmac.replace(Crypter::new(aes_gcm_by_key_size(self.k0.len()), Mode::Encrypt, self.k0.as_slice(), Some(&self.tmp[0..12])).unwrap());
     }
 
@@ -234,7 +231,7 @@ impl AesGmacSiv {
         unsafe {
             // tag[8..16] == tmp[0..8] ^ tmp[8..16]
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
-            if *self.tag.as_mut_ptr().cast::<u64>().offset(1) == *tmp ^ *tmp.offset(1) {
+            if *self.tag.as_mut_ptr().cast::<u64>().offset(1) == *tmp ^ *tmp.add(1) {
                 Some(&self.tag)
             } else {
                 None

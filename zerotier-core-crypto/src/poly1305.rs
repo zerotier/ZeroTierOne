@@ -11,12 +11,9 @@ pub const POLY1305_MAC_SIZE: usize = 16;
 
 impl Poly1305 {
     #[inline(always)]
-    pub fn new(key: &[u8]) -> Option<Poly1305> {
-        if key.len() == 32 {
-            Some(Self(poly1305::Poly1305::new(poly1305::Key::from_slice(key))))
-        } else {
-            None
-        }
+    pub fn new(key: &[u8]) -> Poly1305 {
+        assert_eq!(key.len(), 32);
+        Self(poly1305::Poly1305::new(poly1305::Key::from_slice(key)))
     }
 
     #[inline(always)]
