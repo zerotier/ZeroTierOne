@@ -501,16 +501,10 @@ snap-build-remote: FORCE
 	cd pkg && snapcraft remote-build --build-on=amd64,arm64,s390x,ppc64el,armhf,i386
 
 snap-upload-beta: FORCE
+	snapcraft login --with-file=snapcraft-login-data
 	pushd pkg
 	for SNAPFILE in ./*.snap; do\
-		snapcraft upload --release=beta,edge,candidate $${SNAPFILE};\
-	done
-	popd
-
-snap-upload-stable: FORCE
-	pushd pkg
-	for SNAPFILE in ./*.snap; do\
-		snapcraft upload --release=stable $${SNAPFILE};\
+		snapcraft upload --release=stable,beta,edge,candidate $${SNAPFILE};\
 	done
 	popd
 
