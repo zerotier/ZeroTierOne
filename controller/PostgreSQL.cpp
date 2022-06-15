@@ -483,6 +483,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 					info.ssoNonce = nonce;
 					info.ssoState = std::string(state_hex) + "_" +networkId;
 					info.centralAuthURL = redirectURL;
+#ifdef ZT_DEBUG
 					fprintf(
 						stderr,
 						"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s\n",
@@ -491,6 +492,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 						info.ssoNonce.c_str(),
 						info.ssoState.c_str(),
 						info.centralAuthURL.c_str());
+#endif
 				}
 			}  else {
 				fprintf(stderr, "client_id: %s\nauthorization_endpoint: %s\n", client_id.c_str(), authorization_endpoint.c_str());
