@@ -26,3 +26,5 @@ impl Poly1305 {
         self.0.finalize().into_bytes().into()
     }
 }
+
+unsafe impl Send for Poly1305 {}

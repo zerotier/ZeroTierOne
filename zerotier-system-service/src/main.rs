@@ -141,8 +141,14 @@ async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
         Some(("leave", cmd_args)) => todo!(),
         Some(("service", _)) => {
             drop(global_args); // free unnecessary heap before starting service as we're done with CLI args
-            assert!(service::Service::new(tokio::runtime::Handle::current(), &flags.base_path, true).await.is_ok());
-            exitcode::OK
+            let svc = service::Service::new(tokio::runtime::Handle::current(), &flags.base_path, true).await;
+            if svc.is_ok() {
+                let _ = tokio::signal::ctrl_c().await;
+                exitcode::OK
+            } else {
+                println!("FATAL: error launching service: {}", svc.err().unwrap().to_string());
+                exitcode::ERR_IOERR
+            }
         }
         Some(("identity", cmd_args)) => todo!(),
         Some(("rootset", cmd_args)) => cli::rootset::cmd(flags, cmd_args).await,

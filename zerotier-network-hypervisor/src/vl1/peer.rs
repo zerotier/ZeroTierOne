@@ -15,6 +15,7 @@ use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
 use crate::util::byte_array_range;
+use crate::util::debug_event;
 use crate::util::marshalable::Marshalable;
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
@@ -26,6 +27,7 @@ pub(crate) const SERVICE_INTERVAL_MS: i64 = security_constants::EPHEMERAL_SECRET
 
 struct PeerPath<SI: SystemInterface> {
     path: Weak<Path<SI>>,
+    path_internal_instance_id: usize,
     last_receive_time_ticks: i64,
 }
 
@@ -205,7 +207,7 @@ impl<SI: SystemInterface> Peer<SI> {
     ///
     /// If the packet comes in multiple fragments, the fragments slice should contain all
     /// those fragments after the main packet header and first chunk.
-    pub(crate) fn receive<VI: InnerProtocolInterface>(&self, node: &Node<SI>, si: &SI, vi: &VI, time_ticks: i64, source_path: &Arc<Path<SI>>, header: &PacketHeader, frag0: &PacketBuffer, fragments: &[Option<PooledPacketBuffer>]) {
+    pub(crate) async fn receive<PH: InnerProtocolInterface>(&self, node: &Node<SI>, si: &SI, ph: &PH, time_ticks: i64, source_path: &Arc<Path<SI>>, header: &PacketHeader, frag0: &PacketBuffer, fragments: &[Option<PooledPacketBuffer>]) {
         if let Ok(packet_frag0_payload_bytes) = frag0.as_bytes_starting_at(packet_constants::VERB_INDEX) {
             let mut payload = unsafe { PacketBuffer::new_without_memzero() };
 
@@ -268,9 +270,8 @@ impl<SI: SystemInterface> Peer<SI> {
                     }
                 }
 
-                let source_path_ptr = Arc::as_ptr(source_path);
                 for p in self.paths.lock().iter_mut() {
-                    if Weak::as_ptr(&p.path) == source_path_ptr {
+                    if p.path_internal_instance_id == source_path.internal_instance_id {
                         p.last_receive_time_ticks = time_ticks;
                         break;
                     }
@@ -281,17 +282,17 @@ impl<SI: SystemInterface> Peer<SI> {
                 // because the most performance critical path is the handling of the ???_FRAME
                 // verbs, which are in VL2.
                 verb &= packet_constants::VERB_MASK; // mask off flags
-                if !vi.handle_packet(self, source_path, forward_secrecy, extended_authentication, verb, &payload) {
+                if !ph.handle_packet(self, &source_path, forward_secrecy, extended_authentication, verb, &payload).await {
                     match verb {
                         //VERB_VL1_NOP => {}
-                        verbs::VL1_HELLO => self.receive_hello(si, node, time_ticks, source_path, &payload),
-                        verbs::VL1_ERROR => self.receive_error(si, vi, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload),
-                        verbs::VL1_OK => self.receive_ok(si, vi, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload),
-                        verbs::VL1_WHOIS => self.receive_whois(si, node, time_ticks, source_path, &payload),
-                        verbs::VL1_RENDEZVOUS => self.receive_rendezvous(si, node, time_ticks, source_path, &payload),
-                        verbs::VL1_ECHO => self.receive_echo(si, node, time_ticks, source_path, &payload),
-                        verbs::VL1_PUSH_DIRECT_PATHS => self.receive_push_direct_paths(si, node, time_ticks, source_path, &payload),
-                        verbs::VL1_USER_MESSAGE => self.receive_user_message(si, node, time_ticks, source_path, &payload),
+                        verbs::VL1_HELLO => self.receive_hello(si, node, time_ticks, source_path, &payload).await,
+                        verbs::VL1_ERROR => self.receive_error(si, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload).await,
+                        verbs::VL1_OK => self.receive_ok(si, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload).await,
+                        verbs::VL1_WHOIS => self.receive_whois(si, node, time_ticks, source_path, &payload).await,
+                        verbs::VL1_RENDEZVOUS => self.receive_rendezvous(si, node, time_ticks, source_path, &payload).await,
+                        verbs::VL1_ECHO => self.receive_echo(si, node, time_ticks, source_path, &payload).await,
+                        verbs::VL1_PUSH_DIRECT_PATHS => self.receive_push_direct_paths(si, node, time_ticks, source_path, &payload).await,
+                        verbs::VL1_USER_MESSAGE => self.receive_user_message(si, node, time_ticks, source_path, &payload).await,
                         _ => {}
                     }
                 }
@@ -299,13 +300,13 @@ impl<SI: SystemInterface> Peer<SI> {
         }
     }
 
-    fn send_to_endpoint(&self, si: &SI, endpoint: &Endpoint, local_socket: Option<&SI::LocalSocket>, local_interface: Option<&SI::LocalInterface>, packet: &PacketBuffer) -> bool {
+    async fn send_to_endpoint(&self, si: &SI, endpoint: &Endpoint, local_socket: Option<&SI::LocalSocket>, local_interface: Option<&SI::LocalInterface>, packet: &PacketBuffer) -> bool {
         match endpoint {
             Endpoint::Ip(_) | Endpoint::IpUdp(_) | Endpoint::Ethernet(_) | Endpoint::Bluetooth(_) | Endpoint::WifiDirect(_) => {
                 let packet_size = packet.len();
                 if packet_size > UDP_DEFAULT_MTU {
                     let bytes = packet.as_bytes();
-                    if !si.wire_send(endpoint, local_socket, local_interface, &[&bytes[0..UDP_DEFAULT_MTU]], 0) {
+                    if !si.wire_send(endpoint, local_socket, local_interface, &[&bytes[0..UDP_DEFAULT_MTU]], 0).await {
                         return false;
                     }
 
@@ -327,7 +328,7 @@ impl<SI: SystemInterface> Peer<SI> {
                     loop {
                         header.total_and_fragment_no += 1;
                         let next_pos = pos + chunk_size;
-                        if !si.wire_send(endpoint, local_socket, local_interface, &[header.as_bytes(), &bytes[pos..next_pos]], 0) {
+                        if !si.wire_send(endpoint, local_socket, local_interface, &[header.as_bytes(), &bytes[pos..next_pos]], 0).await {
                             return false;
                         }
                         pos = next_pos;
@@ -338,11 +339,11 @@ impl<SI: SystemInterface> Peer<SI> {
                         }
                     }
                 } else {
-                    return si.wire_send(endpoint, local_socket, local_interface, &[packet.as_bytes()], 0);
+                    return si.wire_send(endpoint, local_socket, local_interface, &[packet.as_bytes()], 0).await;
                 }
             }
             _ => {
-                return si.wire_send(endpoint, local_socket, local_interface, &[packet.as_bytes()], 0);
+                return si.wire_send(endpoint, local_socket, local_interface, &[packet.as_bytes()], 0).await;
             }
         }
     }
@@ -351,9 +352,9 @@ impl<SI: SystemInterface> Peer<SI> {
     ///
     /// This will go directly if there is an active path, or otherwise indirectly
     /// via a root or some other route.
-    pub(crate) fn send(&self, si: &SI, node: &Node<SI>, time_ticks: i64, packet: &PacketBuffer) -> bool {
+    pub(crate) async fn send(&self, si: &SI, node: &Node<SI>, time_ticks: i64, packet: &PacketBuffer) -> bool {
         if let Some(path) = self.path(node) {
-            if self.send_to_endpoint(si, &path.endpoint, Some(&path.local_socket), Some(&path.local_interface), packet) {
+            if self.send_to_endpoint(si, &path.endpoint, Some(&path.local_socket), Some(&path.local_interface), packet).await {
                 self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
                 return true;
             }
@@ -368,9 +369,9 @@ impl<SI: SystemInterface> Peer<SI> {
     ///
     /// This doesn't fragment large packets since fragments are forwarded individually.
     /// Intermediates don't need to adjust fragmentation.
-    pub(crate) fn forward(&self, si: &SI, time_ticks: i64, packet: &PacketBuffer) -> bool {
+    pub(crate) async fn forward(&self, si: &SI, time_ticks: i64, packet: &PacketBuffer) -> bool {
         if let Some(path) = self.direct_path() {
-            if si.wire_send(&path.endpoint, Some(&path.local_socket), Some(&path.local_interface), &[packet.as_bytes()], 0) {
+            if si.wire_send(&path.endpoint, Some(&path.local_socket), Some(&path.local_interface), &[packet.as_bytes()], 0).await {
                 self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
                 return true;
             }
@@ -385,110 +386,109 @@ impl<SI: SystemInterface> Peer<SI> {
     ///
     /// Unlike other messages HELLO is sent partially in the clear and always with the long-lived
     /// static identity key.
-    pub(crate) fn send_hello(&self, si: &SI, node: &Node<SI>, explicit_endpoint: Option<&Endpoint>) -> bool {
+    pub(crate) async fn send_hello(&self, si: &SI, node: &Node<SI>, explicit_endpoint: Option<&Endpoint>) -> bool {
         let mut path = None;
-        let destination = explicit_endpoint.map_or_else(
-            || {
-                self.path(node).map_or(None, |p| {
-                    let _ = path.insert(p.clone());
-                    Some(p.endpoint.clone())
-                })
-            },
-            |endpoint| Some(endpoint.clone()),
-        );
-        if destination.is_none() {
-            return false;
-        }
-        let destination = destination.unwrap();
+        let destination = if let Some(explicit_endpoint) = explicit_endpoint {
+            explicit_endpoint.clone()
+        } else {
+            if let Some(p) = self.path(node) {
+                let _ = path.insert(p);
+                path.as_ref().unwrap().endpoint.clone()
+            } else {
+                return false;
+            }
+        };
 
-        let mut packet = PacketBuffer::new();
         let time_ticks = si.time_ticks();
-        let message_id = self.next_message_id();
-
+        let mut packet = PacketBuffer::new();
         {
-            let packet_header: &mut PacketHeader = packet.append_struct_get_mut().unwrap();
-            packet_header.id = message_id.to_ne_bytes(); // packet ID and message ID are the same when Poly1305 MAC is used
-            packet_header.dest = self.identity.address.to_bytes();
-            packet_header.src = node.identity.address.to_bytes();
-            packet_header.flags_cipher_hops = security_constants::CIPHER_NOCRYPT_POLY1305;
+            let message_id = self.next_message_id();
+
+            {
+                let packet_header: &mut PacketHeader = packet.append_struct_get_mut().unwrap();
+                packet_header.id = message_id.to_ne_bytes(); // packet ID and message ID are the same when Poly1305 MAC is used
+                packet_header.dest = self.identity.address.to_bytes();
+                packet_header.src = node.identity.address.to_bytes();
+                packet_header.flags_cipher_hops = security_constants::CIPHER_NOCRYPT_POLY1305;
+            }
+
+            {
+                let hello_fixed_headers: &mut message_component_structs::HelloFixedHeaderFields = packet.append_struct_get_mut().unwrap();
+                hello_fixed_headers.verb = verbs::VL1_HELLO | packet_constants::VERB_FLAG_EXTENDED_AUTHENTICATION;
+                hello_fixed_headers.version_proto = PROTOCOL_VERSION;
+                hello_fixed_headers.version_major = VERSION_MAJOR;
+                hello_fixed_headers.version_minor = VERSION_MINOR;
+                hello_fixed_headers.version_revision = (VERSION_REVISION as u16).to_be_bytes();
+                hello_fixed_headers.timestamp = (time_ticks as u64).to_be_bytes();
+            }
+
+            // Full identity of the node establishing the session.
+            assert!(self.identity.marshal_with_options(&mut packet, Identity::ALGORITHM_ALL, false).is_ok());
+
+            // 8 reserved bytes, must be zero for compatibility with old nodes.
+            assert!(packet.append_padding(0, 8).is_ok());
+
+            // Generate a 12-byte nonce for the private section of HELLO.
+            let mut nonce = get_bytes_secure::<12>();
+
+            // LEGACY: create a 16-bit encrypted field that specifies zero "moons." Current nodes ignore this
+            // and treat it as part of the random AES-CTR nonce, but old versions need it to parse the packet
+            // correctly.
+            let mut salsa_iv = message_id.to_ne_bytes();
+            salsa_iv[7] &= 0xf8;
+            Salsa::<12>::new(&self.identity_symmetric_key.key.0[0..32], &salsa_iv).crypt(&[0_u8, 0_u8], &mut nonce[8..10]);
+
+            // Append 12-byte AES-CTR nonce.
+            assert!(packet.append_bytes_fixed(&nonce).is_ok());
+
+            // Add session meta-data, which is encrypted using plain AES-CTR. No authentication (AEAD) is needed
+            // because the whole packet is authenticated. Data in the session is not technically secret in a
+            // cryptographic sense but we encrypt it for privacy and as a defense in depth.
+            let mut fields = Dictionary::new();
+            fields.set_bytes(session_metadata::INSTANCE_ID, node.instance_id.to_vec());
+            fields.set_u64(session_metadata::CLOCK, si.time_clock() as u64);
+            fields.set_bytes(session_metadata::SENT_TO, destination.to_buffer::<{ Endpoint::MAX_MARSHAL_SIZE }>().unwrap().as_bytes().to_vec());
+            let fields = fields.to_bytes();
+            assert!(fields.len() <= 0xffff); // sanity check, should be impossible
+            assert!(packet.append_u16(fields.len() as u16).is_ok()); // prefix with unencrypted size
+            let private_section_start = packet.len();
+            assert!(packet.append_bytes(fields.as_slice()).is_ok());
+            let mut aes = AesCtr::new(&self.identity_symmetric_key.hello_private_section_key.as_bytes()[0..32]);
+            aes.init(&nonce);
+            aes.crypt_in_place(&mut packet.as_mut()[private_section_start..]);
+
+            // Seal packet with HMAC-SHA512 extended authentication.
+            let mut hmac = HMACSHA512::new(self.identity_symmetric_key.packet_hmac_key.as_bytes());
+            hmac.update(&message_id.to_ne_bytes());
+            hmac.update(&packet.as_bytes()[packet_constants::HEADER_SIZE..]);
+            assert!(packet.append_bytes_fixed(&hmac.finish()).is_ok());
+            drop(hmac);
+
+            // Set poly1305 in header, which is the only authentication for old nodes.
+            let (_, mut poly) = salsa_poly_create(&self.identity_symmetric_key, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
+            poly.update(packet.as_bytes_starting_at(packet_constants::HEADER_SIZE).unwrap());
+            packet.as_mut()[packet_constants::MAC_FIELD_INDEX..packet_constants::MAC_FIELD_INDEX + 8].copy_from_slice(&poly.finish()[0..8]);
+
+            self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
+
+            debug_event!(si, "HELLO -> {} @ {} ({} bytes)", self.identity.address.to_string(), destination.to_string(), packet.len());
         }
 
-        {
-            let hello_fixed_headers: &mut message_component_structs::HelloFixedHeaderFields = packet.append_struct_get_mut().unwrap();
-            hello_fixed_headers.verb = verbs::VL1_HELLO | packet_constants::VERB_FLAG_EXTENDED_AUTHENTICATION;
-            hello_fixed_headers.version_proto = PROTOCOL_VERSION;
-            hello_fixed_headers.version_major = VERSION_MAJOR;
-            hello_fixed_headers.version_minor = VERSION_MINOR;
-            hello_fixed_headers.version_revision = (VERSION_REVISION as u16).to_be_bytes();
-            hello_fixed_headers.timestamp = (time_ticks as u64).to_be_bytes();
+        if let Some(p) = path {
+            if self.send_to_endpoint(si, &destination, Some(&p.local_socket), Some(&p.local_interface), &packet).await {
+                p.log_send_anything(time_ticks);
+                true
+            } else {
+                false
+            }
+        } else {
+            self.send_to_endpoint(si, &destination, None, None, &packet).await
         }
-
-        // Full identity of the node establishing the session.
-        assert!(self.identity.marshal_with_options(&mut packet, Identity::ALGORITHM_ALL, false).is_ok());
-
-        // 8 reserved bytes, must be zero for compatibility with old nodes.
-        assert!(packet.append_padding(0, 8).is_ok());
-
-        // Generate a 12-byte nonce for the private section of HELLO.
-        let mut nonce = get_bytes_secure::<12>();
-
-        // LEGACY: create a 16-bit encrypted field that specifies zero "moons." Current nodes ignore this
-        // and treat it as part of the random AES-CTR nonce, but old versions need it to parse the packet
-        // correctly.
-        let mut salsa_iv = message_id.to_ne_bytes();
-        salsa_iv[7] &= 0xf8;
-        Salsa::<12>::new(&self.identity_symmetric_key.key.0[0..32], &salsa_iv).crypt(&[0_u8, 0_u8], &mut nonce[8..10]);
-
-        // Append 12-byte AES-CTR nonce.
-        assert!(packet.append_bytes_fixed(&nonce).is_ok());
-
-        // Add session meta-data, which is encrypted using plain AES-CTR. No authentication (AEAD) is needed
-        // because the whole packet is authenticated. Data in the session is not technically secret in a
-        // cryptographic sense but we encrypt it for privacy and as a defense in depth.
-        let mut fields = Dictionary::new();
-        fields.set_bytes(session_metadata::INSTANCE_ID, node.instance_id.to_vec());
-        fields.set_u64(session_metadata::CLOCK, si.time_clock() as u64);
-        fields.set_bytes(session_metadata::SENT_TO, destination.to_buffer::<{ Endpoint::MAX_MARSHAL_SIZE }>().unwrap().as_bytes().to_vec());
-        let fields = fields.to_bytes();
-        assert!(fields.len() <= 0xffff); // sanity check, should be impossible
-        assert!(packet.append_u16(fields.len() as u16).is_ok()); // prefix with unencrypted size
-        let private_section_start = packet.len();
-        assert!(packet.append_bytes(fields.as_slice()).is_ok());
-        let mut aes = AesCtr::new(&self.identity_symmetric_key.hello_private_section_key.as_bytes()[0..32]);
-        aes.init(&nonce);
-        aes.crypt_in_place(&mut packet.as_mut()[private_section_start..]);
-        drop(aes);
-        drop(fields);
-
-        // Seal packet with HMAC-SHA512 extended authentication.
-        let mut hmac = HMACSHA512::new(self.identity_symmetric_key.packet_hmac_key.as_bytes());
-        hmac.update(&message_id.to_ne_bytes());
-        hmac.update(&packet.as_bytes()[packet_constants::HEADER_SIZE..]);
-        assert!(packet.append_bytes_fixed(&hmac.finish()).is_ok());
-
-        // Set poly1305 in header, which is the only authentication for old nodes.
-        let (_, mut poly) = salsa_poly_create(&self.identity_symmetric_key, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
-        poly.update(packet.as_bytes_starting_at(packet_constants::HEADER_SIZE).unwrap());
-        packet.as_mut()[packet_constants::MAC_FIELD_INDEX..packet_constants::MAC_FIELD_INDEX + 8].copy_from_slice(&poly.finish()[0..8]);
-
-        self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
-
-        path.map_or_else(
-            || self.send_to_endpoint(si, &destination, None, None, &packet),
-            |p| {
-                if self.send_to_endpoint(si, &destination, Some(&p.local_socket), Some(&p.local_interface), &packet) {
-                    p.log_send_anything(time_ticks);
-                    true
-                } else {
-                    false
-                }
-            },
-        )
     }
 
-    fn receive_hello(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
+    async fn receive_hello(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
 
-    fn receive_error<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) {
+    async fn receive_error<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) {
         let mut cursor: usize = 1;
         if let Ok(error_header) = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor) {
             let in_re_message_id = u64::from_ne_bytes(error_header.in_re_message_id);
@@ -496,14 +496,14 @@ impl<SI: SystemInterface> Peer<SI> {
             if current_packet_id_counter.wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match error_header.in_re_verb {
                     _ => {
-                        ph.handle_error(self, source_path, forward_secrecy, extended_authentication, error_header.in_re_verb, in_re_message_id, error_header.error_code, payload, &mut cursor);
+                        ph.handle_error(self, &source_path, forward_secrecy, extended_authentication, error_header.in_re_verb, in_re_message_id, error_header.error_code, payload, &mut cursor).await;
                     }
                 }
             }
         }
     }
 
-    fn receive_ok<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) {
+    async fn receive_ok<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) {
         let mut cursor: usize = 1;
         if let Ok(ok_header) = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor) {
             let in_re_message_id = u64::from_ne_bytes(ok_header.in_re_message_id);
@@ -515,22 +515,22 @@ impl<SI: SystemInterface> Peer<SI> {
                     }
                     verbs::VL1_WHOIS => {}
                     _ => {
-                        ph.handle_ok(self, source_path, forward_secrecy, extended_authentication, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor);
+                        ph.handle_ok(self, &source_path, forward_secrecy, extended_authentication, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor).await;
                     }
                 }
             }
         }
     }
 
-    fn receive_whois(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
+    async fn receive_whois(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
 
-    fn receive_rendezvous(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
+    async fn receive_rendezvous(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
 
-    fn receive_echo(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
+    async fn receive_echo(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
 
-    fn receive_push_direct_paths(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
+    async fn receive_push_direct_paths(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
 
-    fn receive_user_message(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
+    async fn receive_user_message(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
 
     /// Get current best path or None if there are no direct paths to this peer.
     pub fn direct_path(&self) -> Option<Arc<Path<SI>>> {

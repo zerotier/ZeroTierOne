@@ -51,6 +51,8 @@ impl Write for SHA512 {
     }
 }
 
+unsafe impl Send for SHA512 {}
+
 pub struct SHA384(Option<openssl::sha::Sha384>);
 
 impl SHA384 {
@@ -92,6 +94,8 @@ impl Write for SHA384 {
         Ok(())
     }
 }
+
+unsafe impl Send for SHA384 {}
 
 //#[link(name="crypto")]
 extern "C" {

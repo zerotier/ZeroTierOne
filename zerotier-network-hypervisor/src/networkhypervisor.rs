@@ -2,6 +2,8 @@
 
 use std::time::Duration;
 
+use async_trait::async_trait;
+
 use crate::error::InvalidParameterError;
 use crate::util::buffer::Buffer;
 use crate::util::marshalable::Marshalable;
@@ -10,6 +12,7 @@ use crate::vl1::protocol::PooledPacketBuffer;
 use crate::vl1::*;
 use crate::vl2::switch::*;
 
+#[async_trait]
 pub trait Interface: SystemInterface + SwitchInterface {}
 
 pub struct NetworkHypervisor<I: Interface> {
@@ -18,10 +21,10 @@ pub struct NetworkHypervisor<I: Interface> {
 }
 
 impl<I: Interface> NetworkHypervisor<I> {
-    pub fn new(ii: &I, auto_generate_identity: bool, auto_upgrade_identity: bool) -> Result<Self, InvalidParameterError> {
+    pub async fn new(ii: &I, auto_generate_identity: bool, auto_upgrade_identity: bool) -> Result<Self, InvalidParameterError> {
         Ok(NetworkHypervisor {
-            vl1: Node::new(ii, auto_generate_identity, auto_upgrade_identity)?,
-            vl2: Switch::new(),
+            vl1: Node::new(ii, auto_generate_identity, auto_upgrade_identity).await?,
+            vl2: Switch::new().await,
         })
     }
 
@@ -45,13 +48,14 @@ impl<I: Interface> NetworkHypervisor<I> {
     /// This shouldn't be called concurrently by more than one loop. Doing so would be harmless
     /// but would be a waste of compute cycles.
     #[inline(always)]
-    pub fn do_background_tasks(&self, ii: &I) -> Duration {
-        self.vl1.do_background_tasks(ii)
+    pub async fn do_background_tasks(&self, ii: &I) -> Duration {
+        self.vl1.do_background_tasks(ii).await
     }
 
+    /// Process a physical packet received over a network interface.
     #[inline(always)]
-    pub fn handle_incoming_physical_packet(&self, ii: &I, source_endpoint: &Endpoint, source_local_socket: &I::LocalSocket, source_local_interface: &I::LocalInterface, data: PooledPacketBuffer) {
-        self.vl1.handle_incoming_physical_packet(ii, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data)
+    pub async fn handle_incoming_physical_packet(&self, ii: &I, source_endpoint: &Endpoint, source_local_socket: &I::LocalSocket, source_local_interface: &I::LocalInterface, data: PooledPacketBuffer) {
+        self.vl1.handle_incoming_physical_packet(ii, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data).await
     }
 
     /// Add or update a root set.

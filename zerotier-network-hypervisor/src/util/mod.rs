@@ -14,7 +14,7 @@ pub(crate) const ZEROES: [u8; 64] = [0_u8; 64];
 #[allow(unused_macros)]
 macro_rules! debug_event {
     ($si:expr, $fmt:expr $(, $($arg:tt)*)?) => {
-        $si.event(crate::Event::Debug(file!(), line!(), format!($fmt, $($($arg)*)?)));
+        $si.event(crate::Event::Debug(file!(), line!(), format!($fmt, $($($arg)*)?))).await;
     }
 }
 

@@ -6,6 +6,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
+use zerotier_network_hypervisor::async_trait;
 use zerotier_network_hypervisor::vl1::*;
 use zerotier_network_hypervisor::vl2::*;
 use zerotier_network_hypervisor::*;
@@ -52,6 +53,10 @@ impl Drop for Service {
 }
 
 impl Service {
+    /// Start ZeroTier service.
+    ///
+    /// This launches a number of background tasks in the async runtime that will run as long as this object exists.
+    /// When this is dropped these tasks are killed.
     pub async fn new<P: AsRef<Path>>(rt: tokio::runtime::Handle, base_path: P, auto_upgrade_identity: bool) -> Result<Self, Box<dyn Error>> {
         let mut si = ServiceImpl {
             rt,
@@ -61,7 +66,7 @@ impl Service {
             num_listeners_per_socket: std::thread::available_parallelism().unwrap().get(),
             _core: None,
         };
-        let _ = si._core.insert(NetworkHypervisor::new(&si, true, auto_upgrade_identity)?);
+        let _ = si._core.insert(NetworkHypervisor::new(&si, true, auto_upgrade_identity).await?);
         let si = Arc::new(si);
 
         si._core.as_ref().unwrap().add_update_default_root_set_if_none();
@@ -88,7 +93,7 @@ impl ServiceImpl {
         if bp.sockets.is_empty() {
             return Some(errors);
         }
-        drop(udp_sockets); // release lock
+        drop(udp_sockets);
 
         for ns in new_sockets.iter() {
             /*
@@ -98,19 +103,18 @@ impl ServiceImpl {
              * This makes sure that when one packet is in processing the async runtime is immediately able to
              * cue up another receiver for this socket.
              */
-            let mut socket_associated_tasks = ns.socket_associated_tasks.lock();
             for _ in 0..self.num_listeners_per_socket {
                 let self2 = self.clone();
                 let socket = ns.socket.clone();
                 let interface = ns.interface.clone();
                 let local_socket = LocalSocket(Arc::downgrade(ns), self.local_socket_unique_id_counter.fetch_add(1, Ordering::SeqCst));
-                socket_associated_tasks.push(self.rt.spawn(async move {
+                ns.socket_associated_tasks.lock().push(self.rt.spawn(async move {
                     let core = self2.core();
                     loop {
                         let mut buf = core.get_packet_buffer();
                         if let Ok((bytes, source)) = socket.recv_from(unsafe { buf.entire_buffer_mut() }).await {
                             unsafe { buf.set_size_unchecked(bytes) };
-                            core.handle_incoming_physical_packet(&self2, &Endpoint::IpUdp(InetAddress::from(source)), &local_socket, &interface, buf);
+                            core.handle_incoming_physical_packet(&self2, &Endpoint::IpUdp(InetAddress::from(source)), &local_socket, &interface, buf).await;
                         } else {
                             break;
                         }
@@ -142,38 +146,39 @@ impl ServiceImpl {
     async fn core_background_service_task_main(self: Arc<Self>) {
         tokio::time::sleep(Duration::from_secs(1)).await;
         loop {
-            tokio::time::sleep(self.core().do_background_tasks(&self)).await;
+            tokio::time::sleep(self.core().do_background_tasks(&self).await).await;
         }
     }
 }
 
+#[async_trait]
 impl SystemInterface for ServiceImpl {
     type LocalSocket = crate::service::LocalSocket;
     type LocalInterface = crate::localinterface::LocalInterface;
 
-    fn event(&self, event: Event) {
+    async fn event(&self, event: Event) {
         println!("{}", event.to_string());
         match event {
             _ => {}
         }
     }
 
-    fn user_message(&self, _source: &Identity, _message_type: u64, _message: &[u8]) {}
+    async fn user_message(&self, _source: &Identity, _message_type: u64, _message: &[u8]) {}
 
     #[inline(always)]
     fn local_socket_is_valid(&self, socket: &Self::LocalSocket) -> bool {
         socket.0.strong_count() > 0
     }
 
-    fn load_node_identity(&self) -> Option<Identity> {
-        self.rt.block_on(async { self.data.load_identity().await.map_or(None, |i| Some(i)) })
+    async fn load_node_identity(&self) -> Option<Identity> {
+        self.data.load_identity().await.map_or(None, |i| Some(i))
     }
 
-    fn save_node_identity(&self, id: &Identity) {
-        self.rt.block_on(async { assert!(self.data.save_identity(id).await.is_ok()) });
+    async fn save_node_identity(&self, id: &Identity) {
+        assert!(self.data.save_identity(id).await.is_ok())
     }
 
-    fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<&Self::LocalSocket>, local_interface: Option<&Self::LocalInterface>, data: &[&[u8]], packet_ttl: u8) -> bool {
+    async fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<&Self::LocalSocket>, local_interface: Option<&Self::LocalInterface>, data: &[&[u8]], packet_ttl: u8) -> bool {
         match endpoint {
             Endpoint::IpUdp(address) => {
                 // This is the fast path -- the socket is known to the core so just send it.
@@ -187,64 +192,58 @@ impl SystemInterface for ServiceImpl {
 
                 // Otherwise we try to send from one socket on every interface or from the specified interface.
                 // This path only happens when the core is trying new endpoints. The fast path is for most packets.
-                return self.rt.block_on(async {
-                    let sockets = self.udp_sockets.read().await;
-                    if !sockets.is_empty() {
-                        if let Some(specific_interface) = local_interface {
-                            for (_, p) in sockets.iter() {
-                                for s in p.sockets.iter() {
-                                    if s.interface.eq(specific_interface) {
-                                        if s.send_async(&self.rt, address, data, packet_ttl).await {
-                                            return true;
-                                        }
+                let sockets = self.udp_sockets.read().await;
+                if !sockets.is_empty() {
+                    if let Some(specific_interface) = local_interface {
+                        for (_, p) in sockets.iter() {
+                            for s in p.sockets.iter() {
+                                if s.interface.eq(specific_interface) {
+                                    if s.send_async(&self.rt, address, data, packet_ttl).await {
+                                        return true;
                                     }
                                 }
                             }
-                        } else {
-                            let bound_ports: Vec<&u16> = sockets.keys().collect();
-                            let mut sent_on_interfaces = HashSet::with_capacity(4);
-                            let rn = random::xorshift64_random() as usize;
-                            for i in 0..bound_ports.len() {
-                                let p = sockets.get(*bound_ports.get(rn.wrapping_add(i) % bound_ports.len()).unwrap()).unwrap();
-                                for s in p.sockets.iter() {
-                                    if !sent_on_interfaces.contains(&s.interface) {
-                                        if s.send_async(&self.rt, address, data, packet_ttl).await {
-                                            sent_on_interfaces.insert(s.interface.clone());
-                                        }
-                                    }
-                                }
-                            }
-                            return !sent_on_interfaces.is_empty();
                         }
+                    } else {
+                        let bound_ports: Vec<&u16> = sockets.keys().collect();
+                        let mut sent_on_interfaces = HashSet::with_capacity(4);
+                        let rn = random::xorshift64_random() as usize;
+                        for i in 0..bound_ports.len() {
+                            let p = sockets.get(*bound_ports.get(rn.wrapping_add(i) % bound_ports.len()).unwrap()).unwrap();
+                            for s in p.sockets.iter() {
+                                if !sent_on_interfaces.contains(&s.interface) {
+                                    if s.send_async(&self.rt, address, data, packet_ttl).await {
+                                        sent_on_interfaces.insert(s.interface.clone());
+                                    }
+                                }
+                            }
+                        }
+                        return !sent_on_interfaces.is_empty();
                     }
-                    return false;
-                });
+                }
+                return false;
             }
             _ => {}
         }
         return false;
     }
 
-    fn check_path(&self, _id: &Identity, endpoint: &Endpoint, _local_socket: Option<&Self::LocalSocket>, _local_interface: Option<&Self::LocalInterface>) -> bool {
-        self.rt.block_on(async {
-            let config = self.data.config().await;
-            if let Some(pps) = config.physical.get(endpoint) {
-                !pps.blacklist
-            } else {
-                true
-            }
-        })
+    async fn check_path(&self, _id: &Identity, endpoint: &Endpoint, _local_socket: Option<&Self::LocalSocket>, _local_interface: Option<&Self::LocalInterface>) -> bool {
+        let config = self.data.config().await;
+        if let Some(pps) = config.physical.get(endpoint) {
+            !pps.blacklist
+        } else {
+            true
+        }
     }
 
-    fn get_path_hints(&self, id: &Identity) -> Option<Vec<(Endpoint, Option<Self::LocalSocket>, Option<Self::LocalInterface>)>> {
-        self.rt.block_on(async {
-            let config = self.data.config().await;
-            if let Some(vns) = config.virtual_.get(&id.address) {
-                Some(vns.try_.iter().map(|ep| (ep.clone(), None, None)).collect())
-            } else {
-                None
-            }
-        })
+    async fn get_path_hints(&self, id: &Identity) -> Option<Vec<(Endpoint, Option<Self::LocalSocket>, Option<Self::LocalInterface>)>> {
+        let config = self.data.config().await;
+        if let Some(vns) = config.virtual_.get(&id.address) {
+            Some(vns.try_.iter().map(|ep| (ep.clone(), None, None)).collect())
+        } else {
+            None
+        }
     }
 
     #[inline(always)]

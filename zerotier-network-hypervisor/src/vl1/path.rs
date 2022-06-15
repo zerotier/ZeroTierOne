@@ -2,17 +2,27 @@
 
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hasher};
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
 
+use lazy_static::lazy_static;
 use parking_lot::Mutex;
 
-use crate::util::*;
 use crate::vl1::endpoint::Endpoint;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
+
+pub(crate) enum PathServiceResult {
+    Ok,
+    Dead,
+    NeedsKeepalive,
+}
+
+lazy_static! {
+    static ref INSTANCE_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
+}
 
 /// A remote endpoint paired with a local socket and a local interface.
 /// These are maintained in Node and canonicalized so that all unique paths have
@@ -22,6 +32,7 @@ pub struct Path<SI: SystemInterface> {
     pub endpoint: Endpoint,
     pub local_socket: SI::LocalSocket,
     pub local_interface: SI::LocalInterface,
+    pub(crate) internal_instance_id: usize, // arbitrary local ID that should be globally unique to a given path object instance
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     create_time_ticks: i64,
@@ -34,6 +45,7 @@ impl<SI: SystemInterface> Path<SI> {
             endpoint,
             local_socket,
             local_interface,
+            internal_instance_id: INSTANCE_ID_COUNTER.fetch_add(1, Ordering::SeqCst),
             last_send_time_ticks: AtomicI64::new(0),
             last_receive_time_ticks: AtomicI64::new(0),
             create_time_ticks: time_ticks,
@@ -78,18 +90,19 @@ impl<SI: SystemInterface> Path<SI> {
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
     }
 
-    pub(crate) fn service(&self, si: &SI, _: &Node<SI>, time_ticks: i64) -> bool {
+    pub(crate) fn service(&self, time_ticks: i64) -> PathServiceResult {
         self.fragmented_packets.lock().retain(|_, frag| (time_ticks - frag.ts_ticks) < packet_constants::FRAGMENT_EXPIRATION);
         if (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed)) < PATH_EXPIRATION_TIME {
             if (time_ticks - self.last_send_time_ticks.load(Ordering::Relaxed)) >= PATH_KEEPALIVE_INTERVAL {
                 self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
-                si.wire_send(&self.endpoint, Some(&self.local_socket), Some(&self.local_interface), &[&ZEROES[..1]], 0);
+                PathServiceResult::NeedsKeepalive
+            } else {
+                PathServiceResult::Ok
             }
-            true
         } else if (time_ticks - self.create_time_ticks) < PATH_EXPIRATION_TIME {
-            true
+            PathServiceResult::Ok
         } else {
-            false
+            PathServiceResult::Dead
         }
     }
 }
