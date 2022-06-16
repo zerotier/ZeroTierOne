@@ -515,13 +515,16 @@ void PostgreSQL::initializeNetworks()
 		fprintf(stderr, "Initializing Networks...\n");
 
 		if (_redisMemberStatus) {
+			fprintf(stderr, "Init Redis for networks...\n");
 			try {
 				if (_rc->clusterMode) {
 					_cluster->del(setKey);
 				} else {
 					_redis->del(setKey);
 				}
-			} catch (...) {}
+			} catch (sw::redis::Error &e) {
+				// ignore. if this key doesn't exist, there's no reason to delete it
+			}
 		}
 
 		std::unordered_set<std::string> networkSet;
@@ -542,7 +545,8 @@ void PostgreSQL::initializeNetworks()
 		auto c = _pool->borrow();
 		auto c2 = _pool->borrow();
 		pqxx::work w{*c->c};
-		
+
+		fprintf(stderr, "Load networks from psql...\n");
 		auto stream = pqxx::stream_from::query(w, qbuf);
 
 		std::tuple<
@@ -695,18 +699,21 @@ void PostgreSQL::initializeNetworks()
 		w.commit();
 		_pool->unborrow(c2);
 		_pool->unborrow(c);
+		fprintf(stderr, "done.\n");
 
 		if (!networkSet.empty()) {
 			if (_redisMemberStatus) {
+				fprintf(stderr, "adding networks to redis...\n");
 				if (_rc->clusterMode) {
 					auto tx = _cluster->transaction(_myAddressStr, true);
 					tx.sadd(setKey, networkSet.begin(), networkSet.end());
 					tx.exec();
 				} else {
-					auto tx = _cluster->transaction(_myAddressStr, true);
+					auto tx = _redis->transaction(true);
 					tx.sadd(setKey, networkSet.begin(), networkSet.end());
 					tx.exec();
 				}
+				fprintf(stderr, "done.\n");
 			}
 		}
 
@@ -716,11 +723,14 @@ void PostgreSQL::initializeNetworks()
 			}
 			_readyLock.unlock();
 		}
+		fprintf(stderr, "network init done.\n");
 	} catch (sw::redis::Error &e) {
 		fprintf(stderr, "ERROR: Error initializing networks in Redis: %s\n", e.what());
+		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 		exit(-1);
 	} catch (std::exception &e) {
 		fprintf(stderr, "ERROR: Error initializing networks: %s\n", e.what());
+		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 		exit(-1);
 	}
 }
@@ -736,6 +746,7 @@ void PostgreSQL::initializeMembers()
 		std::string setKeyBase = "network-nodes-all:{" + _myAddressStr + "}:";
 
 		if (_redisMemberStatus) {
+			fprintf(stderr, "Initialize Redis for members...\n");
 			std::lock_guard<std::mutex> l(_networks_l);
 			std::unordered_set<std::string> deletes;
 			for ( auto it : _networks) {
@@ -762,7 +773,9 @@ void PostgreSQL::initializeMembers()
 						}
 						tx.exec();
 					}
-				} catch (...) {}
+				} catch (sw::redis::Error &e) {
+					// ignore
+				}
 			}
 		}
 
@@ -786,7 +799,8 @@ void PostgreSQL::initializeMembers()
 		auto c = _pool->borrow();
 		auto c2 = _pool->borrow();
 		pqxx::work w{*c->c};
-	
+
+		fprintf(stderr, "Load members from psql...\n");
 		auto stream = pqxx::stream_from::query(w, qbuf);
 
 		std::tuple<
@@ -901,9 +915,11 @@ void PostgreSQL::initializeMembers()
 		w.commit();
 		_pool->unborrow(c2);
 		_pool->unborrow(c);
+		fprintf(stderr, "done.\n");
 
 		if (!networkMembers.empty()) {
 			if (_redisMemberStatus) {
+				fprintf(stderr, "Load member data into redis...\n");
 				if (_rc->clusterMode) {
 					auto tx = _cluster->transaction(_myAddressStr, true);
 					for (auto it : networkMembers) {
@@ -917,8 +933,11 @@ void PostgreSQL::initializeMembers()
 					}
 					tx.exec();
 				}
+				fprintf(stderr, "done.\n");
 			}
 		}
+
+		fprintf(stderr, "Done loading members...\n");
 
 		if (++this->_ready == 2) {
 			if (_waitNoticePrinted) {
@@ -971,7 +990,7 @@ void PostgreSQL::heartbeat()
 			std::string redis_mem_status = (_redisMemberStatus) ? "true" : "false";
 			
 			try {
-			pqxx::result res = w.exec0("INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_redis) "
+			pqxx::result res = w.exec0("INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_redis, redis_member_status) "
 				"VALUES ("+w.quote(controllerId)+", "+w.quote(hostname)+", TO_TIMESTAMP("+now+"::double precision/1000), "+
 				w.quote(publicIdentity)+", "+major+", "+minor+", "+rev+", "+build+", "+host_port+", "+use_redis+", "+redis_mem_status+") "
 				"ON CONFLICT (id) DO UPDATE SET cluster_host = EXCLUDED.cluster_host, last_alive = EXCLUDED.last_alive, "
