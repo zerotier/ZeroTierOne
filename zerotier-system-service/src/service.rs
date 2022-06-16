@@ -6,7 +6,8 @@ use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use zerotier_network_hypervisor::async_trait;
+use async_trait::async_trait;
+
 use zerotier_network_hypervisor::vl1::*;
 use zerotier_network_hypervisor::vl2::*;
 use zerotier_network_hypervisor::*;

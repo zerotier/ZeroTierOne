@@ -15,5 +15,3 @@ mod networkhypervisor;
 pub use event::Event;
 pub use networkhypervisor::{Interface, NetworkHypervisor};
 pub use vl1::protocol::{PacketBuffer, PooledPacketBuffer};
-
-pub use async_trait::async_trait;

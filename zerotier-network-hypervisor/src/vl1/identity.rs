@@ -216,9 +216,7 @@ impl Identity {
     ///
     /// This is somewhat time consuming due to the memory-intensive work algorithm.
     pub fn validate_identity(&self) -> bool {
-        if self.p384.is_some() {
-            let p384 = self.p384.as_ref().unwrap();
-
+        if let Some(p384) = self.p384.as_ref() {
             let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE);
             let _ = self_sign_buf.write_all(&self.address.to_bytes());
             let _ = self_sign_buf.write_all(&self.c25519);
@@ -260,7 +258,7 @@ impl Identity {
     /// Nothing actually uses a 512-bit secret directly, but if the base secret is 512 bits then
     /// no entropy is lost when deriving smaller secrets with a KDF.
     pub fn agree(&self, other: &Identity) -> Option<Secret<64>> {
-        self.secret.as_ref().and_then(|secret| {
+        if let Some(secret) = self.secret.as_ref() {
             let c25519_secret = Secret(SHA512::hash(&secret.c25519.agree(&other.c25519).0));
 
             // FIPS note: FIPS-compliant exchange algorithms must be the last algorithms in any HKDF chain
@@ -271,7 +269,9 @@ impl Identity {
             } else {
                 Some(c25519_secret)
             }
-        })
+        } else {
+            None
+        }
     }
 
     /// Sign a message with this identity.
@@ -281,8 +281,7 @@ impl Identity {
     ///
     /// A return of None happens if we don't have our secret key(s) or some other error occurs.
     pub fn sign(&self, msg: &[u8], legacy_ed25519_only: bool) -> Option<Vec<u8>> {
-        if self.secret.is_some() {
-            let secret = self.secret.as_ref().unwrap();
+        if let Some(secret) = self.secret.as_ref() {
             if legacy_ed25519_only {
                 Some(secret.ed25519.sign_zt(msg).to_vec())
             } else if let Some(p384s) = secret.p384.as_ref() {

@@ -14,6 +14,7 @@ panic = 'abort'
 [dependencies]
 zerotier-network-hypervisor = { path = "../zerotier-network-hypervisor" }
 zerotier-core-crypto = { path = "../zerotier-core-crypto" }
+async-trait = "^0"
 num-traits = "^0"
 tokio = { version = "^1", features = ["full"], default-features = false }
 serde = { version = "^1", features = ["derive"], default-features = false }

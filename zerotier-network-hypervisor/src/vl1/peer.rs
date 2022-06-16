@@ -438,11 +438,11 @@ impl<SI: SystemInterface> Peer<SI> {
     pub(crate) async fn send_hello(&self, si: &SI, node: &Node<SI>, explicit_endpoint: Option<&Endpoint>) -> bool {
         let mut path = None;
         let destination = if let Some(explicit_endpoint) = explicit_endpoint {
-            explicit_endpoint.clone()
+            explicit_endpoint
         } else {
             if let Some(p) = self.path(node) {
                 let _ = path.insert(p);
-                path.as_ref().unwrap().endpoint.clone()
+                &path.as_ref().unwrap().endpoint
             } else {
                 return false;
             }
@@ -534,15 +534,15 @@ impl<SI: SystemInterface> Peer<SI> {
             debug_event!(si, "HELLO -> {} @ {} ({} bytes)", self.identity.address.to_string(), destination.to_string(), packet.len());
         }
 
-        if let Some(p) = path {
-            if self.internal_send(si, &destination, Some(&p.local_socket), Some(&p.local_interface), max_fragment_size, &packet).await {
+        if let Some(p) = path.as_ref() {
+            if self.internal_send(si, destination, Some(&p.local_socket), Some(&p.local_interface), max_fragment_size, &packet).await {
                 p.log_send_anything(time_ticks);
                 true
             } else {
                 false
             }
         } else {
-            self.internal_send(si, &destination, None, None, max_fragment_size, &packet).await
+            self.internal_send(si, destination, None, None, max_fragment_size, &packet).await
         }
     }
 
