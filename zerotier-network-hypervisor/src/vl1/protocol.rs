@@ -118,7 +118,7 @@ pub mod packet_constants {
     /// Index of destination in both fragment and full packet headers.
     pub const DESTINATION_INDEX: usize = 8;
 
-    /// Index of 8-byte MAC field in packet header.
+    /// Index of 8-byte MAC field in packet header (also size of header minus MAC).
     pub const MAC_FIELD_INDEX: usize = 19;
 
     /// Mask to select cipher from header flags field.
@@ -216,7 +216,7 @@ pub mod security_constants {
 
 pub mod session_metadata {
     pub const INSTANCE_ID: &'static str = "i";
-    pub const CLOCK: &'static str = "t";
+    pub const TIME_TICKS: &'static str = "t";
     pub const SENT_TO: &'static str = "d";
 }
 
@@ -278,6 +278,14 @@ pub fn compress_packet<const S: usize>(src: &[u8], dest: &mut Buffer<S>) -> bool
         }
     }
     return false;
+}
+
+/// Set header flag indicating that a packet is fragmented.
+///
+/// This will panic if the buffer provided doesn't contain a proper header.
+#[inline(always)]
+pub fn set_packet_fragment_flag<const S: usize>(pkt: &mut Buffer<S>) {
+    pkt.as_bytes_mut()[packet_constants::FLAGS_FIELD_INDEX] |= packet_constants::HEADER_FLAG_FRAGMENTED;
 }
 
 /// ZeroTier unencrypted outer packet header

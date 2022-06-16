@@ -276,33 +276,25 @@ impl Identity {
 
     /// Sign a message with this identity.
     ///
-    /// If legacy_ed25519_only is true this generates only an ed25519 signature and uses the old
-    /// format that also includes part of the plaintext hash at the end. The include_algorithms mask
-    /// will be ignored. Otherwise it will generate a signature for every algorithm with a secret
-    /// in this identity and that is specified in the include_algorithms bit mask.
+    /// Identities with P-384 keys sign with that unless legacy_ed25519_only is selected. If this is
+    /// set the old 96-byte signature plus hash format used in ZeroTier v1 is used.
     ///
     /// A return of None happens if we don't have our secret key(s) or some other error occurs.
-    pub fn sign(&self, msg: &[u8], include_algorithms: u8, legacy_ed25519_only: bool) -> Option<Vec<u8>> {
+    pub fn sign(&self, msg: &[u8], legacy_ed25519_only: bool) -> Option<Vec<u8>> {
         if self.secret.is_some() {
             let secret = self.secret.as_ref().unwrap();
             if legacy_ed25519_only {
                 Some(secret.ed25519.sign_zt(msg).to_vec())
+            } else if let Some(p384s) = secret.p384.as_ref() {
+                let mut tmp: Vec<u8> = Vec::with_capacity(1 + P384_ECDSA_SIGNATURE_SIZE);
+                tmp.push(Self::ALGORITHM_EC_NIST_P384);
+                let _ = tmp.write_all(&p384s.ecdsa.sign(msg));
+                Some(tmp)
             } else {
-                let mut tmp: Vec<u8> = Vec::with_capacity(1 + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE);
-                tmp.push(0);
-                if secret.p384.is_some() && (include_algorithms & Self::ALGORITHM_EC_NIST_P384) != 0 {
-                    *tmp.first_mut().unwrap() |= Self::ALGORITHM_EC_NIST_P384;
-                    let _ = tmp.write_all(&secret.p384.as_ref().unwrap().ecdsa.sign(msg));
-                }
-                if (include_algorithms & Self::ALGORITHM_X25519) != 0 {
-                    *tmp.first_mut().unwrap() |= Self::ALGORITHM_X25519;
-                    let _ = tmp.write_all(&secret.ed25519.sign(msg));
-                }
-                if tmp.len() > 1 {
-                    Some(tmp)
-                } else {
-                    None
-                }
+                let mut tmp: Vec<u8> = Vec::with_capacity(1 + ED25519_SIGNATURE_SIZE);
+                tmp.push(Self::ALGORITHM_X25519);
+                let _ = tmp.write_all(&secret.ed25519.sign(msg));
+                Some(tmp)
             }
         } else {
             None
@@ -313,34 +305,21 @@ impl Identity {
     pub fn verify(&self, msg: &[u8], mut signature: &[u8]) -> bool {
         if signature.len() == 96 {
             // legacy ed25519-only signature with hash included detected by their unique size.
-            return ed25519_verify(&self.ed25519, signature, msg);
-        } else if signature.len() > 1 {
-            // Otherwise we support compound signatures. Note that it's possible for there to be
-            // unknown algorithms here if we ever add e.g. a PQ signature scheme and older nodes
-            // don't support it, and therefore it's valid if all algorithms that are present and
-            // understood pass signature check. The 'passed' variable makes sure we can't pass without
-            // verifying at least one signature. If any present and understood algorithm fails the
-            // whole check fails, so you can't have one good and one bad signature.
-            let algorithms = signature[0];
-            signature = &signature[1..];
-            let mut passed = false; // makes sure we can't pass with an empty signature!
-            if (algorithms & Self::ALGORITHM_EC_NIST_P384) != 0 && signature.len() >= P384_ECDSA_SIGNATURE_SIZE && self.p384.is_some() {
-                if !self.p384.as_ref().unwrap().ecdsa.verify(msg, &signature[..P384_ECDSA_SIGNATURE_SIZE]) {
-                    return false;
+            ed25519_verify(&self.ed25519, &signature[..64], msg)
+        } else if let Some(algorithm) = signature.get(0) {
+            if *algorithm == Self::ALGORITHM_EC_NIST_P384 && signature.len() == (1 + P384_ECDSA_SIGNATURE_SIZE) {
+                if let Some(p384) = self.p384.as_ref() {
+                    p384.ecdsa.verify(msg, &signature[1..])
+                } else {
+                    false
                 }
-                signature = &signature[P384_ECDSA_SIGNATURE_SIZE..];
-                passed = true;
+            } else if *algorithm == Self::ALGORITHM_X25519 && signature.len() == (1 + ED25519_SIGNATURE_SIZE) {
+                ed25519_verify(&self.ed25519, &signature[1..], msg)
+            } else {
+                false
             }
-            if (algorithms & Self::ALGORITHM_X25519) != 0 && signature.len() >= ED25519_SIGNATURE_SIZE {
-                if !ed25519_verify(&self.ed25519, &signature[..ED25519_SIGNATURE_SIZE], msg) {
-                    return false;
-                }
-                //signature = &signature[ED25519_SIGNATURE_SIZE..];
-                passed = true;
-            }
-            return passed;
         } else {
-            return false;
+            false
         }
     }
 
@@ -371,10 +350,11 @@ impl Identity {
         }
 
         /*
-         * For legacy backward compatibility, any key pairs and other material after the x25519
-         * keys are prefixed by 0x03 followed by the number of remaining bytes. This allows old nodes
-         * to parse HELLO normally and ignore the rest of the extended identity. It's ignored by
-         * newer nodes.
+         * The prefix of 0x03 is for backward compatibility. Older nodes will interpret this as
+         * an empty unidentified InetAddress object and will skip the number of bytes following it.
+         *
+         * For future compatibility the size field here will allow this to be extended, something
+         * that should have been in the protocol from the beginning.
          */
         buf.append_u8(0x03)?;
         let remaining_data_size_field_at = buf.len();
@@ -400,10 +380,8 @@ impl Identity {
             }
         }
 
-        buf.append_u8(0xff)?;
-
         // Fill in the remaining data field earmarked above.
-        *buf.bytes_fixed_mut_at(remaining_data_size_field_at).unwrap() = ((buf.len() - remaining_data_size_field_at) as u16).to_be_bytes();
+        *buf.bytes_fixed_mut_at(remaining_data_size_field_at).unwrap() = (((buf.len() - remaining_data_size_field_at) - 2) as u16).to_be_bytes();
 
         Ok(())
     }
@@ -632,13 +610,11 @@ impl Marshalable for Identity {
         let mut p384_ecdh_ecdsa_public: Option<(P384PublicKey, P384PublicKey, &[u8; P384_ECDSA_SIGNATURE_SIZE], &[u8; ED25519_SIGNATURE_SIZE])> = None;
         let mut p384_ecdh_ecdsa_secret: Option<(&[u8; P384_SECRET_KEY_SIZE], &[u8; P384_SECRET_KEY_SIZE])> = None;
 
-        loop {
-            let mut algorithm = buf.read_u8(cursor)?;
-            if algorithm == 0 {
-                algorithm = Self::ALGORITHM_X25519;
-            }
+        let mut eof = buf.len();
+        while *cursor < eof {
+            let algorithm = buf.read_u8(cursor)?;
             match algorithm {
-                Self::ALGORITHM_X25519 => {
+                0_u8 | Self::ALGORITHM_X25519 => {
                     let a = buf.read_bytes_fixed::<C25519_PUBLIC_KEY_SIZE>(cursor)?;
                     let b = buf.read_bytes_fixed::<ED25519_PUBLIC_KEY_SIZE>(cursor)?;
                     x25519_public = Some((a, b));
@@ -655,7 +631,8 @@ impl Marshalable for Identity {
                     // This isn't an algorithm; each algorithm is identified by just one bit. This
                     // indicates the total size of the section after the x25519 keys for backward
                     // compatibility. See comments in marshal(). New versions can ignore this field.
-                    *cursor += 2;
+                    let bytes_remaining = buf.read_u16(cursor)? as usize;
+                    eof = *cursor + bytes_remaining;
                 }
                 Self::ALGORITHM_EC_NIST_P384 => {
                     let field_length = buf.read_varint(cursor)?;
@@ -684,7 +661,6 @@ impl Marshalable for Identity {
                         p384_ecdh_ecdsa_secret = Some((a, b));
                     }
                 }
-                0xff => break,
                 _ => {
                     *cursor += buf.read_varint(cursor)? as usize;
                 }

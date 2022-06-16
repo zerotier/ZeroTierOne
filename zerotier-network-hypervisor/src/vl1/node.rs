@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -111,7 +111,7 @@ pub trait InnerProtocolInterface: Sync + Send + 'static {
 
     /// Check if this remote peer has a trust relationship with this node.
     ///
-    /// This is checked to determine if we should do things like make direct links ore respond to
+    /// This is checked to determine if we should do things like make direct links or respond to
     /// various other VL1 messages.
     fn has_trust_relationship(&self, id: &Identity) -> bool;
 }
@@ -421,9 +421,10 @@ impl<SI: SystemInterface> Node<SI> {
             for dp in dead_paths.iter() {
                 self.paths.write().remove(dp);
             }
-            let z = [&crate::util::ZEROES[..1]];
+            let ka = [tt as u8]; // send different bytes every time for keepalive in case some things filter zero packets
+            let ka2 = [&ka[..1]];
             for ka in need_keepalive.iter() {
-                si.wire_send(&ka.endpoint, Some(&ka.local_socket), Some(&ka.local_interface), &z, 0).await;
+                si.wire_send(&ka.endpoint, Some(&ka.local_socket), Some(&ka.local_interface), &ka2, 0).await;
             }
         }
 
@@ -513,12 +514,8 @@ impl<SI: SystemInterface> Node<SI> {
         }
     }
 
-    pub fn root(&self) -> Option<Arc<Peer<SI>>> {
+    pub fn best_root(&self) -> Option<Arc<Peer<SI>>> {
         self.best_root.read().clone()
-    }
-
-    pub fn is_peer_root(&self, peer: &Peer<SI>) -> bool {
-        self.roots.read().roots.contains_key(peer)
     }
 
     pub fn add_update_root_set(&self, rs: RootSet) -> bool {

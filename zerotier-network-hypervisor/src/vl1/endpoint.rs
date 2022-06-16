@@ -117,6 +117,14 @@ impl Endpoint {
             None
         }
     }
+
+    /// Returns true if this is an endpoint type that requires that large packets be fragmented.
+    pub fn requires_fragmentation(&self) -> bool {
+        match self {
+            Endpoint::Ip(_) | Endpoint::IpUdp(_) | Endpoint::Ethernet(_) | Endpoint::Bluetooth(_) | Endpoint::WifiDirect(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl Marshalable for Endpoint {

@@ -45,7 +45,7 @@ impl SymmetricSecret {
 /// An ephemeral symmetric secret with usage timers and counters.
 pub(crate) struct EphemeralSymmetricSecret {
     pub secret: SymmetricSecret,
-    pub decrypt_uses: AtomicUsize,
+    pub encrypt_uses: AtomicUsize,
 }
 
 pub(crate) struct AesGmacSivPoolFactory(Secret<32>, Secret<32>);
