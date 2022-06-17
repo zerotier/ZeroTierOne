@@ -4,6 +4,7 @@ pub mod cli;
 pub mod datadir;
 pub mod exitcode;
 pub mod getifaddrs;
+pub mod ipv6;
 pub mod jsonformatter;
 pub mod localconfig;
 pub mod localinterface;

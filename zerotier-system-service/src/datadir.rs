@@ -56,7 +56,7 @@ impl DataDir {
 
     /// Load identity.secret from data directory.
     pub async fn load_identity(&self) -> std::io::Result<Identity> {
-        let id_data = Identity::from_str(String::from_utf8_lossy(read_limit(self.base_path.join(IDENTITY_PUBLIC_FILENAME), 4096).await?.as_slice()).as_ref());
+        let id_data = Identity::from_str(String::from_utf8_lossy(read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 4096).await?.as_slice()).as_ref());
         if id_data.is_err() {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, id_data.err().unwrap()));
         }

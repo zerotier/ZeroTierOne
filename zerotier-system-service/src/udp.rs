@@ -6,8 +6,6 @@ use std::mem::{size_of, transmute, MaybeUninit};
 #[allow(unused_imports)]
 use std::net::SocketAddr;
 #[allow(unused_imports)]
-use std::os::raw::*;
-#[allow(unused_imports)]
 use std::ptr::{null, null_mut};
 use std::sync::Arc;
 
@@ -15,6 +13,7 @@ use std::sync::Arc;
 use std::os::unix::io::{FromRawFd, RawFd};
 
 use crate::getifaddrs;
+use crate::ipv6;
 use crate::localinterface::LocalInterface;
 
 #[allow(unused_imports)]
@@ -33,18 +32,10 @@ pub struct BoundUdpPort {
 
 /// A socket bound to a specific interface and IP.
 pub struct BoundUdpSocket {
-    /// Local IP address to which this socket is bound.
     pub address: InetAddress,
-
-    /// High-level async socket, but UDP also supports non-blocking sync send.
     pub socket: Arc<tokio::net::UdpSocket>,
-
-    /// Local interface on which socket appears.
     pub interface: LocalInterface,
-
-    /// Add tasks here that should be aborted when this socket is closed.
     pub socket_associated_tasks: parking_lot::Mutex<Vec<tokio::task::JoinHandle<()>>>,
-
     fd: RawFd,
 }
 
@@ -60,8 +51,8 @@ impl BoundUdpSocket {
     #[cfg(unix)]
     #[inline(always)]
     fn set_ttl(&self, packet_ttl: u8) {
-        let ttl = packet_ttl as c_int;
-        unsafe { libc::setsockopt(self.fd.as_(), libc::IPPROTO_IP.as_(), libc::IP_TOS.as_(), (&ttl as *const c_int).cast(), std::mem::size_of::<c_int>().as_()) };
+        let ttl = packet_ttl as libc::c_int;
+        unsafe { libc::setsockopt(self.fd.as_(), libc::IPPROTO_IP.as_(), libc::IP_TOS.as_(), (&ttl as *const libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_()) };
     }
 
     #[cfg(any(target_os = "macos"))]
@@ -187,28 +178,29 @@ impl BoundUdpPort {
     pub fn update_bindings(&mut self, interface_prefix_blacklist: &Vec<String>, cidr_blacklist: &Vec<InetAddress>) -> (Vec<(LocalInterface, InetAddress, std::io::Error)>, Vec<Arc<BoundUdpSocket>>) {
         let mut existing_bindings: HashMap<LocalInterface, HashMap<InetAddress, Arc<BoundUdpSocket>>> = HashMap::with_capacity(4);
         for s in self.sockets.drain(..) {
-            existing_bindings.entry(s.interface.clone()).or_insert_with(|| HashMap::with_capacity(4)).insert(s.address.clone(), s);
+            existing_bindings.entry(s.interface).or_insert_with(|| HashMap::with_capacity(4)).insert(s.address.clone(), s);
         }
 
         let mut errors = Vec::new();
         let mut new_sockets = Vec::new();
         getifaddrs::for_each_address(|address, interface| {
             let interface_str = interface.to_string();
+            let mut addr_with_port = address.clone();
+            addr_with_port.set_port(self.port);
             if address.is_ip()
                 && matches!(address.scope(), IpScope::Global | IpScope::PseudoPrivate | IpScope::Private | IpScope::Shared)
                 && !interface_prefix_blacklist.iter().any(|pfx| interface_str.starts_with(pfx.as_str()))
                 && !cidr_blacklist.iter().any(|r| address.is_within(r))
+                && !ipv6::is_ipv6_temporary(interface_str.as_str(), address)
             {
                 let mut found = false;
                 if let Some(byaddr) = existing_bindings.get(interface) {
-                    if let Some(socket) = byaddr.get(address) {
+                    if let Some(socket) = byaddr.get(&addr_with_port) {
                         found = true;
                         self.sockets.push(socket.clone());
                     }
                 }
                 if !found {
-                    let mut addr_with_port = address.clone();
-                    addr_with_port.set_port(self.port);
                     let s = unsafe { bind_udp_to_device(interface_str.as_str(), &addr_with_port) };
                     if s.is_ok() {
                         let fd = s.unwrap();
@@ -253,16 +245,21 @@ unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result
         return Err("unable to create socket");
     }
 
-    let mut setsockopt_results: c_int = 0;
-
-    let mut fl: c_int = 0;
-    setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_LINGER.as_(), (&mut fl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
+    #[allow(unused_variables)]
+    let mut setsockopt_results: libc::c_int = 0;
+    let mut fl: libc::c_int;
 
     fl = 1;
-    setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_BROADCAST.as_(), (&mut fl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
+    setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_REUSEPORT.as_(), (&mut fl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_());
+    debug_assert!(setsockopt_results == 0);
+
+    fl = 1;
+    setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_BROADCAST.as_(), (&mut fl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_());
+    debug_assert!(setsockopt_results == 0);
     if af == libc::AF_INET6 {
         fl = 1;
-        setsockopt_results |= libc::setsockopt(s, libc::IPPROTO_IPV6.as_(), libc::IPV6_V6ONLY.as_(), (&mut fl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
+        setsockopt_results |= libc::setsockopt(s, libc::IPPROTO_IPV6.as_(), libc::IPV6_V6ONLY.as_(), (&mut fl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_());
+        debug_assert!(setsockopt_results == 0);
     }
 
     #[cfg(target_os = "linux")]
@@ -284,30 +281,30 @@ unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result
         #[cfg(not(target_os = "linux"))]
         {
             fl = 0;
-            libc::setsockopt(s, libc::IPPROTO_IP.as_(), libc::IP_DONTFRAG.as_(), (&mut fl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
+            libc::setsockopt(s, libc::IPPROTO_IP.as_(), libc::IP_DONTFRAG.as_(), (&mut fl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_());
         }
         #[cfg(target_os = "linux")]
         {
             fl = libc::IP_PMTUDISC_DONT as c_int;
-            libc::setsockopt(s, libc::IPPROTO_IP.as_(), libc::IP_MTU_DISCOVER.as_(), (&mut fl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
+            libc::setsockopt(s, libc::IPPROTO_IP.as_(), libc::IP_MTU_DISCOVER.as_(), (&mut fl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_());
         }
     }
 
     if af == libc::AF_INET6 {
         fl = 0;
-        libc::setsockopt(s, libc::IPPROTO_IPV6.as_(), libc::IPV6_DONTFRAG.as_(), (&mut fl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
+        libc::setsockopt(s, libc::IPPROTO_IPV6.as_(), libc::IPV6_DONTFRAG.as_(), (&mut fl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_());
     }
 
     fl = 1048576;
     while fl >= 65536 {
-        if libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_RCVBUF.as_(), (&mut fl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_()) == 0 {
+        if libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_RCVBUF.as_(), (&mut fl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_()) == 0 {
             break;
         }
         fl -= 65536;
     }
     fl = 1048576;
     while fl >= 65536 {
-        if libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_SNDBUF.as_(), (&mut fl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_()) == 0 {
+        if libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_SNDBUF.as_(), (&mut fl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_()) == 0 {
             break;
         }
         fl -= 65536;
