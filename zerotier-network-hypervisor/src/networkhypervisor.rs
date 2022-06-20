@@ -85,11 +85,7 @@ impl<I: Interface> NetworkHypervisor<I> {
     }
 
     /// Call add_update_default_root_set if there are no roots defined, otherwise do nothing and return false.
-    pub fn add_update_default_root_set_if_none(&self) -> bool {
-        if self.vl1.has_roots_defined() {
-            false
-        } else {
-            self.add_update_default_root_set()
-        }
+    pub fn add_update_default_root_set_if_none(&self) {
+        assert!(self.add_update_default_root_set());
     }
 }

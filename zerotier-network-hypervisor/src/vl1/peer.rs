@@ -52,6 +52,7 @@ pub struct Peer<SI: SystemInterface> {
     last_receive_time_ticks: AtomicI64,
     pub(crate) last_hello_reply_time_ticks: AtomicI64,
     last_forward_time_ticks: AtomicI64,
+    create_time_ticks: i64,
 
     // Counter for assigning sequential message IDs.
     message_id_counter: AtomicU64,
@@ -164,7 +165,7 @@ impl<SI: SystemInterface> Peer<SI> {
     ///
     /// This only returns None if this_node_identity does not have its secrets or if some
     /// fatal error occurs performing key agreement between the two identities.
-    pub(crate) fn new(this_node_identity: &Identity, id: Identity, time_clock: i64) -> Option<Peer<SI>> {
+    pub(crate) fn new(this_node_identity: &Identity, id: Identity, time_clock: i64, time_ticks: i64) -> Option<Peer<SI>> {
         this_node_identity.agree(&id).map(|static_secret| -> Self {
             Self {
                 identity: id,
@@ -175,6 +176,7 @@ impl<SI: SystemInterface> Peer<SI> {
                 last_receive_time_ticks: AtomicI64::new(0),
                 last_forward_time_ticks: AtomicI64::new(0),
                 last_hello_reply_time_ticks: AtomicI64::new(0),
+                create_time_ticks: time_ticks,
                 message_id_counter: AtomicU64::new(((time_clock as u64) / 100).wrapping_shl(28) ^ next_u64_secure().wrapping_shr(36)),
                 remote_version: AtomicU64::new(0),
                 remote_protocol_version: AtomicU8::new(0),
@@ -244,17 +246,15 @@ impl<SI: SystemInterface> Peer<SI> {
             paths.retain(|p| ((time_ticks - p.last_receive_time_ticks) < PEER_EXPIRATION_TIME) && (p.path.strong_count() > 0));
             Self::prioritize_paths(&mut paths);
         }
-        if (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed)) < PEER_EXPIRATION_TIME {
-            true
-        } else {
-            false
-        }
+        (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed).max(self.create_time_ticks)) < PEER_EXPIRATION_TIME
     }
 
     /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
     ///
     /// If the packet comes in multiple fragments, the fragments slice should contain all
     /// those fragments after the main packet header and first chunk.
+    ///
+    /// This returns true if the packet decrypted and passed authentication.
     pub(crate) async fn receive<PH: InnerProtocolInterface>(&self, node: &Node<SI>, si: &SI, ph: &PH, time_ticks: i64, source_path: &Arc<Path<SI>>, header: &PacketHeader, frag0: &PacketBuffer, fragments: &[Option<PooledPacketBuffer>]) {
         if let Ok(packet_frag0_payload_bytes) = frag0.as_bytes_starting_at(packet_constants::VERB_INDEX) {
             //let mut payload = unsafe { PacketBuffer::new_without_memzero() };
@@ -286,8 +286,6 @@ impl<SI: SystemInterface> Peer<SI> {
             }
 
             if let Ok(mut verb) = payload.u8_at(0) {
-                self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
-
                 let extended_authentication = (verb & packet_constants::VERB_FLAG_EXTENDED_AUTHENTICATION) != 0;
                 if extended_authentication {
                     if payload.len() >= SHA512_HASH_SIZE {
@@ -319,6 +317,8 @@ impl<SI: SystemInterface> Peer<SI> {
                         return;
                     }
                 }
+
+                self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
 
                 let mut path_is_known = false;
                 for p in self.paths.lock().iter_mut() {
@@ -609,6 +609,7 @@ impl<SI: SystemInterface> Peer<SI> {
                 match ok_header.in_re_verb {
                     verbs::VL1_HELLO => {
                         // TODO
+                        self.last_hello_reply_time_ticks.store(time_ticks, Ordering::Relaxed);
                     }
                     verbs::VL1_WHOIS => {}
                     _ => {

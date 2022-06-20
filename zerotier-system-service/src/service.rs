@@ -157,7 +157,7 @@ impl SystemInterface for ServiceImpl {
     type LocalSocket = crate::service::LocalSocket;
     type LocalInterface = crate::localinterface::LocalInterface;
 
-    async fn event(&self, event: Event) {
+    fn event(&self, event: Event) {
         println!("{}", event.to_string());
         match event {
             _ => {}

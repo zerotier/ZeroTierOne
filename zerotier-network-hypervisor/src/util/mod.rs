@@ -10,15 +10,15 @@ pub use zerotier_core_crypto::varint;
 
 pub(crate) const ZEROES: [u8; 64] = [0_u8; 64];
 
-#[cfg(target_feature = "debug_events")]
+#[cfg(feature = "debug_events")]
 #[allow(unused_macros)]
 macro_rules! debug_event {
     ($si:expr, $fmt:expr $(, $($arg:tt)*)?) => {
-        $si.event(crate::Event::Debug(file!(), line!(), format!($fmt, $($($arg)*)?))).await;
+        $si.event(crate::Event::Debug(file!(), line!(), format!($fmt, $($($arg)*)?)));
     }
 }
 
-#[cfg(not(target_feature = "debug_events"))]
+#[cfg(not(feature = "debug_events"))]
 #[allow(unused_macros)]
 macro_rules! debug_event {
     ($si:expr, $fmt:expr $(, $($arg:tt)*)?) => {};

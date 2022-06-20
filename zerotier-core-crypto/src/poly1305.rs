@@ -18,7 +18,7 @@ impl Poly1305 {
 
     #[inline(always)]
     pub fn update(&mut self, data: &[u8]) {
-        self.0.update(poly1305::Block::from_slice(data));
+        self.0.update_padded(data);
     }
 
     #[inline(always)]

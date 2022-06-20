@@ -247,6 +247,9 @@ pub const PATH_EXPIRATION_TIME: i64 = (PATH_KEEPALIVE_INTERVAL * 2) + 10000;
 /// How often to send HELLOs to roots, which is more often than normal peers.
 pub const ROOT_HELLO_INTERVAL: i64 = PATH_KEEPALIVE_INTERVAL * 2;
 
+/// How often to send HELLOs to roots when we are offline.
+pub const ROOT_HELLO_SPAM_INTERVAL: i64 = 5000;
+
 /// How often to send HELLOs to regular peers.
 pub const PEER_HELLO_INTERVAL_MAX: i64 = 300000;
 
