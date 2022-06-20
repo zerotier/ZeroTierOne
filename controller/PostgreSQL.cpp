@@ -1358,7 +1358,7 @@ void PostgreSQL::commitThread()
 						"$1, TO_TIMESTAMP($5::double precision/1000), "
 						"(SELECT user_id AS owner_id FROM ztc_global_permissions WHERE authorize = true AND del = true AND modify = true AND read = true LIMIT 1),"
 						"$2, $3, $4, TO_TIMESTAMP($5::double precision/1000), "
-						"$6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 17) "
+						"$6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) "
 						"ON CONFLICT (id) DO UPDATE set controller_id = EXCLUDED.controller_id, "
 						"capabilities = EXCLUDED.capabilities, enable_broadcast = EXCLUDED.enable_broadcast, "
 						"last_modified = EXCLUDED.last_modified, mtu = EXCLUDED.mtu, "
