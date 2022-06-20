@@ -174,6 +174,7 @@ private:
 	RedisConfig *_rc;
 	std::shared_ptr<sw::redis::Redis> _redis;
 	std::shared_ptr<sw::redis::RedisCluster> _cluster;
+    bool _redisMemberStatus;
 };
 
 } // namespace ZeroTier
