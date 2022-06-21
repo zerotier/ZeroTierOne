@@ -1483,7 +1483,7 @@ void PostgreSQL::commitThread()
 				try {
 					pqxx::work w(*c->c);
 
-					std::string networkId = config["nwid"];
+					std::string networkId = config["id"];
 
 					pqxx::result res = w.exec_params0("UPDATE ztc_network SET deleted = true WHERE id = $1",
 						networkId);
