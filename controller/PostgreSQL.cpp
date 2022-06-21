@@ -330,7 +330,7 @@ void PostgreSQL::eraseNetwork(const uint64_t networkId)
 	waitForReady();
 	Utils::hex(networkId, tmp2);
 	std::pair<nlohmann::json,bool> tmp;
-	tmp.first["id"] = tmp2;
+	tmp.first["nwid"] = tmp2;
 	tmp.first["objtype"] = "_delete_network";
 	tmp.second = true;
 	_commitQueue.post(tmp);
