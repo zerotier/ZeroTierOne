@@ -116,7 +116,7 @@ impl<const L: usize> Buffer<L> {
     #[inline(always)]
     pub fn as_bytes_starting_at(&self, start: usize) -> std::io::Result<&[u8]> {
         if start <= self.0 {
-            Ok(&self.1[start..])
+            Ok(&self.1[start..self.0])
         } else {
             Err(overflow_err())
         }

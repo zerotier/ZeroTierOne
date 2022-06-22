@@ -161,11 +161,12 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
                     ciphertext[56..60].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(56).cast::<[u8; 4]>() }) ^ x14.to_le()).to_ne_bytes());
                     ciphertext[60..64].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(60).cast::<[u8; 4]>() }) ^ x15.to_le()).to_ne_bytes());
                 }
-                plaintext = &plaintext[64..];
-                ciphertext = &mut ciphertext[64..];
 
                 j8 = j8.wrapping_add(1);
                 j9 = j9.wrapping_add((j8 == 0) as u32);
+
+                plaintext = &plaintext[64..];
+                ciphertext = &mut ciphertext[64..];
             } else {
                 if !plaintext.is_empty() {
                     let remainder = [x0.to_le(), x1.to_le(), x2.to_le(), x3.to_le(), x4.to_le(), x5.to_le(), x6.to_le(), x7.to_le(), x8.to_le(), x9.to_le(), x10.to_le(), x11.to_le(), x12.to_le(), x13.to_le(), x14.to_le(), x15.to_le()];
@@ -185,5 +186,30 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
     #[inline(always)]
     pub fn crypt_in_place(&mut self, data: &mut [u8]) {
         unsafe { self.crypt(&*slice_from_raw_parts(data.as_ptr(), data.len()), &mut *slice_from_raw_parts_mut(data.as_mut_ptr(), data.len())) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::salsa::*;
+
+    const SALSA_20_TV0_KEY: [u8; 32] = [0x0f, 0x62, 0xb5, 0x08, 0x5b, 0xae, 0x01, 0x54, 0xa7, 0xfa, 0x4d, 0xa0, 0xf3, 0x46, 0x99, 0xec, 0x3f, 0x92, 0xe5, 0x38, 0x8b, 0xde, 0x31, 0x84, 0xd7, 0x2a, 0x7d, 0xd0, 0x23, 0x76, 0xc9, 0x1c];
+    const SALSA_20_TV0_IV: [u8; 8] = [0x28, 0x8f, 0xf6, 0x5d, 0xc4, 0x2b, 0x92, 0xf9];
+    const SALSA_20_TV0_KS: [u8; 64] = [
+        0x5e, 0x5e, 0x71, 0xf9, 0x01, 0x99, 0x34, 0x03, 0x04, 0xab, 0xb2, 0x2a, 0x37, 0xb6, 0x62, 0x5b, 0xf8, 0x83, 0xfb, 0x89, 0xce, 0x3b, 0x21, 0xf5, 0x4a, 0x10, 0xb8, 0x10, 0x66, 0xef, 0x87, 0xda, 0x30, 0xb7, 0x76, 0x99, 0xaa, 0x73, 0x79, 0xda, 0x59,
+        0x5c, 0x77, 0xdd, 0x59, 0x54, 0x2d, 0xa2, 0x08, 0xe5, 0x95, 0x4f, 0x89, 0xe4, 0x0e, 0xb7, 0xaa, 0x80, 0xa8, 0x4a, 0x61, 0x76, 0x66, 0x3f,
+    ];
+
+    #[test]
+    fn salsa20() {
+        let mut s20 = Salsa::<20>::new(&SALSA_20_TV0_KEY, &SALSA_20_TV0_IV);
+        let mut ks = [0_u8; 64];
+        s20.crypt_in_place(&mut ks);
+        assert_eq!(ks, SALSA_20_TV0_KS);
+
+        let mut s20 = Salsa::<20>::new(&SALSA_20_TV0_KEY, &SALSA_20_TV0_IV);
+        let mut ks = [0_u8; 32];
+        s20.crypt_in_place(&mut ks);
+        assert_eq!(ks, &SALSA_20_TV0_KS[..32]);
     }
 }

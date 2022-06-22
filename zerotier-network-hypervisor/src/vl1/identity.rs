@@ -150,6 +150,13 @@ impl Identity {
     ///
     /// The boolean indicates whether or not an upgrade occurred. An error occurs if this identity is
     /// invalid or missing its private key(s). This does nothing if no upgrades are possible.
+    ///
+    /// NOTE: upgrading is not deterministic. This generates a new set of NIST P-384 keys and the new
+    /// identity contains these and a signature by the original keys and by the new keys to bind them
+    /// together. However repeated calls to upgrade() will generate different secondary keys. This should
+    /// only be used once to upgrade and then save a new identity.
+    ///
+    /// It would be possible to change this in the future, with care.
     pub fn upgrade(&mut self) -> Result<bool, InvalidParameterError> {
         if self.secret.is_none() {
             return Err(InvalidParameterError("an identity can only be upgraded if it includes its private key"));
@@ -301,25 +308,20 @@ impl Identity {
     }
 
     /// Verify a signature against this identity.
-    pub fn verify(&self, msg: &[u8], mut signature: &[u8]) -> bool {
+    pub fn verify(&self, msg: &[u8], signature: &[u8]) -> bool {
         if signature.len() == 96 {
-            // legacy ed25519-only signature with hash included detected by their unique size.
-            ed25519_verify(&self.ed25519, &signature[..64], msg)
+            // LEGACY: ed25519-only signature with hash included, detected by having a unique size of 96 bytes
+            return ed25519_verify(&self.ed25519, &signature[..64], msg);
         } else if let Some(algorithm) = signature.get(0) {
             if *algorithm == Self::ALGORITHM_EC_NIST_P384 && signature.len() == (1 + P384_ECDSA_SIGNATURE_SIZE) {
                 if let Some(p384) = self.p384.as_ref() {
-                    p384.ecdsa.verify(msg, &signature[1..])
-                } else {
-                    false
+                    return p384.ecdsa.verify(msg, &signature[1..]);
                 }
             } else if *algorithm == Self::ALGORITHM_X25519 && signature.len() == (1 + ED25519_SIGNATURE_SIZE) {
-                ed25519_verify(&self.ed25519, &signature[1..], msg)
-            } else {
-                false
+                return ed25519_verify(&self.ed25519, &signature[1..], msg);
             }
-        } else {
-            false
         }
+        return false;
     }
 
     pub fn to_buffer_with_options(&self, include_algorithms: u8, include_private: bool) -> Buffer<{ Self::MAX_MARSHAL_SIZE }> {
@@ -349,6 +351,8 @@ impl Identity {
         }
 
         /*
+         * LEGACY:
+         *
          * The prefix of 0x03 is for backward compatibility. Older nodes will interpret this as
          * an empty unidentified InetAddress object and will skip the number of bytes following it.
          *
@@ -908,6 +912,26 @@ mod tests {
     use std::time::{Duration, SystemTime};
     #[allow(unused_imports)]
     use zerotier_core_crypto::hex;
+
+    #[test]
+    fn v0_identity() {
+        let self_agree_expected = hex::from_string("de904fc90ff3a2b96b739b926e623113f5334c80841b654509b77916c4c4a6eb0ca69ec6ed01a7f04aee17c546b30ba4");
+
+        // Test self-agree with a known good x25519-only (v0) identity.
+        let id = Identity::from_str("728efdb79d:0:3077ed0084d8d48a3ac628af6b45d9351e823bff34bc4376cddfc77a3d73a966c7d347bdcc1244d0e99e1b9c961ff5e963092e90ca43b47ff58c114d2d699664:2afaefcd1dca336ed59957eb61919b55009850b0b7088af3ee142672b637d1d49cc882b30a006f9eee42f2211ef8fe1cbe99a16a4436737fc158ce2243c15f12").unwrap();
+        let self_agree = id.agree(&id).unwrap();
+        assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));
+
+        // Identity should be upgradable.
+        let mut upgraded = id.clone();
+        assert!(upgraded.upgrade().unwrap());
+
+        // Upgraded identity should generate the same result when agreeing with the old non-upgraded identity.
+        let self_agree = id.agree(&upgraded).unwrap();
+        assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));
+        let self_agree = upgraded.agree(&id).unwrap();
+        assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));
+    }
 
     const GOOD_V0_IDENTITIES: [&'static str; 10] = [
         "51ef313c3a:0:79fee239cf79833be3a9068565661dc33e04759fa0f7e2218d10f1a51d441f1bf71332eba26dfc3755ce60e14650fe68dede66cf145e429972a7f51e026374de:6d12b1c5e0eae3983a5ee5872fa9061963d9e2f8cdd85adab54bdec4bd67f538cafc91b8b5b93fca658a630aab030ec10d66235f2443ccf362c55c41ae01b46e",

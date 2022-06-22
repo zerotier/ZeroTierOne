@@ -20,6 +20,11 @@ mod tests {
     use sha2::Digest;
     use std::time::SystemTime;
 
+    const TV0_KEYS: [&'static [u8]; 2] = ["00000000000000000000000000000000".as_bytes(), "11111111111111111111111111111111".as_bytes()];
+
+    /// Test vectors consist of a series of input sizes, a SHA384 hash of a resulting ciphertext, and an expected tag.
+    /// Input is a standard byte array consisting of bytes 0, 1, 2, 3, ..., 255 and then cycling back to 0 over and over
+    /// and is provided both as ciphertext and associated data (AAD).
     #[allow(unused)]
     const TEST_VECTORS: [(usize, &'static str, &'static str); 85] = [
         (0, "38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b", "43847e644239134deccf5538162c861e"),
@@ -117,6 +122,7 @@ mod tests {
         s
     }
 
+    /// Run a bunch of test vectors.
     #[test]
     fn test_vectors() {
         let mut test_pt = [0_u8; 65536];
@@ -126,7 +132,7 @@ mod tests {
             test_pt[i] = i as u8;
             test_aad[i] = i as u8;
         }
-        let mut c = AesGmacSiv::new("00000000000000000000000000000000".as_bytes(), "11111111111111111111111111111111".as_bytes());
+        let mut c = AesGmacSiv::new(TV0_KEYS[0], TV0_KEYS[1]);
         for (test_length, expected_ct_sha384, expected_tag) in TEST_VECTORS.iter() {
             test_ct.fill(0);
             c.reset();
@@ -147,6 +153,7 @@ mod tests {
         }
     }
 
+    /// Test repeated encrypt/decrypt and run a benchmark. Run with --nocapture to see it.
     #[test]
     fn encrypt_decrypt() {
         let aes_key_0: [u8; 32] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32];

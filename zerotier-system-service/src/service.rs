@@ -197,11 +197,16 @@ impl SystemInterface for ServiceImpl {
                 if !sockets.is_empty() {
                     if let Some(specific_interface) = local_interface {
                         for (_, p) in sockets.iter() {
-                            for s in p.sockets.iter() {
-                                if s.interface.eq(specific_interface) {
-                                    if s.send_sync_nonblock(&self.rt, address, data, packet_ttl) {
-                                        return true;
+                            if !p.sockets.is_empty() {
+                                let mut i = (random::next_u32_secure() as usize) % p.sockets.len();
+                                for _ in 0..p.sockets.len() {
+                                    let s = p.sockets.get(i).unwrap();
+                                    if s.interface.eq(specific_interface) {
+                                        if s.send_sync_nonblock(&self.rt, address, data, packet_ttl) {
+                                            return true;
+                                        }
                                     }
+                                    i = (i + 1) % p.sockets.len();
                                 }
                             }
                         }
@@ -211,12 +216,16 @@ impl SystemInterface for ServiceImpl {
                         let rn = random::xorshift64_random() as usize;
                         for i in 0..bound_ports.len() {
                             let p = sockets.get(*bound_ports.get(rn.wrapping_add(i) % bound_ports.len()).unwrap()).unwrap();
-                            for s in p.sockets.iter() {
-                                if !sent_on_interfaces.contains(&s.interface) {
-                                    if s.send_sync_nonblock(&self.rt, address, data, packet_ttl) {
-                                        sent_on_interfaces.insert(s.interface.clone());
-                                        break;
+                            if !p.sockets.is_empty() {
+                                let mut i = (random::next_u32_secure() as usize) % p.sockets.len();
+                                for _ in 0..p.sockets.len() {
+                                    let s = p.sockets.get(i).unwrap();
+                                    if !sent_on_interfaces.contains(&s.interface) {
+                                        if s.send_sync_nonblock(&self.rt, address, data, packet_ttl) {
+                                            sent_on_interfaces.insert(s.interface.clone());
+                                        }
                                     }
+                                    i = (i + 1) % p.sockets.len();
                                 }
                             }
                         }

@@ -111,10 +111,10 @@ impl Default for GlobalSettings {
 
 impl GlobalSettings {
     #[cfg(target_os = "macos")]
-    pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 9] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth", "zt", "llw"];
+    pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 10] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth", "zt", "llw", "anpi"];
 
     #[cfg(target_os = "linux")]
-    pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 5] = ["lo", "tun", "tap", "ipsec", "zt", "tailscale"];
+    pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 5] = ["lo", "tun", "tap", "ipsec", "zt"];
 
     #[cfg(windows)]
     pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 0] = [];

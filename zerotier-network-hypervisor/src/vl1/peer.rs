@@ -9,7 +9,6 @@ use parking_lot::{Mutex, RwLock};
 
 use zerotier_core_crypto::aes_gmac_siv::AesCtr;
 use zerotier_core_crypto::hash::*;
-use zerotier_core_crypto::poly1305::Poly1305;
 use zerotier_core_crypto::random::{get_bytes_secure, next_u64_secure};
 use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
@@ -62,32 +61,30 @@ pub struct Peer<SI: SystemInterface> {
     remote_protocol_version: AtomicU8,
 }
 
-/// Create initialized instances of Salsa20/12 and Poly1305 for a packet.
-/// This is deprecated and is not used with AES-GMAC-SIV.
-fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_size: usize) -> (Salsa<12>, Poly1305) {
+/// Create initialized instances of Salsa20/12 and Poly1305 for a packet (LEGACY).
+fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_size: usize) -> (Salsa<12>, [u8; 32]) {
     // Create a per-packet key from the IV, source, destination, and packet size.
     let mut key: Secret<32> = secret.key.first_n();
     let hb = header.as_bytes();
     for i in 0..18 {
         key.0[i] ^= hb[i];
     }
-    key.0[18] ^= hb[packet_constants::FLAGS_FIELD_INDEX] & packet_constants::FLAGS_FIELD_MASK_HIDE_HOPS;
-    key.0[19] ^= (packet_size >> 8) as u8;
-    key.0[20] ^= packet_size as u8;
+    key.0[18] ^= header.flags_cipher_hops & packet_constants::FLAGS_FIELD_MASK_HIDE_HOPS;
+    key.0[19] ^= packet_size as u8;
+    key.0[20] ^= packet_size.wrapping_shr(8) as u8;
 
     let mut salsa = Salsa::<12>::new(&key.0, &header.id);
-
     let mut poly1305_key = [0_u8; 32];
     salsa.crypt_in_place(&mut poly1305_key);
-
-    (salsa, Poly1305::new(&poly1305_key))
+    (salsa, poly1305_key)
 }
 
 /// Attempt AEAD packet encryption and MAC validation. Returns message ID on success.
 fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8], header: &PacketHeader, fragments: &[Option<PooledPacketBuffer>], payload: &mut PacketBuffer) -> Option<MessageId> {
     packet_frag0_payload_bytes.get(0).map_or(None, |verb| {
-        match header.cipher() {
-            security_constants::CIPHER_NOCRYPT_POLY1305 => {
+        let cipher = header.cipher();
+        match cipher {
+            security_constants::CIPHER_NOCRYPT_POLY1305 | security_constants::CIPHER_SALSA2012_POLY1305 => {
                 if (verb & packet_constants::VERB_MASK) == verbs::VL1_HELLO {
                     let mut total_packet_len = packet_frag0_payload_bytes.len() + packet_constants::HEADER_SIZE;
                     for f in fragments.iter() {
@@ -97,38 +94,18 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
                     for f in fragments.iter() {
                         let _ = f.as_ref().map(|f| f.as_bytes_starting_at(packet_constants::HEADER_SIZE).map(|f| payload.append_bytes(f)));
                     }
-                    let (_, mut poly) = salsa_poly_create(secret, header, total_packet_len);
-                    poly.update(payload.as_bytes());
-                    if poly.finish()[0..8].eq(&header.mac) {
+                    let (mut salsa, poly1305_key) = salsa_poly_create(secret, header, total_packet_len);
+                    let mac = zerotier_core_crypto::poly1305::compute(&poly1305_key, &payload.as_bytes());
+                    if mac[0..8].eq(&header.mac) {
+                        if cipher == security_constants::CIPHER_SALSA2012_POLY1305 {
+                            salsa.crypt_in_place(payload.as_bytes_mut());
+                        }
                         Some(u64::from_ne_bytes(header.id))
                     } else {
                         None
                     }
                 } else {
                     // Only HELLO is permitted without payload encryption. Drop other packet types if sent this way.
-                    None
-                }
-            }
-
-            security_constants::CIPHER_SALSA2012_POLY1305 => {
-                let mut total_packet_len = packet_frag0_payload_bytes.len() + packet_constants::HEADER_SIZE;
-                for f in fragments.iter() {
-                    total_packet_len += f.as_ref().map_or(0, |f| f.len());
-                }
-                let (mut salsa, mut poly) = salsa_poly_create(secret, header, total_packet_len);
-                poly.update(packet_frag0_payload_bytes);
-                let _ = payload.append_bytes_get_mut(packet_frag0_payload_bytes.len()).map(|b| salsa.crypt(packet_frag0_payload_bytes, b));
-                for f in fragments.iter() {
-                    let _ = f.as_ref().map(|f| {
-                        f.as_bytes_starting_at(packet_constants::FRAGMENT_HEADER_SIZE).map(|f| {
-                            poly.update(f);
-                            let _ = payload.append_bytes_get_mut(f.len()).map(|b| salsa.crypt(f, b));
-                        })
-                    });
-                }
-                if poly.finish()[0..8].eq(&header.mac) {
-                    Some(u64::from_ne_bytes(header.id))
-                } else {
                     None
                 }
             }
@@ -255,14 +232,14 @@ impl<SI: SystemInterface> Peer<SI> {
     /// those fragments after the main packet header and first chunk.
     ///
     /// This returns true if the packet decrypted and passed authentication.
-    pub(crate) async fn receive<PH: InnerProtocolInterface>(&self, node: &Node<SI>, si: &SI, ph: &PH, time_ticks: i64, source_path: &Arc<Path<SI>>, header: &PacketHeader, frag0: &PacketBuffer, fragments: &[Option<PooledPacketBuffer>]) {
+    pub(crate) async fn receive<PH: InnerProtocolInterface>(&self, node: &Node<SI>, si: &SI, ph: &PH, time_ticks: i64, source_path: &Arc<Path<SI>>, packet_header: &PacketHeader, frag0: &PacketBuffer, fragments: &[Option<PooledPacketBuffer>]) {
         if let Ok(packet_frag0_payload_bytes) = frag0.as_bytes_starting_at(packet_constants::VERB_INDEX) {
             //let mut payload = unsafe { PacketBuffer::new_without_memzero() };
             let mut payload = PacketBuffer::new();
 
             // First try decrypting and authenticating with an ephemeral secret if one is negotiated.
             let (forward_secrecy, mut message_id) = if let Some(ephemeral_secret) = self.ephemeral_symmetric_key.read().as_ref() {
-                if let Some(message_id) = try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, header, fragments, &mut payload) {
+                if let Some(message_id) = try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, packet_header, fragments, &mut payload) {
                     // Decryption successful with ephemeral secret
                     (true, message_id)
                 } else {
@@ -276,11 +253,13 @@ impl<SI: SystemInterface> Peer<SI> {
 
             // If forward_secrecy is false it means the ephemeral key failed. Try decrypting with the permanent key.
             if !forward_secrecy {
-                if let Some(message_id2) = try_aead_decrypt(&self.identity_symmetric_key, packet_frag0_payload_bytes, header, fragments, &mut payload) {
+                payload.clear();
+                if let Some(message_id2) = try_aead_decrypt(&self.identity_symmetric_key, packet_frag0_payload_bytes, packet_header, fragments, &mut payload) {
                     // Decryption successful with static secret.
                     message_id = message_id2;
                 } else {
                     // Packet failed to decrypt using either ephemeral or permament key, reject.
+                    debug_event!(si, "[vl1] #{:0>16x} failed authentication", u64::from_be_bytes(packet_header.id));
                     return;
                 }
             }
@@ -307,6 +286,8 @@ impl<SI: SystemInterface> Peer<SI> {
                 // ---------------------------------------------------------------
                 // If we made it here it decrypted and passed authentication.
                 // ---------------------------------------------------------------
+
+                debug_event!(si, "[vl1] #{:0>16x} decrypted and authenticated, verb: {:0>2x}", u64::from_be_bytes(packet_header.id), (verb & packet_constants::VERB_MASK) as u32);
 
                 if (verb & packet_constants::VERB_FLAG_COMPRESSED) != 0 {
                     let mut decompressed_payload: [u8; packet_constants::SIZE_MAX] = unsafe { MaybeUninit::uninit().assume_init() };
@@ -473,8 +454,10 @@ impl<SI: SystemInterface> Peer<SI> {
                 hello_fixed_headers.timestamp = si.time_clock().to_be_bytes();
             }
 
-            // Full identity of the node establishing the session.
-            assert!(self.identity.marshal_with_options(&mut packet, Identity::ALGORITHM_ALL, false).is_ok());
+            assert_eq!(packet.len(), 41);
+
+            // Full identity of this node.
+            assert!(node.identity.marshal_with_options(&mut packet, Identity::ALGORITHM_ALL, false).is_ok());
 
             // Append two reserved bytes, currently always zero.
             assert!(packet.append_padding(0, 2).is_ok());
@@ -525,9 +508,9 @@ impl<SI: SystemInterface> Peer<SI> {
             drop(hmac);
 
             // Set poly1305 in header, which is the only authentication for old nodes.
-            let (_, mut poly) = salsa_poly_create(&self.identity_symmetric_key, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
-            poly.update(packet.as_bytes_starting_at(packet_constants::HEADER_SIZE).unwrap());
-            packet.as_mut()[packet_constants::MAC_FIELD_INDEX..packet_constants::MAC_FIELD_INDEX + 8].copy_from_slice(&poly.finish()[0..8]);
+            let (_, poly1305_key) = salsa_poly_create(&self.identity_symmetric_key, packet.struct_at::<PacketHeader>(0).unwrap(), packet.len());
+            let mac = zerotier_core_crypto::poly1305::compute(&poly1305_key, packet.as_bytes_starting_at(packet_constants::HEADER_SIZE).unwrap());
+            packet.as_mut()[packet_constants::MAC_FIELD_INDEX..packet_constants::MAC_FIELD_INDEX + 8].copy_from_slice(&mac[0..8]);
 
             self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
 

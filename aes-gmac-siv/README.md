@@ -1,21 +1,21 @@
 AES-GMAC-SIV
 ======
 
-This is a Rust implementation of AES-GMAC-SIV, a FIPS-compliant SIV mode for AES-256, with underlying cryptographic primitives provided by either macOS CryptoCore, OpenSSL, or (eventually, not implemented yet) WinCrypt. The appropriate API is automatically selected at compile time.
+This is a Rust implementation of AES-GMAC-SIV, a FIPS-compliant SIV AEAD construction for AES-256. An interface to simple AES-CTR mode is also included.
 
-This is designed for use with the ZeroTier protocol but could be used for other message based protocols where a secure authenticated cipher construction is needed.
+It's implemented in terms of OpenSSL (libcrypto), macOS/iOS CryptoCore, or (soon) WinCrypt, with the latter two automatically selected at compile time on those platforms.
 
 ## Introduction
 
 AES-GMAC-SIV is a "synthetic IV" (SIV) cipher construction implemented using only FIPS and NIST approved cryptographic building blocks: AES and GMAC (the MAC component of GCM). It can for FIPS purposes be described as "AES-CTR authenticated with GMAC" both of which are permitted algorithms. It was created because while similar to [AES-GCM-SIV](https://en.wikipedia.org/wiki/AES-GCM-SIV) that mode uses a non-standard MAC called POLYVAL in place of GMAC. POLYVAL is just GMAC in little-endian, but the fact that it is not standard GMAC means it's not found in most cryptographic libraries and is not approved by FIPS and most other cryptographic standards.
 
-## Why SIV?
+## About SIV Modes
 
 Stream ciphers like AES-CTR, ChaCha20, and others require a number called an initialization vector (IV) for each use. These and most other stream ciphers work by XORing a key stream with plaintext, so if an IV is used more than once security is compromised. Since XOR is commutative, if two different messages are encrypted with the same key stream a simple XOR can reveal that key stream and decrypt both messages. This is a common pitfall with any XOR based symmetric cipher construction.
 
-Repeating the IV is dangerous with many MAC functions in authenticated constructions as well. For AES-GCM the use of a duplicate IV with GMAC can allow an attacker to forge messages, which for many use cases is a worse security failure than letting an attacker decrypt a few messages.
+Repeating the IV is dangerous with many MAC (message authentication) functions as well. [It's particularly dangerous in AES-GCM](https://crypto.stackexchange.com/questions/26790/how-bad-it-is-using-the-same-iv-twice-with-aes-gcm), where one nonce reuse with GMAC (the MAC function in AES-GCM) could allow an attacker to forge messages.
 
-SIV modes provide strong protection against IV reuse and improve security bounds for protocols using small IVs (like ZeroTier's 64-bit message ID) by generating a larger *synthetic IV* from a random or sequential external IV and the message plaintext. Even if the externally provided IV is duplicated, the larger SIV IV won't repeat unless the plaintext is also identical. In this case all you've done is leaked the fact that you have sent a duplicate message. The security of that message and its authentication function is not compromised.
+SIV stands for *synthetic IV*. SIV modes work by applying a MAC function to the plaintext first, then using the resulting authentication code plus an IV to initialize a stream cipher. This provides much stronger protection against IV reuse by making the actual IV dependent on the plaintext. Changes to the plaintext will therefore change the IV even if the one supplied to the function is duplicated.
 
 SIV modes might seem like paranoia, but accidental IV reuse is easier than you might think. Here's a few scenarios where it might happen:
 
@@ -30,11 +30,13 @@ SIV modes might seem like paranoia, but accidental IV reuse is easier than you m
 
 ... and so on. "Sudden death" on IV re-use is a foot-gun that's worth removing.
 
-## AES-GMAC-SIV construction
+## AES-GMAC-SIV
 
 ![AES-GMAC-SIV block diagram](AES-GMAC-SIV.png)
 
-Two initialization keys, which can be derived from one using a parameterized KDF:
+*Inputs are green, outputs are blue. Grey indicates simple non-cryptographic operations. Red indicates cryptographic steps.*
+
+Two initialization keys, which can be derived from a single key using a key derivation function or hashing with a 512-bit hash function and using the first and second 256 bits:
 
  1. K0, a 256-bit AES key used to initialize AES-GMAC.
  2. K1, a second (and different) 256-bit AES key used to initialize AES-ECB and AES-CTR.
@@ -53,7 +55,7 @@ Encryption steps:
  4. Feed plaintext into GMAC to compute final MAC.
  5. XOR lower 64 bits and higher 64 bits of 128-bit GMAC tag to yield a 64-bit tag.
  6. Concatenate original 64-bit input IV and 64-bit shortened tag to form a 128-bit block.
- 7. AES-ECB encrypt this IV+tag, yielding an opaque 128-bit message tag and AES-CTR IV. (AES-ECB is perfectly safe if only one block is encrypted.)
+ 7. AES-ECB encrypt this IV+tag, yielding an opaque 128-bit message tag and AES-CTR IV. (ECB is secure if only one block is encrypted.)
  8. Clear bit 31 (from the right) in the tag and use this to initialize AES-CTR with the first 96 bits being the AES-CTR IV and the remaining 31 bits being the AES-CTR "index" or counter. This provides what amounts to a 127-bit AES-CTR IV. The most significant bit of the counter is cleared so that poor quality AES-CTR implementations that only use a 32-bit wrapping counter will not wrap at message sizes up to 2^31 bytes. Wrapping technically wouldn't hurt anything unless the implementation generates a fault on wrap, but avoid this in case some cryptographic accelerator somewhere does so.
  9. Encrypt plaintext with AES-CTR and send this along with the encrypted IV+tag from step 7 (without CTR counter bit 31 cleared). The per-message unique 64-bit IV supplied by the caller at encryption **should not** be sent as it is recovered during decryption by decrypting the IV+tag blob. Sending it wastes space and reveals slightly more state information to an attacker, since without the input IV an attacker doesn't know if it has in fact been duplicated.
 

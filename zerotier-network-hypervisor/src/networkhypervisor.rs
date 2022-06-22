@@ -80,6 +80,7 @@ impl<I: Interface> NetworkHypervisor<I> {
     pub fn add_update_default_root_set(&self) -> bool {
         let mut buf: Buffer<4096> = Buffer::new();
         buf.set_to(include_bytes!("../default-rootset/root.zerotier.com.bin"));
+        //buf.set_to(include_bytes!("../default-rootset/local-parallels-test.bin"));
         let mut cursor = 0;
         self.add_update_root_set(RootSet::unmarshal(&buf, &mut cursor).unwrap())
     }

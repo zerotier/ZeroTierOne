@@ -20,7 +20,7 @@ zerotier-core-crypto = { path = "../zerotier-core-crypto" }
 async-trait = "^0"
 base64 = "^0"
 lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }
-parking_lot = "^0"
+parking_lot = { version = "^0", features = [], default-features = false }
 lazy_static = "^1"
 serde = { version = "^1", features = ["derive"], default-features = false }
 

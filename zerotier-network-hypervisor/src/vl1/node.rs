@@ -497,11 +497,11 @@ impl<SI: SystemInterface> Node<SI> {
     pub async fn handle_incoming_physical_packet<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, source_endpoint: &Endpoint, source_local_socket: &SI::LocalSocket, source_local_interface: &SI::LocalInterface, mut data: PooledPacketBuffer) {
         debug_event!(
             si,
-            "[vl1] #{} {}->{} via {} length {} via socket {}@{}",
+            "[vl1] {} -> #{} {}->{} length {} (on socket {}@{})",
+            source_endpoint.to_string(),
             data.bytes_fixed_at::<8>(0).map_or("????????????????".into(), |pid| zerotier_core_crypto::hex::to_string(pid)),
             data.bytes_fixed_at::<5>(13).map_or("??????????".into(), |src| zerotier_core_crypto::hex::to_string(src)),
             data.bytes_fixed_at::<5>(8).map_or("??????????".into(), |dest| zerotier_core_crypto::hex::to_string(dest)),
-            source_endpoint.to_string(),
             data.len(),
             source_local_socket.to_string(),
             source_local_interface.to_string()
@@ -517,11 +517,11 @@ impl<SI: SystemInterface> Node<SI> {
                     if fragment_header.is_fragment() {
                         #[cfg(debug_assertions)]
                         let fragment_header_id = u64::from_be_bytes(fragment_header.id);
-                        debug_event!(si, "-- #{:0>16x} fragment {} of {} received", u64::from_be_bytes(fragment_header.id), fragment_header.fragment_no(), fragment_header.total_fragments());
+                        debug_event!(si, "[vl1] #{:0>16x} fragment {} of {} received", u64::from_be_bytes(fragment_header.id), fragment_header.fragment_no(), fragment_header.total_fragments());
 
                         if let Some(assembled_packet) = path.receive_fragment(fragment_header.packet_id(), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks) {
                             if let Some(frag0) = assembled_packet.frags[0].as_ref() {
-                                debug_event!(si, "-- #{:0>16x} packet fully assembled!", fragment_header_id);
+                                debug_event!(si, "[vl1] #{:0>16x} packet fully assembled!", fragment_header_id);
 
                                 if let Ok(packet_header) = frag0.struct_at::<PacketHeader>(0) {
                                     if let Some(source) = Address::from_bytes(&packet_header.src) {
@@ -537,7 +537,7 @@ impl<SI: SystemInterface> Node<SI> {
                     } else {
                         #[cfg(debug_assertions)]
                         if let Ok(packet_header) = data.struct_at::<PacketHeader>(0) {
-                            debug_event!(si, "-- #{:0>16x} is unfragmented", u64::from_be_bytes(packet_header.id));
+                            debug_event!(si, "[vl1] #{:0>16x} is unfragmented", u64::from_be_bytes(packet_header.id));
 
                             if let Some(source) = Address::from_bytes(&packet_header.src) {
                                 if let Some(peer) = self.peer(source) {
@@ -557,9 +557,9 @@ impl<SI: SystemInterface> Node<SI> {
                         {
                             debug_packet_id = u64::from_be_bytes(fragment_header.id);
                         }
-                        debug_event!(si, "-- #{:0>16x} forwarding packet fragment to {}", debug_packet_id, dest.to_string());
+                        debug_event!(si, "[vl1] #{:0>16x} forwarding packet fragment to {}", debug_packet_id, dest.to_string());
                         if fragment_header.increment_hops() > FORWARD_MAX_HOPS {
-                            debug_event!(si, "-- #{:0>16x} discarded: max hops exceeded!", debug_packet_id);
+                            debug_event!(si, "[vl1] #{:0>16x} discarded: max hops exceeded!", debug_packet_id);
                             return;
                         }
                     } else {
@@ -568,9 +568,9 @@ impl<SI: SystemInterface> Node<SI> {
                             {
                                 debug_packet_id = u64::from_be_bytes(packet_header.id);
                             }
-                            debug_event!(si, "-- #{:0>16x} forwarding packet to {}", debug_packet_id, dest.to_string());
+                            debug_event!(si, "[vl1] #{:0>16x} forwarding packet to {}", debug_packet_id, dest.to_string());
                             if packet_header.increment_hops() > FORWARD_MAX_HOPS {
-                                debug_event!(si, "-- #{:0>16x} discarded: max hops exceeded!", u64::from_be_bytes(packet_header.id));
+                                debug_event!(si, "[vl1] #{:0>16x} discarded: max hops exceeded!", u64::from_be_bytes(packet_header.id));
                                 return;
                             }
                         } else {
@@ -581,7 +581,7 @@ impl<SI: SystemInterface> Node<SI> {
                     if let Some(peer) = self.peer(dest) {
                         // TODO: SHOULD we forward? Need a way to check.
                         peer.forward(si, time_ticks, data.as_ref()).await;
-                        debug_event!(si, "-- #{:0>16x} forwarded successfully", debug_packet_id);
+                        debug_event!(si, "[vl1] #{:0>16x} forwarded successfully", debug_packet_id);
                     }
                 }
             }
@@ -618,9 +618,8 @@ impl<SI: SystemInterface> Node<SI> {
 
     pub fn canonical_path(&self, ep: &Endpoint, local_socket: &SI::LocalSocket, local_interface: &SI::LocalInterface, time_ticks: i64) -> Arc<Path<SI>> {
         if let Some(path) = self.paths.read().get(&PathKey::Ref(ep, local_socket)) {
-            path.clone()
-        } else {
-            self.paths.write().entry(PathKey::Copied(ep.clone(), local_socket.clone())).or_insert_with(|| Arc::new(Path::new(ep.clone(), local_socket.clone(), local_interface.clone(), time_ticks))).clone()
+            return path.clone();
         }
+        return self.paths.write().entry(PathKey::Copied(ep.clone(), local_socket.clone())).or_insert_with(|| Arc::new(Path::new(ep.clone(), local_socket.clone(), local_interface.clone(), time_ticks))).clone();
     }
 }
