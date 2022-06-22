@@ -7,8 +7,34 @@ trap 'trap " " SIGTERM; kill 0; wait' SIGTERM SIGQUIT SIGINT
 echo "Starting Zerotier-One"
 zerotier-one -d
 
-# Waiting for ZT service to come online before attempting queries
-sleep 15
+echo "Wait for ZT service to come online before attempting queries..."
+MAX_WAIT_SECS="${MAX_WAIT_SECS:-90}"
+SLEEP_TIME="${SLEEP_TIME:-15}"
+if [[ "$SLEEP_TIME" -le 0 ]]
+then
+  SLEEP_TIME=1
+fi
+
+iterations=$((MAX_WAIT_SECS/SLEEP_TIME))
+online=false
+
+for ((s=0; s<=iterations; s++))
+do
+    online="$(zerotier-cli -j info | jq '.online' 2>/dev/null)"
+    if [[ "$online" == "true" ]]
+    then
+        break
+    fi
+    sleep "$SLEEP_TIME"
+    echo " ."
+done
+
+if [[ "$online" != "true" ]]
+then
+    echo "Waited $MAX_WAIT_SECS for zerotier-one to start, exiting." >&2
+    exit 1
+fi
+echo "done."
 
 (
 echo "Starting route helper"

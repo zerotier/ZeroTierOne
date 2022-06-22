@@ -2,13 +2,12 @@
 
 FROM alpine:latest as builder
 
-RUN apk add --no-cache rust cargo
-RUN apk add  openssl-dev
-
-RUN apk add --update alpine-sdk linux-headers \
+WORKDIR /src
+RUN apk add --no-cache rust cargo \
+  && apk add  openssl-dev \
+  && apk add --update alpine-sdk linux-headers \
   && git clone --quiet https://github.com/zerotier/ZeroTierOne.git /src \
-  && git -C src reset --quiet --hard ${ZTO_COMMIT} \
-  && cd /src \
+  && git reset --quiet --hard ${ZTO_COMMIT} \
   && make -f make-linux.mk
 
 FROM alpine:latest
@@ -18,6 +17,7 @@ LABEL description="ZeroTier One docker image for Synology NAS"
 RUN apk add --update --no-cache bash jq libc6-compat libstdc++
 
 EXPOSE 9993/udp
+ENV MAX_WAIT_SECS SLEEP_TIME
 
 COPY --from=builder /src/zerotier-one /usr/sbin/
 RUN mkdir -p /var/lib/zerotier-one \
