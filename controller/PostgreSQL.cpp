@@ -1711,11 +1711,7 @@ void PostgreSQL::onlineNotification_Redis()
 
 		fprintf(stderr, "onlineNotification ran in %llu ms\n", total);
 
-		if (count > 0) {
-			std::this_thread::yield();
-		} else {
-			std::this_thread::sleep_for(std::chrono::seconds(1));
-		}
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 }
 
