@@ -1678,6 +1678,7 @@ void PostgreSQL::onlineNotification_Redis()
 	std::string controllerId = std::string(_myAddress.toString(buf));
 
 	while (_run == 1) {
+		fprintf(stderr, "onlineNotification tick\n");
 		auto start = std::chrono::high_resolution_clock::now();
 
 		std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > lastOnline;
@@ -1703,7 +1704,7 @@ void PostgreSQL::onlineNotification_Redis()
 		auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 		auto total = dur.count();
 
-		fprintf(stderr, "onlineNotification ran in %llu ms", total);
+		fprintf(stderr, "onlineNotification ran in %llu ms\n", total);
 
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
