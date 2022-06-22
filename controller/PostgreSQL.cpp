@@ -899,7 +899,7 @@ void PostgreSQL::initializeMembers()
 			networkId = "";
 
 			auto end = std::chrono::high_resolution_clock::now();
-			auto dur = std::chrono::duration_cast<std::chrono::microseconds>(end - start);;
+			auto dur = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 			total += dur.count();
 			++count;
 			if (count > 0 && count % 10000 == 0) {
@@ -1678,6 +1678,8 @@ void PostgreSQL::onlineNotification_Redis()
 	std::string controllerId = std::string(_myAddress.toString(buf));
 
 	while (_run == 1) {
+		auto start = std::chrono::high_resolution_clock::now();
+
 		std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > lastOnline;
 		{
 			std::lock_guard<std::mutex> l(_lastOnline_l);
@@ -1696,7 +1698,14 @@ void PostgreSQL::onlineNotification_Redis()
 		} catch (sw::redis::Error &e) {
 			fprintf(stderr, "Error in online notification thread (redis): %s\n", e.what());
 		}
-		std::this_thread::sleep_for(std::chrono::seconds(10));
+
+		auto end = std::chrono::high_resolution_clock::now();
+		auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		auto total = dur.count();
+
+		fprintf(stderr, "onlineNotification ran in %llu ms", total);
+
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 }
 
