@@ -216,7 +216,7 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 		opts.port = _rc->port;
 		opts.password = _rc->password;
 		opts.db = 0;
-		poolOpts.size = 10;
+		poolOpts.size = 25;
 		if (_rc->clusterMode) {
 			fprintf(stderr, "Using Redis in Cluster Mode\n");
 			_cluster = std::make_shared<sw::redis::RedisCluster>(opts, poolOpts);
@@ -1706,7 +1706,7 @@ void PostgreSQL::onlineNotification_Redis()
 
 		fprintf(stderr, "onlineNotification ran in %llu ms\n", total);
 
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::this_thread::yield();
 	}
 }
 
