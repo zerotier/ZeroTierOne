@@ -1,0 +1,8 @@
+/** pqxx::notification_receiver functor interface.
+ *
+ * pqxx::notification_receiver handles incoming notifications.
+ */
+// Actual definitions in .hxx file so editors and such recognize file type.
+#include "pqxx/internal/header-pre.hxx"
+#include "pqxx/notification.hxx"
+#include "pqxx/internal/header-post.hxx"

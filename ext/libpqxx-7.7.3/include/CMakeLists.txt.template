@@ -1,0 +1,23 @@
+install(
+    DIRECTORY pqxx "${PROJECT_BINARY_DIR}/include/pqxx"
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING
+    # For each X.hxx, install both X.hxx itself and plain X.
+    PATTERN *.hxx
+    # TODO: Is there any way to do this with CMake's globbing?
+###MAKTEMPLATE:FOREACH include/pqxx/*.hxx
+    PATTERN ###BASENAME###
+###MAKTEMPLATE:ENDFOREACH
+    PATTERN internal/*.hxx
+    PATTERN internal/gates/*.hxx
+    PATTERN config-public-compiler.h
+    PATTERN pqxx
+    PATTERN doc EXCLUDE
+)
+
+install(
+    DIRECTORY pqxx/doc/
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}
+    FILES_MATCHING
+    PATTERN *.md
+)

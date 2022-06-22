@@ -1,0 +1,60 @@
+# CircleCI config for automated test builds triggered from Github.
+version: 2
+jobs:
+  build:
+    docker:
+      - image: debian:testing
+#      - image: postgres:latest
+    environment:
+      - PGHOST: "/tmp"
+    steps:
+      - checkout
+      - run:
+          name: Configure apt archives
+          command: apt update
+      - run:
+          name: Install
+          command: apt install -y lsb-release python3 cmake postgresql libpq-dev postgresql-server-dev-all build-essential autoconf dh-autoreconf autoconf-archive automake cppcheck
+      - run:
+          name: Identify
+          command: lsb_release -a && c++ --version
+      - run:
+          name: Prepare postgres
+          command: |
+              mkdir /tmp/db &&
+              chown postgres /tmp/db &&
+              su postgres -c '/usr/lib/postgresql/*/bin/initdb --pgdata /tmp/db --auth trust --nosync'
+      - run:
+          name: Run postgres
+          command: (su postgres -c '/usr/lib/postgresql/*/bin/postgres -D /tmp/db -k /tmp' &) && sleep 5
+      - run:
+          name: Create postgres user
+          command: su postgres -c "createuser -w -d root"
+      - run:
+          name: Set up database
+          command: createdb root
+      - run:
+          name: Autogen
+          command: NOCONFIGURE=1 ./autogen.sh
+      - run:
+          name: Configure
+          command: |
+              ./configure \
+                  --disable-documentation \
+                  --enable-maintainer-mode \
+                  --enable-audit \
+                  --enable-shared --disable-static \
+                  CXXFLAGS=-O3
+      - store_artifacts:
+          path: config.log
+      - run:
+          name: Make
+          command: make -j$(nproc)
+      - run:
+          name: Test
+          command: PGDATA=db/data make check
+      - run:
+          name: Analyse
+          command: ./tools/lint --full >lint.log
+      - store_artifacts:
+          path: lint.log

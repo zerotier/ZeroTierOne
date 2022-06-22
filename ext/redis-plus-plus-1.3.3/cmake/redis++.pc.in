@@ -1,0 +1,12 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: redis++
+Description: This is a Redis client, based on hiredis and written in C++11. It supports scritpting, pub/sub, pipeline, transaction, Redis Cluster, Redis Sentinel, connection pool, ACL, SSL and thread safety.
+Version: @PROJECT_VERSION@
+URL: https://github.com/sewenew/redis-plus-plus
+Requires: @REDIS_PLUS_PLUS_DEPENDS@
+Cflags: -I${includedir}
+Libs: -L${libdir} -lredis++

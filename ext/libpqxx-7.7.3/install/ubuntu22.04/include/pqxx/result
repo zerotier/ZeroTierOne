@@ -1,0 +1,16 @@
+/** pqxx::result class and support classes.
+ *
+ * pqxx::result represents the set of result rows from a database query.
+ */
+// Actual definitions in .hxx file so editors and such recognize file type.
+#include "pqxx/internal/header-pre.hxx"
+
+#include "pqxx/result.hxx"
+
+// Now include some types which depend on result, but which the user will
+// expect to see defined after including this header.
+#include "pqxx/internal/result_iterator.hxx"
+#include "pqxx/field.hxx"
+#include "pqxx/internal/result_iter.hxx"
+
+#include "pqxx/internal/header-post.hxx"

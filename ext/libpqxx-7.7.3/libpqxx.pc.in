@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libpqxx
+Description: C++ client API for the PostgreSQL database management system.
+Version: @VERSION@
+Libs: -L${libdir} -lpqxx
+Cflags: -I${includedir}
