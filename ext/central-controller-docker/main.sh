@@ -80,6 +80,9 @@ echo "{
 " > /var/lib/zerotier-one/local.conf
 
 if [ -n "$DB_SERVER_CA" ]; then
+    echo "secret list"
+    chmod 600 /secrets/db/*.pem
+    ls -l /secrets/db/
     until /usr/pgsql-10/bin/pg_isready -h ${ZT_DB_HOST} -p ${ZT_DB_PORT} -d "sslmode=prefer sslcert=${DB_CLIENT_CERT} sslkey=${DB_CLIENT_KEY} sslrootcert=${DB_SERVER_CA}"; do
 	    echo "Waiting for PostgreSQL...";
 	    sleep 2;
