@@ -1,0 +1,3 @@
+# Make Sonatype Lift ignore these generated files.
+configure
+config/*
