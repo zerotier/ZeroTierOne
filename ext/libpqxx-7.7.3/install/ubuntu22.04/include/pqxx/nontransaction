@@ -1,8 +1,0 @@
-/** pqxx::nontransaction class.
- *
- * pqxx::nontransaction provides nontransactional database access.
- */
-// Actual definitions in .hxx file so editors and such recognize file type.
-#include "pqxx/internal/header-pre.hxx"
-#include "pqxx/nontransaction.hxx"
-#include "pqxx/internal/header-post.hxx"

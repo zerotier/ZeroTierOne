@@ -1,9 +1,0 @@
-# Config file for lgtm.com static analysis.
-
-path_classifiers:
-  test:
-    - test
-  generated:
-    - aclocal.m4
-    - configure
-    - ltmain.sh
