@@ -24,6 +24,11 @@ parking_lot = { version = "^0", features = [], default-features = false }
 lazy_static = "^1"
 serde = { version = "^1", features = ["derive"], default-features = false }
 
+[dev-dependencies]
+rand = "*"
+serde_json = "*"
+serde_cbor = "*"
+
 [target."cfg(not(windows))".dependencies]
 libc = "^0"
 
