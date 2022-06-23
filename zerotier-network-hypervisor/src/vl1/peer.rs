@@ -113,24 +113,24 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
         }
 
         security_constants::CIPHER_AES_GMAC_SIV => {
-            let mut aes = secret.aes_gmac_siv.get();
-            aes.decrypt_init(&packet_header.aes_gmac_siv_tag());
-            aes.decrypt_set_aad(&packet_header.aad_bytes());
+            let mut aes_gmac_siv = secret.aes_gmac_siv.get();
+            aes_gmac_siv.decrypt_init(&packet_header.aes_gmac_siv_tag());
+            aes_gmac_siv.decrypt_set_aad(&packet_header.aad_bytes());
 
             if let Ok(b) = payload.append_bytes_get_mut(packet_frag0_payload_bytes.len()) {
-                aes.decrypt(packet_frag0_payload_bytes, b);
+                aes_gmac_siv.decrypt(packet_frag0_payload_bytes, b);
             }
             for f in fragments.iter() {
                 if let Some(f) = f.as_ref() {
                     if let Ok(f) = f.as_bytes_starting_at(packet_constants::FRAGMENT_HEADER_SIZE) {
                         if let Ok(b) = payload.append_bytes_get_mut(f.len()) {
-                            aes.decrypt(f, b);
+                            aes_gmac_siv.decrypt(f, b);
                         }
                     }
                 }
             }
 
-            if let Some(tag) = aes.decrypt_finish() {
+            if let Some(tag) = aes_gmac_siv.decrypt_finish() {
                 // AES-GMAC-SIV encrypts the packet ID too as part of its computation of a single
                 // opaque 128-bit tag, so to get the original packet ID we have to grab it from the
                 // decrypted tag.
