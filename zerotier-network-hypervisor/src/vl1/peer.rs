@@ -546,7 +546,7 @@ impl<SI: SystemInterface> Peer<SI> {
         }
     }
 
-    async fn handle_incoming_ok<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, mut path_is_known: bool, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) {
+    async fn handle_incoming_ok<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, path_is_known: bool, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) {
         let mut cursor: usize = 1;
         if let Ok(ok_header) = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor) {
             let in_re_message_id = u64::from_ne_bytes(ok_header.in_re_message_id);
