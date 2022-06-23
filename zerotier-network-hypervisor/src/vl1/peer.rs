@@ -381,6 +381,7 @@ impl<SI: SystemInterface> Peer<SI> {
     ///
     /// This will go directly if there is an active path, or otherwise indirectly
     /// via a root or some other route.
+    #[allow(unused)]
     pub(crate) async fn send(&self, si: &SI, node: &Node<SI>, time_ticks: i64, packet: &PacketBuffer) -> bool {
         if let Some(path) = self.path(node) {
             if self.internal_send(si, &path.endpoint, Some(&path.local_socket), Some(&path.local_interface), if path.endpoint.requires_fragmentation() { UDP_DEFAULT_MTU } else { usize::MAX }, packet).await {
@@ -529,8 +530,10 @@ impl<SI: SystemInterface> Peer<SI> {
         }
     }
 
+    #[allow(unused)]
     async fn handle_incoming_hello(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
 
+    #[allow(unused)]
     async fn handle_incoming_error<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) {
         let mut cursor: usize = 1;
         if let Ok(error_header) = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor) {
@@ -546,6 +549,7 @@ impl<SI: SystemInterface> Peer<SI> {
         }
     }
 
+    #[allow(unused)]
     async fn handle_incoming_ok<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, path_is_known: bool, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) {
         let mut cursor: usize = 1;
         if let Ok(ok_header) = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor) {
@@ -603,14 +607,19 @@ impl<SI: SystemInterface> Peer<SI> {
         }
     }
 
+    #[allow(unused)]
     async fn handle_incoming_whois(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
 
+    #[allow(unused)]
     async fn handle_incoming_rendezvous(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
 
+    #[allow(unused)]
     async fn handle_incoming_echo(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
 
+    #[allow(unused)]
     async fn handle_incoming_push_direct_paths(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
 
+    #[allow(unused)]
     async fn handle_incoming_user_message(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) {}
 }
 
