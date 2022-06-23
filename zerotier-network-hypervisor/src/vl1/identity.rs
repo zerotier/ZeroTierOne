@@ -23,7 +23,7 @@ use crate::error::{InvalidFormatError, InvalidParameterError};
 use crate::util::buffer::Buffer;
 use crate::util::marshalable::Marshalable;
 use crate::util::pool::{Pool, PoolFactory, Pooled};
-use crate::vl1::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_POW_THRESHOLD};
+use crate::vl1::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_FINGERPRINT_SIZE, IDENTITY_POW_THRESHOLD};
 use crate::vl1::Address;
 
 /// Secret keys associated with NIST P-384 public keys.
@@ -67,7 +67,7 @@ pub struct Identity {
     pub ed25519: [u8; ED25519_PUBLIC_KEY_SIZE],
     pub p384: Option<IdentityP384Public>,
     pub secret: Option<IdentitySecret>,
-    pub fingerprint: [u8; SHA512_HASH_SIZE],
+    pub fingerprint: [u8; IDENTITY_FINGERPRINT_SIZE],
 }
 
 #[inline(always)]
@@ -136,7 +136,7 @@ impl Identity {
             ed25519: ed25519_pub,
             p384: None,
             secret: Some(IdentitySecret { c25519, ed25519, p384: None }),
-            fingerprint: [0_u8; 64], // replaced in upgrade()
+            fingerprint: [0_u8; IDENTITY_FINGERPRINT_SIZE], // replaced in upgrade()
         };
 
         // Then "upgrade" to add NIST P-384 keys and compute fingerprint.
@@ -174,7 +174,7 @@ impl Identity {
             let _ = self_sign_buf.write_all(p384_ecdsa.public_key_bytes());
 
             // Fingerprint includes only the above fields, so calc before appending the ECDSA signature.
-            self.fingerprint = SHA512::hash(self_sign_buf.as_slice());
+            self.fingerprint = SHA384::hash(self_sign_buf.as_slice());
 
             // Sign all keys including the x25519 ones with the new P-384 keys.
             let ecdsa_self_signature = p384_ecdsa.sign(self_sign_buf.as_slice());
@@ -505,7 +505,7 @@ impl FromStr for Identity {
             return Err(InvalidFormatError);
         }
 
-        let mut sha = SHA512::new();
+        let mut sha = SHA384::new();
         sha.update(&address.to_bytes());
         sha.update(&keys[0].as_slice()[0..64]);
         if !keys[2].is_empty() {
@@ -675,7 +675,7 @@ impl Marshalable for Identity {
         }
         let x25519_public = x25519_public.unwrap();
 
-        let mut sha = SHA512::new();
+        let mut sha = SHA384::new();
         sha.update(&address.to_bytes());
         sha.update(x25519_public.0);
         sha.update(x25519_public.1);

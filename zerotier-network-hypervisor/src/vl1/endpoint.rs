@@ -6,12 +6,11 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use zerotier_core_crypto::hash::SHA512_HASH_SIZE;
-
 use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;
 use crate::util::marshalable::Marshalable;
 use crate::vl1::inetaddress::InetAddress;
+use crate::vl1::protocol::IDENTITY_FINGERPRINT_SIZE;
 use crate::vl1::{Address, MAC};
 
 pub const TYPE_NIL: u8 = 0;
@@ -38,7 +37,7 @@ pub enum Endpoint {
 
     /// Via another node using unencapsulated relaying (e.g. via a root)
     /// This is the address and the full identity fingerprint.
-    ZeroTier(Address, [u8; SHA512_HASH_SIZE]),
+    ZeroTier(Address, [u8; IDENTITY_FINGERPRINT_SIZE]),
 
     /// Direct L2 Ethernet
     Ethernet(MAC),
@@ -66,7 +65,7 @@ pub enum Endpoint {
 
     /// Via another node using inner encapsulation via VERB_ENCAP.
     /// This is the address and the full identity fingerprint.
-    ZeroTierEncap(Address, [u8; SHA512_HASH_SIZE]),
+    ZeroTierEncap(Address, [u8; IDENTITY_FINGERPRINT_SIZE]),
 }
 
 impl Default for Endpoint {
@@ -203,7 +202,7 @@ impl Marshalable for Endpoint {
                 TYPE_NIL => Ok(Endpoint::Nil),
                 TYPE_ZEROTIER => {
                     let zt = Address::unmarshal(buf, cursor)?;
-                    Ok(Endpoint::ZeroTier(zt, buf.read_bytes_fixed::<SHA512_HASH_SIZE>(cursor)?.clone()))
+                    Ok(Endpoint::ZeroTier(zt, buf.read_bytes_fixed::<IDENTITY_FINGERPRINT_SIZE>(cursor)?.clone()))
                 }
                 TYPE_ETHERNET => Ok(Endpoint::Ethernet(MAC::unmarshal(buf, cursor)?)),
                 TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(MAC::unmarshal(buf, cursor)?)),
@@ -215,7 +214,7 @@ impl Marshalable for Endpoint {
                 TYPE_WEBRTC => Ok(Endpoint::WebRTC(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?.to_vec())),
                 TYPE_ZEROTIER_ENCAP => {
                     let zt = Address::unmarshal(buf, cursor)?;
-                    Ok(Endpoint::ZeroTierEncap(zt, buf.read_bytes_fixed::<SHA512_HASH_SIZE>(cursor)?.clone()))
+                    Ok(Endpoint::ZeroTierEncap(zt, buf.read_bytes_fixed(cursor)?.clone()))
                 }
                 _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream")),
             }
@@ -339,7 +338,7 @@ impl FromStr for Endpoint {
                     let hash = base64::decode_config(hash, base64::URL_SAFE_NO_PAD);
                     if hash.is_ok() {
                         let hash = hash.unwrap();
-                        if hash.len() == SHA512_HASH_SIZE {
+                        if hash.len() == IDENTITY_FINGERPRINT_SIZE {
                             if endpoint_type == "zt" {
                                 return Ok(Endpoint::ZeroTier(Address::from_str(address)?, hash.as_slice().try_into().unwrap()));
                             } else {

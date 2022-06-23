@@ -107,6 +107,9 @@ pub const ADDRESS_SIZE_STRING: usize = 10;
 /// Prefix indicating reserved addresses (that can't actually be addresses).
 pub const ADDRESS_RESERVED_PREFIX: u8 = 0xff;
 
+/// Size of an identity fingerprint (SHA384)
+pub const IDENTITY_FINGERPRINT_SIZE: usize = 48;
+
 pub mod packet_constants {
     /// Size of packet header that lies outside the encryption envelope.
     pub const HEADER_SIZE: usize = 27;
