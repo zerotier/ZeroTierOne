@@ -118,6 +118,9 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
             x14 = x14.wrapping_add(j14);
             x15 = x15.wrapping_add(j15);
 
+            j8 = j8.wrapping_add(1);
+            j9 = j9.wrapping_add((j8 == 0) as u32);
+
             if plaintext.len() >= 64 {
                 #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
                 {
@@ -161,9 +164,6 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
                     ciphertext[56..60].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(56).cast::<[u8; 4]>() }) ^ x14.to_le()).to_ne_bytes());
                     ciphertext[60..64].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(60).cast::<[u8; 4]>() }) ^ x15.to_le()).to_ne_bytes());
                 }
-
-                j8 = j8.wrapping_add(1);
-                j9 = j9.wrapping_add((j8 == 0) as u32);
 
                 plaintext = &plaintext[64..];
                 ciphertext = &mut ciphertext[64..];

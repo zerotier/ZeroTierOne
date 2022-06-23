@@ -74,6 +74,21 @@ pub mod verbs {
     pub const VL1_ECHO: u8 = 0x08;
     pub const VL1_PUSH_DIRECT_PATHS: u8 = 0x10;
     pub const VL1_USER_MESSAGE: u8 = 0x14;
+
+    pub fn name(verb: u8) -> &'static str {
+        match verb {
+            VL1_NOP => "VL1_NOP",
+            VL1_HELLO => "VL1_HELLO",
+            VL1_ERROR => "VL1_ERROR",
+            VL1_OK => "VL1_OK",
+            VL1_WHOIS => "VL1_WHOIS",
+            VL1_RENDEZVOUS => "VL1_RENDEZVOUS",
+            VL1_ECHO => "VL1_ECHO",
+            VL1_PUSH_DIRECT_PATHS => "VL1_PUSH_DIRECT_PATHS",
+            VL1_USER_MESSAGE => "VL1_USER_MESSAGE",
+            _ => "???",
+        }
+    }
 }
 
 /// Default maximum payload size for UDP transport.
@@ -122,7 +137,7 @@ pub mod packet_constants {
     pub const MAC_FIELD_INDEX: usize = 19;
 
     /// Mask to select cipher from header flags field.
-    pub const FLAGS_FIELD_MASK_CIPHER: u8 = 0x30;
+    pub const FLAGS_FIELD_MASK_CIPHER: u8 = 0x38;
 
     /// Mask to select packet hops from header flags field.
     pub const FLAGS_FIELD_MASK_HOPS: u8 = 0x07;
@@ -178,13 +193,13 @@ pub mod security_constants {
 
     /// Packet is encrypted and authenticated with Salsa20/12 and Poly1305.
     /// Construction is the same as that which is used in the NaCl secret box functions.
-    pub const CIPHER_SALSA2012_POLY1305: u8 = 0x10;
+    pub const CIPHER_SALSA2012_POLY1305: u8 = 0x08;
 
     /// Formerly 'NONE' which is deprecated; reserved for future use.
-    pub const CIPHER_RESERVED: u8 = 0x20;
+    pub const CIPHER_RESERVED: u8 = 0x10;
 
     /// Packet is encrypted and authenticated with AES-GMAC-SIV (AES-256).
-    pub const CIPHER_AES_GMAC_SIV: u8 = 0x30;
+    pub const CIPHER_AES_GMAC_SIV: u8 = 0x18;
 
     /// KBKDF usage label indicating a key used to HMAC packets for extended authentication.
     pub const KBKDF_KEY_USAGE_LABEL_PACKET_HMAC: u8 = b'M';

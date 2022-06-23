@@ -80,61 +80,68 @@ fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_siz
 }
 
 /// Attempt AEAD packet encryption and MAC validation. Returns message ID on success.
-fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8], header: &PacketHeader, fragments: &[Option<PooledPacketBuffer>], payload: &mut PacketBuffer) -> Option<MessageId> {
-    packet_frag0_payload_bytes.get(0).map_or(None, |verb| {
-        let cipher = header.cipher();
-        match cipher {
-            security_constants::CIPHER_NOCRYPT_POLY1305 | security_constants::CIPHER_SALSA2012_POLY1305 => {
-                if (verb & packet_constants::VERB_MASK) == verbs::VL1_HELLO {
-                    let mut total_packet_len = packet_frag0_payload_bytes.len() + packet_constants::HEADER_SIZE;
-                    for f in fragments.iter() {
-                        total_packet_len += f.as_ref().map_or(0, |f| f.len());
+fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8], packet_header: &PacketHeader, fragments: &[Option<PooledPacketBuffer>], payload: &mut PacketBuffer) -> Option<MessageId> {
+    let cipher = packet_header.cipher();
+    match cipher {
+        security_constants::CIPHER_NOCRYPT_POLY1305 | security_constants::CIPHER_SALSA2012_POLY1305 => {
+            let _ = payload.append_bytes(packet_frag0_payload_bytes);
+            for f in fragments.iter() {
+                if let Some(f) = f.as_ref() {
+                    if let Ok(f) = f.as_bytes_starting_at(packet_constants::FRAGMENT_HEADER_SIZE) {
+                        let _ = payload.append_bytes(f);
                     }
-                    let _ = payload.append_bytes(packet_frag0_payload_bytes);
-                    for f in fragments.iter() {
-                        let _ = f.as_ref().map(|f| f.as_bytes_starting_at(packet_constants::HEADER_SIZE).map(|f| payload.append_bytes(f)));
-                    }
-                    let (mut salsa, poly1305_key) = salsa_poly_create(secret, header, total_packet_len);
-                    let mac = zerotier_core_crypto::poly1305::compute(&poly1305_key, &payload.as_bytes());
-                    if mac[0..8].eq(&header.mac) {
-                        if cipher == security_constants::CIPHER_SALSA2012_POLY1305 {
-                            salsa.crypt_in_place(payload.as_bytes_mut());
-                        }
-                        Some(u64::from_ne_bytes(header.id))
-                    } else {
-                        None
-                    }
+                }
+            }
+
+            let (mut salsa, poly1305_key) = salsa_poly_create(secret, packet_header, payload.len() + packet_constants::HEADER_SIZE);
+            let mac = zerotier_core_crypto::poly1305::compute(&poly1305_key, &payload.as_bytes());
+            if mac[0..8].eq(&packet_header.mac) {
+                let message_id = u64::from_ne_bytes(packet_header.id);
+                if cipher == security_constants::CIPHER_SALSA2012_POLY1305 {
+                    salsa.crypt_in_place(payload.as_bytes_mut());
+                    Some(message_id)
+                } else if (payload.u8_at(0).unwrap_or(0) & packet_constants::VERB_MASK) == verbs::VL1_HELLO {
+                    Some(message_id)
                 } else {
-                    // Only HELLO is permitted without payload encryption. Drop other packet types if sent this way.
+                    // SECURITY: fail if there is no encryption and the message is not HELLO. No other types are allowed
+                    // to be sent without full packet encryption.
                     None
                 }
+            } else {
+                None
             }
-
-            security_constants::CIPHER_AES_GMAC_SIV => {
-                let mut aes = secret.aes_gmac_siv.get();
-                aes.decrypt_init(&header.aes_gmac_siv_tag());
-                aes.decrypt_set_aad(&header.aad_bytes());
-                // NOTE: if there are somehow missing fragments this part will silently fail,
-                // but the packet will fail MAC check in decrypt_finish() so meh.
-                let _ = payload.append_bytes_get_mut(packet_frag0_payload_bytes.len()).map(|b| aes.decrypt(packet_frag0_payload_bytes, b));
-                for f in fragments.iter() {
-                    f.as_ref().map(|f| {
-                        f.as_bytes_starting_at(packet_constants::FRAGMENT_HEADER_SIZE).map(|f| {
-                            let _ = payload.append_bytes_get_mut(f.len()).map(|b| aes.decrypt(f, b));
-                        })
-                    });
-                }
-                aes.decrypt_finish().map_or(None, |tag| {
-                    // AES-GMAC-SIV encrypts the packet ID too as part of its computation of a single
-                    // opaque 128-bit tag, so to get the original packet ID we have to grab it from the
-                    // decrypted tag.
-                    Some(u64::from_ne_bytes(*byte_array_range::<16, 0, 8>(tag)))
-                })
-            }
-
-            _ => None,
         }
-    })
+
+        security_constants::CIPHER_AES_GMAC_SIV => {
+            let mut aes = secret.aes_gmac_siv.get();
+            aes.decrypt_init(&packet_header.aes_gmac_siv_tag());
+            aes.decrypt_set_aad(&packet_header.aad_bytes());
+
+            if let Ok(b) = payload.append_bytes_get_mut(packet_frag0_payload_bytes.len()) {
+                aes.decrypt(packet_frag0_payload_bytes, b);
+            }
+            for f in fragments.iter() {
+                if let Some(f) = f.as_ref() {
+                    if let Ok(f) = f.as_bytes_starting_at(packet_constants::FRAGMENT_HEADER_SIZE) {
+                        if let Ok(b) = payload.append_bytes_get_mut(f.len()) {
+                            aes.decrypt(f, b);
+                        }
+                    }
+                }
+            }
+
+            if let Some(tag) = aes.decrypt_finish() {
+                // AES-GMAC-SIV encrypts the packet ID too as part of its computation of a single
+                // opaque 128-bit tag, so to get the original packet ID we have to grab it from the
+                // decrypted tag.
+                Some(u64::from_ne_bytes(*byte_array_range::<16, 0, 8>(tag)))
+            } else {
+                None
+            }
+        }
+
+        _ => None,
+    }
 }
 
 impl<SI: SystemInterface> Peer<SI> {
@@ -287,7 +294,7 @@ impl<SI: SystemInterface> Peer<SI> {
                 // If we made it here it decrypted and passed authentication.
                 // ---------------------------------------------------------------
 
-                debug_event!(si, "[vl1] #{:0>16x} decrypted and authenticated, verb: {:0>2x}", u64::from_be_bytes(packet_header.id), (verb & packet_constants::VERB_MASK) as u32);
+                debug_event!(si, "[vl1] #{:0>16x} decrypted and authenticated, verb: {} ({:0>2x})", u64::from_be_bytes(packet_header.id), verbs::name(verb & packet_constants::VERB_MASK), (verb & packet_constants::VERB_MASK) as u32);
 
                 if (verb & packet_constants::VERB_FLAG_COMPRESSED) != 0 {
                     let mut decompressed_payload: [u8; packet_constants::SIZE_MAX] = unsafe { MaybeUninit::uninit().assume_init() };

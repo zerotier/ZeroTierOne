@@ -183,10 +183,10 @@ pub async fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity,
     }
 }
 
-#[cfg(unix)]
-pub fn c_strerror() -> String {
-    unsafe { std::ffi::CStr::from_ptr(libc::strerror(*libc::__error()).cast()).to_string_lossy().to_string() }
-}
+//#[cfg(unix)]
+//pub fn c_strerror() -> String {
+//    unsafe { std::ffi::CStr::from_ptr(libc::strerror(*libc::__error()).cast()).to_string_lossy().to_string() }
+//}
 
 #[cfg(test)]
 mod tests {
