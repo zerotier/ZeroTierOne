@@ -98,15 +98,13 @@ impl<O, F: PoolFactory<O>> AsMut<O> for Pooled<O, F> {
 }
 
 impl<O, F: PoolFactory<O>> Drop for Pooled<O, F> {
-    #[inline(always)]
     fn drop(&mut self) {
-        unsafe {
-            if let Some(p) = self.0.as_ref().return_pool.upgrade() {
-                p.factory.reset(&mut self.0.as_mut().obj);
-                p.pool.lock().push(self.0);
-            } else {
-                drop(Box::from_raw(self.0.as_ptr()))
-            }
+        let internal = unsafe { self.0.as_mut() };
+        if let Some(p) = internal.return_pool.upgrade() {
+            p.factory.reset(&mut internal.obj);
+            p.pool.lock().push(self.0);
+        } else {
+            drop(unsafe { Box::from_raw(self.0.as_ptr()) });
         }
     }
 }
@@ -126,15 +124,15 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
 
     /// Get a pooled object, or allocate one if the pool is empty.
     pub fn get(&self) -> Pooled<O, F> {
-        Pooled::<O, F>(self.0.pool.lock().pop().unwrap_or_else(
-            #[inline(always)]
-            || unsafe {
-                NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
-                    obj: self.0.factory.create(),
-                    return_pool: Arc::downgrade(&self.0),
-                })))
-            },
-        ))
+        if let Some(o) = self.0.pool.lock().pop() {
+            return Pooled::<O, F>(o);
+        }
+        return Pooled::<O, F>(unsafe {
+            NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
+                obj: self.0.factory.create(),
+                return_pool: Arc::downgrade(&self.0),
+            })))
+        });
     }
 
     /// Dispose of all pooled objects, freeing any memory they use.

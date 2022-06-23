@@ -2,11 +2,12 @@
 
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::sync::Arc;
 
-use crate::localconfig;
+use crate::localconfig::Config;
 use crate::utils::{read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 
-use tokio::sync::{Mutex, RwLock, RwLockReadGuard};
+use parking_lot::{Mutex, RwLock};
 
 use zerotier_core_crypto::random::next_u32_secure;
 use zerotier_network_hypervisor::vl1::Identity;
@@ -21,7 +22,7 @@ const CONFIG_FILENAME: &'static str = "local.conf";
 /// Abstraction around ZeroTier's home data directory.
 pub struct DataDir {
     pub base_path: PathBuf,
-    config: RwLock<localconfig::Config>,
+    config: RwLock<Arc<Config>>,
     authtoken: Mutex<String>,
 }
 
@@ -37,8 +38,8 @@ impl DataDir {
 
         let config_path = base_path.join(CONFIG_FILENAME);
         let config_data = read_limit(&config_path, DEFAULT_FILE_IO_READ_LIMIT).await;
-        let config = RwLock::new(if config_data.is_ok() {
-            let c = serde_json::from_slice::<localconfig::Config>(config_data.unwrap().as_slice());
+        let config = RwLock::new(Arc::new(if config_data.is_ok() {
+            let c = serde_json::from_slice::<Config>(config_data.unwrap().as_slice());
             if c.is_err() {
                 return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, c.err().unwrap()));
             }
@@ -47,9 +48,9 @@ impl DataDir {
             if config_path.is_file() {
                 return Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "local.conf not readable"));
             } else {
-                localconfig::Config::default()
+                Config::default()
             }
-        });
+        }));
 
         return Ok(Self { base_path, config, authtoken: Mutex::new(String::new()) });
     }
@@ -76,7 +77,7 @@ impl DataDir {
 
     /// Get authorization token for local API, creating and saving if it does not exist.
     pub async fn authtoken(&self) -> std::io::Result<String> {
-        let mut authtoken = self.authtoken.lock().await;
+        let authtoken = self.authtoken.lock().clone();
         if authtoken.is_empty() {
             let authtoken_path = self.base_path.join(AUTH_TOKEN_FILENAME);
             let authtoken_bytes = read_limit(&authtoken_path, 4096).await;
@@ -87,12 +88,12 @@ impl DataDir {
                 }
                 tokio::fs::write(&authtoken_path, tmp.as_bytes()).await?;
                 assert!(crate::utils::fs_restrict_permissions(&authtoken_path));
-                *authtoken = tmp;
+                *self.authtoken.lock() = tmp;
             } else {
-                *authtoken = String::from_utf8_lossy(authtoken_bytes.unwrap().as_slice()).into();
+                *self.authtoken.lock() = String::from_utf8_lossy(authtoken_bytes.unwrap().as_slice()).into();
             }
         }
-        Ok(authtoken.clone())
+        Ok(authtoken)
     }
 
     /// Get a readable locked reference to this node's configuration.
@@ -100,17 +101,16 @@ impl DataDir {
     /// Use clone() to get a copy of the configuration if you want to modify it. Then use
     /// save_config() to save the modified configuration and update the internal copy in
     /// this structure.
-    pub async fn config(&self) -> RwLockReadGuard<'_, localconfig::Config> {
-        self.config.read().await
+    pub async fn config(&self) -> Arc<Config> {
+        self.config.read().clone()
     }
 
     /// Save a modified copy of the configuration and replace the internal copy in this structure (if it's actually changed).
-    pub async fn save_config(&self, modified_config: localconfig::Config) -> std::io::Result<()> {
-        let mut config = self.config.write().await;
-        if !config.eq(&modified_config) {
+    pub async fn save_config(&self, modified_config: Config) -> std::io::Result<()> {
+        if !modified_config.eq(&self.config.read()) {
             let config_data = crate::utils::to_json_pretty(&modified_config);
             tokio::fs::write(self.base_path.join(CONFIG_FILENAME), config_data.as_bytes()).await?;
-            *config = modified_config;
+            *self.config.write() = Arc::new(modified_config);
         }
         Ok(())
     }

@@ -145,6 +145,7 @@ async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
             let svc = service::Service::new(tokio::runtime::Handle::current(), &flags.base_path, true).await;
             if svc.is_ok() {
                 let _ = tokio::signal::ctrl_c().await;
+                println!("Terminate signal received, shutting down...");
                 exitcode::OK
             } else {
                 println!("FATAL: error launching service: {}", svc.err().unwrap().to_string());

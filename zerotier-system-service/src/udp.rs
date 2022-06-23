@@ -55,8 +55,8 @@ impl BoundUdpSocket {
         unsafe { libc::setsockopt(self.fd.as_(), libc::IPPROTO_IP.as_(), libc::IP_TOS.as_(), (&ttl as *const libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_()) };
     }
 
-    #[cfg(any(target_os = "macos"))]
-    pub fn send_sync_nonblock(&self, _: &tokio::runtime::Handle, dest: &InetAddress, b: &[&[u8]], packet_ttl: u8) -> bool {
+    #[cfg(any(target_os = "macos", target_os = "freebsd"))]
+    pub fn send_sync_nonblock(&self, dest: &InetAddress, b: &[&[u8]], packet_ttl: u8) -> bool {
         let mut ok = false;
         if dest.family() == self.address.family() {
             if packet_ttl > 0 && dest.is_ipv4() {
@@ -65,7 +65,7 @@ impl BoundUdpSocket {
             unsafe {
                 if b.len() == 1 {
                     let bb = *b.get_unchecked(0);
-                    ok = libc::sendto(self.fd.as_(), bb.as_ptr().cast(), bb.len().as_(), 0, transmute(dest as *const InetAddress), size_of::<InetAddress>().as_()) > 0;
+                    ok = libc::sendto(self.fd.as_(), bb.as_ptr().cast(), bb.len().as_(), 0, (dest as *const InetAddress).cast(), size_of::<InetAddress>().as_()) > 0;
                 } else {
                     let mut iov: [libc::iovec; 16] = MaybeUninit::uninit().assume_init();
                     assert!(b.len() <= iov.len());
@@ -95,7 +95,7 @@ impl BoundUdpSocket {
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "freebsd")))]
-    pub fn send_sync_nonblock(&self, _: &tokio::runtime::Handle, dest: &InetAddress, b: &[&[u8]], packet_ttl: u8) -> bool {
+    pub fn send_sync_nonblock(&self, dest: &InetAddress, b: &[&[u8]], packet_ttl: u8) -> bool {
         let mut ok = false;
         if dest.family() == self.address.family() {
             let mut tmp: [u8; 16384] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
@@ -117,42 +117,10 @@ impl BoundUdpSocket {
 
             if packet_ttl > 0 && dest.is_ipv4() {
                 self.set_ttl(packet_ttl);
-            }
-            ok = self.socket.try_send_to(data, dest.try_into().unwrap()).is_ok();
-            if packet_ttl > 0 && dest.is_ipv4() {
+                ok = self.socket.try_send_to(data, dest.try_into().unwrap()).is_ok();
                 self.set_ttl(0xff);
-            }
-        }
-        ok
-    }
-
-    pub async fn send_async(&self, _: &tokio::runtime::Handle, dest: &InetAddress, b: &[&[u8]], packet_ttl: u8) -> bool {
-        let mut ok = false;
-        if dest.family() == self.address.family() {
-            let mut tmp: [u8; 16384] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
-            let data = if b.len() == 1 {
-                *unsafe { b.get_unchecked(0) }
             } else {
-                let mut p = 0;
-                for bb in b.iter() {
-                    let pp = p + bb.len();
-                    if pp < 16384 {
-                        tmp[p..pp].copy_from_slice(*bb);
-                        p = pp;
-                    } else {
-                        return false;
-                    }
-                }
-                &tmp[..p]
-            };
-
-            if packet_ttl > 0 && dest.is_ipv4() {
-                self.set_ttl(packet_ttl);
-            }
-            let sa: SocketAddr = dest.try_into().unwrap();
-            ok = self.socket.send_to(data, sa).await.is_ok();
-            if packet_ttl > 0 && dest.is_ipv4() {
-                self.set_ttl(0xff);
+                ok = self.socket.try_send_to(data, dest.try_into().unwrap()).is_ok();
             }
         }
         ok
@@ -242,8 +210,10 @@ unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result
 
     let s = libc::socket(af.as_(), libc::SOCK_DGRAM, 0);
     if s <= 0 {
-        return Err("unable to create socket");
+        return Err("unable to create new UDP socket");
     }
+
+    assert_ne!(libc::fcntl(s, libc::F_SETFL, libc::O_NONBLOCK), -1);
 
     #[allow(unused_variables)]
     let mut setsockopt_results: libc::c_int = 0;

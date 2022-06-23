@@ -16,7 +16,7 @@ zerotier-network-hypervisor = { path = "../zerotier-network-hypervisor" }
 zerotier-core-crypto = { path = "../zerotier-core-crypto" }
 async-trait = "^0"
 num-traits = "^0"
-tokio = { version = "^1", features = ["full"], default-features = false }
+tokio = { version = "^1", features = ["fs", "io-util", "io-std", "net", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "sync", "time"], default-features = false }
 serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = ["std"], default-features = false }
 parking_lot = { version = "^0", features = [], default-features = false }

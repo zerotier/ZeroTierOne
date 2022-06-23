@@ -333,13 +333,13 @@ impl<SI: SystemInterface> Node<SI> {
         };
 
         // We only "spam" if we are offline.
-        if root_spam_hello && self.is_online() {
-            root_spam_hello = false;
+        if root_spam_hello {
+            root_spam_hello = !self.is_online();
         }
 
         debug_event!(
             si,
-            "[vl1] do_background_tasks:{}{}{}{}{}{}",
+            "[vl1] do_background_tasks:{}{}{}{}{}{} ----",
             if root_sync { " root_sync" } else { "" },
             if root_hello { " root_hello" } else { "" },
             if root_spam_hello { " root_spam_hello" } else { "" },
@@ -491,6 +491,7 @@ impl<SI: SystemInterface> Node<SI> {
             self.whois.service(si, self, tt);
         }
 
+        debug_event!(si, "[vl1] do_background_tasks DONE ----");
         Duration::from_millis(1000)
     }
 

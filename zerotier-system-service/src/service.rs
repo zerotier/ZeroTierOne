@@ -35,7 +35,7 @@ struct ServiceImpl {
     pub rt: tokio::runtime::Handle,
     pub data: DataDir,
     pub local_socket_unique_id_counter: AtomicUsize,
-    pub udp_sockets: parking_lot::RwLock<HashMap<u16, BoundUdpPort>>,
+    pub udp_sockets: tokio::sync::RwLock<HashMap<u16, BoundUdpPort>>,
     pub num_listeners_per_socket: usize,
     _core: Option<NetworkHypervisor<Self>>,
 }
@@ -47,7 +47,15 @@ impl Drop for Service {
         self.core_background_service_task.abort();
 
         // Drop all bound sockets since these can hold circular Arc<> references to 'internal'.
-        self.internal.udp_sockets.write().clear();
+        // This shouldn't have to loop much if at all to acquire the lock, but it might if something
+        // is still completing somewhere in an aborting task.
+        loop {
+            if let Ok(mut udp_sockets) = self.internal.udp_sockets.try_write() {
+                udp_sockets.clear();
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
     }
 }
 
@@ -61,8 +69,8 @@ impl Service {
             rt,
             data: DataDir::open(base_path).await.map_err(|e| Box::new(e))?,
             local_socket_unique_id_counter: AtomicUsize::new(1),
-            udp_sockets: parking_lot::RwLock::new(HashMap::with_capacity(4)),
-            num_listeners_per_socket: std::thread::available_parallelism().unwrap().get(),
+            udp_sockets: tokio::sync::RwLock::new(HashMap::with_capacity(4)),
+            num_listeners_per_socket: 1, //std::thread::available_parallelism().unwrap().get(),
             _core: None,
         };
         let _ = si._core.insert(NetworkHypervisor::new(&si, true, auto_upgrade_identity).await?);
@@ -86,17 +94,17 @@ impl ServiceImpl {
 
     /// Called in udp_binding_task_main() to service a particular UDP port.
     async fn update_udp_bindings_for_port(self: &Arc<Self>, port: u16, interface_prefix_blacklist: &Vec<String>, cidr_blacklist: &Vec<InetAddress>) -> Option<Vec<(LocalInterface, InetAddress, std::io::Error)>> {
-        let new_sockets = {
-            let mut udp_sockets = self.udp_sockets.write();
+        for ns in {
+            let mut udp_sockets = self.udp_sockets.write().await;
             let bp = udp_sockets.entry(port).or_insert_with(|| BoundUdpPort::new(port));
             let (errors, new_sockets) = bp.update_bindings(interface_prefix_blacklist, cidr_blacklist);
             if bp.sockets.is_empty() {
                 return Some(errors);
             }
             new_sockets
-        };
-
-        for ns in new_sockets.iter() {
+        }
+        .iter()
+        {
             /*
              * Start a task (not actual thread) for each CPU core.
              *
@@ -123,7 +131,6 @@ impl ServiceImpl {
                 }));
             }
         }
-
         return None;
     }
 
@@ -185,7 +192,7 @@ impl SystemInterface for ServiceImpl {
                 // This is the fast path -- the socket is known to the core so just send it.
                 if let Some(s) = local_socket {
                     if let Some(s) = s.0.upgrade() {
-                        return s.send_sync_nonblock(&self.rt, address, data, packet_ttl);
+                        return s.send_sync_nonblock(address, data, packet_ttl);
                     } else {
                         return false;
                     }
@@ -193,7 +200,7 @@ impl SystemInterface for ServiceImpl {
 
                 // Otherwise we try to send from one socket on every interface or from the specified interface.
                 // This path only happens when the core is trying new endpoints. The fast path is for most packets.
-                let sockets = self.udp_sockets.read();
+                let sockets = self.udp_sockets.read().await;
                 if !sockets.is_empty() {
                     if let Some(specific_interface) = local_interface {
                         for (_, p) in sockets.iter() {
@@ -202,7 +209,7 @@ impl SystemInterface for ServiceImpl {
                                 for _ in 0..p.sockets.len() {
                                     let s = p.sockets.get(i).unwrap();
                                     if s.interface.eq(specific_interface) {
-                                        if s.send_sync_nonblock(&self.rt, address, data, packet_ttl) {
+                                        if s.send_sync_nonblock(address, data, packet_ttl) {
                                             return true;
                                         }
                                     }
@@ -221,7 +228,7 @@ impl SystemInterface for ServiceImpl {
                                 for _ in 0..p.sockets.len() {
                                     let s = p.sockets.get(i).unwrap();
                                     if !sent_on_interfaces.contains(&s.interface) {
-                                        if s.send_sync_nonblock(&self.rt, address, data, packet_ttl) {
+                                        if s.send_sync_nonblock(address, data, packet_ttl) {
                                             sent_on_interfaces.insert(s.interface.clone());
                                         }
                                     }

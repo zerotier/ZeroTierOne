@@ -46,8 +46,8 @@ impl<SI: SystemInterface> Path<SI> {
             local_socket,
             local_interface,
             internal_instance_id: INSTANCE_ID_COUNTER.fetch_add(1, Ordering::SeqCst),
-            last_send_time_ticks: AtomicI64::new(0),
-            last_receive_time_ticks: AtomicI64::new(0),
+            last_send_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
+            last_receive_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
             create_time_ticks: time_ticks,
             fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, PacketIdHasher(zerotier_core_crypto::random::xorshift64_random()))),
         }

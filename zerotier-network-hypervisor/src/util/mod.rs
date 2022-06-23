@@ -10,6 +10,9 @@ pub use zerotier_core_crypto::varint;
 
 pub(crate) const ZEROES: [u8; 64] = [0_u8; 64];
 
+/// A value for ticks that indicates that something never happened, and is thus very long before zero ticks.
+pub(crate) const NEVER_HAPPENED_TICKS: i64 = -2147483648;
+
 #[cfg(feature = "debug_events")]
 #[allow(unused_macros)]
 macro_rules! debug_event {
