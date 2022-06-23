@@ -1,9 +1,16 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 use std::hash::Hash;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 
 use crate::udp::BoundUdpSocket;
+
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref LOCAL_SOCKET_UNIQUE_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
+}
 
 /// Local socket wrapper to provide to the core.
 ///
@@ -12,9 +19,13 @@ use crate::udp::BoundUdpSocket;
 /// cease to exist or work. This also means that this code can check the weak count to determine
 /// if the core is currently holding/using a socket for any reason.
 #[derive(Clone)]
-pub struct LocalSocket(pub Weak<BoundUdpSocket>, pub usize);
+pub struct LocalSocket(pub(crate) Weak<BoundUdpSocket>, usize);
 
 impl LocalSocket {
+    pub fn new(s: &Arc<BoundUdpSocket>) -> Self {
+        Self(Arc::downgrade(s), LOCAL_SOCKET_UNIQUE_ID_COUNTER.fetch_add(1, Ordering::SeqCst))
+    }
+
     /// Returns true if the wrapped socket appears to be in use by the core.
     #[inline(always)]
     pub fn in_use(&self) -> bool {

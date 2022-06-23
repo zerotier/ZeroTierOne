@@ -3,7 +3,6 @@
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -34,7 +33,6 @@ pub struct Service {
 struct ServiceImpl {
     pub rt: tokio::runtime::Handle,
     pub data: DataDir,
-    pub local_socket_unique_id_counter: AtomicUsize,
     pub udp_sockets: tokio::sync::RwLock<HashMap<u16, BoundUdpPort>>,
     pub num_listeners_per_socket: usize,
     _core: Option<NetworkHypervisor<Self>>,
@@ -68,9 +66,8 @@ impl Service {
         let mut si = ServiceImpl {
             rt,
             data: DataDir::open(base_path).await.map_err(|e| Box::new(e))?,
-            local_socket_unique_id_counter: AtomicUsize::new(1),
             udp_sockets: tokio::sync::RwLock::new(HashMap::with_capacity(4)),
-            num_listeners_per_socket: 1, //std::thread::available_parallelism().unwrap().get(),
+            num_listeners_per_socket: std::thread::available_parallelism().unwrap().get(),
             _core: None,
         };
         let _ = si._core.insert(NetworkHypervisor::new(&si, true, auto_upgrade_identity).await?);
@@ -116,7 +113,7 @@ impl ServiceImpl {
                 let self2 = self.clone();
                 let socket = ns.socket.clone();
                 let interface = ns.interface.clone();
-                let local_socket = LocalSocket(Arc::downgrade(ns), self.local_socket_unique_id_counter.fetch_add(1, Ordering::SeqCst));
+                let local_socket = LocalSocket::new(ns);
                 ns.socket_associated_tasks.lock().push(self.rt.spawn(async move {
                     let core = self2.core();
                     loop {
