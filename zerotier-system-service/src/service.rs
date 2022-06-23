@@ -21,7 +21,8 @@ use crate::localsocket::LocalSocket;
 use crate::udp::*;
 use crate::utils::{ms_monotonic, ms_since_epoch};
 
-const UDP_UPDATE_BINDINGS_INTERVAL_MS: Duration = Duration::from_millis(2500);
+/// Interval between scans of system network interfaces to update port bindings.
+const UDP_UPDATE_BINDINGS_INTERVAL_MS: Duration = Duration::from_millis(5000);
 
 /// ZeroTier system service, which presents virtual networks as VPN connections on Windows/macOS/Linux/BSD/etc.
 pub struct Service {

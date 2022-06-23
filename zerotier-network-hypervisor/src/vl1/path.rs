@@ -2,11 +2,11 @@
 
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hasher};
-use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicI64, Ordering};
 
-use lazy_static::lazy_static;
 use parking_lot::Mutex;
 
+use crate::util::canonicalobject::CanonicalObject;
 use crate::vl1::endpoint::Endpoint;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::*;
@@ -20,19 +20,15 @@ pub(crate) enum PathServiceResult {
     NeedsKeepalive,
 }
 
-lazy_static! {
-    static ref INSTANCE_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
-}
-
 /// A remote endpoint paired with a local socket and a local interface.
 /// These are maintained in Node and canonicalized so that all unique paths have
 /// one and only one unique path object. That enables statistics to be tracked
 /// for them and uniform application of things like keepalives.
 pub struct Path<SI: SystemInterface> {
+    pub(crate) canonical: CanonicalObject,
     pub endpoint: Endpoint,
     pub local_socket: SI::LocalSocket,
     pub local_interface: SI::LocalInterface,
-    pub(crate) internal_instance_id: usize, // arbitrary local ID that should be globally unique to a given path object instance
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     create_time_ticks: i64,
@@ -42,10 +38,10 @@ pub struct Path<SI: SystemInterface> {
 impl<SI: SystemInterface> Path<SI> {
     pub fn new(endpoint: Endpoint, local_socket: SI::LocalSocket, local_interface: SI::LocalInterface, time_ticks: i64) -> Self {
         Self {
+            canonical: CanonicalObject::new(),
             endpoint,
             local_socket,
             local_interface,
-            internal_instance_id: INSTANCE_ID_COUNTER.fetch_add(1, Ordering::SeqCst),
             last_send_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
             last_receive_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
             create_time_ticks: time_ticks,
@@ -106,6 +102,15 @@ impl<SI: SystemInterface> Path<SI> {
         }
     }
 }
+
+impl<SI: SystemInterface> PartialEq for Path<SI> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.canonical.eq(&other.canonical)
+    }
+}
+
+impl<SI: SystemInterface> Eq for Path<SI> {}
 
 #[repr(transparent)]
 struct PacketIdHasher(u64);

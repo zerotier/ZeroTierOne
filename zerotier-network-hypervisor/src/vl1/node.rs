@@ -593,6 +593,10 @@ impl<SI: SystemInterface> Node<SI> {
         self.best_root.read().clone()
     }
 
+    pub fn is_peer_root(&self, peer: &Peer<SI>) -> bool {
+        self.roots.read().roots.keys().any(|p| (**p).eq(peer))
+    }
+
     pub fn add_update_root_set(&self, rs: RootSet) -> bool {
         let mut roots = self.roots.write();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {

@@ -1,6 +1,7 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 pub mod buffer;
+pub(crate) mod canonicalobject;
 pub(crate) mod gate;
 pub mod marshalable;
 pub(crate) mod pool;

@@ -14,6 +14,7 @@ use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 
 use crate::util::byte_array_range;
+use crate::util::canonicalobject::CanonicalObject;
 use crate::util::debug_event;
 use crate::util::marshalable::Marshalable;
 use crate::vl1::node::*;
@@ -26,7 +27,7 @@ pub(crate) const SERVICE_INTERVAL_MS: i64 = security_constants::EPHEMERAL_SECRET
 
 struct PeerPath<SI: SystemInterface> {
     path: Weak<Path<SI>>,
-    path_internal_instance_id: usize,
+    canonical_instance_id: usize,
     last_receive_time_ticks: i64,
 }
 
@@ -34,6 +35,8 @@ struct PeerPath<SI: SystemInterface> {
 ///
 /// Equality and hashing is implemented in terms of the identity.
 pub struct Peer<SI: SystemInterface> {
+    canonical: CanonicalObject,
+
     // This peer's identity.
     pub(crate) identity: Identity,
 
@@ -152,6 +155,7 @@ impl<SI: SystemInterface> Peer<SI> {
     pub(crate) fn new(this_node_identity: &Identity, id: Identity, time_clock: i64, time_ticks: i64) -> Option<Peer<SI>> {
         this_node_identity.agree(&id).map(|static_secret| -> Self {
             Self {
+                canonical: CanonicalObject::new(),
                 identity: id,
                 identity_symmetric_key: SymmetricSecret::new(static_secret),
                 ephemeral_symmetric_key: RwLock::new(None),
@@ -310,7 +314,7 @@ impl<SI: SystemInterface> Peer<SI> {
 
                 let mut path_is_known = false;
                 for p in self.paths.lock().iter_mut() {
-                    if p.path_internal_instance_id == source_path.internal_instance_id {
+                    if p.canonical_instance_id == source_path.canonical.canonical_instance_id() {
                         p.last_receive_time_ticks = time_ticks;
                         path_is_known = true;
                         break;
@@ -633,7 +637,7 @@ impl<SI: SystemInterface> Peer<SI> {
 impl<SI: SystemInterface> PartialEq for Peer<SI> {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        self.identity.eq(&other.identity)
+        self.canonical.eq(&other.canonical)
     }
 }
 
@@ -642,6 +646,6 @@ impl<SI: SystemInterface> Eq for Peer<SI> {}
 impl<SI: SystemInterface> Hash for Peer<SI> {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.identity.hash(state);
+        self.canonical.canonical_instance_id().hash(state);
     }
 }
