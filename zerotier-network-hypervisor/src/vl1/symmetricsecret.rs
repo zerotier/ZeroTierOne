@@ -45,6 +45,7 @@ impl SymmetricSecret {
 /// An ephemeral symmetric secret with usage timers and counters.
 pub(crate) struct EphemeralSymmetricSecret {
     pub secret: SymmetricSecret,
+    #[allow(unused)]
     pub encrypt_uses: AtomicUsize,
 }
 

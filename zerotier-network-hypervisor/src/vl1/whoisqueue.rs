@@ -53,11 +53,13 @@ impl WhoisQueue {
     }
 
     /// Remove a WHOIS request from the queue and call the supplied function for all queued packets.
+    #[allow(unused)]
     pub fn response_received_get_packets<F: FnMut(&mut QueuedPacket)>(&self, address: Address, packet_handler: F) {
         let mut qi = self.0.lock().remove(&address);
         let _ = qi.map(|mut qi| qi.packet_queue.iter_mut().for_each(packet_handler));
     }
 
+    #[allow(unused)]
     fn send_whois<SI: SystemInterface>(&self, node: &Node<SI>, si: &SI, targets: &[Address]) {
         todo!()
     }

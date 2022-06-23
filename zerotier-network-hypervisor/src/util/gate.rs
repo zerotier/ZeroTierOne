@@ -43,11 +43,13 @@ impl<const FREQ: i64> Default for AtomicIntervalGate<FREQ> {
 
 impl<const FREQ: i64> AtomicIntervalGate<FREQ> {
     #[inline(always)]
+    #[allow(unused)]
     pub fn new(initial_ts: i64) -> Self {
         Self(AtomicI64::new(initial_ts))
     }
 
     #[inline(always)]
+    #[allow(unused)]
     pub fn gate(&self, mut time: i64) -> bool {
         let prev_time = self.0.load(Ordering::Acquire);
         if (time - prev_time) < FREQ {

@@ -37,11 +37,14 @@ type sockaddr_storage = libc::sockaddr_storage;
 #[cfg(not(windows))]
 type in6_addr = libc::in6_addr;
 
-#[cfg(not(windows))]
-pub const AF_INET: u8 = libc::AF_INET as u8;
+#[cfg(all(not(target_os = "windows"), not(target_os = "linux")))]
+type INetType = u8;
 
-#[cfg(not(windows))]
-pub const AF_INET6: u8 = libc::AF_INET6 as u8;
+#[cfg(target_os = "linux")]
+type InetType = u16;
+
+pub const AF_INET: InetType = libc::AF_INET as InetType;
+pub const AF_INET6: InetType = libc::AF_INET6 as InetType;
 
 #[repr(u8)]
 pub enum IpScope {
@@ -391,9 +394,6 @@ impl<'de> Deserialize<'de> for InetAddress {
 }
 
 impl InetAddress {
-    pub const AF_INET: u8 = AF_INET;
-    pub const AF_INET6: u8 = AF_INET6;
-
     /// Get a new zero/nil InetAddress.
     #[inline(always)]
     pub fn new() -> InetAddress {
@@ -460,13 +460,13 @@ impl InetAddress {
     /// Check if this is an IPv4 address.
     #[inline(always)]
     pub fn is_ipv4(&self) -> bool {
-        unsafe { self.sa.sa_family as u8 == AF_INET }
+        unsafe { self.sa.sa_family == AF_INET }
     }
 
     /// Check if this is an IPv6 address.
     #[inline(always)]
     pub fn is_ipv6(&self) -> bool {
-        unsafe { self.sa.sa_family as u8 == AF_INET6 }
+        unsafe { self.sa.sa_family == AF_INET6 }
     }
 
     /// Check if this is either an IPv4 or an IPv6 address.
@@ -488,7 +488,7 @@ impl InetAddress {
     #[inline(always)]
     pub fn c_sockaddr(&self) -> (*const (), usize) {
         unsafe {
-            match self.sa.sa_family as u8 {
+            match self.sa.sa_family {
                 AF_INET => ((&self.sin as *const sockaddr_in).cast(), size_of::<sockaddr_in>()),
                 AF_INET6 => ((&self.sin6 as *const sockaddr_in6).cast(), size_of::<sockaddr_in6>()),
                 _ => (null(), 0),
@@ -500,7 +500,7 @@ impl InetAddress {
     /// Whether this is IPv4 or IPv6 is inferred from the size of ip[], which must be
     /// either 4 or 16 bytes. The family (AF_INET or AF_INET6) is returned, or zero on
     /// failure.
-    pub fn set(&mut self, ip: &[u8], port: u16) -> u8 {
+    pub fn set(&mut self, ip: &[u8], port: u16) -> InetType {
         self.zero();
         let port = port.to_be();
         unsafe {
@@ -523,7 +523,7 @@ impl InetAddress {
     /// Get raw IP bytes, with length dependent on address family (4 or 16).
     pub fn ip_bytes(&self) -> &[u8] {
         unsafe {
-            match self.sa.sa_family as u8 {
+            match self.sa.sa_family as InetType {
                 AF_INET => &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>(),
                 AF_INET6 => &*(&self.sin6.sin6_addr as *const in6_addr).cast::<[u8; 16]>(),
                 _ => &[],
@@ -545,7 +545,7 @@ impl InetAddress {
     /// Get the IP port for this InetAddress.
     pub fn port(&self) -> u16 {
         unsafe {
-            u16::from_be(match self.sa.sa_family as u8 {
+            u16::from_be(match self.sa.sa_family as InetType {
                 AF_INET => self.sin.sin_port as u16,
                 AF_INET6 => self.sin6.sin6_port as u16,
                 _ => 0,
@@ -560,7 +560,7 @@ impl InetAddress {
     pub fn set_port(&mut self, port: u16) {
         let port = port.to_be();
         unsafe {
-            match self.sa.sa_family as u8 {
+            match self.sa.sa_family as InetType {
                 AF_INET => self.sin.sin_port = port,
                 AF_INET6 => self.sin6.sin6_port = port,
                 _ => {}
@@ -575,7 +575,7 @@ impl InetAddress {
         unsafe {
             if self.sa.sa_family == cidr.sa.sa_family {
                 let mut cidr_bits = cidr.port() as u32;
-                match self.sa.sa_family as u8 {
+                match self.sa.sa_family as InetType {
                     AF_INET => {
                         if cidr_bits <= 32 {
                             let discard_bits = 32 - cidr_bits;
@@ -612,7 +612,7 @@ impl InetAddress {
     /// Get this IP address's scope as per RFC documents and what is advertised via BGP.
     pub fn scope(&self) -> IpScope {
         unsafe {
-            match self.sa.sa_family as u8 {
+            match self.sa.sa_family as InetType {
                 AF_INET => {
                     let ip = self.sin.sin_addr.s_addr as u32;
                     let class_a = (ip >> 24) as u8;
@@ -737,7 +737,7 @@ impl InetAddress {
     /// Get only the IP portion of this address as a string.
     pub fn to_ip_string(&self) -> String {
         unsafe {
-            match self.sa.sa_family as u8 {
+            match self.sa.sa_family as InetType {
                 AF_INET => {
                     let ip = &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>();
                     format!("{}.{}.{}.{}", ip[0], ip[1], ip[2], ip[3])
@@ -754,7 +754,7 @@ impl Marshalable for InetAddress {
 
     fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         unsafe {
-            match self.sa.sa_family as u8 {
+            match self.sa.sa_family as InetType {
                 AF_INET => {
                     let b = buf.append_bytes_fixed_get_mut::<7>()?;
                     b[0] = 4;
@@ -794,7 +794,7 @@ impl ToString for InetAddress {
     fn to_string(&self) -> String {
         unsafe {
             let mut s = self.to_ip_string();
-            match self.sa.sa_family as u8 {
+            match self.sa.sa_family as InetType {
                 AF_INET => {
                     s.push('/');
                     s.push_str(u16::from_be(self.sin.sin_port as u16).to_string().as_str())
@@ -858,7 +858,7 @@ impl PartialEq for InetAddress {
     fn eq(&self, other: &Self) -> bool {
         unsafe {
             if self.sa.sa_family == other.sa.sa_family {
-                match self.sa.sa_family as u8 {
+                match self.sa.sa_family as InetType {
                     AF_INET => self.sin.sin_port == other.sin.sin_port && self.sin.sin_addr.s_addr == other.sin.sin_addr.s_addr,
                     AF_INET6 => {
                         if self.sin6.sin6_port == other.sin6.sin6_port {
@@ -891,7 +891,7 @@ impl Ord for InetAddress {
     fn cmp(&self, other: &Self) -> Ordering {
         unsafe {
             if self.sa.sa_family == other.sa.sa_family {
-                match self.sa.sa_family as u8 {
+                match self.sa.sa_family as InetType {
                     0 => Ordering::Equal,
                     AF_INET => {
                         let ip_ordering = u32::from_be(self.sin.sin_addr.s_addr as u32).cmp(&u32::from_be(other.sin.sin_addr.s_addr as u32));
@@ -917,17 +917,17 @@ impl Ord for InetAddress {
                     }
                 }
             } else {
-                match self.sa.sa_family as u8 {
+                match self.sa.sa_family as InetType {
                     0 => Ordering::Less,
                     AF_INET => {
-                        if other.sa.sa_family as u8 == AF_INET6 {
+                        if other.sa.sa_family as InetType == AF_INET6 {
                             Ordering::Less
                         } else {
                             self.sa.sa_family.cmp(&other.sa.sa_family)
                         }
                     }
                     AF_INET6 => {
-                        if other.sa.sa_family as u8 == AF_INET {
+                        if other.sa.sa_family as InetType == AF_INET {
                             Ordering::Greater
                         } else {
                             self.sa.sa_family.cmp(&other.sa.sa_family)
@@ -947,7 +947,8 @@ impl Hash for InetAddress {
     fn hash<H: Hasher>(&self, state: &mut H) {
         unsafe {
             state.write_u8(self.sa.sa_family as u8);
-            match self.sa.sa_family as u8 {
+
+            match self.sa.sa_family as InetType {
                 AF_INET => {
                     state.write_u16(self.sin.sin_port as u16);
                     state.write_u32(self.sin.sin_addr.s_addr as u32);
