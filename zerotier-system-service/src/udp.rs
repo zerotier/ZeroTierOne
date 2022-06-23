@@ -19,7 +19,7 @@ use crate::localinterface::LocalInterface;
 #[allow(unused_imports)]
 use num_traits::AsPrimitive;
 
-use zerotier_network_hypervisor::vl1::{InetAddress, IpScope};
+use zerotier_network_hypervisor::vl1::{InetAddress, IpScope, AF_INET, AF_INET6};
 
 /// A local port to which one or more UDP sockets is bound.
 ///
@@ -201,8 +201,8 @@ impl BoundUdpPort {
 #[cfg(unix)]
 unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result<RawFd, &'static str> {
     let (af, sa_len) = match address.family() {
-        InetAddress::AF_INET => (libc::AF_INET, std::mem::size_of::<libc::sockaddr_in>().as_()),
-        InetAddress::AF_INET6 => (libc::AF_INET6, std::mem::size_of::<libc::sockaddr_in6>().as_()),
+        AF_INET => (libc::AF_INET, std::mem::size_of::<libc::sockaddr_in>().as_()),
+        AF_INET6 => (libc::AF_INET6, std::mem::size_of::<libc::sockaddr_in6>().as_()),
         _ => {
             return Err("unrecognized address family");
         }

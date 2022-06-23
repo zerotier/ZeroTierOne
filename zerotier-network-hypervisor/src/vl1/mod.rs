@@ -21,7 +21,7 @@ pub use address::Address;
 pub use dictionary::Dictionary;
 pub use endpoint::Endpoint;
 pub use identity::*;
-pub use inetaddress::{InetAddress, IpScope};
+pub use inetaddress::{AddressFamilyType, InetAddress, IpScope, AF_INET, AF_INET6};
 pub use mac::MAC;
 pub use node::SystemInterface;
 pub use path::Path;
