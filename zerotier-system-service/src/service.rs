@@ -34,7 +34,7 @@ pub struct Service {
 struct ServiceImpl {
     pub rt: tokio::runtime::Handle,
     pub data: DataDir,
-    pub udp_sockets: tokio::sync::RwLock<HashMap<u16, BoundUdpPort>>,
+    pub udp_sockets_by_port: tokio::sync::RwLock<HashMap<u16, BoundUdpPort>>,
     pub num_listeners_per_socket: usize,
     _core: Option<NetworkHypervisor<Self>>,
 }
@@ -49,7 +49,7 @@ impl Drop for Service {
         // This shouldn't have to loop much if at all to acquire the lock, but it might if something
         // is still completing somewhere in an aborting task.
         loop {
-            if let Ok(mut udp_sockets) = self.internal.udp_sockets.try_write() {
+            if let Ok(mut udp_sockets) = self.internal.udp_sockets_by_port.try_write() {
                 udp_sockets.clear();
                 break;
             }
@@ -67,7 +67,7 @@ impl Service {
         let mut si = ServiceImpl {
             rt,
             data: DataDir::open(base_path).await.map_err(|e| Box::new(e))?,
-            udp_sockets: tokio::sync::RwLock::new(HashMap::with_capacity(4)),
+            udp_sockets_by_port: tokio::sync::RwLock::new(HashMap::with_capacity(4)),
             num_listeners_per_socket: std::thread::available_parallelism().unwrap().get(),
             _core: None,
         };
@@ -93,8 +93,8 @@ impl ServiceImpl {
     /// Called in udp_binding_task_main() to service a particular UDP port.
     async fn update_udp_bindings_for_port(self: &Arc<Self>, port: u16, interface_prefix_blacklist: &Vec<String>, cidr_blacklist: &Vec<InetAddress>) -> Option<Vec<(LocalInterface, InetAddress, std::io::Error)>> {
         for ns in {
-            let mut udp_sockets = self.udp_sockets.write().await;
-            let bp = udp_sockets.entry(port).or_insert_with(|| BoundUdpPort::new(port));
+            let mut udp_sockets_by_port = self.udp_sockets_by_port.write().await;
+            let bp = udp_sockets_by_port.entry(port).or_insert_with(|| BoundUdpPort::new(port));
             let (errors, new_sockets) = bp.update_bindings(interface_prefix_blacklist, cidr_blacklist);
             if bp.sockets.is_empty() {
                 return Some(errors);
@@ -196,12 +196,11 @@ impl SystemInterface for ServiceImpl {
                     }
                 }
 
-                // Otherwise we try to send from one socket on every interface or from the specified interface.
-                // This path only happens when the core is trying new endpoints. The fast path is for most packets.
-                let sockets = self.udp_sockets.read().await;
-                if !sockets.is_empty() {
+                let udp_sockets_by_port = self.udp_sockets_by_port.read().await;
+                if !udp_sockets_by_port.is_empty() {
                     if let Some(specific_interface) = local_interface {
-                        for (_, p) in sockets.iter() {
+                        // Send from a specific interface if that interface is specified.
+                        for (_, p) in udp_sockets_by_port.iter() {
                             if !p.sockets.is_empty() {
                                 let mut i = (random::next_u32_secure() as usize) % p.sockets.len();
                                 for _ in 0..p.sockets.len() {
@@ -216,11 +215,9 @@ impl SystemInterface for ServiceImpl {
                             }
                         }
                     } else {
-                        let bound_ports: Vec<&u16> = sockets.keys().collect();
+                        // Otherwise send from one socket on every interface.
                         let mut sent_on_interfaces = HashSet::with_capacity(4);
-                        let rn = random::xorshift64_random() as usize;
-                        for i in 0..bound_ports.len() {
-                            let p = sockets.get(*bound_ports.get(rn.wrapping_add(i) % bound_ports.len()).unwrap()).unwrap();
+                        for p in udp_sockets_by_port.values() {
                             if !p.sockets.is_empty() {
                                 let mut i = (random::next_u32_secure() as usize) % p.sockets.len();
                                 for _ in 0..p.sockets.len() {
