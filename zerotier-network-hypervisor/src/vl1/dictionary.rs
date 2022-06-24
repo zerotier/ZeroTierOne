@@ -5,13 +5,15 @@ use std::io::Write;
 
 use crate::util::hex::HEX_CHARS;
 
+const BOOL_TRUTH: &str = "1tTyY";
+
 /// Dictionary is an extremely simple key=value serialization format.
 ///
 /// It's designed for extreme parsing simplicity and is human readable if keys and values are strings.
 /// It also supports binary keys and values which will be minimally escaped but render the result not
 /// entirely human readable. Keys are serialized in natural sort order so the result can be consistently
 /// checksummed or hashed.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Dictionary(pub(crate) BTreeMap<String, Vec<u8>>);
 
 fn write_escaped<W: Write>(b: &[u8], w: &mut W) -> std::io::Result<()> {
@@ -94,7 +96,7 @@ impl Dictionary {
     }
 
     pub fn get_bool(&self, k: &str) -> Option<bool> {
-        self.0.get(k).map_or(None, |v| v.first().map_or(Some(false), |c| Some("1tTyY".contains(*c as char))))
+        self.0.get(k).map_or(None, |v| v.first().map_or(Some(false), |c| Some(BOOL_TRUTH.contains(*c as char))))
     }
 
     pub fn set_str(&mut self, k: &str, v: &str) {
@@ -146,6 +148,7 @@ impl Dictionary {
                     b'0' => 0,
                     b'n' => b'\n',
                     b'r' => b'\r',
+                    b'e' => b'=',
                     _ => c, // =, \, and escapes before other characters are unnecessary but not errors
                 });
             } else if c == b'\\' {
@@ -176,6 +179,10 @@ impl Dictionary {
         }
         Some(d)
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Vec<u8>)> {
+        self.0.iter()
+    }
 }
 
 impl ToString for Dictionary {
@@ -195,10 +202,58 @@ impl ToString for Dictionary {
 
 #[cfg(test)]
 mod tests {
-    use crate::vl1::dictionary::Dictionary;
+    #[derive(PartialEq, Eq, Clone, Debug)]
+    enum Type {
+        String,
+        Bytes,
+        U64,
+        Bool,
+    }
+
+    type TypeMap = HashMap<String, Type>;
+
+    use std::collections::HashMap;
+
+    use crate::vl1::dictionary::{Dictionary, BOOL_TRUTH};
+
+    // from zeronsd
+    pub fn randstring(len: u8) -> String {
+        (0..len).map(|_| (rand::random::<u8>() % 26) + 'a' as u8).map(|c| if rand::random::<bool>() { (c as char).to_ascii_uppercase() } else { c as char }).map(|c| c.to_string()).collect::<Vec<String>>().join("")
+    }
+
+    fn make_dictionary() -> (Dictionary, TypeMap) {
+        let mut d = Dictionary::new();
+        let mut tm = TypeMap::new();
+
+        for _ in 0..(rand::random::<usize>() % 20) + 1 {
+            // NOTE: just doing this twice because I want to keep the code a little cleaner.
+            let selection = rand::random::<usize>() % 4;
+
+            let key = randstring(10);
+
+            // set the key
+            match selection {
+                0 => d.set_str(&key, &randstring(10)),
+                1 => d.set_u64(&key, rand::random()),
+                2 => d.set_bytes(&key, (0..((rand::random::<usize>() % 10) + 1)).into_iter().map(|_| rand::random()).collect::<Vec<u8>>()),
+                3 => d.set_bool(&key, rand::random::<bool>()),
+                _ => unreachable!(),
+            }
+
+            match selection {
+                0 => tm.insert(key, Type::String),
+                1 => tm.insert(key, Type::U64),
+                2 => tm.insert(key, Type::Bytes),
+                3 => tm.insert(key, Type::Bool),
+                _ => unreachable!(),
+            };
+        }
+
+        (d, tm)
+    }
 
     #[test]
-    fn dictionary() {
+    fn dictionary_basic() {
         let mut d = Dictionary::new();
         d.set_str("foo", "bar");
         d.set_u64("bar", 0xfeedcafebabebeef);
@@ -208,5 +263,84 @@ mod tests {
         let bytes = d.to_bytes();
         let d2 = Dictionary::from_bytes(bytes.as_slice()).unwrap();
         assert!(d.eq(&d2));
+    }
+
+    #[test]
+    fn dictionary_to_string() {
+        for _ in 0..1000 {
+            let (d, _) = make_dictionary();
+            assert_ne!(d.to_string().len(), 0)
+        }
+    }
+
+    #[test]
+    fn dictionary_clear() {
+        for _ in 0..1000 {
+            let (mut d, _) = make_dictionary();
+            assert_ne!(d.len(), 0);
+            assert!(!d.is_empty());
+            d.clear();
+            assert!(d.is_empty());
+            assert_eq!(d.len(), 0);
+        }
+    }
+
+    #[test]
+    fn dictionary_io() {
+        for _ in 0..1000 {
+            let (d, _) = make_dictionary();
+            assert_ne!(d.len(), 0);
+            assert!(!d.is_empty());
+
+            let mut v = Vec::new();
+            let mut cursor = std::io::Cursor::new(&mut v);
+            assert!(d.write_to(&mut cursor).is_ok());
+            drop(cursor);
+            assert!(!v.is_empty());
+
+            let d2 = super::Dictionary::from_bytes(v.as_slice());
+            assert!(d2.is_some());
+            let d2 = d2.unwrap();
+            assert_eq!(d, d2);
+
+            let d2 = super::Dictionary::from_bytes(&d.to_bytes());
+            assert!(d2.is_some());
+            let d2 = d2.unwrap();
+            assert_eq!(d, d2);
+        }
+    }
+
+    #[test]
+    fn dictionary_accessors() {
+        for _ in 0..1000 {
+            let (d, tm) = make_dictionary();
+
+            for (k, v) in d.iter() {
+                match tm.get(k).unwrap() {
+                    Type::String => {
+                        let v2 = d.get_str(k);
+                        assert!(v2.is_some());
+                        assert_eq!(String::from_utf8(v.to_vec()).unwrap(), String::from(v2.unwrap()));
+                    }
+                    Type::Bytes => {
+                        let v2 = d.get_bytes(k);
+                        assert!(v2.is_some());
+                        assert_eq!(v, v2.unwrap());
+                    }
+                    Type::Bool => {
+                        let v2 = d.get_bool(k);
+                        assert!(v2.is_some());
+                        // FIXME move this lettering to a constant
+                        assert_eq!(BOOL_TRUTH.contains(*v.iter().nth(0).unwrap() as char), v2.unwrap());
+                    }
+                    Type::U64 => {
+                        let v2 = d.get_u64(k);
+                        assert!(v2.is_some());
+
+                        assert_eq!(u64::from_str_radix(d.get_str(k).unwrap(), 16).unwrap(), v2.unwrap());
+                    }
+                }
+            }
+        }
     }
 }

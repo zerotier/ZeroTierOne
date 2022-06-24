@@ -13,7 +13,7 @@ use crate::util::marshalable::Marshalable;
 use crate::vl1::protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
 
 /// A unique address on the global ZeroTier VL1 network.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct Address(NonZeroU64);
 
@@ -142,6 +142,123 @@ impl<'de> Deserialize<'de> for Address {
             deserializer.deserialize_str(AddressVisitor)
         } else {
             deserializer.deserialize_bytes(AddressVisitor)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    fn safe_address() -> super::Address {
+        let mut addr: Option<super::Address>;
+
+        'retry: loop {
+            let rawaddr: u64 = rand::random();
+            addr = super::Address::from_u64(rawaddr);
+
+            if addr.is_some() {
+                break 'retry;
+            }
+        }
+
+        addr.unwrap()
+    }
+
+    #[test]
+    fn address_marshal_u64() {
+        let mut rawaddr: u64 = rand::random();
+        let addr = super::Address::from_u64(rawaddr);
+        assert!(addr.is_some());
+        assert_eq!(addr.unwrap().to_u64(), rawaddr & 0xffffffffff);
+
+        rawaddr = 0;
+        assert!(super::Address::from_u64(rawaddr).is_none());
+
+        rawaddr = (crate::vl1::protocol::ADDRESS_RESERVED_PREFIX as u64) << 32;
+        assert!(super::Address::from_u64(rawaddr).is_none());
+    }
+
+    #[test]
+    fn address_marshal_bytes() {
+        use crate::vl1::protocol::ADDRESS_SIZE;
+        let mut v: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE);
+        let mut i = 0;
+        while i < ADDRESS_SIZE {
+            v.push(rand::random());
+            i += 1;
+        }
+
+        let addr = super::Address::from_bytes(v.as_slice());
+        assert!(addr.is_some());
+        assert_eq!(addr.unwrap().to_bytes(), v.as_slice());
+
+        let empty: Vec<u8> = Vec::new();
+        let emptyaddr = super::Address::from_bytes(empty.as_slice());
+        assert!(emptyaddr.is_none());
+
+        let mut v2: [u8; ADDRESS_SIZE] = [0u8; ADDRESS_SIZE];
+        let mut i = 0;
+        while i < ADDRESS_SIZE {
+            v2[i] = v[i];
+            i += 1;
+        }
+
+        let addr2 = super::Address::from_bytes_fixed(&v2);
+        assert!(addr2.is_some());
+        assert_eq!(addr2.unwrap().to_bytes(), v2);
+
+        assert_eq!(addr.unwrap(), addr2.unwrap());
+    }
+
+    #[test]
+    fn address_to_from_string() {
+        use std::str::FromStr;
+
+        for _ in 0..1000 {
+            let rawaddr: u64 = rand::random();
+            let addr = super::Address::from_u64(rawaddr);
+
+            // NOTE: a regression here is covered by other tests and should not break this test
+            // accidentally.
+            if addr.is_none() {
+                continue;
+            }
+
+            let addr = addr.unwrap();
+            assert_ne!(addr.to_string(), "");
+            assert_eq!(addr.to_string().len(), 10);
+
+            assert_eq!(super::Address::from_str(&addr.to_string()).unwrap(), addr);
+        }
+    }
+
+    #[test]
+    fn address_hash() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+
+        let addr = safe_address();
+        addr.hash(&mut hasher);
+        let result1 = hasher.finish();
+
+        // this loop is mostly to ensure that hash returns a consistent result every time.
+        for _ in 0..1000 {
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            addr.hash(&mut hasher);
+            let result2 = hasher.finish();
+            assert_ne!(result2.to_string(), "");
+            assert_eq!(result1.to_string(), result2.to_string());
+        }
+    }
+
+    #[test]
+    fn address_serialize() {
+        let addr = safe_address();
+
+        for _ in 0..1000 {
+            assert_eq!(serde_json::from_str::<super::Address>(&serde_json::to_string(&addr).unwrap()).unwrap(), addr);
+            assert_eq!(serde_cbor::from_slice::<super::Address>(&serde_cbor::to_vec(&addr).unwrap()).unwrap(), addr);
         }
     }
 }
