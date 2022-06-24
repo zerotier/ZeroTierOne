@@ -1,14 +1,10 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use std::alloc::{alloc, dealloc, Layout};
 use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
-use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
 use std::str::FromStr;
-
-use lazy_static::lazy_static;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -22,7 +18,7 @@ use zerotier_core_crypto::x25519::*;
 use crate::error::{InvalidFormatError, InvalidParameterError};
 use crate::util::buffer::Buffer;
 use crate::util::marshalable::Marshalable;
-use crate::util::pool::{Pool, PoolFactory, Pooled};
+use crate::util::ZEROES;
 use crate::vl1::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_FINGERPRINT_SIZE, IDENTITY_POW_THRESHOLD};
 use crate::vl1::Address;
 
@@ -90,6 +86,50 @@ fn concat_arrays_4<const A: usize, const B: usize, const C: usize, const D: usiz
     tmp
 }
 
+fn zt_address_derivation_work_function(digest: &mut [u8; 64]) {
+    const ADDRESS_DERIVATION_HASH_MEMORY_SIZE: usize = 2097152;
+    unsafe {
+        let genmem_layout = std::alloc::Layout::from_size_align(ADDRESS_DERIVATION_HASH_MEMORY_SIZE, 16).unwrap(); // aligned for access as u64 or u8
+        let genmem: *mut u8 = std::alloc::alloc(genmem_layout);
+        assert!(!genmem.is_null());
+
+        let mut salsa: Salsa<20> = Salsa::new(&digest[..32], &digest[32..40]);
+        salsa.crypt(&ZEROES, &mut *genmem.cast::<[u8; 64]>());
+        let mut k = 0;
+        while k < (ADDRESS_DERIVATION_HASH_MEMORY_SIZE - 64) {
+            let i = k + 64;
+            salsa.crypt(&*genmem.add(k).cast::<[u8; 64]>(), &mut *genmem.add(i).cast::<[u8; 64]>());
+            k = i;
+        }
+
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
+        let digest_buf = &mut *digest.as_mut_ptr().cast::<[u64; 8]>();
+
+        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
+        let mut digest_buf: [u64; 8] = std::mem::MaybeUninit::uninit().assume_init();
+        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
+        std::ptr::copy_nonoverlapping(digest.as_ptr(), digest_buf.as_mut_ptr().cast(), 64);
+
+        let mut i = 0;
+        while i < ADDRESS_DERIVATION_HASH_MEMORY_SIZE {
+            let idx1 = *genmem.add(i + 7) % 8; // same as: u64::from_be(*genmem.add(i).cast::<u64>()) % 8;
+            let idx2 = (u64::from_be(*genmem.add(i + 8).cast::<u64>()) % ((ADDRESS_DERIVATION_HASH_MEMORY_SIZE / 8) as u64)) * 8;
+            i += 16;
+            let genmem_idx2 = genmem.add(idx2 as usize).cast::<u64>();
+            let digest_idx1 = digest_buf.as_mut_ptr().add(idx1 as usize);
+            let tmp = *genmem_idx2;
+            *genmem_idx2 = *digest_idx1;
+            *digest_idx1 = tmp;
+            salsa.crypt_in_place(&mut *digest_buf.as_mut_ptr().cast::<[u8; 64]>());
+        }
+
+        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
+        std::ptr::copy_nonoverlapping(digest_buf.as_ptr().cast(), digest.as_mut_ptr(), 64);
+
+        std::alloc::dealloc(genmem, genmem_layout);
+    }
+}
+
 impl Identity {
     /// Curve25519 and Ed25519
     pub const ALGORITHM_X25519: u8 = 0x01;
@@ -109,7 +149,6 @@ impl Identity {
         let address;
         let mut c25519;
         let mut c25519_pub;
-        let mut genmem_pool_obj = ADDRESS_DERVIATION_MEMORY_POOL.get();
         loop {
             c25519 = C25519KeyPair::generate();
             c25519_pub = c25519.public_bytes();
@@ -117,7 +156,7 @@ impl Identity {
             sha.update(&c25519_pub);
             sha.update(&ed25519_pub);
             let mut digest = sha.finish();
-            zt_address_derivation_memory_intensive_hash(&mut digest, &mut genmem_pool_obj);
+            zt_address_derivation_work_function(&mut digest);
 
             if digest[0] < IDENTITY_POW_THRESHOLD {
                 let addr = Address::from_bytes(&digest[59..64]);
@@ -129,7 +168,6 @@ impl Identity {
 
             sha.reset();
         }
-        drop(genmem_pool_obj);
         let mut id = Self {
             address,
             c25519: c25519_pub,
@@ -248,9 +286,7 @@ impl Identity {
         sha.update(&self.c25519);
         sha.update(&self.ed25519);
         let mut digest = sha.finish();
-        let mut genmem_pool_obj = ADDRESS_DERVIATION_MEMORY_POOL.get();
-        zt_address_derivation_memory_intensive_hash(&mut digest, &mut genmem_pool_obj);
-        drop(genmem_pool_obj);
+        zt_address_derivation_work_function(&mut digest);
 
         return digest[0] < IDENTITY_POW_THRESHOLD && Address::from_bytes(&digest[59..64]).map_or(false, |a| a == self.address);
     }
@@ -820,87 +856,6 @@ impl<'de> Deserialize<'de> for Identity {
     }
 }
 
-const ADDRESS_DERIVATION_HASH_MEMORY_SIZE: usize = 2097152;
-
-/// This is a compound hasher used for the work function that derives an address.
-///
-/// FIPS note: addresses are just unique identifiers based on a hash. The actual key is
-/// what truly determines node identity. For FIPS purposes this can be considered a
-/// non-cryptographic hash. Its memory hardness and use in a work function is a defense
-/// in depth feature rather than a primary security feature.
-fn zt_address_derivation_memory_intensive_hash(digest: &mut [u8; 64], genmem_pool_obj: &mut Pooled<AddressDerivationMemory, AddressDerivationMemoryFactory>) {
-    let genmem_ptr: *mut u8 = genmem_pool_obj.get_memory();
-    let (genmem, genmem_alias_hack) = unsafe { (&mut *slice_from_raw_parts_mut(genmem_ptr, ADDRESS_DERIVATION_HASH_MEMORY_SIZE), &*slice_from_raw_parts(genmem_ptr, ADDRESS_DERIVATION_HASH_MEMORY_SIZE)) };
-    let genmem_u64_ptr = genmem_ptr.cast::<u64>();
-
-    let mut s20 = Salsa::<20>::new(&digest[0..32], &digest[32..40]);
-
-    s20.crypt(&crate::util::ZEROES[0..64], &mut genmem[0..64]);
-    let mut i: usize = 64;
-    while i < ADDRESS_DERIVATION_HASH_MEMORY_SIZE {
-        let ii = i + 64;
-        s20.crypt(&genmem_alias_hack[(i - 64)..i], &mut genmem[i..ii]);
-        i = ii;
-    }
-
-    i = 0;
-    while i < (ADDRESS_DERIVATION_HASH_MEMORY_SIZE / 8) {
-        unsafe {
-            let idx1 = (((*genmem_u64_ptr.add(i)).to_be() & 7) * 8) as usize;
-            let idx2 = ((*genmem_u64_ptr.add(i + 1)).to_be() % (ADDRESS_DERIVATION_HASH_MEMORY_SIZE as u64 / 8)) as usize;
-            let genmem_u64_at_idx2_ptr = genmem_u64_ptr.add(idx2);
-            let tmp = *genmem_u64_at_idx2_ptr;
-            let digest_u64_ptr = digest.as_mut_ptr().add(idx1).cast::<u64>();
-            *genmem_u64_at_idx2_ptr = *digest_u64_ptr;
-            *digest_u64_ptr = tmp;
-        }
-        s20.crypt_in_place(digest);
-        i += 2;
-    }
-}
-
-#[repr(transparent)]
-struct AddressDerivationMemory(*mut u8);
-
-impl AddressDerivationMemory {
-    #[inline(always)]
-    fn get_memory(&mut self) -> *mut u8 {
-        self.0
-    }
-}
-
-impl Drop for AddressDerivationMemory {
-    #[inline(always)]
-    fn drop(&mut self) {
-        unsafe { dealloc(self.0, Layout::from_size_align(ADDRESS_DERIVATION_HASH_MEMORY_SIZE, 8).unwrap()) };
-    }
-}
-
-struct AddressDerivationMemoryFactory;
-
-impl PoolFactory<AddressDerivationMemory> for AddressDerivationMemoryFactory {
-    #[inline(always)]
-    fn create(&self) -> AddressDerivationMemory {
-        AddressDerivationMemory(unsafe { alloc(Layout::from_size_align(ADDRESS_DERIVATION_HASH_MEMORY_SIZE, 8).unwrap()) })
-    }
-
-    #[inline(always)]
-    fn reset(&self, _: &mut AddressDerivationMemory) {}
-}
-
-lazy_static! {
-    static ref ADDRESS_DERVIATION_MEMORY_POOL: Pool<AddressDerivationMemory, AddressDerivationMemoryFactory> = Pool::new(0, AddressDerivationMemoryFactory);
-}
-
-/// Purge the memory pool used to verify identities. This can be called periodically
-/// from the maintenance function to prevent memory buildup from bursts of identity
-/// verification.
-#[allow(unused)]
-#[inline(always)]
-pub(crate) fn purge_verification_memory_pool() {
-    ADDRESS_DERVIATION_MEMORY_POOL.purge();
-}
-
 #[cfg(test)]
 mod tests {
     use crate::util::marshalable::Marshalable;
@@ -916,6 +871,7 @@ mod tests {
 
         // Test self-agree with a known good x25519-only (v0) identity.
         let id = Identity::from_str("728efdb79d:0:3077ed0084d8d48a3ac628af6b45d9351e823bff34bc4376cddfc77a3d73a966c7d347bdcc1244d0e99e1b9c961ff5e963092e90ca43b47ff58c114d2d699664:2afaefcd1dca336ed59957eb61919b55009850b0b7088af3ee142672b637d1d49cc882b30a006f9eee42f2211ef8fe1cbe99a16a4436737fc158ce2243c15f12").unwrap();
+        assert!(id.validate_identity());
         let self_agree = id.agree(&id).unwrap();
         assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));
 
@@ -930,29 +886,17 @@ mod tests {
         assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));
     }
 
-    const GOOD_V0_IDENTITIES: [&'static str; 10] = [
-        "51ef313c3a:0:79fee239cf79833be3a9068565661dc33e04759fa0f7e2218d10f1a51d441f1bf71332eba26dfc3755ce60e14650fe68dede66cf145e429972a7f51e026374de:6d12b1c5e0eae3983a5ee5872fa9061963d9e2f8cdd85adab54bdec4bd67f538cafc91b8b5b93fca658a630aab030ec10d66235f2443ccf362c55c41ae01b46e",
-        "9532db97eb:0:86a2c3a7d08be09f794188ef86014f54b699577536db1ded58537c9159020b48c962ff7f25501ada8ef20b604dd29fb1a915966aaffe1ef6a589527525599f10:06ab13d2704583451bb326feb5c3d9bfe7879aa327669ff33150a42c04464aa5435cec79d952e0af970142e9d8c8a0dd26deadf9b9ba2f1cb454bf2ac22e53e6",
-        "361d9b8016:0:5935e0d38e690a992d22fdbb587b873e9b6de4de4a45d161c47f249a2dbeed44e917da80736c8c3b61cdcc5a3f0a2c77fc8fa41c1302fa7bb871fe5833f9995f:7cfb67189c36e2588682a065db769a3827f423d099a84c61f30b5ad41c2e51a4c750235820441a524a011facad4555869042750684b01d6eca4b86223e816569",
-        "77f925e5e3:0:161678a69aa19d1de096cd9cd7801745f038f74c3680f28da0890c995ecf56408c1f6022a02ab20c68e21b1afc587a0038f1405cbd3167877a69926788e92620:2e1a73ffb750f201451f5c35693179cfa0de14404c8d55e6bb5749787e7e220b292f9193f454b2e97404c5d136cff665874373e9a6d5139efa1b904f19efc7d3",
-        "e32e883ac6:0:29e41f935cf419d41103a748938ab0dcc978b6fde9fbb82d6f34ef124538f93dc680c8b26ba03f0c66d15be1a3895ef73dc6879843f3720095fa144d33369195:3654e04cac0beb98a94b97bca2b9a0aea4c7001e13c3ebe813fe8096395ecb69b824d3b6ee2d5b149077abd73cff61dd9ee04811c30b0c7f964b59c67eefa799",
-        "6f66865615:0:11443c5c0a6a096245f9790240e15d3b8ea228397447f118bd8b44030b24191f97e11bf704807561cd6d54f627d57d599ca7983547c6d4db52597dbd1c86114b:1d1cb5bbced28b11f2f61ddcbc9693d0233485fc8fe0825c090a7309fe94fd26e8e89d137071ef7567b80cce60672a31da4c1677fa1c37237b0713456788dc81",
-        "c5bdb4a6a6:0:e0a8575bc0277ecf59aaa4a2724acc55554151fff510c8211b0b863398a04224ed918c16405552336ad4c4da3b98eb6224574f1cacaa69e19cdfde184fd9292d:0d45f17d73337cc1898f7be6aae54a050b39ed0259b608b80619c3f898caf8a3a48ae56e51c3d7d8426ef295c0628d81b1a99616a3ed28da49bf8f81e1bec863",
-        "c622dedbe4:0:0cfec354be26b4b2fa9ea29166b4acaf9476d169d51fd741d7e4cd9de93f321c6b80628c50da566d0a6b07d58d651eba8af63e0edc36202c05c3f97c828788ad:31a75d2b46c1b0f33228d3869bc807b42b371bbcef4c96f7232a27c62f56397568558f115d9cff3d6f7b8efb726a1ea49a591662d9aacd1049e295cbb0cf3197",
-        "e28829ab3c:0:8e36c4f6cb524cae6bbea5f26dadb601a76f2a3793961779317365effb17ac6cde4ff4149a1b3480fbdbdbabfe62e1f264e764f95540b63158d1ea8b1eb0df5b:957508a7546df18784cd285da2e6216e4265906c6c7fba9a895f29a724d63a2e0268128c0c9c2cc304c8c3304863cdfe437a7b93b12dc778c0372a116088e9cd",
-        "aec623e59d:0:d7b1a715d95490611b8d467bbee442e3c88949f677371d3692da92f5b23d9e01bb916596cc1ddd2d5e0e5ecd6c750bb71ad2ba594b614b771c6f07b39dbe4126:ae4e4759d67158dcc54ede8c8ddb08acac49baf8b816883fc0ac5b6e328d17ced5f05ee0b4cd20b03bc5005471795c29206b835081b873fef26d3941416bd626",
+    const GOOD_V0_IDENTITIES: [&'static str; 4] = [
+        "8ee1095428:0:3ee30bb0cf66098891a5375aa8b44c4e7d09fabfe6d04e150bc7f17898726f1b1b8dc16f7cc74ed4eeb06e224db4370668766829434faf3da26ecfb151c87c12:69031e4b2354d41010f7b097f4793e99040342ca641938525e3f72a081a75285bea3c399edecda738c772f59412469a8290405e3e327fb30f3654af49ff8de09",
+        "77fcbbd875:0:1724aad9ef6af50ab7a67ed975053779ca1a0251832ef6456cff50bf5af3bb1f859885b67c7ff6a64192e795e7dcdc9ce7b13deb9177022a4a83c02026596993:55c3b96396853f41ba898d7099ca118ba3ba1d306af55248dcbd7008e6752b8900e208a251eeda70f778249dab65a5dfbb4beeaf76de40bf3b732536f93fc7f7",
+        "91c4e0e1b0:0:5a96fb6bddbc3e845ec30e369b6517dd936e9b9679404001ba81c66dfe38be7a12f5db4f470f4af2ff4aa3e2fe54a3838c80b3a33fe83fe78fef956772c46ed3:7210ce5b7bc4777c7790d225f81e7f2583417a3ac64fd1a5873186ed6bd5b48126c8e1cfd0e82b391a389547bd3c143c672f83e19632aa445cafb2d5aab4c098",
+        "ba0c4a4edd:0:4b75790dce1979b4cec38ca1eb81e0f348f757047c4ad5e8a463fe54f32142739ffd8c0bc9c95a45572d96173a11def1e653e6975343e4bc78d5b504e023aab8:28fa6bf3c103186c41575c91ee86887d21e0bdf77cdf4c36c9430c32e83affbee0b04da61312f4c990a18f2acf9031a6a2c4c69362f79f7f6d5621a3c8abf33c",
     ];
-    const GOOD_V1_IDENTITIES: [&'static str; 10] = [
-        "b9553fc08f:0:e5b69b67aba3fbb35fb5b26e3f8d98bd081944c0153350c2fbd0e5d4d68c4d19b0c33c44c7933c9e7d02162a56abad2de4ebe9e2bf606d7021b92e7412e20270:487b70af891cfd47d847e12739623abd67ed1a3554c4bcaf73a7e44178b1c04a9e59f4b4cedc17b6de00f8f7b26880fea6f82fdc67e371f5cfcab7a1f44dd267:2:AjvDSgtrnnkvMheXcH8P42wXPjPNVYedfvFldPUr7Xn_icixyCAoNGkXwTNEMN9xpwNqq9mvfqQa-mOUJUz8yiWTNqnw8T1Esaf-OGZSu-leWOEbmCswVIl94qNsjS5g8Kx4BHzTtkx2t_quKMoelK5EOscwAwEiFS94r1nUau3H9QBQWNr9v44_8_Dbj-V6Eeo70ZwiU2bCUlsvoBS5ae1Aepktv6Usi1Yzl9L-6v22VH0RLLinY_b_r63sdf4LSay9YZ8b4GnMYkXb_0KqDTSZXxsiDUb1lhmE63ARsLo9b9X8oKm_Kog5ZXhnMUUjN6DObiDjJ5pdyjvPEXlxzOoD:IKPkJFOW9NbDYSl2Aagb1OQ4HyDDN6iQpDhECBE84nUQj5KbN-IGU5a-IVvO3K1UyYcDfKnb2PMycSungUWO9LKbWFykXDKDmoWL0Sz7yEmfshDn96KTevLNpCbRNiAj",
-        "2f67e50239:0:a79b755302a4fd4805bea5b4e3f12cbf75e9adee50dce2cff48252eeb5e9803b8cf677cc5488851e5c64796b251ac9eca78af01a1825966e3d7d1fc06da4779e:48815d7f81db7709d88067d14fc8cb8a91b24eea70b791603002812619c73f4dabbba724dfb76d188c9150daef9ff4d650a5825752840683027c569fa478ca41:2:AmVWC14Qx4OEERfjBRvECvsbPPgRmuJr2N6ypX-ewfyEsZwQ8kVX2c3mrTsyfnUSuQJrjLh9p7L7G2Fv6LI0T7AXlL8_Hczk_81UlhV9eG9Dj70p4NtPWcAeH-osDJPCDTZmNx4cke6DQ8XwDeU_NFLOm_GKniNj85oO9iVRt40BZLD89S-bloPxptd4vT4QP07YL3VnRyLNUEn1PLnvedBwfU9WSSbGtYVOTYNElr4Jgmt6WK78Yq4bgQogayu8eKCb5AeS0A4vwVf0Ii7nsYOHnEQE-g7MSmV01awR2PC9hL8_uviZQKdNROYx9LKQrXLeszxl0cHawmB8hoOAnxkH:D0lKhr2LBBY8wTlrI2RaxI3bq9fZeJuU6xTbCOfF442YFjTIrqtGokDzirUYpVfMsCyT2nS-xmYDGBmDDAIEdG3x9fWuCjD1trib9ZKCB-1bX21ZOOUzsux9q6EByox9",
-        "484d3aabbc:0:0574978881591073ecdfa9e48ae0dce17b285896695e12e7f4f1c76f4abf0a03e22d12d97363542cdb59c0387533f49295a5831de758901328392021e28488fb:58ae228ba918e8558e1f8167b0e3612d9f58e48ff3caaa5c1aafd9cc4e81c7634a7d6b6c5859f539836e28bcd6d7a0d14760134b643d89bdc8d369765501fce8:2:AwTUxHZP6YGmdUzno2_JW6RLRaR8Qr_jyUXcbRVXTismnvzr2ERwSqXMlc3I3qvTBgOUFhl2oNXDNdiuCPsDINJuSiez9sm5nx3yzfYdwP636VjoLzjdGBnh82Sp9jNsYx1ZlK8ZWl2zzlNtdLs30OKvm-xhSmr5Mpkx9VK12j5jm8VDsoTMwAW3kjOBjCIy7kQ7gd61I89W4f7KIntjz1ZW9yuon3XWfFDbskUqbe7sQIldAvOKcggaZQWWljVrnn6hT4k6UwjDPyA_i2CaUTJmn_lVxilsW6UGXeIFyo-opG62zpVeBQcOhblIu9ndkAXpK0KJLjdppvDAwmTk8cEH:grMfFb7ZGfz5-SBX-JLoiY2BW5DJ5rvAsO0Aop1npYMnSHL2VM_56eiYiBlwZ7zdKyYWdA_BRApPl5x0iCQcqXLhgQAVn-iL5edFHTGIF8HLRVcLn6_XIz7_u5TAydXp",
-        "210ae3e250:0:d3fb8d2c651a4b5d2cdfe8ac07ed3aa2c303ff5250990d08aa5998fa8017335d2aff2b82bb153cb349c91e4177e16e718bcc74586644a582d8702481e30a813d:f8d31b46693c013f392da1180806edfaa7c389c1040f8e772195c086fd0d44617b9eb809e21e9de0e44b06236a5997b04522dc78218eca76b6c66f6ab8034770:2:Ai6daBUu73oul4o4lpH-xt2jufhIOIeZFR34vrO4MlY8oC258FPdg-e57467BS8pfQKkSh_Qvrarwl4kHgpCfANqWhFS7jdnvRTwWXPNESwsP04y8ZoGtR3-p8eaq9qUYWiZg7qnfvcoqecvySpk3gZIthZOXEtchID0InjYmkbCipHZcyzUDP82hkbrWlZWFySMVwP2sDUc_WT6Lyx4aMP83R1ZMTVw1-Q-peK8Ihevw4yCfOuF_iJOMxsek-NAA4R9n2gYhQJIDOn8Hj7zuNIffjcgoDOSX-pJr0mke_elL0u5Hgnko9qAPIH6PGQJRt5U5tpa5E-beJ0_aGaBWMwK:YC-wYTJu8l_7ZfUoK4xXP6fdVjon4QPQXE92fVgvs7-B2Sw2bsbus9-QGmWcUmJPWvrnpmkT14sgoyf7mWWoJFo93DCHm8dWheC8-cDUMIQ12uHgBKL33r6Ka57kgY71",
-        "f947dd72f4:0:5221ae17483f5dfe954a0240ebf0d2b466ff7f7f67cdd702eeadbe2e510dd26a795e15b2c84f85e610becb2ca049c73687dbcc8c6407cfade6a191c6e7f70377:501adf90810f5cd095581dd0f2929184db36278fd6b48909e3a10d80560bf5603d2750143063730932b31f240ea1c30f0349d017a363a75c6c1b95b8d0c659e5:2:AvXfGGmMG2OZRaamtGYJkatdUSHv4Z1PfbdKExOGwWnOewYGcPTvBDChtlAg9IwqOgJ9-XSnSFxgskoQtI8wDFXRhrr659_FFAzM-oyQ9sj3ZrSXYnFNPpfoyiennT2nsQmP2MoahrQCMerQIIO86EXc98BWVZJO79LC5fxhTK1EWzE9APvOBFulv6c-W9dxVlD9CT-oIAjqIBL8hVUgKLdWPmtzGmAd4NnfrfiHDx4zaAkoSmFxyuUOCvfp8AioGXNLrHwIPqquOqQKw2tcIHnDaHA72JpjOV7787Eb_2pTwFhyzJVKixDrESNqhI-35SHrcsaJel1mUOGcweliqEkB:NHS7hGLadxiuFWRqT48kp1NvZ0jf4Po861scAhIFRP4hLMe6Uuk4TGmajBEzZhQjz-60as3nQN5VaHg1NjE5eFUbJuijAagi4dEyvzsQWg4HPUYn8hNe9Z95vz-n5DgO",
-        "e11c31a215:0:db25e87625513ba531ac19eff743bf6e769517776e964bec1eaed38c559de3518167075d21ea4d89d611628c559ee52336537583201dcf46f2546e3f8bcdc7ec:40a09a8a1bd5f071262a79ad52c5a6b485318ad58ec38bebf432236bece7624c96b9ef2737eb992ae15c0d63c439c384b63aa35467aee5c686c5201cf7617158:2:A4VDDuVuH4UpctYg5_-rDhLduiHcColHzGAVudbe9ri0kTx7D_paVFYG-YUZaJu4LALW8FgWbjoEYjXepWErZWrZJk-MxrA-8IfeotLDZQbBNC5V_UxpDlPt-gRdyYpz-mN5KLe21shP0JiO7eL-rnGqYS4lmw8Fk_vHDq0AL1rNCIQn6x0k0jVZsXE0SUq_8BfrC3ufI4-D-KuqpdozdR54E4vUxT6WZpoeahMFlT0w87XPbeIp4RerWw4tuuBMfvyvm9cQCqQkAaOPNT4TEzLQwlQasf1pFE3aCguvdU4i2SuIhGIXaukHoXP5nWLibQpILd71bEnwX7wBCgIrBjUM:7IXCtpXjI0RQ2I478353Ab-7iFXv9VNa9SPR18M8ra1CpZWgPD5hkfl0PRyaHkBdzvpb2VkZ0TFTIigh8ZkFUeJxgu84i_AXIaPEsTa9fevCagbR57caRa-xqLRe4Onl",
-        "69fc019ddf:0:ebb1b3c67b2c658e60afa1d14fc5586946aeb5f3abb42e3deb684d4eaa4ed04ff758e4af6770184e6aecc52d090a7992279886c88de1ca99ce80bf04d01a48e9:6011b9bed796b82bf2f981a92fdc94b62d6942a25323208ab193227935c429412a239889c8a5c07960706d936d3497db5c5bef80f5ca3f162d96d305374e3dd9:2:AiFYEjbjMSSYf8gXtV-r9YDnl6RVgKmckZi25ss3yLLi5hvdB92I8Vr80QiHcXbGkgO2YBJ1_EUMTQAeiL1VlaY3mSKf0Q892yjeoqe7sOJiWrvx1x2Xl4zD2kHi2pbLy1NA7NUkroJamJ4Z5J__rq8yNv4bsqEr2iaTiADWxKfpLRc29cjA11eiUq_Xjj72gBpr78DmT_-N63OAUhBPSHHrA60NannkvkRKcy7WsCr9pB9L0QSZd3BgoYE78VAfaOx9gJw4vihkel3lFEXEaIyoJhwcFxEBIsnfl0gagQ7NeCqRkEzeiXDVS1pFOY3BCu6zV5Q-Aqtw5yqozSXxa9QN:jmOd2wCLT5z09JXJMXOMPk91I1in7qhq0Rsdsi-xEYenHs3nPX5k___FZ3bpFYqjx914Yy65QrXKkThr3hysgiXztEtILYOr8yXf56O16Io-XB6L6CK0VrKnSb4p40Lf",
-        "74152a45b9:0:11a049ebf24d6e9911c68e1c849b4290c8b72bff2954699e54138446573e041346fa34e09b697ae3a9d7c6f94aeb1b21e54745fab10f7a56df22947ef20a5c7d:e8d19530a8ce8685ba39ca69eabfb3d0fad5ed63bf59f025a3658f33e6c629737e49e57b3c91026ef8648d6a473c8ee9f7a27a040c822a0fff44adc0079aa969:2:Ak86tzCx95V6u5t4Ty2OrAWN9PSOjIWQkk0g28VBEwo84HFVVLSl2gBKV2HYDpO2TAJlLNFxhDynea4XdHrbA6Cdv1nsNdWsaizHiClZ3qoBEf9riSimVLpwPI5BMC-1vznYivS-_gMKYmSX5D20UDKZwK3bM-p3wLwcwslurLzsv4KMk2DTzkExdWGjHkZhOC6754YLgdjM6UsYgohPHnqZNUCLo288BFxBhYshmOxrAjnFzapp67dzf5SfV9hiwhWhblEEFYa2FC1lm8WQC3dPVJwg6Bmkw8pMBzN_qoQZYAOVanzu2dUisCx0oLIVW4-AzPJOqHH1DkiUl4opkZEO:rNVgOQsylq8Xi-wnW__VvcHjqert2hl8mLhlHBu9IG4SDelD9c24Bs6skvwxV2QRBQwbvmv11f6MNkhA6PK5W22OMOmHMG8GsnXlORRH5HMfBzVBdffK_91lfBkB67pP",
-        "fe63ec5d9a:0:cb64b8f27bc6ed0c2875e98d988e11db3d1f2016d14787ed51fbc0493b58aa3b8329d49142fc9acce421b7d3a9b9908a5afed3367b589bc1b0c94ae04c8a383d:e81cc452f9f616210295f96d2034ac715c3b87ca95dbc1e77bd3dcc798719558a4ca82befa391aaffd8099787a60086b35cc6a2390c55720716ac05d2a7b116f:2:Aor2te5DUyKXFFrvOyegql5i0XOleTu4d1AfEl-SE0KZ_PiQeVsWiWsy57SXVZtFTQL7YNyV5dd3oRUmPqcFzNlfY7RnJnKwf-OfmFzin4VeCqqw-d4eAfgNaav2Y5qVC_uc-VuPdRONqSqd04n6RG9Gyz9XvMqXH8Dk6L2iVkP3y1TjyzapIbNQC8pRnsRJaPafN2QVG6qhu7clFAoOzsgkM8BKaxrTLvbznrTpjGAZk5ocb_gLZiDDwOzUsMoUI4Zi3Gky4TyHFAWX9ifJgeSh_D9gj_oGCvsQhF8xVkgsXDTkHAN4hmIEJM_myzL-XnpROFGcaN6m8y085HS7UCcB:6HVliM67dmXAgYPs-z75TTz3m6tSVX6-EpEsy6N-TsX2a_5czJImDXQ-Qhi3524tDIIktWJcUv8JGA7kTPHkqr4Jrnt6JJXG4DVf6xw-n-GpRje-EwyW4Q378tomPpw5",
-        "99ff6d1b10:0:20148e36a3dec6f91537e0bc0e2a852b6cc0fac6c664ef8ce453d7cc404b2b7c5f30bcd244d68ca009f4be0be6ad9a8ea51452d4bb8f7872cb8dacb5d1cdbc25:489fc570d4086ee0bf160d2dc8cc4547b4d3e4336c97b46d45b38064cb19087057adee0ecac1a3fc398627772407f7b814d1292db1ab8eecfdaf6177a7c09870:2:AlLlDYoNRBKH038FnkvZPXfQ1w9T19Df1AW8cav-mrJH524nbtxHI_t-cBorpm8i1wOPnYH96Bkr2LH9UeXaR0xHSNW-dqDTdWbu7uz7sqseULAq7izA8k5VcRQH9YesrcsgASmEOKxJZAc1CkjJpoCj8cwKHZECx5EE3rNFEF4ZxQth5AYg6P8isEpjMw7zBQOGlIRWV5sjVSml_JUKMnB3H9ZOE4UTxTXKVUEUJwHcp_9tXVv_RYuQOarzIRq0-jpod1kamOcLXFsYAiQbg_DwW7F2kQMdqUWJ7tHVwOxfb2CbwD40Yo_-VZ3ZJ8AGm-eY0ngO3PDBbUyKwct_ljwO:29hzAxGQd6oGze7c8XxqueXF_OnZ5WHtpAGQt3RhG2UPEl4uUximYMS25uAqARmZe4VIkwWJ16_IO7nTaizC3feRDWl1BpePoFVuUoFGsK303kUL6IH6xsqdXup2Uahg"
+    const GOOD_V1_IDENTITIES: [&'static str; 4] = [
+        "174cd00112:0:fd7e144befe03a8bca114094f576a6848224f35ef2c764f73d4b6f51ce54392127163722755be3e1de4375bec6d704e823acfa40180a39b7d76600c7776483b6::2:A9WKCt_BhL9EnKAb8SnPisFbCIXNDxFbtTxZiTjki9t5cu1xqEIOjk94s4r2CEaR5gOdpDyUGcoY0e1JjRRFK3CzVivW35eUhMKS1qQorcts35bYblMASQGp9ek047ROlKuzq4M5a-2Ymqb_fo1lhPxhaxLTmgsjmtllJJNknSOwGGYvQXukwzH4Vf0E-OWmkGrSWo6n7FkbuHwvKe7oPbhKwRQU03ya3-kM5vHGBglTOnN1NceXZvKwUhSiQ0zynt4OHrM5eJFlX3rE9mal5ml0l6CYs0Wh52byTHcav8A6tiSGNxxqU-BJ1EYEBG_kWB94gvGwImmBpaAR0xKfndIJ",
+        "4a23204ebb:0:ff61cddca9062501edc4390a8f218728fd58876ecfe2d757f611b9895d8e4e3a9cf8c6b49e18d5112f15c1a04715f0a579c2c43d7af0f3bb81de9a05135dcfcb::2:A4C5X0VLw98-g2Nc0ksfF50rt3-G-K5GGwmam2jUOGuz0IUH6cbryz3p4QjxFVEh9wM8VJUHF6yN7dpTwTWp6UMTVG5pFH6jSel-Z8GTSOJi3sybB-PFp0huY9oc0OOg1yuGbzKJFodkRmSCTku935hWVcV01HtNpNIScouXNVLIwDnxMd7iJ5J2pLJLS79Ofbf5VJWNXSIm4Ykse1BIv6vzbPZToQg_PXuIx8LFY1pGm8kb2Hx6FRUEDtP6jc3q5BDwVO8qVqatvpCTyjXWdBBURynH2FnmHeH_8u0mYse__wJoK5ICDRTxDKWWBOAOcS9pEQpjLuHnQex5cz9VI-gM",
+        "47e4f45e96:0:8a159c1ae1a81fb9f6d12027533e98178fca97c02edcb3b6f08c59578d54651cde7c596f9b7a8bb001b5ca7337ae99321a046bfcb8d5bdfd68a184a918000e7f::2:Aq0WCQ2jorXo2hlxKV8lQ0GX46DuisOSIRR8V3kg9oFbvnfa1c5W2lLMFtkqVqccAQPNPfU-Qfxh9lFUDKWNeS_bCx9Akt5Kw2yBi28eeySQP1DcHek4nVez9DG5-aTqnyyKnU3fNX34LuqMdTxZws4id33VXicY-sqKRobpyqFosC1U1SIiwqgSy290WBj_RKeZFU7QQF26cmbVF6bZ-OdYpcmNhdu_yzZ42Hh2W4duBHmJG1gDKGD-dXByaJVcnLIDwUMne8KSDZ7VaM_YfxWBmBBUqWUIpeeHnKLIlgF2ZJKgdUb8xzfUk0WzPkJfu2dcYduYGtVAG7r7jMatffMH",
+        "f172595d9d:0:739b4146fc7fff9d0234bd37b6d8c846b52bbad6f286bfc725580214b3a14149bf013dc23080d844a8cb1a0a32a6bb7caa455eeedc356660bee6cf80a7b586c1::2:A1_KXkfl5aHO6r7KmEf39Y5enSxWdiiVy6B5ZBWbhsT4sZV1Aqh4c_K2dH7s_QAydAIi-jrgvKshER7Dfn__xArPU_zWNvcW0-rCY3D0_y-Lr6b8_OjeZeN3Ry9cFkMhAyJE0x_n4uKGgFvtYFDjAtnGIzzzfnNf_h0dOFHZMRwcFRxtvo-e2hz-PuDsEQ_s350phi9N1Djtcy6aj-Cn_A0KzNpA5HFlWoOHTcNUDjZ64Eus47wemNl4lt3PBgQdcsk7MPsq122Da_LalAk_26CnbNzwifsfRnXHbHn7mf14r7YBb-8r-88LzL_Rtlnvcvhm6ib4pGFpv7TVkmkLvBoD",
     ];
 
     #[test]

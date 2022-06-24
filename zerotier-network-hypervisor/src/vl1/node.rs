@@ -537,6 +537,7 @@ impl<SI: SystemInterface> Node<SI> {
 
                         if let Some(assembled_packet) = path.receive_fragment(fragment_header.packet_id(), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks) {
                             if let Some(frag0) = assembled_packet.frags[0].as_ref() {
+                                #[cfg(debug_assertions)]
                                 debug_event!(si, "[vl1] #{:0>16x} packet fully assembled!", fragment_header_id);
 
                                 if let Ok(packet_header) = frag0.struct_at::<PacketHeader>(0) {
@@ -572,9 +573,10 @@ impl<SI: SystemInterface> Node<SI> {
                         #[cfg(debug_assertions)]
                         {
                             debug_packet_id = u64::from_be_bytes(fragment_header.id);
+                            debug_event!(si, "[vl1] #{:0>16x} forwarding packet fragment to {}", debug_packet_id, dest.to_string());
                         }
-                        debug_event!(si, "[vl1] #{:0>16x} forwarding packet fragment to {}", debug_packet_id, dest.to_string());
                         if fragment_header.increment_hops() > FORWARD_MAX_HOPS {
+                            #[cfg(debug_assertions)]
                             debug_event!(si, "[vl1] #{:0>16x} discarded: max hops exceeded!", debug_packet_id);
                             return;
                         }
@@ -583,9 +585,10 @@ impl<SI: SystemInterface> Node<SI> {
                             #[cfg(debug_assertions)]
                             {
                                 debug_packet_id = u64::from_be_bytes(packet_header.id);
+                                debug_event!(si, "[vl1] #{:0>16x} forwarding packet to {}", debug_packet_id, dest.to_string());
                             }
-                            debug_event!(si, "[vl1] #{:0>16x} forwarding packet to {}", debug_packet_id, dest.to_string());
                             if packet_header.increment_hops() > FORWARD_MAX_HOPS {
+                                #[cfg(debug_assertions)]
                                 debug_event!(si, "[vl1] #{:0>16x} discarded: max hops exceeded!", u64::from_be_bytes(packet_header.id));
                                 return;
                             }
@@ -597,6 +600,7 @@ impl<SI: SystemInterface> Node<SI> {
                     if let Some(peer) = self.peer(dest) {
                         // TODO: SHOULD we forward? Need a way to check.
                         peer.forward(si, time_ticks, data.as_ref()).await;
+                        #[cfg(debug_assertions)]
                         debug_event!(si, "[vl1] #{:0>16x} forwarded successfully", debug_packet_id);
                     }
                 }

@@ -63,7 +63,8 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
             self.state[14],
             self.state[15],
         );
-        loop {
+
+        while !plaintext.is_empty() {
             let (mut x0, mut x1, mut x2, mut x3, mut x4, mut x5, mut x6, mut x7, mut x8, mut x9, mut x10, mut x11, mut x12, mut x13, mut x14, mut x15) = (j0, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10, j11, j12, j13, j14, j15);
 
             for _ in 0..(ROUNDS / 2) {
@@ -147,40 +148,25 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
                 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
                 {
                     // Portable keystream XOR with alignment-safe access and native to little-endian conversion.
-                    ciphertext[0..4].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().cast::<[u8; 4]>() }) ^ x0.to_le()).to_ne_bytes());
-                    ciphertext[4..8].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(4).cast::<[u8; 4]>() }) ^ x1.to_le()).to_ne_bytes());
-                    ciphertext[8..12].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(8).cast::<[u8; 4]>() }) ^ x2.to_le()).to_ne_bytes());
-                    ciphertext[12..16].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(12).cast::<[u8; 4]>() }) ^ x3.to_le()).to_ne_bytes());
-                    ciphertext[16..20].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(16).cast::<[u8; 4]>() }) ^ x4.to_le()).to_ne_bytes());
-                    ciphertext[20..24].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(20).cast::<[u8; 4]>() }) ^ x5.to_le()).to_ne_bytes());
-                    ciphertext[24..28].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(24).cast::<[u8; 4]>() }) ^ x6.to_le()).to_ne_bytes());
-                    ciphertext[28..32].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(28).cast::<[u8; 4]>() }) ^ x7.to_le()).to_ne_bytes());
-                    ciphertext[32..36].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(32).cast::<[u8; 4]>() }) ^ x8.to_le()).to_ne_bytes());
-                    ciphertext[36..40].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(36).cast::<[u8; 4]>() }) ^ x9.to_le()).to_ne_bytes());
-                    ciphertext[40..44].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(40).cast::<[u8; 4]>() }) ^ x10.to_le()).to_ne_bytes());
-                    ciphertext[44..48].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(44).cast::<[u8; 4]>() }) ^ x11.to_le()).to_ne_bytes());
-                    ciphertext[48..52].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(48).cast::<[u8; 4]>() }) ^ x12.to_le()).to_ne_bytes());
-                    ciphertext[52..56].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(52).cast::<[u8; 4]>() }) ^ x13.to_le()).to_ne_bytes());
-                    ciphertext[56..60].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(56).cast::<[u8; 4]>() }) ^ x14.to_le()).to_ne_bytes());
-                    ciphertext[60..64].copy_from_slice(&(u32::from_ne_bytes(unsafe { *plaintext.as_ptr().add(60).cast::<[u8; 4]>() }) ^ x15.to_le()).to_ne_bytes());
+                    let keystream = [x0.to_le(), x1.to_le(), x2.to_le(), x3.to_le(), x4.to_le(), x5.to_le(), x6.to_le(), x7.to_le(), x8.to_le(), x9.to_le(), x10.to_le(), x11.to_le(), x12.to_le(), x13.to_le(), x14.to_le(), x15.to_le()];
+                    for i in 0..64 {
+                        ciphertext[i] = plaintext[i] ^ unsafe { *keystream.as_ptr().cast::<u8>().add(i) };
+                    }
                 }
 
                 plaintext = &plaintext[64..];
                 ciphertext = &mut ciphertext[64..];
             } else {
-                if !plaintext.is_empty() {
-                    let remainder = [x0.to_le(), x1.to_le(), x2.to_le(), x3.to_le(), x4.to_le(), x5.to_le(), x6.to_le(), x7.to_le(), x8.to_le(), x9.to_le(), x10.to_le(), x11.to_le(), x12.to_le(), x13.to_le(), x14.to_le(), x15.to_le()];
-                    for i in 0..plaintext.len() {
-                        ciphertext[i] = plaintext[i] ^ unsafe { *remainder.as_ptr().cast::<u8>().add(i) };
-                    }
+                let keystream = [x0.to_le(), x1.to_le(), x2.to_le(), x3.to_le(), x4.to_le(), x5.to_le(), x6.to_le(), x7.to_le(), x8.to_le(), x9.to_le(), x10.to_le(), x11.to_le(), x12.to_le(), x13.to_le(), x14.to_le(), x15.to_le()];
+                for i in 0..plaintext.len() {
+                    ciphertext[i] = plaintext[i] ^ unsafe { *keystream.as_ptr().cast::<u8>().add(i) };
                 }
-
-                self.state[8] = j8;
-                self.state[9] = j9;
-
                 break;
             }
         }
+
+        self.state[8] = j8;
+        self.state[9] = j9;
     }
 
     #[inline(always)]
