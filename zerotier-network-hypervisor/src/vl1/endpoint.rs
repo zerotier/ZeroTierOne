@@ -425,3 +425,36 @@ impl<'de> Deserialize<'de> for Endpoint {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use zerotier_core_crypto::hash::SHA512_HASH_SIZE;
+
+    use super::{Endpoint, MAX_MARSHAL_SIZE};
+    use crate::{util::marshalable::Marshalable, vl1::Address};
+
+    #[test]
+    fn endpoint_default() {
+        let e: Endpoint = Default::default();
+        assert!(matches!(e, Endpoint::Nil))
+    }
+
+    #[test]
+    fn endpoint_from_bytes() {
+        let v = [0u8; MAX_MARSHAL_SIZE];
+        assert!(Endpoint::from_bytes(&v).is_none());
+    }
+
+    #[test]
+    fn endpoint_marshal() {
+        use crate::util::buffer::Buffer;
+
+        let mut hash = [0u8; SHA512_HASH_SIZE];
+        hash.fill_with(|| rand::random());
+        let zte = Endpoint::ZeroTier(Address::from_u64(rand::random::<u64>() + 1).unwrap(), hash);
+
+        let mut buf = Buffer::<72>::new();
+
+        assert!(zte.marshal(&mut buf).is_ok());
+    }
+}
