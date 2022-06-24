@@ -1,8 +1,0 @@
-/** pqxx::field class.
- *
- * pqxx::field refers to a field in a query result.
- */
-// Actual definitions in .hxx file so editors and such recognize file type.
-#include "pqxx/internal/header-pre.hxx"
-#include "pqxx/field.hxx"
-#include "pqxx/internal/header-post.hxx"
