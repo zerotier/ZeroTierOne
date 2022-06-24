@@ -233,9 +233,17 @@ pub mod security_constants {
 }
 
 pub mod session_metadata {
+    /// Random 128-bit ID generated at node startup, allows multiple instances to share an identity and be differentiated.
     pub const INSTANCE_ID: &'static str = "i";
+
+    /// Endpoint to which HELLO packet was sent.
     pub const SENT_TO: &'static str = "d";
+
+    /// Signed bundle of identity fingerprints through which this node can be reached.
     pub const CARE_OF: &'static str = "c";
+
+    /// One or more root sets to which THIS node is a member. Included only if this is a root.
+    pub const MY_ROOT_SETS: &'static str = "r";
 }
 
 /// Maximum number of packet hops allowed by the protocol.

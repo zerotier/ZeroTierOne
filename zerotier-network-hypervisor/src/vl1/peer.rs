@@ -421,6 +421,9 @@ impl<SI: SystemInterface> Peer<SI> {
             session_metadata.set_bytes(session_metadata::INSTANCE_ID, node.instance_id.to_vec());
             session_metadata.set_bytes(session_metadata::CARE_OF, node.care_of_bytes());
             session_metadata.set_bytes(session_metadata::SENT_TO, destination.to_buffer::<{ Endpoint::MAX_MARSHAL_SIZE }>().unwrap().as_bytes().to_vec());
+            if let Some(my_root_sets) = node.my_root_sets() {
+                session_metadata.set_bytes(session_metadata::MY_ROOT_SETS, my_root_sets);
+            }
             let session_metadata = session_metadata.to_bytes();
 
             // Prefix encrypted session metadata with its size (in cleartext).

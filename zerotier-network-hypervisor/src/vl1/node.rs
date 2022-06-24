@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::io::Write;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
@@ -12,6 +13,7 @@ use parking_lot::{Mutex, RwLock};
 use crate::error::InvalidParameterError;
 use crate::util::debug_event;
 use crate::util::gate::IntervalGate;
+use crate::util::marshalable::Marshalable;
 use crate::vl1::careof::CareOf;
 use crate::vl1::path::{Path, PathServiceResult};
 use crate::vl1::peer::Peer;
@@ -137,6 +139,7 @@ struct RootInfo<SI: SystemInterface> {
     sets: HashMap<String, RootSet>,
     roots: HashMap<Arc<Peer<SI>>, Vec<Endpoint>>,
     care_of: Vec<u8>,
+    my_root_sets: Option<Vec<u8>>,
     sets_modified: bool,
     online: bool,
 }
@@ -260,6 +263,7 @@ impl<SI: SystemInterface> Node<SI> {
                 sets: HashMap::new(),
                 roots: HashMap::new(),
                 care_of: Vec::new(),
+                my_root_sets: None,
                 sets_modified: false,
                 online: false,
             }),
@@ -363,12 +367,13 @@ impl<SI: SystemInterface> Node<SI> {
             } {
                 debug_event!(si, "[vl1] root sets modified, synchronizing internal data structures");
 
-                let (mut old_root_identities, address_collisions, new_roots, bad_identities) = {
+                let (mut old_root_identities, address_collisions, new_roots, bad_identities, my_root_sets) = {
                     let roots = self.roots.read();
 
                     let old_root_identities: Vec<Identity> = roots.roots.iter().map(|(p, _)| p.identity.clone()).collect();
                     let mut new_roots = HashMap::new();
                     let mut bad_identities = Vec::new();
+                    let mut my_root_sets: Option<Vec<u8>> = None;
 
                     // This is a sanity check to make sure we don't have root sets that contain roots with the same address
                     // but a different identity. If we do, the offending address is blacklisted. This would indicate something
@@ -376,18 +381,20 @@ impl<SI: SystemInterface> Node<SI> {
                     let mut address_collisions = Vec::new();
                     {
                         let mut address_collision_check = HashMap::with_capacity(roots.sets.len() * 8);
-                        for (_, rc) in roots.sets.iter() {
-                            for m in rc.members.iter() {
-                                if self.peers.read().get(&m.identity.address).map_or(false, |p| !p.identity.eq(&m.identity)) || address_collision_check.insert(m.identity.address, &m.identity).map_or(false, |old_id| !old_id.eq(&m.identity)) {
+                        for (_, rs) in roots.sets.iter() {
+                            for m in rs.members.iter() {
+                                if m.identity.eq(&self.identity) {
+                                    let _ = my_root_sets.get_or_insert_with(|| Vec::new()).write_all(rs.to_bytes().as_slice());
+                                } else if self.peers.read().get(&m.identity.address).map_or(false, |p| !p.identity.eq(&m.identity)) || address_collision_check.insert(m.identity.address, &m.identity).map_or(false, |old_id| !old_id.eq(&m.identity)) {
                                     address_collisions.push(m.identity.address);
                                 }
                             }
                         }
                     }
 
-                    for (_, rc) in roots.sets.iter() {
-                        for m in rc.members.iter() {
-                            if m.endpoints.is_some() && !address_collisions.contains(&m.identity.address) {
+                    for (_, rs) in roots.sets.iter() {
+                        for m in rs.members.iter() {
+                            if m.endpoints.is_some() && !address_collisions.contains(&m.identity.address) && !m.identity.eq(&self.identity) {
                                 debug_event!(si, "[vl1] examining root {} with {} endpoints", m.identity.address.to_string(), m.endpoints.as_ref().map_or(0, |e| e.len()));
                                 let peers = self.peers.upgradable_read();
                                 if let Some(peer) = peers.get(&m.identity.address) {
@@ -403,7 +410,7 @@ impl<SI: SystemInterface> Node<SI> {
                         }
                     }
 
-                    (old_root_identities, address_collisions, new_roots, bad_identities)
+                    (old_root_identities, address_collisions, new_roots, bad_identities, my_root_sets)
                 };
 
                 for c in address_collisions.iter() {
@@ -414,9 +421,9 @@ impl<SI: SystemInterface> Node<SI> {
                 }
 
                 let mut new_root_identities: Vec<Identity> = new_roots.iter().map(|(p, _)| p.identity.clone()).collect();
-
                 old_root_identities.sort_unstable();
                 new_root_identities.sort_unstable();
+
                 if !old_root_identities.eq(&new_root_identities) {
                     let mut care_of = CareOf::new(si.time_clock());
                     for id in new_root_identities.iter() {
@@ -429,6 +436,7 @@ impl<SI: SystemInterface> Node<SI> {
                         let mut roots = self.roots.write();
                         roots.roots = new_roots;
                         roots.care_of = care_of;
+                        roots.my_root_sets = my_root_sets;
                     }
 
                     si.event(Event::UpdatedRoots(old_root_identities, new_root_identities));
@@ -638,6 +646,10 @@ impl<SI: SystemInterface> Node<SI> {
 
     pub fn root_sets(&self) -> Vec<RootSet> {
         self.roots.read().sets.values().cloned().collect()
+    }
+
+    pub(crate) fn my_root_sets(&self) -> Option<Vec<u8>> {
+        self.roots.read().my_root_sets.clone()
     }
 
     pub(crate) fn care_of_bytes(&self) -> Vec<u8> {
