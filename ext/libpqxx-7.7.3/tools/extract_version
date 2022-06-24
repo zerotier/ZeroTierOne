@@ -1,0 +1,73 @@
+#! /bin/sh
+set -eu
+
+ARG="${1:-}"
+
+# Source directory.  In out-of-tree builds, Automake sets this for us.
+srcdir=${srcdir:-.}
+
+
+# Print usage information.
+usage() {
+	cat <<EOF
+Print libpqxx version information based on the source tree's VERSION file.
+
+Usage: $0 [option]
+
+Version strings look like: <major>.<minor>.<revision>.
+
+Acceptable option values are:
+    -h, --help     Print this message, and exit.
+    -a, --abi      Show libpqxx ABI version; leave out revision number.
+    -f, --full     Show full libpqxx version string (the default).
+    -M, --major    Show major libpqxx version.
+    -m, --minor    Show minor libpqxx version (between major and revision).
+EOF
+}
+
+
+# Print "unknown argument" error.
+unknown_arg() {
+	cat <<EOF >&2
+Unknown argument: $1.
+Try
+
+	$0 --help
+
+for usage information.
+EOF
+}
+
+
+case "$ARG" in
+''|-f|--full)
+	# Default: Print full version.
+	cat $srcdir/VERSION
+	;;
+
+-h|--help)
+	# Print usage information, and exit.
+	usage
+	exit
+	;;
+
+-a|--abi)
+	# Print just the ABI version (major & minor).
+	sed -e 's/^\([^.]*\.[^.]*\)\..*/\1/' $srcdir/VERSION
+	;;
+
+-M|--major)
+	# Print the major version number.
+	sed -e 's/^\([^.]*\)\..*/\1/' $srcdir/VERSION
+	;;
+
+-m|--minor)
+	# Print the minor version number.
+	sed -e 's/^[^.]*\.\([^.]*\)\..*/\1/' $srcdir/VERSION
+	;;
+
+*)
+	unknown_arg $ARG
+	exit 1
+	;;
+esac

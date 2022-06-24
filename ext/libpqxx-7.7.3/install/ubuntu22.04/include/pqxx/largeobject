@@ -1,0 +1,8 @@
+/** Large Objects interface.
+ *
+ * Supports direct access to large objects, as well as through I/O streams
+ */
+// Actual definitions in .hxx file so editors and such recognize file type.
+#include "pqxx/internal/header-pre.hxx"
+#include "pqxx/largeobject.hxx"
+#include "pqxx/internal/header-post.hxx"
