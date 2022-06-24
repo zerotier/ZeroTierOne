@@ -261,18 +261,15 @@ impl Identity {
     ///
     /// If both sides have NIST P-384 keys then key agreement is performed using both Curve25519 and
     /// NIST P-384 and the result is HMAC(Curve25519 secret, NIST P-384 secret).
-    ///
-    /// Nothing actually uses a 512-bit secret directly, but if the base secret is 512 bits then
-    /// no entropy is lost when deriving smaller secrets with a KDF.
-    pub fn agree(&self, other: &Identity) -> Option<Secret<64>> {
+    pub fn agree(&self, other: &Identity) -> Option<Secret<48>> {
         if let Some(secret) = self.secret.as_ref() {
-            let c25519_secret = Secret(SHA512::hash(&secret.c25519.agree(&other.c25519).0));
+            let c25519_secret: Secret<48> = Secret((&SHA512::hash(&secret.c25519.agree(&other.c25519).0)[..48]).try_into().unwrap());
 
             // FIPS note: FIPS-compliant exchange algorithms must be the last algorithms in any HKDF chain
             // for the final result to be technically FIPS compliant. Non-FIPS algorithm secrets are considered
             // a salt in the HMAC(salt, key) HKDF construction.
             if secret.p384.is_some() && other.p384.is_some() {
-                secret.p384.as_ref().unwrap().ecdh.agree(&other.p384.as_ref().unwrap().ecdh).map(|p384_secret| Secret(hmac_sha512(&c25519_secret.0, &p384_secret.0)))
+                secret.p384.as_ref().unwrap().ecdh.agree(&other.p384.as_ref().unwrap().ecdh).map(|p384_secret| Secret(hmac_sha384(&c25519_secret.0, &p384_secret.0)))
             } else {
                 Some(c25519_secret)
             }

@@ -12,6 +12,7 @@ use parking_lot::{Mutex, RwLock};
 use crate::error::InvalidParameterError;
 use crate::util::debug_event;
 use crate::util::gate::IntervalGate;
+use crate::vl1::careof::CareOf;
 use crate::vl1::path::{Path, PathServiceResult};
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
@@ -133,8 +134,9 @@ struct BackgroundTaskIntervals {
 }
 
 struct RootInfo<SI: SystemInterface> {
-    roots: HashMap<Arc<Peer<SI>>, Vec<Endpoint>>,
     sets: HashMap<String, RootSet>,
+    roots: HashMap<Arc<Peer<SI>>, Vec<Endpoint>>,
+    care_of: Vec<u8>,
     sets_modified: bool,
     online: bool,
 }
@@ -255,8 +257,9 @@ impl<SI: SystemInterface> Node<SI> {
             paths: parking_lot::RwLock::new(HashMap::new()),
             peers: parking_lot::RwLock::new(HashMap::new()),
             roots: RwLock::new(RootInfo {
-                roots: HashMap::new(),
                 sets: HashMap::new(),
+                roots: HashMap::new(),
+                care_of: Vec::new(),
                 sets_modified: false,
                 online: false,
             }),
@@ -415,7 +418,19 @@ impl<SI: SystemInterface> Node<SI> {
                 old_root_identities.sort_unstable();
                 new_root_identities.sort_unstable();
                 if !old_root_identities.eq(&new_root_identities) {
-                    self.roots.write().roots = new_roots;
+                    let mut care_of = CareOf::new(si.time_clock());
+                    for id in new_root_identities.iter() {
+                        care_of.add_care_of(id);
+                    }
+                    assert!(care_of.sign(&self.identity));
+                    let care_of = care_of.to_bytes();
+
+                    {
+                        let mut roots = self.roots.write();
+                        roots.roots = new_roots;
+                        roots.care_of = care_of;
+                    }
+
                     si.event(Event::UpdatedRoots(old_root_identities, new_root_identities));
                 }
             }
@@ -621,7 +636,11 @@ impl<SI: SystemInterface> Node<SI> {
         self.roots.read().sets.values().cloned().collect()
     }
 
-    pub fn canonical_path(&self, ep: &Endpoint, local_socket: &SI::LocalSocket, local_interface: &SI::LocalInterface, time_ticks: i64) -> Arc<Path<SI>> {
+    pub(crate) fn care_of_bytes(&self) -> Vec<u8> {
+        self.roots.read().care_of.clone()
+    }
+
+    pub(crate) fn canonical_path(&self, ep: &Endpoint, local_socket: &SI::LocalSocket, local_interface: &SI::LocalInterface, time_ticks: i64) -> Arc<Path<SI>> {
         if let Some(path) = self.paths.read().get(&PathKey::Ref(ep, local_socket)) {
             return path.clone();
         }

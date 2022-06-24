@@ -55,6 +55,7 @@ pub struct Peer<SI: SystemInterface> {
     pub(crate) last_hello_reply_time_ticks: AtomicI64,
     last_forward_time_ticks: AtomicI64,
     create_time_ticks: i64,
+    random_ticks_offset: u64,
 
     // Counter for assigning sequential message IDs.
     message_id_counter: AtomicU64,
@@ -165,11 +166,33 @@ impl<SI: SystemInterface> Peer<SI> {
                 last_forward_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
                 last_hello_reply_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
                 create_time_ticks: time_ticks,
+                random_ticks_offset: next_u64_secure(),
                 message_id_counter: AtomicU64::new(((time_clock as u64) / 100).wrapping_shl(28) ^ next_u64_secure().wrapping_shr(36)),
                 remote_version: AtomicU64::new(0),
                 remote_protocol_version: AtomicU8::new(0),
             }
         })
+    }
+
+    /// Get the remote version of this peer: major, minor, revision, and build.
+    /// Returns None if it's not yet known.
+    pub fn version(&self) -> Option<[u16; 4]> {
+        let rv = self.remote_version.load(Ordering::Relaxed);
+        if rv != 0 {
+            Some([(rv >> 48) as u16, (rv >> 32) as u16, (rv >> 16) as u16, rv as u16])
+        } else {
+            None
+        }
+    }
+
+    /// Get the remote protocol version of this peer or None if not yet known.
+    pub fn protocol_version(&self) -> Option<u8> {
+        let pv = self.remote_protocol_version.load(Ordering::Relaxed);
+        if pv != 0 {
+            Some(pv)
+        } else {
+            None
+        }
     }
 
     /// Get the next message ID for sending a message to this peer.
@@ -201,30 +224,48 @@ impl<SI: SystemInterface> Peer<SI> {
         return None;
     }
 
-    /// Get the remote version of this peer: major, minor, revision, and build.
-    /// Returns None if it's not yet known.
-    pub fn version(&self) -> Option<[u16; 4]> {
-        let rv = self.remote_version.load(Ordering::Relaxed);
-        if rv != 0 {
-            Some([(rv >> 48) as u16, (rv >> 32) as u16, (rv >> 16) as u16, rv as u16])
-        } else {
-            None
-        }
-    }
-
-    /// Get the remote protocol version of this peer or None if not yet known.
-    pub fn protocol_version(&self) -> Option<u8> {
-        let pv = self.remote_protocol_version.load(Ordering::Relaxed);
-        if pv != 0 {
-            Some(pv)
-        } else {
-            None
-        }
-    }
-
     /// Sort a list of paths by quality or priority, with best paths first.
     fn prioritize_paths(paths: &mut Vec<PeerPath<SI>>) {
         paths.sort_unstable_by(|a, b| a.last_receive_time_ticks.cmp(&b.last_receive_time_ticks).reverse());
+    }
+
+    pub(crate) fn learn_path(&self, si: &SI, new_path: &Arc<Path<SI>>, time_ticks: i64) {
+        let mut paths = self.paths.lock();
+
+        // If this is an IpUdp endpoint, scan the existing paths and replace any that come from
+        // the same IP address but a different port. This prevents the accumulation of duplicate
+        // paths to the same peer over different ports.
+        match &new_path.endpoint {
+            Endpoint::IpUdp(new_ip) => {
+                for pi in paths.iter_mut() {
+                    if let Some(p) = pi.path.upgrade() {
+                        match &p.endpoint {
+                            Endpoint::IpUdp(existing_ip) => {
+                                if existing_ip.ip_bytes().eq(new_ip.ip_bytes()) {
+                                    debug_event!(si, "[vl1] {} replacing path {} with {} (same IP, different port)", self.identity.address.to_string(), p.endpoint.to_string(), new_path.endpoint.to_string());
+                                    pi.path = Arc::downgrade(new_path);
+                                    pi.canonical_instance_id = new_path.canonical.canonical_instance_id();
+                                    pi.last_receive_time_ticks = time_ticks;
+                                    Self::prioritize_paths(&mut paths);
+                                    return;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        // Otherwise learn new path.
+        debug_event!(si, "[vl1] {} learned new path: {}", self.identity.address.to_string(), new_path.endpoint.to_string());
+        paths.push(PeerPath::<SI> {
+            path: Arc::downgrade(new_path),
+            canonical_instance_id: new_path.canonical.canonical_instance_id(),
+            last_receive_time_ticks: time_ticks,
+        });
+        Self::prioritize_paths(&mut paths);
     }
 
     /// Called every SERVICE_INTERVAL_MS by the background service loop in Node.
@@ -278,9 +319,9 @@ impl<SI: SystemInterface> Peer<SI> {
             if let Ok(mut verb) = payload.u8_at(0) {
                 let extended_authentication = (verb & packet_constants::VERB_FLAG_EXTENDED_AUTHENTICATION) != 0;
                 if extended_authentication {
-                    if payload.len() >= SHA512_HASH_SIZE {
-                        let actual_end_of_payload = payload.len() - SHA512_HASH_SIZE;
-                        let mut hmac = HMACSHA512::new(self.identity_symmetric_key.packet_hmac_key.as_bytes());
+                    if payload.len() >= SHA384_HASH_SIZE {
+                        let actual_end_of_payload = payload.len() - SHA384_HASH_SIZE;
+                        let mut hmac = HMACSHA384::new(self.identity_symmetric_key.packet_hmac_key.as_bytes());
                         hmac.update(&node.identity.fingerprint);
                         hmac.update(&self.identity.fingerprint);
                         hmac.update(&message_id.to_ne_bytes());
@@ -331,7 +372,7 @@ impl<SI: SystemInterface> Peer<SI> {
                         //VERB_VL1_NOP => {}
                         verbs::VL1_HELLO => self.handle_incoming_hello(si, node, time_ticks, source_path, &payload).await,
                         verbs::VL1_ERROR => self.handle_incoming_error(si, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload).await,
-                        verbs::VL1_OK => self.handle_incoming_ok(si, ph, node, time_ticks, source_path, path_is_known, forward_secrecy, extended_authentication, &payload).await,
+                        verbs::VL1_OK => self.handle_incoming_ok(si, ph, node, time_ticks, source_path, packet_header.hops(), path_is_known, forward_secrecy, extended_authentication, &payload).await,
                         verbs::VL1_WHOIS => self.handle_incoming_whois(si, node, time_ticks, source_path, &payload).await,
                         verbs::VL1_RENDEZVOUS => self.handle_incoming_rendezvous(si, node, time_ticks, source_path, &payload).await,
                         verbs::VL1_ECHO => self.handle_incoming_echo(si, node, time_ticks, source_path, &payload).await,
@@ -463,7 +504,7 @@ impl<SI: SystemInterface> Peer<SI> {
                 hello_fixed_headers.version_major = VERSION_MAJOR;
                 hello_fixed_headers.version_minor = VERSION_MINOR;
                 hello_fixed_headers.version_revision = (VERSION_REVISION as u16).to_be_bytes();
-                hello_fixed_headers.timestamp = si.time_clock().to_be_bytes();
+                hello_fixed_headers.timestamp = (time_ticks as u64).wrapping_add(self.random_ticks_offset).to_be_bytes();
             }
 
             assert_eq!(packet.len(), 41);
@@ -471,8 +512,16 @@ impl<SI: SystemInterface> Peer<SI> {
             // Full identity of this node.
             assert!(node.identity.marshal_with_options(&mut packet, Identity::ALGORITHM_ALL, false).is_ok());
 
-            // Append two reserved bytes, currently always zero.
-            assert!(packet.append_padding(0, 2).is_ok());
+            // Create session meta-data.
+            let mut session_metadata = Dictionary::new();
+            session_metadata.set_bytes(session_metadata::INSTANCE_ID, node.instance_id.to_vec());
+            session_metadata.set_bytes(session_metadata::CARE_OF, node.care_of_bytes());
+            session_metadata.set_bytes(session_metadata::SENT_TO, destination.to_buffer::<{ Endpoint::MAX_MARSHAL_SIZE }>().unwrap().as_bytes().to_vec());
+            let session_metadata = session_metadata.to_bytes();
+
+            // Prefix encrypted session metadata with its size (in cleartext).
+            assert!(session_metadata.len() <= 0xffff); // sanity check, should be impossible
+            assert!(packet.append_u16(session_metadata.len() as u16).is_ok());
 
             // Append a 16-byte AES-CTR nonce. LEGACY: for compatibility the last two bytes of this nonce
             // are in fact an encryption of two zeroes with Salsa20/12, which old nodes will interpret as
@@ -483,22 +532,7 @@ impl<SI: SystemInterface> Peer<SI> {
             Salsa::<12>::new(&self.identity_symmetric_key.key.0[0..32], &salsa_iv).crypt(&crate::util::ZEROES[..2], &mut nonce[14..]);
             assert!(packet.append_bytes_fixed(&nonce).is_ok());
 
-            // Add session meta-data, which is encrypted using plain AES-CTR. No authentication (AEAD) is needed
-            // because the whole packet is authenticated. While the data in this section is not necessarily critical
-            // to protect, encrypting it is a defense in depth measure.
-            let mut session_metadata = Dictionary::new();
-            session_metadata.set_bytes(session_metadata::INSTANCE_ID, node.instance_id.to_vec());
-            session_metadata.set_u64(session_metadata::TIME_TICKS, time_ticks as u64);
-            session_metadata.set_bytes(session_metadata::SENT_TO, destination.to_buffer::<{ Endpoint::MAX_MARSHAL_SIZE }>().unwrap().as_bytes().to_vec());
-            let session_metadata = session_metadata.to_bytes();
-
-            // Prefix encrypted session metadata with its size (in cleartext).
-            assert!(session_metadata.len() <= 0xffff); // sanity check, should be impossible
-            assert!(packet.append_u16(session_metadata.len() as u16).is_ok());
-
-            // Write session meta-data in encrypted form. A derived key is made using the message ID as a salt
-            // because this only ever uses the permanent identity key. In V2 we don't want to get near any
-            // key usage boundaries unless forward secrecy is off for some reason.
+            // Write session meta-data in encrypted form.
             nonce[12] &= 0x7f; // mask off the MSB of the 32-bit counter part of the CTR nonce for compatibility with AES libraries that don't wrap
             let salted_key = Secret(hmac_sha384(&message_id.to_ne_bytes(), self.identity_symmetric_key.hello_private_section_key.as_bytes()));
             let mut aes = AesCtr::new(&salted_key.as_bytes()[0..32]);
@@ -506,12 +540,12 @@ impl<SI: SystemInterface> Peer<SI> {
             aes.crypt(session_metadata.as_slice(), packet.append_bytes_get_mut(session_metadata.len()).unwrap());
 
             // Set fragment flag if the packet will need to be fragmented.
-            if (packet.len() + SHA512_HASH_SIZE) > max_fragment_size {
+            if (packet.len() + SHA384_HASH_SIZE) > max_fragment_size {
                 set_packet_fragment_flag(&mut packet);
             }
 
-            // Seal packet with HMAC-SHA512 extended authentication.
-            let mut hmac = HMACSHA512::new(self.identity_symmetric_key.packet_hmac_key.as_bytes());
+            // Seal packet with HMAC-SHA384 extended authentication.
+            let mut hmac = HMACSHA384::new(self.identity_symmetric_key.packet_hmac_key.as_bytes());
             hmac.update(&self.identity.fingerprint);
             hmac.update(&node.identity.fingerprint);
             hmac.update(&message_id.to_ne_bytes());
@@ -561,55 +595,34 @@ impl<SI: SystemInterface> Peer<SI> {
     }
 
     #[allow(unused)]
-    async fn handle_incoming_ok<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, path_is_known: bool, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) {
+    async fn handle_incoming_ok<PH: InnerProtocolInterface>(
+        &self,
+        si: &SI,
+        ph: &PH,
+        node: &Node<SI>,
+        time_ticks: i64,
+        source_path: &Arc<Path<SI>>,
+        hops: u8,
+        path_is_known: bool,
+        forward_secrecy: bool,
+        extended_authentication: bool,
+        payload: &PacketBuffer,
+    ) {
         let mut cursor: usize = 1;
         if let Ok(ok_header) = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor) {
             let in_re_message_id = u64::from_ne_bytes(ok_header.in_re_message_id);
             let current_packet_id_counter = self.message_id_counter.load(Ordering::Relaxed);
             if current_packet_id_counter.wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
-                // TODO: learn new paths
-                /*
-                if !path_is_known {
-                    let mut paths = self.paths.lock();
-                    paths.retain_mut(|p| {
-                        if let Some(path) = p.path.upgrade() {
-                            match (&path.endpoint, &source_path.endpoint) {
-                                (Endpoint::IpUdp(current_address), Endpoint::IpUdp(source_address)) => {
-                                    if current_address.ip_bytes().eq(source_address.ip_bytes()) {
-                                        // In UDP mode, replace paths that come from the same IP but a different port. This helps avoid
-                                        // creating endless duplicate paths in NAT traversal scenarios if a NAT changes its port.
-                                        p.path = Arc::downgrade(source_path);
-                                        p.path_internal_instance_id = source_path.internal_instance_id;
-                                        p.last_receive_time_ticks = time_ticks;
-                                        path_is_known = true;
-                                        true
-                                    } else {
-                                        true
-                                    }
-                                }
-                                _ => true,
-                            }
-                        } else {
-                            false
-                        }
-                    });
-                    if !path_is_known {
-                        paths.push(PeerPath::<SI> {
-                            path: Arc::downgrade(source_path),
-                            path_internal_instance_id: source_path.internal_instance_id,
-                            last_receive_time_ticks: time_ticks,
-                        });
-                    }
-                    Self::prioritize_paths(&mut paths);
-                }
-                */
-
                 match ok_header.in_re_verb {
                     verbs::VL1_HELLO => {
-                        // TODO
+                        if hops == 0 && !path_is_known {
+                            self.learn_path(si, source_path, time_ticks);
+                        }
                         self.last_hello_reply_time_ticks.store(time_ticks, Ordering::Relaxed);
                     }
+
                     verbs::VL1_WHOIS => {}
+
                     _ => {
                         ph.handle_ok(self, &source_path, forward_secrecy, extended_authentication, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor).await;
                     }

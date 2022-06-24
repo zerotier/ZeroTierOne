@@ -234,8 +234,8 @@ pub mod security_constants {
 
 pub mod session_metadata {
     pub const INSTANCE_ID: &'static str = "i";
-    pub const TIME_TICKS: &'static str = "t";
     pub const SENT_TO: &'static str = "d";
+    pub const CARE_OF: &'static str = "c";
 }
 
 /// Maximum number of packet hops allowed by the protocol.
