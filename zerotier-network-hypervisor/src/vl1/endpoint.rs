@@ -428,10 +428,11 @@ impl<'de> Deserialize<'de> for Endpoint {
 
 #[cfg(test)]
 mod tests {
-    use zerotier_core_crypto::hash::SHA512_HASH_SIZE;
-
     use super::{Endpoint, MAX_MARSHAL_SIZE};
-    use crate::{util::marshalable::Marshalable, vl1::Address};
+    use crate::{
+        util::marshalable::Marshalable,
+        vl1::{protocol::IDENTITY_FINGERPRINT_SIZE, Address},
+    };
 
     #[test]
     fn endpoint_default() {
@@ -449,7 +450,7 @@ mod tests {
     fn endpoint_marshal() {
         use crate::util::buffer::Buffer;
 
-        let mut hash = [0u8; SHA512_HASH_SIZE];
+        let mut hash = [0u8; IDENTITY_FINGERPRINT_SIZE];
         hash.fill_with(|| rand::random());
         let zte = Endpoint::ZeroTier(Address::from_u64(rand::random::<u64>() + 1).unwrap(), hash);
 

@@ -61,10 +61,12 @@ impl CareOf {
         }
     }
 
+    #[allow(unused)]
     pub fn verify(&self, signer: &Identity) -> bool {
         signer.verify(self.to_bytes_internal(false).as_slice(), self.signature.as_slice())
     }
 
+    #[allow(unused)]
     pub fn contains(&self, id: &Identity) -> bool {
         self.fingerprints.binary_search(&id.fingerprint).is_ok()
     }
