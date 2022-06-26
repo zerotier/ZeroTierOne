@@ -30,7 +30,7 @@ pub(crate) const MAX_MARSHAL_SIZE: usize = 1024;
 /// A communication endpoint on the network where a ZeroTier node can be reached.
 ///
 /// Currently only a few of these are supported. The rest are reserved for future use.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Endpoint {
     /// A null endpoint.
     Nil,
@@ -131,7 +131,7 @@ impl Marshalable for Endpoint {
 
     fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         match self {
-            Endpoint::Nil => buf.append_u8(TYPE_NIL),
+            Endpoint::Nil => buf.append_u8(16 + TYPE_NIL),
             Endpoint::ZeroTier(a, h) => {
                 buf.append_u8(16 + TYPE_ZEROTIER)?;
                 buf.append_bytes_fixed(&a.to_bytes())?;
@@ -431,7 +431,10 @@ mod tests {
     use super::{Endpoint, MAX_MARSHAL_SIZE};
     use crate::{
         util::marshalable::Marshalable,
-        vl1::{protocol::IDENTITY_FINGERPRINT_SIZE, Address},
+        vl1::{
+            protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE, IDENTITY_FINGERPRINT_SIZE},
+            Address,
+        },
     };
 
     #[test]
@@ -447,15 +450,171 @@ mod tests {
     }
 
     #[test]
-    fn endpoint_marshal() {
+    fn endpoint_marshal_nil() {
         use crate::util::buffer::Buffer;
 
-        let mut hash = [0u8; IDENTITY_FINGERPRINT_SIZE];
-        hash.fill_with(|| rand::random());
-        let zte = Endpoint::ZeroTier(Address::from_u64(rand::random::<u64>() + 1).unwrap(), hash);
+        let n = Endpoint::Nil;
 
-        let mut buf = Buffer::<72>::new();
+        let mut buf = Buffer::<1>::new();
 
-        assert!(zte.marshal(&mut buf).is_ok());
+        let res = n.marshal(&mut buf);
+        assert!(res.is_ok());
+
+        let res = Endpoint::unmarshal(&buf, &mut 0);
+        assert!(res.is_ok());
+
+        let n2 = res.unwrap();
+        assert_eq!(n, n2);
+    }
+
+    #[test]
+    fn endpoint_marshal_zerotier() {
+        use crate::util::buffer::Buffer;
+
+        for _ in 0..1000 {
+            let mut hash = [0u8; IDENTITY_FINGERPRINT_SIZE];
+            hash.fill_with(|| rand::random());
+
+            let mut v = [0u8; ADDRESS_SIZE];
+            v.fill_with(|| rand::random());
+
+            // correct for situations where RNG generates a prefix which generates a None value.
+            while v[0] == ADDRESS_RESERVED_PREFIX {
+                v[0] = rand::random()
+            }
+
+            let zte = Endpoint::ZeroTier(Address::from_bytes(&v).unwrap(), hash);
+
+            const TMP: usize = IDENTITY_FINGERPRINT_SIZE + 8;
+            let mut buf = Buffer::<TMP>::new();
+
+            let res = zte.marshal(&mut buf);
+            assert!(res.is_ok());
+
+            let res = Endpoint::unmarshal(&buf, &mut 0);
+            assert!(res.is_ok());
+
+            let zte2 = res.unwrap();
+            assert_eq!(zte, zte2);
+        }
+    }
+
+    #[test]
+    fn endpoint_marshal_zerotier_encap() {
+        use crate::util::buffer::Buffer;
+
+        for _ in 0..1000 {
+            let mut hash = [0u8; IDENTITY_FINGERPRINT_SIZE];
+            hash.fill_with(|| rand::random());
+
+            let mut v = [0u8; ADDRESS_SIZE];
+            v.fill_with(|| rand::random());
+
+            // correct for situations where RNG generates a prefix which generates a None value.
+            while v[0] == ADDRESS_RESERVED_PREFIX {
+                v[0] = rand::random()
+            }
+
+            let zte = Endpoint::ZeroTierEncap(Address::from_bytes(&v).unwrap(), hash);
+
+            const TMP: usize = IDENTITY_FINGERPRINT_SIZE + 8;
+            let mut buf = Buffer::<TMP>::new();
+
+            let res = zte.marshal(&mut buf);
+            assert!(res.is_ok());
+
+            let res = Endpoint::unmarshal(&buf, &mut 0);
+            assert!(res.is_ok());
+
+            let zte2 = res.unwrap();
+            assert_eq!(zte, zte2);
+        }
+    }
+
+    #[test]
+    fn endpoint_marshal_mac() {
+        use crate::util::buffer::Buffer;
+
+        for _ in 0..1000 {
+            let mac = crate::vl1::MAC::from_u64(rand::random()).unwrap();
+
+            for e in [Endpoint::Ethernet(mac.clone()), Endpoint::WifiDirect(mac.clone()), Endpoint::Bluetooth(mac.clone())] {
+                let mut buf = Buffer::<7>::new();
+
+                let res = e.marshal(&mut buf);
+                assert!(res.is_ok());
+
+                let res = Endpoint::unmarshal(&buf, &mut 0);
+                assert!(res.is_ok());
+
+                let e2 = res.unwrap();
+                assert_eq!(e, e2);
+            }
+        }
+    }
+
+    #[test]
+    fn endpoint_marshal_inetaddress() {
+        use crate::util::buffer::Buffer;
+
+        for _ in 0..1000 {
+            let mut v = [0u8; 16];
+            v.fill_with(|| rand::random());
+
+            let inet = crate::vl1::InetAddress::from_ip_port(&v, 1234);
+
+            for e in [Endpoint::Ip(inet.clone()), Endpoint::IpTcp(inet.clone()), Endpoint::IpUdp(inet.clone())] {
+                let mut buf = Buffer::<20>::new();
+
+                let res = e.marshal(&mut buf);
+                assert!(res.is_ok());
+
+                let res = Endpoint::unmarshal(&buf, &mut 0);
+                assert!(res.is_ok());
+
+                let e2 = res.unwrap();
+                assert_eq!(e, e2);
+            }
+        }
+    }
+
+    #[test]
+    fn endpoint_marshal_http() {
+        use crate::util::buffer::Buffer;
+        use crate::util::testutil::randstring;
+
+        for _ in 0..1000 {
+            let http = Endpoint::Http(randstring(30));
+            let mut buf = Buffer::<33>::new();
+
+            assert!(http.marshal(&mut buf).is_ok());
+
+            let res = Endpoint::unmarshal(&buf, &mut 0);
+            assert!(res.is_ok());
+
+            let http2 = res.unwrap();
+            assert_eq!(http, http2);
+        }
+    }
+
+    #[test]
+    fn endpoint_marshal_webrtc() {
+        use crate::util::buffer::Buffer;
+
+        for _ in 0..1000 {
+            let mut v = Vec::with_capacity(100);
+            v.fill_with(|| rand::random());
+
+            let rtc = Endpoint::WebRTC(v);
+            let mut buf = Buffer::<102>::new();
+
+            assert!(rtc.marshal(&mut buf).is_ok());
+
+            let res = Endpoint::unmarshal(&buf, &mut 0);
+            assert!(res.is_ok());
+
+            let rtc2 = res.unwrap();
+            assert_eq!(rtc, rtc2);
+        }
     }
 }
