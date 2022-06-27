@@ -652,6 +652,10 @@ impl<SI: SystemInterface> Node<SI> {
         self.roots.read().my_root_sets.clone()
     }
 
+    pub(crate) fn this_node_is_root(&self) -> bool {
+        self.roots.read().my_root_sets.is_some()
+    }
+
     pub(crate) fn care_of_bytes(&self) -> Vec<u8> {
         self.roots.read().care_of.clone()
     }

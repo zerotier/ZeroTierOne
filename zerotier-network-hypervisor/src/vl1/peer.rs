@@ -67,24 +67,6 @@ pub struct Peer<SI: SystemInterface> {
     remote_protocol_version: AtomicU8,
 }
 
-/// Create initialized instances of Salsa20/12 and Poly1305 for a packet (LEGACY).
-fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_size: usize) -> (Salsa<12>, [u8; 32]) {
-    // Create a per-packet key from the IV, source, destination, and packet size.
-    let mut key: Secret<32> = secret.key.first_n();
-    let hb = header.as_bytes();
-    for i in 0..18 {
-        key.0[i] ^= hb[i];
-    }
-    key.0[18] ^= header.flags_cipher_hops & packet_constants::FLAGS_FIELD_MASK_HIDE_HOPS;
-    key.0[19] ^= packet_size as u8;
-    key.0[20] ^= packet_size.wrapping_shr(8) as u8;
-
-    let mut salsa = Salsa::<12>::new(&key.0, &header.id);
-    let mut poly1305_key = [0_u8; 32];
-    salsa.crypt_in_place(&mut poly1305_key);
-    (salsa, poly1305_key)
-}
-
 /// Attempt AEAD packet encryption and MAC validation. Returns message ID on success.
 fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8], packet_header: &PacketHeader, fragments: &[Option<PooledPacketBuffer>], payload: &mut PacketBuffer) -> Option<MessageId> {
     let cipher = packet_header.cipher();
@@ -148,6 +130,25 @@ fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8],
 
         _ => None,
     }
+}
+
+/// Create initialized instances of Salsa20/12 and Poly1305 for a packet.
+/// (Note that this is a legacy cipher suite.)
+fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_size: usize) -> (Salsa<12>, [u8; 32]) {
+    // Create a per-packet key from the IV, source, destination, and packet size.
+    let mut key: Secret<32> = secret.key.first_n();
+    let hb = header.as_bytes();
+    for i in 0..18 {
+        key.0[i] ^= hb[i];
+    }
+    key.0[18] ^= header.flags_cipher_hops & packet_constants::FLAGS_FIELD_MASK_HIDE_HOPS;
+    key.0[19] ^= packet_size as u8;
+    key.0[20] ^= packet_size.wrapping_shr(8) as u8;
+
+    let mut salsa = Salsa::<12>::new(&key.0, &header.id);
+    let mut poly1305_key = [0_u8; 32];
+    salsa.crypt_in_place(&mut poly1305_key);
+    (salsa, poly1305_key)
 }
 
 /// Sort a list of paths by quality or priority, with best paths first.
@@ -596,9 +597,8 @@ impl<SI: SystemInterface> Peer<SI> {
     async fn handle_incoming_error<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) {
         let mut cursor: usize = 1;
         if let Ok(error_header) = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor) {
-            let in_re_message_id = u64::from_ne_bytes(error_header.in_re_message_id);
-            let current_packet_id_counter = self.message_id_counter.load(Ordering::Relaxed);
-            if current_packet_id_counter.wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
+            let in_re_message_id: MessageId = u64::from_ne_bytes(error_header.in_re_message_id);
+            if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match error_header.in_re_verb {
                     _ => {
                         ph.handle_error(self, &source_path, forward_secrecy, extended_authentication, error_header.in_re_verb, in_re_message_id, error_header.error_code, payload, &mut cursor).await;
@@ -624,15 +624,31 @@ impl<SI: SystemInterface> Peer<SI> {
     ) {
         let mut cursor: usize = 1;
         if let Ok(ok_header) = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor) {
-            let in_re_message_id = u64::from_ne_bytes(ok_header.in_re_message_id);
-            let current_packet_id_counter = self.message_id_counter.load(Ordering::Relaxed);
-            if current_packet_id_counter.wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
+            let in_re_message_id: MessageId = u64::from_ne_bytes(ok_header.in_re_message_id);
+            if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match ok_header.in_re_verb {
                     verbs::VL1_HELLO => {
-                        if hops == 0 && !path_is_known {
-                            self.learn_path(si, source_path, time_ticks);
+                        if let Ok(ok_hello_fixed_header_fields) = payload.read_struct::<message_component_structs::OkHelloFixedHeaderFields>(&mut cursor) {
+                            if ok_hello_fixed_header_fields.version_proto >= 20 {
+                                if let Ok(session_metadata_len) = payload.read_u16(&mut cursor) {
+                                    if session_metadata_len > 0 {
+                                        if let Ok(session_metadata) = payload.read_bytes(session_metadata_len as usize, &mut cursor) {
+                                            if let Some(session_metadata) = Dictionary::from_bytes(session_metadata) {
+                                                // TODO
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                //let physical_address = Endpoint::unmarshal(&payload, &mut cursor);
+                                // TODO
+                            }
+
+                            if hops == 0 && !path_is_known {
+                                self.learn_path(si, source_path, time_ticks);
+                            }
+                            self.last_hello_reply_time_ticks.store(time_ticks, Ordering::Relaxed);
                         }
-                        self.last_hello_reply_time_ticks.store(time_ticks, Ordering::Relaxed);
                     }
 
                     verbs::VL1_WHOIS => {}

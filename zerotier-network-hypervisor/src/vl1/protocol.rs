@@ -253,7 +253,7 @@ pub const PROTOCOL_MAX_HOPS: u8 = 7;
 pub const FORWARD_MAX_HOPS: u8 = 3;
 
 /// Maximum difference between current message ID and OK/ERROR in-re message ID.
-pub const PACKET_RESPONSE_COUNTER_DELTA_MAX: u64 = 1024;
+pub const PACKET_RESPONSE_COUNTER_DELTA_MAX: u64 = 4096;
 
 /// Frequency for WHOIS retries
 pub const WHOIS_RETRY_INTERVAL: i64 = 1000;
