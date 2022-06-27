@@ -1,6 +1,11 @@
 ZeroTier Release Notes
 ======
 
+# 2022-06-27 -- Version 1.10.1
+
+ * Fix an issue that could cause SSO clients to get "stuck" on stale auth URLs.
+ * A few other SSO related bug fixes.
+
 # 2022-06-07 -- Version 1.10.0
 
  * Fix formatting problem in `zerotier-cli` when using SSO networks.
