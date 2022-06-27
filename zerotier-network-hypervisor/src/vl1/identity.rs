@@ -861,8 +861,6 @@ mod tests {
     use crate::util::marshalable::Marshalable;
     use crate::vl1::identity::*;
     use std::str::FromStr;
-    use std::time::{Duration, SystemTime};
-    #[allow(unused_imports)]
     use zerotier_core_crypto::hex;
 
     #[test]
@@ -973,25 +971,5 @@ mod tests {
             let ids = id.to_string();
             assert!(Identity::from_str(ids.as_str()).unwrap() == id);
         }
-    }
-
-    #[test]
-    fn benchmark_generate() {
-        let mut count = 0;
-        let run_time = Duration::from_secs(5);
-        let start = SystemTime::now();
-        let mut end;
-        let mut duration;
-        loop {
-            let _id = Identity::generate();
-            //println!("{}", _id.to_string());
-            end = SystemTime::now();
-            duration = end.duration_since(start).unwrap();
-            count += 1;
-            if duration >= run_time {
-                break;
-            }
-        }
-        println!("benchmark: V1 identity generation: {} ms / identity (average)", (duration.as_millis() as f64) / (count as f64));
     }
 }

@@ -212,14 +212,9 @@ mod tests {
 
     type TypeMap = HashMap<String, Type>;
 
-    use std::collections::HashMap;
-
+    use crate::util::testutil::randstring;
     use crate::vl1::dictionary::{Dictionary, BOOL_TRUTH};
-
-    // from zeronsd
-    pub fn randstring(len: u8) -> String {
-        (0..len).map(|_| (rand::random::<u8>() % 26) + 'a' as u8).map(|c| if rand::random::<bool>() { (c as char).to_ascii_uppercase() } else { c as char }).map(|c| c.to_string()).collect::<Vec<String>>().join("")
-    }
+    use std::collections::HashMap;
 
     fn make_dictionary() -> (Dictionary, TypeMap) {
         let mut d = Dictionary::new();

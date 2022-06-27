@@ -28,9 +28,14 @@ serde = { version = "^1", features = ["derive"], default-features = false }
 rand = "*"
 serde_json = "*"
 serde_cbor = "*"
+criterion = "0.3"
 
 [target."cfg(not(windows))".dependencies]
 libc = "^0"
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "^0", features = ["ws2tcpip"] }
+
+[[bench]]
+name = "benchmark_identity"
+harness = false

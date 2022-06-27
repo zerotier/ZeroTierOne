@@ -356,22 +356,22 @@ impl<const L: usize> Buffer<L> {
     }
 
     #[inline(always)]
-    pub fn u16_at(&self, ptr: usize) -> std::io::Result<u64> {
+    pub fn u16_at(&self, ptr: usize) -> std::io::Result<u16> {
         let end = ptr + 2;
         debug_assert!(end <= L);
         if end <= self.0 {
-            Ok(u64::from_be(unsafe { self.read_obj_internal(ptr) }))
+            Ok(u16::from_be(unsafe { self.read_obj_internal(ptr) }))
         } else {
             Err(overflow_err())
         }
     }
 
     #[inline(always)]
-    pub fn u32_at(&self, ptr: usize) -> std::io::Result<u64> {
+    pub fn u32_at(&self, ptr: usize) -> std::io::Result<u32> {
         let end = ptr + 4;
         debug_assert!(end <= L);
         if end <= self.0 {
-            Ok(u64::from_be(unsafe { self.read_obj_internal(ptr) }))
+            Ok(u32::from_be(unsafe { self.read_obj_internal(ptr) }))
         } else {
             Err(overflow_err())
         }
@@ -560,5 +560,170 @@ impl<const L: usize> PoolFactory<Buffer<L>> for PooledBufferFactory<L> {
     #[inline(always)]
     fn reset(&self, obj: &mut Buffer<L>) {
         obj.clear();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Buffer;
+
+    #[test]
+    fn buffer_basic_u64() {
+        let mut b = Buffer::<8>::new();
+        assert_eq!(b.len(), 0);
+        assert!(b.is_empty());
+        assert!(b.append_u64(1234).is_ok());
+        assert_eq!(b.len(), 8);
+        assert!(!b.is_empty());
+        assert_eq!(b.read_u64(&mut 0).unwrap(), 1234);
+        b.clear();
+        assert_eq!(b.len(), 0);
+        assert!(b.is_empty());
+    }
+
+    #[test]
+    fn buffer_basic_u32() {
+        let mut b = Buffer::<4>::new();
+        assert_eq!(b.len(), 0);
+        assert!(b.is_empty());
+        assert!(b.append_u32(1234).is_ok());
+        assert_eq!(b.len(), 4);
+        assert!(!b.is_empty());
+        assert_eq!(b.read_u32(&mut 0).unwrap(), 1234);
+        b.clear();
+        assert_eq!(b.len(), 0);
+        assert!(b.is_empty());
+    }
+
+    #[test]
+    fn buffer_basic_u16() {
+        let mut b = Buffer::<2>::new();
+        assert_eq!(b.len(), 0);
+        assert!(b.is_empty());
+        assert!(b.append_u16(1234).is_ok());
+        assert_eq!(b.len(), 2);
+        assert!(!b.is_empty());
+        assert_eq!(b.read_u16(&mut 0).unwrap(), 1234);
+        b.clear();
+        assert_eq!(b.len(), 0);
+        assert!(b.is_empty());
+    }
+
+    #[test]
+    fn buffer_basic_u8() {
+        let mut b = Buffer::<1>::new();
+        assert_eq!(b.len(), 0);
+        assert!(b.is_empty());
+        assert!(b.append_u8(128).is_ok());
+        assert_eq!(b.len(), 1);
+        assert!(!b.is_empty());
+        assert_eq!(b.read_u8(&mut 0).unwrap(), 128);
+        b.clear();
+        assert_eq!(b.len(), 0);
+        assert!(b.is_empty());
+    }
+
+    #[test]
+    fn buffer_bytes() {
+        const SIZE: usize = 100;
+
+        for _ in 0..1000 {
+            let mut v: Vec<u8> = Vec::with_capacity(SIZE);
+            v.fill_with(|| rand::random());
+
+            let mut b = Buffer::<SIZE>::new();
+            assert!(b.append_bytes(&v).is_ok());
+            assert_eq!(b.read_bytes(v.len(), &mut 0).unwrap(), &v);
+
+            let mut v: [u8; SIZE] = [0u8; SIZE];
+            v.fill_with(|| rand::random());
+
+            let mut b = Buffer::<SIZE>::new();
+            assert!(b.append_bytes_fixed(&v).is_ok());
+            assert_eq!(b.read_bytes_fixed(&mut 0).unwrap(), &v);
+
+            // FIXME: append calls for _get_mut style do not accept anything to append, so we can't
+            // test them.
+            //
+            // let mut b = Buffer::<SIZE>::new();
+            // let res = b.append_bytes_fixed_get_mut(&v);
+            // assert!(res.is_ok());
+            // let byt = res.unwrap();
+            // assert_eq!(byt, &v);
+        }
+    }
+
+    #[test]
+    fn buffer_at() {
+        const SIZE: usize = 100;
+
+        for _ in 0..1000 {
+            let mut v = [0u8; SIZE];
+            let mut idx: usize = rand::random::<usize>() % SIZE;
+            v[idx] = 1;
+
+            let mut b = Buffer::<SIZE>::new();
+            assert!(b.append_bytes(&v).is_ok());
+
+            let res = b.bytes_fixed_at::<1>(idx);
+            assert!(res.is_ok());
+            assert_eq!(res.unwrap()[0], 1);
+
+            let res = b.bytes_fixed_mut_at::<1>(idx);
+            assert!(res.is_ok());
+            assert_eq!(res.unwrap()[0], 1);
+
+            // the uX integer tests require a little more massage. we're going to rewind the index
+            // by 8, correcting to 0 if necessary, and then write 1's in. our numbers will be
+            // consistent this way.
+            v[idx] = 0;
+
+            if idx < 8 {
+                idx = 0;
+            } else if (idx + 7) >= SIZE {
+                idx -= 7;
+            }
+
+            for i in idx..(idx + 8) {
+                v[i] = 1;
+            }
+
+            let mut b = Buffer::<SIZE>::new();
+            assert!(b.append_bytes(&v).is_ok());
+
+            let res = b.u8_at(idx);
+            assert!(res.is_ok());
+            assert_eq!(res.unwrap(), 1);
+
+            let res = b.u16_at(idx);
+            assert!(res.is_ok());
+            assert_eq!(res.unwrap(), 257);
+
+            let res = b.u32_at(idx);
+            assert!(res.is_ok());
+            assert_eq!(res.unwrap(), 16843009);
+
+            let res = b.u64_at(idx);
+            assert!(res.is_ok());
+            assert_eq!(res.unwrap(), 72340172838076673);
+        }
+    }
+
+    #[test]
+    fn buffer_sizing() {
+        const SIZE: usize = 100;
+
+        for _ in 0..1000 {
+            let v = [0u8; SIZE];
+            let mut b = Buffer::<SIZE>::new();
+            assert!(b.append_bytes(&v).is_ok());
+            assert_eq!(b.len(), SIZE);
+            b.set_size(10);
+            assert_eq!(b.len(), 10);
+            unsafe {
+                b.set_size_unchecked(8675309);
+            }
+            assert_eq!(b.len(), 8675309);
+        }
     }
 }
