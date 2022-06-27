@@ -79,12 +79,22 @@ echo "{
 }    
 " > /var/lib/zerotier-one/local.conf
 
-until /usr/pgsql-10/bin/pg_isready -h ${ZT_DB_HOST} -p ${ZT_DB_PORT}; do
-	echo "Waiting for PostgreSQL...";
-	sleep 2;
-done
+if [ -n "$DB_SERVER_CA" ]; then
+    echo "secret list"
+    chmod 600 /secrets/db/*.pem
+    ls -l /secrets/db/
+    until /usr/bin/pg_isready -h ${ZT_DB_HOST} -p ${ZT_DB_PORT} -d "sslmode=prefer sslcert=${DB_CLIENT_CERT} sslkey=${DB_CLIENT_KEY} sslrootcert=${DB_SERVER_CA}"; do
+	    echo "Waiting for PostgreSQL...";
+	    sleep 2;
+    done
+else
+    until /usr/bin/pg_isready -h ${ZT_DB_HOST} -p ${ZT_DB_PORT}; do
+	    echo "Waiting for PostgreSQL...";
+	    sleep 2;
+    done
+fi
 
 export GLIBCXX_FORCE_NEW=1
 export GLIBCPP_FORCE_NEW=1
-export LD_PRELOAD="/usr/lib64/libjemalloc.so"
+export LD_PRELOAD="/usr/lib/x86_64-linux-gnu/libjemalloc.so.2"
 exec /usr/local/bin/zerotier-one -p${ZT_CONTROLLER_PORT:-$DEFAULT_PORT} /var/lib/zerotier-one

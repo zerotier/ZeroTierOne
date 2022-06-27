@@ -478,8 +478,7 @@ dependencies = [
 [[package]]
 name = "jwt"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6204285f77fe7d9784db3fdc449ecce1a0114927a51d5a41c4c7a292011c015f"
+source = "git+https://github.com/glimberg/rust-jwt#61a9291fdeec747c6edf14f4fa0caf235136c168"
 dependencies = [
  "base64",
  "crypto-common",

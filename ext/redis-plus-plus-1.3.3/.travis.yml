@@ -1,0 +1,32 @@
+language: cpp
+
+os:
+  - linux
+  - osx
+
+dist: bionic
+
+compiler:
+  - gcc
+  - clang
+
+before_install:
+  - wget -L https://github.com/redis/redis/archive/6.0.8.tar.gz -O redis-6.0.8.tar.gz
+  - tar xfz redis-6.0.8.tar.gz
+  - wget -L https://github.com/redis/hiredis/archive/master.zip -O hiredis-master.zip
+  - unzip hiredis-master.zip
+  - mkdir -p $TRAVIS_BUILD_DIR/install
+
+install:
+  - cd redis-6.0.8 && make -j2 && cd ..
+  - ./redis-6.0.8/src/redis-server &
+  - cd hiredis-master && make PREFIX=$TRAVIS_BUILD_DIR/install -j2 install && cd ..
+
+script:
+  - mkdir compile && cd compile && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$TRAVIS_BUILD_DIR/install .. && make -j2 && cd ..
+  - ./compile/test/test_redis++ -h 127.0.0.1 -p 6379
+
+branches:
+  only:
+    - master
+    - dev

@@ -288,6 +288,7 @@ impl ZeroIDC {
                                                                     t.claims().registered.clone();
                                                                 match claims.expiration {
                                                                     Some(exp) => {
+                                                                        println!("exp: {}", exp);
                                                                         (*inner_local
                                                                             .lock()
                                                                             .unwrap())
@@ -297,6 +298,8 @@ impl ZeroIDC {
                                                                         panic!("expiration is None.  This shouldn't happen")
                                                                     }
                                                                 }
+                                                            } else {
+                                                                panic!("error parsing claims");
                                                             }
 
                                                             (*inner_local.lock().unwrap())
@@ -375,7 +378,9 @@ impl ZeroIDC {
                     }
                 }
 
-                println!("thread done!")
+                println!("thread done!");
+                (*inner_local.lock().unwrap()).running = false;
+                println!("set idc thread running flag to false");
             }));
         }
     }
@@ -400,7 +405,7 @@ impl ZeroIDC {
 
     pub fn set_nonce_and_csrf(&mut self, csrf_token: String, nonce: String) {
         let local = Arc::clone(&self.inner);
-        let _ = (*local.lock().expect("can't lock inner"))
+        (*local.lock().expect("can't lock inner"))
             .as_opt()
             .map(|i| {
                 if i.running {
@@ -590,6 +595,8 @@ impl ZeroIDC {
                                                 panic!("expiration is None.  This shouldn't happen");
                                             }
                                         }
+                                    } else {
+                                        panic!("Failed to parse token");
                                     }
 
                                     i.access_token = Some(tok.access_token().clone());

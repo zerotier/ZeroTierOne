@@ -1,12 +1,19 @@
 ZeroTier Release Notes
 ======
 
+# 2022-06-27 -- Version 1.10.1
+
+ * Fix an issue that could cause SSO clients to get "stuck" on stale auth URLs.
+ * A few other SSO related bug fixes.
+
 # 2022-06-07 -- Version 1.10.0
 
  * Fix formatting problem in `zerotier-cli` when using SSO networks.
  * Fix a few other minor bugs in SSO signin to prepare for general availability.
  * Remove requirement for webview in desktop UI and instead just make everything available via the tray pulldown/menu. Use [libui-ng](https://github.com/libui-ng/libui-ng) for minor prompt dialogs. Saves space and eliminates installation headaches on Windows.
+ * Fix SSO "spam" bug in desktop UI.
  * Use system default browser for SSO login so all your plugins, MFA devices, password managers, etc. will work as you have them configured.
+ * Minor fix for bonding/multipath.
 
 # 2022-05-10 -- Version 1.8.10
 

@@ -255,6 +255,35 @@ static int testCrypto()
 		::free((void *)bb);
 	}
 
+	/*
+	{
+		AES k0,k1;
+		k0.init("00000000000000000000000000000000");
+		k1.init("11111111111111111111111111111111");
+		uint8_t test_pt[65536];
+		uint8_t test_ct[65536];
+		uint8_t test_aad[65536];
+		uint8_t ct_hash[48];
+		char hex_tmp[128];
+		for(unsigned int i=0;i<65536;++i) {
+			test_pt[i] = (uint8_t)i;
+			test_aad[i] = (uint8_t)i;
+		}
+		AES::GMACSIVEncryptor enc(k0,k1);
+		for(unsigned int test_length=0;test_length<65536;test_length+=777) {
+			memset(test_ct, 0, test_length);
+			enc.init((uint64_t)test_length, test_ct);
+			enc.aad(test_aad, test_length);
+			enc.update1(test_pt, test_length);
+			enc.finish1();
+			enc.update2(test_pt, test_length);
+			const void *tag = enc.finish2();
+			SHA384(ct_hash, test_ct, test_length);
+			std::cout << "(" << test_length << ", \"" << Utils::hex(ct_hash, 48, hex_tmp) << "\", \"" << Utils::hex(tag, 16, hex_tmp) << "\")," <<std::endl;
+		}
+	}
+	*/
+
 	std::cout << "[crypto] Benchmarking AES-GMAC-SIV... "; std::cout.flush();
 	{
 		uint64_t end,start = OSUtils::now();

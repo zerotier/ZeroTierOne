@@ -1,0 +1,12 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+string(REPLACE "," ";" REDIS_PLUS_PLUS_DEPENDS_LIST @REDIS_PLUS_PLUS_DEPENDS@)
+foreach(REDIS_PLUS_PLUS_DEP ${REDIS_PLUS_PLUS_DEPENDS_LIST})
+    find_dependency(${REDIS_PLUS_PLUS_DEP} REQUIRED)
+endforeach()
+
+include("${CMAKE_CURRENT_LIST_DIR}/redis++-targets.cmake")
+
+check_required_components(redis++)

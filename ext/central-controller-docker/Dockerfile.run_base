@@ -1,5 +1,8 @@
-FROM centos:8
-RUN yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-RUN dnf -qy module disable postgresql 
-RUN yum -y install epel-release && yum -y update && yum clean all
-RUN yum install -y jemalloc jemalloc-devel postgresql10 libpqxx libpqxx-devel && yum clean all
+FROM ubuntu:jammy
+RUN apt update && apt upgrade -y
+RUN apt -y install \
+    postgresql-client \
+    postgresql-client-common \
+    libjemalloc2 \
+    libpq5 \
+    curl

@@ -170,6 +170,7 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 	, _rc(rc)
 	, _redis(NULL)
 	, _cluster(NULL)
+	, _redisMemberStatus(false)
 {
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
@@ -188,6 +189,11 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 		// returns something non-NULL. If the hex encodes something shorter than 48 bytes,
 		// it will be padded at the end with zeroes. If longer, it'll be truncated.
 		Utils::unhex(ssoPskHex, _ssoPsk, sizeof(_ssoPsk));
+	}
+	const char *redisMemberStatus = getenv("ZT_REDIS_MEMBER_STATUS");
+	if (redisMemberStatus && (strcmp(redisMemberStatus, "true") == 0)) {
+	    _redisMemberStatus = true;
+		fprintf(stderr, "Using redis for member status\n");
 	}
 
 	auto c = _pool->borrow();
@@ -210,7 +216,11 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 		opts.port = _rc->port;
 		opts.password = _rc->password;
 		opts.db = 0;
-		poolOpts.size = 10;
+		opts.keep_alive = true;
+		opts.connect_timeout = std::chrono::seconds(5);
+		poolOpts.size = 25;
+		poolOpts.wait_timeout = std::chrono::milliseconds(1000);
+		poolOpts.connection_lifetime = std::chrono::minutes(5);
 		if (_rc->clusterMode) {
 			fprintf(stderr, "Using Redis in Cluster Mode\n");
 			_cluster = std::make_shared<sw::redis::RedisCluster>(opts, poolOpts);
@@ -477,6 +487,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 					info.ssoNonce = nonce;
 					info.ssoState = std::string(state_hex) + "_" +networkId;
 					info.centralAuthURL = redirectURL;
+#ifdef ZT_DEBUG
 					fprintf(
 						stderr,
 						"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s\n",
@@ -485,6 +496,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 						info.ssoNonce.c_str(),
 						info.ssoState.c_str(),
 						info.centralAuthURL.c_str());
+#endif
 				}
 			}  else {
 				fprintf(stderr, "client_id: %s\nauthorization_endpoint: %s\n", client_id.c_str(), authorization_endpoint.c_str());
@@ -506,6 +518,21 @@ void PostgreSQL::initializeNetworks()
 		
 		fprintf(stderr, "Initializing Networks...\n");
 
+		if (_redisMemberStatus) {
+			fprintf(stderr, "Init Redis for networks...\n");
+			try {
+				if (_rc->clusterMode) {
+					_cluster->del(setKey);
+				} else {
+					_redis->del(setKey);
+				}
+			} catch (sw::redis::Error &e) {
+				// ignore. if this key doesn't exist, there's no reason to delete it
+			}
+		}
+
+		std::unordered_set<std::string> networkSet;
+
 		char qbuf[2048] = {0};
 		sprintf(qbuf, "SELECT n.id, (EXTRACT(EPOCH FROM n.creation_time AT TIME ZONE 'UTC')*1000)::bigint as creation_time, n.capabilities, "
 			"n.enable_broadcast, (EXTRACT(EPOCH FROM n.last_modified AT TIME ZONE 'UTC')*1000)::bigint AS last_modified, n.mtu, n.multicast_limit, n.name, n.private, n.remote_trace_level, "
@@ -522,7 +549,8 @@ void PostgreSQL::initializeNetworks()
 		auto c = _pool->borrow();
 		auto c2 = _pool->borrow();
 		pqxx::work w{*c->c};
-		
+
+		fprintf(stderr, "Load networks from psql...\n");
 		auto stream = pqxx::stream_from::query(w, qbuf);
 
 		std::tuple<
@@ -610,6 +638,8 @@ void PostgreSQL::initializeNetworks()
 			config["clientId"] = clientId.value_or("");
 			config["authorizationEndpoint"] = authorizationEndpoint.value_or("");
 
+			networkSet.insert(nwid);
+
 			if (dnsDomain.has_value()) {
 				std::string serverList = dnsServers.value();
 				json obj;
@@ -673,6 +703,23 @@ void PostgreSQL::initializeNetworks()
 		w.commit();
 		_pool->unborrow(c2);
 		_pool->unborrow(c);
+		fprintf(stderr, "done.\n");
+
+		if (!networkSet.empty()) {
+			if (_redisMemberStatus) {
+				fprintf(stderr, "adding networks to redis...\n");
+				if (_rc->clusterMode) {
+					auto tx = _cluster->transaction(_myAddressStr, true);
+					tx.sadd(setKey, networkSet.begin(), networkSet.end());
+					tx.exec();
+				} else {
+					auto tx = _redis->transaction(true);
+					tx.sadd(setKey, networkSet.begin(), networkSet.end());
+					tx.exec();
+				}
+				fprintf(stderr, "done.\n");
+			}
+		}
 
 		if (++this->_ready == 2) {
 			if (_waitNoticePrinted) {
@@ -680,11 +727,14 @@ void PostgreSQL::initializeNetworks()
 			}
 			_readyLock.unlock();
 		}
+		fprintf(stderr, "network init done.\n");
 	} catch (sw::redis::Error &e) {
 		fprintf(stderr, "ERROR: Error initializing networks in Redis: %s\n", e.what());
+		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 		exit(-1);
 	} catch (std::exception &e) {
 		fprintf(stderr, "ERROR: Error initializing networks: %s\n", e.what());
+		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 		exit(-1);
 	}
 }
@@ -696,6 +746,42 @@ void PostgreSQL::initializeMembers()
 	try {
 		std::unordered_map<std::string, std::string> networkMembers;
 		fprintf(stderr, "Initializing Members...\n");
+
+		std::string setKeyBase = "network-nodes-all:{" + _myAddressStr + "}:";
+
+		if (_redisMemberStatus) {
+			fprintf(stderr, "Initialize Redis for members...\n");
+			std::lock_guard<std::mutex> l(_networks_l);
+			std::unordered_set<std::string> deletes;
+			for ( auto it : _networks) {
+				uint64_t nwid_i = it.first;
+				char nwidTmp[64] = {0};
+				OSUtils::ztsnprintf(nwidTmp, sizeof(nwidTmp), "%.16llx", nwid_i);
+				std::string nwid(nwidTmp);
+				std::string key = setKeyBase + nwid;
+				deletes.insert(key);
+			}
+
+			if (!deletes.empty()) {
+				try {
+					if (_rc->clusterMode) {
+						auto tx = _cluster->transaction(_myAddressStr, true);
+						for (std::string k : deletes) {
+							tx.del(k);
+						}
+						tx.exec();
+					} else {
+						auto tx = _redis->transaction(true);
+						for (std::string k : deletes) {
+							tx.del(k);
+						}
+						tx.exec();
+					}
+				} catch (sw::redis::Error &e) {
+					// ignore
+				}
+			}
+		}
 
 		char qbuf[2048];
 		sprintf(qbuf, "SELECT m.id, m.network_id, m.active_bridge, m.authorized, m.capabilities, (EXTRACT(EPOCH FROM m.creation_time AT TIME ZONE 'UTC')*1000)::bigint, m.identity, "
@@ -717,7 +803,8 @@ void PostgreSQL::initializeMembers()
 		auto c = _pool->borrow();
 		auto c2 = _pool->borrow();
 		pqxx::work w{*c->c};
-	
+
+		fprintf(stderr, "Load members from psql...\n");
 		auto stream = pqxx::stream_from::query(w, qbuf);
 
 		std::tuple<
@@ -776,6 +863,8 @@ void PostgreSQL::initializeMembers()
 			std::optional<uint64_t> authenticationExpiryTime = std::get<19>(row);
 			std::string assignedAddresses = std::get<20>(row);
 
+			networkMembers.insert(std::pair<std::string, std::string>(setKeyBase+networkId, memberId));
+
 			config["id"] = memberId;
 			config["address"] = memberId;
 			config["nwid"] = networkId;
@@ -814,7 +903,7 @@ void PostgreSQL::initializeMembers()
 			networkId = "";
 
 			auto end = std::chrono::high_resolution_clock::now();
-			auto dur = std::chrono::duration_cast<std::chrono::microseconds>(end - start);;
+			auto dur = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 			total += dur.count();
 			++count;
 			if (count > 0 && count % 10000 == 0) {
@@ -830,6 +919,29 @@ void PostgreSQL::initializeMembers()
 		w.commit();
 		_pool->unborrow(c2);
 		_pool->unborrow(c);
+		fprintf(stderr, "done.\n");
+
+		if (!networkMembers.empty()) {
+			if (_redisMemberStatus) {
+				fprintf(stderr, "Load member data into redis...\n");
+				if (_rc->clusterMode) {
+					auto tx = _cluster->transaction(_myAddressStr, true);
+					for (auto it : networkMembers) {
+						tx.sadd(it.first, it.second);
+					}
+					tx.exec();
+				} else {
+					auto tx = _redis->transaction(true);
+					for (auto it : networkMembers) {
+						tx.sadd(it.first, it.second);
+					}
+					tx.exec();
+				}
+				fprintf(stderr, "done.\n");
+			}
+		}
+
+		fprintf(stderr, "Done loading members...\n");
 
 		if (++this->_ready == 2) {
 			if (_waitNoticePrinted) {
@@ -879,15 +991,16 @@ void PostgreSQL::heartbeat()
 			std::string now = std::to_string(ts);
 			std::string host_port = std::to_string(_listenPort);
 			std::string use_redis = (_rc != NULL) ? "true" : "false";
+			std::string redis_mem_status = (_redisMemberStatus) ? "true" : "false";
 			
 			try {
-			pqxx::result res = w.exec0("INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_redis) "
+			pqxx::result res = w.exec0("INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_redis, redis_member_status) "
 				"VALUES ("+w.quote(controllerId)+", "+w.quote(hostname)+", TO_TIMESTAMP("+now+"::double precision/1000), "+
-				w.quote(publicIdentity)+", "+major+", "+minor+", "+rev+", "+build+", "+host_port+", "+use_redis+") "
+				w.quote(publicIdentity)+", "+major+", "+minor+", "+rev+", "+build+", "+host_port+", "+use_redis+", "+redis_mem_status+") "
 				"ON CONFLICT (id) DO UPDATE SET cluster_host = EXCLUDED.cluster_host, last_alive = EXCLUDED.last_alive, "
 				"public_identity = EXCLUDED.public_identity, v_major = EXCLUDED.v_major, v_minor = EXCLUDED.v_minor, "
 				"v_rev = EXCLUDED.v_rev, v_build = EXCLUDED.v_rev, host_port = EXCLUDED.host_port, "
-				"use_redis = EXCLUDED.use_redis");
+				"use_redis = EXCLUDED.use_redis, redis_member_status = EXCLUDED.redis_member_status");
 			} catch (std::exception &e) {
 				fprintf(stderr, "Heartbeat update failed: %s\n", e.what());
 				w.abort();
@@ -898,6 +1011,14 @@ void PostgreSQL::heartbeat()
 			w.commit();
 		}
 		_pool->unborrow(c);
+
+		if (_redisMemberStatus) {
+			if (_rc->clusterMode) {
+				_cluster->zadd("controllers", "controllerId", ts);
+			} else {
+				_redis->zadd("controllers", "controllerId", ts);
+			}
+		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
@@ -1241,7 +1362,7 @@ void PostgreSQL::commitThread()
 						"$1, TO_TIMESTAMP($5::double precision/1000), "
 						"(SELECT user_id AS owner_id FROM ztc_global_permissions WHERE authorize = true AND del = true AND modify = true AND read = true LIMIT 1),"
 						"$2, $3, $4, TO_TIMESTAMP($5::double precision/1000), "
-						"$6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 17) "
+						"$6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) "
 						"ON CONFLICT (id) DO UPDATE set controller_id = EXCLUDED.controller_id, "
 						"capabilities = EXCLUDED.capabilities, enable_broadcast = EXCLUDED.enable_broadcast, "
 						"last_modified = EXCLUDED.last_modified, mtu = EXCLUDED.mtu, "
@@ -1347,6 +1468,20 @@ void PostgreSQL::commitThread()
 				} catch (std::exception &e) {
 					fprintf(stderr, "%s ERROR: Error updating network: %s\n", _myAddressStr.c_str(), e.what());
 				}
+				if (_redisMemberStatus) {
+					try {
+						std::string id = config["id"];
+						std::string controllerId = _myAddressStr.c_str();
+						std::string key = "networks:{" + controllerId + "}";
+						if (_rc->clusterMode) {
+							_cluster->sadd(key, id);
+						} else {
+							_redis->sadd(key, id);
+						}
+					} catch (sw::redis::Error &e) {
+						fprintf(stderr, "ERROR: Error adding network to Redis: %s\n", e.what());
+					}
+				}
 			} else if (objtype == "_delete_network") {
 				// fprintf(stderr, "%s: commitThread: delete network\n", _myAddressStr.c_str());
 				try {
@@ -1360,6 +1495,22 @@ void PostgreSQL::commitThread()
 					w.commit();
 				} catch (std::exception &e) {
 					fprintf(stderr, "%s ERROR: Error deleting network: %s\n", _myAddressStr.c_str(), e.what());
+				}
+				if (_redisMemberStatus) {
+					try {
+						std::string id = config["id"];
+						std::string controllerId = _myAddressStr.c_str();
+						std::string key = "networks:{" + controllerId + "}";
+						if (_rc->clusterMode) {
+							_cluster->srem(key, id);
+							_cluster->del("network-nodes-online:{"+controllerId+"}:"+id);
+						} else {
+							_redis->srem(key, id);
+							_redis->del("network-nodes-online:{"+controllerId+"}:"+id);
+						}
+					} catch (sw::redis::Error &e) {
+						fprintf(stderr, "ERROR: Error adding network to Redis: %s\n", e.what());
+					}
 				}
 
 			} else if (objtype == "_delete_member") {
@@ -1378,6 +1529,23 @@ void PostgreSQL::commitThread()
 				} catch (std::exception &e) {
 					fprintf(stderr, "%s ERROR: Error deleting member: %s\n", _myAddressStr.c_str(), e.what());
 				}
+				if (_redisMemberStatus) {
+					try {
+						std::string memberId = config["id"];
+						std::string networkId = config["nwid"];
+						std::string controllerId = _myAddressStr.c_str();
+						std::string key = "network-nodes-all:{" + controllerId + "}:" + networkId;
+						if (_rc->clusterMode) {
+							_cluster->srem(key, memberId);
+							_cluster->del("member:{"+controllerId+"}:"+networkId+":"+memberId);
+						} else {
+							_redis->srem(key, memberId);
+							_redis->del("member:{"+controllerId+"}:"+networkId+":"+memberId);
+						}
+					} catch (sw::redis::Error &e) {
+						fprintf(stderr, "ERROR: Error deleting member from Redis: %s\n", e.what());
+					}
+				}
 			} else {
 				fprintf(stderr, "%s ERROR: unknown objtype\n", _myAddressStr.c_str());
 			}
@@ -1394,9 +1562,22 @@ void PostgreSQL::commitThread()
 
 void PostgreSQL::onlineNotificationThread()
 {
-	waitForReady();
-	onlineNotification_Postgres();
+ 	waitForReady();
+	if (_redisMemberStatus) {
+	    onlineNotification_Redis();
+	} else {
+	    onlineNotification_Postgres();
+	}
 }
+
+/**
+ * ONLY UNCOMMENT FOR TEMPORARY DB MAINTENANCE
+ *
+ * This define temproarly turns off writing to the member status table
+ * so it can be reindexed when the indexes get too large.
+ */
+
+// #define DISABLE_MEMBER_STATUS 1
 
 void PostgreSQL::onlineNotification_Postgres()
 {
@@ -1413,7 +1594,8 @@ void PostgreSQL::onlineNotification_Postgres()
 				std::lock_guard<std::mutex> l(_lastOnline_l);
 				lastOnline.swap(_lastOnline);
 			}
-			
+
+#ifndef DISABLE_MEMBER_STATUS
 			pqxx::work w(*c->c);
 			pqxx::work w2(*c2->c);
 
@@ -1472,6 +1654,7 @@ void PostgreSQL::onlineNotification_Postgres()
 			pipe.complete();
 			w.commit();
 			fprintf(stderr, "%s: Updated online status of %d members\n", _myAddressStr.c_str(), updateCount);
+#endif
 		} catch (std::exception &e) {
 			fprintf(stderr, "%s: error in onlinenotification thread: %s\n", _myAddressStr.c_str(), e.what());
 		} 
@@ -1499,6 +1682,10 @@ void PostgreSQL::onlineNotification_Redis()
 	std::string controllerId = std::string(_myAddress.toString(buf));
 
 	while (_run == 1) {
+		fprintf(stderr, "onlineNotification tick\n");
+		auto start = std::chrono::high_resolution_clock::now();
+		uint64_t count = 0;
+
 		std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > lastOnline;
 		{
 			std::lock_guard<std::mutex> l(_lastOnline_l);
@@ -1508,26 +1695,32 @@ void PostgreSQL::onlineNotification_Redis()
 			if (!lastOnline.empty()) {
 				if (_rc->clusterMode) {
 					auto tx = _cluster->transaction(controllerId, true);
-					_doRedisUpdate(tx, controllerId, lastOnline);
+					count = _doRedisUpdate(tx, controllerId, lastOnline);
 				} else {
 					auto tx = _redis->transaction(true);
-					_doRedisUpdate(tx, controllerId, lastOnline);
+					count = _doRedisUpdate(tx, controllerId, lastOnline);
 				}
 			}
 		} catch (sw::redis::Error &e) {
-#ifdef REDIS_TRACE
 			fprintf(stderr, "Error in online notification thread (redis): %s\n", e.what());
-#endif
 		}
-		std::this_thread::sleep_for(std::chrono::seconds(10));
+
+		auto end = std::chrono::high_resolution_clock::now();
+		auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		auto total = dur.count();
+
+		fprintf(stderr, "onlineNotification ran in %llu ms\n", total);
+
+		std::this_thread::sleep_for(std::chrono::seconds(5));
 	}
 }
 
-void PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &controllerId, 
+uint64_t PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &controllerId,
 	std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > &lastOnline) 
 
 {
 	nlohmann::json jtmp1, jtmp2;
+	uint64_t count = 0;
 	for (auto i=lastOnline.begin(); i != lastOnline.end(); ++i) {
 		uint64_t nwid_i = i->first.first;
 		uint64_t memberid_i = i->first.second;
@@ -1559,14 +1752,21 @@ void PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &control
 			.zadd("active-networks:{"+controllerId+"}", networkId, ts)
 			.sadd("network-nodes-all:{"+controllerId+"}:"+networkId, memberId)
 			.hmset("member:{"+controllerId+"}:"+networkId+":"+memberId, record.begin(), record.end());
+		++count;
 	}
 
 	// expire records from all-nodes and network-nodes member list
 	uint64_t expireOld = OSUtils::now() - 300000;
 	
-	tx.zremrangebyscore("nodes-online:{"+controllerId+"}", sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
-	tx.zremrangebyscore("nodes-online2:{"+controllerId+"}", sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
-	tx.zremrangebyscore("active-networks:{"+controllerId+"}", sw::redis::RightBoundedInterval<double>(expireOld, sw::redis::BoundType::LEFT_OPEN));
+	tx.zremrangebyscore("nodes-online:{"+controllerId+"}",
+						sw::redis::RightBoundedInterval<double>(expireOld,
+																sw::redis::BoundType::LEFT_OPEN));
+	tx.zremrangebyscore("nodes-online2:{"+controllerId+"}",
+						sw::redis::RightBoundedInterval<double>(expireOld,
+																sw::redis::BoundType::LEFT_OPEN));
+	tx.zremrangebyscore("active-networks:{"+controllerId+"}",
+						sw::redis::RightBoundedInterval<double>(expireOld,
+																sw::redis::BoundType::LEFT_OPEN));
 	{
 		std::lock_guard<std::mutex> l(_networks_l);
 		for (const auto &it : _networks) {
@@ -1578,6 +1778,9 @@ void PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &control
 		}
 	}
 	tx.exec();
+	fprintf(stderr, "%s: Updated online status of %d members\n", _myAddressStr.c_str(), count);
+
+	return count;
 }
 
 

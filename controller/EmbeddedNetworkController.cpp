@@ -1447,7 +1447,9 @@ void EmbeddedNetworkController::_request(
 			Utils::scopy(nc->centralAuthURL, sizeof(nc->centralAuthURL), info.centralAuthURL.c_str());
 		}
 		if (!info.issuerURL.empty()) {
+			#ifdef ZT_DEBUG
 			fprintf(stderr, "copying issuerURL to nc: %s\n", info.issuerURL.c_str());
+			#endif
 			Utils::scopy(nc->issuerURL, sizeof(nc->issuerURL), info.issuerURL.c_str());
 		}
 		if (!info.ssoNonce.empty()) {

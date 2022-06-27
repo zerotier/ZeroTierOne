@@ -64,12 +64,14 @@ layout:
 
 parts:
   one:
-    source: ./
-    plugin: dump
-    organize:
-      zerotier-one : usr/sbin/zerotier-one
-      zerotier-cli : usr/sbin/zerotier-cli
-      zerotier-idtool : usr/sbin/zerotier-idtool
+    plugin: make
+    source: https://github.com/zerotier/zerotierone.git
+    source-branch: "master"
+    build-packages:
+      - build-essential
+      - libc++-dev
+    make-parameters:
+      - ZT_SSO_SUPPORTED=0
     filesets:
       binaries:
         - usr/sbin/zerotier-one

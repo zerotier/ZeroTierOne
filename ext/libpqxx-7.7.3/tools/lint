@@ -1,0 +1,197 @@
+#! /bin/bash
+#
+# Routine sanity checks for libpqxx source tree.
+#
+# Optionally, set environment variable "srcdir" to the source directory.  It
+# defaults to the parent directory of the one where this script is.  This trick
+# requires bash (or a close equivalent) as the shell.
+
+set -eu -o pipefail
+
+SRCDIR="${srcdir:-$(dirname "${BASH_SOURCE[0]}")/..}"
+PQXXVERSION="$(cd "$SRCDIR" && "$SRCDIR/tools/extract_version")"
+
+ARGS="${1:-}"
+
+
+# Check that all source code is ASCII.
+#
+# I'd love to have rich Unicode, but I can live without it.  But we don't want
+# any surprises in contributions.
+check_ascii() {
+    local exotics=$(
+        find -name \*.cxx -o -name \*.hxx |
+	xargs cat |
+        tr -d '\011-\176' |
+	wc -c
+    )
+    if [ $exotics != 0 ]
+    then
+        echo >&2 "There's a non-ASCII character somewhere."
+	exit 1
+    fi
+}
+
+
+# This version must be at the top of the NEWS file.
+check_news_version() {
+    if ! head -n1 $SRCDIR/NEWS | grep -q "^$PQXXVERSION\$"
+    then
+        cat <<EOF >&2
+Version $PQXXVERSION is not at the top of NEWS.
+EOF
+        exit 1
+    fi
+}
+
+
+# Count number of times header $1 is included from each of given input files.
+# Output is lines of <filename>:<count>, one line per file, sorted.
+count_includes() {
+    local HEADER_NAME WS PAT
+    HEADER_NAME="$1"
+    shift
+    WS="[[:space:]]*"
+    PAT="^${WS}#${WS}include${WS}[<\"]$HEADER_NAME[>\"]"
+    # It's OK for the grep to fail.
+    (grep -c "$PAT" $* || /bin/true) | sort
+}
+
+
+# Check that any includes of $1-pre.hxx are matched by $1-post.hxx ones.
+match_pre_post_headers() {
+    local NAME TEMPDIR PRE POST HEADERS
+    NAME="$1"
+    TEMPDIR="$(mktemp -d)"
+    if test -z "$TEMPDIR"
+    then
+        echo >&2 "Could not create temporary directory."
+        exit 1
+    fi
+    PRE="$TEMPDIR/pre"
+    POST="$TEMPDIR/post"
+    HEADERS=$(find include/pqxx/* -type f | grep -v '\.swp$')
+    count_includes \
+        $SRCDIR/NAME-pre.hxx $HEADERS >"$PRE"
+    count_includes \
+        $SRCDIR/NAME-post.hxx $HEADERS >"$POST"
+    DIFF="$(diff "$PRE" "$POST")" || /bin/true
+    rm -r -- "$TEMPDIR"
+    if test -n "$DIFF"
+    then
+        cat <<EOF >&2
+Mismatched pre/post header pairs:
+
+$DIFF
+EOF
+        exit 1
+    fi
+}
+
+
+# Any file that includes header-pre.hxx must also include header-post.hxx, and
+# vice versa.  Similar for ignore-deprecated-{pre|post}.hxx.
+check_compiler_internal_headers() {
+    match_pre_post_headers "pqxx/internal/header"
+    match_pre_post_headers "pqxx/internal/ignore-deprecated"
+}
+
+
+cpplint() {
+    local cxxflags dialect includes
+
+    if which clang-tidy >/dev/null
+    then
+        if [ -e compile_flags ]
+        then
+	    # Pick out relevant flags, but leave out the rest.
+	    # If we're not compiling with clang, compile_flags may contain
+	    # options that clang-tidy doesn't recognise.
+            dialect="$(grep -o -- '-std=[^[:space:]]*' compile_flags || true)"
+	    includes="$(
+	        grep -o -- '-I[[:space:]]*[^[:space:]]*' compile_flags ||
+		true)"
+        else
+            dialect=""
+	    includes=""
+        fi
+
+	cxxflags="$dialect $includes"
+
+# TODO: Please, is there any way we can parallelise this?
+# TODO: I'd like cppcoreguidelines-*, but it's a tsunami of false positives.
+# TODO: Some useful checks in abseil-*, but it recommends "use our library."
+# TODO: Check test/, but tolerate some of the dubious stuff tests do.
+        clang-tidy \
+            $(find $SRCDIR/src $SRCDIR/tools -name \*.cxx) \
+            --checks=boost-*, \
+            -- \
+            -I$SRCDIR/include -Iinclude $cxxflags
+    fi
+
+    # Run Facebook's "infer" static analyser, if available.
+    # Instructions here: https://fbinfer.com/docs/getting-started/
+    if which infer >/dev/null
+    then
+        # This will work in an out-of-tree build, but either way it does
+	# require a successful "configure", or a cmake with the "make"
+	# generator.
+        infer capture -- make -j$(nproc)
+	infer run
+    fi
+}
+
+
+pylint() {
+    local PYFILES="$SRCDIR/tools/*.py $SRCDIR/tools/splitconfig"
+    echo "Skipping pocketlint; it's not up to date with Python3."
+    # if which pocketlint >/dev/null
+    # then
+    # 	pocketlint $PYFILES
+    # fi
+
+    if which pyflakes3 >/dev/null
+    then
+        pyflakes3 $PYFILES
+    fi
+}
+
+
+main() {
+    local full="no"
+    for arg in $ARGS
+    do
+        case $arg in
+        -h|--help)
+	    cat <<EOF
+Perform static checks on libpqxx build tree.
+
+Usage:
+    $0 -h|--help -- print this message and exit.
+    $0 -f|--full -- perform full check, including C++ analysis.
+    $0 -- perform default check.
+EOF
+            exit 0
+        ;;
+        -f|--full)
+	    full="yes"
+        ;;
+        *)
+	    echo >&2 "Unknown argument: '$arg'"
+	    exit 1
+        ;;
+        esac
+    done
+
+    check_ascii
+    pylint
+    check_news_version
+    check_compiler_internal_headers
+    if [ $full == "yes" ]
+    then
+        cpplint
+    fi
+}
+
+
+main
