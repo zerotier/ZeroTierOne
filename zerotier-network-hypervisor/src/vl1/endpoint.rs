@@ -310,7 +310,7 @@ impl ToString for Endpoint {
             Endpoint::Ip(ip) => format!("ip:{}", ip.to_ip_string()),
             Endpoint::IpUdp(ip) => format!("udp:{}", ip.to_string()),
             Endpoint::IpTcp(ip) => format!("tcp:{}", ip.to_string()),
-            Endpoint::Http(url) => url.clone(), // http or https
+            Endpoint::Http(url) => format!("url:{}", url.clone()), // http or https
             Endpoint::WebRTC(offer) => format!("webrtc:{}", base64::encode_config(offer.as_slice(), base64::URL_SAFE_NO_PAD)),
             Endpoint::ZeroTierEncap(a, ah) => format!("zte:{}-{}", a.to_string(), base64::encode_config(ah, base64::URL_SAFE_NO_PAD)),
         }
@@ -354,7 +354,7 @@ impl FromStr for Endpoint {
             "ip" => return Ok(Endpoint::Ip(InetAddress::from_str(endpoint_data)?)),
             "udp" => return Ok(Endpoint::IpUdp(InetAddress::from_str(endpoint_data)?)),
             "tcp" => return Ok(Endpoint::IpTcp(InetAddress::from_str(endpoint_data)?)),
-            "http" | "https" => return Ok(Endpoint::Http(endpoint_data.into())),
+            "url" => return Ok(Endpoint::Http(endpoint_data.into())),
             "webrtc" => {
                 let offer = base64::decode_config(endpoint_data, base64::URL_SAFE_NO_PAD);
                 if offer.is_ok() {
@@ -615,6 +615,84 @@ mod tests {
 
             let rtc2 = res.unwrap();
             assert_eq!(rtc, rtc2);
+        }
+    }
+
+    #[test]
+    fn endpoint_to_from_string() {
+        use crate::util::testutil::randstring;
+        use std::str::FromStr;
+
+        for _ in 0..1000 {
+            let mut v = Vec::with_capacity(100);
+            v.fill_with(|| rand::random());
+            let rtc = Endpoint::WebRTC(v);
+
+            assert_ne!(rtc.to_string().len(), 0);
+            assert!(rtc.to_string().starts_with("webrtc"));
+
+            let rtc2 = Endpoint::from_str(&rtc.to_string()).unwrap();
+            assert_eq!(rtc, rtc2);
+
+            let http = Endpoint::Http(randstring(30));
+            assert_ne!(http.to_string().len(), 0);
+            assert!(http.to_string().starts_with("url"));
+
+            let http2 = Endpoint::from_str(&http.to_string()).unwrap();
+            assert_eq!(http, http2);
+
+            let mut v = [0u8; 16];
+            v.fill_with(|| rand::random());
+
+            let inet = crate::vl1::InetAddress::from_ip_port(&v, 0);
+
+            let ip = Endpoint::Ip(inet.clone());
+            assert_ne!(ip.to_string().len(), 0);
+            assert!(ip.to_string().starts_with("ip"));
+
+            let ip2 = Endpoint::from_str(&ip.to_string()).unwrap();
+            assert_eq!(ip, ip2);
+
+            let inet = crate::vl1::InetAddress::from_ip_port(&v, 1234);
+
+            for e in [(Endpoint::IpTcp(inet.clone()), "tcp"), (Endpoint::IpUdp(inet.clone()), "udp")] {
+                assert_ne!(e.0.to_string().len(), 0);
+                assert!(e.0.to_string().starts_with(e.1));
+
+                let e2 = Endpoint::from_str(&e.0.to_string()).unwrap();
+                assert_eq!(e.0, e2);
+            }
+
+            let mac = crate::vl1::MAC::from_u64(rand::random()).unwrap();
+
+            for e in [(Endpoint::Ethernet(mac.clone()), "eth"), (Endpoint::WifiDirect(mac.clone()), "wifip2p"), (Endpoint::Bluetooth(mac.clone()), "bt")] {
+                assert_ne!(e.0.to_string().len(), 0);
+                assert!(e.0.to_string().starts_with(e.1));
+
+                let e2 = Endpoint::from_str(&e.0.to_string()).unwrap();
+                assert_eq!(e.0, e2);
+            }
+
+            let mut hash = [0u8; IDENTITY_FINGERPRINT_SIZE];
+            hash.fill_with(|| rand::random());
+
+            let mut v = [0u8; ADDRESS_SIZE];
+            v.fill_with(|| rand::random());
+
+            // correct for situations where RNG generates a prefix which generates a None value.
+            while v[0] == ADDRESS_RESERVED_PREFIX {
+                v[0] = rand::random()
+            }
+
+            for e in [(Endpoint::ZeroTier(Address::from_bytes(&v).unwrap(), hash), "zt"), (Endpoint::ZeroTierEncap(Address::from_bytes(&v).unwrap(), hash), "zte")] {
+                assert_ne!(e.0.to_string().len(), 0);
+                assert!(e.0.to_string().starts_with(e.1));
+
+                let e2 = Endpoint::from_str(&e.0.to_string()).unwrap();
+                assert_eq!(e.0, e2);
+            }
+
+            assert_eq!(Endpoint::Nil.to_string(), "nil");
         }
     }
 }
