@@ -72,36 +72,36 @@ like conventional VPNs or VLANs. It can run on native systems, VMs, or
 containers (Docker, OpenVZ, etc.).
 
 %prep
-ls -la
-%if 0%{?rhel} && 0%{?rhel} >= 7
+%if "%{?dist}" != ".el6"
 rm -rf BUILD BUILDROOT RPMS SRPMS SOURCES
-mkdir -p SOURCES
 ln -s %{getenv:PWD} %{name}-%{version}
+mkdir -p SOURCES
 tar --exclude=%{name}-%{version}/.git --exclude=%{name}-%{version}/%{name}-%{version} -czf SOURCES/%{name}-%{version}.tar.gz %{name}-%{version}/*
 rm -f %{name}-%{version}
 cp -a %{getenv:PWD}/* .
 %endif
 
 %build
-%if "%{?dist}" == ".el6"
-make RUST_BACKTRACE=full ZT_USE_MINIUPNPC=1 %{?_smp_mflags} from_builder
-%else
-make RUST_BACKTRACE=full ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one
+%if "%{?dist}" != ".el6"
+make ZT_USE_MINIUPNPC=1 %{?_smp_mflags} one
 %endif
 
 %pre
 /usr/bin/getent passwd zerotier-one || /usr/sbin/useradd -r -d /var/lib/zerotier-one -s /sbin/nologin zerotier-one
 
 %install
-# rm -rf $RPM_BUILD_ROOT
+%if "%{?dist}" != ".el6"
 make install DESTDIR=$RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 cp %{getenv:PWD}/debian/zerotier-one.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
-
-%if 0%{?rhel} && 0%{?rhel} <= 6
-mkdir -p $RPM_BUILD_ROOT/etc/init.d/
+%else
+rm -rf $RPM_BUILD_ROOT
+pushd %{getenv:PWD}
+make install DESTDIR=$RPM_BUILD_ROOT
+popd
+mkdir -p $RPM_BUILD_ROOT/etc/init.d
 cp %{getenv:PWD}/ext/installfiles/linux/zerotier-one.init.rhel6 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
-chmod 700 $RPM_BUILD_ROOT/etc/init.d/${name}
+chmod 0755 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 %endif
 
 %files

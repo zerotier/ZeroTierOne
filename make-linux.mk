@@ -344,7 +344,7 @@ all:	one
 .PHONY: one
 one: zerotier-one zerotier-idtool zerotier-cli
 
-from_builder:
+from_builder:	FORCE
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 
