@@ -13,7 +13,7 @@ openidconnect = { version = "2.2", default-features = false, features = ["reqwes
 base64 = "0.13"
 url = "2.2"
 reqwest = "0.11"
-jwt = "0.16"
+jwt = {version = "0.16", git = "https://github.com/glimberg/rust-jwt"}
 serde = "1.0"
 time = { version = "0.3", features = ["formatting"] }
 bytes = "1.1"
