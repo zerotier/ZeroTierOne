@@ -491,8 +491,8 @@ mod tests {
 
     #[test]
     fn representation() {
-        assert_eq!(size_of::<message_component_structs::OkHeader>(), 9);
-        assert_eq!(size_of::<message_component_structs::ErrorHeader>(), 10);
+        assert_eq!(size_of::<message_component_structs::OkHeader>(), 10);
+        assert_eq!(size_of::<message_component_structs::ErrorHeader>(), 11);
         assert_eq!(size_of::<PacketHeader>(), packet_constants::HEADER_SIZE);
         assert_eq!(size_of::<FragmentHeader>(), packet_constants::FRAGMENT_HEADER_SIZE);
 

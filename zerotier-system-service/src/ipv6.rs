@@ -68,3 +68,9 @@ mod freebsd_like {
 
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "freebsd", target_os = "darwin"))]
 pub use freebsd_like::is_ipv6_temporary;
+
+use zerotier_network_hypervisor::vl1::InetAddress;
+#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "freebsd", target_os = "darwin")))]
+pub fn is_ipv6_temporary(_device_name: &str, _address: &InetAddress) -> bool {
+    false
+}

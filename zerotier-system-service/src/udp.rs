@@ -201,8 +201,8 @@ impl BoundUdpPort {
 #[cfg(unix)]
 unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result<RawFd, &'static str> {
     let (af, sa_len) = match address.family() {
-        AF_INET => (libc::AF_INET, std::mem::size_of::<libc::sockaddr_in>().as_()),
-        AF_INET6 => (libc::AF_INET6, std::mem::size_of::<libc::sockaddr_in6>().as_()),
+        AF_INET => (AF_INET, std::mem::size_of::<libc::sockaddr_in>().as_()),
+        AF_INET6 => (AF_INET6, std::mem::size_of::<libc::sockaddr_in6>().as_()),
         _ => {
             return Err("unrecognized address family");
         }
@@ -226,7 +226,7 @@ unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result
     fl = 1;
     setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_BROADCAST.as_(), (&mut fl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_());
     debug_assert!(setsockopt_results == 0);
-    if af == libc::AF_INET6 {
+    if af == AF_INET6 {
         fl = 1;
         setsockopt_results |= libc::setsockopt(s, libc::IPPROTO_IPV6.as_(), libc::IPV6_V6ONLY.as_(), (&mut fl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_());
         debug_assert!(setsockopt_results == 0);
@@ -247,7 +247,7 @@ unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result
         return Err("setsockopt() failed");
     }
 
-    if af == libc::AF_INET {
+    if af == AF_INET {
         #[cfg(not(target_os = "linux"))]
         {
             fl = 0;
@@ -255,12 +255,12 @@ unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result
         }
         #[cfg(target_os = "linux")]
         {
-            fl = libc::IP_PMTUDISC_DONT as c_int;
+            fl = libc::IP_PMTUDISC_DONT as libc::c_int;
             libc::setsockopt(s, libc::IPPROTO_IP.as_(), libc::IP_MTU_DISCOVER.as_(), (&mut fl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_());
         }
     }
 
-    if af == libc::AF_INET6 {
+    if af == AF_INET6 {
         fl = 0;
         libc::setsockopt(s, libc::IPPROTO_IPV6.as_(), libc::IPV6_DONTFRAG.as_(), (&mut fl as *mut libc::c_int).cast(), std::mem::size_of::<libc::c_int>().as_());
     }
