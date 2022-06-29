@@ -305,6 +305,7 @@ impl<SI: SystemInterface> Peer<SI> {
             paths.retain(|p| ((time_ticks - p.last_receive_time_ticks) < PEER_EXPIRATION_TIME) && (p.path.strong_count() > 0));
             prioritize_paths(&mut paths);
         }
+        self.reported_local_endpoints.lock().retain(|_, ts| (time_ticks - *ts) < PEER_EXPIRATION_TIME);
         (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed).max(self.create_time_ticks)) < PEER_EXPIRATION_TIME
     }
 
