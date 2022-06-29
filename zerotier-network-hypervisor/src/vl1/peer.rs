@@ -1,5 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::mem::MaybeUninit;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicU8, Ordering};
@@ -48,6 +49,9 @@ pub struct Peer<SI: SystemInterface> {
 
     // Paths sorted in descending order of quality / preference.
     paths: Mutex<Vec<PeerPath<SI>>>,
+
+    // External addresses by this peer for the local node.
+    reported_local_endpoints: Mutex<HashMap<Endpoint, i64>>,
 
     // Statistics and times of events.
     last_send_time_ticks: AtomicI64,
@@ -182,6 +186,7 @@ impl<SI: SystemInterface> Peer<SI> {
                 identity_symmetric_key: SymmetricSecret::new(static_secret),
                 ephemeral_symmetric_key: RwLock::new(None),
                 paths: Mutex::new(Vec::with_capacity(4)),
+                reported_local_endpoints: Mutex::new(HashMap::new()),
                 last_send_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
                 last_receive_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
                 last_forward_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
@@ -441,21 +446,17 @@ impl<SI: SystemInterface> Peer<SI> {
             let message_id = self.next_message_id();
 
             {
-                let packet_header: &mut PacketHeader = packet.append_struct_get_mut().unwrap();
-                packet_header.id = message_id.to_ne_bytes();
-                packet_header.dest = self.identity.address.to_bytes();
-                packet_header.src = node.identity.address.to_bytes();
-                packet_header.flags_cipher_hops = security_constants::CIPHER_NOCRYPT_POLY1305;
-            }
-
-            {
-                let hello_fixed_headers: &mut message_component_structs::HelloFixedHeaderFields = packet.append_struct_get_mut().unwrap();
-                hello_fixed_headers.verb = verbs::VL1_HELLO | packet_constants::VERB_FLAG_EXTENDED_AUTHENTICATION;
-                hello_fixed_headers.version_proto = PROTOCOL_VERSION;
-                hello_fixed_headers.version_major = VERSION_MAJOR;
-                hello_fixed_headers.version_minor = VERSION_MINOR;
-                hello_fixed_headers.version_revision = VERSION_REVISION.to_be_bytes();
-                hello_fixed_headers.timestamp = (time_ticks as u64).wrapping_add(self.random_ticks_offset).to_be_bytes();
+                let f: &mut (PacketHeader, message_component_structs::HelloFixedHeaderFields) = packet.append_struct_get_mut().unwrap();
+                f.0.id = message_id.to_ne_bytes();
+                f.0.dest = self.identity.address.to_bytes();
+                f.0.src = node.identity.address.to_bytes();
+                f.0.flags_cipher_hops = security_constants::CIPHER_NOCRYPT_POLY1305;
+                f.1.verb = verbs::VL1_HELLO | packet_constants::VERB_FLAG_EXTENDED_AUTHENTICATION;
+                f.1.version_proto = PROTOCOL_VERSION;
+                f.1.version_major = VERSION_MAJOR;
+                f.1.version_minor = VERSION_MINOR;
+                f.1.version_revision = VERSION_REVISION.to_be_bytes();
+                f.1.timestamp = (time_ticks as u64).wrapping_add(self.random_ticks_offset).to_be_bytes();
             }
 
             debug_assert_eq!(packet.len(), 41);
@@ -582,8 +583,6 @@ impl<SI: SystemInterface> Peer<SI> {
                 // If we made it here it decrypted and passed authentication.
                 // ---------------------------------------------------------------
 
-                debug_event!(si, "[vl1] #{:0>16x} decrypted and authenticated, verb: {} ({:0>2x})", u64::from_be_bytes(packet_header.id), verbs::name(verb & packet_constants::VERB_MASK), (verb & packet_constants::VERB_MASK) as u32);
-
                 if (verb & packet_constants::VERB_FLAG_COMPRESSED) != 0 {
                     let mut decompressed_payload: [u8; packet_constants::SIZE_MAX] = unsafe { MaybeUninit::uninit().assume_init() };
                     decompressed_payload[0] = verb;
@@ -606,6 +605,8 @@ impl<SI: SystemInterface> Peer<SI> {
                 }
 
                 verb &= packet_constants::VERB_MASK; // mask off flags
+                debug_event!(si, "[vl1] #{:0>16x} decrypted and authenticated, verb: {} ({:0>2x})", u64::from_be_bytes(packet_header.id), verbs::name(verb & packet_constants::VERB_MASK), verb as u32);
+
                 return match verb {
                     verbs::VL1_NOP => true,
                     verbs::VL1_HELLO => self.handle_incoming_hello(si, node, time_ticks, message_id, source_path, &payload).await,
@@ -629,33 +630,55 @@ impl<SI: SystemInterface> Peer<SI> {
             self.remote_protocol_version.store(hello_fixed_headers.version_proto, Ordering::Relaxed);
             self.remote_version
                 .store((hello_fixed_headers.version_major as u64).wrapping_shl(48) | (hello_fixed_headers.version_minor as u64).wrapping_shl(32) | (u16::from_be_bytes(hello_fixed_headers.version_revision) as u64).wrapping_shl(16), Ordering::Relaxed);
+            if let Ok(identity) = Identity::unmarshal(payload, &mut cursor) {
+                if identity.eq(&self.identity) {
+                    if hello_fixed_headers.version_proto >= 20 {
+                        let mut session_metadata_len = payload.read_u16(&mut cursor).unwrap_or(0) as usize;
+                        if session_metadata_len > 16 {
+                            session_metadata_len -= 16;
+                            if let Ok(nonce) = payload.read_bytes_fixed::<16>(&mut cursor) {
+                                let mut nonce = nonce.clone();
+                                if let Ok(session_metadata) = payload.read_bytes(session_metadata_len, &mut cursor) {
+                                    let mut session_metadata = session_metadata.to_vec();
 
-            let mut packet = PacketBuffer::new();
+                                    nonce[12] &= 0x7f;
+                                    let salted_key = Secret(hmac_sha384(&message_id.to_ne_bytes(), self.identity_symmetric_key.hello_private_section_key.as_bytes()));
+                                    let mut aes = AesCtr::new(&salted_key.as_bytes()[0..32]);
+                                    aes.init(&nonce);
+                                    aes.crypt_in_place(session_metadata.as_mut_slice());
 
-            packet.set_size(packet_constants::HEADER_SIZE);
-            {
-                let fixed_fields: &mut message_component_structs::OkHeader = packet.append_struct_get_mut().unwrap();
-                fixed_fields.verb = verbs::VL1_OK;
-                fixed_fields.in_re_verb = verbs::VL1_HELLO;
-                fixed_fields.in_re_message_id = message_id.to_ne_bytes();
+                                    if let Some(_session_metadata) = Dictionary::from_bytes(session_metadata.as_slice()) {
+                                        // TODO
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    let mut packet = PacketBuffer::new();
+                    packet.set_size(packet_constants::HEADER_SIZE);
+                    {
+                        let f: &mut (message_component_structs::OkHeader, message_component_structs::OkHelloFixedHeaderFields) = packet.append_struct_get_mut().unwrap();
+                        f.0.verb = verbs::VL1_OK;
+                        f.0.in_re_verb = verbs::VL1_HELLO;
+                        f.0.in_re_message_id = message_id.to_ne_bytes();
+                        f.1.timestamp_echo = hello_fixed_headers.timestamp;
+                        f.1.version_proto = PROTOCOL_VERSION;
+                        f.1.version_major = VERSION_MAJOR;
+                        f.1.version_minor = VERSION_MINOR;
+                        f.1.version_revision = VERSION_REVISION.to_be_bytes();
+                    }
+
+                    if hello_fixed_headers.version_proto >= 20 {
+                        let session_metadata = self.create_session_metadata(node, &source_path.endpoint);
+                        assert!(session_metadata.len() <= 0xffff); // sanity check, should be impossible
+                        assert!(packet.append_u16(session_metadata.len() as u16).is_ok());
+                        assert!(packet.append_bytes(session_metadata.as_slice()).is_ok());
+                    }
+
+                    return self.send(si, node, time_ticks, self.next_message_id(), &mut packet).await;
+                }
             }
-            {
-                let fixed_fields: &mut message_component_structs::OkHelloFixedHeaderFields = packet.append_struct_get_mut().unwrap();
-                fixed_fields.timestamp_echo = hello_fixed_headers.timestamp;
-                fixed_fields.version_proto = PROTOCOL_VERSION;
-                fixed_fields.version_major = VERSION_MAJOR;
-                fixed_fields.version_minor = VERSION_MINOR;
-                fixed_fields.version_revision = VERSION_REVISION.to_be_bytes();
-            }
-
-            if hello_fixed_headers.version_proto >= 20 {
-                let session_metadata = self.create_session_metadata(node, &source_path.endpoint);
-                assert!(session_metadata.len() <= 0xffff); // sanity check, should be impossible
-                assert!(packet.append_u16(session_metadata.len() as u16).is_ok());
-                assert!(packet.append_bytes(session_metadata.as_slice()).is_ok());
-            }
-
-            return self.send(si, node, time_ticks, self.next_message_id(), &mut packet).await;
         }
         return false;
     }
@@ -707,8 +730,9 @@ impl<SI: SystemInterface> Peer<SI> {
                                     }
                                 }
                             } else {
-                                //let physical_address = Endpoint::unmarshal(&payload, &mut cursor);
-                                // TODO
+                                if let Ok(reported_endpoint) = Endpoint::unmarshal(&payload, &mut cursor) {
+                                    let _ = self.reported_local_endpoints.lock().insert(reported_endpoint, time_ticks);
+                                }
                             }
 
                             if hops == 0 && !path_is_known {
