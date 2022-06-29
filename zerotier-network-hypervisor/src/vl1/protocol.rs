@@ -46,6 +46,9 @@ use crate::vl1::Address;
  */
 pub const PROTOCOL_VERSION: u8 = 20;
 
+/// Minimum peer protocol version supported.
+pub const PROTOCOL_VERSION_MIN: u8 = 11;
+
 /// Buffer sized for ZeroTier packets.
 pub type PacketBuffer = Buffer<{ packet_constants::SIZE_MAX }>;
 
@@ -205,7 +208,7 @@ pub mod security_constants {
     pub const CIPHER_AES_GMAC_SIV: u8 = 0x18;
 
     /// KBKDF usage label indicating a key used to HMAC packets for extended authentication.
-    pub const KBKDF_KEY_USAGE_LABEL_PACKET_HMAC: u8 = b'M';
+    pub const KBKDF_KEY_USAGE_LABEL_PACKET_HMAC: u8 = b'm';
 
     /// KBKDF usage label for the first AES-GMAC-SIV key.
     pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0: u8 = b'0';
@@ -216,8 +219,8 @@ pub mod security_constants {
     /// KBKDF usage label for the private section of HELLOs.
     pub const KBKDF_KEY_USAGE_LABEL_HELLO_PRIVATE_SECTION: u8 = b'h';
 
-    /// KBKDF usage label for the key used to advance the ratchet.
-    pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_RATCHET_KEY: u8 = b'e';
+    /// KBKDF usage label for a unique ID for ephemeral keys (not actually a key).
+    pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_KEY_ID: u8 = b'e';
 
     /// Try to re-key ephemeral keys after this time.
     pub const EPHEMERAL_SECRET_REKEY_AFTER_TIME: i64 = 300000; // 5 minutes
@@ -366,21 +369,21 @@ impl PacketHeader {
     }
 
     #[inline(always)]
-    pub fn aad_bytes(&self) -> [u8; 11] {
-        let mut id = unsafe { MaybeUninit::<[u8; 11]>::uninit().assume_init() };
-        id[0..5].copy_from_slice(&self.dest);
-        id[5..10].copy_from_slice(&self.src);
-        id[10] = self.flags_cipher_hops & packet_constants::FLAGS_FIELD_MASK_HIDE_HOPS;
-        id
-    }
-
-    #[inline(always)]
     pub fn aes_gmac_siv_tag(&self) -> [u8; 16] {
         let mut id = unsafe { MaybeUninit::<[u8; 16]>::uninit().assume_init() };
         id[0..8].copy_from_slice(&self.id);
         id[8..16].copy_from_slice(&self.mac);
         id
     }
+}
+
+#[inline(always)]
+pub fn get_packet_aad_bytes(destination: Address, source: Address, flags_cipher_hops: u8) -> [u8; 11] {
+    let mut id = unsafe { MaybeUninit::<[u8; 11]>::uninit().assume_init() };
+    id[0..5].copy_from_slice(&destination.to_bytes());
+    id[5..10].copy_from_slice(&source.to_bytes());
+    id[10] = flags_cipher_hops & packet_constants::FLAGS_FIELD_MASK_HIDE_HOPS;
+    id
 }
 
 /// ZeroTier fragment header
@@ -439,10 +442,12 @@ impl FragmentHeader {
     }
 }
 
+/// Flat packed structs for fixed length header blocks in messages.
 pub(crate) mod message_component_structs {
     #[derive(Clone, Copy)]
     #[repr(C, packed)]
     pub struct OkHeader {
+        pub verb: u8,
         pub in_re_verb: u8,
         pub in_re_message_id: [u8; 8],
     }
@@ -450,6 +455,7 @@ pub(crate) mod message_component_structs {
     #[derive(Clone, Copy)]
     #[repr(C, packed)]
     pub struct ErrorHeader {
+        pub verb: u8,
         pub in_re_verb: u8,
         pub in_re_message_id: [u8; 8],
         pub error_code: u8,

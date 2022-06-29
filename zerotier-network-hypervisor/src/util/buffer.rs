@@ -112,11 +112,19 @@ impl<const L: usize> Buffer<L> {
         self.1.as_mut_ptr()
     }
 
-    /// Get all bytes after a given position.
     #[inline(always)]
     pub fn as_bytes_starting_at(&self, start: usize) -> std::io::Result<&[u8]> {
         if start <= self.0 {
             Ok(&self.1[start..self.0])
+        } else {
+            Err(overflow_err())
+        }
+    }
+
+    #[inline(always)]
+    pub fn as_bytes_starting_at_mut(&mut self, start: usize) -> std::io::Result<&mut [u8]> {
+        if start <= self.0 {
+            Ok(&mut self.1[start..self.0])
         } else {
             Err(overflow_err())
         }

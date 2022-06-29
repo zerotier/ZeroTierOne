@@ -94,8 +94,6 @@ pub trait InnerProtocolInterface: Sync + Send + 'static {
     /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
-    /// The return values of these must follow the same semantic of returning true if the message
-    /// was handled.
     async fn handle_packet<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, forward_secrecy: bool, extended_authentication: bool, verb: u8, payload: &PacketBuffer) -> bool;
 
     /// Handle errors, returning true if the error was recognized.

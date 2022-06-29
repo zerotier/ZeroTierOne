@@ -42,10 +42,25 @@ impl SymmetricSecret {
 }
 
 /// An ephemeral symmetric secret with usage timers and counters.
+#[allow(unused)]
 pub(crate) struct EphemeralSymmetricSecret {
     pub secret: SymmetricSecret,
-    #[allow(unused)]
+    pub key_hash: [u8; 16],
+    pub create_time_ticks: i64,
     pub encrypt_uses: AtomicUsize,
+}
+
+impl EphemeralSymmetricSecret {
+    #[allow(unused)]
+    pub fn new(key: Secret<48>, create_time_ticks: i64) -> EphemeralSymmetricSecret {
+        let key_hash: [u8; 16] = zt_kbkdf_hmac_sha384(key.as_bytes(), security_constants::KBKDF_KEY_USAGE_LABEL_EPHEMERAL_KEY_ID).0[0..16].try_into().unwrap();
+        Self {
+            secret: SymmetricSecret::new(key),
+            key_hash,
+            create_time_ticks,
+            encrypt_uses: AtomicUsize::new(0),
+        }
+    }
 }
 
 pub(crate) struct AesGmacSivPoolFactory(Secret<32>, Secret<32>);

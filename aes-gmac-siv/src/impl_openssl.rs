@@ -245,3 +245,6 @@ impl AesGmacSiv {
         }
     }
 }
+
+unsafe impl Send for AesGmacSiv {}
+unsafe impl Send for AesCtr {}
