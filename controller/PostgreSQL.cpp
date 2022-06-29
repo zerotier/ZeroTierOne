@@ -217,10 +217,11 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 		opts.password = _rc->password;
 		opts.db = 0;
 		opts.keep_alive = true;
-		opts.connect_timeout = std::chrono::seconds(5);
+		opts.connect_timeout = std::chrono::seconds(3);
 		poolOpts.size = 25;
-		poolOpts.wait_timeout = std::chrono::milliseconds(1000);
-		poolOpts.connection_lifetime = std::chrono::minutes(5);
+		poolOpts.wait_timeout = std::chrono::seconds(5);
+		poolOpts.connection_lifetime = std::chrono::minutes(3);
+		poolOpts.connection_idle_time = std::chrono::minutes(1);
 		if (_rc->clusterMode) {
 			fprintf(stderr, "Using Redis in Cluster Mode\n");
 			_cluster = std::make_shared<sw::redis::RedisCluster>(opts, poolOpts);
