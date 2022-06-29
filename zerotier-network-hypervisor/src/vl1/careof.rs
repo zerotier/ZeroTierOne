@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use std::io::Write;
+use std::io::{Read, Write};
 
 use crate::vl1::identity::Identity;
 use crate::vl1::protocol::IDENTITY_FINGERPRINT_SIZE;
@@ -34,7 +34,8 @@ impl CareOf {
         for f in self.fingerprints.iter() {
             let _ = v.write_all(f);
         }
-        let _ = varint::write(&mut v, 0); // reserved for future use
+        let _ = varint::write(&mut v, 0); // flags, reserved for future use
+        let _ = varint::write(&mut v, 0); // extra bytes, reserved for future use
         if include_signature {
             let _ = varint::write(&mut v, self.signature.len() as u64);
             let _ = v.write_all(self.signature.as_slice());
@@ -45,6 +46,40 @@ impl CareOf {
     #[inline(always)]
     pub fn to_bytes(&self) -> Vec<u8> {
         self.to_bytes_internal(true)
+    }
+
+    pub fn from_bytes(mut b: &[u8]) -> Option<CareOf> {
+        let mut f = move || -> std::io::Result<CareOf> {
+            let (timestamp, _) = varint::read(&mut b)?;
+            let mut care_of = CareOf {
+                timestamp: timestamp as i64,
+                fingerprints: Vec::new(),
+                signature: Vec::new(),
+            };
+            let (fingerprint_count, _) = varint::read(&mut b)?;
+            for _ in 0..fingerprint_count {
+                let mut tmp = [0_u8; IDENTITY_FINGERPRINT_SIZE];
+                b.read_exact(&mut tmp)?;
+                care_of.fingerprints.push(tmp);
+            }
+            let _ = varint::read(&mut b)?; // flags, currently ignored
+            let (extra_bytes, _) = varint::read(&mut b)?;
+            if extra_bytes > (b.len() as u64) {
+                return Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, ""));
+            }
+            b = &b[(extra_bytes as usize)..];
+            let (signature_len, _) = varint::read(&mut b)?;
+            if signature_len > (b.len() as u64) {
+                return Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, ""));
+            }
+            let _ = care_of.signature.write_all(&b[..(signature_len as usize)]);
+            return Ok(care_of);
+        };
+        if let Ok(care_of) = f() {
+            Some(care_of)
+        } else {
+            None
+        }
     }
 
     /// Sort, deduplicate, and sign this care-of packet.
