@@ -478,8 +478,8 @@ impl InetAddress {
 
     /// Get the address family of this InetAddress: AF_INET, AF_INET6, or 0 if uninitialized.
     #[inline(always)]
-    pub fn family(&self) -> u8 {
-        unsafe { self.sa.sa_family as u8 }
+    pub fn family(&self) -> AddressFamilyType {
+        unsafe { self.sa.sa_family as AddressFamilyType }
     }
 
     /// Get a pointer to the C "sockaddr" structure and the size of the returned structure in bytes.
