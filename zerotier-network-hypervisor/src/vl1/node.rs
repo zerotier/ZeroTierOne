@@ -650,6 +650,7 @@ impl<SI: SystemInterface> Node<SI> {
         self.roots.read().my_root_sets.clone()
     }
 
+    #[allow(unused)]
     pub(crate) fn this_node_is_root(&self) -> bool {
         self.roots.read().my_root_sets.is_some()
     }

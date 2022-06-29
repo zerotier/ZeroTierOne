@@ -11,9 +11,9 @@ use zerotier_network_hypervisor::vl1::RootSet;
 
 pub async fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
     match cmd_args.subcommand() {
-        Some(("add", sc_args)) => todo!(),
+        Some(("add", _sc_args)) => todo!(),
 
-        Some(("remove", sc_args)) => todo!(),
+        Some(("remove", _sc_args)) => todo!(),
 
         Some(("list", _)) => todo!(),
 
