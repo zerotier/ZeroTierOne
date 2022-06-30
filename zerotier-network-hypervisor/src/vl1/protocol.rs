@@ -47,6 +47,8 @@ use crate::vl1::Address;
 pub const PROTOCOL_VERSION: u8 = 20;
 
 /// Minimum peer protocol version supported.
+///
+/// We could probably push it back to 8 or 9 with some added support for sending Salsa/Poly packets.
 pub const PROTOCOL_VERSION_MIN: u8 = 11;
 
 /// Buffer sized for ZeroTier packets.
@@ -239,8 +241,8 @@ pub mod session_metadata {
     /// Random 128-bit ID generated at node startup, allows multiple instances to share an identity and be differentiated.
     pub const INSTANCE_ID: &'static str = "i";
 
-    /// Endpoint to which HELLO packet was sent.
-    pub const SENT_TO: &'static str = "d";
+    /// Endpoint from which HELLO was received, sent with OK(HELLO) if hops is zero.
+    pub const DIRECT_SOURCE: &'static str = "s";
 
     /// Signed bundle of identity fingerprints through which this node can be reached.
     pub const CARE_OF: &'static str = "c";
