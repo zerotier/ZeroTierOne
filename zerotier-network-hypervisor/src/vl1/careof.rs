@@ -106,3 +106,33 @@ impl CareOf {
         self.fingerprints.binary_search(&id.fingerprint).is_ok()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::mpsc;
+
+    use super::CareOf;
+    use super::Identity;
+
+    #[test]
+    fn add() {
+        let (s, r) = mpsc::channel();
+
+        for _ in 0..10 {
+            let s2 = s.clone();
+
+            std::thread::spawn(move || {
+                let id = Identity::generate();
+                let mut c = CareOf::new(rand::random());
+
+                s2.send(!c.contains(&id)).unwrap();
+                c.add_care_of(&id);
+                s2.send(c.contains(&id)).unwrap();
+            });
+        }
+
+        for _ in 0..20 {
+            assert!(r.recv().unwrap());
+        }
+    }
+}
