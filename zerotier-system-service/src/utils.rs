@@ -198,7 +198,11 @@ mod tests {
         let start = ms_monotonic();
         std::thread::sleep(Duration::from_millis(500));
         let end = ms_monotonic();
-        assert!((end - start).abs() > 450);
-        assert!((end - start).abs() < 550);
+        // per docs:
+        //
+        // The thread may sleep longer than the duration specified due to scheduling specifics or
+        // platform-dependent functionality. It will never sleep less.
+        //
+        assert!((end - start).abs() >= 500);
     }
 }

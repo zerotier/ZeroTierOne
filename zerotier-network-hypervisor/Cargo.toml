@@ -5,12 +5,6 @@ edition = "2021"
 license = "MPL-2.0"
 authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 
-[profile.release]
-lto = true
-opt-level = 3
-codegen-units = 1
-panic = 'abort'
-
 [features]
 default = ["debug_events"]
 debug_events = []
