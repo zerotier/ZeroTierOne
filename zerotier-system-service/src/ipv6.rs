@@ -1,5 +1,8 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+#[allow(unused_imports)]
+use zerotier_network_hypervisor::vl1::InetAddress;
+
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "freebsd", target_os = "darwin"))]
 mod freebsd_like {
     use lazy_static::lazy_static;
@@ -69,7 +72,6 @@ mod freebsd_like {
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "freebsd", target_os = "darwin"))]
 pub use freebsd_like::is_ipv6_temporary;
 
-use zerotier_network_hypervisor::vl1::InetAddress;
 #[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "freebsd", target_os = "darwin")))]
 pub fn is_ipv6_temporary(_device_name: &str, _address: &InetAddress) -> bool {
     false
