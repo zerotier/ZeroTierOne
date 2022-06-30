@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::mem::MaybeUninit;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 
@@ -543,7 +542,6 @@ impl<SI: SystemInterface> Peer<SI> {
     /// This returns true if the packet decrypted and passed authentication.
     pub(crate) async fn receive<PH: InnerProtocolInterface>(&self, node: &Node<SI>, si: &SI, ph: &PH, time_ticks: i64, source_path: &Arc<Path<SI>>, packet_header: &PacketHeader, frag0: &PacketBuffer, fragments: &[Option<PooledPacketBuffer>]) -> bool {
         if let Ok(packet_frag0_payload_bytes) = frag0.as_bytes_starting_at(packet_constants::VERB_INDEX) {
-            //let mut payload = unsafe { PacketBuffer::new_without_memzero() };
             let mut payload = PacketBuffer::new();
 
             // First try decrypting and authenticating with an ephemeral secret if one is negotiated.
