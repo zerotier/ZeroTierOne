@@ -1014,12 +1014,16 @@ void PostgreSQL::heartbeat()
 		}
 		_pool->unborrow(c);
 
-		if (_redisMemberStatus) {
-			if (_rc->clusterMode) {
-				_cluster->zadd("controllers", "controllerId", ts);
-			} else {
-				_redis->zadd("controllers", "controllerId", ts);
+		try {
+			if (_redisMemberStatus) {
+				if (_rc->clusterMode) {
+					_cluster->zadd("controllers", "controllerId", ts);
+				} else {
+					_redis->zadd("controllers", "controllerId", ts);
+				}
 			}
+		} catch (sw::redis::Error &e) {
+			fprintf(stderr, "ERROR: Redis error in heartbeat thread: %s\n", e.what());
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
