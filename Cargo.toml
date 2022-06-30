@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+  "aes-gmac-siv",
   "zerotier-core-crypto",
   "zerotier-network-hypervisor",
   "zerotier-system-service",
