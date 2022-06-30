@@ -710,11 +710,11 @@ void PostgreSQL::initializeNetworks()
 			if (_redisMemberStatus) {
 				fprintf(stderr, "adding networks to redis...\n");
 				if (_rc->clusterMode) {
-					auto tx = _cluster->transaction(_myAddressStr, true);
+					auto tx = _cluster->transaction(_myAddressStr, true, false);
 					tx.sadd(setKey, networkSet.begin(), networkSet.end());
 					tx.exec();
 				} else {
-					auto tx = _redis->transaction(true);
+					auto tx = _redis->transaction(true, false);
 					tx.sadd(setKey, networkSet.begin(), networkSet.end());
 					tx.exec();
 				}
@@ -766,13 +766,13 @@ void PostgreSQL::initializeMembers()
 			if (!deletes.empty()) {
 				try {
 					if (_rc->clusterMode) {
-						auto tx = _cluster->transaction(_myAddressStr, true);
+						auto tx = _cluster->transaction(_myAddressStr, true, false);
 						for (std::string k : deletes) {
 							tx.del(k);
 						}
 						tx.exec();
 					} else {
-						auto tx = _redis->transaction(true);
+						auto tx = _redis->transaction(true, false);
 						for (std::string k : deletes) {
 							tx.del(k);
 						}
@@ -926,13 +926,13 @@ void PostgreSQL::initializeMembers()
 			if (_redisMemberStatus) {
 				fprintf(stderr, "Load member data into redis...\n");
 				if (_rc->clusterMode) {
-					auto tx = _cluster->transaction(_myAddressStr, true);
+					auto tx = _cluster->transaction(_myAddressStr, true, false);
 					for (auto it : networkMembers) {
 						tx.sadd(it.first, it.second);
 					}
 					tx.exec();
 				} else {
-					auto tx = _redis->transaction(true);
+					auto tx = _redis->transaction(true, false);
 					for (auto it : networkMembers) {
 						tx.sadd(it.first, it.second);
 					}
@@ -1696,10 +1696,10 @@ void PostgreSQL::onlineNotification_Redis()
 		try {
 			if (!lastOnline.empty()) {
 				if (_rc->clusterMode) {
-					auto tx = _cluster->transaction(controllerId, true);
+					auto tx = _cluster->transaction(controllerId, true, false);
 					count = _doRedisUpdate(tx, controllerId, lastOnline);
 				} else {
-					auto tx = _redis->transaction(true);
+					auto tx = _redis->transaction(true, false);
 					count = _doRedisUpdate(tx, controllerId, lastOnline);
 				}
 			}
