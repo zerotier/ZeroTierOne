@@ -5,12 +5,6 @@ authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ieryme
 edition = "2021"
 license = "MPL-2.0"
 
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-panic = 'abort'
-
 [dependencies]
 zerotier-network-hypervisor = { path = "../zerotier-network-hypervisor" }
 zerotier-core-crypto = { path = "../zerotier-core-crypto" }
