@@ -11,7 +11,7 @@ use zerotier_core_crypto::varint;
 ///
 /// This can be sent by nodes to indicate which other nodes they wish to have used to reach them. Typically
 /// these would be roots. It prevents a misbehaving or malicious root from pretending to host a node.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CareOf {
     pub timestamp: i64,
     pub fingerprints: Vec<[u8; IDENTITY_FINGERPRINT_SIZE]>,
@@ -115,7 +115,7 @@ mod tests {
     use super::Identity;
 
     #[test]
-    fn add() {
+    fn add_contains() {
         let (s, r) = mpsc::channel();
 
         for _ in 0..10 {
@@ -128,6 +128,51 @@ mod tests {
                 s2.send(!c.contains(&id)).unwrap();
                 c.add_care_of(&id);
                 s2.send(c.contains(&id)).unwrap();
+            });
+        }
+
+        for _ in 0..20 {
+            assert!(r.recv().unwrap());
+        }
+    }
+
+    #[test]
+    fn to_from_bytes() {
+        let (s, r) = mpsc::channel();
+
+        for _ in 0..10 {
+            let s2 = s.clone();
+
+            std::thread::spawn(move || {
+                let id = Identity::generate();
+                let mut c = CareOf::new(rand::random());
+
+                c.add_care_of(&id);
+                s2.send(c.eq(&CareOf::from_bytes(&c.to_bytes()).unwrap())).unwrap();
+            });
+        }
+
+        for _ in 0..10 {
+            assert!(r.recv().unwrap());
+        }
+    }
+
+    #[test]
+    fn sign_verify() {
+        let (s, r) = mpsc::channel();
+
+        for _ in 0..10 {
+            let s2 = s.clone();
+
+            std::thread::spawn(move || {
+                let id = Identity::generate();
+                let id2 = Identity::generate();
+                let mut c = CareOf::new(rand::random());
+
+                c.add_care_of(&id2);
+
+                s2.send(c.sign(&id)).unwrap();
+                s2.send(c.verify(&id)).unwrap();
             });
         }
 
