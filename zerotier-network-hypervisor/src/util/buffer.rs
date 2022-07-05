@@ -80,6 +80,10 @@ impl<const L: usize> Buffer<L> {
         Self(0, MaybeUninit::uninit().assume_init())
     }
 
+    pub const fn capacity(&self) -> usize {
+        Self::CAPACITY
+    }
+
     pub fn from_bytes(b: &[u8]) -> std::io::Result<Self> {
         let l = b.len();
         if l <= L {

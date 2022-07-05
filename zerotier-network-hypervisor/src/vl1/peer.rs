@@ -17,9 +17,11 @@ use crate::util::byte_array_range;
 use crate::util::canonicalobject::CanonicalObject;
 use crate::util::debug_event;
 use crate::util::marshalable::Marshalable;
+use crate::vl1::address::Address;
 use crate::vl1::careof::CareOf;
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
+use crate::vl1::rootset::RootSet;
 use crate::vl1::symmetricsecret::{EphemeralSymmetricSecret, SymmetricSecret};
 use crate::vl1::{Dictionary, Endpoint, Identity, Path};
 use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
@@ -33,6 +35,7 @@ struct PeerPath<SI: SystemInterface> {
 }
 
 struct RemoteNodeInfo {
+    remote_instance_id: [u8; 16],
     reported_local_endpoints: HashMap<Endpoint, i64>,
     care_of: Option<CareOf>,
     remote_version: u64,
@@ -52,7 +55,7 @@ pub struct Peer<SI: SystemInterface> {
     // Static shared secret computed from agreement with identity.
     identity_symmetric_key: SymmetricSecret,
 
-    // Latest ephemeral secret or None if not yet negotiated.
+    // Latest ephemeral session key or None if no current session.
     ephemeral_symmetric_key: RwLock<Option<EphemeralSymmetricSecret>>,
 
     // Paths sorted in descending order of quality / preference.
@@ -200,6 +203,7 @@ impl<SI: SystemInterface> Peer<SI> {
                 random_ticks_offset: next_u64_secure(),
                 message_id_counter: AtomicU64::new(((time_clock as u64) / 100).wrapping_shl(28) ^ next_u64_secure().wrapping_shr(36)),
                 remote_node_info: RwLock::new(RemoteNodeInfo {
+                    remote_instance_id: [0_u8; 16],
                     reported_local_endpoints: HashMap::new(),
                     care_of: None,
                     remote_version: 0,
@@ -369,7 +373,7 @@ impl<SI: SystemInterface> Peer<SI> {
     /// via a root or some other route.
     ///
     /// It encrypts and sets the MAC and cipher fields and packet ID and other things.
-    pub(crate) async fn send(&self, si: &SI, path: Option<&Arc<Path<SI>>>, node: &Node<SI>, time_ticks: i64, message_id: MessageId, packet: &mut PacketBuffer) -> bool {
+    pub(crate) async fn send(&self, si: &SI, path: Option<&Arc<Path<SI>>>, node: &Node<SI>, time_ticks: i64, packet: &mut PacketBuffer) -> bool {
         let mut _path_arc = None;
         let path = if let Some(path) = path {
             path
@@ -386,7 +390,7 @@ impl<SI: SystemInterface> Peer<SI> {
         let flags_cipher_hops = if packet.len() > max_fragment_size { packet_constants::HEADER_FLAG_FRAGMENTED | security_constants::CIPHER_AES_GMAC_SIV } else { security_constants::CIPHER_AES_GMAC_SIV };
 
         let mut aes_gmac_siv = if let Some(ephemeral_key) = self.ephemeral_symmetric_key.read().as_ref() { ephemeral_key.secret.aes_gmac_siv.get() } else { self.identity_symmetric_key.aes_gmac_siv.get() };
-        aes_gmac_siv.encrypt_init(&message_id.to_ne_bytes());
+        aes_gmac_siv.encrypt_init(&self.next_message_id().to_ne_bytes());
         aes_gmac_siv.encrypt_set_aad(&get_packet_aad_bytes(self.identity.address, node.identity.address, flags_cipher_hops));
         if let Ok(payload) = packet.as_bytes_starting_at_mut(packet_constants::HEADER_SIZE) {
             aes_gmac_siv.encrypt_first_pass(payload);
@@ -426,6 +430,19 @@ impl<SI: SystemInterface> Peer<SI> {
             }
         }
         return false;
+    }
+
+    pub(crate) fn create_session_metadata(&self, node: &Node<SI>, direct_source_report: Option<&Endpoint>) -> Vec<u8> {
+        let mut session_metadata = Dictionary::new();
+        session_metadata.set_bytes(session_metadata::INSTANCE_ID, node.instance_id.to_vec());
+        session_metadata.set_bytes(session_metadata::CARE_OF, node.care_of_bytes());
+        if let Some(direct_source) = direct_source_report {
+            session_metadata.set_bytes(session_metadata::DIRECT_SOURCE, direct_source.to_buffer::<{ Endpoint::MAX_MARSHAL_SIZE }>().unwrap().as_bytes().to_vec());
+        }
+        if let Some(my_root_sets) = node.my_root_sets() {
+            session_metadata.set_bytes(session_metadata::ROOT_SET_UPDATES, my_root_sets);
+        }
+        session_metadata.to_bytes()
     }
 
     /// Send a HELLO to this peer.
@@ -476,8 +493,7 @@ impl<SI: SystemInterface> Peer<SI> {
             assert!(node.identity.marshal_with_options(&mut packet, Identity::ALGORITHM_ALL, false).is_ok());
 
             // Create session meta-data and append length of this section.
-            let session_metadata = Dictionary::new();
-            let session_metadata = session_metadata.to_bytes();
+            let session_metadata = self.create_session_metadata(node, None);
             let session_metadata_len = session_metadata.len() + 16; // plus nonce
             assert!(session_metadata_len <= 0xffff); // sanity check, should be impossible
             assert!(packet.append_u16(session_metadata_len as u16).is_ok());
@@ -616,16 +632,17 @@ impl<SI: SystemInterface> Peer<SI> {
                 }
 
                 verb &= packet_constants::VERB_MASK; // mask off flags
-                debug_event!(si, "[vl1] #{:0>16x} decrypted and authenticated, verb: {} ({:0>2x})", u64::from_be_bytes(packet_header.id), verbs::name(verb & packet_constants::VERB_MASK), verb as u32);
+                debug_event!(si, "[vl1] #{:0>16x} decrypted and authenticated, verb: {} ({:0>2x})", u64::from_be_bytes(packet_header.id), verbs::name(verb), verb as u32);
 
                 if match verb {
                     verbs::VL1_NOP => true,
                     verbs::VL1_HELLO => self.handle_incoming_hello(si, ph, node, time_ticks, message_id, source_path, packet_header.hops(), extended_authentication, &payload).await,
                     verbs::VL1_ERROR => self.handle_incoming_error(si, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload).await,
                     verbs::VL1_OK => self.handle_incoming_ok(si, ph, node, time_ticks, source_path, packet_header.hops(), path_is_known, forward_secrecy, extended_authentication, &payload).await,
-                    verbs::VL1_WHOIS => self.handle_incoming_whois(si, node, time_ticks, source_path, &payload).await,
-                    verbs::VL1_RENDEZVOUS => self.handle_incoming_rendezvous(si, node, time_ticks, source_path, &payload).await,
-                    verbs::VL1_ECHO => self.handle_incoming_echo(si, node, time_ticks, source_path, &payload).await,
+                    verbs::VL1_WHOIS => self.handle_incoming_whois(si, ph, node, time_ticks, message_id, &payload).await,
+                    verbs::VL1_RENDEZVOUS => self.handle_incoming_rendezvous(si, node, time_ticks, message_id, source_path, &payload).await,
+                    verbs::VL1_ECHO => self.handle_incoming_echo(si, ph, node, time_ticks, message_id, &payload).await,
+                    verbs::VL1_SESSION_ACK => true, // TODO, for forward secrecy
                     verbs::VL1_PUSH_DIRECT_PATHS => self.handle_incoming_push_direct_paths(si, node, time_ticks, source_path, &payload).await,
                     verbs::VL1_USER_MESSAGE => self.handle_incoming_user_message(si, node, time_ticks, source_path, &payload).await,
                     _ => ph.handle_packet(self, &source_path, forward_secrecy, extended_authentication, verb, &payload).await,
@@ -643,7 +660,7 @@ impl<SI: SystemInterface> Peer<SI> {
     async fn handle_incoming_hello<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, message_id: MessageId, source_path: &Arc<Path<SI>>, hops: u8, extended_authentication: bool, payload: &PacketBuffer) -> bool {
         if !(ph.has_trust_relationship(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
             debug_event!(si, "[vl1] dropping HELLO from {} due to lack of trust relationship", self.identity.address.to_string());
-            return true;
+            return true; // packet wasn't invalid, just ignored
         }
 
         let mut cursor = 0;
@@ -673,8 +690,24 @@ impl<SI: SystemInterface> Peer<SI> {
                                         aes.init(&nonce);
                                         aes.crypt_in_place(session_metadata.as_mut_slice());
 
-                                        if let Some(_session_metadata) = Dictionary::from_bytes(session_metadata.as_slice()) {
-                                            // TODO
+                                        if let Some(session_metadata) = Dictionary::from_bytes(session_metadata.as_slice()) {
+                                            if let Some(instance_id) = session_metadata.get_bytes(session_metadata::INSTANCE_ID) {
+                                                // For new nodes that send an instance ID, we can try to filter out any possible replaying of old
+                                                // packets. A replay of an old HELLO could be used to at least probe for the existence of a node at
+                                                // a given IP address and port by eliciting an OK(HELLO) reply.
+                                                if remote_node_info.remote_instance_id.eq(instance_id) {
+                                                    if message_id.wrapping_sub(self.last_incoming_message_id.load(Ordering::Relaxed)) > PACKET_RESPONSE_COUNTER_DELTA_MAX
+                                                        && time_ticks.wrapping_sub(self.last_receive_time_ticks.load(Ordering::Relaxed)) < PEER_HELLO_INTERVAL_MAX
+                                                    {
+                                                        debug_event!(si, "[vl1] dropping HELLO from {} due to possible replay of old packet", self.identity.address.to_string());
+                                                        return true;
+                                                    }
+                                                } else {
+                                                    remote_node_info.remote_instance_id.fill(0);
+                                                    let l = instance_id.len().min(remote_node_info.remote_instance_id.len());
+                                                    (&mut remote_node_info.remote_instance_id[..l]).copy_from_slice(&instance_id[..l]);
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -695,32 +728,21 @@ impl<SI: SystemInterface> Peer<SI> {
                         f.1.version_minor = VERSION_MINOR;
                         f.1.version_revision = VERSION_REVISION.to_be_bytes();
                     }
-
                     if hello_fixed_headers.version_proto >= 20 {
-                        let mut session_metadata = Dictionary::new();
-                        session_metadata.set_bytes(session_metadata::INSTANCE_ID, node.instance_id.to_vec());
-                        session_metadata.set_bytes(session_metadata::CARE_OF, node.care_of_bytes());
-                        if hops == 0 {
-                            session_metadata.set_bytes(session_metadata::DIRECT_SOURCE, source_path.endpoint.to_buffer::<{ Endpoint::MAX_MARSHAL_SIZE }>().unwrap().as_bytes().to_vec());
-                        }
-                        if let Some(my_root_sets) = node.my_root_sets() {
-                            session_metadata.set_bytes(session_metadata::MY_ROOT_SETS, my_root_sets);
-                        }
-                        let session_metadata = session_metadata.to_bytes();
+                        let session_metadata = self.create_session_metadata(node, if hops == 0 { Some(&source_path.endpoint) } else { None });
                         assert!(session_metadata.len() <= 0xffff); // sanity check, should be impossible
                         assert!(packet.append_u16(session_metadata.len() as u16).is_ok());
                         assert!(packet.append_bytes(session_metadata.as_slice()).is_ok());
                     }
 
-                    return self.send(si, Some(source_path), node, time_ticks, self.next_message_id(), &mut packet).await;
+                    return self.send(si, Some(source_path), node, time_ticks, &mut packet).await;
                 }
             }
         }
         return false;
     }
 
-    #[allow(unused)]
-    async fn handle_incoming_error<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) -> bool {
+    async fn handle_incoming_error<PH: InnerProtocolInterface>(&self, _si: &SI, ph: &PH, _node: &Node<SI>, _time_ticks: i64, source_path: &Arc<Path<SI>>, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) -> bool {
         let mut cursor = 0;
         if let Ok(error_header) = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor) {
             let in_re_message_id: MessageId = u64::from_ne_bytes(error_header.in_re_message_id);
@@ -739,7 +761,7 @@ impl<SI: SystemInterface> Peer<SI> {
         &self,
         si: &SI,
         ph: &PH,
-        _node: &Node<SI>,
+        node: &Node<SI>,
         time_ticks: i64,
         source_path: &Arc<Path<SI>>,
         hops: u8,
@@ -762,6 +784,7 @@ impl<SI: SystemInterface> Peer<SI> {
                                         if let Ok(session_metadata) = payload.read_bytes(session_metadata_len as usize, &mut cursor) {
                                             if let Some(session_metadata) = Dictionary::from_bytes(session_metadata) {
                                                 let mut remote_node_info = self.remote_node_info.write();
+
                                                 if hops == 0 {
                                                     if let Some(reported_endpoint) = session_metadata.get_bytes(session_metadata::DIRECT_SOURCE) {
                                                         if let Some(reported_endpoint) = Endpoint::from_bytes(reported_endpoint) {
@@ -774,9 +797,32 @@ impl<SI: SystemInterface> Peer<SI> {
                                                         }
                                                     }
                                                 }
+
                                                 if let Some(care_of) = session_metadata.get_bytes(session_metadata::CARE_OF) {
                                                     if let Some(care_of) = CareOf::from_bytes(care_of) {
                                                         let _ = remote_node_info.care_of.insert(care_of);
+                                                    }
+                                                }
+
+                                                if let Some(instance_id) = session_metadata.get_bytes(session_metadata::INSTANCE_ID) {
+                                                    remote_node_info.remote_instance_id.fill(0);
+                                                    let l = instance_id.len().min(remote_node_info.remote_instance_id.len());
+                                                    (&mut remote_node_info.remote_instance_id[..l]).copy_from_slice(&instance_id[..l]);
+                                                }
+
+                                                if let Some(root_set_updates) = session_metadata.get_bytes(session_metadata::ROOT_SET_UPDATES) {
+                                                    let mut tmp = PacketBuffer::new();
+                                                    if root_set_updates.len() <= tmp.capacity() {
+                                                        tmp.set_to(root_set_updates);
+                                                        let mut cursor = 0;
+                                                        while cursor < tmp.len() {
+                                                            if let Ok(rs) = RootSet::unmarshal(&tmp, &mut cursor) {
+                                                                // This checks the origin node and only allows members of root sets to update them.
+                                                                node.remote_update_root_set(&self.identity, rs);
+                                                            } else {
+                                                                break;
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -785,8 +831,8 @@ impl<SI: SystemInterface> Peer<SI> {
                                 }
                             } else {
                                 // V1 nodes just append the endpoint to which they sent the packet, and we can still use that.
-                                if let Ok(reported_endpoint) = Endpoint::unmarshal(&payload, &mut cursor) {
-                                    if hops == 0 {
+                                if hops == 0 {
+                                    if let Ok(reported_endpoint) = Endpoint::unmarshal(&payload, &mut cursor) {
                                         #[cfg(debug_assertions)]
                                         let reported_endpoint2 = reported_endpoint.clone();
                                         if self.remote_node_info.write().reported_local_endpoints.insert(reported_endpoint, time_ticks).is_none() {
@@ -805,7 +851,19 @@ impl<SI: SystemInterface> Peer<SI> {
                         }
                     }
 
-                    verbs::VL1_WHOIS => {}
+                    verbs::VL1_WHOIS => {
+                        if node.is_peer_root(self) {
+                            while cursor < payload.len() {
+                                if let Ok(_whois_response) = Identity::unmarshal(payload, &mut cursor) {
+                                    // TODO
+                                } else {
+                                    break;
+                                }
+                            }
+                        } else {
+                            return true; // not invalid, just ignored
+                        }
+                    }
 
                     _ => {
                         return ph.handle_ok(self, &source_path, forward_secrecy, extended_authentication, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor).await;
@@ -816,19 +874,60 @@ impl<SI: SystemInterface> Peer<SI> {
         return false;
     }
 
-    #[allow(unused)]
-    async fn handle_incoming_whois(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) -> bool {
-        false
+    async fn handle_incoming_whois<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, message_id: MessageId, payload: &PacketBuffer) -> bool {
+        if node.this_node_is_root() || ph.has_trust_relationship(&self.identity) {
+            let mut packet = PacketBuffer::new();
+            packet.set_size(packet_constants::HEADER_SIZE);
+            {
+                let mut f: &mut message_component_structs::OkHeader = packet.append_struct_get_mut().unwrap();
+                f.verb = verbs::VL1_OK;
+                f.in_re_verb = verbs::VL1_WHOIS;
+                f.in_re_message_id = message_id.to_ne_bytes();
+            }
+
+            let mut cursor = 0;
+            while cursor < payload.len() {
+                if let Ok(zt_address) = Address::unmarshal(payload, &mut cursor) {
+                    if let Some(peer) = node.peer(zt_address) {
+                        if !peer.identity.marshal(&mut packet).is_ok() {
+                            debug_event!(si, "unexpected error serializing an identity into a WHOIS packet response");
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            self.send(si, None, node, time_ticks, &mut packet).await
+        } else {
+            true // packet wasn't invalid, just ignored
+        }
     }
 
     #[allow(unused)]
-    async fn handle_incoming_rendezvous(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) -> bool {
-        false
+    async fn handle_incoming_rendezvous(&self, si: &SI, node: &Node<SI>, time_ticks: i64, message_id: MessageId, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) -> bool {
+        if node.is_peer_root(self) {}
+        return true;
     }
 
-    #[allow(unused)]
-    async fn handle_incoming_echo(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) -> bool {
-        false
+    async fn handle_incoming_echo<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, message_id: MessageId, payload: &PacketBuffer) -> bool {
+        if ph.has_trust_relationship(&self.identity) || node.is_peer_root(self) {
+            let mut packet = PacketBuffer::new();
+            packet.set_size(packet_constants::HEADER_SIZE);
+            {
+                let mut f: &mut message_component_structs::OkHeader = packet.append_struct_get_mut().unwrap();
+                f.verb = verbs::VL1_OK;
+                f.in_re_verb = verbs::VL1_ECHO;
+                f.in_re_message_id = message_id.to_ne_bytes();
+            }
+            if packet.append_bytes(payload.as_bytes()).is_ok() {
+                self.send(si, None, node, time_ticks, &mut packet).await
+            } else {
+                false
+            }
+        } else {
+            debug_event!(si, "[vl1] dropping ECHO from {} due to lack of trust relationship", self.identity.address.to_string());
+            true // packet wasn't invalid, just ignored
+        }
     }
 
     #[allow(unused)]

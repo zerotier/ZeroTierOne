@@ -77,6 +77,7 @@ pub mod verbs {
     pub const VL1_WHOIS: u8 = 0x04;
     pub const VL1_RENDEZVOUS: u8 = 0x05;
     pub const VL1_ECHO: u8 = 0x08;
+    pub const VL1_SESSION_ACK: u8 = 0x0f;
     pub const VL1_PUSH_DIRECT_PATHS: u8 = 0x10;
     pub const VL1_USER_MESSAGE: u8 = 0x14;
 
@@ -89,6 +90,7 @@ pub mod verbs {
             VL1_WHOIS => "VL1_WHOIS",
             VL1_RENDEZVOUS => "VL1_RENDEZVOUS",
             VL1_ECHO => "VL1_ECHO",
+            VL1_SESSION_ACK => "VL1_SESSION_ACK",
             VL1_PUSH_DIRECT_PATHS => "VL1_PUSH_DIRECT_PATHS",
             VL1_USER_MESSAGE => "VL1_USER_MESSAGE",
             _ => "???",
@@ -248,7 +250,7 @@ pub mod session_metadata {
     pub const CARE_OF: &'static str = "c";
 
     /// One or more root sets to which THIS node is a member. Included only if this is a root.
-    pub const MY_ROOT_SETS: &'static str = "r";
+    pub const ROOT_SET_UPDATES: &'static str = "r";
 }
 
 /// Maximum number of packet hops allowed by the protocol.

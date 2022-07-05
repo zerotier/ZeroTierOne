@@ -5,6 +5,10 @@ authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ieryme
 edition = "2021"
 license = "MPL-2.0"
 
+[[bin]]
+name = "zerotier"
+path = "src/main.rs"
+
 [dependencies]
 zerotier-network-hypervisor = { path = "../zerotier-network-hypervisor" }
 zerotier-core-crypto = { path = "../zerotier-core-crypto" }

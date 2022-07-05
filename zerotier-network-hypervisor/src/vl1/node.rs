@@ -622,6 +622,16 @@ impl<SI: SystemInterface> Node<SI> {
         self.roots.read().roots.keys().any(|p| (**p).eq(peer))
     }
 
+    pub(crate) fn remote_update_root_set(&self, received_from: &Identity, rs: RootSet) {
+        let mut roots = self.roots.write();
+        if let Some(entry) = roots.sets.get_mut(&rs.name) {
+            if entry.members.iter().any(|m| m.identity.eq(received_from)) && rs.should_replace(entry) {
+                *entry = rs;
+                roots.sets_modified = true;
+            }
+        }
+    }
+
     pub fn add_update_root_set(&self, rs: RootSet) -> bool {
         let mut roots = self.roots.write();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
