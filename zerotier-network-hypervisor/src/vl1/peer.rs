@@ -186,7 +186,7 @@ impl<SI: SystemInterface> Peer<SI> {
     ///
     /// This only returns None if this_node_identity does not have its secrets or if some
     /// fatal error occurs performing key agreement between the two identities.
-    pub(crate) fn new(this_node_identity: &Identity, id: Identity, time_clock: i64, time_ticks: i64) -> Option<Peer<SI>> {
+    pub(crate) fn new(this_node_identity: &Identity, id: Identity, time_ticks: i64) -> Option<Peer<SI>> {
         this_node_identity.agree(&id).map(|static_secret| -> Self {
             Self {
                 canonical: CanonicalObject::new(),
@@ -201,7 +201,7 @@ impl<SI: SystemInterface> Peer<SI> {
                 last_incoming_message_id: AtomicU64::new(0),
                 create_time_ticks: time_ticks,
                 random_ticks_offset: next_u64_secure(),
-                message_id_counter: AtomicU64::new(((time_clock as u64) / 100).wrapping_shl(28) ^ next_u64_secure().wrapping_shr(36)),
+                message_id_counter: AtomicU64::new(next_u64_secure()),
                 remote_node_info: RwLock::new(RemoteNodeInfo {
                     remote_instance_id: [0_u8; 16],
                     reported_local_endpoints: HashMap::new(),
@@ -642,7 +642,6 @@ impl<SI: SystemInterface> Peer<SI> {
                     verbs::VL1_WHOIS => self.handle_incoming_whois(si, ph, node, time_ticks, message_id, &payload).await,
                     verbs::VL1_RENDEZVOUS => self.handle_incoming_rendezvous(si, node, time_ticks, message_id, source_path, &payload).await,
                     verbs::VL1_ECHO => self.handle_incoming_echo(si, ph, node, time_ticks, message_id, &payload).await,
-                    verbs::VL1_SESSION_ACK => true, // TODO, for forward secrecy
                     verbs::VL1_PUSH_DIRECT_PATHS => self.handle_incoming_push_direct_paths(si, node, time_ticks, source_path, &payload).await,
                     verbs::VL1_USER_MESSAGE => self.handle_incoming_user_message(si, node, time_ticks, source_path, &payload).await,
                     _ => ph.handle_packet(self, &source_path, forward_secrecy, extended_authentication, verb, &payload).await,

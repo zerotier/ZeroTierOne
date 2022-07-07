@@ -36,6 +36,10 @@ pub struct Root {
     /// Lower priority roots are only used if NO roots of a higher priority can be reached (in any root set).
     #[serde(default)]
     pub priority: u8,
+
+    /// Protocol version for this root or 0 for default/unknown.
+    #[serde(default)]
+    pub protocol_version: u8,
 }
 
 impl PartialOrd for Root {
@@ -121,6 +125,7 @@ impl RootSet {
             }
             buf.append_varint(0)?; // flags, currently always 0
             buf.append_u8(m.priority)?;
+            buf.append_u8(m.protocol_version)?;
             buf.append_varint(0)?; // size of additional fields for future use
         }
         buf.append_varint(0)?; // size of additional fields for future use
@@ -151,7 +156,7 @@ impl RootSet {
     }
 
     /// Add a member to this definition, replacing any current entry with this address.
-    pub fn add<'a, I: Iterator<Item = &'a Endpoint>>(&mut self, member_identity: &Identity, endpoints: Option<I>, priority: u8) {
+    pub fn add<'a, I: Iterator<Item = &'a Endpoint>>(&mut self, member_identity: &Identity, endpoints: Option<I>, priority: u8, protocol_version: u8) {
         self.members.retain(|m| m.identity.address != member_identity.address);
         let _ = self.members.push(Root {
             identity: member_identity.clone_without_secret(),
@@ -164,6 +169,7 @@ impl RootSet {
             }),
             signature: Vec::new(),
             priority,
+            protocol_version,
         });
         self.members.sort();
     }
@@ -186,6 +192,7 @@ impl RootSet {
                 endpoints: unsigned_entry.endpoints,
                 signature: signature.unwrap(),
                 priority: unsigned_entry.priority,
+                protocol_version: unsigned_entry.protocol_version,
             });
             self.members.sort();
             return true;
@@ -266,6 +273,7 @@ impl Marshalable for RootSet {
                 endpoints: None,
                 signature: Vec::new(),
                 priority: 0,
+                protocol_version: 0,
             };
 
             let endpoint_count = buf.read_varint(cursor)?;
@@ -282,6 +290,7 @@ impl Marshalable for RootSet {
 
             let _ = buf.read_varint(cursor)?; // flags, currently unused
             m.priority = buf.read_u8(cursor)?;
+            m.protocol_version = buf.read_u8(cursor)?;
 
             *cursor += buf.read_varint(cursor)? as usize;
 

@@ -398,7 +398,7 @@ impl<SI: SystemInterface> Node<SI> {
                                 if let Some(peer) = peers.get(&m.identity.address) {
                                     new_roots.insert(peer.clone(), m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                 } else {
-                                    if let Some(peer) = Peer::<SI>::new(&self.identity, m.identity.clone(), si.time_clock(), tt) {
+                                    if let Some(peer) = Peer::<SI>::new(&self.identity, m.identity.clone(), tt) {
                                         new_roots.insert(parking_lot::RwLockUpgradableReadGuard::upgrade(peers).entry(m.identity.address).or_insert_with(|| Arc::new(peer)).clone(), m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                     } else {
                                         bad_identities.push(m.identity.clone());
