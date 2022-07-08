@@ -6,11 +6,10 @@ license = "MPL-2.0"
 authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 
 [dependencies]
-rand_core = "0.5.0"
+rand_core = "0.5.1"
 aes-gmac-siv = { path = "../aes-gmac-siv" }
 x25519-dalek = { version = "1.2.0", features = ["std", "u64_backend"], default-features = false }
 ed25519-dalek = { version = "1.0.1", features = ["std", "u64_backend"], default-features = false }
-heapless = "0.7.7"
 subtle = "2.4.1"
 openssl = { version = "^0", features = [], default-features = false }
 lazy_static = "^1"
