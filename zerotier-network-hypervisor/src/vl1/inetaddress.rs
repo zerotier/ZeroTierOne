@@ -460,19 +460,19 @@ impl InetAddress {
     /// Check if this is an IPv4 address.
     #[inline(always)]
     pub fn is_ipv4(&self) -> bool {
-        unsafe { self.sa.sa_family == AF_INET }
+        unsafe { self.sa.sa_family as AddressFamilyType == AF_INET }
     }
 
     /// Check if this is an IPv6 address.
     #[inline(always)]
     pub fn is_ipv6(&self) -> bool {
-        unsafe { self.sa.sa_family == AF_INET6 }
+        unsafe { self.sa.sa_family as AddressFamilyType == AF_INET6 }
     }
 
     /// Check if this is either an IPv4 or an IPv6 address.
     #[inline(always)]
     pub fn is_ip(&self) -> bool {
-        let family = unsafe { self.sa.sa_family };
+        let family = unsafe { self.sa.sa_family } as AddressFamilyType;
         family == AF_INET || family == AF_INET6
     }
 
@@ -488,7 +488,7 @@ impl InetAddress {
     #[inline(always)]
     pub fn c_sockaddr(&self) -> (*const (), usize) {
         unsafe {
-            match self.sa.sa_family {
+            match self.sa.sa_family as AddressFamilyType {
                 AF_INET => ((&self.sin as *const sockaddr_in).cast(), size_of::<sockaddr_in>()),
                 AF_INET6 => ((&self.sin6 as *const sockaddr_in6).cast(), size_of::<sockaddr_in6>()),
                 _ => (null(), 0),
@@ -535,7 +535,7 @@ impl InetAddress {
     /// Get a Rust stdlib SocketAddr structure from this InetAddress.
     pub fn to_socketaddr(&self) -> Option<SocketAddr> {
         unsafe {
-            match self.sa.sa_family {
+            match self.sa.sa_family as AddressFamilyType {
                 AF_INET => Some(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()), u16::from_be(self.sin.sin_port as u16)))),
                 AF_INET6 => Some(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from(self.sin6.sin6_addr.s6_addr), u16::from_be(self.sin6.sin6_port as u16), 0, 0))),
                 _ => None,
