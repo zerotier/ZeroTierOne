@@ -500,19 +500,20 @@ impl InetAddress {
     /// Whether this is IPv4 or IPv6 is inferred from the size of ip[], which must be
     /// either 4 or 16 bytes. The family (AF_INET or AF_INET6) is returned, or zero on
     /// failure.
-    pub fn set(&mut self, ip: &[u8], port: u16) -> AddressFamilyType {
+    pub fn set<T: AsRef<[u8]>>(&mut self, ip: T, port: u16) -> AddressFamilyType {
         self.zero();
         let port = port.to_be();
+        let ip2 = ip.as_ref();
         unsafe {
-            if ip.len() == 4 {
+            if ip2.len() == 4 {
                 self.sin.sin_family = AF_INET.into();
                 self.sin.sin_port = port.into();
-                copy_nonoverlapping(ip.as_ptr(), (&mut self.sin.sin_addr.s_addr as *mut u32).cast::<u8>(), 4);
+                copy_nonoverlapping(ip2.as_ptr(), (&mut self.sin.sin_addr.s_addr as *mut u32).cast::<u8>(), 4);
                 AF_INET
-            } else if ip.len() == 16 {
+            } else if ip2.len() == 16 {
                 self.sin6.sin6_family = AF_INET6.into();
                 self.sin6.sin6_port = port.into();
-                copy_nonoverlapping(ip.as_ptr(), (&mut self.sin6.sin6_addr as *mut in6_addr).cast::<u8>(), 16);
+                copy_nonoverlapping(ip2.as_ptr(), (&mut self.sin6.sin6_addr as *mut in6_addr).cast::<u8>(), 16);
                 AF_INET6
             } else {
                 0
@@ -977,6 +978,29 @@ mod tests {
         assert_ne!(AF_INET, 0);
         assert_ne!(AF_INET6, 0);
         assert_ne!(AF_INET, AF_INET6);
+    }
+
+    #[test]
+    fn set_get() {
+        // ipv4
+        let mut v = [0_u8; 4];
+        for port in 0..=65535 {
+            v.fill_with(|| rand::random());
+            let mut addr = InetAddress::new();
+            assert_ne!(addr.set(&v, port), 0);
+            assert_eq!(addr.ip_bytes(), &v);
+            assert_eq!(addr.port(), port);
+        }
+
+        // ipv6
+        let mut v = [0_u8; 16];
+        for port in 0..=65535 {
+            v.fill_with(|| rand::random());
+            let mut addr = InetAddress::new();
+            assert_ne!(addr.set(&v, port), 0);
+            assert_eq!(addr.ip_bytes(), &v);
+            assert_eq!(addr.port(), port);
+        }
     }
 
     #[test]
