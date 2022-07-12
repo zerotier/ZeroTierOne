@@ -224,6 +224,9 @@ pub mod security_constants {
     /// KBKDF usage label for a unique ID for ephemeral keys (not actually a key).
     pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_KEY_ID: u8 = b'e';
 
+    /// KBKDF usage label for a unique ID for ephemeral keys (not actually a key).
+    pub const KBKDF_KEY_USAGE_LABEL_RATCHET_KEY: u8 = b'+';
+
     /// Try to re-key ephemeral keys after this time.
     pub const EPHEMERAL_SECRET_REKEY_AFTER_TIME: i64 = 300000; // 5 minutes
 

@@ -22,7 +22,7 @@ use crate::vl1::careof::CareOf;
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
 use crate::vl1::rootset::RootSet;
-use crate::vl1::symmetricsecret::{EphemeralSymmetricSecret, SymmetricSecret};
+use crate::vl1::symmetricsecret::SymmetricSecret;
 use crate::vl1::{Dictionary, Endpoint, Identity, Path};
 use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
@@ -55,9 +55,6 @@ pub struct Peer<SI: SystemInterface> {
     // Static shared secret computed from agreement with identity.
     identity_symmetric_key: SymmetricSecret,
 
-    // Latest ephemeral session key or None if no current session.
-    ephemeral_symmetric_key: RwLock<Option<EphemeralSymmetricSecret>>,
-
     // Paths sorted in descending order of quality / preference.
     paths: Mutex<Vec<PeerPath<SI>>>,
 
@@ -80,7 +77,13 @@ pub struct Peer<SI: SystemInterface> {
 }
 
 /// Attempt AEAD packet encryption and MAC validation. Returns message ID on success.
-fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8], packet_header: &PacketHeader, fragments: &[Option<PooledPacketBuffer>], payload: &mut PacketBuffer) -> Option<MessageId> {
+fn try_aead_decrypt(
+    secret: &SymmetricSecret,
+    packet_frag0_payload_bytes: &[u8],
+    packet_header: &PacketHeader,
+    fragments: &[Option<PooledPacketBuffer>],
+    payload: &mut PacketBuffer,
+) -> Option<MessageId> {
     let cipher = packet_header.cipher();
     match cipher {
         security_constants::CIPHER_NOCRYPT_POLY1305 | security_constants::CIPHER_SALSA2012_POLY1305 => {
@@ -192,7 +195,6 @@ impl<SI: SystemInterface> Peer<SI> {
                 canonical: CanonicalObject::new(),
                 identity: id,
                 identity_symmetric_key: SymmetricSecret::new(static_secret),
-                ephemeral_symmetric_key: RwLock::new(None),
                 paths: Mutex::new(Vec::with_capacity(4)),
                 last_send_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
                 last_receive_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
@@ -280,7 +282,13 @@ impl<SI: SystemInterface> Peer<SI> {
                         match &p.endpoint {
                             Endpoint::IpUdp(existing_ip) => {
                                 if existing_ip.ip_bytes().eq(new_ip.ip_bytes()) {
-                                    debug_event!(si, "[vl1] {} replacing path {} with {} (same IP, different port)", self.identity.address.to_string(), p.endpoint.to_string(), new_path.endpoint.to_string());
+                                    debug_event!(
+                                        si,
+                                        "[vl1] {} replacing path {} with {} (same IP, different port)",
+                                        self.identity.address.to_string(),
+                                        p.endpoint.to_string(),
+                                        new_path.endpoint.to_string()
+                                    );
                                     pi.path = Arc::downgrade(new_path);
                                     pi.canonical_instance_id = new_path.canonical.canonical_instance_id();
                                     pi.last_receive_time_ticks = time_ticks;
@@ -327,7 +335,15 @@ impl<SI: SystemInterface> Peer<SI> {
     ///
     /// This does not set the fragmentation field in the packet header, MAC, or encrypt the packet. The sender
     /// must do that while building the packet. The fragmentation flag must be set if fragmentation will be needed.
-    async fn internal_send(&self, si: &SI, endpoint: &Endpoint, local_socket: Option<&SI::LocalSocket>, local_interface: Option<&SI::LocalInterface>, max_fragment_size: usize, packet: &PacketBuffer) -> bool {
+    async fn internal_send(
+        &self,
+        si: &SI,
+        endpoint: &Endpoint,
+        local_socket: Option<&SI::LocalSocket>,
+        local_interface: Option<&SI::LocalInterface>,
+        max_fragment_size: usize,
+        packet: &PacketBuffer,
+    ) -> bool {
         let packet_size = packet.len();
         if packet_size > max_fragment_size {
             let bytes = packet.as_bytes();
@@ -337,7 +353,8 @@ impl<SI: SystemInterface> Peer<SI> {
             let mut pos = UDP_DEFAULT_MTU;
 
             let overrun_size = (packet_size - UDP_DEFAULT_MTU) as u32;
-            let fragment_count = (overrun_size / (UDP_DEFAULT_MTU - packet_constants::FRAGMENT_HEADER_SIZE) as u32) + (((overrun_size % (UDP_DEFAULT_MTU - packet_constants::FRAGMENT_HEADER_SIZE) as u32) != 0) as u32);
+            let fragment_count = (overrun_size / (UDP_DEFAULT_MTU - packet_constants::FRAGMENT_HEADER_SIZE) as u32)
+                + (((overrun_size % (UDP_DEFAULT_MTU - packet_constants::FRAGMENT_HEADER_SIZE) as u32) != 0) as u32);
             debug_assert!(fragment_count <= packet_constants::FRAGMENT_COUNT_MAX as u32);
 
             let mut header = FragmentHeader {
@@ -387,9 +404,13 @@ impl<SI: SystemInterface> Peer<SI> {
         };
 
         let max_fragment_size = if path.endpoint.requires_fragmentation() { UDP_DEFAULT_MTU } else { usize::MAX };
-        let flags_cipher_hops = if packet.len() > max_fragment_size { packet_constants::HEADER_FLAG_FRAGMENTED | security_constants::CIPHER_AES_GMAC_SIV } else { security_constants::CIPHER_AES_GMAC_SIV };
+        let flags_cipher_hops = if packet.len() > max_fragment_size {
+            packet_constants::HEADER_FLAG_FRAGMENTED | security_constants::CIPHER_AES_GMAC_SIV
+        } else {
+            security_constants::CIPHER_AES_GMAC_SIV
+        };
 
-        let mut aes_gmac_siv = if let Some(ephemeral_key) = self.ephemeral_symmetric_key.read().as_ref() { ephemeral_key.secret.aes_gmac_siv.get() } else { self.identity_symmetric_key.aes_gmac_siv.get() };
+        let mut aes_gmac_siv = self.identity_symmetric_key.aes_gmac_siv.get();
         aes_gmac_siv.encrypt_init(&self.next_message_id().to_ne_bytes());
         aes_gmac_siv.encrypt_set_aad(&get_packet_aad_bytes(self.identity.address, node.identity.address, flags_cipher_hops));
         if let Ok(payload) = packet.as_bytes_starting_at_mut(packet_constants::HEADER_SIZE) {
@@ -556,36 +577,28 @@ impl<SI: SystemInterface> Peer<SI> {
     /// those fragments after the main packet header and first chunk.
     ///
     /// This returns true if the packet decrypted and passed authentication.
-    pub(crate) async fn receive<PH: InnerProtocolInterface>(&self, node: &Node<SI>, si: &SI, ph: &PH, time_ticks: i64, source_path: &Arc<Path<SI>>, packet_header: &PacketHeader, frag0: &PacketBuffer, fragments: &[Option<PooledPacketBuffer>]) -> bool {
+    pub(crate) async fn receive<PH: InnerProtocolInterface>(
+        &self,
+        node: &Node<SI>,
+        si: &SI,
+        ph: &PH,
+        time_ticks: i64,
+        source_path: &Arc<Path<SI>>,
+        packet_header: &PacketHeader,
+        frag0: &PacketBuffer,
+        fragments: &[Option<PooledPacketBuffer>],
+    ) -> bool {
         if let Ok(packet_frag0_payload_bytes) = frag0.as_bytes_starting_at(packet_constants::VERB_INDEX) {
             let mut payload = PacketBuffer::new();
 
-            // First try decrypting and authenticating with an ephemeral secret if one is negotiated.
-            let (forward_secrecy, mut message_id) = if let Some(ephemeral_secret) = self.ephemeral_symmetric_key.read().as_ref() {
-                if let Some(message_id) = try_aead_decrypt(&ephemeral_secret.secret, packet_frag0_payload_bytes, packet_header, fragments, &mut payload) {
-                    // Decryption successful with ephemeral secret
-                    (true, message_id)
-                } else {
-                    // Decryption failed with ephemeral secret, which may indicate that it's obsolete.
-                    (false, 0)
-                }
+            let message_id = if let Some(message_id2) = try_aead_decrypt(&self.identity_symmetric_key, packet_frag0_payload_bytes, packet_header, fragments, &mut payload) {
+                // Decryption successful with static secret.
+                message_id2
             } else {
-                // There is no ephemeral secret negotiated (yet?).
-                (false, 0)
+                // Packet failed to decrypt using either ephemeral or permament key, reject.
+                debug_event!(si, "[vl1] #{:0>16x} failed authentication", u64::from_be_bytes(packet_header.id));
+                return false;
             };
-
-            // If forward_secrecy is false it means the ephemeral key failed. Try decrypting with the permanent key.
-            if !forward_secrecy {
-                payload.clear();
-                if let Some(message_id2) = try_aead_decrypt(&self.identity_symmetric_key, packet_frag0_payload_bytes, packet_header, fragments, &mut payload) {
-                    // Decryption successful with static secret.
-                    message_id = message_id2;
-                } else {
-                    // Packet failed to decrypt using either ephemeral or permament key, reject.
-                    debug_event!(si, "[vl1] #{:0>16x} failed authentication", u64::from_be_bytes(packet_header.id));
-                    return false;
-                }
-            }
 
             if let Ok(mut verb) = payload.u8_at(0) {
                 let extended_authentication = (verb & packet_constants::VERB_FLAG_EXTENDED_AUTHENTICATION) != 0;
@@ -636,15 +649,19 @@ impl<SI: SystemInterface> Peer<SI> {
 
                 if match verb {
                     verbs::VL1_NOP => true,
-                    verbs::VL1_HELLO => self.handle_incoming_hello(si, ph, node, time_ticks, message_id, source_path, packet_header.hops(), extended_authentication, &payload).await,
-                    verbs::VL1_ERROR => self.handle_incoming_error(si, ph, node, time_ticks, source_path, forward_secrecy, extended_authentication, &payload).await,
-                    verbs::VL1_OK => self.handle_incoming_ok(si, ph, node, time_ticks, source_path, packet_header.hops(), path_is_known, forward_secrecy, extended_authentication, &payload).await,
+                    verbs::VL1_HELLO => {
+                        self.handle_incoming_hello(si, ph, node, time_ticks, message_id, source_path, packet_header.hops(), extended_authentication, &payload).await
+                    }
+                    verbs::VL1_ERROR => self.handle_incoming_error(si, ph, node, time_ticks, source_path, false, extended_authentication, &payload).await,
+                    verbs::VL1_OK => {
+                        self.handle_incoming_ok(si, ph, node, time_ticks, source_path, packet_header.hops(), path_is_known, false, extended_authentication, &payload).await
+                    }
                     verbs::VL1_WHOIS => self.handle_incoming_whois(si, ph, node, time_ticks, message_id, &payload).await,
                     verbs::VL1_RENDEZVOUS => self.handle_incoming_rendezvous(si, node, time_ticks, message_id, source_path, &payload).await,
                     verbs::VL1_ECHO => self.handle_incoming_echo(si, ph, node, time_ticks, message_id, &payload).await,
                     verbs::VL1_PUSH_DIRECT_PATHS => self.handle_incoming_push_direct_paths(si, node, time_ticks, source_path, &payload).await,
                     verbs::VL1_USER_MESSAGE => self.handle_incoming_user_message(si, node, time_ticks, source_path, &payload).await,
-                    _ => ph.handle_packet(self, &source_path, forward_secrecy, extended_authentication, verb, &payload).await,
+                    _ => ph.handle_packet(self, &source_path, false, extended_authentication, verb, &payload).await,
                 } {
                     // This needs to be saved AFTER processing the packet since some message types may use it to try to filter for replays.
                     self.last_incoming_message_id.store(message_id, Ordering::Relaxed);
@@ -656,7 +673,18 @@ impl<SI: SystemInterface> Peer<SI> {
         return false;
     }
 
-    async fn handle_incoming_hello<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, message_id: MessageId, source_path: &Arc<Path<SI>>, hops: u8, extended_authentication: bool, payload: &PacketBuffer) -> bool {
+    async fn handle_incoming_hello<PH: InnerProtocolInterface>(
+        &self,
+        si: &SI,
+        ph: &PH,
+        node: &Node<SI>,
+        time_ticks: i64,
+        message_id: MessageId,
+        source_path: &Arc<Path<SI>>,
+        hops: u8,
+        extended_authentication: bool,
+        payload: &PacketBuffer,
+    ) -> bool {
         if !(ph.has_trust_relationship(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
             debug_event!(si, "[vl1] dropping HELLO from {} due to lack of trust relationship", self.identity.address.to_string());
             return true; // packet wasn't invalid, just ignored
@@ -671,8 +699,9 @@ impl<SI: SystemInterface> Peer<SI> {
 
                         remote_node_info.remote_protocol_version = hello_fixed_headers.version_proto;
                         remote_node_info.hello_extended_authentication = extended_authentication;
-                        remote_node_info.remote_version =
-                            (hello_fixed_headers.version_major as u64).wrapping_shl(48) | (hello_fixed_headers.version_minor as u64).wrapping_shl(32) | (u16::from_be_bytes(hello_fixed_headers.version_revision) as u64).wrapping_shl(16);
+                        remote_node_info.remote_version = (hello_fixed_headers.version_major as u64).wrapping_shl(48)
+                            | (hello_fixed_headers.version_minor as u64).wrapping_shl(32)
+                            | (u16::from_be_bytes(hello_fixed_headers.version_revision) as u64).wrapping_shl(16);
 
                         if hello_fixed_headers.version_proto >= 20 {
                             let mut session_metadata_len = payload.read_u16(&mut cursor).unwrap_or(0) as usize;
@@ -741,14 +770,36 @@ impl<SI: SystemInterface> Peer<SI> {
         return false;
     }
 
-    async fn handle_incoming_error<PH: InnerProtocolInterface>(&self, _si: &SI, ph: &PH, _node: &Node<SI>, _time_ticks: i64, source_path: &Arc<Path<SI>>, forward_secrecy: bool, extended_authentication: bool, payload: &PacketBuffer) -> bool {
+    async fn handle_incoming_error<PH: InnerProtocolInterface>(
+        &self,
+        _si: &SI,
+        ph: &PH,
+        _node: &Node<SI>,
+        _time_ticks: i64,
+        source_path: &Arc<Path<SI>>,
+        forward_secrecy: bool,
+        extended_authentication: bool,
+        payload: &PacketBuffer,
+    ) -> bool {
         let mut cursor = 0;
         if let Ok(error_header) = payload.read_struct::<message_component_structs::ErrorHeader>(&mut cursor) {
             let in_re_message_id: MessageId = u64::from_ne_bytes(error_header.in_re_message_id);
             if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match error_header.in_re_verb {
                     _ => {
-                        return ph.handle_error(self, &source_path, forward_secrecy, extended_authentication, error_header.in_re_verb, in_re_message_id, error_header.error_code, payload, &mut cursor).await;
+                        return ph
+                            .handle_error(
+                                self,
+                                &source_path,
+                                forward_secrecy,
+                                extended_authentication,
+                                error_header.in_re_verb,
+                                in_re_message_id,
+                                error_header.error_code,
+                                payload,
+                                &mut cursor,
+                            )
+                            .await;
                     }
                 }
             }
@@ -791,7 +842,12 @@ impl<SI: SystemInterface> Peer<SI> {
                                                             let reported_endpoint2 = reported_endpoint.clone();
                                                             if remote_node_info.reported_local_endpoints.insert(reported_endpoint, time_ticks).is_none() {
                                                                 #[cfg(debug_assertions)]
-                                                                debug_event!(si, "[vl1] {} reported new remote perspective, local endpoint: {}", self.identity.address.to_string(), reported_endpoint2.to_string());
+                                                                debug_event!(
+                                                                    si,
+                                                                    "[vl1] {} reported new remote perspective, local endpoint: {}",
+                                                                    self.identity.address.to_string(),
+                                                                    reported_endpoint2.to_string()
+                                                                );
                                                             }
                                                         }
                                                     }
@@ -836,7 +892,12 @@ impl<SI: SystemInterface> Peer<SI> {
                                         let reported_endpoint2 = reported_endpoint.clone();
                                         if self.remote_node_info.write().reported_local_endpoints.insert(reported_endpoint, time_ticks).is_none() {
                                             #[cfg(debug_assertions)]
-                                            debug_event!(si, "[vl1] {} reported new remote perspective, local endpoint: {}", self.identity.address.to_string(), reported_endpoint2.to_string());
+                                            debug_event!(
+                                                si,
+                                                "[vl1] {} reported new remote perspective, local endpoint: {}",
+                                                self.identity.address.to_string(),
+                                                reported_endpoint2.to_string()
+                                            );
                                         }
                                     }
                                 }

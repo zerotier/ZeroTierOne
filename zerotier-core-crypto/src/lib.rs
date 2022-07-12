@@ -12,5 +12,5 @@ pub mod varint;
 pub mod x25519;
 
 pub use aes_gmac_siv;
-pub use rand_core;
+pub use pqc_kyber;
 pub use subtle;

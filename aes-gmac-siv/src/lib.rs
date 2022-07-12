@@ -7,10 +7,10 @@ mod impl_macos;
 mod impl_openssl;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-pub use impl_macos::{AesCtr, AesGmacSiv};
+pub use impl_macos::{Aes, AesCtr, AesGmacSiv};
 
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
-pub use impl_openssl::{AesCtr, AesGmacSiv};
+pub use impl_openssl::{Aes, AesCtr, AesGmacSiv};
 
 pub(crate) const ZEROES: [u8; 16] = [0_u8; 16];
 

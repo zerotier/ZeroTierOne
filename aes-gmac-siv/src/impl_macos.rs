@@ -31,6 +31,84 @@ extern "C" {
     fn CCCryptorGCMReset(cryptor_ref: *mut c_void) -> i32;
 }
 
+pub struct Aes(*mut c_void, *mut c_void);
+
+impl Drop for Aes {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            unsafe {
+                CCCryptorRelease(self.0);
+            }
+        }
+        if !self.1.is_null() {
+            unsafe {
+                CCCryptorRelease(self.1);
+            }
+        }
+    }
+}
+
+impl Aes {
+    pub fn new(k: &[u8]) -> Self {
+        unsafe {
+            if k.len() != 32 && k.len() != 24 && k.len() != 16 {
+                panic!("AES supports 128, 192, or 256 bits keys");
+            }
+            let mut aes: Self = std::mem::zeroed();
+            let enc = CCCryptorCreateWithMode(kCCEncrypt, kCCModeECB, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k.as_ptr().cast(), k.len(), null(), 0, 0, kCCOptionECBMode, &mut aes.0);
+            if enc != 0 {
+                panic!("CCCryptorCreateWithMode for ECB encrypt mode returned {}", enc);
+            }
+            let dec = CCCryptorCreateWithMode(kCCDecrypt, kCCModeECB, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k.as_ptr().cast(), k.len(), null(), 0, 0, kCCOptionECBMode, &mut aes.1);
+            if dec != 0 {
+                panic!("CCCryptorCreateWithMode for ECB decrypt mode returned {}", dec);
+            }
+            aes
+        }
+    }
+
+    #[inline(always)]
+    pub fn encrypt_block(&self, plaintext: &[u8], ciphertext: &mut [u8]) {
+        assert_eq!(plaintext.len(), 16);
+        assert_eq!(ciphertext.len(), 16);
+        unsafe {
+            let mut data_out_written = 0;
+            CCCryptorUpdate(self.0, plaintext.as_ptr().cast(), 16, ciphertext.as_mut_ptr().cast(), 16, &mut data_out_written);
+        }
+    }
+
+    #[inline(always)]
+    pub fn encrypt_block_in_place(&self, data: &mut [u8]) {
+        assert_eq!(data.len(), 16);
+        unsafe {
+            let mut data_out_written = 0;
+            CCCryptorUpdate(self.0, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
+        }
+    }
+
+    #[inline(always)]
+    pub fn decrypt_block(&self, ciphertext: &[u8], plaintext: &mut [u8]) {
+        assert_eq!(plaintext.len(), 16);
+        assert_eq!(ciphertext.len(), 16);
+        unsafe {
+            let mut data_out_written = 0;
+            CCCryptorUpdate(self.1, ciphertext.as_ptr().cast(), 16, plaintext.as_mut_ptr().cast(), 16, &mut data_out_written);
+        }
+    }
+
+    #[inline(always)]
+    pub fn decrypt_block_in_place(&self, data: &mut [u8]) {
+        assert_eq!(data.len(), 16);
+        unsafe {
+            let mut data_out_written = 0;
+            CCCryptorUpdate(self.1, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
+        }
+    }
+}
+
+unsafe impl Send for Aes {}
+unsafe impl Sync for Aes {}
+
 pub struct AesCtr(*mut c_void);
 
 impl Drop for AesCtr {
@@ -46,7 +124,6 @@ impl Drop for AesCtr {
 impl AesCtr {
     /// Construct a new AES-CTR cipher.
     /// Key must be 16, 24, or 32 bytes in length or a panic will occur.
-    #[inline(always)]
     pub fn new(k: &[u8]) -> Self {
         if k.len() != 32 && k.len() != 24 && k.len() != 16 {
             panic!("AES supports 128, 192, or 256 bits keys");
@@ -63,7 +140,6 @@ impl AesCtr {
 
     /// Initialize AES-CTR for encryption or decryption with the given IV.
     /// If it's already been used, this also resets the cipher. There is no separate reset.
-    #[inline(always)]
     pub fn init(&mut self, iv: &[u8]) {
         unsafe {
             if iv.len() == 16 {
@@ -101,6 +177,8 @@ impl AesCtr {
         }
     }
 }
+
+unsafe impl Send for AesCtr {}
 
 #[repr(align(8))]
 pub struct AesGmacSiv {
@@ -267,7 +345,7 @@ impl AesGmacSiv {
             if CCCryptorReset(self.ctr, self.tmp.as_ptr().cast()) != 0 {
                 panic!("CCCryptorReset for CTR mode failed (old MacOS bug)");
             }
-            let mut data_out_written: usize = 0;
+            let mut data_out_written = 0;
             CCCryptorUpdate(self.ecb_dec, self.tag.as_ptr().cast(), 16, self.tag.as_mut_ptr().cast(), 16, &mut data_out_written);
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
             *tmp = *self.tag.as_mut_ptr().cast::<u64>();
@@ -296,7 +374,7 @@ impl AesGmacSiv {
     #[inline(always)]
     pub fn decrypt(&mut self, ciphertext: &[u8], plaintext: &mut [u8]) {
         unsafe {
-            let mut data_out_written: usize = 0;
+            let mut data_out_written = 0;
             CCCryptorUpdate(self.ctr, ciphertext.as_ptr().cast(), ciphertext.len(), plaintext.as_mut_ptr().cast(), plaintext.len(), &mut data_out_written);
             CCCryptorGCMAddAAD(self.gmac, plaintext.as_ptr().cast(), plaintext.len());
         }
@@ -307,7 +385,7 @@ impl AesGmacSiv {
     #[inline(always)]
     pub fn decrypt_in_place(&mut self, ciphertext_to_plaintext: &mut [u8]) {
         unsafe {
-            let mut data_out_written: usize = 0;
+            let mut data_out_written = 0;
             CCCryptorUpdate(self.ctr, ciphertext_to_plaintext.as_ptr().cast(), ciphertext_to_plaintext.len(), ciphertext_to_plaintext.as_mut_ptr().cast(), ciphertext_to_plaintext.len(), &mut data_out_written);
             CCCryptorGCMAddAAD(self.gmac, ciphertext_to_plaintext.as_ptr().cast(), ciphertext_to_plaintext.len());
         }
@@ -329,4 +407,3 @@ impl AesGmacSiv {
 }
 
 unsafe impl Send for AesGmacSiv {}
-unsafe impl Send for AesCtr {}

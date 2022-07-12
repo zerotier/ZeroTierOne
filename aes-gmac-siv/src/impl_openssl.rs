@@ -4,6 +4,7 @@
 
 use openssl::symm::{Cipher, Crypter, Mode};
 
+#[inline(always)]
 fn aes_ctr_by_key_size(ks: usize) -> Cipher {
     match ks {
         16 => Cipher::aes_128_ctr(),
@@ -15,6 +16,7 @@ fn aes_ctr_by_key_size(ks: usize) -> Cipher {
     }
 }
 
+#[inline(always)]
 fn aes_gcm_by_key_size(ks: usize) -> Cipher {
     match ks {
         16 => Cipher::aes_128_gcm(),
@@ -26,6 +28,7 @@ fn aes_gcm_by_key_size(ks: usize) -> Cipher {
     }
 }
 
+#[inline(always)]
 fn aes_ecb_by_key_size(ks: usize) -> Cipher {
     match ks {
         16 => Cipher::aes_128_ecb(),
@@ -36,6 +39,55 @@ fn aes_ecb_by_key_size(ks: usize) -> Cipher {
         }
     }
 }
+
+pub struct Aes(Crypter, Crypter);
+
+impl Aes {
+    pub fn new(k: &[u8]) -> Self {
+        let mut aes = Self(Crypter::new(aes_ecb_by_key_size(k.len()), Mode::Encrypt, k, None).unwrap(), Crypter::new(aes_ecb_by_key_size(k.len()), Mode::Decrypt, k, None).unwrap());
+        aes.0.pad(false);
+        aes.1.pad(false);
+    }
+
+    #[inline(always)]
+    pub fn encrypt_block(&self, plaintext: &[u8], ciphertext: &mut [u8]) {
+        let mut tmp = [0_u8; 32];
+        if self.0.update(plaintext, &mut tmp).unwrap() != 16 {
+            assert_eq!(ecb.finalize(&mut tmp).unwrap(), 16);
+        }
+        ciphertext[..16].copy_from_slice(&tmp[..16]);
+    }
+
+    #[inline(always)]
+    pub fn encrypt_block_in_place(&self, data: &mut [u8]) {
+        let mut tmp = [0_u8; 32];
+        if self.0.update(data, &mut tmp).unwrap() != 16 {
+            assert_eq!(ecb.finalize(&mut tmp).unwrap(), 16);
+        }
+        data[..16].copy_from_slice(&tmp[..16]);
+    }
+
+    #[inline(always)]
+    pub fn decrypt_block(&self, ciphertext: &[u8], plaintext: &mut [u8]) {
+        let mut tmp = [0_u8; 32];
+        if self.1.update(plaintext, &mut tmp).unwrap() != 16 {
+            assert_eq!(ecb.finalize(&mut tmp).unwrap(), 16);
+        }
+        ciphertext[..16].copy_from_slice(&tmp[..16]);
+    }
+
+    #[inline(always)]
+    pub fn decrypt_block_in_place(&self, data: &mut [u8]) {
+        let mut tmp = [0_u8; 32];
+        if self.1.update(data, &mut tmp).unwrap() != 16 {
+            assert_eq!(ecb.finalize(&mut tmp).unwrap(), 16);
+        }
+        data[..16].copy_from_slice(&tmp[..16]);
+    }
+}
+
+unsafe impl Send for Aes {}
+unsafe impl Sync for Aes {}
 
 pub struct AesCtr(Vec<u8>, Option<Crypter>);
 
@@ -68,6 +120,8 @@ impl AesCtr {
         let _ = self.1.as_mut().unwrap().update(unsafe { &*std::slice::from_raw_parts(data.as_ptr(), data.len()) }, data);
     }
 }
+
+unsafe impl Send for AesCtr {}
 
 /// AES-GMAC-SIV encryptor/decryptor.
 pub struct AesGmacSiv {
@@ -247,4 +301,3 @@ impl AesGmacSiv {
 }
 
 unsafe impl Send for AesGmacSiv {}
-unsafe impl Send for AesCtr {}
