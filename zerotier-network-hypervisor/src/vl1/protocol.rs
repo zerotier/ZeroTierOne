@@ -218,14 +218,11 @@ pub mod security_constants {
     /// KBKDF usage label for the second AES-GMAC-SIV key.
     pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1: u8 = b'1';
 
-    /// KBKDF usage label for the private section of HELLOs.
-    pub const KBKDF_KEY_USAGE_LABEL_HELLO_PRIVATE_SECTION: u8 = b'h';
+    /// KBKDF usage label for AES-GCM session keys.
+    pub const KBKDF_KEY_USAGE_LABEL_AES_GCM_SESSION_KEY: u8 = b's';
 
-    /// KBKDF usage label for a unique ID for ephemeral keys (not actually a key).
-    pub const KBKDF_KEY_USAGE_LABEL_EPHEMERAL_KEY_ID: u8 = b'e';
-
-    /// KBKDF usage label for a unique ID for ephemeral keys (not actually a key).
-    pub const KBKDF_KEY_USAGE_LABEL_RATCHET_KEY: u8 = b'+';
+    /// KBKDF usage label for ephemeral session key ratcheting.
+    pub const KBKDF_KEY_USAGE_LABEL_RATCHET_KEY: u8 = b'r';
 
     /// Try to re-key ephemeral keys after this time.
     pub const EPHEMERAL_SECRET_REKEY_AFTER_TIME: i64 = 300000; // 5 minutes

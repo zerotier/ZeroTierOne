@@ -21,7 +21,20 @@ const kCCAlgorithmAES: i32 = 0;
 const kCCOptionECBMode: i32 = 2;
 
 extern "C" {
-    fn CCCryptorCreateWithMode(op: i32, mode: i32, alg: i32, padding: i32, iv: *const c_void, key: *const c_void, key_len: usize, tweak: *const c_void, tweak_len: usize, num_rounds: c_int, options: i32, cryyptor_ref: *mut *mut c_void) -> i32;
+    fn CCCryptorCreateWithMode(
+        op: i32,
+        mode: i32,
+        alg: i32,
+        padding: i32,
+        iv: *const c_void,
+        key: *const c_void,
+        key_len: usize,
+        tweak: *const c_void,
+        tweak_len: usize,
+        num_rounds: c_int,
+        options: i32,
+        cryyptor_ref: *mut *mut c_void,
+    ) -> i32;
     fn CCCryptorUpdate(cryptor_ref: *mut c_void, data_in: *const c_void, data_in_len: usize, data_out: *mut c_void, data_out_len: usize, data_out_written: *mut usize) -> i32;
     fn CCCryptorReset(cryptor_ref: *mut c_void, iv: *const c_void) -> i32;
     fn CCCryptorRelease(cryptor_ref: *mut c_void) -> i32;
@@ -30,84 +43,6 @@ extern "C" {
     fn CCCryptorGCMFinalize(cryptor_ref: *mut c_void, tag: *mut c_void, tag_len: usize) -> i32;
     fn CCCryptorGCMReset(cryptor_ref: *mut c_void) -> i32;
 }
-
-pub struct Aes(*mut c_void, *mut c_void);
-
-impl Drop for Aes {
-    fn drop(&mut self) {
-        if !self.0.is_null() {
-            unsafe {
-                CCCryptorRelease(self.0);
-            }
-        }
-        if !self.1.is_null() {
-            unsafe {
-                CCCryptorRelease(self.1);
-            }
-        }
-    }
-}
-
-impl Aes {
-    pub fn new(k: &[u8]) -> Self {
-        unsafe {
-            if k.len() != 32 && k.len() != 24 && k.len() != 16 {
-                panic!("AES supports 128, 192, or 256 bits keys");
-            }
-            let mut aes: Self = std::mem::zeroed();
-            let enc = CCCryptorCreateWithMode(kCCEncrypt, kCCModeECB, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k.as_ptr().cast(), k.len(), null(), 0, 0, kCCOptionECBMode, &mut aes.0);
-            if enc != 0 {
-                panic!("CCCryptorCreateWithMode for ECB encrypt mode returned {}", enc);
-            }
-            let dec = CCCryptorCreateWithMode(kCCDecrypt, kCCModeECB, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k.as_ptr().cast(), k.len(), null(), 0, 0, kCCOptionECBMode, &mut aes.1);
-            if dec != 0 {
-                panic!("CCCryptorCreateWithMode for ECB decrypt mode returned {}", dec);
-            }
-            aes
-        }
-    }
-
-    #[inline(always)]
-    pub fn encrypt_block(&self, plaintext: &[u8], ciphertext: &mut [u8]) {
-        assert_eq!(plaintext.len(), 16);
-        assert_eq!(ciphertext.len(), 16);
-        unsafe {
-            let mut data_out_written = 0;
-            CCCryptorUpdate(self.0, plaintext.as_ptr().cast(), 16, ciphertext.as_mut_ptr().cast(), 16, &mut data_out_written);
-        }
-    }
-
-    #[inline(always)]
-    pub fn encrypt_block_in_place(&self, data: &mut [u8]) {
-        assert_eq!(data.len(), 16);
-        unsafe {
-            let mut data_out_written = 0;
-            CCCryptorUpdate(self.0, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
-        }
-    }
-
-    #[inline(always)]
-    pub fn decrypt_block(&self, ciphertext: &[u8], plaintext: &mut [u8]) {
-        assert_eq!(plaintext.len(), 16);
-        assert_eq!(ciphertext.len(), 16);
-        unsafe {
-            let mut data_out_written = 0;
-            CCCryptorUpdate(self.1, ciphertext.as_ptr().cast(), 16, plaintext.as_mut_ptr().cast(), 16, &mut data_out_written);
-        }
-    }
-
-    #[inline(always)]
-    pub fn decrypt_block_in_place(&self, data: &mut [u8]) {
-        assert_eq!(data.len(), 16);
-        unsafe {
-            let mut data_out_written = 0;
-            CCCryptorUpdate(self.1, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
-        }
-    }
-}
-
-unsafe impl Send for Aes {}
-unsafe impl Sync for Aes {}
 
 pub struct AesCtr(*mut c_void);
 
@@ -229,19 +164,47 @@ impl AesGmacSiv {
             gmac: null_mut(),
         };
         unsafe {
-            let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeCTR, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k1.as_ptr().cast(), k1.len(), null(), 0, 0, 0, &mut c.ctr);
+            let result =
+                CCCryptorCreateWithMode(kCCEncrypt, kCCModeCTR, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k1.as_ptr().cast(), k1.len(), null(), 0, 0, 0, &mut c.ctr);
             if result != 0 {
                 panic!("CCCryptorCreateWithMode for CTR mode returned {}", result);
             }
-            let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeECB, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k1.as_ptr().cast(), k1.len(), null(), 0, 0, kCCOptionECBMode, &mut c.ecb_enc);
+            let result = CCCryptorCreateWithMode(
+                kCCEncrypt,
+                kCCModeECB,
+                kCCAlgorithmAES,
+                0,
+                crate::ZEROES.as_ptr().cast(),
+                k1.as_ptr().cast(),
+                k1.len(),
+                null(),
+                0,
+                0,
+                kCCOptionECBMode,
+                &mut c.ecb_enc,
+            );
             if result != 0 {
                 panic!("CCCryptorCreateWithMode for ECB encrypt mode returned {}", result);
             }
-            let result = CCCryptorCreateWithMode(kCCDecrypt, kCCModeECB, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k1.as_ptr().cast(), k1.len(), null(), 0, 0, kCCOptionECBMode, &mut c.ecb_dec);
+            let result = CCCryptorCreateWithMode(
+                kCCDecrypt,
+                kCCModeECB,
+                kCCAlgorithmAES,
+                0,
+                crate::ZEROES.as_ptr().cast(),
+                k1.as_ptr().cast(),
+                k1.len(),
+                null(),
+                0,
+                0,
+                kCCOptionECBMode,
+                &mut c.ecb_dec,
+            );
             if result != 0 {
                 panic!("CCCryptorCreateWithMode for ECB decrypt mode returned {}", result);
             }
-            let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeGCM, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k0.as_ptr().cast(), k0.len(), null(), 0, 0, 0, &mut c.gmac);
+            let result =
+                CCCryptorCreateWithMode(kCCEncrypt, kCCModeGCM, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k0.as_ptr().cast(), k0.len(), null(), 0, 0, 0, &mut c.gmac);
             if result != 0 {
                 panic!("CCCryptorCreateWithMode for GCM (GMAC) mode returned {}", result);
             }
@@ -327,7 +290,14 @@ impl AesGmacSiv {
     pub fn encrypt_second_pass_in_place(&mut self, plaintext_to_ciphertext: &mut [u8]) {
         unsafe {
             let mut data_out_written: usize = 0;
-            CCCryptorUpdate(self.ctr, plaintext_to_ciphertext.as_ptr().cast(), plaintext_to_ciphertext.len(), plaintext_to_ciphertext.as_mut_ptr().cast(), plaintext_to_ciphertext.len(), &mut data_out_written);
+            CCCryptorUpdate(
+                self.ctr,
+                plaintext_to_ciphertext.as_ptr().cast(),
+                plaintext_to_ciphertext.len(),
+                plaintext_to_ciphertext.as_mut_ptr().cast(),
+                plaintext_to_ciphertext.len(),
+                &mut data_out_written,
+            );
         }
     }
 
@@ -386,7 +356,14 @@ impl AesGmacSiv {
     pub fn decrypt_in_place(&mut self, ciphertext_to_plaintext: &mut [u8]) {
         unsafe {
             let mut data_out_written = 0;
-            CCCryptorUpdate(self.ctr, ciphertext_to_plaintext.as_ptr().cast(), ciphertext_to_plaintext.len(), ciphertext_to_plaintext.as_mut_ptr().cast(), ciphertext_to_plaintext.len(), &mut data_out_written);
+            CCCryptorUpdate(
+                self.ctr,
+                ciphertext_to_plaintext.as_ptr().cast(),
+                ciphertext_to_plaintext.len(),
+                ciphertext_to_plaintext.as_mut_ptr().cast(),
+                ciphertext_to_plaintext.len(),
+                &mut data_out_written,
+            );
             CCCryptorGCMAddAAD(self.gmac, ciphertext_to_plaintext.as_ptr().cast(), ciphertext_to_plaintext.len());
         }
     }

@@ -1,0 +1,65 @@
+[package]
+name = "pqc_kyber"
+version = "0.2.0"
+authors = ["Mitchell Berry <foss@mitchellberry.com>"]
+edition = "2018"
+license = "Apache-2.0"
+repository = "https://github.com/Argyle-Cybersystems/kyber"
+documentation = "https://docs.rs/crate/pqc_kyber/"
+categories = ["algorithms", "cryptography"]
+description = "A rust implementation of the post-quantum Kyber KEM algorithm"
+keywords = ["kyber", "kem", "key-exchange", "kex", "post-quantum"]
+readme = "readme.md"
+
+[dependencies]
+rand_core = {version = "0.6.2",  default-features = false }
+wasm-bindgen = { version = "0.2.74", optional = true }
+sha2 = { version = "0.9.5", optional = true }
+# TODO: Add rustcrypto AES-CTR feature for 90's mode
+# aes-ctr = {version = "0.6.0", optional = true}
+
+[dev-dependencies]
+criterion = "0.3.4"
+rand = "0.8.3"
+
+[build-dependencies]
+cc = "1.0.67"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bench]]
+name = "api"
+harness = false
+
+[features]
+### Security Levels ###
+# Defaults to "kyber764" if none selected
+# Will throw a compile-time error if more than one level is chosen
+kyber512 = []
+kyber1024 =[]
+
+### Additional features ###
+# 90s mode uses AES-CTR and SHA2 as primitives instead
+90s = ["sha2"]
+
+# Force usage of the reference codebase on x86_64 architectures
+reference = []
+
+# For compiling to wasm targets 
+wasm = ["wasm-bindgen"]
+
+# Known Answer Tests
+# Allows private internal api access to seed the RNG output.
+# Do not use this feature for any purpose other than testing.
+KATs = []
+
+# Prevents leak sanitiser failing in tests
+[profile.test]
+opt-level = 2
+
+[profile.test.package."*"]
+opt-level = 0
+
+[profile.test.build-override]
+opt-level = 0

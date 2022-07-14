@@ -16,7 +16,7 @@ openssl = { version = "^0", features = [], default-features = false }
 lazy_static = "^1"
 foreign-types = "0.3.1"
 poly1305 = { version = "0.7.2", features = [], default-features = false }
-pqc_kyber = { version = "0.2.0", features = ["kyber512"], default-features = false }
+pqc_kyber = { path = "../third_party/kyber", features = [], default-features = false }
 
 [dev-dependencies]
 quickcheck = "1.0.3"

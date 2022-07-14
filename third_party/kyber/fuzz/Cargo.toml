@@ -1,0 +1,12 @@
+[package]
+name = "kyber-fuzz"
+version = "0.0.1"
+authors = ["null"]
+edition = "2018"
+publish = false
+
+[dependencies]
+honggfuzz = "0.5.54"
+rand_xoshiro = "0.6.0"
+rand = "0.8.3"
+pqc-kyber = { path = ".." }

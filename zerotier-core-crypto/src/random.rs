@@ -77,7 +77,8 @@ impl rand_core::RngCore for SecureRandom {
 
     #[inline(always)]
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
-        rand_bytes(dest).map_err(|e| rand_core::Error::new(Box::new(e)))
+        fill_bytes_secure(dest);
+        Ok(())
     }
 }
 
@@ -101,7 +102,8 @@ impl rand_core_062::RngCore for SecureRandom {
 
     #[inline(always)]
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core_062::Error> {
-        rand_bytes(dest).map_err(|e| rand_core_062::Error::new(Box::new(e)))
+        fill_bytes_secure(dest);
+        Ok(())
     }
 }
 

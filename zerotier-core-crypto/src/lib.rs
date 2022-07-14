@@ -1,5 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+pub mod aes;
 pub mod hash;
 pub mod hex;
 pub mod kbkdf;
