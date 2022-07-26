@@ -4,6 +4,7 @@ members = [
   "aes-gmac-siv",
   "zerotier-core-crypto",
   "zerotier-network-hypervisor",
+  "zerotier-network-controller",
   "zerotier-system-service",
 ]
 
