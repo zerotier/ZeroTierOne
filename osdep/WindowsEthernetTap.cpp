@@ -78,7 +78,12 @@ public:
 	{
 #ifdef _WIN64
 		is64Bit = TRUE;
+#ifdef _M_ARM64
+		tapDriverPath = "\\tap-windows\\arm64\\zttap300.inf";
+#else
 		tapDriverPath = "\\tap-windows\\x64\\zttap300.inf";
+#endif
+
 #else
 		is64Bit = FALSE;
 		IsWow64Process(GetCurrentProcess(),&is64Bit);

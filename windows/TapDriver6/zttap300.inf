@@ -34,14 +34,19 @@ DeviceDescription = "ZeroTier Virtual Port"
 Provider = "ZeroTier"
 
 [Manufacturer]
-%Provider%=zttap300,NTx86
+;%Provider%=zttap300,NTx86
 ;%Provider%=zttap300,NTamd64
+%Provider%=zttap300,NTarm64
 
 [zttap300.NTx86]
 %DeviceDescription% = zttap300.ndi, root\zttap300 ; Root enumerated
 %DeviceDescription% = zttap300.ndi, zttap300      ; Legacy
 
 [zttap300.NTamd64]
+%DeviceDescription% = zttap300.ndi, root\zttap300 ; Root enumerated
+%DeviceDescription% = zttap300.ndi, zttap300      ; Legacy
+
+[zttap300.NTarm64]
 %DeviceDescription% = zttap300.ndi, root\zttap300 ; Root enumerated
 %DeviceDescription% = zttap300.ndi, zttap300      ; Legacy
 

@@ -25,10 +25,11 @@
 #define __TAP_H
 
 #ifndef NDIS_SUPPORT_NDIS6
+#define NDIS_MINIPORT_DRIVER 1
 #define NDIS_SUPPORT_NDIS6 1
-#define NDIS_SUPPORT_NDIS61 1
+#define NDIS_SUPPORT_NDIS630 1
 #define NDIS_WDM1 1
-#define NDIS61_MINIPORT 1
+#define NDIS630_MINIPORT 1
 #endif
 
 #include <ntifs.h>

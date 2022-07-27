@@ -647,7 +647,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>wbemuuid.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;zeroidc.lib;bcrypt.lib;userenv.lib;crypt32.lib;secur32.lib;ncrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\zeroidc\target\x86_64-pc-windows-msvc\release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\zeroidc\target\aarch64-pc-windows-msvc\release\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
