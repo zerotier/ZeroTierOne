@@ -132,6 +132,13 @@
 #pragma intrinsic(_umul128)
 #endif
 
+#if defined(OPENSSL_AARCH64) && defined(_MSC_VER) && ! defined(__clang__)
+#pragma warning(push, 3)
+#include <intrin.h>
+#pragma warning(pop)
+#pragma intrinsic(_umul128)
+#endif
+
 #include "../../internal.h"
 
 typedef crypto_word BN_ULONG;
@@ -187,10 +194,12 @@ static inline void bn_umult_lohi(BN_ULONG *low_out, BN_ULONG *high_out,
                                  BN_ULONG a, BN_ULONG b) {
 #if defined(OPENSSL_X86_64) && defined(_MSC_VER) && !defined(__clang__)
   *low_out = _umul128(a, b, high_out);
+#elif defined(OPENSSL_AARCH64) && defined(_MSC_VER) && ! defined(__clang__)
+	*low_out = _umul128(a, b, high_out);
 #else
-  BN_ULLONG result = (BN_ULLONG)a * b;
-  *low_out = (BN_ULONG)result;
-  *high_out = (BN_ULONG)(result >> BN_BITS2);
+	BN_ULLONG result = (BN_ULLONG)a * b;
+	*low_out = (BN_ULONG)result;
+	*high_out = (BN_ULONG)(result >> BN_BITS2);
 #endif
 }
 
