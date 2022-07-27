@@ -31,7 +31,7 @@ pub(crate) fn features() -> Features {
         target_arch = "x86_64",
         all(
             any(target_arch = "aarch64", target_arch = "arm"),
-            any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+            any(target_os = "android", target_os = "fuchsia", target_os = "linux", target_os = "windows")
         )
     ))]
     {
@@ -49,7 +49,7 @@ pub(crate) fn features() -> Features {
 
             #[cfg(all(
                 any(target_arch = "aarch64", target_arch = "arm"),
-                any(target_os = "android", target_os = "fuchsia", target_os = "linux")
+                any(target_os = "android", target_os = "fuchsia", target_os = "linux", target_os = "windows")
             ))]
             {
                 arm::setup();
@@ -162,6 +162,25 @@ pub(crate) mod arm {
         }
     }
 
+    #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
+    pub fn setup() {
+        // We do not need to check for the presence of NEON, as Armv8-A always has it
+        let mut features = NEON.mask;
+
+        let result = unsafe {
+            winapi::um::processthreadsapi::IsProcessorFeaturePresent(
+                winapi::um::winnt::PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE,
+            )
+        };
+
+        if result != 0 {
+            // These are all covered by one call in Windows
+            features |= AES.mask;
+            features |= PMULL.mask;
+            features |= SHA256.mask;
+        }
+    }
+
     macro_rules! features {
         {
             $(
@@ -237,7 +256,7 @@ pub(crate) mod arm {
             }
 
             #[cfg(all(
-                any(target_os = "android", target_os = "fuchsia", target_os = "linux"),
+                any(target_os = "android", target_os = "fuchsia", target_os = "linux", target_os = "windows"),
                 any(target_arch = "arm", target_arch = "aarch64")
             ))]
             {

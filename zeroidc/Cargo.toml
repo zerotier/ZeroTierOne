@@ -21,3 +21,6 @@ thiserror = "1"
 
 [build-dependencies]
 cbindgen = "0.20"
+
+[patch.crates-io]
+ring = { path = "vendor/ring" }

@@ -221,6 +221,7 @@ const ASM_TARGETS: &[(&str, Option<&str>, Option<&str>)] = &[
     ("aarch64", Some("ios"), Some("ios64")),
     ("aarch64", Some("macos"), Some("ios64")),
     ("aarch64", None, Some("linux64")),
+    ("aarch64", Some(WINDOWS), Some("win64")),
     ("x86", Some(WINDOWS), Some("win32n")),
     ("x86", Some("ios"), Some("macosx")),
     ("x86", None, Some("elf")),
@@ -384,7 +385,7 @@ fn build_c_code(target: &Target, pregenerated: PathBuf, out_dir: &Path) {
         // For Windows we also pregenerate the object files for non-Git builds so
         // the user doesn't need to install the assembler. On other platforms we
         // assume the C compiler also assembles.
-        if use_pregenerated && target.os == WINDOWS {
+        if use_pregenerated && (target.os == WINDOWS && target.arch != "aarch64") {
             // The pregenerated object files always use ".obj" as the extension,
             // even when the C/C++ compiler outputs files with the ".o" extension.
             asm_srcs = asm_srcs
@@ -503,7 +504,7 @@ fn compile(
         let mut out_path = out_dir.join(p.file_name().unwrap());
         assert!(out_path.set_extension(target.obj_ext));
         if need_run(&p, &out_path, includes_modified) {
-            let cmd = if target.os != WINDOWS || ext != "asm" {
+            let cmd = if !(target.os == WINDOWS && target.arch != "aarch64") || ext != "asm" {
                 cc(p, ext, target, warnings_are_errors, &out_path)
             } else {
                 nasm(p, &target.arch, &out_path)
@@ -675,7 +676,7 @@ fn perlasm_src_dsts(
     let mut src_dsts = srcs
         .iter()
         .filter(|p| is_perlasm(p))
-        .map(|src| (src.clone(), asm_path(out_dir, src, os, perlasm_format)))
+        .map(|src| (src.clone(), asm_path(out_dir, src, arch, os, perlasm_format)))
         .collect::<Vec<_>>();
 
     // Some PerlAsm source files need to be run multiple times with different
@@ -688,7 +689,7 @@ fn perlasm_src_dsts(
                 let synthesized_path = PathBuf::from(synthesized);
                 src_dsts.push((
                     concrete_path,
-                    asm_path(out_dir, &synthesized_path, os, perlasm_format),
+                    asm_path(out_dir, &synthesized_path, arch, os, perlasm_format),
                 ))
             }
         };
@@ -710,11 +711,11 @@ fn is_perlasm(path: &PathBuf) -> bool {
     path.extension().unwrap().to_str().unwrap() == "pl"
 }
 
-fn asm_path(out_dir: &Path, src: &Path, os: Option<&str>, perlasm_format: &str) -> PathBuf {
+fn asm_path(out_dir: &Path, src: &Path, arch: &str, os: Option<&str>, perlasm_format: &str) -> PathBuf {
     let src_stem = src.file_stem().expect("source file without basename");
 
     let dst_stem = src_stem.to_str().unwrap();
-    let dst_extension = if os == Some("windows") { "asm" } else { "S" };
+    let dst_extension = if os == Some("windows") && arch != "aarch64" { "asm" } else { "S" };
     let dst_filename = format!("{}-{}.{}", dst_stem, perlasm_format, dst_extension);
     out_dir.join(dst_filename)
 }
