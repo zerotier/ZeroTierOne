@@ -65,7 +65,8 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
         );
 
         while !plaintext.is_empty() {
-            let (mut x0, mut x1, mut x2, mut x3, mut x4, mut x5, mut x6, mut x7, mut x8, mut x9, mut x10, mut x11, mut x12, mut x13, mut x14, mut x15) = (j0, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10, j11, j12, j13, j14, j15);
+            let (mut x0, mut x1, mut x2, mut x3, mut x4, mut x5, mut x6, mut x7, mut x8, mut x9, mut x10, mut x11, mut x12, mut x13, mut x14, mut x15) =
+                (j0, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10, j11, j12, j13, j14, j15);
 
             for _ in 0..(ROUNDS / 2) {
                 x4 ^= x0.wrapping_add(x12).rotate_left(7);
@@ -123,7 +124,7 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
             j9 = j9.wrapping_add((j8 == 0) as u32);
 
             if plaintext.len() >= 64 {
-                #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
+                #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
                 {
                     // Slightly faster keystream XOR for little-endian platforms with unaligned load/store.
                     unsafe {
@@ -148,7 +149,24 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
                 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
                 {
                     // Portable keystream XOR with alignment-safe access and native to little-endian conversion.
-                    let keystream = [x0.to_le(), x1.to_le(), x2.to_le(), x3.to_le(), x4.to_le(), x5.to_le(), x6.to_le(), x7.to_le(), x8.to_le(), x9.to_le(), x10.to_le(), x11.to_le(), x12.to_le(), x13.to_le(), x14.to_le(), x15.to_le()];
+                    let keystream = [
+                        x0.to_le(),
+                        x1.to_le(),
+                        x2.to_le(),
+                        x3.to_le(),
+                        x4.to_le(),
+                        x5.to_le(),
+                        x6.to_le(),
+                        x7.to_le(),
+                        x8.to_le(),
+                        x9.to_le(),
+                        x10.to_le(),
+                        x11.to_le(),
+                        x12.to_le(),
+                        x13.to_le(),
+                        x14.to_le(),
+                        x15.to_le(),
+                    ];
                     for i in 0..64 {
                         ciphertext[i] = plaintext[i] ^ unsafe { *keystream.as_ptr().cast::<u8>().add(i) };
                     }
@@ -157,7 +175,24 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
                 plaintext = &plaintext[64..];
                 ciphertext = &mut ciphertext[64..];
             } else {
-                let keystream = [x0.to_le(), x1.to_le(), x2.to_le(), x3.to_le(), x4.to_le(), x5.to_le(), x6.to_le(), x7.to_le(), x8.to_le(), x9.to_le(), x10.to_le(), x11.to_le(), x12.to_le(), x13.to_le(), x14.to_le(), x15.to_le()];
+                let keystream = [
+                    x0.to_le(),
+                    x1.to_le(),
+                    x2.to_le(),
+                    x3.to_le(),
+                    x4.to_le(),
+                    x5.to_le(),
+                    x6.to_le(),
+                    x7.to_le(),
+                    x8.to_le(),
+                    x9.to_le(),
+                    x10.to_le(),
+                    x11.to_le(),
+                    x12.to_le(),
+                    x13.to_le(),
+                    x14.to_le(),
+                    x15.to_le(),
+                ];
                 for i in 0..plaintext.len() {
                     ciphertext[i] = plaintext[i] ^ unsafe { *keystream.as_ptr().cast::<u8>().add(i) };
                 }
@@ -179,11 +214,15 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
 mod tests {
     use crate::salsa::*;
 
-    const SALSA_20_TV0_KEY: [u8; 32] = [0x0f, 0x62, 0xb5, 0x08, 0x5b, 0xae, 0x01, 0x54, 0xa7, 0xfa, 0x4d, 0xa0, 0xf3, 0x46, 0x99, 0xec, 0x3f, 0x92, 0xe5, 0x38, 0x8b, 0xde, 0x31, 0x84, 0xd7, 0x2a, 0x7d, 0xd0, 0x23, 0x76, 0xc9, 0x1c];
+    const SALSA_20_TV0_KEY: [u8; 32] = [
+        0x0f, 0x62, 0xb5, 0x08, 0x5b, 0xae, 0x01, 0x54, 0xa7, 0xfa, 0x4d, 0xa0, 0xf3, 0x46, 0x99, 0xec, 0x3f, 0x92, 0xe5, 0x38, 0x8b, 0xde, 0x31, 0x84, 0xd7, 0x2a, 0x7d, 0xd0,
+        0x23, 0x76, 0xc9, 0x1c,
+    ];
     const SALSA_20_TV0_IV: [u8; 8] = [0x28, 0x8f, 0xf6, 0x5d, 0xc4, 0x2b, 0x92, 0xf9];
     const SALSA_20_TV0_KS: [u8; 64] = [
-        0x5e, 0x5e, 0x71, 0xf9, 0x01, 0x99, 0x34, 0x03, 0x04, 0xab, 0xb2, 0x2a, 0x37, 0xb6, 0x62, 0x5b, 0xf8, 0x83, 0xfb, 0x89, 0xce, 0x3b, 0x21, 0xf5, 0x4a, 0x10, 0xb8, 0x10, 0x66, 0xef, 0x87, 0xda, 0x30, 0xb7, 0x76, 0x99, 0xaa, 0x73, 0x79, 0xda, 0x59,
-        0x5c, 0x77, 0xdd, 0x59, 0x54, 0x2d, 0xa2, 0x08, 0xe5, 0x95, 0x4f, 0x89, 0xe4, 0x0e, 0xb7, 0xaa, 0x80, 0xa8, 0x4a, 0x61, 0x76, 0x66, 0x3f,
+        0x5e, 0x5e, 0x71, 0xf9, 0x01, 0x99, 0x34, 0x03, 0x04, 0xab, 0xb2, 0x2a, 0x37, 0xb6, 0x62, 0x5b, 0xf8, 0x83, 0xfb, 0x89, 0xce, 0x3b, 0x21, 0xf5, 0x4a, 0x10, 0xb8, 0x10,
+        0x66, 0xef, 0x87, 0xda, 0x30, 0xb7, 0x76, 0x99, 0xaa, 0x73, 0x79, 0xda, 0x59, 0x5c, 0x77, 0xdd, 0x59, 0x54, 0x2d, 0xa2, 0x08, 0xe5, 0x95, 0x4f, 0x89, 0xe4, 0x0e, 0xb7,
+        0xaa, 0x80, 0xa8, 0x4a, 0x61, 0x76, 0x66, 0x3f,
     ];
 
     #[test]

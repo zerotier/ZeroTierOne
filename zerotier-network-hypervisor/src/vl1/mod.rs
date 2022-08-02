@@ -11,7 +11,6 @@ mod mac;
 mod path;
 mod peer;
 mod rootset;
-mod session;
 mod symmetricsecret;
 mod whoisqueue;
 

@@ -68,14 +68,7 @@ pub trait SystemInterface: Sync + Send + 'static {
     /// For endpoint types that support a packet TTL, the implementation may set the TTL
     /// if the 'ttl' parameter is not zero. If the parameter is zero or TTL setting is not
     /// supported, the default TTL should be used.
-    async fn wire_send(
-        &self,
-        endpoint: &Endpoint,
-        local_socket: Option<&Self::LocalSocket>,
-        local_interface: Option<&Self::LocalInterface>,
-        data: &[&[u8]],
-        packet_ttl: u8,
-    ) -> bool;
+    async fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<&Self::LocalSocket>, local_interface: Option<&Self::LocalInterface>, data: &[&[u8]], packet_ttl: u8) -> bool;
 
     /// Called to check and see if a physical address should be used for ZeroTier traffic to a node.
     async fn check_path(&self, id: &Identity, endpoint: &Endpoint, local_socket: Option<&Self::LocalSocket>, local_interface: Option<&Self::LocalInterface>) -> bool;
@@ -101,23 +94,13 @@ pub trait InnerProtocolInterface: Sync + Send + 'static {
     /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
-    async fn handle_packet<SI: SystemInterface>(
-        &self,
-        source: &Peer<SI>,
-        source_path: &Path<SI>,
-        forward_secrecy: bool,
-        extended_authentication: bool,
-        verb: u8,
-        payload: &PacketBuffer,
-    ) -> bool;
+    async fn handle_packet<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, verb: u8, payload: &PacketBuffer) -> bool;
 
     /// Handle errors, returning true if the error was recognized.
     async fn handle_error<SI: SystemInterface>(
         &self,
         source: &Peer<SI>,
         source_path: &Path<SI>,
-        forward_secrecy: bool,
-        extended_authentication: bool,
         in_re_verb: u8,
         in_re_message_id: u64,
         error_code: u8,
@@ -126,17 +109,7 @@ pub trait InnerProtocolInterface: Sync + Send + 'static {
     ) -> bool;
 
     /// Handle an OK, returing true if the OK was recognized.
-    async fn handle_ok<SI: SystemInterface>(
-        &self,
-        source: &Peer<SI>,
-        source_path: &Path<SI>,
-        forward_secrecy: bool,
-        extended_authentication: bool,
-        in_re_verb: u8,
-        in_re_message_id: u64,
-        payload: &PacketBuffer,
-        cursor: &mut usize,
-    ) -> bool;
+    async fn handle_ok<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, in_re_verb: u8, in_re_message_id: u64, payload: &PacketBuffer, cursor: &mut usize) -> bool;
 
     /// Check if this remote peer has a trust relationship with this node.
     ///
@@ -455,10 +428,7 @@ impl<SI: SystemInterface> Node<SI> {
                     )));
                 }
                 for i in bad_identities.iter() {
-                    si.event(Event::SecurityWarning(format!(
-                        "bad identity detected for address {} in at least one root set, ignoring (error creating peer object)",
-                        i.address.to_string()
-                    )));
+                    si.event(Event::SecurityWarning(format!("bad identity detected for address {} in at least one root set, ignoring (error creating peer object)", i.address.to_string())));
                 }
 
                 let mut new_root_identities: Vec<Identity> = new_roots.iter().map(|(p, _)| p.identity.clone()).collect();
@@ -590,17 +560,9 @@ impl<SI: SystemInterface> Node<SI> {
                     if fragment_header.is_fragment() {
                         #[cfg(debug_assertions)]
                         let fragment_header_id = u64::from_be_bytes(fragment_header.id);
-                        debug_event!(
-                            si,
-                            "[vl1] #{:0>16x} fragment {} of {} received",
-                            u64::from_be_bytes(fragment_header.id),
-                            fragment_header.fragment_no(),
-                            fragment_header.total_fragments()
-                        );
+                        debug_event!(si, "[vl1] #{:0>16x} fragment {} of {} received", u64::from_be_bytes(fragment_header.id), fragment_header.fragment_no(), fragment_header.total_fragments());
 
-                        if let Some(assembled_packet) =
-                            path.receive_fragment(fragment_header.packet_id(), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks)
-                        {
+                        if let Some(assembled_packet) = path.receive_fragment(fragment_header.packet_id(), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks) {
                             if let Some(frag0) = assembled_packet.frags[0].as_ref() {
                                 #[cfg(debug_assertions)]
                                 debug_event!(si, "[vl1] #{:0>16x} packet fully assembled!", fragment_header_id);
@@ -608,8 +570,7 @@ impl<SI: SystemInterface> Node<SI> {
                                 if let Ok(packet_header) = frag0.struct_at::<PacketHeader>(0) {
                                     if let Some(source) = Address::from_bytes(&packet_header.src) {
                                         if let Some(peer) = self.peer(source) {
-                                            peer.receive(self, si, ph, time_ticks, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)])
-                                                .await;
+                                            peer.receive(self, si, ph, time_ticks, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]).await;
                                         } else {
                                             self.whois.query(self, si, source, Some(QueuedPacket::Fragmented(assembled_packet)));
                                         }

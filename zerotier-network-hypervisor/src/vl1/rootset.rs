@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 use std::io::Write;
 
-use crate::util::buffer::Buffer;
+use crate::util::buffer::{Buffer, BufferReader};
 use crate::util::marshalable::Marshalable;
 use crate::vl1::identity::*;
 use crate::vl1::Endpoint;
@@ -109,7 +109,7 @@ impl RootSet {
         buf.append_varint(self.revision)?;
         buf.append_varint(self.members.len() as u64)?;
         for m in self.members.iter() {
-            m.identity.marshal_with_options(buf, Identity::ALGORITHM_ALL, false)?;
+            buf.append_bytes((&m.identity.to_public_bytes()).into())?;
             if m.endpoints.is_some() {
                 let endpoints = m.endpoints.as_ref().unwrap();
                 buf.append_varint(endpoints.len() as u64)?;
@@ -269,7 +269,7 @@ impl Marshalable for RootSet {
         let member_count = buf.read_varint(cursor)?;
         for _ in 0..member_count {
             let mut m = Root {
-                identity: Identity::unmarshal(buf, cursor)?,
+                identity: Identity::read_bytes(&mut BufferReader::new(buf, cursor))?,
                 endpoints: None,
                 signature: Vec::new(),
                 priority: 0,

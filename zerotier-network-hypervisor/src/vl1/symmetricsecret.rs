@@ -14,9 +14,6 @@ pub(crate) struct SymmetricSecret {
     /// Master key from which other keys are derived.
     pub key: Secret<64>,
 
-    /// Key used for HMAC extended validation on packets like HELLO.
-    pub packet_hmac_key: Secret<48>,
-
     /// Pool of keyed AES-GMAC-SIV engines (pooled to avoid AES re-init every time).
     pub aes_gmac_siv: Pool<AesGmacSiv, AesGmacSivPoolFactory>,
 }
@@ -24,16 +21,11 @@ pub(crate) struct SymmetricSecret {
 impl SymmetricSecret {
     /// Create a new symmetric secret, deriving all sub-keys and such.
     pub fn new(key: Secret<64>) -> SymmetricSecret {
-        let packet_hmac_key = zt_kbkdf_hmac_sha384(&key.0[..48], security_constants::KBKDF_KEY_USAGE_LABEL_PACKET_HMAC);
         let aes_factory = AesGmacSivPoolFactory(
             zt_kbkdf_hmac_sha384(&key.0[..48], security_constants::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0).first_n(),
             zt_kbkdf_hmac_sha384(&key.0[..48], security_constants::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1).first_n(),
         );
-        SymmetricSecret {
-            key,
-            packet_hmac_key,
-            aes_gmac_siv: Pool::new(2, aes_factory),
-        }
+        SymmetricSecret { key, aes_gmac_siv: Pool::new(2, aes_factory) }
     }
 }
 

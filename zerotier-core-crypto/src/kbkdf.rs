@@ -1,5 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use crate::hash::{hmac_sha384, hmac_sha512};
 use crate::secret::Secret;
 
 /*
@@ -13,10 +14,10 @@ use crate::secret::Secret;
 
 /// Derive a key using HMAC-SHA384 and a single byte label, ZeroTier variant with "ZT" preface.
 pub fn zt_kbkdf_hmac_sha384(key: &[u8], label: u8) -> Secret<48> {
-    Secret(crate::hash::hmac_sha384(key, &[0, 0, 0, 0, b'Z', b'T', label, 0, 0, 0, 0, 0x01, 0x80]))
+    Secret(hmac_sha384(key, &[0, 0, 0, 0, b'Z', b'T', label, 0, 0, 0, 0, 0x01, 0x80]))
 }
 
 /// Derive a key using HMAC-SHA512 and a single byte label, ZeroTier variant with "ZT" preface.
 pub fn zt_kbkdf_hmac_sha512(key: &[u8], label: u8) -> Secret<64> {
-    Secret(crate::hash::hmac_sha512(key, &[0, 0, 0, 0, b'Z', b'T', label, 0, 0, 0, 0, 0x02, 0x00]))
+    Secret(hmac_sha512(key, &[0, 0, 0, 0, b'Z', b'T', label, 0, 0, 0, 0, 0x02, 0x00]))
 }

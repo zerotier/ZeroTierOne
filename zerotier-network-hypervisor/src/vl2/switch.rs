@@ -13,7 +13,7 @@ pub struct Switch {}
 #[async_trait]
 impl InnerProtocolInterface for Switch {
     #[allow(unused)]
-    async fn handle_packet<SI: SystemInterface>(&self, peer: &Peer<SI>, source_path: &Path<SI>, forward_secrecy: bool, extended_authentication: bool, verb: u8, payload: &PacketBuffer) -> bool {
+    async fn handle_packet<SI: SystemInterface>(&self, peer: &Peer<SI>, source_path: &Path<SI>, verb: u8, payload: &PacketBuffer) -> bool {
         false
     }
 
@@ -22,8 +22,6 @@ impl InnerProtocolInterface for Switch {
         &self,
         peer: &Peer<SI>,
         source_path: &Path<SI>,
-        forward_secrecy: bool,
-        extended_authentication: bool,
         in_re_verb: u8,
         in_re_message_id: u64,
         error_code: u8,
@@ -34,7 +32,7 @@ impl InnerProtocolInterface for Switch {
     }
 
     #[allow(unused)]
-    async fn handle_ok<SI: SystemInterface>(&self, peer: &Peer<SI>, source_path: &Path<SI>, forward_secrecy: bool, extended_authentication: bool, in_re_verb: u8, in_re_message_id: u64, payload: &PacketBuffer, cursor: &mut usize) -> bool {
+    async fn handle_ok<SI: SystemInterface>(&self, peer: &Peer<SI>, source_path: &Path<SI>, in_re_verb: u8, in_re_message_id: u64, payload: &PacketBuffer, cursor: &mut usize) -> bool {
         false
     }
 

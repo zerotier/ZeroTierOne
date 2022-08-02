@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use std::io::Write;
+use std::io::{Read, Write};
 use std::mem::{size_of, MaybeUninit};
 
 use crate::util::pool::PoolFactory;
@@ -26,6 +26,9 @@ impl<const L: usize> Default for Buffer<L> {
     }
 }
 
+// Setting attributes this way causes the 'overflow' branches to be treated as unlikely by LLVM.
+#[inline(never)]
+#[cold]
 fn overflow_err() -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "buffer overflow")
 }
@@ -98,12 +101,12 @@ impl<const L: usize> Buffer<L> {
 
     #[inline(always)]
     pub fn as_bytes(&self) -> &[u8] {
-        &self.1[0..self.0]
+        &self.1[..self.0]
     }
 
     #[inline(always)]
     pub fn as_bytes_mut(&mut self) -> &mut [u8] {
-        &mut self.1[0..self.0]
+        &mut self.1[..self.0]
     }
 
     #[inline(always)]
@@ -129,6 +132,15 @@ impl<const L: usize> Buffer<L> {
     pub fn as_bytes_starting_at_mut(&mut self, start: usize) -> std::io::Result<&mut [u8]> {
         if start <= self.0 {
             Ok(&mut self.1[start..self.0])
+        } else {
+            Err(overflow_err())
+        }
+    }
+
+    #[inline(always)]
+    pub fn as_byte_range(&self, start: usize, end: usize) -> std::io::Result<&[u8]> {
+        if end <= self.0 {
+            Ok(&self.1[start..end])
         } else {
             Err(overflow_err())
         }
@@ -323,6 +335,19 @@ impl<const L: usize> Buffer<L> {
     }
 
     #[inline(always)]
+    pub fn append_u64_le(&mut self, i: u64) -> std::io::Result<()> {
+        let ptr = self.0;
+        let end = ptr + 8;
+        if end <= L {
+            self.0 = end;
+            unsafe { self.write_obj_internal(ptr, i.to_le()) };
+            Ok(())
+        } else {
+            Err(overflow_err())
+        }
+    }
+
+    #[inline(always)]
     pub fn bytes_fixed_at<const S: usize>(&self, ptr: usize) -> std::io::Result<&[u8; S]> {
         if (ptr + S) <= self.0 {
             unsafe { Ok(&*self.1.as_ptr().cast::<u8>().add(ptr).cast::<[u8; S]>()) }
@@ -504,6 +529,19 @@ impl<const L: usize> Buffer<L> {
             Err(overflow_err())
         }
     }
+
+    #[inline(always)]
+    pub fn read_u64_le(&self, cursor: &mut usize) -> std::io::Result<u64> {
+        let ptr = *cursor;
+        let end = ptr + 8;
+        debug_assert!(end <= L);
+        if end <= self.0 {
+            *cursor = end;
+            Ok(u64::from_le(unsafe { self.read_obj_internal(ptr) }))
+        } else {
+            Err(overflow_err())
+        }
+    }
 }
 
 impl<const L: usize> Write for Buffer<L> {
@@ -551,6 +589,24 @@ impl<const L: usize> From<&[u8; L]> for Buffer<L> {
     #[inline(always)]
     fn from(a: &[u8; L]) -> Self {
         Self(L, a.clone())
+    }
+}
+
+/// Implements std::io::Read for a buffer and a cursor.
+pub struct BufferReader<'a, 'b, const L: usize>(&'a Buffer<L>, &'b mut usize);
+
+impl<'a, 'b, const L: usize> BufferReader<'a, 'b, L> {
+    #[inline(always)]
+    pub fn new(b: &'a Buffer<L>, cursor: &'b mut usize) -> Self {
+        Self(b, cursor)
+    }
+}
+
+impl<'a, 'b, const L: usize> Read for BufferReader<'a, 'b, L> {
+    #[inline(always)]
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        buf.copy_from_slice(self.0.read_bytes(buf.len(), self.1)?);
+        Ok(buf.len())
     }
 }
 

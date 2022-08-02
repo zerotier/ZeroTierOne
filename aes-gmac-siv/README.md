@@ -1,6 +1,8 @@
 AES-GMAC-SIV
 ======
 
+**DEPRECATION NOTICE: this mode has been deprecated in ZeroTier V2 via its secure session protocol. It is still included for use with older nodes but the V2 session protocol removes the advantage of a SIV mode and allows us to use more standard and faster simple AEAD modes like GCM.**
+
 This is a Rust implementation of AES-GMAC-SIV, a FIPS-compliant SIV AEAD construction for AES-256. An interface to simple AES-CTR mode is also included.
 
 It's implemented in terms of OpenSSL (libcrypto), macOS/iOS CryptoCore, or (soon) WinCrypt, with the latter two automatically selected at compile time on those platforms.
