@@ -13,6 +13,7 @@ mod peer;
 mod rootset;
 mod symmetricsecret;
 mod whoisqueue;
+mod zssp;
 
 pub(crate) mod node;
 #[allow(unused)]

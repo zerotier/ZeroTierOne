@@ -183,6 +183,15 @@ mod fruit_flavored {
         }
 
         #[inline(always)]
+        pub fn crypt_in_place(&mut self, data: &mut [u8]) {
+            unsafe {
+                let mut data_out_written: usize = 0;
+                CCCryptorUpdate(self.0, data.as_ptr().cast(), data.len(), data.as_mut_ptr().cast(), data.len(), &mut data_out_written);
+                assert_eq!(data_out_written, data.len());
+            }
+        }
+
+        #[inline(always)]
         pub fn finish(&mut self) -> [u8; 16] {
             let mut tag = [0_u8; 16];
             unsafe {
