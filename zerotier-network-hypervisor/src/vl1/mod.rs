@@ -10,10 +10,10 @@ mod inetaddress;
 mod mac;
 mod path;
 mod peer;
+mod pinknoise;
 mod rootset;
 mod symmetricsecret;
 mod whoisqueue;
-mod zssp;
 
 pub(crate) mod node;
 #[allow(unused)]

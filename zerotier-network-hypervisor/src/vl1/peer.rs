@@ -162,7 +162,7 @@ fn try_aead_decrypt(
 /// (Note that this is a legacy cipher suite.)
 fn salsa_poly_create(secret: &SymmetricSecret, header: &PacketHeader, packet_size: usize) -> (Salsa<12>, [u8; 32]) {
     // Create a per-packet key from the IV, source, destination, and packet size.
-    let mut key: Secret<32> = secret.key.first_n();
+    let mut key: Secret<32> = secret.key.first_n_clone();
     let hb = header.as_bytes();
     for i in 0..18 {
         key.0[i] ^= hb[i];

@@ -11,7 +11,7 @@ debug_events = []
 
 [dependencies]
 zerotier-core-crypto = { path = "../zerotier-core-crypto" }
-pqc_kyber = { path = "../third_party/kyber", features = ["kyber512"], default-features = false }
+pqc_kyber = { path = "../third_party/kyber", features = ["kyber512", "90s", "reference"], default-features = false }
 async-trait = "^0"
 base64 = "^0"
 lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }

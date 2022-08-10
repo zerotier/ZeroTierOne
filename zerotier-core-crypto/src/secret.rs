@@ -1,7 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 use std::ffi::c_void;
-use std::mem::MaybeUninit;
 
 extern "C" {
     fn OPENSSL_cleanse(ptr: *mut c_void, len: usize);
@@ -37,12 +36,15 @@ impl<const L: usize> Secret<L> {
         &self.0
     }
 
-    /// Get a clone of the first N bytes of this secret.
     #[inline(always)]
-    pub fn first_n<const N: usize>(&self) -> Secret<N> {
-        let mut tmp: Secret<N> = unsafe { MaybeUninit::uninit().assume_init() };
-        tmp.0.copy_from_slice(&self.0[..N]);
-        tmp
+    pub fn first_n<const N: usize>(&self) -> &[u8; N] {
+        assert!(N <= L);
+        unsafe { &*self.0.as_ptr().cast() }
+    }
+
+    #[inline(always)]
+    pub fn first_n_clone<const N: usize>(&self) -> Secret<N> {
+        Secret::<N>(self.first_n().clone())
     }
 }
 
@@ -50,7 +52,6 @@ impl<const L: usize> Drop for Secret<L> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { OPENSSL_cleanse(self.0.as_mut_ptr().cast(), L) };
-        std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
     }
 }
 

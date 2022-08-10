@@ -22,8 +22,8 @@ impl SymmetricSecret {
     /// Create a new symmetric secret, deriving all sub-keys and such.
     pub fn new(key: Secret<64>) -> SymmetricSecret {
         let aes_factory = AesGmacSivPoolFactory(
-            zt_kbkdf_hmac_sha384(&key.0[..48], security_constants::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0).first_n(),
-            zt_kbkdf_hmac_sha384(&key.0[..48], security_constants::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1).first_n(),
+            zt_kbkdf_hmac_sha384(&key.0[..48], security_constants::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0).first_n_clone(),
+            zt_kbkdf_hmac_sha384(&key.0[..48], security_constants::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1).first_n_clone(),
         );
         SymmetricSecret { key, aes_gmac_siv: Pool::new(2, aes_factory) }
     }
