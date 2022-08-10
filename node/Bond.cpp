@@ -590,7 +590,7 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now)
 		}
 		flow->assignPath(_abPathIdx, now);
 	}
-	debug("assign out-flow %04x to link %s (%lu / %lu flows)", flow->id, pathToStr(_paths[flow->assignedPath].p).c_str(), _paths[flow->assignedPath].assignedFlowCount, (unsigned long)_flows.size());
+	debug("assign out-flow %04x to link %s (%u / %lu flows)", flow->id, pathToStr(_paths[flow->assignedPath].p).c_str(), _paths[flow->assignedPath].assignedFlowCount, _flows.size());
 	return true;
 }
 
@@ -614,7 +614,7 @@ SharedPtr<Bond::Flow> Bond::createFlow(int pathIdx, int32_t flowId, unsigned cha
 	if (pathIdx != ZT_MAX_PEER_NETWORK_PATHS) {
 		flow->assignPath(pathIdx, now);
 		_paths[pathIdx].assignedFlowCount++;
-		debug("assign in-flow %x to link %s (%lu / %lu)", flow->id, pathToStr(_paths[pathIdx].p).c_str(), _paths[pathIdx].assignedFlowCount, (unsigned long)_flows.size());
+		debug("assign in-flow %x to link %s (%u / %lu)", flow->id, pathToStr(_paths[pathIdx].p).c_str(), _paths[pathIdx].assignedFlowCount, _flows.size());
 	}
 	/**
 	 * Add a flow when no path was provided. This means that it is an outgoing packet
@@ -634,7 +634,7 @@ void Bond::forgetFlowsWhenNecessary(uint64_t age, bool oldest, int64_t now)
 	if (age) {	 // Remove by specific age
 		while (it != _flows.end()) {
 			if (it->second->age(now) > age) {
-				debug("forget flow %x (age %llu) (%lu / %lu)", it->first, (unsigned long long)it->second->age(now), _paths[it->second->assignedPath].assignedFlowCount, (unsigned long)(_flows.size() - 1));
+				debug("forget flow %x (age %llu) (%u / %lu)", it->first, (unsigned long long)it->second->age(now), _paths[it->second->assignedPath].assignedFlowCount, (_flows.size() - 1));
 				_paths[it->second->assignedPath].assignedFlowCount--;
 				it = _flows.erase(it);
 			}
