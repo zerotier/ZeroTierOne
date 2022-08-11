@@ -1,5 +1,8 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+// Pink Noise: a NIST/FIPS/CSfC compliant Noise_IK pattern based session protocol for ZeroTier v2
+// Work in progress, not yet audited or tested much...
+
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use zerotier_core_crypto::aes::{Aes, AesGcm};
