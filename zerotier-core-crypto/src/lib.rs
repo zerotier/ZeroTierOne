@@ -1,6 +1,7 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 pub mod aes;
+pub mod aes_gmac_siv;
 pub mod hash;
 pub mod hex;
 pub mod kbkdf;
@@ -12,5 +13,4 @@ pub mod secret;
 pub mod varint;
 pub mod x25519;
 
-pub use aes_gmac_siv;
-pub use subtle;
+pub const ZEROES: [u8; 16] = [0_u8; 16];

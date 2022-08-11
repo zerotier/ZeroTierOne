@@ -67,8 +67,8 @@ impl DataDir {
     /// Save identity.secret and identity.public to data directory.
     pub async fn save_identity(&self, id: &Identity) -> std::io::Result<()> {
         assert!(id.secret.is_some());
-        let id_secret_str = id.to_string_with_options(Identity::ALGORITHM_ALL, true);
-        let id_public_str = id.to_string_with_options(Identity::ALGORITHM_ALL, false);
+        let id_secret_str = id.to_secret_string();
+        let id_public_str = id.to_string();
         let secret_path = self.base_path.join(IDENTITY_SECRET_FILENAME);
         tokio::fs::write(&secret_path, id_secret_str.as_bytes()).await?;
         assert!(crate::utils::fs_restrict_permissions(&secret_path));

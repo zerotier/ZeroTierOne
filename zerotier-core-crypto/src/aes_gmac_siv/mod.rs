@@ -7,16 +7,14 @@ mod impl_macos;
 mod impl_openssl;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-pub use impl_macos::{AesCtr, AesGmacSiv};
+pub use crate::aes_gmac_siv::impl_macos::AesGmacSiv;
 
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
-pub use impl_openssl::{AesCtr, AesGmacSiv};
-
-pub(crate) const ZEROES: [u8; 16] = [0_u8; 16];
+pub use crate::aes_gmac_siv::impl_openssl::AesGmacSiv;
 
 #[cfg(test)]
 mod tests {
-    use crate::AesGmacSiv;
+    use crate::aes_gmac_siv::AesGmacSiv;
     use sha2::Digest;
     use std::time::SystemTime;
 

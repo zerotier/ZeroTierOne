@@ -8,7 +8,6 @@ authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ieryme
 [dependencies]
 rand_core = "0.5.1"
 rand_core_062 = { package = "rand_core", version = "0.6.2" }
-aes-gmac-siv = { path = "../aes-gmac-siv" }
 x25519-dalek = { version = "1.2.0", features = ["std", "u64_backend"], default-features = false }
 ed25519-dalek = { version = "1.0.1", features = ["std", "u64_backend"], default-features = false }
 subtle = "2.4.1"
@@ -17,5 +16,9 @@ lazy_static = "^1"
 foreign-types = "0.3.1"
 poly1305 = { version = "0.7.2", features = [], default-features = false }
 
+[target."cfg(not(any(target_os = \"macos\", target_os = \"ios\")))".dependencies]
+openssl = "^0"
+
 [dev-dependencies]
 quickcheck = "1.0.3"
+sha2 = "^0"
