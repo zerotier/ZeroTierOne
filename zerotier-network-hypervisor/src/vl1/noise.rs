@@ -1,12 +1,9 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-// Pink Noise: a NIST/FIPS/CSfC compliant Noise_IK pattern based session protocol for ZeroTier v2
-// Work in progress, not yet audited or tested much...
-
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use zerotier_core_crypto::aes::{Aes, AesGcm};
-use zerotier_core_crypto::hash::{hmac_sha384, hmac_sha512, SHA512};
+use zerotier_core_crypto::hash::{hmac_sha384, hmac_sha512, SHA384, SHA512};
 use zerotier_core_crypto::p384::{P384KeyPair, P384PublicKey, P384_PUBLIC_KEY_SIZE};
 use zerotier_core_crypto::random;
 use zerotier_core_crypto::secret::Secret;
@@ -26,7 +23,7 @@ pub const REKEY_AFTER_USES_MAX_JITTER: u32 = 1048576;
 pub const EXPIRE_AFTER_USES: u64 = (u32::MAX - 1024) as u64;
 
 /// Start attempting to rekey after a key has been in use for this many milliseconds.
-pub const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60;
+pub const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60; // 1 hour
 
 /// Maximum random jitter to add to rekey-after time.
 pub const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 5;
@@ -49,10 +46,13 @@ const AES_GCM_TAG_SIZE: usize = 16;
 const HMAC_SIZE: usize = 48; // HMAC-SHA384
 const SESSION_ID_SIZE: usize = 6;
 
-// on macOS: echo -n 'pinkNoise_IKpsk2_hybrid_NISTP384_AESGCM_SHA512' | shasum -a 512  | cut -d ' ' -f 1 | xxd -r -p | xxd -i
+/// Aribitrary starting value for key derivation chain
+///
+/// It doesn't matter very much what this is, but it's good for it to be unique.
 const KEY_COMPUTATION_STARTING_SALT: [u8; 64] = [
-    0xa8, 0x4c, 0x50, 0x1e, 0x41, 0x84, 0x5a, 0x6e, 0x73, 0x0b, 0x39, 0xad, 0x99, 0xaa, 0x10, 0x0e, 0x79, 0x42, 0x7c, 0x52, 0xc7, 0x10, 0x91, 0xb3, 0x87, 0x96, 0xe4, 0x98, 0x76, 0x11, 0x15, 0x42, 0xd2, 0xfc, 0x3d, 0xe6, 0x19, 0xbf, 0x36, 0xab, 0x22, 0xf1,
-    0x62, 0xb6, 0x92, 0x3b, 0x80, 0x26, 0x0d, 0xcb, 0x16, 0xfc, 0x25, 0x4a, 0xad, 0x9a, 0x32, 0x4f, 0x37, 0xf8, 0x63, 0xeb, 0x10, 0x94,
+    // echo -n 'Noise_IKpsk2_NISTP384+hybrid_AESGCM_SHA512' | shasum -a 512  | cut -d ' ' -f 1 | xxd -r -p | xxd -i
+    0xc7, 0x66, 0xf3, 0x71, 0xc8, 0xbc, 0xc3, 0x19, 0xc6, 0xf0, 0x2a, 0x6e, 0x5c, 0x4b, 0x3c, 0xc0, 0x83, 0x29, 0x09, 0x09, 0x14, 0x4a, 0xf0, 0xde, 0xea, 0x3d, 0xbd, 0x00, 0x4c, 0x9e, 0x01, 0xa0, 0x6e, 0xb6, 0x9b, 0x56, 0x47, 0x97, 0x86, 0x1d, 0x4e, 0x94,
+    0xc5, 0xdd, 0xde, 0x4a, 0x1c, 0xc3, 0x4e, 0xcc, 0x8b, 0x09, 0x3b, 0xb3, 0xc3, 0xb0, 0x03, 0xd7, 0xdf, 0x22, 0x49, 0x3f, 0xa5, 0x01,
 ];
 
 const KBKDF_KEY_USAGE_LABEL_HMAC: u8 = b'h';
@@ -139,6 +139,7 @@ pub enum ReceiveResult<'a, O> {
 pub struct Session<O> {
     pub id: u64,
     outgoing_packet_counter: Counter,
+    remote_s_public_hash: [u8; 48],
     psk: Secret<64>,
     ss: Secret<48>,
     outgoing_obfuscator: Obfuscator,
@@ -177,6 +178,7 @@ impl<O> Session<O> {
                     Self {
                         id: local_session_id,
                         outgoing_packet_counter: counter,
+                        remote_s_public_hash: SHA384::hash(remote_s_public),
                         psk: psk.clone(),
                         ss,
                         outgoing_obfuscator,
@@ -303,8 +305,15 @@ pub fn receive<
                 }
 
                 let (alice_session_id, alice_s_public, alice_e1_public) = parse_KEY_OFFER_after_header(&buffer[(HEADER_SIZE + P384_PUBLIC_KEY_SIZE)..payload_end])?;
-                let alice_s_public_p384 = extract_p384_static_public(&alice_s_public).ok_or(Error::InvalidPacket)?;
 
+                if let Some(session) = session.as_ref() {
+                    // If we already have a session for this session ID, make sure this is the same node calling.
+                    if !session.remote_s_public_hash.eq(&SHA384::hash(&alice_s_public)) {
+                        return Err(Error::FailedAuthentication);
+                    }
+                }
+
+                let alice_s_public_p384 = extract_p384_static_public(&alice_s_public).ok_or(Error::InvalidPacket)?;
                 let ss = local_s_keypair_p384.agree(&alice_s_public_p384).ok_or(Error::FailedAuthentication)?;
 
                 let key = Secret(hmac_sha512(key.as_bytes(), ss.as_bytes()));
@@ -326,6 +335,7 @@ pub fn receive<
                         Some(Session::<O> {
                             id: local_session_id,
                             outgoing_packet_counter: Counter::new(),
+                            remote_s_public_hash: SHA384::hash(&alice_s_public),
                             psk,
                             ss,
                             outgoing_obfuscator: Obfuscator::new(&alice_s_public),
@@ -343,12 +353,11 @@ pub fn receive<
 
                 // FIPS note: the order of HMAC parameters are flipped here from the usual Noise HMAC(key, X). That's because
                 // NIST/FIPS allows HKDF with HMAC(salt, key) and salt is allowed to be anything. This way if the PSK is not
-                // FIPS compliant the compliance of the entire key derivation is not invalidated. It can just be considered a
-                // salt. Since both inputs are fixed size secrets nobody else can control this shouldn't be cryptographically
-                // meaningful.
+                // FIPS compliant the compliance of the entire key derivation is not invalidated. Both inputs are secrets of
+                // fixed size so this shouldn't matter cryptographically.
                 let key = Secret(hmac_sha512(session.psk.as_bytes(), &hmac_sha512(&hmac_sha512(&hmac_sha512(key.as_bytes(), bob_e0_keypair.public_key_bytes()), e0e0.as_bytes()), se0.as_bytes())));
 
-                // At this point we've completed standard Noise_IK key derivation, but see the extra step below...
+                // At this point we've completed Noise_IK key derivation with NIST P-384 ECDH, but see final step below...
 
                 let (bob_e1_public, e1e1) = if jedi && alice_e1_public.is_some() {
                     if let Ok((bob_e1_public, e1e1)) = pqc_kyber::encapsulate(alice_e1_public.as_ref().unwrap(), &mut random::SecureRandom::default()) {
