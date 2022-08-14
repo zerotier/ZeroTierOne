@@ -10,36 +10,80 @@ use zerotier_core_crypto::secret::Secret;
 
 use parking_lot::{Mutex, RwLock};
 
+/*
+
+ZeroTier V2 Noise(-like?) Session Protocol
+
+This protocol implements the Noise_IK key exchange pattern using NIST P-384 ECDH, AES-GCM,
+and SHA512. So yes, Virginia, it's a FIPS-compliant Noise implementation. NIST P-384 is
+not listed in official Noise documentation though, so consider it "Noise-like" if you
+prefer.
+
+See also: http://noiseprotocol.org/noise.html
+
+Secondary hybrid exchange using Kyber512, the recently approved post-quantum KEX algorithm,
+is also supported but is optional. When it is enabled the additional shared secret is
+mixed into the final Noise_IK secret with HMAC/HKDF. This provides an exchange at least as
+strong as the stronger of the two algorithms (ECDH and Kyber) since hashing anything with
+a secret yields a secret.
+
+Kyber theoretically provides data forward secrecy into the post-quantum era if and when it
+arrives. It might also reassure those paranoid about NIST elliptic curves a little, though
+we tend to accept the arguments of Koblitz and Menezes against the curves being backdoored.
+These arguments are explained at the end of this post:
+
+https://blog.cryptographyengineering.com/2015/10/22/a-riddle-wrapped-in-curve/
+
+Kyber is used as long as both sides set the "jedi" parameter to true. It should be used
+by default but can be disabled on tiny and slow devices or systems that talk to vast
+numbers of endpoints and don't want the extra overhead.
+
+Last and least, this includes an obfuscation step. AES in simple ECB mode is used to encrypt
+the first block (or few blocks for key exchanges) of each packet using a hash of the
+recipient's public static identity as a key. Packets are indistinguishable from random by
+any observer who doesn't know the identity of the recipient, making bulk de-anonymization
+or filtering via DPI more difficult. Since only someone knowing the identity of the recipient
+can form a valid initial key exchange packet, it renders nodes invisible to naive scanners
+as well.
+
+*/
+
 /// Minimum supported size for work buffers / minimum packet size.
 pub const MIN_BUFFER_SIZE: usize = 1400;
 
+/// Maximum possible value of a session ID
+///
+/// Session IDs are 48 bits, so this is also a bit mask that can just be ANDed to get
+/// a valid session ID.
+pub const SESSION_ID_MAX: u64 = 0xffffffffffff;
+
 /// Start attempting to rekey after a key has been used to send packets this many times.
-pub const REKEY_AFTER_USES: u64 = 1073741824;
+const REKEY_AFTER_USES: u64 = 1073741824;
 
 /// Maximum random jitter to add to rekey-after usage count.
-pub const REKEY_AFTER_USES_MAX_JITTER: u32 = 1048576;
+const REKEY_AFTER_USES_MAX_JITTER: u32 = 1048576;
 
 /// Hard expiration after this many uses.
-pub const EXPIRE_AFTER_USES: u64 = (u32::MAX - 1024) as u64;
+const EXPIRE_AFTER_USES: u64 = (u32::MAX - 1024) as u64;
 
 /// Start attempting to rekey after a key has been in use for this many milliseconds.
-pub const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60; // 1 hour
+const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60; // 1 hour
 
 /// Maximum random jitter to add to rekey-after time.
-pub const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 5;
-
-/// Maximum possible value of a session ID
-pub const SESSION_ID_MAX: u64 = 0xffffffffffff;
+const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 5;
 
 const PACKET_TYPE_DATA: u8 = 0;
 const PACKET_TYPE_NOP: u8 = 1;
-const PACKET_TYPE_KEY_OFFER: u8 = 2;
-const PACKET_TYPE_KEY_COUNTER_OFFER: u8 = 3;
+const PACKET_TYPE_KEY_OFFER: u8 = 2; // "alice"
+const PACKET_TYPE_KEY_COUNTER_OFFER: u8 = 3; // "bob"
 
+/// Secondary (hybrid) ephemeral key disabled.
 const E1_TYPE_NONE: u8 = 0;
-const E1_TYPE_KYBER512_90S: u8 = 1;
 
-// [4] counter | [6] destination session ID | [1] type
+/// Secondary (hybrid) ephemeral key is Kyber512
+const E1_TYPE_KYBER512: u8 = 1;
+
+/// Header size; header is: [4] counter | [6] destination session ID | [1] type
 const HEADER_SIZE: usize = 11;
 
 const AES_GCM_TAG_SIZE: usize = 16;
@@ -106,6 +150,11 @@ impl std::fmt::Debug for Error {
 }
 
 /// Obfuscator/deobfuscator for privacy and indistinguishability masking of packets on the wire.
+///
+/// This is used to ECB encrypt the first block or for KEX packets the first few blocks using
+/// the recipient's public static key as a key. That way a third party must know the identity
+/// of the recipient to even see that this is ZeroTier traffic or trivial things like header
+/// info, and bulk DPI becomes harder because you now have to do AES decrypts.
 pub struct Obfuscator(Aes);
 
 impl Obfuscator {
@@ -154,45 +203,43 @@ struct State {
     keys: [Option<SessionKey>; 2], // current, next
 }
 
-impl<O> Session<O> {
-    /// Create a new session and return this plus an outgoing packet to send to the other end.
-    #[allow(unused)]
-    pub fn new<'a, const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE: usize>(
-        buffer: &'a mut [u8; MAX_PACKET_SIZE],
-        local_session_id: u64,
-        local_s_public: &[u8; STATIC_PUBLIC_SIZE],
-        local_s_keypair_p384: &P384KeyPair,
-        remote_s_public: &[u8; STATIC_PUBLIC_SIZE],
-        remote_s_public_p384: &P384PublicKey,
-        psk: &Secret<64>,
-        associated_object: O,
-        jedi: bool,
-    ) -> Result<(Self, &'a [u8]), Error> {
-        debug_assert!(MAX_PACKET_SIZE >= MIN_BUFFER_SIZE);
-        assert!(local_session_id > 0 && local_session_id <= SESSION_ID_MAX);
-        let counter = Counter::new();
-        if let Some(ss) = local_s_keypair_p384.agree(remote_s_public_p384) {
-            let outgoing_obfuscator = Obfuscator::new(remote_s_public);
-            if let Some((offer, psize)) = EphemeralOffer::create_alice_offer(buffer, counter.next(), local_session_id, 0, local_s_public, remote_s_public_p384, &ss, &outgoing_obfuscator, jedi) {
-                return Ok((
-                    Self {
-                        id: local_session_id,
-                        outgoing_packet_counter: counter,
-                        remote_s_public_hash: SHA384::hash(remote_s_public),
-                        psk: psk.clone(),
-                        ss,
-                        outgoing_obfuscator,
-                        offer: Mutex::new(Some(offer)),
-                        state: RwLock::new(State { remote_session_id: 0, keys: [None, None] }),
-                        associated_object,
-                        remote_s_public_p384: remote_s_public_p384.as_bytes().clone(),
-                    },
-                    &buffer[..psize],
-                ));
-            }
+/// Create a new session and return this plus an outgoing packet to send to the other end.
+#[allow(unused)]
+pub fn initiate<'a, O, const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE: usize>(
+    buffer: &'a mut [u8; MAX_PACKET_SIZE],
+    local_session_id: u64,
+    local_s_public: &[u8; STATIC_PUBLIC_SIZE],
+    local_s_keypair_p384: &P384KeyPair,
+    remote_s_public: &[u8; STATIC_PUBLIC_SIZE],
+    remote_s_public_p384: &P384PublicKey,
+    psk: &Secret<64>,
+    associated_object: O,
+    jedi: bool,
+) -> Result<(Session<O>, &'a [u8]), Error> {
+    debug_assert!(MAX_PACKET_SIZE >= MIN_BUFFER_SIZE);
+    assert!(local_session_id > 0 && local_session_id <= SESSION_ID_MAX);
+    let counter = Counter::new();
+    if let Some(ss) = local_s_keypair_p384.agree(remote_s_public_p384) {
+        let outgoing_obfuscator = Obfuscator::new(remote_s_public);
+        if let Some((offer, psize)) = EphemeralOffer::create_alice_offer(buffer, counter.next(), local_session_id, 0, local_s_public, remote_s_public_p384, &ss, &outgoing_obfuscator, jedi) {
+            return Ok((
+                Session::<O> {
+                    id: local_session_id,
+                    outgoing_packet_counter: counter,
+                    remote_s_public_hash: SHA384::hash(remote_s_public),
+                    psk: psk.clone(),
+                    ss,
+                    outgoing_obfuscator,
+                    offer: Mutex::new(Some(offer)),
+                    state: RwLock::new(State { remote_session_id: 0, keys: [None, None] }),
+                    associated_object,
+                    remote_s_public_p384: remote_s_public_p384.as_bytes().clone(),
+                },
+                &buffer[..psize],
+            ));
         }
-        return Err(Error::InvalidParameter);
     }
+    return Err(Error::InvalidParameter);
 }
 
 /// Receive a packet from the network and take the appropriate action.
@@ -705,7 +752,7 @@ fn assemble_KEY_OFFER<const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE: us
     b = &mut b[STATIC_PUBLIC_SIZE..];
 
     if let Some(k) = alice_e1_public {
-        b[0] = E1_TYPE_KYBER512_90S;
+        b[0] = E1_TYPE_KYBER512;
         b[1..1 + pqc_kyber::KYBER_PUBLICKEYBYTES].copy_from_slice(k);
         b = &mut b[1 + pqc_kyber::KYBER_PUBLICKEYBYTES..];
     } else {
@@ -735,7 +782,7 @@ fn parse_KEY_OFFER_after_header<const STATIC_PUBLIC_SIZE: usize>(mut b: &[u8]) -
             if b.len() >= 1 {
                 let e1_type = b[0];
                 b = &b[1..];
-                let alice_e1_public = if e1_type == E1_TYPE_KYBER512_90S {
+                let alice_e1_public = if e1_type == E1_TYPE_KYBER512 {
                     if b.len() >= pqc_kyber::KYBER_PUBLICKEYBYTES {
                         let k: [u8; pqc_kyber::KYBER_PUBLICKEYBYTES] = b[..pqc_kyber::KYBER_PUBLICKEYBYTES].try_into().unwrap();
                         b = &b[pqc_kyber::KYBER_PUBLICKEYBYTES..];
@@ -776,7 +823,7 @@ fn assemble_KEY_COUNTER_OFFER<const MAX_PACKET_SIZE: usize>(
     b = &mut b[SESSION_ID_SIZE..];
 
     if let Some(k) = bob_e1_public {
-        b[0] = E1_TYPE_KYBER512_90S;
+        b[0] = E1_TYPE_KYBER512;
         b[1..1 + pqc_kyber::KYBER_CIPHERTEXTBYTES].copy_from_slice(k);
         b = &mut b[1 + pqc_kyber::KYBER_CIPHERTEXTBYTES..];
     } else {
@@ -803,7 +850,7 @@ fn parse_KEY_COUNTER_OFFER_after_header(mut b: &[u8]) -> Result<(u64, Option<[u8
         if b.len() >= 1 {
             let e1_type = b[0];
             b = &b[1..];
-            let bob_e1_public = if e1_type == E1_TYPE_KYBER512_90S {
+            let bob_e1_public = if e1_type == E1_TYPE_KYBER512 {
                 if b.len() >= pqc_kyber::KYBER_CIPHERTEXTBYTES {
                     let k: [u8; pqc_kyber::KYBER_CIPHERTEXTBYTES] = b[..pqc_kyber::KYBER_CIPHERTEXTBYTES].try_into().unwrap();
                     b = &b[pqc_kyber::KYBER_CIPHERTEXTBYTES..];
