@@ -354,15 +354,21 @@ impl ZeroIDC {
                                             }
                                             None => {
                                                 println!("no id token?!?");
+                                                (*inner_local.lock().unwrap()).exp_time = 0;
+                                                (*inner_local.lock().unwrap()).running = false;
                                             }
                                         }
                                     }
                                     Err(e) => {
                                         println!("token error: {}", e);
+                                        (*inner_local.lock().unwrap()).exp_time = 0;
+                                        (*inner_local.lock().unwrap()).running = false;
                                     }
                                 }
                             } else {
                                 println!("token response??");
+                                (*inner_local.lock().unwrap()).exp_time = 0;
+                                (*inner_local.lock().unwrap()).running = false;
                             }
                         } else {
                             #[cfg(debug_assertions)]
@@ -370,6 +376,8 @@ impl ZeroIDC {
                         }
                     } else {
                         println!("no refresh token?");
+                        (*inner_local.lock().unwrap()).exp_time = 0;
+                        (*inner_local.lock().unwrap()).running = false;
                     }
 
                     sleep(Duration::from_secs(1));
@@ -377,6 +385,7 @@ impl ZeroIDC {
                         running = (*inner_local.lock().unwrap()).running;
                     }
                 }
+                // end run loop
 
                 println!("thread done!");
                 (*inner_local.lock().unwrap()).running = false;
