@@ -238,7 +238,7 @@ pub struct Session<O> {
     /// Local session ID
     pub id: SessionId,
 
-    outgoing_packet_counter: Counter,
+    send_counter: Counter,
     remote_s_public_hash: [u8; 48],
     psk: Secret<64>,
     ss: Secret<48>,
@@ -266,11 +266,9 @@ impl<O> Session<O> {
     pub fn rekey_check<'a, const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE: usize>(&self, buffer: &'a mut [u8; MAX_PACKET_SIZE], local_s_public: &[u8; STATIC_PUBLIC_SIZE], current_time: i64, force: bool, jedi: bool) -> Option<&'a [u8]> {
         let state = self.state.upgradable_read();
         if let Some(key) = state.keys[0].as_ref() {
-            if force || (key.lifetime.should_rekey(self.outgoing_packet_counter.current(), current_time) && state.offer.as_ref().map_or(true, |o| (current_time - o.creation_time) > OFFER_RATE_LIMIT_MS)) {
+            if force || (key.lifetime.should_rekey(self.send_counter.current(), current_time) && state.offer.as_ref().map_or(true, |o| (current_time - o.creation_time) > OFFER_RATE_LIMIT_MS)) {
                 if let Some(remote_s_public_p384) = P384PublicKey::from_bytes(&self.remote_s_public_p384) {
-                    if let Some((offer, psize)) =
-                        EphemeralOffer::create_alice_offer(buffer, self.outgoing_packet_counter.next(), self.id, state.remote_session_id, local_s_public, &remote_s_public_p384, &self.ss, &self.outgoing_obfuscator, current_time, jedi)
-                    {
+                    if let Some((offer, psize)) = EphemeralOffer::create_alice_offer(buffer, self.send_counter.next(), self.id, state.remote_session_id, local_s_public, &remote_s_public_p384, &self.ss, &self.outgoing_obfuscator, current_time, jedi) {
                         let mut state = RwLockUpgradableReadGuard::upgrade(state);
                         let _ = state.offer.replace(offer);
                         return Some(&buffer[..psize]);
@@ -304,7 +302,7 @@ pub fn new_session<'a, O, const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE
             return Ok((
                 Session::<O> {
                     id: local_session_id,
-                    outgoing_packet_counter: counter,
+                    send_counter: counter,
                     remote_s_public_hash: SHA384::hash(remote_s_public),
                     psk: psk.clone(),
                     ss,
@@ -467,7 +465,7 @@ pub fn receive<
                     if let Some((local_session_id, psk, associated_object)) = new_session_auth(&alice_s_public) {
                         Some(Session::<O> {
                             id: local_session_id,
-                            outgoing_packet_counter: Counter::new(),
+                            send_counter: Counter::new(),
                             remote_s_public_hash: SHA384::hash(&alice_s_public),
                             psk,
                             ss,
@@ -505,7 +503,7 @@ pub fn receive<
                     (None, Secret::default()) // use all zero Kyber secret if disabled
                 };
 
-                let counter = session.outgoing_packet_counter.next();
+                let counter = session.send_counter.next();
                 let mut reply_size = assemble_KEY_COUNTER_OFFER(buffer, counter, alice_session_id, bob_e0_keypair.public_key(), session.id, bob_e1_public.as_ref());
 
                 let mut c = AesGcm::new(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n::<32>(), true);
@@ -585,10 +583,10 @@ pub fn receive<
                         let _ = state.offer.take();
                         let _ = state.remote_session_id.replace(bob_session_id);
                         if state.keys[0].is_some() {
-                            let _ = state.keys[1].replace(SessionKey::new(key, Role::Alice, current_time, session.outgoing_packet_counter.current(), jedi));
+                            let _ = state.keys[1].replace(SessionKey::new(key, Role::Alice, current_time, session.send_counter.current(), jedi));
                             return Ok(ReceiveResult::Ok);
                         } else {
-                            let counter = session.outgoing_packet_counter.next();
+                            let counter = session.send_counter.next();
                             let key = SessionKey::new(key, Role::Alice, current_time, counter, jedi);
 
                             let dummy_data_len = (random::next_u32_secure() % (MAX_PACKET_SIZE - (HEADER_SIZE + AES_GCM_TAG_SIZE)) as u32) as usize;
