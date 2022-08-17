@@ -128,6 +128,9 @@ pub enum Error {
 
     /// Rekeying failed and session secret has reached its maximum usage count
     MaxKeyLifetimeExceeded,
+
+    /// Attempt to send using session without established key.
+    SessionNotEstablished,
 }
 
 impl std::fmt::Display for Error {
@@ -140,6 +143,7 @@ impl std::fmt::Display for Error {
             Self::NewSessionRejected => f.write_str("NewSessionRejected"),
             Self::Unexpected => f.write_str("OutOfSequence"),
             Self::MaxKeyLifetimeExceeded => f.write_str("MaxKeyLifetimeExceeded"),
+            Self::SessionNotEstablished => f.write_str("SessionNotEstablished"),
         }
     }
 }
@@ -165,7 +169,7 @@ impl Obfuscator {
 
 pub enum ReceiveResult<'a, O> {
     /// Packet is valid and contained a data payload.
-    OkData(&'a [u8]),
+    OkData(&'a [u8], u32),
 
     /// Packet is valid and the provided reply should be sent back.
     OkSendReply(&'a [u8]),
@@ -241,7 +245,7 @@ pub struct Session<O> {
     remote_s_public_hash: [u8; 48],
     psk: Secret<64>,
     ss: Secret<48>,
-    pub(self) outgoing_obfuscator: Obfuscator,
+    outgoing_obfuscator: Obfuscator,
     state: RwLock<State>,
     remote_s_public_p384: [u8; P384_PUBLIC_KEY_SIZE],
 
@@ -286,6 +290,23 @@ impl<O> Session<O> {
             }
         }
         return None;
+    }
+
+    /// Send a data packet to the other side, returning packet to send.
+    pub fn send<'a, const MAX_PACKET_SIZE: usize>(&self, buffer: &'a mut [u8; MAX_PACKET_SIZE], data: &[u8]) -> Result<&'a [u8], Error> {
+        let state = self.state.read();
+        if let Some(key) = state.keys[0].as_ref() {
+            if let Some(remote_session_id) = state.remote_session_id {
+                let data_len = assemble_and_armor_DATA(buffer, data, PACKET_TYPE_DATA, u64::from(remote_session_id), self.send_counter.next(), &key, &self.outgoing_obfuscator)?;
+                Ok(&buffer[..data_len])
+            } else {
+                unlikely_branch();
+                Err(Error::SessionNotEstablished)
+            }
+        } else {
+            unlikely_branch();
+            Err(Error::SessionNotEstablished)
+        }
     }
 }
 
@@ -363,14 +384,17 @@ pub fn receive<
     let local_session_id = SessionId::new_from_bytes(&buffer[4..10]);
     let packet_type = buffer[10];
 
+    debug_assert_eq!(PACKET_TYPE_DATA, 0);
+    debug_assert_eq!(PACKET_TYPE_NOP, 1);
     if packet_type <= PACKET_TYPE_NOP {
         if let Some(local_session_id) = local_session_id {
             if let Some(session) = session_lookup(local_session_id) {
                 let state = session.state.read();
                 for ki in 0..2 {
                     if let Some(key) = state.keys[ki].as_ref() {
+                        let nonce = get_aes_gcm_nonce(buffer);
                         let mut c = key.get_receive_cipher();
-                        c.init(&get_aes_gcm_nonce(buffer));
+                        c.init(&nonce);
                         c.crypt_in_place(&mut buffer[HEADER_SIZE..16]);
                         let data_len = incoming_packet.len() - AES_GCM_TAG_SIZE;
                         c.crypt(&incoming_packet[16..data_len], &mut buffer[16..data_len]);
@@ -387,7 +411,7 @@ pub fn receive<
                             }
 
                             if packet_type == PACKET_TYPE_DATA {
-                                return Ok(ReceiveResult::OkData(&buffer[HEADER_SIZE..data_len]));
+                                return Ok(ReceiveResult::OkData(&buffer[HEADER_SIZE..data_len], u32::from_le_bytes(nonce[..4].try_into().unwrap())));
                             } else {
                                 unlikely_branch();
                                 return Ok(ReceiveResult::Ok);
@@ -824,7 +848,6 @@ impl SessionKey {
     }
 }
 
-#[inline(always)]
 #[allow(non_snake_case)]
 fn assemble_and_armor_DATA<const MAX_PACKET_SIZE: usize>(buffer: &mut [u8; MAX_PACKET_SIZE], data: &[u8], packet_type: u8, remote_session_id: u64, counter: CounterValue, key: &SessionKey, outgoing_obfuscator: &Obfuscator) -> Result<usize, Error> {
     buffer[0..4].copy_from_slice(&counter.to_bytes());
@@ -834,17 +857,21 @@ fn assemble_and_armor_DATA<const MAX_PACKET_SIZE: usize>(buffer: &mut [u8; MAX_P
 
     let payload_end = HEADER_SIZE + data.len();
     let tag_end = payload_end + AES_GCM_TAG_SIZE;
+    if tag_end < MAX_PACKET_SIZE {
+        let mut c = key.get_send_cipher(counter)?;
+        buffer[11..16].fill(0);
+        c.init(&buffer[..16]);
+        c.crypt(data, &mut buffer[HEADER_SIZE..payload_end]);
+        buffer[payload_end..tag_end].copy_from_slice(&c.finish());
+        key.return_send_cipher(c);
 
-    let mut c = key.get_send_cipher(counter)?;
-    buffer[11..16].fill(0);
-    c.init(&buffer[..16]);
-    c.crypt(data, &mut buffer[HEADER_SIZE..payload_end]);
-    buffer[payload_end..tag_end].copy_from_slice(&c.finish());
-    key.return_send_cipher(c);
+        outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[..16]);
 
-    outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[..16]);
-
-    Ok(tag_end)
+        Ok(tag_end)
+    } else {
+        unlikely_branch();
+        Err(Error::InvalidParameter)
+    }
 }
 
 fn append_random_padding(b: &mut [u8]) -> &mut [u8] {
@@ -1050,112 +1077,125 @@ mod tests {
         // Session FROM Alice, on Bob's side.
         let mut bob: Option<Rc<Session<u32>>> = None;
 
-        while !from_alice.is_empty() || !from_bob.is_empty() {
-            if let Some(packet) = from_alice.pop() {
-                let r = receive(
-                    packet.as_slice(),
-                    &mut b_buffer,
-                    &bob_static_keypair,
-                    &outgoing_obfuscator_to_bob,
-                    |p: &[u8; P384_PUBLIC_KEY_SIZE]| P384PublicKey::from_bytes(p),
-                    |sid| {
-                        if let Some(bob) = bob.as_ref() {
-                            if sid == bob.id {
-                                Some(bob.clone())
+        for _ in 0..256 {
+            while !from_alice.is_empty() || !from_bob.is_empty() {
+                if let Some(packet) = from_alice.pop() {
+                    let r = receive(
+                        packet.as_slice(),
+                        &mut b_buffer,
+                        &bob_static_keypair,
+                        &outgoing_obfuscator_to_bob,
+                        |p: &[u8; P384_PUBLIC_KEY_SIZE]| P384PublicKey::from_bytes(p),
+                        |sid| {
+                            println!("[noise] [bob] session ID: {}", u64::from(sid));
+                            if let Some(bob) = bob.as_ref() {
+                                if sid == bob.id {
+                                    Some(bob.clone())
+                                } else {
+                                    None
+                                }
                             } else {
                                 None
                             }
-                        } else {
-                            None
-                        }
-                    },
-                    |_: &[u8; P384_PUBLIC_KEY_SIZE]| {
-                        if bob.is_none() {
-                            Some((SessionId::new_random(), psk.clone(), 0))
-                        } else {
-                            panic!("Bob received a second new session request from Alice");
-                        }
-                    },
-                    0,
-                    true,
-                );
-                if let Ok(r) = r {
-                    match r {
-                        ReceiveResult::OkData(_) => {
-                            println!("alice->bob DATA");
-                        }
-                        ReceiveResult::OkSendReply(p) => {
-                            from_bob.push(p.to_vec());
-                        }
-                        ReceiveResult::OkNewSession(ns, p) => {
-                            if bob.is_some() {
-                                panic!("attempt to create new session on Bob's side when he already has one");
+                        },
+                        |_: &[u8; P384_PUBLIC_KEY_SIZE]| {
+                            if bob.is_none() {
+                                Some((SessionId::new_random(), psk.clone(), 0))
+                            } else {
+                                panic!("[noise] [bob] Bob received a second new session request from Alice");
                             }
-                            let _ = bob.replace(Rc::new(ns));
-                            from_bob.push(p.to_vec());
-                            println!("alice->bob NEW SESSION established!");
+                        },
+                        0,
+                        true,
+                    );
+                    if let Ok(r) = r {
+                        match r {
+                            ReceiveResult::OkData(data, counter) => {
+                                println!("[noise] [bob] DATA len=={} counter=={}", data.len(), counter);
+                            }
+                            ReceiveResult::OkSendReply(p) => {
+                                println!("[noise] [bob] OK (reply: {} bytes)", p.len());
+                                from_bob.push(p.to_vec());
+                            }
+                            ReceiveResult::OkNewSession(ns, p) => {
+                                if bob.is_some() {
+                                    panic!("[noise] [bob] attempt to create new session on Bob's side when he already has one");
+                                }
+                                let id: u64 = ns.id.into();
+                                let _ = bob.replace(Rc::new(ns));
+                                from_bob.push(p.to_vec());
+                                println!("[noise] [bob] NEW SESSION {}", id);
+                            }
+                            ReceiveResult::Ok => {
+                                println!("[noise] [bob] OK");
+                            }
+                            ReceiveResult::Duplicate => {
+                                println!("[noise] [bob] duplicate packet");
+                            }
+                            ReceiveResult::Ignored => {
+                                println!("[noise] [bob] ignored packet");
+                            }
                         }
-                        ReceiveResult::Ok => {
-                            println!("alice->bob OK");
-                        }
-                        ReceiveResult::Duplicate => {
-                            println!("alice->bob duplicate packet");
-                        }
-                        ReceiveResult::Ignored => {
-                            println!("alice->bob ignored packet");
-                        }
+                    } else {
+                        println!("ERROR (bob): {}", r.err().unwrap().to_string());
+                        panic!();
                     }
-                } else {
-                    println!("ERROR (alice->bob): {}", r.err().unwrap().to_string());
-                    panic!();
+                }
+
+                if let Some(packet) = from_bob.pop() {
+                    let r = receive(
+                        packet.as_slice(),
+                        &mut b_buffer,
+                        &alice_static_keypair,
+                        &outgoing_obfuscator_to_alice,
+                        |p: &[u8; P384_PUBLIC_KEY_SIZE]| P384PublicKey::from_bytes(p),
+                        |sid| {
+                            println!("[noise] [alice] session ID: {}", u64::from(sid));
+                            if sid == alice.id {
+                                Some(alice.clone())
+                            } else {
+                                panic!("[noise] [alice] received from Bob addressed to unknown session ID, not Alice");
+                            }
+                        },
+                        |_: &[u8; P384_PUBLIC_KEY_SIZE]| {
+                            panic!("[noise] [alice] Alice received an unexpected new session request from Bob");
+                        },
+                        0,
+                        true,
+                    );
+                    if let Ok(r) = r {
+                        match r {
+                            ReceiveResult::OkData(data, counter) => {
+                                println!("[noise] [alice] DATA len=={} counter=={}", data.len(), counter);
+                            }
+                            ReceiveResult::OkSendReply(p) => {
+                                println!("[noise] [alice] OK (reply: {} bytes)", p.len());
+                                from_alice.push(p.to_vec());
+                            }
+                            ReceiveResult::OkNewSession(_, _) => {
+                                panic!("[noise] [alice] attempt to create new session on Alice's side; Bob should not initiate");
+                            }
+                            ReceiveResult::Ok => {
+                                println!("[noise] [alice] OK");
+                            }
+                            ReceiveResult::Duplicate => {
+                                println!("[noise] [alice] duplicate packet");
+                            }
+                            ReceiveResult::Ignored => {
+                                println!("[noise] [alice] ignored packet");
+                            }
+                        }
+                    } else {
+                        println!("ERROR (alice): {}", r.err().unwrap().to_string());
+                        panic!();
+                    }
                 }
             }
 
-            if let Some(packet) = from_bob.pop() {
-                let r = receive(
-                    packet.as_slice(),
-                    &mut b_buffer,
-                    &alice_static_keypair,
-                    &outgoing_obfuscator_to_alice,
-                    |p: &[u8; P384_PUBLIC_KEY_SIZE]| P384PublicKey::from_bytes(p),
-                    |sid| {
-                        if sid == alice.id {
-                            Some(alice.clone())
-                        } else {
-                            panic!("received from Bob addressed to unknown session ID, not Alice");
-                        }
-                    },
-                    |_: &[u8; P384_PUBLIC_KEY_SIZE]| {
-                        panic!("Alice received an unexpected new session request from Bob");
-                    },
-                    0,
-                    true,
-                );
-                if let Ok(r) = r {
-                    match r {
-                        ReceiveResult::OkData(_) => {
-                            println!("bob->alice DATA");
-                        }
-                        ReceiveResult::OkSendReply(p) => {
-                            from_alice.push(p.to_vec());
-                        }
-                        ReceiveResult::OkNewSession(_, _) => {
-                            panic!("attempt to create new session on Alice's side; Bob should not initiate");
-                        }
-                        ReceiveResult::Ok => {
-                            println!("bob->alice OK");
-                        }
-                        ReceiveResult::Duplicate => {
-                            println!("bob->alice duplicate packet");
-                        }
-                        ReceiveResult::Ignored => {
-                            println!("bob->alice ignored packet");
-                        }
-                    }
-                } else {
-                    println!("ERROR (bob->alice): {}", r.err().unwrap().to_string());
-                    panic!();
-                }
+            if (random::next_u32_secure() & 1) == 0 {
+                from_alice.push(alice.send(&mut a_buffer, &[0_u8; 16]).unwrap().to_vec());
+            } else if bob.is_some() {
+                from_bob.push(bob.as_ref().unwrap().send(&mut b_buffer, &[0_u8; 16]).unwrap().to_vec());
             }
         }
     }
