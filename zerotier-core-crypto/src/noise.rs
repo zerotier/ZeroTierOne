@@ -3,11 +3,11 @@
 use std::num::NonZeroU64;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use zerotier_core_crypto::aes::{Aes, AesGcm};
-use zerotier_core_crypto::hash::{hmac_sha384, hmac_sha512, SHA384, SHA512};
-use zerotier_core_crypto::p384::{P384KeyPair, P384PublicKey, P384_PUBLIC_KEY_SIZE};
-use zerotier_core_crypto::random;
-use zerotier_core_crypto::secret::Secret;
+use crate::aes::{Aes, AesGcm};
+use crate::hash::{hmac_sha384, hmac_sha512, SHA384, SHA512};
+use crate::p384::{P384KeyPair, P384PublicKey, P384_PUBLIC_KEY_SIZE};
+use crate::random;
+use crate::secret::Secret;
 
 use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
 
@@ -163,7 +163,6 @@ impl Obfuscator {
     }
 }
 
-#[allow(unused)]
 pub enum ReceiveResult<'a, O> {
     /// Packet is valid and contained a data payload.
     OkData(&'a [u8]),
@@ -242,7 +241,7 @@ pub struct Session<O> {
     remote_s_public_hash: [u8; 48],
     psk: Secret<64>,
     ss: Secret<48>,
-    outgoing_obfuscator: Obfuscator,
+    pub(self) outgoing_obfuscator: Obfuscator,
     state: RwLock<State>,
     remote_s_public_p384: [u8; P384_PUBLIC_KEY_SIZE],
 
@@ -262,13 +261,23 @@ impl<O> Session<O> {
     ///
     /// This must be checked often enough to ensure that the hard key usage limit is not reached, which in the
     /// usual UDP use case means once every ~3TiB of traffic.
-    #[allow(unused)]
     pub fn rekey_check<'a, const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE: usize>(&self, buffer: &'a mut [u8; MAX_PACKET_SIZE], local_s_public: &[u8; STATIC_PUBLIC_SIZE], current_time: i64, force: bool, jedi: bool) -> Option<&'a [u8]> {
         let state = self.state.upgradable_read();
         if let Some(key) = state.keys[0].as_ref() {
             if force || (key.lifetime.should_rekey(self.send_counter.current(), current_time) && state.offer.as_ref().map_or(true, |o| (current_time - o.creation_time) > OFFER_RATE_LIMIT_MS)) {
                 if let Some(remote_s_public_p384) = P384PublicKey::from_bytes(&self.remote_s_public_p384) {
-                    if let Some((offer, psize)) = EphemeralOffer::create_alice_offer(buffer, self.send_counter.next(), self.id, state.remote_session_id, local_s_public, &remote_s_public_p384, &self.ss, &self.outgoing_obfuscator, current_time, jedi) {
+                    if let Some((offer, psize)) = EphemeralOffer::create_alice_offer(
+                        buffer,
+                        self.send_counter.next(),
+                        self.id,
+                        state.remote_session_id,
+                        local_s_public,
+                        &remote_s_public_p384,
+                        &self.ss,
+                        &self.outgoing_obfuscator,
+                        current_time,
+                        jedi,
+                    ) {
                         let mut state = RwLockUpgradableReadGuard::upgrade(state);
                         let _ = state.offer.replace(offer);
                         return Some(&buffer[..psize]);
@@ -281,7 +290,6 @@ impl<O> Session<O> {
 }
 
 /// Create a new session and return this plus an outgoing packet to send to the other end.
-#[allow(unused)]
 pub fn new_session<'a, O, const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE: usize>(
     buffer: &'a mut [u8; MAX_PACKET_SIZE],
     local_session_id: SessionId,
@@ -325,7 +333,6 @@ pub fn new_session<'a, O, const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE
 /// Receive a packet from the network and take the appropriate action.
 ///
 /// Check ReceiveResult to see if it includes data or a reply packet.
-#[allow(unused)]
 pub fn receive<
     'a,
     ExtractP384PublicKeyFunction: FnOnce(&[u8; STATIC_PUBLIC_SIZE]) -> Option<P384PublicKey>,
@@ -419,19 +426,24 @@ pub fn receive<
             return Err(Error::InvalidPacket);
         }
         let payload_end = incoming_packet.len() - (AES_GCM_TAG_SIZE + HMAC_SIZE);
+        let aes_gcm_tag_end = incoming_packet.len() - HMAC_SIZE;
 
         match packet_type {
             PACKET_TYPE_KEY_OFFER => {
                 // alice (remote) -> bob (local)
 
-                let (alice_e0_public, e0s) = P384PublicKey::from_bytes(&buffer[HEADER_SIZE..HEADER_SIZE + P384_PUBLIC_KEY_SIZE]).and_then(|pk| local_s_keypair_p384.agree(&pk).map(move |s| (pk, s))).ok_or(Error::FailedAuthentication)?;
+                let (alice_e0_public, e0s) = P384PublicKey::from_bytes(&buffer[HEADER_SIZE..HEADER_SIZE + P384_PUBLIC_KEY_SIZE])
+                    .and_then(|pk| local_s_keypair_p384.agree(&pk).map(move |s| (pk, s)))
+                    .ok_or(Error::FailedAuthentication)?;
 
                 let key = Secret(hmac_sha512(&hmac_sha512(&KEY_DERIVATION_CHAIN_STARTING_SALT, alice_e0_public.as_bytes()), e0s.as_bytes()));
 
+                let original_ciphertext = buffer.clone();
                 let mut c = AesGcm::new(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n::<32>(), false);
                 c.init(&get_aes_gcm_nonce(buffer));
                 c.crypt_in_place(&mut buffer[(HEADER_SIZE + P384_PUBLIC_KEY_SIZE)..payload_end]);
-                if !c.finish().eq(&buffer[payload_end..(payload_end + AES_GCM_TAG_SIZE)]) {
+                let c = c.finish();
+                if !c.eq(&buffer[payload_end..aes_gcm_tag_end]) {
                     return Err(Error::FailedAuthentication);
                 }
 
@@ -449,7 +461,7 @@ pub fn receive<
 
                 let key = Secret(hmac_sha512(key.as_bytes(), ss.as_bytes()));
 
-                if !hmac_sha384(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(), &buffer[..(payload_end + AES_GCM_TAG_SIZE)]).eq(&buffer[(payload_end + AES_GCM_TAG_SIZE)..(payload_end + AES_GCM_TAG_SIZE + HMAC_SIZE)]) {
+                if !hmac_sha384(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(), &original_ciphertext[..aes_gcm_tag_end]).eq(&buffer[aes_gcm_tag_end..incoming_packet.len()]) {
                     return Err(Error::FailedAuthentication);
                 }
 
@@ -459,7 +471,7 @@ pub fn receive<
                 let e0e0 = bob_e0_keypair.agree(&alice_e0_public).ok_or(Error::FailedAuthentication)?;
                 let se0 = bob_e0_keypair.agree(&alice_s_public_p384).ok_or(Error::FailedAuthentication)?;
 
-                let new_session = if let Some(session) = session.as_ref() {
+                let new_session = if session.is_some() {
                     None
                 } else {
                     if let Some((local_session_id, psk, associated_object)) = new_session_auth(&alice_s_public) {
@@ -489,7 +501,10 @@ pub fn receive<
                 // NIST/FIPS allows HKDF with HMAC(salt, key) and salt is allowed to be anything. This way if the PSK is not
                 // FIPS compliant the compliance of the entire key derivation is not invalidated. Both inputs are secrets of
                 // fixed size so this shouldn't matter cryptographically.
-                let key = Secret(hmac_sha512(session.psk.as_bytes(), &hmac_sha512(&hmac_sha512(&hmac_sha512(key.as_bytes(), bob_e0_keypair.public_key_bytes()), e0e0.as_bytes()), se0.as_bytes())));
+                let key = Secret(hmac_sha512(
+                    session.psk.as_bytes(),
+                    &hmac_sha512(&hmac_sha512(&hmac_sha512(key.as_bytes(), bob_e0_keypair.public_key_bytes()), e0e0.as_bytes()), se0.as_bytes()),
+                ));
 
                 // At this point we've completed Noise_IK key derivation with NIST P-384 ECDH, but see final step below...
 
@@ -509,7 +524,8 @@ pub fn receive<
                 let mut c = AesGcm::new(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n::<32>(), true);
                 c.init(&get_aes_gcm_nonce(buffer));
                 c.crypt_in_place(&mut buffer[(HEADER_SIZE + P384_PUBLIC_KEY_SIZE)..reply_size]);
-                buffer[reply_size..(reply_size + AES_GCM_TAG_SIZE)].copy_from_slice(&c.finish());
+                let c = c.finish();
+                buffer[reply_size..(reply_size + AES_GCM_TAG_SIZE)].copy_from_slice(&c);
                 reply_size += AES_GCM_TAG_SIZE;
 
                 // Normal Noise_IK is done, but we have one more step: mix in the Kyber shared secret (or all zeroes if Kyber is
@@ -543,19 +559,26 @@ pub fn receive<
                 if let Some(session) = session {
                     let state = session.state.upgradable_read();
                     if let Some(offer) = state.offer.as_ref() {
-                        let (bob_e0_public, e0e0) = P384PublicKey::from_bytes(&buffer[HEADER_SIZE..(HEADER_SIZE + P384_PUBLIC_KEY_SIZE)]).and_then(|pk| offer.alice_e0_keypair.agree(&pk).map(move |s| (pk, s))).ok_or(Error::FailedAuthentication)?;
+                        let (bob_e0_public, e0e0) = P384PublicKey::from_bytes(&buffer[HEADER_SIZE..(HEADER_SIZE + P384_PUBLIC_KEY_SIZE)])
+                            .and_then(|pk| offer.alice_e0_keypair.agree(&pk).map(move |s| (pk, s)))
+                            .ok_or(Error::FailedAuthentication)?;
                         let se0 = local_s_keypair_p384.agree(&bob_e0_public).ok_or(Error::FailedAuthentication)?;
 
-                        let key = Secret(hmac_sha512(session.psk.as_bytes(), &hmac_sha512(&hmac_sha512(&hmac_sha512(offer.key.as_bytes(), bob_e0_public.as_bytes()), e0e0.as_bytes()), se0.as_bytes())));
+                        let key = Secret(hmac_sha512(
+                            session.psk.as_bytes(),
+                            &hmac_sha512(&hmac_sha512(&hmac_sha512(offer.key.as_bytes(), bob_e0_public.as_bytes()), e0e0.as_bytes()), se0.as_bytes()),
+                        ));
 
+                        let original_ciphertext = buffer.clone();
                         let mut c = AesGcm::new(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n::<32>(), false);
                         c.init(&get_aes_gcm_nonce(buffer));
                         c.crypt_in_place(&mut buffer[(HEADER_SIZE + P384_PUBLIC_KEY_SIZE)..payload_end]);
-                        if !c.finish().eq(&buffer[payload_end..(payload_end + AES_GCM_TAG_SIZE)]) {
+                        let c = c.finish();
+                        if !c.eq(&buffer[payload_end..aes_gcm_tag_end]) {
                             return Err(Error::FailedAuthentication);
                         }
 
-                        // Alice has now completed Noise_IK for P-384, now for the hybrid part.
+                        // Alice has now completed Noise_IK for P-384 and verified with GCM auth, now for the hybrid add-on.
 
                         let (bob_session_id, bob_e1_public) = parse_KEY_COUNTER_OFFER_after_header(&buffer[(HEADER_SIZE + P384_PUBLIC_KEY_SIZE)..payload_end])?;
 
@@ -571,7 +594,7 @@ pub fn receive<
 
                         let key = Secret(hmac_sha512(e1e1.as_bytes(), key.as_bytes()));
 
-                        if !hmac_sha384(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(), &buffer[..(payload_end + AES_GCM_TAG_SIZE)]).eq(&buffer[(payload_end + AES_GCM_TAG_SIZE)..(payload_end + AES_GCM_TAG_SIZE + HMAC_SIZE)]) {
+                        if !hmac_sha384(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(), &original_ciphertext[..aes_gcm_tag_end]).eq(&buffer[aes_gcm_tag_end..incoming_packet.len()]) {
                             return Err(Error::FailedAuthentication);
                         }
 
@@ -669,12 +692,11 @@ impl KeyLifetime {
 
     #[inline(always)]
     fn expired(&self, counter: CounterValue) -> bool {
-        counter.0 < self.hard_expire_at_counter
+        counter.0 >= self.hard_expire_at_counter
     }
 }
 
 /// Ephemeral offer sent with KEY_OFFER and rememebered so state can be reconstructed on COUNTER_OFFER.
-#[allow(unused)]
 struct EphemeralOffer {
     creation_time: i64,
     key: Secret<64>,
@@ -709,10 +731,12 @@ impl EphemeralOffer {
 
         let mut packet_size = assemble_KEY_OFFER(buffer, counter, bob_session_id, alice_e0_keypair.public_key(), alice_session_id, alice_s_public, alice_e1_keypair.as_ref().map(|s| &s.public));
 
+        debug_assert!(packet_size <= MAX_PACKET_SIZE);
         let mut c = AesGcm::new(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n::<32>(), true);
         c.init(&get_aes_gcm_nonce(buffer));
-        c.crypt_in_place(&mut buffer[HEADER_SIZE + P384_PUBLIC_KEY_SIZE..packet_size]);
-        buffer[packet_size..packet_size + AES_GCM_TAG_SIZE].copy_from_slice(&c.finish());
+        c.crypt_in_place(&mut buffer[(HEADER_SIZE + P384_PUBLIC_KEY_SIZE)..packet_size]);
+        let c = c.finish();
+        buffer[packet_size..packet_size + AES_GCM_TAG_SIZE].copy_from_slice(&c);
         packet_size += AES_GCM_TAG_SIZE;
 
         let key = Secret(hmac_sha512(key.as_bytes(), ss.as_bytes()));
@@ -733,7 +757,7 @@ impl EphemeralOffer {
                 alice_e0_keypair,
                 alice_e1_keypair,
             },
-            packet_size + AES_GCM_TAG_SIZE + HMAC_SIZE,
+            packet_size,
         ))
     }
 }
@@ -823,6 +847,16 @@ fn assemble_and_armor_DATA<const MAX_PACKET_SIZE: usize>(buffer: &mut [u8; MAX_P
     Ok(tag_end)
 }
 
+fn append_random_padding(b: &mut [u8]) -> &mut [u8] {
+    if b.len() > AES_GCM_TAG_SIZE + HMAC_SIZE {
+        let random_padding_len = (random::next_u32_secure() as usize) % (b.len() - (AES_GCM_TAG_SIZE + HMAC_SIZE));
+        b[..random_padding_len].fill(0);
+        &mut b[random_padding_len..]
+    } else {
+        b
+    }
+}
+
 #[allow(non_snake_case)]
 fn assemble_KEY_OFFER<const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE: usize>(
     buffer: &mut [u8; MAX_PACKET_SIZE],
@@ -860,11 +894,9 @@ fn assemble_KEY_OFFER<const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE: us
     b[1] = 0; // reserved for future use
     b = &mut b[2..];
 
-    let random_padding_len = (random::next_u32_secure() as usize) % (MAX_PACKET_SIZE - (b.len() + AES_GCM_TAG_SIZE + HMAC_SIZE));
-    random::fill_bytes_secure(&mut b[..random_padding_len]);
-    b = &mut b[random_padding_len..];
+    b = append_random_padding(b);
 
-    b.len()
+    MAX_PACKET_SIZE - b.len()
 }
 
 #[allow(non_snake_case)]
@@ -931,11 +963,9 @@ fn assemble_KEY_COUNTER_OFFER<const MAX_PACKET_SIZE: usize>(
     b[1] = 0; // reserved for future use
     b = &mut b[2..];
 
-    let random_padding_len = (random::next_u32_secure() as usize) % (MAX_PACKET_SIZE - (b.len() + AES_GCM_TAG_SIZE + HMAC_SIZE));
-    random::fill_bytes_secure(&mut b[..random_padding_len]);
-    b = &mut b[random_padding_len..];
+    b = append_random_padding(b);
 
-    b.len()
+    MAX_PACKET_SIZE - b.len()
 }
 
 #[allow(non_snake_case)]
@@ -972,10 +1002,161 @@ fn kbkdf512(key: &[u8], label: u8) -> Secret<64> {
 #[inline(always)]
 fn get_aes_gcm_nonce(deobfuscated_packet: &[u8]) -> [u8; 16] {
     let mut tmp = 0_u128.to_ne_bytes();
-    tmp[..HEADER_SIZE].copy_from_slice(deobfuscated_packet);
+    tmp[..HEADER_SIZE].copy_from_slice(&deobfuscated_packet[..HEADER_SIZE]);
     tmp
 }
 
 #[cold]
 #[inline(never)]
 extern "C" fn unlikely_branch() {}
+
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
+
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[test]
+    fn alice_bob() {
+        let psk: Secret<64> = Secret::default();
+        let mut a_buffer = [0_u8; 1500];
+        let mut b_buffer = [0_u8; 1500];
+        let alice_static_keypair = P384KeyPair::generate();
+        let bob_static_keypair = P384KeyPair::generate();
+        let outgoing_obfuscator_to_alice = Obfuscator::new(alice_static_keypair.public_key_bytes());
+        let outgoing_obfuscator_to_bob = Obfuscator::new(bob_static_keypair.public_key_bytes());
+
+        let mut from_alice: Vec<Vec<u8>> = Vec::new();
+        let mut from_bob: Vec<Vec<u8>> = Vec::new();
+
+        // Session TO Bob, on Alice's side.
+        let (alice, packet) = new_session(
+            &mut a_buffer,
+            SessionId::new_random(),
+            alice_static_keypair.public_key_bytes(),
+            &alice_static_keypair,
+            bob_static_keypair.public_key_bytes(),
+            bob_static_keypair.public_key(),
+            &psk,
+            0,
+            0,
+            true,
+        )
+        .unwrap();
+        let alice = Rc::new(alice);
+        from_alice.push(packet.to_vec());
+
+        // Session FROM Alice, on Bob's side.
+        let mut bob: Option<Rc<Session<u32>>> = None;
+
+        while !from_alice.is_empty() || !from_bob.is_empty() {
+            if let Some(packet) = from_alice.pop() {
+                let r = receive(
+                    packet.as_slice(),
+                    &mut b_buffer,
+                    &bob_static_keypair,
+                    &outgoing_obfuscator_to_bob,
+                    |p: &[u8; P384_PUBLIC_KEY_SIZE]| P384PublicKey::from_bytes(p),
+                    |sid| {
+                        if let Some(bob) = bob.as_ref() {
+                            if sid == bob.id {
+                                Some(bob.clone())
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    },
+                    |_: &[u8; P384_PUBLIC_KEY_SIZE]| {
+                        if bob.is_none() {
+                            Some((SessionId::new_random(), psk.clone(), 0))
+                        } else {
+                            panic!("Bob received a second new session request from Alice");
+                        }
+                    },
+                    0,
+                    true,
+                );
+                if let Ok(r) = r {
+                    match r {
+                        ReceiveResult::OkData(_) => {
+                            println!("alice->bob DATA");
+                        }
+                        ReceiveResult::OkSendReply(p) => {
+                            from_bob.push(p.to_vec());
+                        }
+                        ReceiveResult::OkNewSession(ns, p) => {
+                            if bob.is_some() {
+                                panic!("attempt to create new session on Bob's side when he already has one");
+                            }
+                            let _ = bob.replace(Rc::new(ns));
+                            from_bob.push(p.to_vec());
+                            println!("alice->bob NEW SESSION established!");
+                        }
+                        ReceiveResult::Ok => {
+                            println!("alice->bob OK");
+                        }
+                        ReceiveResult::Duplicate => {
+                            println!("alice->bob duplicate packet");
+                        }
+                        ReceiveResult::Ignored => {
+                            println!("alice->bob ignored packet");
+                        }
+                    }
+                } else {
+                    println!("ERROR (alice->bob): {}", r.err().unwrap().to_string());
+                    panic!();
+                }
+            }
+
+            if let Some(packet) = from_bob.pop() {
+                let r = receive(
+                    packet.as_slice(),
+                    &mut b_buffer,
+                    &alice_static_keypair,
+                    &outgoing_obfuscator_to_alice,
+                    |p: &[u8; P384_PUBLIC_KEY_SIZE]| P384PublicKey::from_bytes(p),
+                    |sid| {
+                        if sid == alice.id {
+                            Some(alice.clone())
+                        } else {
+                            panic!("received from Bob addressed to unknown session ID, not Alice");
+                        }
+                    },
+                    |_: &[u8; P384_PUBLIC_KEY_SIZE]| {
+                        panic!("Alice received an unexpected new session request from Bob");
+                    },
+                    0,
+                    true,
+                );
+                if let Ok(r) = r {
+                    match r {
+                        ReceiveResult::OkData(_) => {
+                            println!("bob->alice DATA");
+                        }
+                        ReceiveResult::OkSendReply(p) => {
+                            from_alice.push(p.to_vec());
+                        }
+                        ReceiveResult::OkNewSession(_, _) => {
+                            panic!("attempt to create new session on Alice's side; Bob should not initiate");
+                        }
+                        ReceiveResult::Ok => {
+                            println!("bob->alice OK");
+                        }
+                        ReceiveResult::Duplicate => {
+                            println!("bob->alice duplicate packet");
+                        }
+                        ReceiveResult::Ignored => {
+                            println!("bob->alice ignored packet");
+                        }
+                    }
+                } else {
+                    println!("ERROR (bob->alice): {}", r.err().unwrap().to_string());
+                    panic!();
+                }
+            }
+        }
+    }
+}

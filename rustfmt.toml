@@ -1,6 +1,7 @@
 #unstable_features = true
 max_width = 256
-use_small_heuristics = "Max"
+#use_small_heuristics = "Max"
+use_small_heuristics = "Default"
 tab_spaces = 4
 newline_style = "Unix"
 edition = "2021"

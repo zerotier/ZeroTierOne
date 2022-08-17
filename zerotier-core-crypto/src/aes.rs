@@ -22,26 +22,15 @@ mod fruit_flavored {
     const kCCOptionECBMode: i32 = 2;
 
     extern "C" {
-        fn CCCryptorCreateWithMode(
-            op: i32,
-            mode: i32,
-            alg: i32,
-            padding: i32,
-            iv: *const c_void,
-            key: *const c_void,
-            key_len: usize,
-            tweak: *const c_void,
-            tweak_len: usize,
-            num_rounds: c_int,
-            options: i32,
-            cryyptor_ref: *mut *mut c_void,
-        ) -> i32;
+        fn CCCryptorCreateWithMode(op: i32, mode: i32, alg: i32, padding: i32, iv: *const c_void, key: *const c_void, key_len: usize, tweak: *const c_void, tweak_len: usize, num_rounds: c_int, options: i32, cryyptor_ref: *mut *mut c_void) -> i32;
         fn CCCryptorUpdate(cryptor_ref: *mut c_void, data_in: *const c_void, data_in_len: usize, data_out: *mut c_void, data_out_len: usize, data_out_written: *mut usize) -> i32;
         //fn CCCryptorReset(cryptor_ref: *mut c_void, iv: *const c_void) -> i32;
         fn CCCryptorRelease(cryptor_ref: *mut c_void) -> i32;
         fn CCCryptorGCMSetIV(cryptor_ref: *mut c_void, iv: *const c_void, iv_len: usize) -> i32;
         fn CCCryptorGCMAddAAD(cryptor_ref: *mut c_void, aad: *const c_void, len: usize) -> i32;
-        fn CCCryptorGCMFinalize(cryptor_ref: *mut c_void, tag: *mut c_void, tag_len: usize) -> i32;
+        fn CCCryptorGCMEncrypt(cryptor_ref: *mut c_void, data_in: *const c_void, data_in_len: usize, data_out: *mut c_void) -> i32;
+        fn CCCryptorGCMDecrypt(cryptor_ref: *mut c_void, data_in: *const c_void, data_in_len: usize, data_out: *mut c_void) -> i32;
+        fn CCCryptorGCMFinal(cryptor_ref: *mut c_void, tag: *mut c_void, tag_len: *mut usize) -> i32;
         fn CCCryptorGCMReset(cryptor_ref: *mut c_void) -> i32;
     }
 
@@ -112,7 +101,7 @@ mod fruit_flavored {
     unsafe impl Send for Aes {}
     unsafe impl Sync for Aes {}
 
-    pub struct AesGcm(*mut c_void);
+    pub struct AesGcm(*mut c_void, bool);
 
     impl Drop for AesGcm {
         #[inline(always)]
@@ -130,11 +119,15 @@ mod fruit_flavored {
                 let mut ptr: *mut c_void = null_mut();
                 assert_eq!(
                     CCCryptorCreateWithMode(
-                        if encrypt { kCCEncrypt } else { kCCDecrypt },
+                        if encrypt {
+                            kCCEncrypt
+                        } else {
+                            kCCDecrypt
+                        },
                         kCCModeGCM,
                         kCCAlgorithmAES,
                         0,
-                        [0_u64; 2].as_ptr().cast(),
+                        null(),
                         k.as_ptr().cast(),
                         k.len(),
                         null(),
@@ -145,7 +138,7 @@ mod fruit_flavored {
                     ),
                     0
                 );
-                AesGcm(ptr)
+                AesGcm(ptr, encrypt)
             }
         }
 
@@ -168,7 +161,7 @@ mod fruit_flavored {
         #[inline(always)]
         pub fn aad(&mut self, aad: &[u8]) {
             unsafe {
-                CCCryptorGCMAddAAD(self.0, aad.as_ptr().cast(), aad.len());
+                assert_eq!(CCCryptorGCMAddAAD(self.0, aad.as_ptr().cast(), aad.len()), 0);
             }
         }
 
@@ -176,26 +169,32 @@ mod fruit_flavored {
         pub fn crypt(&mut self, input: &[u8], output: &mut [u8]) {
             unsafe {
                 assert_eq!(input.len(), output.len());
-                let mut data_out_written: usize = 0;
-                CCCryptorUpdate(self.0, input.as_ptr().cast(), input.len(), output.as_mut_ptr().cast(), output.len(), &mut data_out_written);
-                assert_eq!(data_out_written, input.len());
+                if self.1 {
+                    assert_eq!(CCCryptorGCMEncrypt(self.0, input.as_ptr().cast(), input.len(), output.as_mut_ptr().cast()), 0);
+                } else {
+                    assert_eq!(CCCryptorGCMDecrypt(self.0, input.as_ptr().cast(), input.len(), output.as_mut_ptr().cast()), 0);
+                }
             }
         }
 
         #[inline(always)]
         pub fn crypt_in_place(&mut self, data: &mut [u8]) {
             unsafe {
-                let mut data_out_written: usize = 0;
-                CCCryptorUpdate(self.0, data.as_ptr().cast(), data.len(), data.as_mut_ptr().cast(), data.len(), &mut data_out_written);
-                assert_eq!(data_out_written, data.len());
+                if self.1 {
+                    assert_eq!(CCCryptorGCMEncrypt(self.0, data.as_ptr().cast(), data.len(), data.as_mut_ptr().cast()), 0);
+                } else {
+                    assert_eq!(CCCryptorGCMDecrypt(self.0, data.as_ptr().cast(), data.len(), data.as_mut_ptr().cast()), 0);
+                }
             }
         }
 
         #[inline(always)]
         pub fn finish(&mut self) -> [u8; 16] {
-            let mut tag = [0_u8; 16];
+            let mut tag = 0_u128.to_ne_bytes();
             unsafe {
-                if CCCryptorGCMFinalize(self.0, tag.as_mut_ptr().cast(), 16) != 0 {
+                let mut tag_len = 16;
+                if CCCryptorGCMFinal(self.0, tag.as_mut_ptr().cast(), &mut tag_len) != 0 {
+                    debug_assert!(false);
                     tag.fill(0);
                 }
             }
@@ -327,7 +326,17 @@ mod openssl {
         #[inline(always)]
         pub fn init(&mut self, iv: &[u8]) {
             assert_eq!(iv.len(), 12);
-            let mut c = Crypter::new(aes_gcm_by_key_size(self.1), if self.3 { Mode::Encrypt } else { Mode::Decrypt }, &self.0 .0[..self.1], Some(iv)).unwrap();
+            let mut c = Crypter::new(
+                aes_gcm_by_key_size(self.1),
+                if self.3 {
+                    Mode::Encrypt
+                } else {
+                    Mode::Decrypt
+                },
+                &self.0 .0[..self.1],
+                Some(iv),
+            )
+            .unwrap();
             c.pad(false);
             let _ = self.2.replace(c);
         }

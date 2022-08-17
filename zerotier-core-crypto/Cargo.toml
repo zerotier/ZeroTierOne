@@ -15,6 +15,8 @@ openssl = { version = "^0", features = [], default-features = false }
 lazy_static = "^1"
 foreign-types = "0.3.1"
 poly1305 = { version = "0.7.2", features = [], default-features = false }
+parking_lot = { version = "^0", features = [], default-features = false }
+pqc_kyber = { path = "../third_party/kyber", features = ["kyber512", "reference"], default-features = false }
 
 [target."cfg(not(any(target_os = \"macos\", target_os = \"ios\")))".dependencies]
 openssl = "^0"

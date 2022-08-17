@@ -8,7 +8,6 @@ mod fragmentedpacket;
 mod identity;
 mod inetaddress;
 mod mac;
-mod noise;
 mod path;
 mod peer;
 mod rootset;
