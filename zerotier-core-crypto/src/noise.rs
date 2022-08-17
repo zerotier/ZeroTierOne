@@ -123,9 +123,6 @@ pub enum Error {
     /// New session was rejected by caller's supplied authentication check function
     NewSessionRejected,
 
-    /// An unexpected packet was received, like a counter offer when no offer was sent
-    Unexpected,
-
     /// Rekeying failed and session secret has reached its maximum usage count
     MaxKeyLifetimeExceeded,
 
@@ -141,7 +138,6 @@ impl std::fmt::Display for Error {
             Self::InvalidParameter => f.write_str("InvalidParameter"),
             Self::FailedAuthentication => f.write_str("FailedAuthentication"),
             Self::NewSessionRejected => f.write_str("NewSessionRejected"),
-            Self::Unexpected => f.write_str("OutOfSequence"),
             Self::MaxKeyLifetimeExceeded => f.write_str("MaxKeyLifetimeExceeded"),
             Self::SessionNotEstablished => f.write_str("SessionNotEstablished"),
         }
@@ -646,12 +642,12 @@ pub fn receive<
 
                             return Ok(ReceiveResult::OkSendReply(&buffer[..nop_len]));
                         }
-                    } else {
-                        return Err(Error::Unexpected);
                     }
-                } else {
-                    return Err(Error::Unexpected);
                 }
+
+                // Just ignore counter-offers that are out of place. They probably indicate that this side
+                // restarted and needs to establish a new session.
+                return Ok(ReceiveResult::Ignored);
             }
 
             _ => return Err(Error::InvalidPacket),
