@@ -183,7 +183,13 @@ impl RootSet {
     /// method will return true when signing is complete.
     pub fn sign(&mut self, member_identity: &Identity) -> bool {
         let signature = member_identity.sign(self.marshal_for_signing().as_bytes(), false);
-        let unsigned_entry = self.members.iter().find_map(|m| if m.identity.eq(member_identity) { Some(m.clone()) } else { None });
+        let unsigned_entry = self.members.iter().find_map(|m| {
+            if m.identity.eq(member_identity) {
+                Some(m.clone())
+            } else {
+                None
+            }
+        });
         if unsigned_entry.is_some() && signature.is_some() {
             let unsigned_entry = unsigned_entry.unwrap();
             self.members.retain(|m| !m.identity.eq(member_identity));

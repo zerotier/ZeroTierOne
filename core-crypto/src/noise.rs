@@ -398,8 +398,8 @@ pub fn receive<
                         key.return_receive_cipher(c);
 
                         if tag.eq(&incoming_packet[data_len..]) {
-                            // If this is the "next" key, a valid packet using it indicates that it should become the current key.
                             if ki == 1 {
+                                // Promote next key to current key on success.
                                 unlikely_branch();
                                 drop(state);
                                 let mut state = session.state.write();
@@ -409,7 +409,6 @@ pub fn receive<
                             if packet_type == PACKET_TYPE_DATA {
                                 return Ok(ReceiveResult::OkData(&buffer[HEADER_SIZE..data_len], u32::from_le_bytes(nonce[..4].try_into().unwrap())));
                             } else {
-                                unlikely_branch();
                                 return Ok(ReceiveResult::Ok);
                             }
                         }

@@ -45,7 +45,7 @@ impl PartialOrd for MulticastGroup {
 impl Hash for MulticastGroup {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u64(self.mac.to_u64());
+        state.write_u64(self.mac.into());
         state.write_u32(self.adi);
     }
 }

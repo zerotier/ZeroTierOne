@@ -10,8 +10,8 @@ name = "zerotier"
 path = "src/main.rs"
 
 [dependencies]
-zerotier-network-hypervisor = { path = "../zerotier-network-hypervisor" }
-zerotier-core-crypto = { path = "../zerotier-core-crypto" }
+zerotier-network-hypervisor = { path = "../network-hypervisor" }
+zerotier-core-crypto = { path = "../core-crypto" }
 async-trait = "^0"
 num-traits = "^0"
 tokio = { version = "^1", features = ["fs", "io-util", "io-std", "net", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "sync", "time"], default-features = false }

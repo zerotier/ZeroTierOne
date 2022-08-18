@@ -1,0 +1,12 @@
+[package]
+name = "zerotier-network-controller"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "zerotier-controller"
+path = "src/main.rs"
+
+[dependencies]
+zerotier-core-crypto = { path = "../core-crypto" }
+zerotier-network-hypervisor = { path = "../network-hypervisor" }

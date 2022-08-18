@@ -1,10 +1,10 @@
 [workspace]
 
 members = [
-  "zerotier-core-crypto",
-  "zerotier-network-hypervisor",
-  "zerotier-network-controller",
-  "zerotier-system-service",
+  "core-crypto",
+  "network-hypervisor",
+  "controller",
+  "system-service",
 ]
 
 [profile.release]

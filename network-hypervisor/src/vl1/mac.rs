@@ -23,12 +23,12 @@ impl Debug for MAC {
 }
 
 impl MAC {
-    #[inline]
+    #[inline(always)]
     pub fn from_u64(i: u64) -> Option<MAC> {
         NonZeroU64::new(i & 0xffffffffffff).map(|i| MAC(i))
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> Option<MAC> {
         if b.len() >= 6 {
             NonZeroU64::new((b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64).map(|i| MAC(i))
@@ -37,32 +37,41 @@ impl MAC {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn from_bytes_fixed(b: &[u8; 6]) -> Option<MAC> {
         NonZeroU64::new((b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64).map(|i| MAC(i))
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn to_bytes(&self) -> [u8; 6] {
         let i = self.0.get();
         [(i >> 40) as u8, (i >> 32) as u8, (i >> 24) as u8, (i >> 16) as u8, (i >> 8) as u8, i as u8]
     }
+}
 
+impl From<MAC> for u64 {
     #[inline(always)]
-    pub fn to_u64(&self) -> u64 {
-        self.0.get()
+    fn from(m: MAC) -> Self {
+        m.0.get()
+    }
+}
+
+impl From<&MAC> for u64 {
+    #[inline(always)]
+    fn from(m: &MAC) -> Self {
+        m.0.get()
     }
 }
 
 impl Marshalable for MAC {
     const MAX_MARSHAL_SIZE: usize = 6;
 
-    #[inline]
+    #[inline(always)]
     fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         buf.append_bytes(&self.0.get().to_be_bytes()[2..])
     }
 
-    #[inline]
+    #[inline(always)]
     fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Self> {
         Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).map_or_else(|| Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "cannot be zero")), |a| Ok(a))
     }

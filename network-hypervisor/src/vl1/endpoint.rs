@@ -230,19 +230,19 @@ impl Hash for Endpoint {
             }
             Endpoint::ZeroTier(a, _) => {
                 state.write_u8(TYPE_ZEROTIER);
-                state.write_u64(a.to_u64())
+                state.write_u64(a.into())
             }
             Endpoint::Ethernet(m) => {
                 state.write_u8(TYPE_ETHERNET);
-                state.write_u64(m.to_u64())
+                state.write_u64(m.into())
             }
             Endpoint::WifiDirect(m) => {
                 state.write_u8(TYPE_WIFIDIRECT);
-                state.write_u64(m.to_u64())
+                state.write_u64(m.into())
             }
             Endpoint::Bluetooth(m) => {
                 state.write_u8(TYPE_BLUETOOTH);
-                state.write_u64(m.to_u64())
+                state.write_u64(m.into())
             }
             Endpoint::Ip(ip) => {
                 state.write_u8(TYPE_IP);
@@ -266,7 +266,7 @@ impl Hash for Endpoint {
             }
             Endpoint::ZeroTierEncap(a, _) => {
                 state.write_u8(TYPE_ZEROTIER_ENCAP);
-                state.write_u64(a.to_u64())
+                state.write_u64(a.into())
             }
         }
     }

@@ -10,7 +10,7 @@ default = ["debug_events"]
 debug_events = []
 
 [dependencies]
-zerotier-core-crypto = { path = "../zerotier-core-crypto" }
+zerotier-core-crypto = { path = "../core-crypto" }
 async-trait = "^0"
 base64 = "^0"
 lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }

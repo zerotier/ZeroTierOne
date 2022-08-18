@@ -19,13 +19,19 @@ pub struct Address(NonZeroU64);
 
 impl Address {
     /// Get an address from a 64-bit integer or return None if it is zero or reserved.
-    #[inline]
+    #[inline(always)]
     pub fn from_u64(mut i: u64) -> Option<Address> {
         i &= 0xffffffffff;
-        NonZeroU64::new(i).and_then(|ii| if (i >> 32) != ADDRESS_RESERVED_PREFIX as u64 { Some(Address(ii)) } else { None })
+        NonZeroU64::new(i).and_then(|ii| {
+            if (i >> 32) != ADDRESS_RESERVED_PREFIX as u64 {
+                Some(Address(ii))
+            } else {
+                None
+            }
+        })
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> Option<Address> {
         if b.len() >= ADDRESS_SIZE {
             Self::from_u64((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64)
@@ -34,32 +40,41 @@ impl Address {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn from_bytes_fixed(b: &[u8; ADDRESS_SIZE]) -> Option<Address> {
         Self::from_u64((b[0] as u64) << 32 | (b[1] as u64) << 24 | (b[2] as u64) << 16 | (b[3] as u64) << 8 | b[4] as u64)
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn to_bytes(&self) -> [u8; ADDRESS_SIZE] {
         let i = self.0.get();
         [(i >> 32) as u8, (i >> 24) as u8, (i >> 16) as u8, (i >> 8) as u8, i as u8]
     }
+}
 
+impl From<Address> for u64 {
     #[inline(always)]
-    pub fn to_u64(&self) -> u64 {
-        self.0.get()
+    fn from(a: Address) -> Self {
+        a.0.get()
+    }
+}
+
+impl From<&Address> for u64 {
+    #[inline(always)]
+    fn from(a: &Address) -> Self {
+        a.0.get()
     }
 }
 
 impl Marshalable for Address {
     const MAX_MARSHAL_SIZE: usize = ADDRESS_SIZE;
 
-    #[inline]
+    #[inline(always)]
     fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
         buf.append_bytes(&self.0.get().to_be_bytes()[8 - ADDRESS_SIZE..])
     }
 
-    #[inline]
+    #[inline(always)]
     fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Self> {
         Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).map_or_else(|| Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "cannot be zero")), |a| Ok(a))
     }
@@ -168,7 +183,8 @@ mod tests {
         let mut rawaddr: u64 = rand::random();
         let addr = super::Address::from_u64(rawaddr);
         assert!(addr.is_some());
-        assert_eq!(addr.unwrap().to_u64(), rawaddr & 0xffffffffff);
+        let addr: u64 = addr.unwrap().into();
+        assert_eq!(addr, rawaddr & 0xffffffffff);
 
         rawaddr = 0;
         assert!(super::Address::from_u64(rawaddr).is_none());

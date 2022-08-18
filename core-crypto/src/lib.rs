@@ -14,6 +14,4 @@ pub mod secret;
 pub mod varint;
 pub mod x25519;
 
-pub use pqc_kyber;
-
 pub const ZEROES: [u8; 16] = [0_u8; 16];

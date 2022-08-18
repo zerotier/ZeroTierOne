@@ -97,16 +97,7 @@ pub trait InnerProtocolInterface: Sync + Send + 'static {
     async fn handle_packet<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, verb: u8, payload: &PacketBuffer) -> bool;
 
     /// Handle errors, returning true if the error was recognized.
-    async fn handle_error<SI: SystemInterface>(
-        &self,
-        source: &Peer<SI>,
-        source_path: &Path<SI>,
-        in_re_verb: u8,
-        in_re_message_id: u64,
-        error_code: u8,
-        payload: &PacketBuffer,
-        cursor: &mut usize,
-    ) -> bool;
+    async fn handle_error<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, in_re_verb: u8, in_re_message_id: u64, error_code: u8, payload: &PacketBuffer, cursor: &mut usize) -> bool;
 
     /// Handle an OK, returing true if the OK was recognized.
     async fn handle_ok<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, in_re_verb: u8, in_re_message_id: u64, payload: &PacketBuffer, cursor: &mut usize) -> bool;
@@ -350,12 +341,36 @@ impl<SI: SystemInterface> Node<SI> {
         debug_event!(
             si,
             "[vl1] do_background_tasks:{}{}{}{}{}{} ----",
-            if root_sync { " root_sync" } else { "" },
-            if root_hello { " root_hello" } else { "" },
-            if root_spam_hello { " root_spam_hello" } else { "" },
-            if peer_service { " peer_service" } else { "" },
-            if path_service { " path_service" } else { "" },
-            if whois_service { " whois_service" } else { "" },
+            if root_sync {
+                " root_sync"
+            } else {
+                ""
+            },
+            if root_hello {
+                " root_hello"
+            } else {
+                ""
+            },
+            if root_spam_hello {
+                " root_spam_hello"
+            } else {
+                ""
+            },
+            if peer_service {
+                " peer_service"
+            } else {
+                ""
+            },
+            if path_service {
+                " path_service"
+            } else {
+                ""
+            },
+            if whois_service {
+                " whois_service"
+            } else {
+                ""
+            },
         );
 
         if root_sync {
@@ -388,9 +403,7 @@ impl<SI: SystemInterface> Node<SI> {
                             for m in rs.members.iter() {
                                 if m.identity.eq(&self.identity) {
                                     let _ = my_root_sets.get_or_insert_with(|| Vec::new()).write_all(rs.to_bytes().as_slice());
-                                } else if self.peers.read().get(&m.identity.address).map_or(false, |p| !p.identity.eq(&m.identity))
-                                    || address_collision_check.insert(m.identity.address, &m.identity).map_or(false, |old_id| !old_id.eq(&m.identity))
-                                {
+                                } else if self.peers.read().get(&m.identity.address).map_or(false, |p| !p.identity.eq(&m.identity)) || address_collision_check.insert(m.identity.address, &m.identity).map_or(false, |old_id| !old_id.eq(&m.identity)) {
                                     address_collisions.push(m.identity.address);
                                 }
                             }
@@ -428,7 +441,10 @@ impl<SI: SystemInterface> Node<SI> {
                     )));
                 }
                 for i in bad_identities.iter() {
-                    si.event(Event::SecurityWarning(format!("bad identity detected for address {} in at least one root set, ignoring (error creating peer object)", i.address.to_string())));
+                    si.event(Event::SecurityWarning(format!(
+                        "bad identity detected for address {} in at least one root set, ignoring (error creating peer object)",
+                        i.address.to_string()
+                    )));
                 }
 
                 let mut new_root_identities: Vec<Identity> = new_roots.iter().map(|(p, _)| p.identity.clone()).collect();
@@ -529,15 +545,7 @@ impl<SI: SystemInterface> Node<SI> {
         Duration::from_millis(1000)
     }
 
-    pub async fn handle_incoming_physical_packet<PH: InnerProtocolInterface>(
-        &self,
-        si: &SI,
-        ph: &PH,
-        source_endpoint: &Endpoint,
-        source_local_socket: &SI::LocalSocket,
-        source_local_interface: &SI::LocalInterface,
-        mut data: PooledPacketBuffer,
-    ) {
+    pub async fn handle_incoming_physical_packet<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, source_endpoint: &Endpoint, source_local_socket: &SI::LocalSocket, source_local_interface: &SI::LocalInterface, mut data: PooledPacketBuffer) {
         debug_event!(
             si,
             "[vl1] {} -> #{} {}->{} length {} (on socket {}@{})",
