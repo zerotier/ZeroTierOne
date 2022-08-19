@@ -18,16 +18,7 @@ impl InnerProtocolInterface for Switch {
     }
 
     #[allow(unused)]
-    async fn handle_error<SI: SystemInterface>(
-        &self,
-        peer: &Peer<SI>,
-        source_path: &Path<SI>,
-        in_re_verb: u8,
-        in_re_message_id: u64,
-        error_code: u8,
-        payload: &PacketBuffer,
-        cursor: &mut usize,
-    ) -> bool {
+    async fn handle_error<SI: SystemInterface>(&self, peer: &Peer<SI>, source_path: &Path<SI>, in_re_verb: u8, in_re_message_id: u64, error_code: u8, payload: &PacketBuffer, cursor: &mut usize) -> bool {
         false
     }
 
@@ -37,7 +28,7 @@ impl InnerProtocolInterface for Switch {
     }
 
     #[allow(unused)]
-    fn has_trust_relationship(&self, id: &Identity) -> bool {
+    fn should_communicate_with(&self, id: &Identity) -> bool {
         true
     }
 }

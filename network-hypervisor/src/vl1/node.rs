@@ -102,11 +102,8 @@ pub trait InnerProtocolInterface: Sync + Send + 'static {
     /// Handle an OK, returing true if the OK was recognized.
     async fn handle_ok<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, in_re_verb: u8, in_re_message_id: u64, payload: &PacketBuffer, cursor: &mut usize) -> bool;
 
-    /// Check if this remote peer has a trust relationship with this node.
-    ///
-    /// This is checked to determine if we should do things like make direct links or respond to
-    /// various other VL1 messages.
-    fn has_trust_relationship(&self, id: &Identity) -> bool;
+    /// Check if this peer should communicate with another at all.
+    fn should_communicate_with(&self, id: &Identity) -> bool;
 }
 
 /// How often to check the root cluster definitions against the root list and update.

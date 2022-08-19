@@ -75,13 +75,7 @@ pub struct Peer<SI: SystemInterface> {
 }
 
 /// Attempt AEAD packet encryption and MAC validation. Returns message ID on success.
-fn try_aead_decrypt(
-    secret: &SymmetricSecret,
-    packet_frag0_payload_bytes: &[u8],
-    packet_header: &PacketHeader,
-    fragments: &[Option<PooledPacketBuffer>],
-    payload: &mut PacketBuffer,
-) -> Option<MessageId> {
+fn try_aead_decrypt(secret: &SymmetricSecret, packet_frag0_payload_bytes: &[u8], packet_header: &PacketHeader, fragments: &[Option<PooledPacketBuffer>], payload: &mut PacketBuffer) -> Option<MessageId> {
     let cipher = packet_header.cipher();
     match cipher {
         security_constants::CIPHER_NOCRYPT_POLY1305 | security_constants::CIPHER_SALSA2012_POLY1305 => {
@@ -279,13 +273,7 @@ impl<SI: SystemInterface> Peer<SI> {
                         match &p.endpoint {
                             Endpoint::IpUdp(existing_ip) => {
                                 if existing_ip.ip_bytes().eq(new_ip.ip_bytes()) {
-                                    debug_event!(
-                                        si,
-                                        "[vl1] {} replacing path {} with {} (same IP, different port)",
-                                        self.identity.address.to_string(),
-                                        p.endpoint.to_string(),
-                                        new_path.endpoint.to_string()
-                                    );
+                                    debug_event!(si, "[vl1] {} replacing path {} with {} (same IP, different port)", self.identity.address.to_string(), p.endpoint.to_string(), new_path.endpoint.to_string());
                                     pi.path = Arc::downgrade(new_path);
                                     pi.canonical_instance_id = new_path.canonical.canonical_instance_id();
                                     pi.last_receive_time_ticks = time_ticks;
@@ -332,15 +320,7 @@ impl<SI: SystemInterface> Peer<SI> {
     ///
     /// This does not set the fragmentation field in the packet header, MAC, or encrypt the packet. The sender
     /// must do that while building the packet. The fragmentation flag must be set if fragmentation will be needed.
-    async fn internal_send(
-        &self,
-        si: &SI,
-        endpoint: &Endpoint,
-        local_socket: Option<&SI::LocalSocket>,
-        local_interface: Option<&SI::LocalInterface>,
-        max_fragment_size: usize,
-        packet: &PacketBuffer,
-    ) -> bool {
+    async fn internal_send(&self, si: &SI, endpoint: &Endpoint, local_socket: Option<&SI::LocalSocket>, local_interface: Option<&SI::LocalInterface>, max_fragment_size: usize, packet: &PacketBuffer) -> bool {
         let packet_size = packet.len();
         if packet_size > max_fragment_size {
             let bytes = packet.as_bytes();
@@ -350,8 +330,7 @@ impl<SI: SystemInterface> Peer<SI> {
             let mut pos = UDP_DEFAULT_MTU;
 
             let overrun_size = (packet_size - UDP_DEFAULT_MTU) as u32;
-            let fragment_count =
-                (overrun_size / (UDP_DEFAULT_MTU - packet_constants::FRAGMENT_HEADER_SIZE) as u32) + (((overrun_size % (UDP_DEFAULT_MTU - packet_constants::FRAGMENT_HEADER_SIZE) as u32) != 0) as u32);
+            let fragment_count = (overrun_size / (UDP_DEFAULT_MTU - packet_constants::FRAGMENT_HEADER_SIZE) as u32) + (((overrun_size % (UDP_DEFAULT_MTU - packet_constants::FRAGMENT_HEADER_SIZE) as u32) != 0) as u32);
             debug_assert!(fragment_count <= packet_constants::FRAGMENT_COUNT_MAX as u32);
 
             let mut header = FragmentHeader {
@@ -400,9 +379,16 @@ impl<SI: SystemInterface> Peer<SI> {
             }
         };
 
-        let max_fragment_size = if path.endpoint.requires_fragmentation() { UDP_DEFAULT_MTU } else { usize::MAX };
-        let flags_cipher_hops =
-            if packet.len() > max_fragment_size { packet_constants::HEADER_FLAG_FRAGMENTED | security_constants::CIPHER_AES_GMAC_SIV } else { security_constants::CIPHER_AES_GMAC_SIV };
+        let max_fragment_size = if path.endpoint.requires_fragmentation() {
+            UDP_DEFAULT_MTU
+        } else {
+            usize::MAX
+        };
+        let flags_cipher_hops = if packet.len() > max_fragment_size {
+            packet_constants::HEADER_FLAG_FRAGMENTED | security_constants::CIPHER_AES_GMAC_SIV
+        } else {
+            security_constants::CIPHER_AES_GMAC_SIV
+        };
 
         let mut aes_gmac_siv = self.identity_symmetric_key.aes_gmac_siv.get();
         aes_gmac_siv.encrypt_init(&self.next_message_id().to_ne_bytes());
@@ -481,7 +467,11 @@ impl<SI: SystemInterface> Peer<SI> {
             }
         };
 
-        let max_fragment_size = if destination.requires_fragmentation() { UDP_DEFAULT_MTU } else { usize::MAX };
+        let max_fragment_size = if destination.requires_fragmentation() {
+            UDP_DEFAULT_MTU
+        } else {
+            usize::MAX
+        };
         let time_ticks = si.time_ticks();
 
         let mut packet = PacketBuffer::new();
@@ -532,17 +522,7 @@ impl<SI: SystemInterface> Peer<SI> {
     /// those fragments after the main packet header and first chunk.
     ///
     /// This returns true if the packet decrypted and passed authentication.
-    pub(crate) async fn receive<PH: InnerProtocolInterface>(
-        &self,
-        node: &Node<SI>,
-        si: &SI,
-        ph: &PH,
-        time_ticks: i64,
-        source_path: &Arc<Path<SI>>,
-        packet_header: &PacketHeader,
-        frag0: &PacketBuffer,
-        fragments: &[Option<PooledPacketBuffer>],
-    ) -> bool {
+    pub(crate) async fn receive<PH: InnerProtocolInterface>(&self, node: &Node<SI>, si: &SI, ph: &PH, time_ticks: i64, source_path: &Arc<Path<SI>>, packet_header: &PacketHeader, frag0: &PacketBuffer, fragments: &[Option<PooledPacketBuffer>]) -> bool {
         if let Ok(packet_frag0_payload_bytes) = frag0.as_bytes_starting_at(packet_constants::VERB_INDEX) {
             let mut payload = PacketBuffer::new();
 
@@ -606,18 +586,8 @@ impl<SI: SystemInterface> Peer<SI> {
         return false;
     }
 
-    async fn handle_incoming_hello<PH: InnerProtocolInterface>(
-        &self,
-        si: &SI,
-        ph: &PH,
-        node: &Node<SI>,
-        time_ticks: i64,
-        message_id: MessageId,
-        source_path: &Arc<Path<SI>>,
-        hops: u8,
-        payload: &PacketBuffer,
-    ) -> bool {
-        if !(ph.has_trust_relationship(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
+    async fn handle_incoming_hello<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, message_id: MessageId, source_path: &Arc<Path<SI>>, hops: u8, payload: &PacketBuffer) -> bool {
+        if !(ph.should_communicate_with(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
             debug_event!(si, "[vl1] dropping HELLO from {} due to lack of trust relationship", self.identity.address.to_string());
             return true; // packet wasn't invalid, just ignored
         }
@@ -629,9 +599,8 @@ impl<SI: SystemInterface> Peer<SI> {
                     {
                         let mut remote_node_info = self.remote_node_info.write();
                         remote_node_info.remote_protocol_version = hello_fixed_headers.version_proto;
-                        remote_node_info.remote_version = (hello_fixed_headers.version_major as u64).wrapping_shl(48)
-                            | (hello_fixed_headers.version_minor as u64).wrapping_shl(32)
-                            | (u16::from_be_bytes(hello_fixed_headers.version_revision) as u64).wrapping_shl(16);
+                        remote_node_info.remote_version =
+                            (hello_fixed_headers.version_major as u64).wrapping_shl(48) | (hello_fixed_headers.version_minor as u64).wrapping_shl(32) | (u16::from_be_bytes(hello_fixed_headers.version_revision) as u64).wrapping_shl(16);
                     }
 
                     let mut packet = PacketBuffer::new();
@@ -648,7 +617,14 @@ impl<SI: SystemInterface> Peer<SI> {
                         f.1.version_revision = VERSION_REVISION.to_be_bytes();
                     }
                     if hello_fixed_headers.version_proto >= 20 {
-                        let session_metadata = self.create_session_metadata(node, if hops == 0 { Some(&source_path.endpoint) } else { None });
+                        let session_metadata = self.create_session_metadata(
+                            node,
+                            if hops == 0 {
+                                Some(&source_path.endpoint)
+                            } else {
+                                None
+                            },
+                        );
                         assert!(session_metadata.len() <= 0xffff); // sanity check, should be impossible
                         assert!(packet.append_u16(session_metadata.len() as u16).is_ok());
                         assert!(packet.append_bytes(session_metadata.as_slice()).is_ok());
@@ -676,17 +652,7 @@ impl<SI: SystemInterface> Peer<SI> {
         return false;
     }
 
-    async fn handle_incoming_ok<PH: InnerProtocolInterface>(
-        &self,
-        si: &SI,
-        ph: &PH,
-        node: &Node<SI>,
-        time_ticks: i64,
-        source_path: &Arc<Path<SI>>,
-        hops: u8,
-        path_is_known: bool,
-        payload: &PacketBuffer,
-    ) -> bool {
+    async fn handle_incoming_ok<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, hops: u8, path_is_known: bool, payload: &PacketBuffer) -> bool {
         let mut cursor = 0;
         if let Ok(ok_header) = payload.read_struct::<message_component_structs::OkHeader>(&mut cursor) {
             let in_re_message_id: MessageId = u64::from_ne_bytes(ok_header.in_re_message_id);
@@ -709,12 +675,7 @@ impl<SI: SystemInterface> Peer<SI> {
                                                             let reported_endpoint2 = reported_endpoint.clone();
                                                             if remote_node_info.reported_local_endpoints.insert(reported_endpoint, time_ticks).is_none() {
                                                                 #[cfg(debug_assertions)]
-                                                                debug_event!(
-                                                                    si,
-                                                                    "[vl1] {} reported new remote perspective, local endpoint: {}",
-                                                                    self.identity.address.to_string(),
-                                                                    reported_endpoint2.to_string()
-                                                                );
+                                                                debug_event!(si, "[vl1] {} reported new remote perspective, local endpoint: {}", self.identity.address.to_string(), reported_endpoint2.to_string());
                                                             }
                                                         }
                                                     }
@@ -797,7 +758,7 @@ impl<SI: SystemInterface> Peer<SI> {
     }
 
     async fn handle_incoming_whois<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, message_id: MessageId, payload: &PacketBuffer) -> bool {
-        if node.this_node_is_root() || ph.has_trust_relationship(&self.identity) {
+        if node.this_node_is_root() || ph.should_communicate_with(&self.identity) {
             let mut packet = PacketBuffer::new();
             packet.set_size(packet_constants::HEADER_SIZE);
             {
@@ -832,7 +793,7 @@ impl<SI: SystemInterface> Peer<SI> {
     }
 
     async fn handle_incoming_echo<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, message_id: MessageId, payload: &PacketBuffer) -> bool {
-        if ph.has_trust_relationship(&self.identity) || node.is_peer_root(self) {
+        if ph.should_communicate_with(&self.identity) || node.is_peer_root(self) {
             let mut packet = PacketBuffer::new();
             packet.set_size(packet_constants::HEADER_SIZE);
             {

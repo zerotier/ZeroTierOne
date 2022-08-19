@@ -39,10 +39,19 @@ impl NetworkId {
     pub fn to_bytes(&self) -> [u8; 8] {
         self.0.get().to_be_bytes()
     }
+}
 
+impl From<NetworkId> for u64 {
     #[inline(always)]
-    pub fn to_u64(&self) -> u64 {
-        self.0.get()
+    fn from(v: NetworkId) -> Self {
+        v.0.get()
+    }
+}
+
+impl From<&NetworkId> for u64 {
+    #[inline(always)]
+    fn from(v: &NetworkId) -> Self {
+        v.0.get()
     }
 }
 
