@@ -21,8 +21,6 @@ pub type uint8_t = libc::c_uchar;
 pub type uint64_t = libc::c_ulong;
 pub type uint = libc::c_uint;
 pub type uint128_t = u128;
-#[derive(Copy, Clone)]
-#[repr(C)]
 pub struct EccPoint {
     pub x: [u64; 6],
     pub y: [u64; 6],
@@ -310,7 +308,7 @@ unsafe fn vli_modSub(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t, mut
 //#elif ECC_CURVE == secp384r1
 #[inline(always)]
 unsafe fn omega_mult(mut p_result: *mut uint64_t, mut p_right: *mut uint64_t) {
-    let mut l_tmp: [uint64_t; 6] = [0; 6];
+    let mut l_tmp: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
     let mut l_carry: uint64_t = 0;
     let mut l_diff: uint64_t = 0;
     /* Multiply by (2^128 + 2^96 - 2^32 + 1). */
@@ -340,7 +338,7 @@ see PDF "Comparing Elliptic Curve Cryptography and RSA on 8-bit CPUs"
 section "Curve-Specific Optimizations" */
 #[inline(always)]
 unsafe fn vli_mmod_fast(mut p_result: *mut uint64_t, mut p_product: *mut uint64_t) {
-    let mut l_tmp: [uint64_t; 12] = [0; 12];
+    let mut l_tmp: [uint64_t; 12] = std::mem::MaybeUninit::uninit().assume_init();
     while vli_isZero(p_product.offset((48 as libc::c_int / 8 as libc::c_int) as isize)) == 0 {
         /* While c1 != 0 */
         let mut l_carry: uint64_t = 0 as libc::c_int as uint64_t; /* tmp = w * c1 */
@@ -369,14 +367,14 @@ unsafe fn vli_mmod_fast(mut p_result: *mut uint64_t, mut p_product: *mut uint64_
 /* Computes p_result = (p_left * p_right) % curve_p. */
 #[inline(always)]
 unsafe fn vli_modMult_fast(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t, mut p_right: *mut uint64_t) {
-    let mut l_product: [uint64_t; 12] = [0; 12];
+    let mut l_product: [uint64_t; 12] = std::mem::MaybeUninit::uninit().assume_init();
     vli_mult(l_product.as_mut_ptr(), p_left, p_right);
     vli_mmod_fast(p_result, l_product.as_mut_ptr());
 }
 /* Computes p_result = p_left^2 % curve_p. */
 #[inline(always)]
 unsafe fn vli_modSquare_fast(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t) {
-    let mut l_product: [uint64_t; 12] = [0; 12];
+    let mut l_product: [uint64_t; 12] = std::mem::MaybeUninit::uninit().assume_init();
     vli_square(l_product.as_mut_ptr(), p_left);
     vli_mmod_fast(p_result, l_product.as_mut_ptr());
 }
@@ -385,10 +383,10 @@ See "From Euclid's GCD to Montgomery Multiplication to the Great Divide"
 https://labs.oracle.com/techrep/2001/smli_tr-2001-95.pdf */
 #[inline(always)]
 unsafe fn vli_modInv(mut p_result: *mut uint64_t, mut p_input: *mut uint64_t, mut p_mod: *mut uint64_t) {
-    let mut a: [uint64_t; 6] = [0; 6];
-    let mut b: [uint64_t; 6] = [0; 6];
-    let mut u: [uint64_t; 6] = [0; 6];
-    let mut v: [uint64_t; 6] = [0; 6];
+    let mut a: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut b: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut u: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut v: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
     let mut l_carry: uint64_t = 0;
     let mut l_cmpResult: libc::c_int = 0;
     if vli_isZero(p_input) != 0 {
@@ -469,8 +467,8 @@ From http://eprint.iacr.org/2011/338.pdf
 #[inline(always)]
 unsafe fn EccPoint_double_jacobian(mut X1: *mut uint64_t, mut Y1: *mut uint64_t, mut Z1: *mut uint64_t) {
     /* t1 = X, t2 = Y, t3 = Z */
-    let mut t4: [uint64_t; 6] = [0; 6]; /* t4 = y1^2 */
-    let mut t5: [uint64_t; 6] = [0; 6]; /* t5 = x1*y1^2 = A */
+    let mut t4: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init(); /* t4 = y1^2 */
+    let mut t5: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init(); /* t5 = x1*y1^2 = A */
     if vli_isZero(Z1) != 0 {
         return;
     } /* t4 = y1^4 */
@@ -507,7 +505,7 @@ unsafe fn EccPoint_double_jacobian(mut X1: *mut uint64_t, mut Y1: *mut uint64_t,
 /* Modify (x1, y1) => (x1 * z^2, y1 * z^3) */
 #[inline(always)]
 unsafe fn apply_z(mut X1: *mut uint64_t, mut Y1: *mut uint64_t, mut Z: *mut uint64_t) {
-    let mut t1: [uint64_t; 6] = [0; 6]; /* z^2 */
+    let mut t1: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init(); /* z^2 */
     vli_modSquare_fast(t1.as_mut_ptr(), Z); /* x1 * z^2 */
     vli_modMult_fast(X1, X1, t1.as_mut_ptr()); /* z^3 */
     vli_modMult_fast(t1.as_mut_ptr(), t1.as_mut_ptr(), Z);
@@ -517,7 +515,7 @@ unsafe fn apply_z(mut X1: *mut uint64_t, mut Y1: *mut uint64_t, mut Z: *mut uint
 /* P = (x1, y1) => 2P, (x2, y2) => P' */
 #[inline(always)]
 unsafe fn XYcZ_initial_double(mut X1: *mut uint64_t, mut Y1: *mut uint64_t, mut X2: *mut uint64_t, mut Y2: *mut uint64_t, mut p_initialZ: *mut uint64_t) {
-    let mut z: [uint64_t; 6] = [0; 6];
+    let mut z: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
     vli_set(X2, X1);
     vli_set(Y2, Y1);
     vli_clear(z.as_mut_ptr());
@@ -536,7 +534,7 @@ or P => P', Q => P + Q
 #[inline(always)]
 unsafe fn XYcZ_add(mut X1: *mut uint64_t, mut Y1: *mut uint64_t, mut X2: *mut uint64_t, mut Y2: *mut uint64_t) {
     /* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
-    let mut t5: [uint64_t; 6] = [0; 6]; /* t5 = x2 - x1 */
+    let mut t5: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init(); /* t5 = x2 - x1 */
     vli_modSub(t5.as_mut_ptr(), X2, X1, curve_p.as_mut_ptr()); /* t5 = (x2 - x1)^2 = A */
     vli_modSquare_fast(t5.as_mut_ptr(), t5.as_mut_ptr()); /* t1 = x1*A = B */
     vli_modMult_fast(X1, X1, t5.as_mut_ptr()); /* t3 = x2*A = C */
@@ -559,9 +557,9 @@ or P => P - Q, Q => P + Q
 #[inline(always)]
 unsafe fn XYcZ_addC(mut X1: *mut uint64_t, mut Y1: *mut uint64_t, mut X2: *mut uint64_t, mut Y2: *mut uint64_t) {
     /* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
-    let mut t5: [uint64_t; 6] = [0; 6]; /* t5 = x2 - x1 */
-    let mut t6: [uint64_t; 6] = [0; 6]; /* t5 = (x2 - x1)^2 = A */
-    let mut t7: [uint64_t; 6] = [0; 6]; /* t1 = x1*A = B */
+    let mut t5: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init(); /* t5 = x2 - x1 */
+    let mut t6: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init(); /* t5 = (x2 - x1)^2 = A */
+    let mut t7: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init(); /* t1 = x1*A = B */
     vli_modSub(t5.as_mut_ptr(), X2, X1, curve_p.as_mut_ptr()); /* t3 = x2*A = C */
     vli_modSquare_fast(t5.as_mut_ptr(), t5.as_mut_ptr()); /* t4 = y2 + y1 */
     vli_modMult_fast(X1, X1, t5.as_mut_ptr()); /* t4 = y2 - y1 */
@@ -586,9 +584,9 @@ unsafe fn XYcZ_addC(mut X1: *mut uint64_t, mut Y1: *mut uint64_t, mut X2: *mut u
 #[inline(always)]
 unsafe fn EccPoint_mult(mut p_result: *mut EccPoint, mut p_point: *mut EccPoint, mut p_scalar: *mut uint64_t, mut p_initialZ: *mut uint64_t) {
     /* R0 and R1 */
-    let mut Rx: [[uint64_t; 6]; 2] = [[0; 6]; 2];
-    let mut Ry: [[uint64_t; 6]; 2] = [[0; 6]; 2];
-    let mut z: [uint64_t; 6] = [0; 6];
+    let mut Rx: [[uint64_t; 6]; 2] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut Ry: [[uint64_t; 6]; 2] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut z: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
     let mut i: libc::c_int = 0;
     let mut nb: libc::c_int = 0;
     vli_set(Rx[1 as libc::c_int as usize].as_mut_ptr(), (*p_point).x.as_mut_ptr());
@@ -689,8 +687,8 @@ unsafe fn ecc_point_decompress(mut p_point: *mut EccPoint, mut p_compressed: *co
     };
 }
 pub unsafe fn ecc_make_key(mut p_publicKey: *mut uint8_t, mut p_privateKey: *mut uint8_t) -> libc::c_int {
-    let mut l_private: [uint64_t; 6] = [0; 6];
-    let mut l_public: EccPoint = EccPoint { x: [0; 6], y: [0; 6] };
+    let mut l_private: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut l_public: EccPoint = std::mem::MaybeUninit::uninit().assume_init();
     let mut l_tries: libc::c_uint = 0 as libc::c_int as libc::c_uint;
     loop {
         if getRandomNumber(l_private.as_mut_ptr()) == 0 || {
@@ -718,9 +716,9 @@ pub unsafe fn ecc_make_key(mut p_publicKey: *mut uint8_t, mut p_privateKey: *mut
     return 1 as libc::c_int;
 }
 pub unsafe fn ecdh_shared_secret(mut p_publicKey: *const uint8_t, mut p_privateKey: *const uint8_t, mut p_secret: *mut uint8_t) -> libc::c_int {
-    let mut l_public: EccPoint = EccPoint { x: [0; 6], y: [0; 6] };
-    let mut l_private: [uint64_t; 6] = [0; 6];
-    let mut l_random: [uint64_t; 6] = [0; 6];
+    let mut l_public: EccPoint = std::mem::MaybeUninit::uninit().assume_init();
+    let mut l_private: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut l_random: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
     if getRandomNumber(l_random.as_mut_ptr()) == 0 {
         return 0 as libc::c_int;
     }
@@ -735,8 +733,8 @@ pub unsafe fn ecdh_shared_secret(mut p_publicKey: *const uint8_t, mut p_privateK
 /* Computes p_result = (p_left * p_right) % p_mod. */
 #[inline(always)]
 unsafe fn vli_modMult(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t, mut p_right: *mut uint64_t, mut p_mod: *mut uint64_t) {
-    let mut l_product: [uint64_t; 12] = [0; 12];
-    let mut l_modMultiple: [uint64_t; 12] = [0; 12];
+    let mut l_product: [uint64_t; 12] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut l_modMultiple: [uint64_t; 12] = std::mem::MaybeUninit::uninit().assume_init();
     let mut l_digitShift: uint = 0;
     let mut l_bitShift: uint = 0;
     let mut l_productBits: uint = 0;
@@ -790,17 +788,13 @@ unsafe fn vli_modMult(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t, mu
 }
 #[inline(always)]
 unsafe fn umax(mut a: uint, mut b: uint) -> uint {
-    return if a > b {
-        a
-    } else {
-        b
-    };
+    a.max(b)
 }
 pub unsafe fn ecdsa_sign(mut p_privateKey: *const uint8_t, mut p_hash: *const uint8_t, mut p_signature: *mut uint8_t) -> libc::c_int {
-    let mut k: [uint64_t; 6] = [0; 6];
-    let mut l_tmp: [uint64_t; 6] = [0; 6];
-    let mut l_s: [uint64_t; 6] = [0; 6];
-    let mut p: EccPoint = EccPoint { x: [0; 6], y: [0; 6] };
+    let mut k: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut l_tmp: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut l_s: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut p: EccPoint = std::mem::MaybeUninit::uninit().assume_init();
     let mut l_tries: libc::c_uint = 0 as libc::c_int as libc::c_uint;
     loop {
         if getRandomNumber(k.as_mut_ptr()) == 0 || {
@@ -837,18 +831,18 @@ pub unsafe fn ecdsa_sign(mut p_privateKey: *const uint8_t, mut p_hash: *const ui
     return 1 as libc::c_int;
 }
 pub unsafe fn ecdsa_verify(mut p_publicKey: *const uint8_t, mut p_hash: *const uint8_t, mut p_signature: *const uint8_t) -> libc::c_int {
-    let mut u1: [uint64_t; 6] = [0; 6];
-    let mut u2: [uint64_t; 6] = [0; 6];
-    let mut z: [uint64_t; 6] = [0; 6];
-    let mut l_public: EccPoint = EccPoint { x: [0; 6], y: [0; 6] };
-    let mut l_sum: EccPoint = EccPoint { x: [0; 6], y: [0; 6] };
-    let mut rx: [uint64_t; 6] = [0; 6];
-    let mut ry: [uint64_t; 6] = [0; 6];
-    let mut tx: [uint64_t; 6] = [0; 6];
-    let mut ty: [uint64_t; 6] = [0; 6];
-    let mut tz: [uint64_t; 6] = [0; 6];
-    let mut l_r: [uint64_t; 6] = [0; 6];
-    let mut l_s: [uint64_t; 6] = [0; 6];
+    let mut u1: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut u2: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut z: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut l_public: EccPoint = std::mem::MaybeUninit::uninit().assume_init();
+    let mut l_sum: EccPoint = std::mem::MaybeUninit::uninit().assume_init();
+    let mut rx: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut ry: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut tx: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut ty: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut tz: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut l_r: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
+    let mut l_s: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
     ecc_point_decompress(&mut l_public, p_publicKey);
     ecc_bytes2native(l_r.as_mut_ptr(), p_signature);
     ecc_bytes2native(l_s.as_mut_ptr(), p_signature.offset(48 as libc::c_int as isize));
