@@ -5,8 +5,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use openssl::rand::rand_bytes;
 
-use lazy_static::lazy_static;
-
 pub fn next_u32_secure() -> u32 {
     unsafe {
         let mut tmp: [u32; 1] = MaybeUninit::uninit().assume_init();
@@ -110,20 +108,18 @@ impl rand_core_062::RngCore for SecureRandom {
 impl rand_core_062::CryptoRng for SecureRandom {}
 
 unsafe impl Sync for SecureRandom {}
-
 unsafe impl Send for SecureRandom {}
-
-lazy_static! {
-    static ref XORSHIFT64_STATE: AtomicU64 = AtomicU64::new(next_u64_secure());
-}
 
 /// Get a non-cryptographic random number.
 pub fn xorshift64_random() -> u64 {
-    let mut x = XORSHIFT64_STATE.load(Ordering::Relaxed);
-    x = x.wrapping_add((x == 0) as u64);
+    static mut XORSHIFT64_STATE: AtomicU64 = AtomicU64::new(0);
+    let mut x = unsafe { XORSHIFT64_STATE.load(Ordering::Relaxed) };
+    while x == 0 {
+        x = next_u64_secure();
+    }
     x ^= x.wrapping_shl(13);
     x ^= x.wrapping_shr(7);
     x ^= x.wrapping_shl(17);
-    XORSHIFT64_STATE.store(x, Ordering::Relaxed);
+    unsafe { XORSHIFT64_STATE.store(x, Ordering::Relaxed) };
     x
 }

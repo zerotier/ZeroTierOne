@@ -1,9 +1,11 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
+#[allow(unused)]
 mod impl_macos;
 
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+#[allow(unused)]
 mod impl_openssl;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -203,7 +205,7 @@ mod tests {
             let _ = c.encrypt_second_pass_finish();
         }
         let duration = SystemTime::now().duration_since(start).unwrap();
-        println!("Encrypt benchmark: {} MiB/sec", (((benchmark_iterations * buf.len()) as f64) / 1048576.0) / duration.as_secs_f64());
+        println!("AES-GMAC-SIV (legacy) encrypt benchmark: {} MiB/sec", (((benchmark_iterations * buf.len()) as f64) / 1048576.0) / duration.as_secs_f64());
         let start = SystemTime::now();
         for _ in 0..benchmark_iterations {
             c.reset();
@@ -212,6 +214,6 @@ mod tests {
             c.decrypt_finish();
         }
         let duration = SystemTime::now().duration_since(start).unwrap();
-        println!("Decrypt benchmark: {} MiB/sec", (((benchmark_iterations * buf.len()) as f64) / 1048576.0) / duration.as_secs_f64());
+        println!("AES-GMAC-SIV (legacy) decrypt benchmark: {} MiB/sec", (((benchmark_iterations * buf.len()) as f64) / 1048576.0) / duration.as_secs_f64());
     }
 }

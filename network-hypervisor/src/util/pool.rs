@@ -1,5 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
 use std::sync::{Arc, Weak};
 
@@ -66,7 +67,7 @@ impl<O: Send, F: PoolFactory<O>> Pooled<O, F> {
 unsafe impl<O: Send, F: PoolFactory<O>> Send for Pooled<O, F> {}
 unsafe impl<O: Send, F: PoolFactory<O>> Sync for Pooled<O, F> where O: Sync {}
 
-impl<O: Send, F: PoolFactory<O>> std::ops::Deref for Pooled<O, F> {
+impl<O: Send, F: PoolFactory<O>> Deref for Pooled<O, F> {
     type Target = O;
 
     #[inline(always)]
@@ -75,17 +76,17 @@ impl<O: Send, F: PoolFactory<O>> std::ops::Deref for Pooled<O, F> {
     }
 }
 
+impl<O: Send, F: PoolFactory<O>> DerefMut for Pooled<O, F> {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut self.0.as_mut().obj }
+    }
+}
+
 impl<O: Send, F: PoolFactory<O>> AsRef<O> for Pooled<O, F> {
     #[inline(always)]
     fn as_ref(&self) -> &O {
         unsafe { &self.0.as_ref().obj }
-    }
-}
-
-impl<O: Send, F: PoolFactory<O>> std::ops::DerefMut for Pooled<O, F> {
-    #[inline(always)]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { &mut self.0.as_mut().obj }
     }
 }
 

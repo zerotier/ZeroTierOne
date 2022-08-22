@@ -39,7 +39,7 @@ pub struct IdentityP384Public {
 /// Secret keys associated with an identity.
 #[derive(Clone)]
 pub struct IdentitySecret {
-    pub x25519: C25519KeyPair,
+    pub x25519: X25519KeyPair,
     pub ed25519: Ed25519KeyPair,
     pub p384: Option<IdentityP384Secret>,
 }
@@ -155,7 +155,7 @@ impl Identity {
         let mut x25519;
         let mut x25519_pub;
         loop {
-            x25519 = C25519KeyPair::generate();
+            x25519 = X25519KeyPair::generate();
             x25519_pub = x25519.public_bytes();
 
             sha.update(&x25519_pub);
@@ -475,7 +475,7 @@ impl Identity {
                         ed25519: b.ed25519,
                         p384: None,
                         secret: Some(IdentitySecret {
-                            x25519: C25519KeyPair::from_bytes(&b.x25519, &b.x25519_secret)?,
+                            x25519: X25519KeyPair::from_bytes(&b.x25519, &b.x25519_secret)?,
                             ed25519: Ed25519KeyPair::from_bytes(&b.ed25519, &b.ed25519_secret)?,
                             p384: None,
                         }),
@@ -493,12 +493,7 @@ impl Identity {
             }
             IdentityBytes::X25519P384Public(b) => {
                 let b: &packed::V1 = bytes_as_flat_object(b);
-                if b.v0.key_type == 0
-                    && b.v0.secret_length == 0
-                    && b.v0.reserved == 0x03
-                    && u16::from_be_bytes(b.v0.ext_len) == (Self::BYTE_LENGTH_X25519P384_PUBLIC - Self::BYTE_LENGTH_X25519_PUBLIC) as u16
-                    && b.key_type_flags == Self::ALGORITHM_EC_NIST_P384
-                {
+                if b.v0.key_type == 0 && b.v0.secret_length == 0 && b.v0.reserved == 0x03 && u16::from_be_bytes(b.v0.ext_len) == (Self::BYTE_LENGTH_X25519P384_PUBLIC - Self::BYTE_LENGTH_X25519_PUBLIC) as u16 && b.key_type_flags == Self::ALGORITHM_EC_NIST_P384 {
                     Some(Self {
                         address: Address::from_bytes_fixed(&b.v0.address)?,
                         x25519: b.v0.x25519,
@@ -544,7 +539,7 @@ impl Identity {
                             ed25519_self_signature: b.ed25519_self_signature,
                         }),
                         secret: Some(IdentitySecret {
-                            x25519: C25519KeyPair::from_bytes(&b.v0s.x25519, &b.v0s.x25519_secret)?,
+                            x25519: X25519KeyPair::from_bytes(&b.v0s.x25519, &b.v0s.x25519_secret)?,
                             ed25519: Ed25519KeyPair::from_bytes(&b.v0s.ed25519, &b.v0s.ed25519_secret)?,
                             p384: Some(IdentityP384Secret {
                                 ecdh: P384KeyPair::from_bytes(&b.ecdh, &b.ecdh_secret)?,
@@ -740,7 +735,7 @@ impl FromStr for Identity {
                 }
                 Some(IdentitySecret {
                     x25519: {
-                        let tmp = C25519KeyPair::from_bytes(&keys[0].as_slice()[0..32], &keys[1].as_slice()[0..32]);
+                        let tmp = X25519KeyPair::from_bytes(&keys[0].as_slice()[0..32], &keys[1].as_slice()[0..32]);
                         if tmp.is_none() {
                             return Err(InvalidFormatError);
                         }
@@ -977,7 +972,10 @@ mod tests {
         let self_agree_expected = hex::from_string("de904fc90ff3a2b96b739b926e623113f5334c80841b654509b77916c4c4a6eb0ca69ec6ed01a7f04aee17c546b30ba4");
 
         // Test self-agree with a known good x25519-only (v0) identity.
-        let id = Identity::from_str("728efdb79d:0:3077ed0084d8d48a3ac628af6b45d9351e823bff34bc4376cddfc77a3d73a966c7d347bdcc1244d0e99e1b9c961ff5e963092e90ca43b47ff58c114d2d699664:2afaefcd1dca336ed59957eb61919b55009850b0b7088af3ee142672b637d1d49cc882b30a006f9eee42f2211ef8fe1cbe99a16a4436737fc158ce2243c15f12").unwrap();
+        let id = Identity::from_str(
+            "728efdb79d:0:3077ed0084d8d48a3ac628af6b45d9351e823bff34bc4376cddfc77a3d73a966c7d347bdcc1244d0e99e1b9c961ff5e963092e90ca43b47ff58c114d2d699664:2afaefcd1dca336ed59957eb61919b55009850b0b7088af3ee142672b637d1d49cc882b30a006f9eee42f2211ef8fe1cbe99a16a4436737fc158ce2243c15f12",
+        )
+        .unwrap();
         assert!(id.validate_identity());
         let self_agree = id.agree(&id).unwrap();
         assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));

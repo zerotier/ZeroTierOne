@@ -16,18 +16,18 @@ pub const ED25519_SECRET_KEY_SIZE: usize = 32;
 pub const ED25519_SIGNATURE_SIZE: usize = 64;
 
 /// Curve25519 key pair for ECDH key agreement.
-pub struct C25519KeyPair(x25519_dalek::StaticSecret, Secret<32>, x25519_dalek::PublicKey);
+pub struct X25519KeyPair(x25519_dalek::StaticSecret, Secret<32>, x25519_dalek::PublicKey);
 
-impl C25519KeyPair {
+impl X25519KeyPair {
     #[inline(always)]
-    pub fn generate() -> C25519KeyPair {
+    pub fn generate() -> X25519KeyPair {
         let sk = x25519_dalek::StaticSecret::new(SecureRandom::get());
         let sk2 = Secret(sk.to_bytes());
         let pk = x25519_dalek::PublicKey::from(&sk);
-        C25519KeyPair(sk, sk2, pk)
+        X25519KeyPair(sk, sk2, pk)
     }
 
-    pub fn from_bytes(public_key: &[u8], secret_key: &[u8]) -> Option<C25519KeyPair> {
+    pub fn from_bytes(public_key: &[u8], secret_key: &[u8]) -> Option<X25519KeyPair> {
         if public_key.len() == 32 && secret_key.len() == 32 {
             /* NOTE: we keep the original secret separately from x25519_dalek's StaticSecret
              * due to how "clamping" is done in the old C++ code vs x25519_dalek. Clamping
@@ -57,7 +57,7 @@ impl C25519KeyPair {
             let sk_orig: Secret<32> = Secret(secret_key.try_into().unwrap());
             let pk = x25519_dalek::PublicKey::from(pk);
             let sk = x25519_dalek::StaticSecret::from(sk_orig.0.clone());
-            Some(C25519KeyPair(sk, sk_orig, pk))
+            Some(X25519KeyPair(sk, sk_orig, pk))
         } else {
             None
         }
@@ -82,7 +82,7 @@ impl C25519KeyPair {
     }
 }
 
-impl Clone for C25519KeyPair {
+impl Clone for X25519KeyPair {
     fn clone(&self) -> Self {
         Self(x25519_dalek::StaticSecret::from(self.0.to_bytes()), self.1.clone(), x25519_dalek::PublicKey::from(self.1 .0.clone()))
     }

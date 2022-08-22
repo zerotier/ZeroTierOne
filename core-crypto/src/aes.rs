@@ -379,3 +379,39 @@ pub use fruit_flavored::{Aes, AesGcm};
 
 #[cfg(not(target_os = "macos"))]
 pub use openssl::{Aes, AesGcm};
+
+#[cfg(test)]
+mod tests {
+    use super::AesGcm;
+    use std::time::SystemTime;
+
+    #[test]
+    fn quick_benchmark() {
+        let mut buf = [0_u8; 12345];
+        for i in 1..12345 {
+            buf[i] = i as u8;
+        }
+        let iv = [1_u8; 16];
+
+        let mut c = AesGcm::new(&[1_u8; 32], true);
+
+        let benchmark_iterations: usize = 80000;
+        let start = SystemTime::now();
+        for _ in 0..benchmark_iterations {
+            c.init(&iv);
+            c.crypt_in_place(&mut buf);
+        }
+        let duration = SystemTime::now().duration_since(start).unwrap();
+        println!("AES-256-GCM encrypt benchmark: {} MiB/sec", (((benchmark_iterations * buf.len()) as f64) / 1048576.0) / duration.as_secs_f64());
+
+        let mut c = AesGcm::new(&[1_u8; 32], false);
+
+        let start = SystemTime::now();
+        for _ in 0..benchmark_iterations {
+            c.init(&iv);
+            c.crypt_in_place(&mut buf);
+        }
+        let duration = SystemTime::now().duration_since(start).unwrap();
+        println!("AES-256-GCM decrypt benchmark: {} MiB/sec", (((benchmark_iterations * buf.len()) as f64) / 1048576.0) / duration.as_secs_f64());
+    }
+}

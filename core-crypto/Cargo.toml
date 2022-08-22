@@ -1,26 +1,30 @@
 [package]
-name = "zerotier-core-crypto"
-version = "0.1.0"
+authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 edition = "2021"
 license = "MPL-2.0"
-authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
+name = "zerotier-core-crypto"
+version = "0.1.0"
 
 [dependencies]
-rand_core = "0.5.1"
-rand_core_062 = { package = "rand_core", version = "0.6.2" }
-x25519-dalek = { version = "1.2.0", features = ["std", "u64_backend"], default-features = false }
-ed25519-dalek = { version = "1.0.1", features = ["std", "u64_backend"], default-features = false }
-subtle = "2.4.1"
-openssl = { version = "^0", features = [], default-features = false }
-lazy_static = "^1"
+ed25519-dalek = {version = "1.0.1", features = ["std", "u64_backend"], default-features = false}
 foreign-types = "0.3.1"
-poly1305 = { version = "0.7.2", features = [], default-features = false }
-parking_lot = { version = "^0", features = [], default-features = false }
-pqc_kyber = { path = "../third_party/kyber", features = ["kyber512", "reference"], default-features = false }
+lazy_static = "^1"
+openssl = {version = "^0", features = [], default-features = false}
+parking_lot = {version = "^0", features = [], default-features = false}
+poly1305 = {version = "0.7.2", features = [], default-features = false}
+pqc_kyber = {path = "../third_party/kyber", features = ["kyber512", "reference"], default-features = false}
+rand_core = "0.5.1"
+rand_core_062 = {package = "rand_core", version = "0.6.2"}
+subtle = "2.4.1"
+x25519-dalek = {version = "1.2.0", features = ["std", "u64_backend"], default-features = false}
 
 [target."cfg(not(any(target_os = \"macos\", target_os = \"ios\")))".dependencies]
 openssl = "^0"
 
 [dev-dependencies]
-quickcheck = "1.0.3"
+criterion = "0.3"
 sha2 = "^0"
+
+[[bench]]
+harness = false
+name = "benchmark_crypto"

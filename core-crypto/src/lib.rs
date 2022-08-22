@@ -14,4 +14,6 @@ pub mod secret;
 pub mod varint;
 pub mod x25519;
 
+mod p384_internal;
+
 pub const ZEROES: [u8; 16] = [0_u8; 16];
