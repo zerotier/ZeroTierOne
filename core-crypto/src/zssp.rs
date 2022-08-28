@@ -1,6 +1,8 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::io::Write;
 use std::num::NonZeroU64;
+use std::ops::Deref;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::aes::{Aes, AesGcm};
@@ -8,56 +10,11 @@ use crate::hash::{hmac_sha384, hmac_sha512, SHA384, SHA512};
 use crate::p384::{P384KeyPair, P384PublicKey, P384_PUBLIC_KEY_SIZE};
 use crate::random;
 use crate::secret::Secret;
+use crate::varint;
 
 use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
 
-/*
-
-ZeroTier V2 Noise(-like?) Session Protocol
-
-This protocol implements the Noise_IK key exchange pattern using NIST P-384 ECDH, AES-GCM,
-and SHA512. So yes, Virginia, it's a FIPS-compliant Noise implementation. NIST P-384 is
-not listed in official Noise documentation though, so consider it "Noise-like" if you
-prefer.
-
-See also: http://noiseprotocol.org/noise.html
-
-Secondary hybrid exchange using Kyber512, the recently approved post-quantum KEX algorithm,
-is also supported but is optional. When it is enabled the additional shared secret is
-mixed into the final Noise_IK secret with HMAC/HKDF. This provides an exchange at least as
-strong as the stronger of the two algorithms (ECDH and Kyber) since hashing anything with
-a secret yields a secret.
-
-Kyber theoretically provides data forward secrecy into the post-quantum era if and when it
-arrives. It might also reassure those paranoid about NIST elliptic curves a little, though
-we tend to accept the arguments of Koblitz and Menezes against the curves being backdoored.
-These arguments are explained at the end of this post:
-
-https://blog.cryptographyengineering.com/2015/10/22/a-riddle-wrapped-in-curve/
-
-Kyber is used as long as both sides set the "jedi" parameter to true. It should be used
-by default but can be disabled on tiny and slow devices or systems that talk to vast
-numbers of endpoints and don't want the extra overhead.
-
-Lastly, this protocol includes obfusation using a hash of the recipient's public identity
-as a key. AES is used to encrypt the first block of each packet (or the first few blocks
-for key exchange packets), making packets appear as pure noise to anyone who does not know
-the identity of the recipient.
-
-Obfuscation renders ZeroTier traffic uncategorizable to those who do not know the identity
-of a packet's recipient, helping to defend against bulk de-anonymization. It also makes it
-easy for recipient nodes to silently discard packets from senders that do not know them,
-maintaining invisibility from naive network scanners.
-
-Obfuscation doesn't play any meaningful role in data privacy or authentication. It can be
-ignored when analyzing the "real" security of the protocol.
-
-*/
-
-/// Minimum packet size / minimum size for work buffers.
-pub const MIN_BUFFER_SIZE: usize = 1400;
-
-/// Minimum possible packet size.
+/// Minimum possible packet size. Packets smaller than this are rejected.
 pub const MIN_PACKET_SIZE: usize = HEADER_SIZE + 1 + AES_GCM_TAG_SIZE;
 
 /// Start attempting to rekey after a key has been used to send packets this many times.
@@ -75,19 +32,22 @@ const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60; // 1 hour
 /// Maximum random jitter to add to rekey-after time.
 const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 5;
 
-/// Don't send or process inbound offers more often than this.
-const OFFER_RATE_LIMIT_MS: i64 = 1000;
+/// Rate limit for sending new offers to attempt to re-key.
+const OFFER_RATE_LIMIT_MS: i64 = 2000;
+
+/// Version 1: NIST P-384 forward secrecy and authentication with optional Kyber1024 forward secrecy (but not authentication)
+const SESSION_PROTOCOL_VERSION: u8 = 1;
 
 const PACKET_TYPE_DATA: u8 = 0;
 const PACKET_TYPE_NOP: u8 = 1;
 const PACKET_TYPE_KEY_OFFER: u8 = 2; // "alice"
 const PACKET_TYPE_KEY_COUNTER_OFFER: u8 = 3; // "bob"
 
-/// Secondary (hybrid) ephemeral key disabled.
-const E1_TYPE_NONE: u8 = 0;
+const GET_PACKET_TYPE_BIT_MASK: u8 = 0x1f;
+const GET_PROTOCOL_VERSION_SHIFT_RIGHT: u32 = 5;
 
-/// Secondary (hybrid) ephemeral key is Kyber512
-const E1_TYPE_KYBER512: u8 = 1;
+const E1_TYPE_NONE: u8 = 0;
+const E1_TYPE_KYBER1024: u8 = 1;
 
 const HEADER_SIZE: usize = 11;
 const AES_GCM_TAG_SIZE: usize = 16;
@@ -99,9 +59,9 @@ const SESSION_ID_SIZE: usize = 6;
 /// It doesn't matter very much what this is, but it's good for it to be unique.
 const KEY_DERIVATION_CHAIN_STARTING_SALT: [u8; 64] = [
     // macOS command line to generate:
-    // echo -n 'Noise_IKpsk2_NISTP384+hybrid_AESGCM_SHA512' | shasum -a 512  | cut -d ' ' -f 1 | xxd -r -p | xxd -i
-    0xc7, 0x66, 0xf3, 0x71, 0xc8, 0xbc, 0xc3, 0x19, 0xc6, 0xf0, 0x2a, 0x6e, 0x5c, 0x4b, 0x3c, 0xc0, 0x83, 0x29, 0x09, 0x09, 0x14, 0x4a, 0xf0, 0xde, 0xea, 0x3d, 0xbd, 0x00, 0x4c, 0x9e, 0x01, 0xa0, 0x6e, 0xb6, 0x9b, 0x56, 0x47, 0x97, 0x86, 0x1d, 0x4e, 0x94, 0xc5, 0xdd, 0xde, 0x4a, 0x1c, 0xc3, 0x4e,
-    0xcc, 0x8b, 0x09, 0x3b, 0xb3, 0xc3, 0xb0, 0x03, 0xd7, 0xdf, 0x22, 0x49, 0x3f, 0xa5, 0x01,
+    // echo -n 'ZSSP_Noise_IKpsk2_NISTP384_?KYBER1024_AESGCM_SHA512' | shasum -a 512  | cut -d ' ' -f 1 | xxd -r -p | xxd -i
+    0x35, 0x6a, 0x75, 0xc0, 0xbf, 0xbe, 0xc3, 0x59, 0x70, 0x94, 0x50, 0x69, 0x4c, 0xa2, 0x08, 0x40, 0xc7, 0xdf, 0x67, 0xa8, 0x68, 0x52, 0x6e, 0xd5, 0xdd, 0x77, 0xec, 0x59, 0x6f, 0x8e, 0xa1, 0x99,
+    0xb4, 0x32, 0x85, 0xaf, 0x7f, 0x0d, 0xa9, 0x6c, 0x01, 0xfb, 0x72, 0x46, 0xc0, 0x09, 0x58, 0xb8, 0xe0, 0xa8, 0xcf, 0xb1, 0x58, 0x04, 0x6e, 0x32, 0xba, 0xa8, 0xb8, 0xf9, 0x0a, 0xa4, 0xbf, 0x36,
 ];
 
 const KBKDF_KEY_USAGE_LABEL_HMAC: u8 = b'M';
@@ -132,12 +92,26 @@ pub enum Error {
 
     /// Packet ignored by rate limiter.
     RateLimited,
+
+    /// Other end sent a protocol version we don't support.
+    UnknownProtocolVersion(u8),
+
+    /// An internal error occurred.
+    OtherError(Box<dyn std::error::Error>),
+}
+
+impl From<std::io::Error> for Error {
+    #[cold]
+    #[inline(never)]
+    fn from(e: std::io::Error) -> Self {
+        Self::OtherError(Box::new(e))
+    }
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UnknownLocalSessionId(_) => f.write_str("UnknownLocalSessionId"),
+            Self::UnknownLocalSessionId(id) => f.write_str(format!("UnknownLocalSessionId({})", id.0.get()).as_str()),
             Self::InvalidPacket => f.write_str("InvalidPacket"),
             Self::InvalidParameter => f.write_str("InvalidParameter"),
             Self::FailedAuthentication => f.write_str("FailedAuthentication"),
@@ -145,6 +119,8 @@ impl std::fmt::Display for Error {
             Self::MaxKeyLifetimeExceeded => f.write_str("MaxKeyLifetimeExceeded"),
             Self::SessionNotEstablished => f.write_str("SessionNotEstablished"),
             Self::RateLimited => f.write_str("RateLimited"),
+            Self::UnknownProtocolVersion(v) => f.write_str(format!("UnknownProtocolVersion({})", v).as_str()),
+            Self::OtherError(e) => f.write_str(format!("OtherError({})", e.to_string()).as_str()),
         }
     }
 }
@@ -152,7 +128,6 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {}
 
 impl std::fmt::Debug for Error {
-    #[inline(always)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Display::fmt(self, f)
     }
@@ -168,7 +143,7 @@ impl Obfuscator {
     }
 }
 
-pub enum ReceiveResult<'a, O> {
+pub enum ReceiveResult<'a, H: SessionHost> {
     /// Packet is valid and contained a data payload.
     OkData(&'a [u8], u32),
 
@@ -176,7 +151,7 @@ pub enum ReceiveResult<'a, O> {
     OkSendReply(&'a [u8]),
 
     /// Packet is valid and a new session was created, also includes a reply to be sent back.
-    OkNewSession(Session<O>, &'a [u8]),
+    OkNewSession(Session<H>, &'a [u8]),
 
     /// Packet is valid, no action needs to be taken.
     Ok,
@@ -212,8 +187,8 @@ impl SessionId {
     }
 
     #[inline(always)]
-    pub fn copy_to(&self, b: &mut [u8]) {
-        b[..6].copy_from_slice(&self.0.get().to_le_bytes()[..6])
+    pub fn to_bytes(&self) -> [u8; SESSION_ID_SIZE] {
+        self.0.get().to_le_bytes()[0..6].try_into().unwrap()
     }
 }
 
@@ -237,10 +212,37 @@ impl From<SessionId> for u64 {
     }
 }
 
-/// ZeroTier Noise encrypted channel session.
-pub struct Session<O> {
-    /// Local session ID
+pub trait SessionHost: Sized {
+    type Buffer: AsRef<[u8]> + AsMut<[u8]> + Write;
+    type AssociatedObject: Sized;
+    type SessionRef: Deref<Target = Session<Self>>;
+
+    /// Get a reference to this host's static public key blob.
+    fn get_local_s_public(&self) -> &[u8];
+
+    /// Get a reference to this hosts' static public key's NIST P-384 secret key pair
+    fn get_local_s_keypair_p384(&self) -> &P384KeyPair;
+
+    /// Get an empty writable buffer, or None if none are available and the operation in progress should fail.
+    fn get_buffer(&self) -> Option<Self::Buffer>;
+
+    /// Extract a NIST P-384 ECC public key from a static public key blob.
+    fn extract_p384_static(static_public: &[u8]) -> Option<P384PublicKey>;
+
+    /// Look up a local session by local ID.
+    fn session_lookup(&self, local_session_id: SessionId) -> Option<Self::SessionRef>;
+
+    /// Check whether a new session should be accepted.
+    ///
+    /// On success a tuple of local session ID, static secret, and associated object is returned. The
+    /// static secret is whatever results from agreement between the local and remote static public
+    /// keys.
+    fn accept_new_session(&self, remote_static_public: &[u8], remote_metadata: &[u8]) -> Option<(SessionId, Secret<64>, Self::AssociatedObject)>;
+}
+
+pub struct Session<H: SessionHost> {
     pub id: SessionId,
+    pub associated_object: H::AssociatedObject,
 
     send_counter: Counter,
     remote_s_public_hash: [u8; 48],
@@ -249,9 +251,6 @@ pub struct Session<O> {
     outgoing_obfuscator: Obfuscator,
     state: RwLock<MutableState>,
     remote_s_public_p384: [u8; P384_PUBLIC_KEY_SIZE],
-
-    /// Arbitrary object associated with this session
-    pub associated_object: O,
 }
 
 struct MutableState {
@@ -260,28 +259,40 @@ struct MutableState {
     offer: Option<EphemeralOffer>,
 }
 
-impl<O> Session<O> {
-    /// Create a new session and return this plus an outgoing packet to send to the other end.
-    pub fn new<'a, const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE: usize>(
-        buffer: &'a mut [u8; MAX_PACKET_SIZE],
+impl<H: SessionHost> Session<H> {
+    pub fn new<SendFunction: FnMut(&[u8])>(
+        host: &H,
+        send: SendFunction,
         local_session_id: SessionId,
-        local_s_public: &[u8; STATIC_PUBLIC_SIZE],
-        local_s_keypair_p384: &P384KeyPair,
-        remote_s_public: &[u8; STATIC_PUBLIC_SIZE],
-        remote_s_public_p384: &P384PublicKey,
+        remote_s_public: &[u8],
+        offer_metadata: &[u8],
         psk: &Secret<64>,
-        associated_object: O,
+        associated_object: H::AssociatedObject,
+        mtu: usize,
         current_time: i64,
         jedi: bool,
-    ) -> Result<(Self, &'a [u8]), Error> {
-        debug_assert!(MAX_PACKET_SIZE >= MIN_BUFFER_SIZE);
-        let counter = Counter::new();
-        if let Some(ss) = local_s_keypair_p384.agree(remote_s_public_p384) {
-            let outgoing_obfuscator = Obfuscator::new(remote_s_public);
-            if let Some((offer, psize)) = EphemeralOffer::create_alice_offer(buffer, counter.next(), local_session_id, None, local_s_public, remote_s_public_p384, &ss, &outgoing_obfuscator, current_time, jedi) {
-                return Ok((
-                    Session::<O> {
+    ) -> Result<Self, Error> {
+        if let Some(remote_s_public_p384) = H::extract_p384_static(remote_s_public) {
+            if let Some(ss) = host.get_local_s_keypair_p384().agree(&remote_s_public_p384) {
+                let outgoing_obfuscator = Obfuscator::new(remote_s_public);
+                let counter = Counter::new();
+                if let Ok(offer) = EphemeralOffer::create_alice_offer(
+                    send,
+                    counter.next(),
+                    local_session_id,
+                    None,
+                    host.get_local_s_public(),
+                    offer_metadata,
+                    &remote_s_public_p384,
+                    &ss,
+                    &outgoing_obfuscator,
+                    mtu,
+                    current_time,
+                    jedi,
+                ) {
+                    return Ok(Self {
                         id: local_session_id,
+                        associated_object,
                         send_counter: counter,
                         remote_s_public_hash: SHA384::hash(remote_s_public),
                         psk: psk.clone(),
@@ -293,41 +304,70 @@ impl<O> Session<O> {
                             offer: Some(offer),
                         }),
                         remote_s_public_p384: remote_s_public_p384.as_bytes().clone(),
-                        associated_object,
-                    },
-                    &buffer[..psize],
-                ));
+                    });
+                }
             }
         }
         return Err(Error::InvalidParameter);
     }
 
-    /// Check whether this session should initiate a re-key, returning a packet to send if true.
-    ///
-    /// This must be checked often enough to ensure that the hard key usage limit is not reached, which in the
-    /// usual UDP use case means once every ~3TiB of traffic.
-    pub fn rekey_check<'a, const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE: usize>(&self, buffer: &'a mut [u8; MAX_PACKET_SIZE], local_s_public: &[u8; STATIC_PUBLIC_SIZE], current_time: i64, force: bool, jedi: bool) -> Option<&'a [u8]> {
+    pub fn rekey_check<SendFunction: FnMut(&[u8])>(&self, host: &H, send: SendFunction, offer_metadata: &[u8], mtu: usize, current_time: i64, force: bool, jedi: bool) {
         let state = self.state.upgradable_read();
         if let Some(key) = state.keys[0].as_ref() {
             if force || (key.lifetime.should_rekey(self.send_counter.current(), current_time) && state.offer.as_ref().map_or(true, |o| (current_time - o.creation_time) > OFFER_RATE_LIMIT_MS)) {
                 if let Some(remote_s_public_p384) = P384PublicKey::from_bytes(&self.remote_s_public_p384) {
-                    if let Some((offer, psize)) = EphemeralOffer::create_alice_offer(buffer, self.send_counter.next(), self.id, state.remote_session_id, local_s_public, &remote_s_public_p384, &self.ss, &self.outgoing_obfuscator, current_time, jedi) {
-                        let mut state = RwLockUpgradableReadGuard::upgrade(state);
-                        let _ = state.offer.replace(offer);
-                        return Some(&buffer[..psize]);
+                    if let Ok(offer) = EphemeralOffer::create_alice_offer(
+                        send,
+                        self.send_counter.next(),
+                        self.id,
+                        state.remote_session_id,
+                        host.get_local_s_public(),
+                        offer_metadata,
+                        &remote_s_public_p384,
+                        &self.ss,
+                        &self.outgoing_obfuscator,
+                        mtu,
+                        current_time,
+                        jedi,
+                    ) {
+                        let _ = RwLockUpgradableReadGuard::upgrade(state).offer.replace(offer);
                     }
                 }
             }
         }
-        return None;
     }
 
-    /// Send a data packet to the other side, returning packet to send.
-    pub fn send<'a, const MAX_PACKET_SIZE: usize>(&self, buffer: &'a mut [u8; MAX_PACKET_SIZE], data: &[u8]) -> Result<&'a [u8], Error> {
+    /*
+    debug_assert!(packet_type == PACKET_TYPE_DATA || packet_type == PACKET_TYPE_NOP);
+    buffer[0] = packet_type;
+    buffer[1..7].copy_from_slice(&remote_session_id.to_le_bytes()[..SESSION_ID_SIZE]);
+    buffer[7..11].copy_from_slice(&counter.to_bytes());
+
+    let payload_end = HEADER_SIZE + data.len();
+    let tag_end = payload_end + AES_GCM_TAG_SIZE;
+    if tag_end < MAX_PACKET_SIZE {
+        let mut c = key.get_send_cipher(counter)?;
+        buffer[11..16].fill(0);
+        c.init(&buffer[..16]);
+        c.crypt(data, &mut buffer[HEADER_SIZE..payload_end]);
+        buffer[payload_end..tag_end].copy_from_slice(&c.finish());
+        key.return_send_cipher(c);
+
+        outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[..16]);
+
+        Ok(tag_end)
+    } else {
+        unlikely_branch();
+        Err(Error::InvalidParameter)
+    }
+    */
+
+    /*
+    pub fn send(&self, data: &[u8]) -> Result<H::Buffer, Error> {
         let state = self.state.read();
         if let Some(key) = state.keys[0].as_ref() {
             if let Some(remote_session_id) = state.remote_session_id {
-                let data_len = assemble_and_armor_DATA(buffer, data, PACKET_TYPE_DATA, u64::from(remote_session_id), self.send_counter.next(), &key, &self.outgoing_obfuscator)?;
+                //let data_len = assemble_and_armor_DATA(buffer, data, PACKET_TYPE_DATA, u64::from(remote_session_id), self.send_counter.next(), &key, &self.outgoing_obfuscator)?;
                 Ok(&buffer[..data_len])
             } else {
                 unlikely_branch();
@@ -338,7 +378,9 @@ impl<O> Session<O> {
             Err(Error::SessionNotEstablished)
         }
     }
+    */
 
+    /*
     /// Receive a packet from the network and take the appropriate action.
     ///
     /// Check ReceiveResult to see if it includes data or a reply packet.
@@ -361,16 +403,19 @@ impl<O> Session<O> {
         current_time: i64,
         jedi: bool,
     ) -> Result<ReceiveResult<'a, O>, Error> {
-        debug_assert!(MAX_PACKET_SIZE >= MIN_BUFFER_SIZE);
+        debug_assert!(MAX_PACKET_SIZE >= (64 + STATIC_PUBLIC_SIZE + P384_PUBLIC_KEY_SIZE + pqc_kyber::KYBER_PUBLICKEYBYTES));
+
         if incoming_packet.len() > MAX_PACKET_SIZE || incoming_packet.len() <= MIN_PACKET_SIZE {
             unlikely_branch();
             return Err(Error::InvalidPacket);
         }
 
         incoming_obfuscator.0.decrypt_block(&incoming_packet[..16], &mut buffer[..16]);
-        let packet_type = buffer[0];
-        let local_session_id = SessionId::new_from_bytes(&buffer[1..7]);
+        let mut packet_type = buffer[0];
+        let continued = (packet_type & PACKET_FLAG_CONTINUED) != 0;
+        packet_type &= PACKET_TYPE_MASK;
 
+        let local_session_id = SessionId::new_from_bytes(&buffer[1..7]);
         let session = local_session_id.and_then(|sid| session_lookup(sid));
 
         debug_assert_eq!(PACKET_TYPE_DATA, 0);
@@ -423,9 +468,13 @@ impl<O> Session<O> {
             }
 
             if incoming_packet.len() > (HEADER_SIZE + P384_PUBLIC_KEY_SIZE + AES_GCM_TAG_SIZE + HMAC_SIZE) {
-                incoming_obfuscator.0.decrypt_block(&incoming_packet[16..32], &mut buffer[16..32]);
-                incoming_obfuscator.0.decrypt_block(&incoming_packet[32..48], &mut buffer[32..48]);
-                incoming_obfuscator.0.decrypt_block(&incoming_packet[48..64], &mut buffer[48..64]);
+                for i in (16..64).step_by(16) {
+                    let j = i + 16;
+                    incoming_obfuscator.0.decrypt_block(&incoming_packet[i..j], &mut buffer[i..j]);
+                    for k in i..j {
+                        buffer[k] ^= incoming_packet[k - 16];
+                    }
+                }
                 buffer[64..incoming_packet.len()].copy_from_slice(&incoming_packet[64..]);
             } else {
                 return Err(Error::InvalidPacket);
@@ -491,6 +540,7 @@ impl<O> Session<O> {
                         if let Some((local_session_id, psk, associated_object)) = new_session_auth(&alice_s_public) {
                             Some(Session::<O> {
                                 id: local_session_id,
+                                associated_object,
                                 send_counter: Counter::new(),
                                 remote_s_public_hash: SHA384::hash(&alice_s_public),
                                 psk,
@@ -502,7 +552,6 @@ impl<O> Session<O> {
                                     offer: None,
                                 }),
                                 remote_s_public_p384: alice_s_public_p384.as_bytes().clone(),
-                                associated_object,
                             })
                         } else {
                             return Err(Error::NewSessionRejected);
@@ -557,9 +606,13 @@ impl<O> Session<O> {
                     // Bob now has final key state for this exchange. Yay! Now reply to Alice so she can construct it.
 
                     session.outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[0..16]);
-                    session.outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[16..32]);
-                    session.outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[32..48]);
-                    session.outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[48..64]);
+                    for i in (16..64).step_by(16) {
+                        let j = i + 16;
+                        for k in i..j {
+                            buffer[k] ^= buffer[k - 16];
+                        }
+                        session.outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[i..j]);
+                    }
 
                     return new_session.map_or_else(|| Ok(ReceiveResult::OkSendReply(&buffer[..reply_size])), |ns| Ok(ReceiveResult::OkNewSession(ns, &buffer[..reply_size])));
                 }
@@ -642,6 +695,7 @@ impl<O> Session<O> {
             }
         }
     }
+    */
 }
 
 #[repr(transparent)]
@@ -666,8 +720,8 @@ impl Counter {
 /// A value of the outgoing packet counter.
 ///
 /// The counter is internally 64-bit so we can more easily track usage limits without
-/// confusing modular difference stuff. The counter as seen externally and placed in
-/// packets is the least significant 32 bits.
+/// confusing logic to handle 32-bit wrapping. The least significant 32 bits are the
+/// actual counter put in the packet.
 #[repr(transparent)]
 #[derive(Copy, Clone)]
 struct CounterValue(u64);
@@ -676,6 +730,11 @@ impl CounterValue {
     #[inline(always)]
     pub fn to_bytes(&self) -> [u8; 4] {
         (self.0 as u32).to_le_bytes()
+    }
+
+    #[inline(always)]
+    pub fn lsb(&self) -> u8 {
+        self.0 as u8
     }
 }
 
@@ -714,60 +773,186 @@ struct EphemeralOffer {
 }
 
 impl EphemeralOffer {
-    fn create_alice_offer<const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE: usize>(
-        buffer: &mut [u8; MAX_PACKET_SIZE],
+    fn create_alice_offer<SendFunction: FnMut(&[u8])>(
+        mut send: SendFunction,
         counter: CounterValue,
         alice_session_id: SessionId,
         bob_session_id: Option<SessionId>,
-        alice_s_public: &[u8; STATIC_PUBLIC_SIZE],
+        alice_s_public: &[u8],
+        alice_metadata: &[u8],
         bob_s_public_p384: &P384PublicKey,
         ss: &Secret<48>,
-        outgoing_obfuscator: &Obfuscator, // bobfuscator?
+        outgoing_obfuscator: &Obfuscator,
+        mtu: usize,
         current_time: i64,
         jedi: bool,
-    ) -> Option<(EphemeralOffer, usize)> {
-        debug_assert!(MAX_PACKET_SIZE >= MIN_BUFFER_SIZE);
-
+    ) -> Result<EphemeralOffer, Error> {
         let alice_e0_keypair = P384KeyPair::generate();
-        let e0s = alice_e0_keypair.agree(bob_s_public_p384)?;
+        let e0s = alice_e0_keypair.agree(bob_s_public_p384);
+        if e0s.is_none() {
+            return Err(Error::InvalidPacket);
+        }
+
         let alice_e1_keypair = if jedi {
             Some(pqc_kyber::keypair(&mut random::SecureRandom::get()))
         } else {
             None
         };
 
-        let key = Secret(hmac_sha512(&hmac_sha512(&KEY_DERIVATION_CHAIN_STARTING_SALT, alice_e0_keypair.public_key_bytes()), e0s.as_bytes()));
+        let bob_session_id_bytes = bob_session_id.map_or(0_u64, |i| i.into()).to_le_bytes();
 
-        let mut packet_size = assemble_KEY_OFFER(buffer, counter, bob_session_id, alice_e0_keypair.public_key(), alice_session_id, alice_s_public, alice_e1_keypair.as_ref().map(|s| &s.public));
+        const PACKET_BUF_SIZE: usize = 3072;
+        let mut packet_buf = [0_u8; PACKET_BUF_SIZE];
 
-        debug_assert!(packet_size <= MAX_PACKET_SIZE);
-        let mut c = AesGcm::new(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n::<32>(), true);
-        c.init(&get_aes_gcm_nonce(buffer));
-        c.crypt_in_place(&mut buffer[(HEADER_SIZE + P384_PUBLIC_KEY_SIZE)..packet_size]);
-        let c = c.finish();
-        buffer[packet_size..packet_size + AES_GCM_TAG_SIZE].copy_from_slice(&c);
-        packet_size += AES_GCM_TAG_SIZE;
+        let mut packet_len = {
+            let mut p = &mut packet_buf[..];
+
+            p.write_all(&[PACKET_TYPE_KEY_OFFER])?;
+            p.write_all(&bob_session_id_bytes[..SESSION_ID_SIZE])?;
+            p.write_all(&counter.to_bytes())?;
+
+            p.write_all(alice_e0_keypair.public_key_bytes())?;
+
+            p.write_all(&alice_session_id.0.get().to_le_bytes()[..SESSION_ID_SIZE])?;
+            varint::write(&mut p, alice_s_public.len() as u64)?;
+            p.write_all(alice_s_public)?;
+            varint::write(&mut p, alice_metadata.len() as u64)?;
+            p.write_all(alice_metadata)?;
+            if let Some(e1kp) = alice_e1_keypair {
+                p.write_all(&[E1_TYPE_KYBER1024])?;
+                p.write_all(&e1kp.public)?;
+            } else {
+                p.write_all(&[E1_TYPE_NONE])?;
+            }
+
+            PACKET_BUF_SIZE - p.len()
+        };
+
+        if packet_len > mtu {
+            packet_buf[0] |= PACKET_FLAG_CONTINUED;
+        }
+
+        let key = Secret(hmac_sha512(
+            &hmac_sha512(&KEY_DERIVATION_CHAIN_STARTING_SALT, alice_e0_keypair.public_key_bytes()),
+            e0s.unwrap().as_bytes(),
+        ));
+
+        let gcm_tag = {
+            let mut c = AesGcm::new(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n::<32>(), true);
+            c.init(&get_aes_gcm_nonce(&packet_buf));
+            c.crypt_in_place(&mut packet_buf[(HEADER_SIZE + P384_PUBLIC_KEY_SIZE)..packet_len]);
+            c.finish()
+        };
+        packet_buf[packet_len..(packet_len + AES_GCM_TAG_SIZE)].copy_from_slice(&gcm_tag);
+        packet_len += AES_GCM_TAG_SIZE;
 
         let key = Secret(hmac_sha512(key.as_bytes(), ss.as_bytes()));
 
-        let hmac = hmac_sha384(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(), &buffer[..packet_size]);
-        buffer[packet_size..packet_size + HMAC_SIZE].copy_from_slice(&hmac);
-        packet_size += HMAC_SIZE;
+        let hmac = hmac_sha384(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(), &packet_buf[..packet_len]);
+        packet_buf[packet_len..(packet_len + HMAC_SIZE)].copy_from_slice(&hmac);
+        packet_len += HMAC_SIZE;
 
-        outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[0..16]);
-        outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[16..32]);
-        outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[32..48]);
-        outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[48..64]);
+        cbc_obfuscate_first_64(outgoing_obfuscator, &mut packet_buf);
+        if packet_len > mtu {
+            send_fragmented(send, &mut packet_buf[..packet_len], counter, mtu, &bob_session_id_bytes[..SESSION_ID_SIZE], outgoing_obfuscator)?;
+        } else {
+            send(&packet_buf[..packet_len]);
+        }
 
-        Some((
-            EphemeralOffer {
-                creation_time: current_time,
-                key,
-                alice_e0_keypair,
-                alice_e1_keypair,
-            },
-            packet_size,
-        ))
+        Ok(EphemeralOffer {
+            creation_time: current_time,
+            key,
+            alice_e0_keypair,
+            alice_e1_keypair,
+        })
+    }
+}
+
+/// Send a packet that must be fragmented.
+///
+/// The packet MUST have its CONTINUED flag set in its header. This isn't used
+/// for unfragmented packets. Those are just sent directly.
+///
+/// The packet should be obfuscated as normal. This handles obfuscation of
+/// fragments after the head. The contents of 'packet' are partly overwritten.
+fn send_fragmented<SendFunction: FnMut(&[u8])>(
+    mut send: SendFunction,
+    packet: &mut [u8],
+    counter: CounterValue,
+    mtu: usize,
+    remote_session_id_bytes: &[u8],
+    outgoing_obfuscator: &Obfuscator,
+) -> std::io::Result<()> {
+    let packet_len = packet.len();
+    debug_assert!(packet_len >= MIN_PACKET_SIZE);
+    debug_assert!(mtu > MIN_PACKET_SIZE);
+
+    let frag_len_max = ((packet_len as f64) / ((packet_len as f64) / ((mtu - HEADER_SIZE) as f64)).ceil()).ceil() as usize;
+    debug_assert!(frag_len_max > 0);
+    let mut frag_len = packet_len.min(frag_len_max);
+    debug_assert!(frag_len > 0);
+
+    send(&packet[..frag_len]);
+
+    let frag0_tail = [packet[frag_len - 2], packet[frag_len - 1]];
+
+    let mut next_frag_start = frag_len;
+    let mut frag_no = 1_u8;
+    while next_frag_start < packet_len {
+        debug_assert!(next_frag_start > HEADER_SIZE);
+        frag_len = (packet_len - next_frag_start).min(frag_len_max);
+        debug_assert!(frag_len > MIN_PACKET_SIZE);
+        let frag_end = next_frag_start + frag_len;
+        debug_assert!(frag_end <= packet_len);
+
+        next_frag_start -= HEADER_SIZE;
+        let mut frag_hdr = &mut packet[next_frag_start..];
+        frag_hdr.write_all(&[if frag_end == packet_len {
+            PACKET_TYPE_CONTINUATION
+        } else {
+            PACKET_TYPE_CONTINUATION | PACKET_FLAG_CONTINUED
+        }])?;
+        frag_hdr.write_all(&remote_session_id_bytes)?;
+        frag_hdr.write_all(&[counter.lsb(), frag_no])?;
+        frag_no += 1;
+        frag_hdr.write_all(&frag0_tail)?;
+
+        outgoing_obfuscator.0.encrypt_block_in_place(&mut packet[next_frag_start..(next_frag_start + 16)]);
+        send(&packet[next_frag_start..frag_end]);
+
+        next_frag_start = frag_end;
+    }
+
+    Ok(())
+}
+
+/// Obfuscate the first 64 bytes of a packet (used for key exchanges).
+fn cbc_obfuscate_first_64(ob: &Obfuscator, data: &mut [u8]) {
+    ob.0.encrypt_block_in_place(&mut data[0..16]);
+    let mut i = 16;
+    while i < 64 {
+        let j = i + 16;
+        for k in i..j {
+            data[k] ^= data[k - 16];
+        }
+        ob.0.encrypt_block_in_place(&mut data[i..j]);
+        i = j;
+    }
+}
+
+/// Deobfuscate the last 48 bytes of a packet (used for key exchanges).
+///
+/// This is used when decoding key exchange packets. The first 16 bytes are always
+/// deobfuscated, so this assumes that's already been done and finishes.
+fn cbc_debofuscate_16_to_64(ob: &Obfuscator, input: &[u8], output: &mut [u8]) {
+    let mut i = 16;
+    while i < 64 {
+        let j = i + 16;
+        ob.0.decrypt_block(&input[i..j], &mut output[i..j]);
+        for k in i..j {
+            output[k] ^= input[k - 16];
+        }
+        i = j;
     }
 }
 
@@ -812,7 +997,6 @@ impl SessionKey {
         if !self.lifetime.expired(counter) {
             Ok(self.send_cipher_pool.lock().pop().unwrap_or_else(|| Box::new(AesGcm::new(self.send_key.as_bytes(), true))))
         } else {
-            unlikely_branch();
             Err(Error::MaxKeyLifetimeExceeded)
         }
     }
@@ -833,84 +1017,7 @@ impl SessionKey {
     }
 }
 
-#[allow(non_snake_case)]
-fn assemble_and_armor_DATA<const MAX_PACKET_SIZE: usize>(buffer: &mut [u8; MAX_PACKET_SIZE], data: &[u8], packet_type: u8, remote_session_id: u64, counter: CounterValue, key: &SessionKey, outgoing_obfuscator: &Obfuscator) -> Result<usize, Error> {
-    debug_assert!(packet_type == PACKET_TYPE_DATA || packet_type == PACKET_TYPE_NOP);
-    buffer[0] = packet_type;
-    buffer[1..7].copy_from_slice(&remote_session_id.to_le_bytes()[..SESSION_ID_SIZE]);
-    buffer[7..11].copy_from_slice(&counter.to_bytes());
-
-    let payload_end = HEADER_SIZE + data.len();
-    let tag_end = payload_end + AES_GCM_TAG_SIZE;
-    if tag_end < MAX_PACKET_SIZE {
-        let mut c = key.get_send_cipher(counter)?;
-        buffer[11..16].fill(0);
-        c.init(&buffer[..16]);
-        c.crypt(data, &mut buffer[HEADER_SIZE..payload_end]);
-        buffer[payload_end..tag_end].copy_from_slice(&c.finish());
-        key.return_send_cipher(c);
-
-        outgoing_obfuscator.0.encrypt_block_in_place(&mut buffer[..16]);
-
-        Ok(tag_end)
-    } else {
-        unlikely_branch();
-        Err(Error::InvalidParameter)
-    }
-}
-
-fn append_random_padding(b: &mut [u8]) -> &mut [u8] {
-    if b.len() > AES_GCM_TAG_SIZE + HMAC_SIZE {
-        let random_padding_len = (random::next_u32_secure() as usize) % (b.len() - (AES_GCM_TAG_SIZE + HMAC_SIZE));
-        b[..random_padding_len].fill(0);
-        &mut b[random_padding_len..]
-    } else {
-        b
-    }
-}
-
-#[allow(non_snake_case)]
-fn assemble_KEY_OFFER<const MAX_PACKET_SIZE: usize, const STATIC_PUBLIC_SIZE: usize>(
-    buffer: &mut [u8; MAX_PACKET_SIZE],
-    counter: CounterValue,
-    bob_session_id: Option<SessionId>,
-    alice_e0_public: &P384PublicKey,
-    alice_session_id: SessionId,
-    alice_s_public: &[u8; STATIC_PUBLIC_SIZE],
-    alice_e1_public: Option<&[u8; pqc_kyber::KYBER_PUBLICKEYBYTES]>,
-) -> usize {
-    buffer[0] = PACKET_TYPE_KEY_OFFER;
-    buffer[1..7].copy_from_slice(&bob_session_id.map_or(0_u64, |i| i.into()).to_le_bytes()[..SESSION_ID_SIZE]);
-    buffer[7..11].copy_from_slice(&counter.to_bytes());
-    let mut b = &mut buffer[HEADER_SIZE..];
-
-    b[..P384_PUBLIC_KEY_SIZE].copy_from_slice(alice_e0_public.as_bytes());
-    b = &mut b[P384_PUBLIC_KEY_SIZE..];
-
-    alice_session_id.copy_to(b);
-    b = &mut b[SESSION_ID_SIZE..];
-
-    b[..STATIC_PUBLIC_SIZE].copy_from_slice(alice_s_public);
-    b = &mut b[STATIC_PUBLIC_SIZE..];
-
-    if let Some(k) = alice_e1_public {
-        b[0] = E1_TYPE_KYBER512;
-        b[1..1 + pqc_kyber::KYBER_PUBLICKEYBYTES].copy_from_slice(k);
-        b = &mut b[1 + pqc_kyber::KYBER_PUBLICKEYBYTES..];
-    } else {
-        b[0] = E1_TYPE_NONE;
-        b = &mut b[1..];
-    }
-
-    b[0] = 0;
-    b[1] = 0; // reserved for future use
-    b = &mut b[2..];
-
-    b = append_random_padding(b);
-
-    MAX_PACKET_SIZE - b.len()
-}
-
+/*
 #[allow(non_snake_case)]
 fn parse_KEY_OFFER_after_header<const STATIC_PUBLIC_SIZE: usize>(mut b: &[u8]) -> Result<(SessionId, [u8; STATIC_PUBLIC_SIZE], Option<[u8; pqc_kyber::KYBER_PUBLICKEYBYTES]>), Error> {
     if b.len() >= SESSION_ID_SIZE {
@@ -922,7 +1029,7 @@ fn parse_KEY_OFFER_after_header<const STATIC_PUBLIC_SIZE: usize>(mut b: &[u8]) -
             if b.len() >= 1 {
                 let e1_type = b[0];
                 b = &b[1..];
-                let alice_e1_public = if e1_type == E1_TYPE_KYBER512 {
+                let alice_e1_public = if e1_type == E1_TYPE_KYBER1024 {
                     if b.len() >= pqc_kyber::KYBER_PUBLICKEYBYTES {
                         let k: [u8; pqc_kyber::KYBER_PUBLICKEYBYTES] = b[..pqc_kyber::KYBER_PUBLICKEYBYTES].try_into().unwrap();
                         b = &b[pqc_kyber::KYBER_PUBLICKEYBYTES..];
@@ -943,7 +1050,14 @@ fn parse_KEY_OFFER_after_header<const STATIC_PUBLIC_SIZE: usize>(mut b: &[u8]) -
 }
 
 #[allow(non_snake_case)]
-fn assemble_KEY_COUNTER_OFFER<const MAX_PACKET_SIZE: usize>(buffer: &mut [u8; MAX_PACKET_SIZE], counter: CounterValue, alice_session_id: SessionId, bob_e0_public: &P384PublicKey, bob_session_id: SessionId, bob_e1_public: Option<&[u8; pqc_kyber::KYBER_CIPHERTEXTBYTES]>) -> usize {
+fn assemble_KEY_COUNTER_OFFER<const MAX_PACKET_SIZE: usize>(
+    buffer: &mut [u8; MAX_PACKET_SIZE],
+    counter: CounterValue,
+    alice_session_id: SessionId,
+    bob_e0_public: &P384PublicKey,
+    bob_session_id: SessionId,
+    bob_e1_public: Option<&[u8; pqc_kyber::KYBER_CIPHERTEXTBYTES]>,
+) -> usize {
     buffer[0] = PACKET_TYPE_KEY_COUNTER_OFFER;
     alice_session_id.copy_to(&mut buffer[1..7]);
     buffer[7..11].copy_from_slice(&counter.to_bytes());
@@ -956,7 +1070,7 @@ fn assemble_KEY_COUNTER_OFFER<const MAX_PACKET_SIZE: usize>(buffer: &mut [u8; MA
     b = &mut b[SESSION_ID_SIZE..];
 
     if let Some(k) = bob_e1_public {
-        b[0] = E1_TYPE_KYBER512;
+        b[0] = E1_TYPE_KYBER1024;
         b[1..1 + pqc_kyber::KYBER_CIPHERTEXTBYTES].copy_from_slice(k);
         b = &mut b[1 + pqc_kyber::KYBER_CIPHERTEXTBYTES..];
     } else {
@@ -967,8 +1081,6 @@ fn assemble_KEY_COUNTER_OFFER<const MAX_PACKET_SIZE: usize>(buffer: &mut [u8; MA
     b[0] = 0;
     b[1] = 0; // reserved for future use
     b = &mut b[2..];
-
-    b = append_random_padding(b);
 
     MAX_PACKET_SIZE - b.len()
 }
@@ -981,7 +1093,7 @@ fn parse_KEY_COUNTER_OFFER_after_header(mut b: &[u8]) -> Result<(SessionId, Opti
         if b.len() >= 1 {
             let e1_type = b[0];
             b = &b[1..];
-            let bob_e1_public = if e1_type == E1_TYPE_KYBER512 {
+            let bob_e1_public = if e1_type == E1_TYPE_KYBER1024 {
                 if b.len() >= pqc_kyber::KYBER_CIPHERTEXTBYTES {
                     let k: [u8; pqc_kyber::KYBER_CIPHERTEXTBYTES] = b[..pqc_kyber::KYBER_CIPHERTEXTBYTES].try_into().unwrap();
                     b = &b[pqc_kyber::KYBER_CIPHERTEXTBYTES..];
@@ -1000,6 +1112,9 @@ fn parse_KEY_COUNTER_OFFER_after_header(mut b: &[u8]) -> Result<(SessionId, Opti
     return Err(Error::InvalidPacket);
 }
 
+*/
+
+/// HMAC-SHA512 key derivation function modeled on: https://csrc.nist.gov/publications/detail/sp/800-108/final (page 12)
 fn kbkdf512(key: &[u8], label: u8) -> Secret<64> {
     Secret(hmac_sha512(key, &[0, 0, 0, 0, b'Z', b'T', label, 0, 0, 0, 0, 0x02, 0x00]))
 }
@@ -1011,10 +1126,10 @@ fn get_aes_gcm_nonce(deobfuscated_packet: &[u8]) -> [u8; 16] {
     tmp
 }
 
-#[cold]
-#[inline(never)]
-extern "C" fn unlikely_branch() {}
+#[cfg(test)]
+mod tests {}
 
+/*
 #[cfg(test)]
 mod tests {
     use std::rc::Rc;
@@ -1178,3 +1293,4 @@ mod tests {
         }
     }
 }
+*/
