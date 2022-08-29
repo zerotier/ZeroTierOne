@@ -267,7 +267,7 @@ void Bond::nominatePathToBond(const SharedPtr<Path>& path, int64_t now)
 					if (commonLink) {
 						for (unsigned int j = 0; j < ZT_MAX_PEER_NETWORK_PATHS; ++j) {
 							if (_paths[j].p && _paths[j].p.ptr() != _paths[i].p.ptr()) {
-								if (RR->bc->getLinkBySocket(_policyAlias, _paths[j].p->localSocket()) == commonLink, true) {
+								if (RR->bc->getLinkBySocket(_policyAlias, _paths[j].p->localSocket(), true) == commonLink) {
 									bFoundCommonLink = true;
 									_paths[j].onlyPathOnLink = false;
 								}
