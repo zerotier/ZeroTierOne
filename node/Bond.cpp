@@ -980,6 +980,10 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 		dumpInfo(now, true);
 	}
 
+	if (! _numAliveLinks && ! _numTotalLinks) {
+		return;
+	}
+
 	/**
 	 * Curate the set of paths that are part of the bond proper. Select a set of paths
 	 * per logical link according to eligibility and user-specified constraints.
