@@ -5,6 +5,8 @@ use std::mem::{size_of, MaybeUninit};
 
 use crate::util::pool::PoolFactory;
 
+use zerotier_utils::varint;
+
 /// An I/O buffer with extensions for efficiently reading and writing various objects.
 ///
 /// WARNING: Structures can only be handled through raw read/write here if they are
@@ -280,7 +282,7 @@ impl<const L: usize> Buffer<L> {
 
     #[inline(always)]
     pub fn append_varint(&mut self, i: u64) -> std::io::Result<()> {
-        crate::util::varint::write(self, i)
+        varint::write(self, i)
     }
 
     #[inline(always)]
@@ -469,7 +471,7 @@ impl<const L: usize> Buffer<L> {
         let c = *cursor;
         if c < self.0 {
             let mut a = &self.1[c..];
-            crate::util::varint::read(&mut a).map(|r| {
+            varint::read(&mut a).map(|r| {
                 *cursor = c + r.1;
                 debug_assert!(*cursor <= self.0);
                 r.0

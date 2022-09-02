@@ -3,7 +3,8 @@
 use std::collections::BTreeMap;
 use std::io::Write;
 
-use crate::util::hex::HEX_CHARS;
+use zerotier_utils::hex;
+use zerotier_utils::hex::HEX_CHARS;
 
 const BOOL_TRUTH: &str = "1tTyY";
 
@@ -104,7 +105,7 @@ impl Dictionary {
     }
 
     pub fn set_u64(&mut self, k: &str, v: u64) {
-        let _ = self.0.insert(String::from(k), crate::util::hex::to_vec_u64(v, true));
+        let _ = self.0.insert(String::from(k), hex::to_vec_u64(v, true));
     }
 
     pub fn set_bytes(&mut self, k: &str, v: Vec<u8>) {
@@ -112,7 +113,14 @@ impl Dictionary {
     }
 
     pub fn set_bool(&mut self, k: &str, v: bool) {
-        let _ = self.0.insert(String::from(k), vec![if v { b'1' } else { b'0' }]);
+        let _ = self.0.insert(
+            String::from(k),
+            vec![if v {
+                b'1'
+            } else {
+                b'0'
+            }],
+        );
     }
 
     /// Write a dictionary in transport format to a writer.

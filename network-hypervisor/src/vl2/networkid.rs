@@ -8,8 +8,10 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;
-use crate::util::hex::HEX_CHARS;
 use crate::util::marshalable::Marshalable;
+
+use zerotier_utils::hex;
+use zerotier_utils::hex::HEX_CHARS;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
@@ -85,7 +87,7 @@ impl FromStr for NetworkId {
     type Err = InvalidFormatError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        NetworkId::from_bytes(crate::util::hex::from_string(s).as_slice()).map_or_else(|| Err(InvalidFormatError), |a| Ok(a))
+        NetworkId::from_bytes(hex::from_string(s).as_slice()).map_or_else(|| Err(InvalidFormatError), |a| Ok(a))
     }
 }
 

@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 use crate::vl1::identity::Identity;
 use crate::vl1::protocol::IDENTITY_FINGERPRINT_SIZE;
 
-use zerotier_core_crypto::varint;
+use zerotier_utils::varint;
 
 /// A signed bundle of identity fingerprints of nodes through which a node might be reached (e.g. roots).
 ///

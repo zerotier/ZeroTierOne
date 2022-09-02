@@ -8,9 +8,11 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;
-use crate::util::hex::HEX_CHARS;
 use crate::util::marshalable::Marshalable;
 use crate::vl1::protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
+
+use zerotier_utils::hex;
+use zerotier_utils::hex::HEX_CHARS;
 
 /// A unique address on the global ZeroTier VL1 network.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -96,7 +98,7 @@ impl FromStr for Address {
     type Err = InvalidFormatError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Address::from_bytes(crate::util::hex::from_string(s).as_slice()).map_or_else(|| Err(InvalidFormatError), |a| Ok(a))
+        Address::from_bytes(hex::from_string(s).as_slice()).map_or_else(|| Err(InvalidFormatError), |a| Ok(a))
     }
 }
 

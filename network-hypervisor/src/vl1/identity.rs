@@ -9,11 +9,12 @@ use std::str::FromStr;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use zerotier_core_crypto::hash::*;
-use zerotier_core_crypto::hex;
 use zerotier_core_crypto::p384::*;
 use zerotier_core_crypto::salsa::Salsa;
 use zerotier_core_crypto::secret::Secret;
 use zerotier_core_crypto::x25519::*;
+
+use zerotier_utils::hex;
 
 use crate::error::{InvalidFormatError, InvalidParameterError};
 use crate::util::{bytes_as_flat_object, flat_object_as_bytes, AlignmentNeutral};
@@ -208,7 +209,8 @@ impl Identity {
             let p384_ecdh = P384KeyPair::generate();
             let p384_ecdsa = P384KeyPair::generate();
 
-            let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + 4);
+            let mut self_sign_buf: Vec<u8> =
+                Vec::with_capacity(ADDRESS_SIZE + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + 4);
             let _ = self_sign_buf.write_all(&self.address.to_bytes());
             let _ = self_sign_buf.write_all(&self.x25519);
             let _ = self_sign_buf.write_all(&self.ed25519);
@@ -302,7 +304,13 @@ impl Identity {
             // for the final result to be technically FIPS compliant. Non-FIPS algorithm secrets are considered
             // a salt in the HMAC(salt, key) HKDF construction.
             if secret.p384.is_some() && other.p384.is_some() {
-                secret.p384.as_ref().unwrap().ecdh.agree(&other.p384.as_ref().unwrap().ecdh).map(|p384_secret| Secret(hmac_sha512(&c25519_secret.0, &p384_secret.0)))
+                secret
+                    .p384
+                    .as_ref()
+                    .unwrap()
+                    .ecdh
+                    .agree(&other.p384.as_ref().unwrap().ecdh)
+                    .map(|p384_secret| Secret(hmac_sha512(&c25519_secret.0, &p384_secret.0)))
             } else {
                 Some(c25519_secret)
             }
@@ -493,7 +501,12 @@ impl Identity {
             }
             IdentityBytes::X25519P384Public(b) => {
                 let b: &packed::V1 = bytes_as_flat_object(b);
-                if b.v0.key_type == 0 && b.v0.secret_length == 0 && b.v0.reserved == 0x03 && u16::from_be_bytes(b.v0.ext_len) == (Self::BYTE_LENGTH_X25519P384_PUBLIC - Self::BYTE_LENGTH_X25519_PUBLIC) as u16 && b.key_type_flags == Self::ALGORITHM_EC_NIST_P384 {
+                if b.v0.key_type == 0
+                    && b.v0.secret_length == 0
+                    && b.v0.reserved == 0x03
+                    && u16::from_be_bytes(b.v0.ext_len) == (Self::BYTE_LENGTH_X25519P384_PUBLIC - Self::BYTE_LENGTH_X25519_PUBLIC) as u16
+                    && b.key_type_flags == Self::ALGORITHM_EC_NIST_P384
+                {
                     Some(Self {
                         address: Address::from_bytes_fixed(&b.v0.address)?,
                         x25519: b.v0.x25519,
@@ -608,13 +621,15 @@ impl Identity {
                 s.push(':');
             }
             s.push_str(":2:"); // 2 == IDENTITY_ALGORITHM_EC_NIST_P384
-            let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(p384.ecdh.as_bytes(), p384.ecdsa.as_bytes(), &p384.ecdsa_self_signature, &p384.ed25519_self_signature);
+            let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] =
+                concat_arrays_4(p384.ecdh.as_bytes(), p384.ecdsa.as_bytes(), &p384.ecdsa_self_signature, &p384.ed25519_self_signature);
             s.push_str(base64::encode_config(p384_joined, base64::URL_SAFE_NO_PAD).as_str());
             if self.secret.is_some() && include_private {
                 let secret = self.secret.as_ref().unwrap();
                 if secret.p384.is_some() {
                     let p384_secret = secret.p384.as_ref().unwrap();
-                    let p384_secret_joined: [u8; P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE] = concat_arrays_2(p384_secret.ecdh.secret_key_bytes().as_bytes(), p384_secret.ecdsa.secret_key_bytes().as_bytes());
+                    let p384_secret_joined: [u8; P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE] =
+                        concat_arrays_2(p384_secret.ecdh.secret_key_bytes().as_bytes(), p384_secret.ecdsa.secret_key_bytes().as_bytes());
                     s.push(':');
                     s.push_str(base64::encode_config(p384_secret_joined, base64::URL_SAFE_NO_PAD).as_str());
                 }
@@ -723,7 +738,9 @@ impl FromStr for Identity {
                 Some(IdentityP384Public {
                     ecdh: ecdh.unwrap(),
                     ecdsa: ecdsa.unwrap(),
-                    ecdsa_self_signature: keys[2].as_slice()[(P384_PUBLIC_KEY_SIZE * 2)..((P384_PUBLIC_KEY_SIZE * 2) + P384_ECDSA_SIGNATURE_SIZE)].try_into().unwrap(),
+                    ecdsa_self_signature: keys[2].as_slice()[(P384_PUBLIC_KEY_SIZE * 2)..((P384_PUBLIC_KEY_SIZE * 2) + P384_ECDSA_SIGNATURE_SIZE)]
+                        .try_into()
+                        .unwrap(),
                     ed25519_self_signature: keys[2].as_slice()[((P384_PUBLIC_KEY_SIZE * 2) + P384_ECDSA_SIGNATURE_SIZE)..].try_into().unwrap(),
                 })
             },
@@ -937,7 +954,10 @@ impl<'de> serde::de::Visitor<'de> for IdentityVisitor {
     where
         E: serde::de::Error,
     {
-        IdentityBytes::try_from(v).map_or_else(|e| Err(E::custom(e.to_string())), |b| Identity::from_bytes(&b).map_or_else(|| Err(E::custom("invalid identity")), |id| Ok(id)))
+        IdentityBytes::try_from(v).map_or_else(
+            |e| Err(E::custom(e.to_string())),
+            |b| Identity::from_bytes(&b).map_or_else(|| Err(E::custom("invalid identity")), |id| Ok(id)),
+        )
     }
 
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -965,7 +985,7 @@ impl<'de> Deserialize<'de> for Identity {
 mod tests {
     use crate::vl1::identity::*;
     use std::str::FromStr;
-    use zerotier_core_crypto::hex;
+    use zerotier_utils::hex;
 
     #[test]
     fn v0_identity() {

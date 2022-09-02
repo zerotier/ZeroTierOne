@@ -11,6 +11,8 @@ use crate::error::InvalidFormatError;
 use crate::util::buffer::Buffer;
 use crate::util::marshalable::Marshalable;
 
+use zerotier_utils::hex;
+
 /// An Ethernet MAC address.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
@@ -88,7 +90,7 @@ impl FromStr for MAC {
     type Err = InvalidFormatError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        MAC::from_bytes(crate::util::hex::from_string(s).as_slice()).map_or_else(|| Err(InvalidFormatError), |m| Ok(m))
+        MAC::from_bytes(hex::from_string(s).as_slice()).map_or_else(|| Err(InvalidFormatError), |m| Ok(m))
     }
 }
 

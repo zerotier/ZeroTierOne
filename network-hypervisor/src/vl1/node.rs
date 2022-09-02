@@ -22,6 +22,8 @@ use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
 use crate::vl1::{Address, Endpoint, Identity, RootSet};
 use crate::Event;
 
+use zerotier_utils::hex;
+
 /// Trait implemented by external code to handle events and provide an interface to the system or application.
 ///
 /// These methods are basically callbacks that the core calls to request or transmit things. They are called
@@ -97,7 +99,16 @@ pub trait InnerProtocolInterface: Sync + Send + 'static {
     async fn handle_packet<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, verb: u8, payload: &PacketBuffer) -> bool;
 
     /// Handle errors, returning true if the error was recognized.
-    async fn handle_error<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, in_re_verb: u8, in_re_message_id: u64, error_code: u8, payload: &PacketBuffer, cursor: &mut usize) -> bool;
+    async fn handle_error<SI: SystemInterface>(
+        &self,
+        source: &Peer<SI>,
+        source_path: &Path<SI>,
+        in_re_verb: u8,
+        in_re_message_id: u64,
+        error_code: u8,
+        payload: &PacketBuffer,
+        cursor: &mut usize,
+    ) -> bool;
 
     /// Handle an OK, returing true if the OK was recognized.
     async fn handle_ok<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, in_re_verb: u8, in_re_message_id: u64, payload: &PacketBuffer, cursor: &mut usize) -> bool;
@@ -400,7 +411,9 @@ impl<SI: SystemInterface> Node<SI> {
                             for m in rs.members.iter() {
                                 if m.identity.eq(&self.identity) {
                                     let _ = my_root_sets.get_or_insert_with(|| Vec::new()).write_all(rs.to_bytes().as_slice());
-                                } else if self.peers.read().get(&m.identity.address).map_or(false, |p| !p.identity.eq(&m.identity)) || address_collision_check.insert(m.identity.address, &m.identity).map_or(false, |old_id| !old_id.eq(&m.identity)) {
+                                } else if self.peers.read().get(&m.identity.address).map_or(false, |p| !p.identity.eq(&m.identity))
+                                    || address_collision_check.insert(m.identity.address, &m.identity).map_or(false, |old_id| !old_id.eq(&m.identity))
+                                {
                                     address_collisions.push(m.identity.address);
                                 }
                             }
@@ -410,14 +423,22 @@ impl<SI: SystemInterface> Node<SI> {
                     for (_, rs) in roots.sets.iter() {
                         for m in rs.members.iter() {
                             if m.endpoints.is_some() && !address_collisions.contains(&m.identity.address) && !m.identity.eq(&self.identity) {
-                                debug_event!(si, "[vl1] examining root {} with {} endpoints", m.identity.address.to_string(), m.endpoints.as_ref().map_or(0, |e| e.len()));
+                                debug_event!(
+                                    si,
+                                    "[vl1] examining root {} with {} endpoints",
+                                    m.identity.address.to_string(),
+                                    m.endpoints.as_ref().map_or(0, |e| e.len())
+                                );
                                 let peers = self.peers.upgradable_read();
                                 if let Some(peer) = peers.get(&m.identity.address) {
                                     new_roots.insert(peer.clone(), m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                 } else {
                                     if let Some(peer) = Peer::<SI>::new(&self.identity, m.identity.clone(), tt) {
                                         new_roots.insert(
-                                            parking_lot::RwLockUpgradableReadGuard::upgrade(peers).entry(m.identity.address).or_insert_with(|| Arc::new(peer)).clone(),
+                                            parking_lot::RwLockUpgradableReadGuard::upgrade(peers)
+                                                .entry(m.identity.address)
+                                                .or_insert_with(|| Arc::new(peer))
+                                                .clone(),
                                             m.endpoints.as_ref().unwrap().iter().cloned().collect(),
                                         );
                                     } else {
@@ -542,14 +563,22 @@ impl<SI: SystemInterface> Node<SI> {
         Duration::from_millis(1000)
     }
 
-    pub async fn handle_incoming_physical_packet<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, source_endpoint: &Endpoint, source_local_socket: &SI::LocalSocket, source_local_interface: &SI::LocalInterface, mut data: PooledPacketBuffer) {
+    pub async fn handle_incoming_physical_packet<PH: InnerProtocolInterface>(
+        &self,
+        si: &SI,
+        ph: &PH,
+        source_endpoint: &Endpoint,
+        source_local_socket: &SI::LocalSocket,
+        source_local_interface: &SI::LocalInterface,
+        mut data: PooledPacketBuffer,
+    ) {
         debug_event!(
             si,
             "[vl1] {} -> #{} {}->{} length {} (on socket {}@{})",
             source_endpoint.to_string(),
-            data.bytes_fixed_at::<8>(0).map_or("????????????????".into(), |pid| zerotier_core_crypto::hex::to_string(pid)),
-            data.bytes_fixed_at::<5>(13).map_or("??????????".into(), |src| zerotier_core_crypto::hex::to_string(src)),
-            data.bytes_fixed_at::<5>(8).map_or("??????????".into(), |dest| zerotier_core_crypto::hex::to_string(dest)),
+            data.bytes_fixed_at::<8>(0).map_or("????????????????".into(), |pid| hex::to_string(pid)),
+            data.bytes_fixed_at::<5>(13).map_or("??????????".into(), |src| hex::to_string(src)),
+            data.bytes_fixed_at::<5>(8).map_or("??????????".into(), |dest| hex::to_string(dest)),
             data.len(),
             source_local_socket.to_string(),
             source_local_interface.to_string()
@@ -565,7 +594,13 @@ impl<SI: SystemInterface> Node<SI> {
                     if fragment_header.is_fragment() {
                         #[cfg(debug_assertions)]
                         let fragment_header_id = u64::from_be_bytes(fragment_header.id);
-                        debug_event!(si, "[vl1] #{:0>16x} fragment {} of {} received", u64::from_be_bytes(fragment_header.id), fragment_header.fragment_no(), fragment_header.total_fragments());
+                        debug_event!(
+                            si,
+                            "[vl1] #{:0>16x} fragment {} of {} received",
+                            u64::from_be_bytes(fragment_header.id),
+                            fragment_header.fragment_no(),
+                            fragment_header.total_fragments()
+                        );
 
                         if let Some(assembled_packet) = path.receive_fragment(fragment_header.packet_id(), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks) {
                             if let Some(frag0) = assembled_packet.frags[0].as_ref() {
@@ -575,7 +610,8 @@ impl<SI: SystemInterface> Node<SI> {
                                 if let Ok(packet_header) = frag0.struct_at::<PacketHeader>(0) {
                                     if let Some(source) = Address::from_bytes(&packet_header.src) {
                                         if let Some(peer) = self.peer(source) {
-                                            peer.receive(self, si, ph, time_ticks, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)]).await;
+                                            peer.receive(self, si, ph, time_ticks, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)])
+                                                .await;
                                         } else {
                                             self.whois.query(self, si, source, Some(QueuedPacket::Fragmented(assembled_packet)));
                                         }

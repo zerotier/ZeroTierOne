@@ -6,9 +6,6 @@ pub(crate) mod gate;
 pub mod marshalable;
 pub(crate) mod pool;
 
-pub use zerotier_core_crypto::hex;
-pub use zerotier_core_crypto::varint;
-
 /// A value for ticks that indicates that something never happened, and is thus very long before zero ticks.
 pub(crate) const NEVER_HAPPENED_TICKS: i64 = -2147483648;
 
@@ -55,8 +52,3 @@ pub(crate) fn bytes_as_flat_object<T: Copy + AlignmentNeutral>(b: &[u8]) -> &T {
     assert!(b.len() >= std::mem::size_of::<T>());
     unsafe { &*b.as_ptr().cast() }
 }
-
-/// Include this in a branch to hint the compiler that it's unlikely.
-#[inline(never)]
-#[cold]
-pub(crate) extern "C" fn unlikely_branch() {}
