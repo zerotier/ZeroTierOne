@@ -6,6 +6,7 @@ name = "zerotier-core-crypto"
 version = "0.1.0"
 
 [dependencies]
+zerotier-utils = { path = "../utils" }
 ed25519-dalek = {version = "1.0.1", features = ["std", "u64_backend"], default-features = false}
 foreign-types = "0.3.1"
 lazy_static = "^1"

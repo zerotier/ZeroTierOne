@@ -3,14 +3,12 @@
 pub mod aes;
 pub mod aes_gmac_siv;
 pub mod hash;
-pub mod hex;
 pub mod kbkdf;
 pub mod p384;
 pub mod poly1305;
 pub mod random;
 pub mod salsa;
 pub mod secret;
-pub mod varint;
 pub mod x25519;
 pub mod zssp;
 

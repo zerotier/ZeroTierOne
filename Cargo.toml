@@ -5,6 +5,7 @@ members = [
   "network-hypervisor",
   "controller",
   "system-service",
+  "utils",
 ]
 
 [profile.release]

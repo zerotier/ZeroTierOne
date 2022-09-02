@@ -1,0 +1,8 @@
+[package]
+authors = ["ZeroTier, Inc. <contact@zerotier.com>"]
+edition = "2021"
+license = "MPL-2.0"
+name = "zerotier-utils"
+version = "0.1.0"
+
+[dependencies]
