@@ -106,13 +106,15 @@ impl<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> RingBu
     #[inline]
     pub fn new(salt: u32) -> Self {
         Self {
-            entries: std::array::from_fn(|_| Entry::<K, V> {
-                key: MaybeUninit::uninit(),
-                value: MaybeUninit::uninit(),
-                bucket: -1,
-                next: -1,
-                prev: -1,
-            }),
+            entries: {
+                let mut entries: [Entry<K, V>; C] = unsafe { MaybeUninit::uninit().assume_init() };
+                for e in entries.iter_mut() {
+                    e.bucket = -1;
+                    e.next = -1;
+                    e.prev = -1;
+                }
+                entries
+            },
             buckets: [-1; B],
             entry_ptr: 0,
             salt,

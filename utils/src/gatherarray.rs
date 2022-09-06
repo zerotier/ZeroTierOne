@@ -11,16 +11,16 @@ use crate::arrayvec::ArrayVec;
 pub struct GatherArray<T, const C: usize> {
     a: [MaybeUninit<T>; C],
     have_bits: u64,
-    have_count: u32,
-    goal: u32,
+    have_count: u8,
+    goal: u8,
 }
 
 impl<T, const C: usize> GatherArray<T, C> {
     /// Create a new gather array, which must be initialized prior to use.
     #[inline(always)]
-    pub fn new(goal: u32) -> Self {
+    pub fn new(goal: u8) -> Self {
         assert!(C <= 64);
-        assert!(goal <= (C as u32));
+        assert!(goal <= (C as u8));
         assert_eq!(size_of::<[T; C]>(), size_of::<[MaybeUninit<T>; C]>());
         Self {
             a: unsafe { MaybeUninit::uninit().assume_init() },
@@ -32,10 +32,10 @@ impl<T, const C: usize> GatherArray<T, C> {
 
     /// Add an item to the array if we don't have this index anymore, returning complete array if all parts are here.
     #[inline(always)]
-    pub fn add(&mut self, index: u32, value: T) -> Option<ArrayVec<T, C>> {
+    pub fn add(&mut self, index: u8, value: T) -> Option<ArrayVec<T, C>> {
         if index < self.goal {
             let mut have = self.have_bits;
-            let got = 1u64.wrapping_shl(index);
+            let got = 1u64.wrapping_shl(index as u32);
             if (have & got) == 0 {
                 have |= got;
                 self.have_bits = have;
@@ -64,7 +64,7 @@ impl<T, const C: usize> Drop for GatherArray<T, C> {
     fn drop(&mut self) {
         let have = self.have_bits;
         for i in 0..self.goal {
-            if (have & 1u64.wrapping_shl(i)) != 0 {
+            if (have & 1u64.wrapping_shl(i as u32)) != 0 {
                 unsafe { self.a.get_unchecked_mut(i as usize).assume_init_drop() };
             }
         }
@@ -78,8 +78,8 @@ mod tests {
 
     #[test]
     fn gather_array() {
-        for goal in 2..64 {
-            let mut m = GatherArray::<u32, 64>::new(goal);
+        for goal in 2u8..64u8 {
+            let mut m = GatherArray::<u8, 64>::new(goal);
             for x in 0..(goal - 1) {
                 assert!(m.add(x, x).is_none());
             }
