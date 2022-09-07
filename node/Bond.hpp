@@ -1235,6 +1235,7 @@ class Bond {
 		NominatedPath()
 			: lastAckSent(0)
 			, lastAckReceived(0)
+			, lastQoSReceived(0)
 			, unackedBytes(0)
 			, packetsReceivedSinceLastAck(0)
 			, lastQoSMeasurement(0)
@@ -1243,6 +1244,7 @@ class Bond {
 			, lastAliveToggle(0)
 			, alive(false)
 			, eligible(true)
+			, lastEligibility(0)
 			, whenNominated(0)
 			, refractoryPeriod(0)
 			, ipvPref(0)
@@ -1359,6 +1361,7 @@ class Bond {
 
 		uint64_t lastAckSent;
 		uint64_t lastAckReceived;
+		uint64_t lastQoSReceived;
 		uint64_t unackedBytes;
 		uint64_t packetsReceivedSinceLastAck;
 
@@ -1368,6 +1371,7 @@ class Bond {
 		uint64_t lastAliveToggle;			 // The last time that the path was marked as "alive".
 		bool alive;
 		bool eligible;						   // State of eligibility at last check. Used for determining state changes.
+		uint64_t lastEligibility;			   // The last time that this path was eligible
 		uint64_t whenNominated;				   // Timestamp indicating when this path's trial period began.
 		uint32_t refractoryPeriod;			   // Amount of time that this path will be prevented from becoming a member of a bond.
 		uint8_t ipvPref;					   // IP version preference inherited from the physical link.

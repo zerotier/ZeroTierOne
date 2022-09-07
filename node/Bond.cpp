@@ -493,7 +493,8 @@ void Bond::receivedQoS(const SharedPtr<Path>& path, int64_t now, int count, uint
 	if (pathIdx == ZT_MAX_PEER_NETWORK_PATHS) {
 		return;
 	}
-	// debug("received QoS packet (sampling %d frames) via %s", count, pathToStr(path).c_str());
+	_paths[pathIdx].lastQoSReceived = now;
+	debug("received QoS packet (sampling %d frames) via %s", count, pathToStr(path).c_str());
 	// Look up egress times and compute latency values for each record
 	std::map<uint64_t, uint64_t>::iterator it;
 	for (int j = 0; j < count; j++) {
@@ -799,7 +800,7 @@ void Bond::sendQOS_MEASUREMENT(void* tPtr, int pathIdx, int64_t localSocket, con
 	Packet outp(_peer->_id.address(), RR->identity.address(), Packet::VERB_QOS_MEASUREMENT);
 	char qosData[ZT_QOS_MAX_PACKET_SIZE];
 	int16_t len = generateQoSPacket(pathIdx, _now, qosData);
-	// debug("sending QOS via link %s (len=%d)", pathToStr(_paths[pathIdx].p).c_str(), len);
+	debug("sending QOS via link %s (len=%d)", pathToStr(_paths[pathIdx].p).c_str(), len);
 	if (len) {
 		outp.append(qosData, len);
 		if (atAddress) {
@@ -895,6 +896,9 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 			continue;
 		}
 
+		// Whether this path is still in its trial period
+		bool inTrial = (now - _paths[i].whenNominated) < ZT_BOND_OPTIMIZE_INTERVAL;
+
 		/**
 		 * Remove expired or invalid links from bond
 		 */
@@ -905,7 +909,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 			_paths[i].p = SharedPtr<Path>();
 			continue;
 		}
-		if ((now - _paths[i].p->_lastIn) > (ZT_PEER_EXPIRED_PATH_TRIAL_PERIOD)) {
+		if ((now - _paths[i].lastEligibility) > (ZT_PEER_EXPIRED_PATH_TRIAL_PERIOD) && ! inTrial) {
 			log("link (%s) has expired or is invalid, removing from bond", pathToStr(_paths[i].p).c_str());
 			_paths[i] = NominatedPath();
 			_paths[i].p = SharedPtr<Path>();
@@ -930,14 +934,13 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 		bool acceptableAge = _isLeaf ? (_paths[i].p->age(now) < (_failoverInterval + _downDelay)) : _paths[i].alive;
 		// Whether we've waited long enough since the link last came online
 		bool satisfiedUpDelay = (now - _paths[i].lastAliveToggle) >= _upDelay;
-		// Whether this path is still in its trial period
-		bool inTrial = (now - _paths[i].whenNominated) < ZT_BOND_OPTIMIZE_INTERVAL;
-		// if (includeRefractoryPeriod && _paths[i].refractoryPeriod) {
-		// As long as the refractory period value has not fully drained this path is not eligible
-		//	currEligibility = false;
-		//}
-		currEligibility = _paths[i].allowed() && ((acceptableAge && satisfiedUpDelay) || inTrial);
-		// debug("[%d] allowed=%d, acceptableAge=%d, satisfiedUpDelay=%d, inTrial=%d ==== %d", i, _paths[i].allowed(), acceptableAge, satisfiedUpDelay, inTrial, currEligibility);
+		// How long since the last QoS was received (Must be less than ZT_PEER_PATH_EXPIRATION since the remote peer's _qosSendInterval isn't known)
+		bool acceptableQoSAge = _paths[i].lastQoSReceived == 0 || ((now - _paths[i].lastQoSReceived) < ZT_PEER_EXPIRED_PATH_TRIAL_PERIOD);
+		currEligibility = _paths[i].allowed() && ((acceptableAge && satisfiedUpDelay && acceptableQoSAge) || inTrial);
+
+		if (currEligibility) {
+			_paths[i].lastEligibility = now;
+		}
 
 		/**
 		 * Note eligibility state change (if any) and take appropriate action
@@ -949,6 +952,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 			if (currEligibility == 1) {
 				log("link %s is eligible", pathToStr(_paths[i].p).c_str());
 			}
+			debug("\t[%d] allowed=%d, age=%d, qa=%d, ud=%d, trial=%d", i, _paths[i].allowed(), acceptableAge, acceptableQoSAge, satisfiedUpDelay, inTrial);
 			dumpPathStatus(now, i);
 			if (currEligibility) {
 				rebuildBond = true;
