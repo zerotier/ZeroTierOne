@@ -269,7 +269,6 @@ pub struct ReceiveContext<H: Host> {
 }
 
 impl<H: Host> Session<H> {
-    #[inline]
     pub fn new<SendFunction: FnMut(&mut [u8])>(
         host: &H,
         mut send: SendFunction,
@@ -325,7 +324,6 @@ impl<H: Host> Session<H> {
         return Err(Error::InvalidParameter);
     }
 
-    #[inline]
     pub fn send<SendFunction: FnMut(&mut [u8])>(&self, mut send: SendFunction, mtu_buffer: &mut [u8], mut data: &[u8]) -> Result<(), Error> {
         debug_assert!(mtu_buffer.len() >= MIN_MTU);
         let state = self.state.read();
@@ -386,7 +384,6 @@ impl<H: Host> Session<H> {
         state.remote_session_id.is_some() && !state.keys.is_empty()
     }
 
-    #[inline]
     pub fn rekey_check<SendFunction: FnMut(&mut [u8])>(&self, host: &H, mut send: SendFunction, offer_metadata: &[u8], mtu: usize, current_time: i64, force: bool, jedi: bool) {
         let state = self.state.upgradable_read();
         if let Some(key) = state.keys.front() {
@@ -416,7 +413,6 @@ impl<H: Host> Session<H> {
 }
 
 impl<H: Host> ReceiveContext<H> {
-    #[inline]
     pub fn new(host: &H) -> Self {
         Self {
             initial_offer_defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
@@ -424,7 +420,6 @@ impl<H: Host> ReceiveContext<H> {
         }
     }
 
-    #[inline]
     pub fn receive<'a, SendFunction: FnMut(&mut [u8])>(
         &self,
         host: &H,
