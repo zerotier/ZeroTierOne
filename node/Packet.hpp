@@ -1250,6 +1250,14 @@ public:
 	}
 
 	/**
+	 * @return Whether this packet is currently encrypted
+	 */
+	inline bool isEncrypted() const
+	{
+		return (cipher() == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) || (cipher() == ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV);
+	}
+
+	/**
 	 * Set this packet's cipher suite
 	 */
 	inline void setCipher(unsigned int c)
