@@ -4,6 +4,8 @@ use std::hash::{Hash, Hasher};
 
 use std::mem::MaybeUninit;
 
+const EMPTY: u16 = 0xffff;
+
 #[inline(always)]
 fn xorshift64(mut x: u64) -> u64 {
     x ^= x.wrapping_shl(13);
@@ -78,9 +80,9 @@ impl Hasher for XorShiftHasher {
 struct Entry<K: Eq + PartialEq + Hash + Clone, V> {
     key: MaybeUninit<K>,
     value: MaybeUninit<V>,
-    bucket: i32, // which bucket is this in? -1 for none
-    next: i32,   // next item in bucket's linked list, -1 for none
-    prev: i32,   // previous entry to permit deletion of old entries from bucket lists
+    bucket: u16, // which bucket is this in? EMPTY for none
+    next: u16,   // next item in bucket's linked list, EMPTY for none
+    prev: u16,   // previous entry to permit deletion of old entries from bucket lists
 }
 
 /// A hybrid between a circular buffer and a map.
@@ -90,35 +92,35 @@ struct Entry<K: Eq + PartialEq + Hash + Clone, V> {
 /// with a HashMap but that would be less efficient. This requires no memory allocations unless
 /// the K or V types allocate memory and occupies a fixed amount of memory.
 ///
-/// This is pretty basic and doesn't have a remove function. Old entries just roll off. This
-/// only contains what is needed elsewhere in the project.
+/// There is no explicit remove since that would require more complex logic to maintain FIFO
+/// ordering for replacement of entries. Old entries just roll off the end.
+///
+/// This is used for things like defragmenting incoming packets to support multiple fragmented
+/// packets in flight. Having no allocations is good to reduce the potential for memory
+/// exhaustion attacks.
 ///
 /// The C template parameter is the total capacity while the B parameter is the number of
-/// buckets in the hash table.
+/// buckets in the hash table. The maximum for both these parameters is 65535. This could be
+/// increased by making the index variables larger (e.g. u32 instead of u16).
 pub struct RingBufferMap<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> {
-    entries: [Entry<K, V>; C],
-    buckets: [i32; B],
-    entry_ptr: u32,
     salt: u32,
+    entries: [Entry<K, V>; C],
+    buckets: [u16; B],
+    entry_ptr: u16,
 }
 
 impl<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> RingBufferMap<K, V, C, B> {
+    /// Create a new map with the supplied random salt to perturb the hashing function.
     #[inline]
     pub fn new(salt: u32) -> Self {
-        Self {
-            entries: {
-                let mut entries: [Entry<K, V>; C] = unsafe { MaybeUninit::uninit().assume_init() };
-                for e in entries.iter_mut() {
-                    e.bucket = -1;
-                    e.next = -1;
-                    e.prev = -1;
-                }
-                entries
-            },
-            buckets: [-1; B],
-            entry_ptr: 0,
-            salt,
-        }
+        debug_assert!(C <= EMPTY as usize);
+        debug_assert!(B <= EMPTY as usize);
+        let mut tmp: Self = unsafe { MaybeUninit::uninit().assume_init() };
+        // EMPTY is the maximum value of the indices, which is all 0xff, so this sets all indices to EMPTY.
+        unsafe { std::ptr::write_bytes(&mut tmp, 0xff, 1) };
+        tmp.salt = salt;
+        tmp.entry_ptr = 0;
+        tmp
     }
 
     #[inline]
@@ -126,9 +128,9 @@ impl<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> RingBu
         let mut h = XorShiftHasher::new(self.salt);
         key.hash(&mut h);
         let mut e = self.buckets[(h.finish() as usize) % B];
-        while e >= 0 {
+        while e != EMPTY {
             let ee = &self.entries[e as usize];
-            debug_assert!(ee.bucket >= 0);
+            debug_assert!(ee.bucket != EMPTY);
             if unsafe { ee.key.assume_init_ref().eq(key) } {
                 return Some(unsafe { &ee.value.assume_init_ref() });
             }
@@ -137,7 +139,7 @@ impl<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> RingBu
         return None;
     }
 
-    /// Get an entry, creating if not present.
+    /// Get an entry, creating if not present, and return a mutable reference to it.
     #[inline]
     pub fn get_or_create_mut<CF: FnOnce() -> V>(&mut self, key: &K, create: CF) -> &mut V {
         let mut h = XorShiftHasher::new(self.salt);
@@ -145,10 +147,10 @@ impl<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> RingBu
         let bucket = (h.finish() as usize) % B;
 
         let mut e = self.buckets[bucket];
-        while e >= 0 {
+        while e != EMPTY {
             unsafe {
                 let e_ptr = &mut *self.entries.as_mut_ptr().add(e as usize);
-                debug_assert!(e_ptr.bucket >= 0);
+                debug_assert!(e_ptr.bucket != EMPTY);
                 if e_ptr.key.assume_init_ref().eq(key) {
                     return e_ptr.value.assume_init_mut();
                 }
@@ -167,9 +169,9 @@ impl<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> RingBu
         let bucket = (h.finish() as usize) % B;
 
         let mut e = self.buckets[bucket];
-        while e >= 0 {
+        while e != EMPTY {
             let e_ptr = &mut self.entries[e as usize];
-            debug_assert!(e_ptr.bucket >= 0);
+            debug_assert!(e_ptr.bucket != EMPTY);
             if unsafe { e_ptr.key.assume_init_ref().eq(&key) } {
                 unsafe { *e_ptr.value.assume_init_mut() = value };
                 return;
@@ -177,7 +179,7 @@ impl<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> RingBu
             e = e_ptr.next;
         }
 
-        self.internal_add(bucket, key, value);
+        let _ = self.internal_add(bucket, key, value);
     }
 
     #[inline]
@@ -186,8 +188,8 @@ impl<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> RingBu
         self.entry_ptr = self.entry_ptr.wrapping_add(1);
         let e_ptr = unsafe { &mut *self.entries.as_mut_ptr().add(e) };
 
-        if e_ptr.bucket >= 0 {
-            if e_ptr.prev >= 0 {
+        if e_ptr.bucket != EMPTY {
+            if e_ptr.prev != EMPTY {
                 self.entries[e_ptr.prev as usize].next = e_ptr.next;
             } else {
                 self.buckets[e_ptr.bucket as usize] = e_ptr.next;
@@ -200,13 +202,13 @@ impl<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> RingBu
 
         e_ptr.key.write(key);
         e_ptr.value.write(value);
-        e_ptr.bucket = bucket as i32;
+        e_ptr.bucket = bucket as u16;
         e_ptr.next = self.buckets[bucket];
-        if e_ptr.next >= 0 {
-            self.entries[e_ptr.next as usize].prev = e as i32;
+        if e_ptr.next != EMPTY {
+            self.entries[e_ptr.next as usize].prev = e as u16;
         }
-        self.buckets[bucket] = e as i32;
-        e_ptr.prev = -1;
+        self.buckets[bucket] = e as u16;
+        e_ptr.prev = EMPTY;
         unsafe { e_ptr.value.assume_init_mut() }
     }
 }
@@ -215,7 +217,7 @@ impl<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> Drop f
     #[inline]
     fn drop(&mut self) {
         for e in self.entries.iter_mut() {
-            if e.bucket >= 0 {
+            if e.bucket != EMPTY {
                 unsafe {
                     e.key.assume_init_drop();
                     e.value.assume_init_drop();
