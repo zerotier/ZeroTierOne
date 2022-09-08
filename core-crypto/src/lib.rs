@@ -12,4 +12,4 @@ pub mod secret;
 pub mod x25519;
 pub mod zssp;
 
-pub const ZEROES: [u8; 16] = [0_u8; 16];
+pub const ZEROES: [u8; 64] = [0_u8; 64];
