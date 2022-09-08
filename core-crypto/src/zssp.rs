@@ -22,6 +22,13 @@ use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
 pub const MIN_PACKET_SIZE: usize = HEADER_SIZE;
 pub const MIN_MTU: usize = 1280;
 
+/// Setting this to true enables kyber1024 post-quantum forward secrecy.
+///
+/// This is normally enabled but could be disabled at build time for e.g. very small devices.
+/// Kyber will be used in the exchange if both sides have it enabled, otherwise we just use
+/// NIST P-384 ECDH.
+const JEDI: bool = true;
+
 /// Start attempting to rekey after a key has been used to send packets this many times.
 const REKEY_AFTER_USES: u64 = 536870912;
 
@@ -279,7 +286,6 @@ impl<H: Host> Session<H> {
         associated_object: H::AssociatedObject,
         mtu: usize,
         current_time: i64,
-        jedi: bool,
     ) -> Result<Self, Error> {
         if let Some(remote_s_public_p384) = H::extract_p384_static(remote_s_public) {
             if let Some(ss) = host.get_local_s_keypair_p384().agree(&remote_s_public_p384) {
@@ -300,7 +306,6 @@ impl<H: Host> Session<H> {
                     &outgoing_init_header_check_cipher,
                     mtu,
                     current_time,
-                    jedi,
                 ) {
                     return Ok(Self {
                         id: local_session_id,
@@ -384,28 +389,33 @@ impl<H: Host> Session<H> {
         state.remote_session_id.is_some() && !state.keys.is_empty()
     }
 
-    pub fn rekey_check<SendFunction: FnMut(&mut [u8])>(&self, host: &H, mut send: SendFunction, offer_metadata: &[u8], mtu: usize, current_time: i64, force: bool, jedi: bool) {
+    pub fn service<SendFunction: FnMut(&mut [u8])>(&self, host: &H, mut send: SendFunction, offer_metadata: &[u8], mtu: usize, current_time: i64) {
         let state = self.state.upgradable_read();
-        if let Some(key) = state.keys.front() {
-            if force || (key.lifetime.should_rekey(self.send_counter.current(), current_time) && state.offer.as_ref().map_or(true, |o| (current_time - o.creation_time) > OFFER_RATE_LIMIT_MS)) {
-                if let Some(remote_s_public_p384) = P384PublicKey::from_bytes(&self.remote_s_public_p384) {
-                    if let Ok(offer) = create_initial_offer(
-                        &mut send,
-                        self.send_counter.next(),
-                        self.id,
-                        state.remote_session_id,
-                        host.get_local_s_public(),
-                        offer_metadata,
-                        &remote_s_public_p384,
-                        &self.remote_s_public_hash,
-                        &self.ss,
-                        &self.header_check_cipher,
-                        mtu,
-                        current_time,
-                        jedi,
-                    ) {
-                        let _ = RwLockUpgradableReadGuard::upgrade(state).offer.replace(offer);
-                    }
+        if state.keys.front().map_or(true, |key| key.lifetime.should_rekey(self.send_counter.current(), current_time))
+            && state.offer.as_ref().map_or(true, |o| (current_time - o.creation_time) > OFFER_RATE_LIMIT_MS)
+        {
+            if let Some(remote_s_public_p384) = P384PublicKey::from_bytes(&self.remote_s_public_p384) {
+                let mut tmp_header_check_cipher = None;
+                if let Ok(offer) = create_initial_offer(
+                    &mut send,
+                    self.send_counter.next(),
+                    self.id,
+                    state.remote_session_id,
+                    host.get_local_s_public(),
+                    offer_metadata,
+                    &remote_s_public_p384,
+                    &self.remote_s_public_hash,
+                    &self.ss,
+                    if state.remote_session_id.is_some() {
+                        &self.header_check_cipher
+                    } else {
+                        let _ = tmp_header_check_cipher.insert(Aes::new(kbkdf512(&self.remote_s_public_hash, KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<16>()));
+                        tmp_header_check_cipher.as_ref().unwrap()
+                    },
+                    mtu,
+                    current_time,
+                ) {
+                    let _ = RwLockUpgradableReadGuard::upgrade(state).offer.replace(offer);
                 }
             }
         }
@@ -427,7 +437,6 @@ impl<H: Host> ReceiveContext<H> {
         data_buf: &'a mut [u8],
         incoming_packet_buf: H::IncomingPacketBuffer,
         mtu: usize,
-        jedi: bool,
         current_time: i64,
     ) -> Result<ReceiveResult<'a, H>, Error> {
         let incoming_packet = incoming_packet_buf.as_ref();
@@ -456,14 +465,14 @@ impl<H: Host> ReceiveContext<H> {
                         let fragment_gather_array = defrag.get_or_create_mut(&counter, || GatherArray::new(fragment_count));
                         if let Some(assembled_packet) = fragment_gather_array.add(fragment_no, incoming_packet_buf) {
                             drop(defrag); // release lock
-                            return self.receive_complete(host, &mut send, data_buf, assembled_packet.as_ref(), packet_type, Some(session), mtu, jedi, current_time);
+                            return self.receive_complete(host, &mut send, data_buf, assembled_packet.as_ref(), packet_type, Some(session), mtu, current_time);
                         }
                     } else {
                         unlikely_branch();
                         return Err(Error::InvalidPacket);
                     }
                 } else {
-                    return self.receive_complete(host, &mut send, data_buf, &[incoming_packet_buf], packet_type, Some(session), mtu, jedi, current_time);
+                    return self.receive_complete(host, &mut send, data_buf, &[incoming_packet_buf], packet_type, Some(session), mtu, current_time);
                 }
             } else {
                 unlikely_branch();
@@ -481,7 +490,7 @@ impl<H: Host> ReceiveContext<H> {
             let fragment_gather_array = defrag.get_or_create_mut(&counter, || GatherArray::new(fragment_count));
             if let Some(assembled_packet) = fragment_gather_array.add(fragment_no, incoming_packet_buf) {
                 drop(defrag); // release lock
-                return self.receive_complete(host, &mut send, data_buf, assembled_packet.as_ref(), packet_type, None, mtu, jedi, current_time);
+                return self.receive_complete(host, &mut send, data_buf, assembled_packet.as_ref(), packet_type, None, mtu, current_time);
             }
         };
 
@@ -497,7 +506,6 @@ impl<H: Host> ReceiveContext<H> {
         packet_type: u8,
         session: Option<H::SessionRef>,
         mtu: usize,
-        jedi: bool,
         current_time: i64,
     ) -> Result<ReceiveResult<'a, H>, Error> {
         debug_assert!(fragments.len() >= 1);
@@ -704,7 +712,7 @@ impl<H: Host> ReceiveContext<H> {
 
                     // At this point we've completed Noise_IK key derivation with NIST P-384 ECDH, but see final step below...
 
-                    let (bob_e1_public, e1e1) = if jedi && alice_e1_public.len() > 0 {
+                    let (bob_e1_public, e1e1) = if JEDI && alice_e1_public.len() > 0 {
                         if let Ok((bob_e1_public, e1e1)) = pqc_kyber::encapsulate(alice_e1_public, &mut random::SecureRandom::default()) {
                             (Some(bob_e1_public), Secret(e1e1))
                         } else {
@@ -756,7 +764,7 @@ impl<H: Host> ReceiveContext<H> {
 
                     let mut state = session.state.write();
                     let _ = state.remote_session_id.replace(alice_session_id);
-                    add_key(&mut state.keys, SessionKey::new(key, Role::Bob, current_time, reply_counter, jedi));
+                    add_key(&mut state.keys, SessionKey::new(key, Role::Bob, current_time, reply_counter, JEDI));
                     drop(state);
 
                     // Bob now has final key state for this exchange. Yay! Now reply to Alice so she can construct it.
@@ -803,14 +811,14 @@ impl<H: Host> ReceiveContext<H> {
 
                             let (bob_session_id, _, _, bob_e1_public) = parse_key_offer_after_header(&incoming_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..], packet_type)?;
 
-                            let e1e1 = if jedi && bob_e1_public.len() > 0 && offer.alice_e1_keypair.is_some() {
+                            let (used_the_force, e1e1) = if JEDI && bob_e1_public.len() > 0 && offer.alice_e1_keypair.is_some() {
                                 if let Ok(e1e1) = pqc_kyber::decapsulate(bob_e1_public, &offer.alice_e1_keypair.as_ref().unwrap().secret) {
-                                    Secret(e1e1)
+                                    (true, Secret(e1e1))
                                 } else {
                                     return Err(Error::FailedAuthentication);
                                 }
                             } else {
-                                Secret::default()
+                                (false, Secret::default())
                             };
 
                             let key = Secret(hmac_sha512(e1e1.as_bytes(), key.as_bytes()));
@@ -827,7 +835,7 @@ impl<H: Host> ReceiveContext<H> {
                             // Alice has now completed and validated the full hybrid exchange.
 
                             let counter = session.send_counter.next();
-                            let key = SessionKey::new(key, Role::Alice, current_time, counter, jedi);
+                            let key = SessionKey::new(key, Role::Alice, current_time, counter, used_the_force);
 
                             let mut reply_buf = [0_u8; HEADER_SIZE + AES_GCM_TAG_SIZE];
                             send_with_fragmentation_init_header(&mut reply_buf, HEADER_SIZE + AES_GCM_TAG_SIZE, mtu, PACKET_TYPE_NOP, bob_session_id.into(), counter);
@@ -944,7 +952,6 @@ fn create_initial_offer<SendFunction: FnMut(&mut [u8])>(
     header_check_cipher: &Aes,
     mtu: usize,
     current_time: i64,
-    jedi: bool,
 ) -> Result<EphemeralOffer, Error> {
     let alice_e0_keypair = P384KeyPair::generate();
     let e0s = alice_e0_keypair.agree(bob_s_public_p384);
@@ -952,7 +959,7 @@ fn create_initial_offer<SendFunction: FnMut(&mut [u8])>(
         return Err(Error::InvalidPacket);
     }
 
-    let alice_e1_keypair = if jedi {
+    let alice_e1_keypair = if JEDI {
         Some(pqc_kyber::keypair(&mut random::SecureRandom::get()))
     } else {
         None
@@ -1299,7 +1306,6 @@ mod tests {
                 1,
                 mtu_buffer.len(),
                 1,
-                jedi,
             )
             .unwrap(),
         ));
@@ -1325,7 +1331,7 @@ mod tests {
                     if let Some(qi) = host.queue.lock().pop_back() {
                         let qi_len = qi.len();
                         ts += 1;
-                        let r = rc.receive(host, send_to_other, &mut data_buf, qi, mtu_buffer.len(), jedi, ts);
+                        let r = rc.receive(host, send_to_other, &mut data_buf, qi, mtu_buffer.len(), ts);
                         if r.is_ok() {
                             let r = r.unwrap();
                             match r {
@@ -1358,7 +1364,7 @@ mod tests {
                 data_buf.fill(0x12);
                 if let Some(session) = host.session.lock().as_ref().cloned() {
                     if session.established() {
-                        for dl in 0..data_buf.len() {
+                        for dl in (0..data_buf.len()).step_by(17) {
                             assert!(session.send(send_to_other, &mut mtu_buffer, &data_buf[..dl]).is_ok());
                         }
                     }

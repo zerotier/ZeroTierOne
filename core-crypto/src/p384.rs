@@ -7,8 +7,8 @@ pub const P384_SECRET_KEY_SIZE: usize = 48;
 pub const P384_ECDSA_SIGNATURE_SIZE: usize = 96;
 pub const P384_ECDH_SHARED_SECRET_SIZE: usize = 48;
 
-// This is small and fast but may not be constant time and hasn't been well audited, so we don't
-// use it. It's left here though in case it proves useful in the future on embedded systems.
+// This is small and relatively fast but may not be constant time and hasn't been well audited, so we don't
+// use it by default. It's left here though in case it proves useful in the future on embedded systems.
 #[cfg(target_feature = "builtin_nist_ecc")]
 mod builtin {
     use crate::hash::SHA384;
@@ -17,7 +17,9 @@ mod builtin {
     // EASY-ECC by Kenneth MacKay
     // https://github.com/esxgx/easy-ecc (no longer there, but search GitHub for forks)
     //
-    // Translated directly from C to Rust using: https://c2rust.com
+    // Translated directly from C to Rust using https://c2rust.com and then hacked a bit
+    // to eliminate some dependencies. The translated code still has a lot of gratuitous
+    // "as"es but they're not consequential.
     //
     // It inherits its original BSD 2-Clause license, not ZeroTier's license.
 
@@ -84,12 +86,12 @@ mod builtin {
         0xffffffffffffffff as libc::c_ulong,
         0xffffffffffffffff as libc::c_ulong,
     ];
-    #[inline(always)]
+
     unsafe fn getRandomNumber(mut p_vli: *mut uint64_t) -> libc::c_int {
         crate::random::fill_bytes_secure(&mut *std::ptr::slice_from_raw_parts_mut(p_vli.cast(), 48));
         return 1 as libc::c_int;
     }
-    #[inline(always)]
+
     unsafe fn vli_clear(mut p_vli: *mut uint64_t) {
         let mut i: uint = 0;
         i = 0 as libc::c_int as uint;
@@ -99,7 +101,7 @@ mod builtin {
         }
     }
     /* Returns 1 if p_vli == 0, 0 otherwise. */
-    #[inline(always)]
+
     unsafe fn vli_isZero(mut p_vli: *mut uint64_t) -> libc::c_int {
         let mut i: uint = 0;
         i = 0 as libc::c_int as uint;
@@ -112,12 +114,12 @@ mod builtin {
         return 1 as libc::c_int;
     }
     /* Returns nonzero if bit p_bit of p_vli is set. */
-    #[inline(always)]
+
     unsafe fn vli_testBit(mut p_vli: *mut uint64_t, mut p_bit: uint) -> uint64_t {
         return *p_vli.offset(p_bit.wrapping_div(64 as libc::c_int as libc::c_uint) as isize) & (1 as libc::c_int as uint64_t) << p_bit.wrapping_rem(64 as libc::c_int as libc::c_uint);
     }
     /* Counts the number of 64-bit "digits" in p_vli. */
-    #[inline(always)]
+
     unsafe fn vli_numDigits(mut p_vli: *mut uint64_t) -> uint {
         let mut i: libc::c_int = 0;
         /* Search from the end until we find a non-zero digit.
@@ -129,7 +131,7 @@ mod builtin {
         return (i + 1 as libc::c_int) as uint;
     }
     /* Counts the number of bits required for p_vli. */
-    #[inline(always)]
+
     unsafe fn vli_numBits(mut p_vli: *mut uint64_t) -> uint {
         let mut i: uint = 0;
         let mut l_digit: uint64_t = 0;
@@ -143,10 +145,13 @@ mod builtin {
             l_digit >>= 1 as libc::c_int;
             i = i.wrapping_add(1)
         }
-        return l_numDigits.wrapping_sub(1 as libc::c_int as libc::c_uint).wrapping_mul(64 as libc::c_int as libc::c_uint).wrapping_add(i);
+        return l_numDigits
+            .wrapping_sub(1 as libc::c_int as libc::c_uint)
+            .wrapping_mul(64 as libc::c_int as libc::c_uint)
+            .wrapping_add(i);
     }
     /* Sets p_dest = p_src. */
-    #[inline(always)]
+
     unsafe fn vli_set(mut p_dest: *mut uint64_t, mut p_src: *mut uint64_t) {
         let mut i: uint = 0;
         i = 0 as libc::c_int as uint;
@@ -156,7 +161,7 @@ mod builtin {
         }
     }
     /* Returns sign of p_left - p_right. */
-    #[inline(always)]
+
     unsafe fn vli_cmp(mut p_left: *mut uint64_t, mut p_right: *mut uint64_t) -> libc::c_int {
         let mut i: libc::c_int = 0;
         i = 48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int;
@@ -173,7 +178,7 @@ mod builtin {
         return 0 as libc::c_int;
     }
     /* Computes p_result = p_in << c, returning carry. Can modify in place (if p_result == p_in). 0 < p_shift < 64. */
-    #[inline(always)]
+
     unsafe fn vli_lshift(mut p_result: *mut uint64_t, mut p_in: *mut uint64_t, mut p_shift: uint) -> uint64_t {
         let mut l_carry: uint64_t = 0 as libc::c_int as uint64_t;
         let mut i: uint = 0;
@@ -187,7 +192,7 @@ mod builtin {
         return l_carry;
     }
     /* Computes p_vli = p_vli >> 1. */
-    #[inline(always)]
+
     unsafe fn vli_rshift1(mut p_vli: *mut uint64_t) {
         let mut l_end: *mut uint64_t = p_vli;
         let mut l_carry: uint64_t = 0 as libc::c_int as uint64_t;
@@ -204,7 +209,7 @@ mod builtin {
         }
     }
     /* Computes p_result = p_left + p_right, returning carry. Can modify in place. */
-    #[inline(always)]
+
     unsafe fn vli_add(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t, mut p_right: *mut uint64_t) -> uint64_t {
         let mut l_carry: uint64_t = 0 as libc::c_int as uint64_t;
         let mut i: uint = 0;
@@ -220,7 +225,7 @@ mod builtin {
         return l_carry;
     }
     /* Computes p_result = p_left - p_right, returning borrow. Can modify in place. */
-    #[inline(always)]
+
     unsafe fn vli_sub(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t, mut p_right: *mut uint64_t) -> uint64_t {
         let mut l_borrow: uint64_t = 0 as libc::c_int as uint64_t;
         let mut i: uint = 0;
@@ -236,7 +241,7 @@ mod builtin {
         return l_borrow;
     }
     /* Computes p_result = p_left * p_right. */
-    #[inline(always)]
+
     unsafe fn vli_mult(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t, mut p_right: *mut uint64_t) {
         let mut r01: uint128_t = 0 as libc::c_int as uint128_t;
         let mut r2: uint64_t = 0 as libc::c_int as uint64_t;
@@ -265,7 +270,7 @@ mod builtin {
         *p_result.offset((48 as libc::c_int / 8 as libc::c_int * 2 as libc::c_int - 1 as libc::c_int) as isize) = r01 as uint64_t;
     }
     /* Computes p_result = p_left^2. */
-    #[inline(always)]
+
     unsafe fn vli_square(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t) {
         let mut r01: uint128_t = 0 as libc::c_int as uint128_t;
         let mut r2: uint64_t = 0 as libc::c_int as uint64_t;
@@ -300,7 +305,7 @@ mod builtin {
     /* SUPPORTS_INT128 */
     /* Computes p_result = (p_left + p_right) % p_mod.
     Assumes that p_left < p_mod and p_right < p_mod, p_result != p_mod. */
-    #[inline(always)]
+
     unsafe fn vli_modAdd(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t, mut p_right: *mut uint64_t, mut p_mod: *mut uint64_t) {
         let mut l_carry: uint64_t = vli_add(p_result, p_left, p_right);
         if l_carry != 0 || vli_cmp(p_result, p_mod) >= 0 as libc::c_int {
@@ -310,7 +315,7 @@ mod builtin {
     }
     /* Computes p_result = (p_left - p_right) % p_mod.
     Assumes that p_left < p_mod and p_right < p_mod, p_result != p_mod. */
-    #[inline(always)]
+
     unsafe fn vli_modSub(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t, mut p_right: *mut uint64_t, mut p_mod: *mut uint64_t) {
         let mut l_borrow: uint64_t = vli_sub(p_result, p_left, p_right);
         if l_borrow != 0 {
@@ -320,7 +325,7 @@ mod builtin {
         };
     }
     //#elif ECC_CURVE == secp384r1
-    #[inline(always)]
+
     unsafe fn omega_mult(mut p_result: *mut uint64_t, mut p_right: *mut uint64_t) {
         let mut l_tmp: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
         let mut l_carry: uint64_t = 0;
@@ -328,7 +333,8 @@ mod builtin {
         /* Multiply by (2^128 + 2^96 - 2^32 + 1). */
         vli_set(p_result, p_right); /* 1 */
         l_carry = vli_lshift(l_tmp.as_mut_ptr(), p_right, 32 as libc::c_int as uint); /* 2^96 + 1 */
-        *p_result.offset((1 as libc::c_int + 48 as libc::c_int / 8 as libc::c_int) as isize) = l_carry.wrapping_add(vli_add(p_result.offset(1 as libc::c_int as isize), p_result.offset(1 as libc::c_int as isize), l_tmp.as_mut_ptr())); /* 2^128 + 2^96 + 1 */
+        *p_result.offset((1 as libc::c_int + 48 as libc::c_int / 8 as libc::c_int) as isize) =
+            l_carry.wrapping_add(vli_add(p_result.offset(1 as libc::c_int as isize), p_result.offset(1 as libc::c_int as isize), l_tmp.as_mut_ptr())); /* 2^128 + 2^96 + 1 */
         *p_result.offset((2 as libc::c_int + 48 as libc::c_int / 8 as libc::c_int) as isize) = vli_add(p_result.offset(2 as libc::c_int as isize), p_result.offset(2 as libc::c_int as isize), p_right); /* 2^128 + 2^96 - 2^32 + 1 */
         l_carry = (l_carry as libc::c_ulong).wrapping_add(vli_sub(p_result, p_result, l_tmp.as_mut_ptr())) as uint64_t as uint64_t;
         l_diff = (*p_result.offset((48 as libc::c_int / 8 as libc::c_int) as isize)).wrapping_sub(l_carry);
@@ -350,7 +356,7 @@ mod builtin {
     /* Computes p_result = p_product % curve_p
     see PDF "Comparing Elliptic Curve Cryptography and RSA on 8-bit CPUs"
     section "Curve-Specific Optimizations" */
-    #[inline(always)]
+
     unsafe fn vli_mmod_fast(mut p_result: *mut uint64_t, mut p_product: *mut uint64_t) {
         let mut l_tmp: [uint64_t; 12] = std::mem::MaybeUninit::uninit().assume_init();
         while vli_isZero(p_product.offset((48 as libc::c_int / 8 as libc::c_int) as isize)) == 0 {
@@ -379,14 +385,14 @@ mod builtin {
     }
     //#endif
     /* Computes p_result = (p_left * p_right) % curve_p. */
-    #[inline(always)]
+
     unsafe fn vli_modMult_fast(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t, mut p_right: *mut uint64_t) {
         let mut l_product: [uint64_t; 12] = std::mem::MaybeUninit::uninit().assume_init();
         vli_mult(l_product.as_mut_ptr(), p_left, p_right);
         vli_mmod_fast(p_result, l_product.as_mut_ptr());
     }
     /* Computes p_result = p_left^2 % curve_p. */
-    #[inline(always)]
+
     unsafe fn vli_modSquare_fast(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t) {
         let mut l_product: [uint64_t; 12] = std::mem::MaybeUninit::uninit().assume_init();
         vli_square(l_product.as_mut_ptr(), p_left);
@@ -395,7 +401,7 @@ mod builtin {
     /* Computes p_result = (1 / p_input) % p_mod. All VLIs are the same size.
     See "From Euclid's GCD to Montgomery Multiplication to the Great Divide"
     https://labs.oracle.com/techrep/2001/smli_tr-2001-95.pdf */
-    #[inline(always)]
+
     unsafe fn vli_modInv(mut p_result: *mut uint64_t, mut p_input: *mut uint64_t, mut p_mod: *mut uint64_t) {
         let mut a: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
         let mut b: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
@@ -425,7 +431,8 @@ mod builtin {
                 }
                 vli_rshift1(u.as_mut_ptr());
                 if l_carry != 0 {
-                    u[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] = (u[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] as libc::c_ulonglong | 0x8000000000000000 as libc::c_ulonglong) as uint64_t
+                    u[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] =
+                        (u[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] as libc::c_ulonglong | 0x8000000000000000 as libc::c_ulonglong) as uint64_t
                 }
             } else if b[0 as libc::c_int as usize] & 1 as libc::c_int as libc::c_ulong == 0 {
                 vli_rshift1(b.as_mut_ptr());
@@ -434,7 +441,8 @@ mod builtin {
                 }
                 vli_rshift1(v.as_mut_ptr());
                 if l_carry != 0 {
-                    v[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] = (v[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] as libc::c_ulonglong | 0x8000000000000000 as libc::c_ulonglong) as uint64_t
+                    v[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] =
+                        (v[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] as libc::c_ulonglong | 0x8000000000000000 as libc::c_ulonglong) as uint64_t
                 }
             } else if l_cmpResult > 0 as libc::c_int {
                 vli_sub(a.as_mut_ptr(), a.as_mut_ptr(), b.as_mut_ptr());
@@ -448,7 +456,8 @@ mod builtin {
                 }
                 vli_rshift1(u.as_mut_ptr());
                 if l_carry != 0 {
-                    u[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] = (u[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] as libc::c_ulonglong | 0x8000000000000000 as libc::c_ulonglong) as uint64_t
+                    u[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] =
+                        (u[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] as libc::c_ulonglong | 0x8000000000000000 as libc::c_ulonglong) as uint64_t
                 }
             } else {
                 vli_sub(b.as_mut_ptr(), b.as_mut_ptr(), a.as_mut_ptr());
@@ -462,7 +471,8 @@ mod builtin {
                 }
                 vli_rshift1(v.as_mut_ptr());
                 if l_carry != 0 {
-                    v[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] = (v[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] as libc::c_ulonglong | 0x8000000000000000 as libc::c_ulonglong) as uint64_t
+                    v[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] =
+                        (v[(48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as usize] as libc::c_ulonglong | 0x8000000000000000 as libc::c_ulonglong) as uint64_t
                 }
             }
         }
@@ -470,7 +480,7 @@ mod builtin {
     }
     /* ------ Point operations ------ */
     /* Returns 1 if p_point is the point at infinity, 0 otherwise. */
-    #[inline(always)]
+
     unsafe fn EccPoint_isZero(mut p_point: *mut EccPoint) -> libc::c_int {
         return (vli_isZero((*p_point).x.as_mut_ptr()) != 0 && vli_isZero((*p_point).y.as_mut_ptr()) != 0) as libc::c_int;
     }
@@ -478,7 +488,7 @@ mod builtin {
     From http://eprint.iacr.org/2011/338.pdf
     */
     /* Double in place */
-    #[inline(always)]
+
     unsafe fn EccPoint_double_jacobian(mut X1: *mut uint64_t, mut Y1: *mut uint64_t, mut Z1: *mut uint64_t) {
         /* t1 = X, t2 = Y, t3 = Z */
         let mut t4: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init(); /* t4 = y1^2 */
@@ -517,7 +527,7 @@ mod builtin {
         vli_set(Y1, t4.as_mut_ptr());
     }
     /* Modify (x1, y1) => (x1 * z^2, y1 * z^3) */
-    #[inline(always)]
+
     unsafe fn apply_z(mut X1: *mut uint64_t, mut Y1: *mut uint64_t, mut Z: *mut uint64_t) {
         let mut t1: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init(); /* z^2 */
         vli_modSquare_fast(t1.as_mut_ptr(), Z); /* x1 * z^2 */
@@ -527,7 +537,7 @@ mod builtin {
         /* y1 * z^3 */
     }
     /* P = (x1, y1) => 2P, (x2, y2) => P' */
-    #[inline(always)]
+
     unsafe fn XYcZ_initial_double(mut X1: *mut uint64_t, mut Y1: *mut uint64_t, mut X2: *mut uint64_t, mut Y2: *mut uint64_t, mut p_initialZ: *mut uint64_t) {
         let mut z: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init();
         vli_set(X2, X1);
@@ -545,7 +555,7 @@ mod builtin {
     Output P' = (x1', y1', Z3), P + Q = (x3, y3, Z3)
     or P => P', Q => P + Q
     */
-    #[inline(always)]
+
     unsafe fn XYcZ_add(mut X1: *mut uint64_t, mut Y1: *mut uint64_t, mut X2: *mut uint64_t, mut Y2: *mut uint64_t) {
         /* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
         let mut t5: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init(); /* t5 = x2 - x1 */
@@ -568,7 +578,7 @@ mod builtin {
     Output P + Q = (x3, y3, Z3), P - Q = (x3', y3', Z3)
     or P => P - Q, Q => P + Q
     */
-    #[inline(always)]
+
     unsafe fn XYcZ_addC(mut X1: *mut uint64_t, mut Y1: *mut uint64_t, mut X2: *mut uint64_t, mut Y2: *mut uint64_t) {
         /* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
         let mut t5: [uint64_t; 6] = std::mem::MaybeUninit::uninit().assume_init(); /* t5 = x2 - x1 */
@@ -595,7 +605,7 @@ mod builtin {
         vli_modSub(Y1, t6.as_mut_ptr(), Y1, curve_p.as_mut_ptr());
         vli_set(X1, t7.as_mut_ptr());
     }
-    #[inline(always)]
+
     unsafe fn EccPoint_mult(mut p_result: *mut EccPoint, mut p_point: *mut EccPoint, mut p_scalar: *mut uint64_t, mut p_initialZ: *mut uint64_t) {
         /* R0 and R1 */
         let mut Rx: [[uint64_t; 6]; 2] = std::mem::MaybeUninit::uninit().assume_init();
@@ -615,31 +625,57 @@ mod builtin {
         i = vli_numBits(p_scalar).wrapping_sub(2 as libc::c_int as libc::c_uint) as libc::c_int;
         while i > 0 as libc::c_int {
             nb = (vli_testBit(p_scalar, i as uint) == 0) as libc::c_int;
-            XYcZ_addC(Rx[(1 as libc::c_int - nb) as usize].as_mut_ptr(), Ry[(1 as libc::c_int - nb) as usize].as_mut_ptr(), Rx[nb as usize].as_mut_ptr(), Ry[nb as usize].as_mut_ptr());
-            XYcZ_add(Rx[nb as usize].as_mut_ptr(), Ry[nb as usize].as_mut_ptr(), Rx[(1 as libc::c_int - nb) as usize].as_mut_ptr(), Ry[(1 as libc::c_int - nb) as usize].as_mut_ptr());
+            XYcZ_addC(
+                Rx[(1 as libc::c_int - nb) as usize].as_mut_ptr(),
+                Ry[(1 as libc::c_int - nb) as usize].as_mut_ptr(),
+                Rx[nb as usize].as_mut_ptr(),
+                Ry[nb as usize].as_mut_ptr(),
+            );
+            XYcZ_add(
+                Rx[nb as usize].as_mut_ptr(),
+                Ry[nb as usize].as_mut_ptr(),
+                Rx[(1 as libc::c_int - nb) as usize].as_mut_ptr(),
+                Ry[(1 as libc::c_int - nb) as usize].as_mut_ptr(),
+            );
             i -= 1
         }
         nb = (vli_testBit(p_scalar, 0 as libc::c_int as uint) == 0) as libc::c_int;
-        XYcZ_addC(Rx[(1 as libc::c_int - nb) as usize].as_mut_ptr(), Ry[(1 as libc::c_int - nb) as usize].as_mut_ptr(), Rx[nb as usize].as_mut_ptr(), Ry[nb as usize].as_mut_ptr());
+        XYcZ_addC(
+            Rx[(1 as libc::c_int - nb) as usize].as_mut_ptr(),
+            Ry[(1 as libc::c_int - nb) as usize].as_mut_ptr(),
+            Rx[nb as usize].as_mut_ptr(),
+            Ry[nb as usize].as_mut_ptr(),
+        );
         /* Find final 1/Z value. */
-        vli_modSub(z.as_mut_ptr(), Rx[1 as libc::c_int as usize].as_mut_ptr(), Rx[0 as libc::c_int as usize].as_mut_ptr(), curve_p.as_mut_ptr()); /* X1 - X0 */
+        vli_modSub(
+            z.as_mut_ptr(),
+            Rx[1 as libc::c_int as usize].as_mut_ptr(),
+            Rx[0 as libc::c_int as usize].as_mut_ptr(),
+            curve_p.as_mut_ptr(),
+        ); /* X1 - X0 */
         vli_modMult_fast(z.as_mut_ptr(), z.as_mut_ptr(), Ry[(1 as libc::c_int - nb) as usize].as_mut_ptr()); /* Yb * (X1 - X0) */
         vli_modMult_fast(z.as_mut_ptr(), z.as_mut_ptr(), (*p_point).x.as_mut_ptr()); /* xP * Yb * (X1 - X0) */
         vli_modInv(z.as_mut_ptr(), z.as_mut_ptr(), curve_p.as_mut_ptr()); /* 1 / (xP * Yb * (X1 - X0)) */
         vli_modMult_fast(z.as_mut_ptr(), z.as_mut_ptr(), (*p_point).y.as_mut_ptr()); /* yP / (xP * Yb * (X1 - X0)) */
         vli_modMult_fast(z.as_mut_ptr(), z.as_mut_ptr(), Rx[(1 as libc::c_int - nb) as usize].as_mut_ptr()); /* Xb * yP / (xP * Yb * (X1 - X0)) */
         /* End 1/Z calculation */
-        XYcZ_add(Rx[nb as usize].as_mut_ptr(), Ry[nb as usize].as_mut_ptr(), Rx[(1 as libc::c_int - nb) as usize].as_mut_ptr(), Ry[(1 as libc::c_int - nb) as usize].as_mut_ptr());
+        XYcZ_add(
+            Rx[nb as usize].as_mut_ptr(),
+            Ry[nb as usize].as_mut_ptr(),
+            Rx[(1 as libc::c_int - nb) as usize].as_mut_ptr(),
+            Ry[(1 as libc::c_int - nb) as usize].as_mut_ptr(),
+        );
         apply_z(Rx[0 as libc::c_int as usize].as_mut_ptr(), Ry[0 as libc::c_int as usize].as_mut_ptr(), z.as_mut_ptr());
         vli_set((*p_result).x.as_mut_ptr(), Rx[0 as libc::c_int as usize].as_mut_ptr());
         vli_set((*p_result).y.as_mut_ptr(), Ry[0 as libc::c_int as usize].as_mut_ptr());
     }
-    #[inline(always)]
+
     unsafe fn ecc_bytes2native(mut p_native: *mut uint64_t, mut p_bytes: *const uint8_t) {
         let mut i: libc::c_uint = 0;
         i = 0 as libc::c_int as libc::c_uint;
         while i < (48 as libc::c_int / 8 as libc::c_int) as libc::c_uint {
-            let mut p_digit: *const uint8_t = p_bytes.offset((8 as libc::c_int as libc::c_uint).wrapping_mul(((48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as libc::c_uint).wrapping_sub(i)) as isize);
+            let mut p_digit: *const uint8_t =
+                p_bytes.offset((8 as libc::c_int as libc::c_uint).wrapping_mul(((48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as libc::c_uint).wrapping_sub(i)) as isize);
             *p_native.offset(i as isize) = (*p_digit.offset(0 as libc::c_int as isize) as uint64_t) << 56 as libc::c_int
                 | (*p_digit.offset(1 as libc::c_int as isize) as uint64_t) << 48 as libc::c_int
                 | (*p_digit.offset(2 as libc::c_int as isize) as uint64_t) << 40 as libc::c_int
@@ -651,12 +687,13 @@ mod builtin {
             i = i.wrapping_add(1)
         }
     }
-    #[inline(always)]
+
     unsafe fn ecc_native2bytes(mut p_bytes: *mut uint8_t, mut p_native: *const uint64_t) {
         let mut i: libc::c_uint = 0;
         i = 0 as libc::c_int as libc::c_uint;
         while i < (48 as libc::c_int / 8 as libc::c_int) as libc::c_uint {
-            let mut p_digit: *mut uint8_t = p_bytes.offset((8 as libc::c_int as libc::c_uint).wrapping_mul(((48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as libc::c_uint).wrapping_sub(i)) as isize);
+            let mut p_digit: *mut uint8_t =
+                p_bytes.offset((8 as libc::c_int as libc::c_uint).wrapping_mul(((48 as libc::c_int / 8 as libc::c_int - 1 as libc::c_int) as libc::c_uint).wrapping_sub(i)) as isize);
             *p_digit.offset(0 as libc::c_int as isize) = (*p_native.offset(i as isize) >> 56 as libc::c_int) as uint8_t;
             *p_digit.offset(1 as libc::c_int as isize) = (*p_native.offset(i as isize) >> 48 as libc::c_int) as uint8_t;
             *p_digit.offset(2 as libc::c_int as isize) = (*p_native.offset(i as isize) >> 40 as libc::c_int) as uint8_t;
@@ -669,7 +706,7 @@ mod builtin {
         }
     }
     /* Compute a = sqrt(a) (mod curve_p). */
-    #[inline(always)]
+
     unsafe fn mod_sqrt(mut a: *mut uint64_t) {
         let mut i: libc::c_uint = 0;
         let mut p1: [uint64_t; 6] = [1 as libc::c_int as uint64_t, 0, 0, 0, 0, 0];
@@ -688,7 +725,7 @@ mod builtin {
         } /* y = x^3 - 3x + b */
         vli_set(a, l_result.as_mut_ptr());
     }
-    #[inline(always)]
+
     unsafe fn ecc_point_decompress(mut p_point: *mut EccPoint, mut p_compressed: *const uint8_t) {
         let mut _3: [uint64_t; 6] = [3 as libc::c_int as uint64_t, 0, 0, 0, 0, 0];
         ecc_bytes2native((*p_point).x.as_mut_ptr(), p_compressed.offset(1 as libc::c_int as isize));
@@ -746,7 +783,7 @@ mod builtin {
     }
     /* -------- ECDSA code -------- */
     /* Computes p_result = (p_left * p_right) % p_mod. */
-    #[inline(always)]
+
     unsafe fn vli_modMult(mut p_result: *mut uint64_t, mut p_left: *mut uint64_t, mut p_right: *mut uint64_t, mut p_mod: *mut uint64_t) {
         let mut l_product: [uint64_t; 12] = std::mem::MaybeUninit::uninit().assume_init();
         let mut l_modMultiple: [uint64_t; 12] = std::mem::MaybeUninit::uninit().assume_init();
@@ -773,7 +810,8 @@ mod builtin {
         l_digitShift = l_productBits.wrapping_sub(l_modBits).wrapping_div(64 as libc::c_int as libc::c_uint);
         l_bitShift = l_productBits.wrapping_sub(l_modBits).wrapping_rem(64 as libc::c_int as libc::c_uint);
         if l_bitShift != 0 {
-            l_modMultiple[l_digitShift.wrapping_add((48 as libc::c_int / 8 as libc::c_int) as libc::c_uint) as usize] = vli_lshift(l_modMultiple.as_mut_ptr().offset(l_digitShift as isize), p_mod, l_bitShift)
+            l_modMultiple[l_digitShift.wrapping_add((48 as libc::c_int / 8 as libc::c_int) as libc::c_uint) as usize] =
+                vli_lshift(l_modMultiple.as_mut_ptr().offset(l_digitShift as isize), p_mod, l_bitShift)
         } else {
             vli_set(l_modMultiple.as_mut_ptr().offset(l_digitShift as isize), p_mod);
         }
@@ -781,11 +819,18 @@ mod builtin {
         vli_clear(p_result); /* Use p_result as a temp var to store 1 (for subtraction) */
         *p_result.offset(0 as libc::c_int as isize) = 1 as libc::c_int as uint64_t;
         while l_productBits > (48 as libc::c_int / 8 as libc::c_int * 64 as libc::c_int) as libc::c_uint || vli_cmp(l_modMultiple.as_mut_ptr(), p_mod) >= 0 as libc::c_int {
-            let mut l_cmp: libc::c_int = vli_cmp(l_modMultiple.as_mut_ptr().offset((48 as libc::c_int / 8 as libc::c_int) as isize), l_product.as_mut_ptr().offset((48 as libc::c_int / 8 as libc::c_int) as isize));
+            let mut l_cmp: libc::c_int = vli_cmp(
+                l_modMultiple.as_mut_ptr().offset((48 as libc::c_int / 8 as libc::c_int) as isize),
+                l_product.as_mut_ptr().offset((48 as libc::c_int / 8 as libc::c_int) as isize),
+            );
             if l_cmp < 0 as libc::c_int || l_cmp == 0 as libc::c_int && vli_cmp(l_modMultiple.as_mut_ptr(), l_product.as_mut_ptr()) <= 0 as libc::c_int {
                 if vli_sub(l_product.as_mut_ptr(), l_product.as_mut_ptr(), l_modMultiple.as_mut_ptr()) != 0 {
                     /* borrow */
-                    vli_sub(l_product.as_mut_ptr().offset((48 as libc::c_int / 8 as libc::c_int) as isize), l_product.as_mut_ptr().offset((48 as libc::c_int / 8 as libc::c_int) as isize), p_result);
+                    vli_sub(
+                        l_product.as_mut_ptr().offset((48 as libc::c_int / 8 as libc::c_int) as isize),
+                        l_product.as_mut_ptr().offset((48 as libc::c_int / 8 as libc::c_int) as isize),
+                        p_result,
+                    );
                 }
                 vli_sub(
                     l_product.as_mut_ptr().offset((48 as libc::c_int / 8 as libc::c_int) as isize),
@@ -801,7 +846,7 @@ mod builtin {
         }
         vli_set(p_result, l_product.as_mut_ptr());
     }
-    #[inline(always)]
+
     unsafe fn umax(mut a: uint, mut b: uint) -> uint {
         a.max(b)
     }
@@ -886,8 +931,9 @@ mod builtin {
         /* Use Shamir's trick to calculate u1*G + u2*Q */
         let mut l_points: [*mut EccPoint; 4] = [0 as *mut EccPoint, &mut curve_G, &mut l_public, &mut l_sum]; /* Z = x2 - x1 */
         let mut l_numBits: uint = umax(vli_numBits(u1.as_mut_ptr()), vli_numBits(u2.as_mut_ptr())); /* Z = 1/Z */
-        let mut l_point: *mut EccPoint =
-            l_points[((vli_testBit(u1.as_mut_ptr(), l_numBits.wrapping_sub(1 as libc::c_int as libc::c_uint)) != 0) as libc::c_int | ((vli_testBit(u2.as_mut_ptr(), l_numBits.wrapping_sub(1 as libc::c_int as libc::c_uint)) != 0) as libc::c_int) << 1 as libc::c_int) as usize];
+        let mut l_point: *mut EccPoint = l_points[((vli_testBit(u1.as_mut_ptr(), l_numBits.wrapping_sub(1 as libc::c_int as libc::c_uint)) != 0) as libc::c_int
+            | ((vli_testBit(u2.as_mut_ptr(), l_numBits.wrapping_sub(1 as libc::c_int as libc::c_uint)) != 0) as libc::c_int) << 1 as libc::c_int)
+            as usize];
         vli_set(rx.as_mut_ptr(), (*l_point).x.as_mut_ptr());
         vli_set(ry.as_mut_ptr(), (*l_point).y.as_mut_ptr());
         vli_clear(z.as_mut_ptr());
@@ -922,7 +968,6 @@ mod builtin {
     pub struct P384PublicKey([u8; 49]);
 
     impl P384PublicKey {
-        #[inline(always)]
         pub fn from_bytes(b: &[u8]) -> Option<P384PublicKey> {
             if b.len() == 49 {
                 Some(Self(b.try_into().unwrap()))
@@ -940,7 +985,6 @@ mod builtin {
             return false;
         }
 
-        #[inline(always)]
         pub fn as_bytes(&self) -> &[u8; 49] {
             &self.0
         }
@@ -964,17 +1008,14 @@ mod builtin {
             }
         }
 
-        #[inline(always)]
         pub fn public_key(&self) -> &P384PublicKey {
             &self.0
         }
 
-        #[inline(always)]
         pub fn public_key_bytes(&self) -> &[u8; 49] {
             &self.0 .0
         }
 
-        #[inline(always)]
         pub fn secret_key_bytes(&self) -> Secret<48> {
             self.1.clone()
         }
@@ -1086,14 +1127,12 @@ mod openssl_based {
             return false;
         }
 
-        #[inline(always)]
         pub fn as_bytes(&self) -> &[u8; 49] {
             &self.bytes
         }
     }
 
     impl PartialEq for P384PublicKey {
-        #[inline(always)]
         fn eq(&self, other: &Self) -> bool {
             self.bytes == other.bytes
         }
@@ -1140,12 +1179,10 @@ mod openssl_based {
             }
         }
 
-        #[inline(always)]
         pub fn public_key(&self) -> &P384PublicKey {
             &self.public
         }
 
-        #[inline(always)]
         pub fn public_key_bytes(&self) -> &[u8; P384_PUBLIC_KEY_SIZE] {
             &self.public.bytes
         }
@@ -1192,7 +1229,6 @@ mod openssl_based {
     }
 
     impl PartialEq for P384KeyPair {
-        #[inline(always)]
         fn eq(&self, other: &Self) -> bool {
             self.pair.private_key().eq(other.pair.private_key()) && self.public.bytes.eq(&other.public.bytes)
         }
