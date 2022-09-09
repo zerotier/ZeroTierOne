@@ -1,5 +1,7 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::mem::size_of;
+
 #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
 #[allow(unused)]
 mod fast_int_memory_access {
@@ -36,6 +38,12 @@ mod fast_int_memory_access {
     #[inline(always)]
     pub fn i16_from_le_bytes(b: &[u8]) -> i16 {
         assert!(b.len() >= 2);
+        unsafe { *b.as_ptr().cast() }
+    }
+
+    #[inline(always)]
+    pub fn u128_from_ne_bytes(b: &[u8]) -> u128 {
+        assert!(b.len() >= 16);
         unsafe { *b.as_ptr().cast() }
     }
 
@@ -207,3 +215,11 @@ mod fast_int_memory_access {
 }
 
 pub use fast_int_memory_access::*;
+
+/// Get a reference to a raw object as a byte array.
+/// The template parameter S must equal the size of the object in bytes or this will panic.
+#[inline(always)]
+pub fn as_byte_array<T: Copy, const S: usize>(o: &T) -> &[u8; S] {
+    assert_eq!(S, size_of::<T>());
+    unsafe { &*(o as *const T).cast::<[u8; S]>() }
+}

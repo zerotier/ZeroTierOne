@@ -18,7 +18,7 @@ pub const TYPE_ZEROTIER: u8 = 1;
 pub const TYPE_ETHERNET: u8 = 2;
 pub const TYPE_WIFIDIRECT: u8 = 3;
 pub const TYPE_BLUETOOTH: u8 = 4;
-pub const TYPE_IP: u8 = 5;
+pub const TYPE_ICMP: u8 = 5;
 pub const TYPE_IPUDP: u8 = 6;
 pub const TYPE_IPTCP: u8 = 7;
 pub const TYPE_HTTP: u8 = 8;
@@ -48,8 +48,8 @@ pub enum Endpoint {
     /// Local bluetooth
     Bluetooth(MAC),
 
-    /// Raw IP without a UDP or other header
-    Ip(InetAddress),
+    /// ICMP ECHO, which can be used to traverse some NATs
+    Icmp(InetAddress),
 
     /// Raw UDP, the default and usually preferred transport mode
     IpUdp(InetAddress),
@@ -80,7 +80,7 @@ impl Endpoint {
     #[inline(always)]
     pub fn ip(&self) -> Option<(&InetAddress, u8)> {
         match self {
-            Endpoint::Ip(ip) => Some((&ip, TYPE_IP)),
+            Endpoint::Icmp(ip) => Some((&ip, TYPE_ICMP)),
             Endpoint::IpUdp(ip) => Some((&ip, TYPE_IPUDP)),
             Endpoint::IpTcp(ip) => Some((&ip, TYPE_IPTCP)),
             _ => None,
@@ -94,7 +94,7 @@ impl Endpoint {
             Endpoint::Ethernet(_) => TYPE_ETHERNET,
             Endpoint::WifiDirect(_) => TYPE_WIFIDIRECT,
             Endpoint::Bluetooth(_) => TYPE_BLUETOOTH,
-            Endpoint::Ip(_) => TYPE_IP,
+            Endpoint::Icmp(_) => TYPE_ICMP,
             Endpoint::IpUdp(_) => TYPE_IPUDP,
             Endpoint::IpTcp(_) => TYPE_IPTCP,
             Endpoint::Http(_) => TYPE_HTTP,
@@ -120,7 +120,7 @@ impl Endpoint {
     /// Returns true if this is an endpoint type that requires that large packets be fragmented.
     pub fn requires_fragmentation(&self) -> bool {
         match self {
-            Endpoint::Ip(_) | Endpoint::IpUdp(_) | Endpoint::Ethernet(_) | Endpoint::Bluetooth(_) | Endpoint::WifiDirect(_) => true,
+            Endpoint::Icmp(_) | Endpoint::IpUdp(_) | Endpoint::Ethernet(_) | Endpoint::Bluetooth(_) | Endpoint::WifiDirect(_) => true,
             _ => false,
         }
     }
@@ -149,8 +149,8 @@ impl Marshalable for Endpoint {
                 buf.append_u8(16 + TYPE_BLUETOOTH)?;
                 buf.append_bytes_fixed(&m.to_bytes())
             }
-            Endpoint::Ip(ip) => {
-                buf.append_u8(16 + TYPE_IP)?;
+            Endpoint::Icmp(ip) => {
+                buf.append_u8(16 + TYPE_ICMP)?;
                 ip.marshal(buf)
             }
             Endpoint::IpUdp(ip) => {
@@ -207,7 +207,7 @@ impl Marshalable for Endpoint {
                 TYPE_ETHERNET => Ok(Endpoint::Ethernet(MAC::unmarshal(buf, cursor)?)),
                 TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(MAC::unmarshal(buf, cursor)?)),
                 TYPE_BLUETOOTH => Ok(Endpoint::Bluetooth(MAC::unmarshal(buf, cursor)?)),
-                TYPE_IP => Ok(Endpoint::Ip(InetAddress::unmarshal(buf, cursor)?)),
+                TYPE_ICMP => Ok(Endpoint::Icmp(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_IPUDP => Ok(Endpoint::IpUdp(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_IPTCP => Ok(Endpoint::IpTcp(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_HTTP => Ok(Endpoint::Http(String::from_utf8_lossy(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?).to_string())),
@@ -244,9 +244,9 @@ impl Hash for Endpoint {
                 state.write_u8(TYPE_BLUETOOTH);
                 state.write_u64(m.into())
             }
-            Endpoint::Ip(ip) => {
-                state.write_u8(TYPE_IP);
-                ip.ip_bytes().hash(state);
+            Endpoint::Icmp(ip) => {
+                state.write_u8(TYPE_ICMP);
+                ip.hash(state);
             }
             Endpoint::IpUdp(ip) => {
                 state.write_u8(TYPE_IPUDP);
@@ -281,7 +281,7 @@ impl Ord for Endpoint {
             (Endpoint::Ethernet(a), Endpoint::Ethernet(b)) => a.cmp(b),
             (Endpoint::WifiDirect(a), Endpoint::WifiDirect(b)) => a.cmp(b),
             (Endpoint::Bluetooth(a), Endpoint::Bluetooth(b)) => a.cmp(b),
-            (Endpoint::Ip(a), Endpoint::Ip(b)) => a.cmp(b),
+            (Endpoint::Icmp(a), Endpoint::Icmp(b)) => a.cmp(b),
             (Endpoint::IpUdp(a), Endpoint::IpUdp(b)) => a.cmp(b),
             (Endpoint::IpTcp(a), Endpoint::IpTcp(b)) => a.cmp(b),
             (Endpoint::Http(a), Endpoint::Http(b)) => a.cmp(b),
@@ -307,7 +307,7 @@ impl ToString for Endpoint {
             Endpoint::Ethernet(m) => format!("eth:{}", m.to_string()),
             Endpoint::WifiDirect(m) => format!("wifip2p:{}", m.to_string()),
             Endpoint::Bluetooth(m) => format!("bt:{}", m.to_string()),
-            Endpoint::Ip(ip) => format!("ip:{}", ip.to_ip_string()),
+            Endpoint::Icmp(ip) => format!("icmp:{}", ip.to_string()),
             Endpoint::IpUdp(ip) => format!("udp:{}", ip.to_string()),
             Endpoint::IpTcp(ip) => format!("tcp:{}", ip.to_string()),
             Endpoint::Http(url) => format!("url:{}", url.clone()), // http or https
@@ -351,7 +351,7 @@ impl FromStr for Endpoint {
             "eth" => return Ok(Endpoint::Ethernet(MAC::from_str(endpoint_data)?)),
             "wifip2p" => return Ok(Endpoint::WifiDirect(MAC::from_str(endpoint_data)?)),
             "bt" => return Ok(Endpoint::Bluetooth(MAC::from_str(endpoint_data)?)),
-            "ip" => return Ok(Endpoint::Ip(InetAddress::from_str(endpoint_data)?)),
+            "icmp" => return Ok(Endpoint::Icmp(InetAddress::from_str(endpoint_data)?)),
             "udp" => return Ok(Endpoint::IpUdp(InetAddress::from_str(endpoint_data)?)),
             "tcp" => return Ok(Endpoint::IpTcp(InetAddress::from_str(endpoint_data)?)),
             "url" => return Ok(Endpoint::Http(endpoint_data.into())),
@@ -563,7 +563,7 @@ mod tests {
 
             let inet = crate::vl1::InetAddress::from_ip_port(&v, 1234);
 
-            for e in [Endpoint::Ip(inet.clone()), Endpoint::IpTcp(inet.clone()), Endpoint::IpUdp(inet.clone())] {
+            for e in [Endpoint::Icmp(inet.clone()), Endpoint::IpTcp(inet.clone()), Endpoint::IpUdp(inet.clone())] {
                 let mut buf = Buffer::<20>::new();
 
                 let res = e.marshal(&mut buf);
@@ -646,9 +646,9 @@ mod tests {
 
             let inet = crate::vl1::InetAddress::from_ip_port(&v, 0);
 
-            let ip = Endpoint::Ip(inet.clone());
+            let ip = Endpoint::Icmp(inet.clone());
             assert_ne!(ip.to_string().len(), 0);
-            assert!(ip.to_string().starts_with("ip"));
+            assert!(ip.to_string().starts_with("icmp"));
 
             let ip2 = Endpoint::from_str(&ip.to_string()).unwrap();
             assert_eq!(ip, ip2);
@@ -665,7 +665,11 @@ mod tests {
 
             let mac = crate::vl1::MAC::from_u64(rand::random()).unwrap();
 
-            for e in [(Endpoint::Ethernet(mac.clone()), "eth"), (Endpoint::WifiDirect(mac.clone()), "wifip2p"), (Endpoint::Bluetooth(mac.clone()), "bt")] {
+            for e in [
+                (Endpoint::Ethernet(mac.clone()), "eth"),
+                (Endpoint::WifiDirect(mac.clone()), "wifip2p"),
+                (Endpoint::Bluetooth(mac.clone()), "bt"),
+            ] {
                 assert_ne!(e.0.to_string().len(), 0);
                 assert!(e.0.to_string().starts_with(e.1));
 
@@ -684,7 +688,10 @@ mod tests {
                 v[0] = rand::random()
             }
 
-            for e in [(Endpoint::ZeroTier(Address::from_bytes(&v).unwrap(), hash), "zt"), (Endpoint::ZeroTierEncap(Address::from_bytes(&v).unwrap(), hash), "zte")] {
+            for e in [
+                (Endpoint::ZeroTier(Address::from_bytes(&v).unwrap(), hash), "zt"),
+                (Endpoint::ZeroTierEncap(Address::from_bytes(&v).unwrap(), hash), "zte"),
+            ] {
                 assert_ne!(e.0.to_string().len(), 0);
                 assert!(e.0.to_string().starts_with(e.1));
 
