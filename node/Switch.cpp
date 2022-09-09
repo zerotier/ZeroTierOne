@@ -1045,7 +1045,9 @@ void Switch::_sendViaSpecificPath(void *tPtr,SharedPtr<Peer> peer,SharedPtr<Path
 	if (trustedPathId) {
 		packet.setTrusted(trustedPathId);
 	} else {
-		packet.armor(peer->key(),encrypt,peer->aesKeysIfSupported());
+		if (!packet.isEncrypted()) {
+			packet.armor(peer->key(),encrypt,peer->aesKeysIfSupported());
+		}
 		RR->node->expectReplyTo(packet.packetId());
 	}
 
