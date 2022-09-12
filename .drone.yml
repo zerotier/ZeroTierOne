@@ -15,19 +15,6 @@ steps:
   - ls -la el9
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -52,19 +39,6 @@ steps:
   - ls -la el9
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -86,19 +60,6 @@ steps:
   - ls -la el9
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -120,19 +81,6 @@ steps:
   - ls -la el9
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -154,19 +102,6 @@ steps:
   - ls -la el8
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -191,19 +126,6 @@ steps:
   - ls -la el8
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -225,19 +147,6 @@ steps:
   - ls -la el8
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -259,19 +168,6 @@ steps:
   - ls -la el8
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -293,19 +189,6 @@ steps:
   - ls -la el7
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -327,19 +210,6 @@ steps:
   - ls -la el7
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -361,19 +231,6 @@ steps:
   - ls -la el6
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -395,19 +252,6 @@ steps:
   - ls -la amzn2
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -432,19 +276,6 @@ steps:
   - ls -la amzn2
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -466,19 +297,6 @@ steps:
   - ls -la fc37
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -503,19 +321,6 @@ steps:
   - ls -la fc37
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -537,19 +342,6 @@ steps:
   - ls -la fc37
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -571,19 +363,6 @@ steps:
   - ls -la fc37
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -605,19 +384,6 @@ steps:
   - ls -la fc36
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -642,19 +408,6 @@ steps:
   - ls -la fc36
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -676,19 +429,6 @@ steps:
   - ls -la fc36
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -710,19 +450,6 @@ steps:
   - ls -la fc36
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -744,19 +471,6 @@ steps:
   - ls -la fc35
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -781,19 +495,6 @@ steps:
   - ls -la fc35
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -815,19 +516,6 @@ steps:
   - ls -la fc35
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -849,19 +537,6 @@ steps:
   - ls -la fc35
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -883,19 +558,6 @@ steps:
   - ls -la jammy
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -920,19 +582,6 @@ steps:
   - ls -la jammy
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -957,19 +606,6 @@ steps:
   - ls -la jammy
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -991,19 +627,6 @@ steps:
   - ls -la jammy
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1025,19 +648,6 @@ steps:
   - ls -la jammy
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1059,19 +669,6 @@ steps:
   - ls -la jammy
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1093,19 +690,6 @@ steps:
   - ls -la focal
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1130,19 +714,6 @@ steps:
   - ls -la focal
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1167,19 +738,6 @@ steps:
   - ls -la focal
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1201,19 +759,6 @@ steps:
   - ls -la focal
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1235,19 +780,6 @@ steps:
   - ls -la focal
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1269,19 +801,6 @@ steps:
   - ls -la bionic
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1306,19 +825,6 @@ steps:
   - ls -la bionic
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1340,19 +846,6 @@ steps:
   - ls -la bionic
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1374,19 +867,6 @@ steps:
   - ls -la bionic
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1408,19 +888,6 @@ steps:
   - ls -la bionic
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1442,19 +909,6 @@ steps:
   - ls -la xenial
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1479,19 +933,6 @@ steps:
   - ls -la xenial
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1513,19 +954,6 @@ steps:
   - ls -la xenial
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1547,19 +975,6 @@ steps:
   - ls -la sid
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - push
@@ -1582,19 +997,6 @@ steps:
   - ls -la sid
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - push
@@ -1620,57 +1022,6 @@ steps:
   - ls -la sid
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
-trigger:
-  event:
-  - push
-  - tag
-type: docker
----
-clone:
-  depth: 1
-image_pull_secrets:
-- dockerconfigjson
-kind: pipeline
-name: sid armv7 build
-platform:
-  arch: arm64
-  os: linux
-pull: always
-steps:
-- commands:
-  - ./ci/scripts/build.sh sid armv7 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
-  image: registry.sean.farm/honda-builder
-  name: build
-- commands:
-  - ls -la sid
-  image: registry.sean.farm/honda-builder
-  name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - push
@@ -1693,19 +1044,6 @@ steps:
   - ls -la sid
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - push
@@ -1728,19 +1066,6 @@ steps:
   - ls -la sid
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - push
@@ -1763,19 +1088,6 @@ steps:
   - ls -la sid
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - push
@@ -1798,19 +1110,6 @@ steps:
   - ls -la sid
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - push
@@ -1833,19 +1132,6 @@ steps:
   - ls -la bookworm
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1870,19 +1156,6 @@ steps:
   - ls -la bookworm
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1907,19 +1180,6 @@ steps:
   - ls -la bookworm
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1941,19 +1201,6 @@ steps:
   - ls -la bookworm
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -1975,19 +1222,6 @@ steps:
   - ls -la bookworm
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2009,19 +1243,6 @@ steps:
   - ls -la bookworm
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2043,19 +1264,6 @@ steps:
   - ls -la bookworm
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2077,19 +1285,6 @@ steps:
   - ls -la bullseye
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2114,19 +1309,6 @@ steps:
   - ls -la bullseye
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2151,19 +1333,6 @@ steps:
   - ls -la bullseye
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2185,19 +1354,6 @@ steps:
   - ls -la bullseye
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2219,19 +1375,6 @@ steps:
   - ls -la bullseye
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2253,19 +1396,6 @@ steps:
   - ls -la bullseye
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2287,19 +1417,6 @@ steps:
   - ls -la bullseye
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2321,19 +1438,6 @@ steps:
   - ls -la buster
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2358,19 +1462,6 @@ steps:
   - ls -la buster
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2395,19 +1486,6 @@ steps:
   - ls -la buster
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2429,19 +1507,6 @@ steps:
   - ls -la buster
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2463,19 +1528,6 @@ steps:
   - ls -la buster
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2497,19 +1549,6 @@ steps:
   - ls -la buster
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2531,19 +1570,6 @@ steps:
   - ls -la buster
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2565,19 +1591,6 @@ steps:
   - ls -la stretch
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2602,19 +1615,6 @@ steps:
   - ls -la stretch
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag
@@ -2636,19 +1636,6 @@ steps:
   - ls -la stretch
   image: registry.sean.farm/honda-builder
   name: list
-- environment:
-    channel:
-      from_secret: mattermost-channel
-    host:
-      from_secret: mattermost-host
-    maxRetry: 3
-    token:
-      from_secret: mattermost-token
-  image: registry.sean.farm/mattermost-notify
-  name: notify-mattermost
-  when:
-    status:
-    - failure
 trigger:
   event:
   - tag

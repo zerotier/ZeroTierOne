@@ -15,7 +15,7 @@ local targets = [
       { "os": "linux", "name": "focal", "isas": [ "amd64", "arm64", "armv7", "riscv64", "ppc64le"  ], "events": [ "tag" ] },
       { "os": "linux", "name": "bionic", "isas": [ "amd64", "arm64", "386", "ppc64le", "s390x" ], "events": ["tag" ] },
       { "os": "linux", "name": "xenial", "isas": [ "amd64", "arm64", "386" ], "events": [ "tag" ] },
-      { "os": "linux", "name": "sid", "isas": [ "386", "amd64", "arm64", "armv7", "riscv64", "mips64le", "ppc64le", "s390x" ], "events": [ "push", "tag" ] },
+      { "os": "linux", "name": "sid", "isas": [ "386", "amd64", "arm64",  "riscv64", "mips64le", "ppc64le", "s390x" ], "events": [ "push", "tag" ] },
       { "os": "linux", "name": "bookworm", "isas": [ "amd64", "arm64", "armv7", "386", "mips64le", "ppc64le", "s390x" ], "events": [ "tag" ] },
       { "os": "linux", "name": "bullseye", "isas": [ "amd64", "arm64", "armv7", "386", "mips64le", "ppc64le", "s390x" ], "events": [ "tag" ] },
       { "os": "linux", "name": "buster", "isas": [ "amd64", "arm64", "armv7", "386", "mips64le", "ppc64le", "s390x" ], "events": [ "tag" ] },
@@ -40,17 +40,17 @@ local Build(platform, os, isa, events) = {
       "image": "registry.sean.farm/honda-builder",
       "commands": [ "ls -la " + platform ]
     },
-    {
-      "name": "notify-mattermost",
-      "image": "registry.sean.farm/mattermost-notify",
-      "environment": {
-        "token": { "from_secret": "mattermost-token" },
-        "host": { "from_secret": "mattermost-host" },
-        "channel": { "from_secret": "mattermost-channel" },
-        "maxRetry": 3,
-      },
-      "when": { "status": [ "failure" ] }
-    }
+    // {
+    //   "name": "notify-mattermost",
+    //   "image": "registry.sean.farm/mattermost-notify",
+    //   "environment": {
+    //     "token": { "from_secret": "mattermost-token" },
+    //     "host": { "from_secret": "mattermost-host" },
+    //     "channel": { "from_secret": "mattermost-channel" },
+    //     "maxRetry": 3,
+    //   },
+    //   "when": { "status": [ "failure" ] }
+    // }
   ],  
   "image_pull_secrets": [ "dockerconfigjson" ],
   [ if isa == "arm64" || isa == "armv7" then "platform" ]: { os: os, arch: "arm64" },
