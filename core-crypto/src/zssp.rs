@@ -69,12 +69,6 @@ const OFFER_RATE_LIMIT_MS: i64 = 2000;
 /// Version 0: NIST P-384 forward secrecy and authentication with optional Kyber1024 forward secrecy (but not authentication)
 const SESSION_PROTOCOL_VERSION: u8 = 0x00;
 
-// Packet types can range from 0 to 15 (4 bits) -- 0-3 are defined and 4-15 are reserved for future use
-const PACKET_TYPE_DATA: u8 = 0;
-const PACKET_TYPE_NOP: u8 = 1;
-const PACKET_TYPE_KEY_OFFER: u8 = 2; // "alice"
-const PACKET_TYPE_KEY_COUNTER_OFFER: u8 = 3; // "bob"
-
 /// No additional keys included for hybrid exchange, just normal Noise_IK with P-384.
 const E1_TYPE_NONE: u8 = 0;
 
@@ -99,8 +93,14 @@ const HMAC_SIZE: usize = 48;
 /// Size of a session ID, which is a bit like a TCP port number.
 const SESSION_ID_SIZE: usize = 6;
 
-/// Maximum number of present and future keys to hold at any given time.
+/// Number of session keys to hold at a given time.
 const KEY_HISTORY_SIZE: usize = 3;
+
+// Packet types can range from 0 to 15 (4 bits) -- 0-3 are defined and 4-15 are reserved for future use
+const PACKET_TYPE_DATA: u8 = 0;
+const PACKET_TYPE_NOP: u8 = 1;
+const PACKET_TYPE_KEY_OFFER: u8 = 2; // "alice"
+const PACKET_TYPE_KEY_COUNTER_OFFER: u8 = 3; // "bob"
 
 // Key usage labels for sub-key derivation using kbkdf (HMAC).
 const KBKDF_KEY_USAGE_LABEL_HMAC: u8 = b'M';
@@ -278,7 +278,7 @@ pub trait Host: Sized {
     /// On success a tuple of local session ID, static secret, and associated object is returned. The
     /// static secret is whatever results from agreement between the local and remote static public
     /// keys.
-    fn accept_new_session(&self, remote_static_public: &[u8], remote_metadata: &[u8]) -> Option<(SessionId, Secret<64>, Self::AssociatedObject)>;
+    fn accept_new_session(&self, receive_context: &ReceiveContext<Self>, remote_static_public: &[u8], remote_metadata: &[u8]) -> Option<(SessionId, Secret<64>, Self::AssociatedObject)>;
 }
 
 /// ZSSP bi-directional packet transport channel.
@@ -527,11 +527,10 @@ impl<H: Host> ReceiveContext<H> {
             return Err(Error::InvalidPacket);
         }
 
-        let local_session_id = SessionId::new_from_u64(memory::u64_from_le_bytes(incoming_packet) & SessionId::MAX_BIT_MASK);
-
-        if let Some(local_session_id) = local_session_id {
+        if let Some(local_session_id) = SessionId::new_from_u64(memory::u64_from_le_bytes(incoming_packet) & SessionId::MAX_BIT_MASK) {
             if let Some(session) = host.session_lookup(local_session_id) {
                 if let Some((packet_type, fragment_count, fragment_no, counter)) = dearmor_header(incoming_packet, &session.header_check_cipher) {
+                    let pseudoheader = Pseudoheader::make(u64::from(local_session_id), packet_type, counter);
                     if fragment_count > 1 {
                         if fragment_count <= (MAX_FRAGMENTS as u8) && fragment_no < fragment_count {
                             let mut defrag = session.defrag.lock();
@@ -542,7 +541,7 @@ impl<H: Host> ReceiveContext<H> {
                                     host,
                                     &mut send,
                                     data_buf,
-                                    memory::as_byte_array(&Pseudoheader::make(u64::from(local_session_id), packet_type, counter)),
+                                    memory::as_byte_array(&pseudoheader),
                                     assembled_packet.as_ref(),
                                     packet_type,
                                     Some(session),
@@ -559,7 +558,7 @@ impl<H: Host> ReceiveContext<H> {
                             host,
                             &mut send,
                             data_buf,
-                            memory::as_byte_array(&Pseudoheader::make(u64::from(local_session_id), packet_type, counter)),
+                            memory::as_byte_array(&pseudoheader),
                             &[incoming_packet_buf],
                             packet_type,
                             Some(session),
@@ -578,16 +577,31 @@ impl<H: Host> ReceiveContext<H> {
         } else {
             unlikely_branch();
             if let Some((packet_type, fragment_count, fragment_no, counter)) = dearmor_header(incoming_packet, &self.incoming_init_header_check_cipher) {
-                let mut defrag = self.initial_offer_defrag.lock();
-                let fragment_gather_array = defrag.get_or_create_mut(&counter, || GatherArray::new(fragment_count));
-                if let Some(assembled_packet) = fragment_gather_array.add(fragment_no, incoming_packet_buf) {
-                    drop(defrag); // release lock
+                let pseudoheader = Pseudoheader::make(0, packet_type, counter);
+                if fragment_count > 1 {
+                    let mut defrag = self.initial_offer_defrag.lock();
+                    let fragment_gather_array = defrag.get_or_create_mut(&counter, || GatherArray::new(fragment_count));
+                    if let Some(assembled_packet) = fragment_gather_array.add(fragment_no, incoming_packet_buf) {
+                        drop(defrag); // release lock
+                        return self.receive_complete(
+                            host,
+                            &mut send,
+                            data_buf,
+                            memory::as_byte_array(&pseudoheader),
+                            assembled_packet.as_ref(),
+                            packet_type,
+                            None,
+                            mtu,
+                            current_time,
+                        );
+                    }
+                } else {
                     return self.receive_complete(
                         host,
                         &mut send,
                         data_buf,
-                        memory::as_byte_array(&Pseudoheader::make(0, packet_type, counter)),
-                        assembled_packet.as_ref(),
+                        memory::as_byte_array(&pseudoheader),
+                        &[incoming_packet_buf],
                         packet_type,
                         None,
                         mtu,
@@ -664,7 +678,17 @@ impl<H: Host> ReceiveContext<H> {
                             // Select this key as the new default if it's newer than the current key.
                             if p > 0 && state.keys[state.key_ptr].as_ref().map_or(true, |old| old.establish_counter < key.establish_counter) {
                                 drop(state);
-                                session.state.write().key_ptr = key_ptr;
+                                let mut state = session.state.write();
+                                state.key_ptr = key_ptr;
+                                for i in 0..KEY_HISTORY_SIZE {
+                                    if i != key_ptr {
+                                        if let Some(old_key) = state.keys[key_ptr].as_ref() {
+                                            // Release pooled cipher memory from old keys.
+                                            old_key.receive_cipher_pool.lock().clear();
+                                            old_key.send_cipher_pool.lock().clear();
+                                        }
+                                    }
+                                }
                             }
                             if packet_type == PACKET_TYPE_DATA {
                                 return Ok(ReceiveResult::OkData(&mut data_buf[..data_len]));
@@ -683,7 +707,7 @@ impl<H: Host> ReceiveContext<H> {
         } else {
             unlikely_branch();
 
-            let mut incoming_packet_buf = [0_u8; 4096];
+            let mut incoming_packet_buf = [0_u8; 4096]; // big enough for key exchange packets
             let mut incoming_packet_len = 0;
             for i in 0..fragments.len() {
                 let mut ff = fragments[i].as_ref();
@@ -735,7 +759,7 @@ impl<H: Host> ReceiveContext<H> {
                         .and_then(|pk| host.get_local_s_keypair_p384().agree(&pk).map(move |s| (pk, s)))
                         .ok_or(Error::FailedAuthentication)?;
 
-                    // Initial key derivation from starting point, mixing in alice's ephemeral public and the e0<>s shared secret.
+                    // Initial key derivation from starting point, mixing in alice's ephemeral public and the e0s.
                     let mut key = Secret(hmac_sha512(&hmac_sha512(&INITIAL_KEY, alice_e0_public.as_bytes()), e0s.as_bytes()));
 
                     // Decrypt the encrypted part of the packet payload and authenticate the above key exchange via AES-GCM auth.
@@ -747,31 +771,39 @@ impl<H: Host> ReceiveContext<H> {
                     }
 
                     // Parse payload and get alice's session ID, alice's public blob, metadata, and (if present) Alice's Kyber1024 public.
-                    let (offer_id, alice_session_id, alice_s_public, alice_metadata, alice_e1_public, alice_ratchet_key_id) =
+                    let (offer_id, alice_session_id, alice_s_public, alice_metadata, alice_e1_public, alice_ratchet_key_fingerprint) =
                         parse_key_offer_after_header(&incoming_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..], packet_type)?;
 
-                    // Important! If there's already a session, make sure the caller is the same endpoint as that session! Also
-                    // grab the actual ratchet key if the ratchet key ID the other side sent matches a pre-existing key we have.
+                    // Important! If there's already a session, make sure the caller is the same endpoint as that session and
+                    // that the ratchet key fingerprint matches a key that we have.
+                    if session.is_some() != alice_ratchet_key_fingerprint.is_some() {
+                        // We either have a session, in which case they should have supplied a ratchet key fingerprint, or
+                        // we don't and they should not have supplied one.
+                        return Err(Error::FailedAuthentication);
+                    }
                     let (ratchet_key, ratchet_count) = if let Some(session) = session.as_ref() {
                         if !session.remote_s_public_hash.eq(&SHA384::hash(&alice_s_public)) {
                             return Err(Error::FailedAuthentication);
                         }
-                        if let Some(alice_ratchet_key_id) = alice_ratchet_key_id.as_ref() {
-                            let mut ratchet_key = None;
-                            let mut ratchet_count = 0;
-                            let state = session.state.read();
-                            for k in state.keys.iter() {
-                                if let Some(k) = k.as_ref() {
-                                    if SHA384::hash(k.ratchet_key.as_bytes())[..16].eq(alice_ratchet_key_id) {
-                                        ratchet_key = Some(k.ratchet_key.clone());
-                                        ratchet_count = k.ratchet_count;
-                                    }
+                        let alice_ratchet_key_fingerprint = alice_ratchet_key_fingerprint.as_ref().unwrap();
+                        let mut ratchet_key = None;
+                        let mut ratchet_count = 0;
+                        let state = session.state.read();
+                        for k in state.keys.iter() {
+                            if let Some(k) = k.as_ref() {
+                                if key_fingerprint(k.ratchet_key.as_bytes())[..16].eq(alice_ratchet_key_fingerprint) {
+                                    ratchet_key = Some(k.ratchet_key.clone());
+                                    ratchet_count = k.ratchet_count;
+                                    break;
                                 }
                             }
-                            (ratchet_key, ratchet_count)
-                        } else {
-                            (None, 0)
                         }
+                        if ratchet_key.is_none() {
+                            // If they supplied a fingerprint that matches none of our keys, this is probably an old
+                            // offer packet and should be ignored.
+                            return Ok(ReceiveResult::Ignored);
+                        }
+                        (ratchet_key, ratchet_count)
                     } else {
                         (None, 0)
                     };
@@ -811,7 +843,7 @@ impl<H: Host> ReceiveContext<H> {
                     let new_session = if session.is_some() {
                         None
                     } else {
-                        if let Some((new_session_id, psk, associated_object)) = host.accept_new_session(alice_s_public, alice_metadata) {
+                        if let Some((new_session_id, psk, associated_object)) = host.accept_new_session(self, alice_s_public, alice_metadata) {
                             let header_check_cipher = Aes::new(kbkdf512(ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<16>());
                             Some(Session::<H> {
                                 id: new_session_id,
@@ -834,8 +866,8 @@ impl<H: Host> ReceiveContext<H> {
                             return Err(Error::NewSessionRejected);
                         }
                     };
-                    let session_ref = session;
-                    let session = session_ref.as_ref().map_or_else(|| new_session.as_ref().unwrap(), |s| &*s);
+                    let existing_session = session;
+                    let session = existing_session.as_ref().map_or_else(|| new_session.as_ref().unwrap(), |s| &*s);
 
                     // Mix in the psk, the key to this point, our ephemeral public, e0e0, and se0, completing Noise_IK on our side.
                     //
@@ -883,7 +915,7 @@ impl<H: Host> ReceiveContext<H> {
                         }
                         if ratchet_key.is_some() {
                             rp.write_all(&[0x01])?;
-                            rp.write_all(alice_ratchet_key_id.as_ref().unwrap())?;
+                            rp.write_all(alice_ratchet_key_fingerprint.as_ref().unwrap())?;
                         } else {
                             rp.write_all(&[0x00])?;
                         }
@@ -1160,7 +1192,7 @@ fn create_initial_offer<SendFunction: FnMut(&mut [u8])>(
         }
         if let Some(ratchet_key) = ratchet_key.as_ref() {
             p.write_all(&[0x01])?;
-            p.write_all(&SHA384::hash(ratchet_key.as_bytes())[..16])?;
+            p.write_all(&key_fingerprint(ratchet_key.as_bytes())[..16])?;
         } else {
             p.write_all(&[0x00])?;
         }
@@ -1293,6 +1325,7 @@ fn dearmor_header(packet: &[u8], header_check_cipher: &Aes) -> Option<(u8, u8, u
     }
 }
 
+/// Parse KEY_OFFER and KEY_COUNTER_OFFER starting after the unencrypted public key part.
 fn parse_key_offer_after_header(incoming_packet: &[u8], packet_type: u8) -> Result<([u8; 16], SessionId, &[u8], &[u8], &[u8], Option<[u8; 16]>), Error> {
     let mut p = &incoming_packet[..];
     let mut offer_id = [0_u8; 16];
@@ -1340,7 +1373,7 @@ fn parse_key_offer_after_header(incoming_packet: &[u8], packet_type: u8) -> Resu
     if p.is_empty() {
         return Err(Error::InvalidPacket);
     }
-    let alice_ratchet_key_id = if p[0] == 0x01 {
+    let alice_ratchet_key_fingerprint = if p[0] == 0x01 {
         if p.len() < 16 {
             return Err(Error::InvalidPacket);
         }
@@ -1348,8 +1381,7 @@ fn parse_key_offer_after_header(incoming_packet: &[u8], packet_type: u8) -> Resu
     } else {
         None
     };
-
-    Ok((offer_id, alice_session_id, alice_s_public, alice_metadata, alice_e1_public, alice_ratchet_key_id))
+    Ok((offer_id, alice_session_id, alice_s_public, alice_metadata, alice_e1_public, alice_ratchet_key_fingerprint))
 }
 
 enum Role {
@@ -1395,7 +1427,6 @@ struct SessionKey {
     send_key: Secret<32>,
     receive_cipher_pool: Mutex<Vec<Box<AesGcm>>>,
     send_cipher_pool: Mutex<Vec<Box<AesGcm>>>,
-    role: Role,
     ratchet_count: u64,
     jedi: bool, // true if kyber was enabled on both sides
 }
@@ -1410,7 +1441,7 @@ impl SessionKey {
             Role::Bob => (a2b, b2a),
         };
         Self {
-            fingerprint: SHA384::hash(key.as_bytes())[..16].try_into().unwrap(),
+            fingerprint: key_fingerprint(key.as_bytes())[..16].try_into().unwrap(),
             establish_time: current_time,
             establish_counter: current_counter.0,
             lifetime: KeyLifetime::new(current_counter, current_time),
@@ -1419,7 +1450,6 @@ impl SessionKey {
             send_key,
             receive_cipher_pool: Mutex::new(Vec::with_capacity(2)),
             send_cipher_pool: Mutex::new(Vec::with_capacity(2)),
-            role,
             ratchet_count,
             jedi,
         }
@@ -1461,6 +1491,16 @@ fn hmac_sha384_2(key: &[u8], a: &[u8], b: &[u8]) -> [u8; 48] {
 /// HMAC-SHA512 key derivation function modeled on: https://csrc.nist.gov/publications/detail/sp/800-108/final (page 12)
 fn kbkdf512(key: &[u8], label: u8) -> Secret<64> {
     Secret(hmac_sha512(key, &[0, 0, 0, 0, b'Z', b'T', label, 0, 0, 0, 0, 0x02, 0x00]))
+}
+
+/// Get a hash of a secret key that can be used as a public fingerprint.
+///
+/// This just needs to be a hash that will never be the same as any hash or HMAC used for actual key derivation.
+fn key_fingerprint(key: &[u8]) -> [u8; 48] {
+    let mut tmp = SHA384::new();
+    tmp.update("fp".as_bytes());
+    tmp.update(key);
+    tmp.finish()
 }
 
 #[cfg(test)]
@@ -1534,7 +1574,7 @@ mod tests {
             })
         }
 
-        fn accept_new_session(&self, _: &[u8], _: &[u8]) -> Option<(SessionId, Secret<64>, Self::AssociatedObject)> {
+        fn accept_new_session(&self, _: &ReceiveContext<Self>, _: &[u8], _: &[u8]) -> Option<(SessionId, Secret<64>, Self::AssociatedObject)> {
             loop {
                 let mut new_id = self.session_id_counter.lock();
                 *new_id += 1;
