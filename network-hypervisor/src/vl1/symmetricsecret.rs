@@ -1,7 +1,7 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 use zerotier_crypto::aes_gmac_siv::AesGmacSiv;
-use zerotier_crypto::kbkdf::zt_kbkdf_hmac_sha384;
+use zerotier_crypto::hash::hmac_sha384;
 use zerotier_crypto::secret::Secret;
 
 use crate::vl1::protocol::*;
@@ -17,6 +17,10 @@ pub(crate) struct SymmetricSecret {
 
     /// Pool of keyed AES-GMAC-SIV engines (pooled to avoid AES re-init every time).
     pub aes_gmac_siv: Pool<AesGmacSiv, AesGmacSivPoolFactory>,
+}
+
+fn zt_kbkdf_hmac_sha384(key: &[u8], label: u8) -> Secret<48> {
+    Secret(hmac_sha384(key, &[0, 0, 0, 0, b'Z', b'T', label, 0, 0, 0, 0, 0x01, 0x80]))
 }
 
 impl SymmetricSecret {
