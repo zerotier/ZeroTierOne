@@ -911,7 +911,6 @@ steps:
   name: list
 trigger:
   event:
-  - push
   - tag
 type: docker
 ---
@@ -936,7 +935,6 @@ steps:
   name: list
 trigger:
   event:
-  - push
   - tag
 type: docker
 ---
@@ -958,7 +956,6 @@ steps:
   name: list
 trigger:
   event:
-  - push
   - tag
 type: docker
 ---
@@ -980,6 +977,7 @@ steps:
   name: list
 trigger:
   event:
+  - push
   - tag
 type: docker
 ---
@@ -1001,6 +999,7 @@ steps:
   name: list
 trigger:
   event:
+  - push
   - tag
 type: docker
 ---
@@ -1025,6 +1024,7 @@ steps:
   name: list
 trigger:
   event:
+  - push
   - tag
 type: docker
 ---
@@ -1046,6 +1046,7 @@ steps:
   name: list
 trigger:
   event:
+  - push
   - tag
 type: docker
 ---
@@ -1067,6 +1068,7 @@ steps:
   name: list
 trigger:
   event:
+  - push
   - tag
 type: docker
 ---
@@ -1088,6 +1090,7 @@ steps:
   name: list
 trigger:
   event:
+  - push
   - tag
 type: docker
 ---
@@ -1109,6 +1112,7 @@ steps:
   name: list
 trigger:
   event:
+  - push
   - tag
 type: docker
 ---
