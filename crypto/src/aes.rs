@@ -36,7 +36,14 @@ mod fruit_flavored {
             options: i32,
             cryyptor_ref: *mut *mut c_void,
         ) -> i32;
-        fn CCCryptorUpdate(cryptor_ref: *mut c_void, data_in: *const c_void, data_in_len: usize, data_out: *mut c_void, data_out_len: usize, data_out_written: *mut usize) -> i32;
+        fn CCCryptorUpdate(
+            cryptor_ref: *mut c_void,
+            data_in: *const c_void,
+            data_in_len: usize,
+            data_out: *mut c_void,
+            data_out_len: usize,
+            data_out_written: *mut usize,
+        ) -> i32;
         //fn CCCryptorReset(cryptor_ref: *mut c_void, iv: *const c_void) -> i32;
         fn CCCryptorRelease(cryptor_ref: *mut c_void) -> i32;
         fn CCCryptorGCMSetIV(cryptor_ref: *mut c_void, iv: *const c_void, iv_len: usize) -> i32;
@@ -110,7 +117,14 @@ mod fruit_flavored {
             assert_eq!(ciphertext.len(), 16);
             unsafe {
                 let mut data_out_written = 0;
-                CCCryptorUpdate(self.0, plaintext.as_ptr().cast(), 16, ciphertext.as_mut_ptr().cast(), 16, &mut data_out_written);
+                CCCryptorUpdate(
+                    self.0,
+                    plaintext.as_ptr().cast(),
+                    16,
+                    ciphertext.as_mut_ptr().cast(),
+                    16,
+                    &mut data_out_written,
+                );
             }
         }
 
@@ -119,7 +133,14 @@ mod fruit_flavored {
             assert_eq!(data.len(), 16);
             unsafe {
                 let mut data_out_written = 0;
-                CCCryptorUpdate(self.0, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
+                CCCryptorUpdate(
+                    self.0,
+                    data.as_ptr().cast(),
+                    16,
+                    data.as_mut_ptr().cast(),
+                    16,
+                    &mut data_out_written,
+                );
             }
         }
 
@@ -129,7 +150,14 @@ mod fruit_flavored {
             assert_eq!(ciphertext.len(), 16);
             unsafe {
                 let mut data_out_written = 0;
-                CCCryptorUpdate(self.1, ciphertext.as_ptr().cast(), 16, plaintext.as_mut_ptr().cast(), 16, &mut data_out_written);
+                CCCryptorUpdate(
+                    self.1,
+                    ciphertext.as_ptr().cast(),
+                    16,
+                    plaintext.as_mut_ptr().cast(),
+                    16,
+                    &mut data_out_written,
+                );
             }
         }
 
@@ -138,7 +166,14 @@ mod fruit_flavored {
             assert_eq!(data.len(), 16);
             unsafe {
                 let mut data_out_written = 0;
-                CCCryptorUpdate(self.1, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
+                CCCryptorUpdate(
+                    self.1,
+                    data.as_ptr().cast(),
+                    16,
+                    data.as_mut_ptr().cast(),
+                    16,
+                    &mut data_out_written,
+                );
             }
         }
     }
@@ -215,9 +250,15 @@ mod fruit_flavored {
             unsafe {
                 assert_eq!(input.len(), output.len());
                 if self.1 {
-                    assert_eq!(CCCryptorGCMEncrypt(self.0, input.as_ptr().cast(), input.len(), output.as_mut_ptr().cast()), 0);
+                    assert_eq!(
+                        CCCryptorGCMEncrypt(self.0, input.as_ptr().cast(), input.len(), output.as_mut_ptr().cast()),
+                        0
+                    );
                 } else {
-                    assert_eq!(CCCryptorGCMDecrypt(self.0, input.as_ptr().cast(), input.len(), output.as_mut_ptr().cast()), 0);
+                    assert_eq!(
+                        CCCryptorGCMDecrypt(self.0, input.as_ptr().cast(), input.len(), output.as_mut_ptr().cast()),
+                        0
+                    );
                 }
             }
         }
@@ -226,9 +267,15 @@ mod fruit_flavored {
         pub fn crypt_in_place(&mut self, data: &mut [u8]) {
             unsafe {
                 if self.1 {
-                    assert_eq!(CCCryptorGCMEncrypt(self.0, data.as_ptr().cast(), data.len(), data.as_mut_ptr().cast()), 0);
+                    assert_eq!(
+                        CCCryptorGCMEncrypt(self.0, data.as_ptr().cast(), data.len(), data.as_mut_ptr().cast()),
+                        0
+                    );
                 } else {
-                    assert_eq!(CCCryptorGCMDecrypt(self.0, data.as_ptr().cast(), data.len(), data.as_mut_ptr().cast()), 0);
+                    assert_eq!(
+                        CCCryptorGCMDecrypt(self.0, data.as_ptr().cast(), data.len(), data.as_mut_ptr().cast()),
+                        0
+                    );
                 }
             }
         }
@@ -392,7 +439,12 @@ mod openssl_aes {
         /// Encrypt or decrypt in place (same operation with CTR mode)
         #[inline(always)]
         pub fn crypt_in_place(&mut self, data: &mut [u8]) {
-            assert!(self.2.as_mut().unwrap().update(unsafe { &*std::slice::from_raw_parts(data.as_ptr(), data.len()) }, data).is_ok());
+            assert!(self
+                .2
+                .as_mut()
+                .unwrap()
+                .update(unsafe { &*std::slice::from_raw_parts(data.as_ptr(), data.len()) }, data)
+                .is_ok());
         }
 
         #[inline(always)]

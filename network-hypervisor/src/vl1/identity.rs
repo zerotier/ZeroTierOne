@@ -75,7 +75,12 @@ fn concat_arrays_2<const A: usize, const B: usize, const S: usize>(a: &[u8; A], 
 }
 
 #[inline(always)]
-fn concat_arrays_4<const A: usize, const B: usize, const C: usize, const D: usize, const S: usize>(a: &[u8; A], b: &[u8; B], c: &[u8; C], d: &[u8; D]) -> [u8; S] {
+fn concat_arrays_4<const A: usize, const B: usize, const C: usize, const D: usize, const S: usize>(
+    a: &[u8; A],
+    b: &[u8; B],
+    c: &[u8; C],
+    d: &[u8; D],
+) -> [u8; S] {
     assert_eq!(A + B + C + D, S);
     let mut tmp = [0_u8; S];
     tmp[..A].copy_from_slice(a);
@@ -137,10 +142,19 @@ impl Identity {
     pub const BYTE_LENGTH_X25519_SECRET: usize = Self::BYTE_LENGTH_X25519_PUBLIC + C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE;
 
     /// Length of a new dual-key public identity in byte array form.
-    pub const BYTE_LENGTH_X25519P384_PUBLIC: usize = Self::BYTE_LENGTH_X25519_PUBLIC + 1 + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE;
+    pub const BYTE_LENGTH_X25519P384_PUBLIC: usize = Self::BYTE_LENGTH_X25519_PUBLIC
+        + 1
+        + P384_PUBLIC_KEY_SIZE
+        + P384_PUBLIC_KEY_SIZE
+        + P384_ECDSA_SIGNATURE_SIZE
+        + ED25519_SIGNATURE_SIZE;
 
     /// Length of a new dual-key secret identity in byte array form.
-    pub const BYTE_LENGTH_X25519P384_SECRET: usize = Self::BYTE_LENGTH_X25519P384_PUBLIC + C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE;
+    pub const BYTE_LENGTH_X25519P384_SECRET: usize = Self::BYTE_LENGTH_X25519P384_PUBLIC
+        + C25519_SECRET_KEY_SIZE
+        + ED25519_SECRET_KEY_SIZE
+        + P384_SECRET_KEY_SIZE
+        + P384_SECRET_KEY_SIZE;
 
     const ALGORITHM_X25519: u8 = 0x01;
     const ALGORITHM_EC_NIST_P384: u8 = 0x02;
@@ -203,14 +217,23 @@ impl Identity {
     /// It would be possible to change this in the future, with care.
     pub fn upgrade(&mut self) -> Result<bool, InvalidParameterError> {
         if self.secret.is_none() {
-            return Err(InvalidParameterError("an identity can only be upgraded if it includes its private key"));
+            return Err(InvalidParameterError(
+                "an identity can only be upgraded if it includes its private key",
+            ));
         }
         if self.p384.is_none() {
             let p384_ecdh = P384KeyPair::generate();
             let p384_ecdsa = P384KeyPair::generate();
 
-            let mut self_sign_buf: Vec<u8> =
-                Vec::with_capacity(ADDRESS_SIZE + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + 4);
+            let mut self_sign_buf: Vec<u8> = Vec::with_capacity(
+                ADDRESS_SIZE
+                    + C25519_PUBLIC_KEY_SIZE
+                    + ED25519_PUBLIC_KEY_SIZE
+                    + P384_PUBLIC_KEY_SIZE
+                    + P384_PUBLIC_KEY_SIZE
+                    + P384_ECDSA_SIGNATURE_SIZE
+                    + 4,
+            );
             let _ = self_sign_buf.write_all(&self.address.to_bytes());
             let _ = self_sign_buf.write_all(&self.x25519);
             let _ = self_sign_buf.write_all(&self.ed25519);
@@ -233,7 +256,12 @@ impl Identity {
                 ecdsa_self_signature,
                 ed25519_self_signature,
             });
-            let _ = self.secret.as_mut().unwrap().p384.insert(IdentityP384Secret { ecdh: p384_ecdh, ecdsa: p384_ecdsa });
+            let _ = self
+                .secret
+                .as_mut()
+                .unwrap()
+                .p384
+                .insert(IdentityP384Secret { ecdh: p384_ecdh, ecdsa: p384_ecdsa });
 
             self.fingerprint = SHA384::hash(self.to_public_bytes().as_bytes());
 
@@ -259,7 +287,9 @@ impl Identity {
     /// This is somewhat time consuming due to the memory-intensive work algorithm.
     pub fn validate_identity(&self) -> bool {
         if let Some(p384) = self.p384.as_ref() {
-            let mut self_sign_buf: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE);
+            let mut self_sign_buf: Vec<u8> = Vec::with_capacity(
+                ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE,
+            );
             let _ = self_sign_buf.write_all(&self.address.to_bytes());
             let _ = self_sign_buf.write_all(&self.x25519);
             let _ = self_sign_buf.write_all(&self.ed25519);
@@ -469,7 +499,11 @@ impl Identity {
             }
             IdentityBytes::X25519Secret(b) => {
                 let b: &packed::V0S = bytes_as_flat_object(b);
-                if b.key_type == 0 && b.secret_length == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8 && b.reserved == 0x03 && u16::from_be_bytes(b.ext_len) == 0 {
+                if b.key_type == 0
+                    && b.secret_length == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8
+                    && b.reserved == 0x03
+                    && u16::from_be_bytes(b.ext_len) == 0
+                {
                     Some(Self {
                         address: Address::from_bytes_fixed(&b.address)?,
                         x25519: b.x25519,
@@ -570,7 +604,12 @@ impl Identity {
         };
         IdentityBytes::try_from(&buf[..obj_len]).map_or_else(
             |_| Err(std::io::Error::new(std::io::ErrorKind::Other, "invalid identity")),
-            |b| Identity::from_bytes(&b).map_or_else(|| Err(std::io::Error::new(std::io::ErrorKind::Other, "invalid identity")), |id| Ok(id)),
+            |b| {
+                Identity::from_bytes(&b).map_or_else(
+                    || Err(std::io::Error::new(std::io::ErrorKind::Other, "invalid identity")),
+                    |id| Ok(id),
+                )
+            },
         )
     }
 
@@ -594,14 +633,21 @@ impl Identity {
             }
             s.push_str(":2:"); // 2 == IDENTITY_ALGORITHM_EC_NIST_P384
             let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] =
-                concat_arrays_4(p384.ecdh.as_bytes(), p384.ecdsa.as_bytes(), &p384.ecdsa_self_signature, &p384.ed25519_self_signature);
+                concat_arrays_4(
+                    p384.ecdh.as_bytes(),
+                    p384.ecdsa.as_bytes(),
+                    &p384.ecdsa_self_signature,
+                    &p384.ed25519_self_signature,
+                );
             s.push_str(base64::encode_config(p384_joined, base64::URL_SAFE_NO_PAD).as_str());
             if self.secret.is_some() && include_private {
                 let secret = self.secret.as_ref().unwrap();
                 if secret.p384.is_some() {
                     let p384_secret = secret.p384.as_ref().unwrap();
-                    let p384_secret_joined: [u8; P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE] =
-                        concat_arrays_2(p384_secret.ecdh.secret_key_bytes().as_bytes(), p384_secret.ecdsa.secret_key_bytes().as_bytes());
+                    let p384_secret_joined: [u8; P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE] = concat_arrays_2(
+                        p384_secret.ecdh.secret_key_bytes().as_bytes(),
+                        p384_secret.ecdsa.secret_key_bytes().as_bytes(),
+                    );
                     s.push(':');
                     s.push_str(base64::encode_config(p384_secret_joined, base64::URL_SAFE_NO_PAD).as_str());
                 }
@@ -680,7 +726,9 @@ impl FromStr for Identity {
         if keys[0].len() != C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE {
             return Err(InvalidFormatError);
         }
-        if !keys[2].is_empty() && keys[2].len() != P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE {
+        if !keys[2].is_empty()
+            && keys[2].len() != P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE
+        {
             return Err(InvalidFormatError);
         }
         if !keys[3].is_empty() && keys[3].len() != P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE {
@@ -710,10 +758,13 @@ impl FromStr for Identity {
                 Some(IdentityP384Public {
                     ecdh: ecdh.unwrap(),
                     ecdsa: ecdsa.unwrap(),
-                    ecdsa_self_signature: keys[2].as_slice()[(P384_PUBLIC_KEY_SIZE * 2)..((P384_PUBLIC_KEY_SIZE * 2) + P384_ECDSA_SIGNATURE_SIZE)]
+                    ecdsa_self_signature: keys[2].as_slice()
+                        [(P384_PUBLIC_KEY_SIZE * 2)..((P384_PUBLIC_KEY_SIZE * 2) + P384_ECDSA_SIGNATURE_SIZE)]
                         .try_into()
                         .unwrap(),
-                    ed25519_self_signature: keys[2].as_slice()[((P384_PUBLIC_KEY_SIZE * 2) + P384_ECDSA_SIGNATURE_SIZE)..].try_into().unwrap(),
+                    ed25519_self_signature: keys[2].as_slice()[((P384_PUBLIC_KEY_SIZE * 2) + P384_ECDSA_SIGNATURE_SIZE)..]
+                        .try_into()
+                        .unwrap(),
                 })
             },
             secret: if keys[1].is_empty() {
@@ -742,14 +793,20 @@ impl FromStr for Identity {
                     } else {
                         Some(IdentityP384Secret {
                             ecdh: {
-                                let tmp = P384KeyPair::from_bytes(&keys[2].as_slice()[..P384_PUBLIC_KEY_SIZE], &keys[3].as_slice()[..P384_SECRET_KEY_SIZE]);
+                                let tmp = P384KeyPair::from_bytes(
+                                    &keys[2].as_slice()[..P384_PUBLIC_KEY_SIZE],
+                                    &keys[3].as_slice()[..P384_SECRET_KEY_SIZE],
+                                );
                                 if tmp.is_none() {
                                     return Err(InvalidFormatError);
                                 }
                                 tmp.unwrap()
                             },
                             ecdsa: {
-                                let tmp = P384KeyPair::from_bytes(&keys[2].as_slice()[P384_PUBLIC_KEY_SIZE..(P384_PUBLIC_KEY_SIZE * 2)], &keys[3].as_slice()[P384_SECRET_KEY_SIZE..]);
+                                let tmp = P384KeyPair::from_bytes(
+                                    &keys[2].as_slice()[P384_PUBLIC_KEY_SIZE..(P384_PUBLIC_KEY_SIZE * 2)],
+                                    &keys[3].as_slice()[P384_SECRET_KEY_SIZE..],
+                                );
                                 if tmp.is_none() {
                                     return Err(InvalidFormatError);
                                 }
@@ -781,7 +838,9 @@ impl Eq for Identity {}
 impl Ord for Identity {
     #[inline(always)]
     fn cmp(&self, other: &Self) -> Ordering {
-        self.address.cmp(&other.address).then_with(|| self.fingerprint.cmp(&other.fingerprint))
+        self.address
+            .cmp(&other.address)
+            .then_with(|| self.fingerprint.cmp(&other.fingerprint))
     }
 }
 
@@ -973,7 +1032,8 @@ mod tests {
 
     #[test]
     fn v0_identity() {
-        let self_agree_expected = hex::from_string("de904fc90ff3a2b96b739b926e623113f5334c80841b654509b77916c4c4a6eb0ca69ec6ed01a7f04aee17c546b30ba4");
+        let self_agree_expected =
+            hex::from_string("de904fc90ff3a2b96b739b926e623113f5334c80841b654509b77916c4c4a6eb0ca69ec6ed01a7f04aee17c546b30ba4");
 
         // Test self-agree with a known good x25519-only (v0) identity.
         let id = Identity::from_str(
@@ -1020,7 +1080,11 @@ mod tests {
         let gen_unmarshaled = Identity::from_bytes(&bytes).unwrap();
         assert!(gen_unmarshaled.secret.is_some());
         if !gen_unmarshaled.eq(&gen) {
-            println!("{} != {}", hex::to_string(&gen_unmarshaled.fingerprint), hex::to_string(&gen.fingerprint));
+            println!(
+                "{} != {}",
+                hex::to_string(&gen_unmarshaled.fingerprint),
+                hex::to_string(&gen.fingerprint)
+            );
         }
 
         assert!(Identity::from_str(string.as_str()).unwrap().secret.is_some());

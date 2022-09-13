@@ -81,7 +81,9 @@ impl Dictionary {
     }
 
     pub fn get_str(&self, k: &str) -> Option<&str> {
-        self.0.get(k).map_or(None, |v| std::str::from_utf8(v.as_slice()).map_or(None, |s| Some(s)))
+        self.0
+            .get(k)
+            .map_or(None, |v| std::str::from_utf8(v.as_slice()).map_or(None, |s| Some(s)))
     }
 
     pub fn get_bytes(&self, k: &str) -> Option<&[u8]> {
@@ -89,15 +91,19 @@ impl Dictionary {
     }
 
     pub fn get_u64(&self, k: &str) -> Option<u64> {
-        self.get_str(k).map_or(None, |s| u64::from_str_radix(s, 16).map_or(None, |i| Some(i)))
+        self.get_str(k)
+            .map_or(None, |s| u64::from_str_radix(s, 16).map_or(None, |i| Some(i)))
     }
 
     pub fn get_i64(&self, k: &str) -> Option<i64> {
-        self.get_str(k).map_or(None, |s| i64::from_str_radix(s, 16).map_or(None, |i| Some(i)))
+        self.get_str(k)
+            .map_or(None, |s| i64::from_str_radix(s, 16).map_or(None, |i| Some(i)))
     }
 
     pub fn get_bool(&self, k: &str) -> Option<bool> {
-        self.0.get(k).map_or(None, |v| v.first().map_or(Some(false), |c| Some(BOOL_TRUTH.contains(*c as char))))
+        self.0
+            .get(k)
+            .map_or(None, |v| v.first().map_or(Some(false), |c| Some(BOOL_TRUTH.contains(*c as char))))
     }
 
     pub fn set_str(&mut self, k: &str, v: &str) {
@@ -238,7 +244,13 @@ mod tests {
             match selection {
                 0 => d.set_str(&key, &randstring(10)),
                 1 => d.set_u64(&key, rand::random()),
-                2 => d.set_bytes(&key, (0..((rand::random::<usize>() % 10) + 1)).into_iter().map(|_| rand::random()).collect::<Vec<u8>>()),
+                2 => d.set_bytes(
+                    &key,
+                    (0..((rand::random::<usize>() % 10) + 1))
+                        .into_iter()
+                        .map(|_| rand::random())
+                        .collect::<Vec<u8>>(),
+                ),
                 3 => d.set_bool(&key, rand::random::<bool>()),
                 _ => unreachable!(),
             }

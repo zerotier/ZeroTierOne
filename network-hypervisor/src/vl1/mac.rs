@@ -33,7 +33,15 @@ impl MAC {
     #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> Option<MAC> {
         if b.len() >= 6 {
-            NonZeroU64::new((b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64).map(|i| MAC(i))
+            NonZeroU64::new(
+                (b[0] as u64) << 40
+                    | (b[1] as u64) << 32
+                    | (b[2] as u64) << 24
+                    | (b[3] as u64) << 16 as u64
+                    | (b[4] as u64) << 8
+                    | b[5] as u64,
+            )
+            .map(|i| MAC(i))
         } else {
             None
         }
@@ -41,13 +49,23 @@ impl MAC {
 
     #[inline(always)]
     pub fn from_bytes_fixed(b: &[u8; 6]) -> Option<MAC> {
-        NonZeroU64::new((b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64).map(|i| MAC(i))
+        NonZeroU64::new(
+            (b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64,
+        )
+        .map(|i| MAC(i))
     }
 
     #[inline(always)]
     pub fn to_bytes(&self) -> [u8; 6] {
         let i = self.0.get();
-        [(i >> 40) as u8, (i >> 32) as u8, (i >> 24) as u8, (i >> 16) as u8, (i >> 8) as u8, i as u8]
+        [
+            (i >> 40) as u8,
+            (i >> 32) as u8,
+            (i >> 24) as u8,
+            (i >> 16) as u8,
+            (i >> 8) as u8,
+            i as u8,
+        ]
     }
 }
 
@@ -75,14 +93,20 @@ impl Marshalable for MAC {
 
     #[inline(always)]
     fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Self> {
-        Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).map_or_else(|| Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "cannot be zero")), |a| Ok(a))
+        Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).map_or_else(
+            || Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "cannot be zero")),
+            |a| Ok(a),
+        )
     }
 }
 
 impl ToString for MAC {
     fn to_string(&self) -> String {
         let b: [u8; 6] = self.to_bytes();
-        format!("{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}", b[0], b[1], b[2], b[3], b[4], b[5])
+        format!(
+            "{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}",
+            b[0], b[1], b[2], b[3], b[4], b[5]
+        )
     }
 }
 

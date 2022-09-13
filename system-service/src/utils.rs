@@ -99,7 +99,11 @@ pub fn json_patch(target: &mut serde_json::value::Value, source: &serde_json::va
 ///
 /// If there are no changes, None is returned. The depth limit is passed through to json_patch and
 /// should be set to a sanity check value to prevent overflows.
-pub fn json_patch_object<O: Serialize + DeserializeOwned + Eq>(obj: O, patch: &str, depth_limit: usize) -> Result<Option<O>, serde_json::Error> {
+pub fn json_patch_object<O: Serialize + DeserializeOwned + Eq>(
+    obj: O,
+    patch: &str,
+    depth_limit: usize,
+) -> Result<Option<O>, serde_json::Error> {
     serde_json::from_str::<serde_json::value::Value>(patch).map_or_else(
         |e| Err(e),
         |patch| {
@@ -156,7 +160,14 @@ pub async fn read_limit<P: AsRef<Path>>(path: P, limit: usize) -> std::io::Resul
 pub fn fs_restrict_permissions<P: AsRef<Path>>(path: P) -> bool {
     unsafe {
         let c_path = std::ffi::CString::new(path.as_ref().to_str().unwrap()).unwrap();
-        libc::chmod(c_path.as_ptr(), if path.as_ref().is_dir() { 0o700 } else { 0o600 }) == 0
+        libc::chmod(
+            c_path.as_ptr(),
+            if path.as_ref().is_dir() {
+                0o700
+            } else {
+                0o600
+            },
+        ) == 0
     }
 }
 
@@ -177,7 +188,10 @@ pub async fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity,
 
     let input_p = Path::new(input);
     if input_p.is_file() {
-        read_limit(input_p, 16384).await.map_or_else(|e| Err(e.to_string()), |v| String::from_utf8(v).map_or_else(|e| Err(e.to_string()), |s| parse_func(s.as_str())))
+        read_limit(input_p, 16384).await.map_or_else(
+            |e| Err(e.to_string()),
+            |v| String::from_utf8(v).map_or_else(|e| Err(e.to_string()), |s| parse_func(s.as_str())),
+        )
     } else {
         parse_func(input)
     }

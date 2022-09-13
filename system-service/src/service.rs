@@ -63,7 +63,11 @@ impl Service {
     ///
     /// This launches a number of background tasks in the async runtime that will run as long as this object exists.
     /// When this is dropped these tasks are killed.
-    pub async fn new<P: AsRef<Path>>(rt: tokio::runtime::Handle, base_path: P, auto_upgrade_identity: bool) -> Result<Self, Box<dyn Error>> {
+    pub async fn new<P: AsRef<Path>>(
+        rt: tokio::runtime::Handle,
+        base_path: P,
+        auto_upgrade_identity: bool,
+    ) -> Result<Self, Box<dyn Error>> {
         let mut si = ServiceImpl {
             rt,
             data: DataDir::open(base_path).await.map_err(|e| Box::new(e))?,
@@ -126,8 +130,14 @@ impl ServiceImpl {
                         let mut buf = core.get_packet_buffer();
                         if let Ok((bytes, source)) = socket.recv_from(unsafe { buf.entire_buffer_mut() }).await {
                             unsafe { buf.set_size_unchecked(bytes) };
-                            core.handle_incoming_physical_packet(&self2, &Endpoint::IpUdp(InetAddress::from(source)), &local_socket, &interface, buf)
-                                .await;
+                            core.handle_incoming_physical_packet(
+                                &self2,
+                                &Endpoint::IpUdp(InetAddress::from(source)),
+                                &local_socket,
+                                &interface,
+                                buf,
+                            )
+                            .await;
                         } else {
                             break;
                         }
@@ -144,7 +154,11 @@ impl ServiceImpl {
             let config = self.data.config().await;
 
             if let Some(errors) = self
-                .update_udp_bindings_for_port(config.settings.primary_port, &config.settings.interface_prefix_blacklist, &config.settings.cidr_blacklist)
+                .update_udp_bindings_for_port(
+                    config.settings.primary_port,
+                    &config.settings.interface_prefix_blacklist,
+                    &config.settings.cidr_blacklist,
+                )
                 .await
             {
                 for e in errors.iter() {
@@ -193,7 +207,14 @@ impl SystemInterface for ServiceImpl {
         assert!(self.data.save_identity(id).await.is_ok())
     }
 
-    async fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<&Self::LocalSocket>, local_interface: Option<&Self::LocalInterface>, data: &[&[u8]], packet_ttl: u8) -> bool {
+    async fn wire_send(
+        &self,
+        endpoint: &Endpoint,
+        local_socket: Option<&Self::LocalSocket>,
+        local_interface: Option<&Self::LocalInterface>,
+        data: &[&[u8]],
+        packet_ttl: u8,
+    ) -> bool {
         match endpoint {
             Endpoint::IpUdp(address) => {
                 // This is the fast path -- the socket is known to the core so just send it.
@@ -251,7 +272,13 @@ impl SystemInterface for ServiceImpl {
         return false;
     }
 
-    async fn check_path(&self, _id: &Identity, endpoint: &Endpoint, _local_socket: Option<&Self::LocalSocket>, _local_interface: Option<&Self::LocalInterface>) -> bool {
+    async fn check_path(
+        &self,
+        _id: &Identity,
+        endpoint: &Endpoint,
+        _local_socket: Option<&Self::LocalSocket>,
+        _local_interface: Option<&Self::LocalInterface>,
+    ) -> bool {
         let config = self.data.config().await;
         if let Some(pps) = config.physical.get(endpoint) {
             !pps.blacklist

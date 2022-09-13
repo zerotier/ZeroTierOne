@@ -78,7 +78,10 @@ impl Marshalable for Address {
 
     #[inline(always)]
     fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Self> {
-        Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).map_or_else(|| Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "cannot be zero")), |a| Ok(a))
+        Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).map_or_else(
+            || Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "cannot be zero")),
+            |a| Ok(a),
+        )
     }
 }
 
@@ -275,8 +278,14 @@ mod tests {
         let addr = safe_address();
 
         for _ in 0..1000 {
-            assert_eq!(serde_json::from_str::<super::Address>(&serde_json::to_string(&addr).unwrap()).unwrap(), addr);
-            assert_eq!(serde_cbor::from_slice::<super::Address>(&serde_cbor::to_vec(&addr).unwrap()).unwrap(), addr);
+            assert_eq!(
+                serde_json::from_str::<super::Address>(&serde_json::to_string(&addr).unwrap()).unwrap(),
+                addr
+            );
+            assert_eq!(
+                serde_cbor::from_slice::<super::Address>(&serde_cbor::to_vec(&addr).unwrap()).unwrap(),
+                addr
+            );
         }
     }
 }

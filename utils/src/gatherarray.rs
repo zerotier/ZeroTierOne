@@ -47,7 +47,11 @@ impl<T, const C: usize> GatherArray<T, C> {
                     if (self.have_count as usize) == goal {
                         debug_assert_eq!(0xffffffffffffffffu64.wrapping_shr(64 - goal as u32), have);
                         let mut tmp = ArrayVec::new();
-                        copy_nonoverlapping(self.a.as_ptr().cast::<u8>(), tmp.a.as_mut_ptr().cast::<u8>(), size_of::<MaybeUninit<T>>() * goal);
+                        copy_nonoverlapping(
+                            self.a.as_ptr().cast::<u8>(),
+                            tmp.a.as_mut_ptr().cast::<u8>(),
+                            size_of::<MaybeUninit<T>>() * goal,
+                        );
                         tmp.s = goal;
                         self.goal = 0;
                         return Some(tmp);

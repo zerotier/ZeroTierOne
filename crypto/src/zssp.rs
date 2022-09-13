@@ -117,8 +117,9 @@ const KBKDF_KEY_USAGE_LABEL_RATCHETING: u8 = b'R';
 const INITIAL_KEY: [u8; 64] = [
     // macOS command line to generate:
     // echo -n 'ZSSP_Noise_IKpsk2_NISTP384_?KYBER1024_AESGCM_SHA512' | shasum -a 512  | cut -d ' ' -f 1 | xxd -r -p | xxd -i
-    0x35, 0x6a, 0x75, 0xc0, 0xbf, 0xbe, 0xc3, 0x59, 0x70, 0x94, 0x50, 0x69, 0x4c, 0xa2, 0x08, 0x40, 0xc7, 0xdf, 0x67, 0xa8, 0x68, 0x52, 0x6e, 0xd5, 0xdd, 0x77, 0xec, 0x59, 0x6f, 0x8e, 0xa1, 0x99,
-    0xb4, 0x32, 0x85, 0xaf, 0x7f, 0x0d, 0xa9, 0x6c, 0x01, 0xfb, 0x72, 0x46, 0xc0, 0x09, 0x58, 0xb8, 0xe0, 0xa8, 0xcf, 0xb1, 0x58, 0x04, 0x6e, 0x32, 0xba, 0xa8, 0xb8, 0xf9, 0x0a, 0xa4, 0xbf, 0x36,
+    0x35, 0x6a, 0x75, 0xc0, 0xbf, 0xbe, 0xc3, 0x59, 0x70, 0x94, 0x50, 0x69, 0x4c, 0xa2, 0x08, 0x40, 0xc7, 0xdf, 0x67, 0xa8, 0x68, 0x52,
+    0x6e, 0xd5, 0xdd, 0x77, 0xec, 0x59, 0x6f, 0x8e, 0xa1, 0x99, 0xb4, 0x32, 0x85, 0xaf, 0x7f, 0x0d, 0xa9, 0x6c, 0x01, 0xfb, 0x72, 0x46,
+    0xc0, 0x09, 0x58, 0xb8, 0xe0, 0xa8, 0xcf, 0xb1, 0x58, 0x04, 0x6e, 0x32, 0xba, 0xa8, 0xb8, 0xf9, 0x0a, 0xa4, 0xbf, 0x36,
 ];
 
 pub enum Error {
@@ -232,7 +233,8 @@ impl SessionId {
 
     pub fn new_from_reader<R: Read>(r: &mut R) -> std::io::Result<Option<SessionId>> {
         let mut tmp = [0_u8; 8];
-        r.read_exact(&mut tmp[..SESSION_ID_SIZE]).map(|_| NonZeroU64::new(u64::from_le_bytes(tmp)).map(|i| Self(i)))
+        r.read_exact(&mut tmp[..SESSION_ID_SIZE])
+            .map(|_| NonZeroU64::new(u64::from_le_bytes(tmp)).map(|i| Self(i)))
     }
 }
 
@@ -278,7 +280,12 @@ pub trait Host: Sized {
     /// On success a tuple of local session ID, static secret, and associated object is returned. The
     /// static secret is whatever results from agreement between the local and remote static public
     /// keys.
-    fn accept_new_session(&self, receive_context: &ReceiveContext<Self>, remote_static_public: &[u8], remote_metadata: &[u8]) -> Option<(SessionId, Secret<64>, Self::AssociatedObject)>;
+    fn accept_new_session(
+        &self,
+        receive_context: &ReceiveContext<Self>,
+        remote_static_public: &[u8],
+        remote_metadata: &[u8],
+    ) -> Option<(SessionId, Secret<64>, Self::AssociatedObject)>;
 }
 
 /// ZSSP bi-directional packet transport channel.
@@ -338,7 +345,8 @@ impl<H: Host> Session<H> {
                 let send_counter = Counter::new();
                 let header_check_cipher = Aes::new(kbkdf512(ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<16>());
                 let remote_s_public_hash = SHA384::hash(remote_s_public);
-                let outgoing_init_header_check_cipher = Aes::new(kbkdf512(&remote_s_public_hash, KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<16>());
+                let outgoing_init_header_check_cipher =
+                    Aes::new(kbkdf512(&remote_s_public_hash, KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<16>());
                 if let Ok(offer) = create_initial_offer(
                     &mut send,
                     send_counter.next(),
@@ -381,7 +389,12 @@ impl<H: Host> Session<H> {
     ///
     /// * `mtu_buffer` - A writable work buffer whose size must be equal to the wire MTU
     /// * `data` - Data to send
-    pub fn send<SendFunction: FnMut(&mut [u8])>(&self, mut send: SendFunction, mtu_buffer: &mut [u8], mut data: &[u8]) -> Result<(), Error> {
+    pub fn send<SendFunction: FnMut(&mut [u8])>(
+        &self,
+        mut send: SendFunction,
+        mtu_buffer: &mut [u8],
+        mut data: &[u8],
+    ) -> Result<(), Error> {
         debug_assert!(mtu_buffer.len() >= MIN_MTU);
         let state = self.state.read();
         if let Some(remote_session_id) = state.remote_session_id {
@@ -389,7 +402,14 @@ impl<H: Host> Session<H> {
                 let mut packet_len = data.len() + HEADER_SIZE + AES_GCM_TAG_SIZE;
                 let counter = self.send_counter.next();
 
-                create_packet_header(mtu_buffer, packet_len, mtu_buffer.len(), PACKET_TYPE_DATA, remote_session_id.into(), counter)?;
+                create_packet_header(
+                    mtu_buffer,
+                    packet_len,
+                    mtu_buffer.len(),
+                    PACKET_TYPE_DATA,
+                    remote_session_id.into(),
+                    counter,
+                )?;
 
                 let mut c = key.get_send_cipher(counter)?;
                 c.init(memory::as_byte_array::<Pseudoheader, 12>(&Pseudoheader::make(
@@ -461,13 +481,24 @@ impl<H: Host> Session<H> {
     /// * `mtu` - Physical MTU for sent packets
     /// * `current_time` - Current monotonic time in milliseconds
     /// * `force_rekey` - Re-key the session now regardless of key aging (still subject to rate limiting)
-    pub fn service<SendFunction: FnMut(&mut [u8])>(&self, host: &H, mut send: SendFunction, offer_metadata: &[u8], mtu: usize, current_time: i64, force_rekey: bool) {
+    pub fn service<SendFunction: FnMut(&mut [u8])>(
+        &self,
+        host: &H,
+        mut send: SendFunction,
+        offer_metadata: &[u8],
+        mtu: usize,
+        current_time: i64,
+        force_rekey: bool,
+    ) {
         let state = self.state.upgradable_read();
         if (force_rekey
             || state.keys[state.key_ptr]
                 .as_ref()
                 .map_or(true, |key| key.lifetime.should_rekey(self.send_counter.current(), current_time)))
-            && state.offer.as_ref().map_or(true, |o| (current_time - o.creation_time) > OFFER_RATE_LIMIT_MS)
+            && state
+                .offer
+                .as_ref()
+                .map_or(true, |o| (current_time - o.creation_time) > OFFER_RATE_LIMIT_MS)
         {
             if let Some(remote_s_public_p384) = P384PublicKey::from_bytes(&self.remote_s_public_p384) {
                 let mut tmp_header_check_cipher = None;
@@ -485,7 +516,9 @@ impl<H: Host> Session<H> {
                     if state.remote_session_id.is_some() {
                         &self.header_check_cipher
                     } else {
-                        let _ = tmp_header_check_cipher.insert(Aes::new(kbkdf512(&self.remote_s_public_hash, KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<16>()));
+                        let _ = tmp_header_check_cipher.insert(Aes::new(
+                            kbkdf512(&self.remote_s_public_hash, KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<16>(),
+                        ));
                         tmp_header_check_cipher.as_ref().unwrap()
                     },
                     mtu,
@@ -502,7 +535,9 @@ impl<H: Host> ReceiveContext<H> {
     pub fn new(host: &H) -> Self {
         Self {
             initial_offer_defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
-            incoming_init_header_check_cipher: Aes::new(kbkdf512(host.get_local_s_public_hash(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<16>()),
+            incoming_init_header_check_cipher: Aes::new(
+                kbkdf512(host.get_local_s_public_hash(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<16>(),
+            ),
         }
     }
 
@@ -529,7 +564,9 @@ impl<H: Host> ReceiveContext<H> {
 
         if let Some(local_session_id) = SessionId::new_from_u64(memory::u64_from_le_bytes(incoming_packet) & SessionId::MAX_BIT_MASK) {
             if let Some(session) = host.session_lookup(local_session_id) {
-                if let Some((packet_type, fragment_count, fragment_no, counter)) = dearmor_header(incoming_packet, &session.header_check_cipher) {
+                if let Some((packet_type, fragment_count, fragment_no, counter)) =
+                    dearmor_header(incoming_packet, &session.header_check_cipher)
+                {
                     let pseudoheader = Pseudoheader::make(u64::from(local_session_id), packet_type, counter);
                     if fragment_count > 1 {
                         if fragment_count <= (MAX_FRAGMENTS as u8) && fragment_no < fragment_count {
@@ -576,7 +613,9 @@ impl<H: Host> ReceiveContext<H> {
             }
         } else {
             unlikely_branch();
-            if let Some((packet_type, fragment_count, fragment_no, counter)) = dearmor_header(incoming_packet, &self.incoming_init_header_check_cipher) {
+            if let Some((packet_type, fragment_count, fragment_no, counter)) =
+                dearmor_header(incoming_packet, &self.incoming_init_header_check_cipher)
+            {
                 let pseudoheader = Pseudoheader::make(0, packet_type, counter);
                 if fragment_count > 1 {
                     let mut defrag = self.initial_offer_defrag.lock();
@@ -670,13 +709,20 @@ impl<H: Host> ReceiveContext<H> {
                             key.return_receive_cipher(c);
                             return Err(Error::DataBufferTooSmall);
                         }
-                        c.crypt(&tail[HEADER_SIZE..(tail.len() - AES_GCM_TAG_SIZE)], &mut data_buf[current_frag_data_start..data_len]);
+                        c.crypt(
+                            &tail[HEADER_SIZE..(tail.len() - AES_GCM_TAG_SIZE)],
+                            &mut data_buf[current_frag_data_start..data_len],
+                        );
 
                         let ok = c.finish_decrypt(&tail[(tail.len() - AES_GCM_TAG_SIZE)..]);
                         key.return_receive_cipher(c);
                         if ok {
                             // Select this key as the new default if it's newer than the current key.
-                            if p > 0 && state.keys[state.key_ptr].as_ref().map_or(true, |old| old.establish_counter < key.establish_counter) {
+                            if p > 0
+                                && state.keys[state.key_ptr]
+                                    .as_ref()
+                                    .map_or(true, |old| old.establish_counter < key.establish_counter)
+                            {
                                 drop(state);
                                 let mut state = session.state.write();
                                 state.key_ptr = key_ptr;
@@ -741,7 +787,13 @@ impl<H: Host> ReceiveContext<H> {
                     let hmac1_end = incoming_packet_len - HMAC_SIZE;
 
                     // Check that the sender knows this host's identity before doing anything else.
-                    if !hmac_sha384_2(host.get_local_s_public_hash(), pseudoheader, &incoming_packet[HEADER_SIZE..hmac1_end]).eq(&incoming_packet[hmac1_end..]) {
+                    if !hmac_sha384_2(
+                        host.get_local_s_public_hash(),
+                        pseudoheader,
+                        &incoming_packet[HEADER_SIZE..hmac1_end],
+                    )
+                    .eq(&incoming_packet[hmac1_end..])
+                    {
                         return Err(Error::FailedAuthentication);
                     }
 
@@ -755,15 +807,19 @@ impl<H: Host> ReceiveContext<H> {
                     }
 
                     // Key agreement: alice (remote) ephemeral NIST P-384 <> local static NIST P-384
-                    let (alice_e0_public, e0s) = P384PublicKey::from_bytes(&incoming_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
-                        .and_then(|pk| host.get_local_s_keypair_p384().agree(&pk).map(move |s| (pk, s)))
-                        .ok_or(Error::FailedAuthentication)?;
+                    let (alice_e0_public, e0s) =
+                        P384PublicKey::from_bytes(&incoming_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
+                            .and_then(|pk| host.get_local_s_keypair_p384().agree(&pk).map(move |s| (pk, s)))
+                            .ok_or(Error::FailedAuthentication)?;
 
                     // Initial key derivation from starting point, mixing in alice's ephemeral public and the e0s.
                     let mut key = Secret(hmac_sha512(&hmac_sha512(&INITIAL_KEY, alice_e0_public.as_bytes()), e0s.as_bytes()));
 
                     // Decrypt the encrypted part of the packet payload and authenticate the above key exchange via AES-GCM auth.
-                    let mut c = AesGcm::new(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n::<32>(), false);
+                    let mut c = AesGcm::new(
+                        kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n::<32>(),
+                        false,
+                    );
                     c.init(pseudoheader);
                     c.crypt_in_place(&mut incoming_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..payload_end]);
                     if !c.finish_decrypt(&incoming_packet[payload_end..aes_gcm_tag_end]) {
@@ -812,7 +868,10 @@ impl<H: Host> ReceiveContext<H> {
                     let alice_s_public_p384 = H::extract_p384_static(alice_s_public).ok_or(Error::InvalidPacket)?;
 
                     // Key agreement: both sides' static P-384 keys.
-                    let ss = host.get_local_s_keypair_p384().agree(&alice_s_public_p384).ok_or(Error::FailedAuthentication)?;
+                    let ss = host
+                        .get_local_s_keypair_p384()
+                        .agree(&alice_s_public_p384)
+                        .ok_or(Error::FailedAuthentication)?;
 
                     // Mix result of 'ss' agreement into master key.
                     key = Secret(hmac_sha512(key.as_bytes(), ss.as_bytes()));
@@ -843,7 +902,9 @@ impl<H: Host> ReceiveContext<H> {
                     let new_session = if session.is_some() {
                         None
                     } else {
-                        if let Some((new_session_id, psk, associated_object)) = host.accept_new_session(self, alice_s_public, alice_metadata) {
+                        if let Some((new_session_id, psk, associated_object)) =
+                            host.accept_new_session(self, alice_s_public, alice_metadata)
+                        {
                             let header_check_cipher = Aes::new(kbkdf512(ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<16>());
                             Some(Session::<H> {
                                 id: new_session_id,
@@ -877,7 +938,10 @@ impl<H: Host> ReceiveContext<H> {
                     // fixed size so this shouldn't matter cryptographically.
                     key = Secret(hmac_sha512(
                         session.psk.as_bytes(),
-                        &hmac_sha512(&hmac_sha512(&hmac_sha512(key.as_bytes(), bob_e0_keypair.public_key_bytes()), e0e0.as_bytes()), se0.as_bytes()),
+                        &hmac_sha512(
+                            &hmac_sha512(&hmac_sha512(key.as_bytes(), bob_e0_keypair.public_key_bytes()), e0e0.as_bytes()),
+                            se0.as_bytes(),
+                        ),
                     ));
 
                     // At this point we've completed Noise_IK key derivation with NIST P-384 ECDH, but now for hybrid and ratcheting...
@@ -922,12 +986,23 @@ impl<H: Host> ReceiveContext<H> {
 
                         REPLY_BUF_LEN - rp.len()
                     };
-                    create_packet_header(&mut reply_buf, reply_len, mtu, PACKET_TYPE_KEY_COUNTER_OFFER, alice_session_id.into(), reply_counter)?;
-                    let reply_pseudoheader = Pseudoheader::make(alice_session_id.into(), PACKET_TYPE_KEY_COUNTER_OFFER, reply_counter.to_u32());
+                    create_packet_header(
+                        &mut reply_buf,
+                        reply_len,
+                        mtu,
+                        PACKET_TYPE_KEY_COUNTER_OFFER,
+                        alice_session_id.into(),
+                        reply_counter,
+                    )?;
+                    let reply_pseudoheader =
+                        Pseudoheader::make(alice_session_id.into(), PACKET_TYPE_KEY_COUNTER_OFFER, reply_counter.to_u32());
 
                     // Encrypt reply packet using final Noise_IK key BEFORE mixing hybrid or ratcheting, since the other side
                     // must decrypt before doing these things.
-                    let mut c = AesGcm::new(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n::<32>(), true);
+                    let mut c = AesGcm::new(
+                        kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n::<32>(),
+                        true,
+                    );
                     c.init(memory::as_byte_array::<Pseudoheader, 12>(&reply_pseudoheader));
                     c.crypt_in_place(&mut reply_buf[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..reply_len]);
                     let c = c.finish_encrypt();
@@ -985,17 +1060,27 @@ impl<H: Host> ReceiveContext<H> {
                     if let Some(session) = session {
                         let state = session.state.upgradable_read();
                         if let Some(offer) = state.offer.as_ref() {
-                            let (bob_e0_public, e0e0) = P384PublicKey::from_bytes(&incoming_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
-                                .and_then(|pk| offer.alice_e0_keypair.agree(&pk).map(move |s| (pk, s)))
+                            let (bob_e0_public, e0e0) =
+                                P384PublicKey::from_bytes(&incoming_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
+                                    .and_then(|pk| offer.alice_e0_keypair.agree(&pk).map(move |s| (pk, s)))
+                                    .ok_or(Error::FailedAuthentication)?;
+                            let se0 = host
+                                .get_local_s_keypair_p384()
+                                .agree(&bob_e0_public)
                                 .ok_or(Error::FailedAuthentication)?;
-                            let se0 = host.get_local_s_keypair_p384().agree(&bob_e0_public).ok_or(Error::FailedAuthentication)?;
 
                             let mut key = Secret(hmac_sha512(
                                 session.psk.as_bytes(),
-                                &hmac_sha512(&hmac_sha512(&hmac_sha512(offer.key.as_bytes(), bob_e0_public.as_bytes()), e0e0.as_bytes()), se0.as_bytes()),
+                                &hmac_sha512(
+                                    &hmac_sha512(&hmac_sha512(offer.key.as_bytes(), bob_e0_public.as_bytes()), e0e0.as_bytes()),
+                                    se0.as_bytes(),
+                                ),
                             ));
 
-                            let mut c = AesGcm::new(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n::<32>(), false);
+                            let mut c = AesGcm::new(
+                                kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n::<32>(),
+                                false,
+                            );
                             c.init(pseudoheader);
                             c.crypt_in_place(&mut incoming_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..payload_end]);
                             if !c.finish_decrypt(&incoming_packet[payload_end..aes_gcm_tag_end]) {
@@ -1046,10 +1131,21 @@ impl<H: Host> ReceiveContext<H> {
                             let key = SessionKey::new(key, Role::Alice, current_time, counter, ratchet_count + 1, e1e1.is_some());
 
                             let mut reply_buf = [0_u8; HEADER_SIZE + AES_GCM_TAG_SIZE];
-                            create_packet_header(&mut reply_buf, HEADER_SIZE + AES_GCM_TAG_SIZE, mtu, PACKET_TYPE_NOP, bob_session_id.into(), counter)?;
+                            create_packet_header(
+                                &mut reply_buf,
+                                HEADER_SIZE + AES_GCM_TAG_SIZE,
+                                mtu,
+                                PACKET_TYPE_NOP,
+                                bob_session_id.into(),
+                                counter,
+                            )?;
 
                             let mut c = key.get_send_cipher(counter)?;
-                            c.init(memory::as_byte_array::<Pseudoheader, 12>(&Pseudoheader::make(bob_session_id.into(), PACKET_TYPE_NOP, counter.to_u32())));
+                            c.init(memory::as_byte_array::<Pseudoheader, 12>(&Pseudoheader::make(
+                                bob_session_id.into(),
+                                PACKET_TYPE_NOP,
+                                counter.to_u32(),
+                            )));
                             reply_buf[HEADER_SIZE..].copy_from_slice(&c.finish_encrypt());
                             key.return_send_cipher(c);
 
@@ -1204,10 +1300,16 @@ fn create_initial_offer<SendFunction: FnMut(&mut [u8])>(
     create_packet_header(&mut packet_buf, packet_len, mtu, PACKET_TYPE_KEY_OFFER, bob_session_id, counter)?;
     let pseudoheader = Pseudoheader::make(bob_session_id, PACKET_TYPE_KEY_OFFER, counter.to_u32());
 
-    let key = Secret(hmac_sha512(&hmac_sha512(&INITIAL_KEY, alice_e0_keypair.public_key_bytes()), e0s.unwrap().as_bytes()));
+    let key = Secret(hmac_sha512(
+        &hmac_sha512(&INITIAL_KEY, alice_e0_keypair.public_key_bytes()),
+        e0s.unwrap().as_bytes(),
+    ));
 
     let gcm_tag = {
-        let mut c = AesGcm::new(kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n::<32>(), true);
+        let mut c = AesGcm::new(
+            kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n::<32>(),
+            true,
+        );
         c.init(memory::as_byte_array::<Pseudoheader, 12>(&pseudoheader));
         c.crypt_in_place(&mut packet_buf[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..packet_len]);
         c.finish_encrypt()
@@ -1225,7 +1327,11 @@ fn create_initial_offer<SendFunction: FnMut(&mut [u8])>(
     packet_buf[packet_len..(packet_len + HMAC_SIZE)].copy_from_slice(&hmac);
     packet_len += HMAC_SIZE;
 
-    let hmac = hmac_sha384_2(bob_s_public_hash, memory::as_byte_array::<Pseudoheader, 12>(&pseudoheader), &packet_buf[HEADER_SIZE..packet_len]);
+    let hmac = hmac_sha384_2(
+        bob_s_public_hash,
+        memory::as_byte_array::<Pseudoheader, 12>(&pseudoheader),
+        &packet_buf[HEADER_SIZE..packet_len],
+    );
     packet_buf[packet_len..(packet_len + HMAC_SIZE)].copy_from_slice(&hmac);
     packet_len += HMAC_SIZE;
 
@@ -1243,7 +1349,14 @@ fn create_initial_offer<SendFunction: FnMut(&mut [u8])>(
 }
 
 #[inline(always)]
-fn create_packet_header(header: &mut [u8], packet_len: usize, mtu: usize, packet_type: u8, recipient_session_id: u64, counter: CounterValue) -> Result<(), Error> {
+fn create_packet_header(
+    header: &mut [u8],
+    packet_len: usize,
+    mtu: usize,
+    packet_type: u8,
+    recipient_session_id: u64,
+    counter: CounterValue,
+) -> Result<(), Error> {
     let fragment_count = ((packet_len as f32) / (mtu - HEADER_SIZE) as f32).ceil() as usize;
 
     debug_assert!(header.len() >= HEADER_SIZE);
@@ -1255,7 +1368,9 @@ fn create_packet_header(header: &mut [u8], packet_len: usize, mtu: usize, packet
     debug_assert!(recipient_session_id <= 0xffffffffffff); // session ID is 48 bits
 
     if fragment_count <= MAX_FRAGMENTS {
-        header[0..8].copy_from_slice(&(recipient_session_id | (packet_type as u64).wrapping_shl(48) | ((fragment_count - 1) as u64).wrapping_shl(52)).to_le_bytes());
+        header[0..8].copy_from_slice(
+            &(recipient_session_id | (packet_type as u64).wrapping_shl(48) | ((fragment_count - 1) as u64).wrapping_shl(52)).to_le_bytes(),
+        );
         header[8..12].copy_from_slice(&counter.to_u32().to_le_bytes());
         header[12..16].fill(0);
         Ok(())
@@ -1265,7 +1380,12 @@ fn create_packet_header(header: &mut [u8], packet_len: usize, mtu: usize, packet
     }
 }
 
-fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(send: &mut SendFunction, packet: &mut [u8], mtu: usize, header_check_cipher: &Aes) {
+fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
+    send: &mut SendFunction,
+    packet: &mut [u8],
+    mtu: usize,
+    header_check_cipher: &Aes,
+) {
     let packet_len = packet.len();
     let mut fragment_start = 0;
     let mut fragment_end = packet_len.min(mtu);
@@ -1294,7 +1414,10 @@ fn armor_header(packet: &mut [u8], header_check_cipher: &Aes) {
     debug_assert!(packet.len() >= MIN_PACKET_SIZE);
     let mut header_pad = 0u128.to_ne_bytes();
     header_check_cipher.encrypt_block(&packet[16..32], &mut header_pad);
-    packet[SESSION_ID_SIZE..HEADER_SIZE].iter_mut().zip(header_pad.iter()).for_each(|(x, y)| *x ^= *y);
+    packet[SESSION_ID_SIZE..HEADER_SIZE]
+        .iter_mut()
+        .zip(header_pad.iter())
+        .for_each(|(x, y)| *x ^= *y);
 }
 
 /// Dearmor the armored part of the header and return it if the 32-bit MAC matches.
@@ -1326,7 +1449,10 @@ fn dearmor_header(packet: &[u8], header_check_cipher: &Aes) -> Option<(u8, u8, u
 }
 
 /// Parse KEY_OFFER and KEY_COUNTER_OFFER starting after the unencrypted public key part.
-fn parse_key_offer_after_header(incoming_packet: &[u8], packet_type: u8) -> Result<([u8; 16], SessionId, &[u8], &[u8], &[u8], Option<[u8; 16]>), Error> {
+fn parse_key_offer_after_header(
+    incoming_packet: &[u8],
+    packet_type: u8,
+) -> Result<([u8; 16], SessionId, &[u8], &[u8], &[u8], Option<[u8; 16]>), Error> {
     let mut p = &incoming_packet[..];
     let mut offer_id = [0_u8; 16];
     p.read_exact(&mut offer_id)?;
@@ -1381,7 +1507,14 @@ fn parse_key_offer_after_header(incoming_packet: &[u8], packet_type: u8) -> Resu
     } else {
         None
     };
-    Ok((offer_id, alice_session_id, alice_s_public, alice_metadata, alice_e1_public, alice_ratchet_key_fingerprint))
+    Ok((
+        offer_id,
+        alice_session_id,
+        alice_s_public,
+        alice_metadata,
+        alice_e1_public,
+        alice_ratchet_key_fingerprint,
+    ))
 }
 
 enum Role {
@@ -1399,9 +1532,13 @@ struct KeyLifetime {
 impl KeyLifetime {
     fn new(current_counter: CounterValue, current_time: i64) -> Self {
         Self {
-            rekey_at_or_after_counter: current_counter.0 + REKEY_AFTER_USES + (random::next_u32_secure() % REKEY_AFTER_USES_MAX_JITTER) as u64,
+            rekey_at_or_after_counter: current_counter.0
+                + REKEY_AFTER_USES
+                + (random::next_u32_secure() % REKEY_AFTER_USES_MAX_JITTER) as u64,
             hard_expire_at_counter: current_counter.0 + EXPIRE_AFTER_USES,
-            rekey_at_or_after_timestamp: current_time + REKEY_AFTER_TIME_MS + (random::next_u32_secure() % REKEY_AFTER_TIME_MS_MAX_JITTER) as i64,
+            rekey_at_or_after_timestamp: current_time
+                + REKEY_AFTER_TIME_MS
+                + (random::next_u32_secure() % REKEY_AFTER_TIME_MS_MAX_JITTER) as i64,
         }
     }
 
@@ -1458,7 +1595,11 @@ impl SessionKey {
     #[inline(always)]
     fn get_send_cipher(&self, counter: CounterValue) -> Result<Box<AesGcm>, Error> {
         if !self.lifetime.expired(counter) {
-            Ok(self.send_cipher_pool.lock().pop().unwrap_or_else(|| Box::new(AesGcm::new(self.send_key.as_bytes(), true))))
+            Ok(self
+                .send_cipher_pool
+                .lock()
+                .pop()
+                .unwrap_or_else(|| Box::new(AesGcm::new(self.send_key.as_bytes(), true))))
         } else {
             Err(Error::MaxKeyLifetimeExceeded)
         }
@@ -1471,7 +1612,10 @@ impl SessionKey {
 
     #[inline(always)]
     fn get_receive_cipher(&self) -> Box<AesGcm> {
-        self.receive_cipher_pool.lock().pop().unwrap_or_else(|| Box::new(AesGcm::new(self.receive_key.as_bytes(), false)))
+        self.receive_cipher_pool
+            .lock()
+            .pop()
+            .unwrap_or_else(|| Box::new(AesGcm::new(self.receive_key.as_bytes(), false)))
     }
 
     #[inline(always)]
@@ -1574,7 +1718,12 @@ mod tests {
             })
         }
 
-        fn accept_new_session(&self, _: &ReceiveContext<Self>, _: &[u8], _: &[u8]) -> Option<(SessionId, Secret<64>, Self::AssociatedObject)> {
+        fn accept_new_session(
+            &self,
+            _: &ReceiveContext<Self>,
+            _: &[u8],
+            _: &[u8],
+        ) -> Option<(SessionId, Secret<64>, Self::AssociatedObject)> {
             loop {
                 let mut new_id = self.session_id_counter.lock();
                 *new_id += 1;
@@ -1646,7 +1795,13 @@ mod tests {
                                     assert!(!data.iter().any(|x| *x != 0x12));
                                 }
                                 ReceiveResult::OkNewSession(new_session) => {
-                                    println!("zssp: {} => {} ({}): OkNewSession ({})", host.other_name, host.this_name, qi_len, u64::from(new_session.id));
+                                    println!(
+                                        "zssp: {} => {} ({}): OkNewSession ({})",
+                                        host.other_name,
+                                        host.this_name,
+                                        qi_len,
+                                        u64::from(new_session.id)
+                                    );
                                     let mut hs = host.session.lock();
                                     assert!(hs.is_none());
                                     let _ = hs.insert(Arc::new(new_session));
@@ -1656,7 +1811,13 @@ mod tests {
                                 }
                             }
                         } else {
-                            println!("zssp: {} => {} ({}): error: {}", host.other_name, host.this_name, qi_len, r.err().unwrap().to_string());
+                            println!(
+                                "zssp: {} => {} ({}): error: {}",
+                                host.other_name,
+                                host.this_name,
+                                qi_len,
+                                r.err().unwrap().to_string()
+                            );
                             panic!();
                         }
                     } else {
@@ -1683,7 +1844,11 @@ mod tests {
                         }
                         for _ in 0..4 {
                             assert!(session
-                                .send(send_to_other, &mut mtu_buffer, &data_buf[..((random::xorshift64_random() as usize) % data_buf.len())])
+                                .send(
+                                    send_to_other,
+                                    &mut mtu_buffer,
+                                    &data_buf[..((random::xorshift64_random() as usize) % data_buf.len())]
+                                )
                                 .is_ok());
                         }
                         if (test_loop % 8) == 0 && test_loop >= 8 && host.this_name.eq("alice") {

@@ -44,25 +44,55 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
         let mut setsockopt_results: c_int = 0;
 
         fl = 1;
-        setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_REUSEPORT.as_(), (&mut fl as *mut c_int).cast(), fl_size);
+        setsockopt_results |= libc::setsockopt(
+            s,
+            libc::SOL_SOCKET.as_(),
+            libc::SO_REUSEPORT.as_(),
+            (&mut fl as *mut c_int).cast(),
+            fl_size,
+        );
 
         fl = 0;
-        setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_LINGER.as_(), (&mut fl as *mut c_int).cast(), fl_size);
+        setsockopt_results |= libc::setsockopt(
+            s,
+            libc::SOL_SOCKET.as_(),
+            libc::SO_LINGER.as_(),
+            (&mut fl as *mut c_int).cast(),
+            fl_size,
+        );
 
         //fl = 1;
         //setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET, libc::SO_REUSEADDR, (&mut fl as *mut c_int).cast(), fl_size);
 
         fl = 1;
-        setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_BROADCAST.as_(), (&mut fl as *mut c_int).cast(), fl_size);
+        setsockopt_results |= libc::setsockopt(
+            s,
+            libc::SOL_SOCKET.as_(),
+            libc::SO_BROADCAST.as_(),
+            (&mut fl as *mut c_int).cast(),
+            fl_size,
+        );
         if af == libc::AF_INET6 {
             fl = 1;
-            setsockopt_results |= libc::setsockopt(s, libc::IPPROTO_IPV6.as_(), libc::IPV6_V6ONLY.as_(), (&mut fl as *mut c_int).cast(), fl_size);
+            setsockopt_results |= libc::setsockopt(
+                s,
+                libc::IPPROTO_IPV6.as_(),
+                libc::IPV6_V6ONLY.as_(),
+                (&mut fl as *mut c_int).cast(),
+                fl_size,
+            );
         }
 
         #[cfg(any(target_os = "macos", target_os = "ios"))]
         {
             fl = 1;
-            setsockopt_results |= libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_NOSIGPIPE.as_(), (&mut fl as *mut c_int).cast(), fl_size)
+            setsockopt_results |= libc::setsockopt(
+                s,
+                libc::SOL_SOCKET.as_(),
+                libc::SO_NOSIGPIPE.as_(),
+                (&mut fl as *mut c_int).cast(),
+                fl_size,
+            )
         }
 
         #[cfg(target_os = "linux")]
@@ -70,7 +100,13 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
             if !_device_name.is_empty() {
                 let _ = std::ffi::CString::new(_device_name).map(|dn| {
                     let dnb = dn.as_bytes_with_nul();
-                    let _ = libc::setsockopt(s.as_(), libc::SOL_SOCKET.as_(), libc::SO_BINDTODEVICE.as_(), dnb.as_ptr().cast(), (dnb.len() - 1).as_());
+                    let _ = libc::setsockopt(
+                        s.as_(),
+                        libc::SOL_SOCKET.as_(),
+                        libc::SO_BINDTODEVICE.as_(),
+                        dnb.as_ptr().cast(),
+                        (dnb.len() - 1).as_(),
+                    );
                 });
             }
         }
@@ -84,30 +120,62 @@ fn bind_udp_socket(_device_name: &str, address: &InetAddress) -> Result<FastUDPR
             #[cfg(not(target_os = "linux"))]
             {
                 fl = 0;
-                libc::setsockopt(s, libc::IPPROTO_IP.as_(), libc::IP_DF.as_(), (&mut fl as *mut c_int).cast(), fl_size);
+                libc::setsockopt(
+                    s,
+                    libc::IPPROTO_IP.as_(),
+                    libc::IP_DF.as_(),
+                    (&mut fl as *mut c_int).cast(),
+                    fl_size,
+                );
             }
             #[cfg(target_os = "linux")]
             {
                 fl = libc::IP_PMTUDISC_DONT as c_int;
-                libc::setsockopt(s, libc::IPPROTO_IP.as_(), libc::IP_MTU_DISCOVER.as_(), (&mut fl as *mut c_int).cast(), fl_size);
+                libc::setsockopt(
+                    s,
+                    libc::IPPROTO_IP.as_(),
+                    libc::IP_MTU_DISCOVER.as_(),
+                    (&mut fl as *mut c_int).cast(),
+                    fl_size,
+                );
             }
         }
 
         if af == libc::AF_INET6 {
             fl = 0;
-            libc::setsockopt(s, libc::IPPROTO_IPV6.as_(), libc::IPV6_DONTFRAG.as_(), (&mut fl as *mut c_int).cast(), fl_size);
+            libc::setsockopt(
+                s,
+                libc::IPPROTO_IPV6.as_(),
+                libc::IPV6_DONTFRAG.as_(),
+                (&mut fl as *mut c_int).cast(),
+                fl_size,
+            );
         }
 
         fl = 1048576;
         while fl >= 131072 {
-            if libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_RCVBUF.as_(), (&mut fl as *mut c_int).cast(), fl_size) == 0 {
+            if libc::setsockopt(
+                s,
+                libc::SOL_SOCKET.as_(),
+                libc::SO_RCVBUF.as_(),
+                (&mut fl as *mut c_int).cast(),
+                fl_size,
+            ) == 0
+            {
                 break;
             }
             fl -= 65536;
         }
         fl = 1048576;
         while fl >= 131072 {
-            if libc::setsockopt(s, libc::SOL_SOCKET.as_(), libc::SO_SNDBUF.as_(), (&mut fl as *mut c_int).cast(), fl_size) == 0 {
+            if libc::setsockopt(
+                s,
+                libc::SOL_SOCKET.as_(),
+                libc::SO_SNDBUF.as_(),
+                (&mut fl as *mut c_int).cast(),
+                fl_size,
+            ) == 0
+            {
                 break;
             }
             fl -= 65536;
@@ -172,10 +240,22 @@ pub(crate) fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &I
             let _ = libc::sendmsg(socket.get().as_(), transmute(&mhdr as *const libc::msghdr), 0);
         } else {
             let mut ttl = packet_ttl as c_int;
-            libc::setsockopt(socket.get().as_(), libc::IPPROTO_IP.as_(), libc::IP_TTL.as_(), (&mut ttl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
+            libc::setsockopt(
+                socket.get().as_(),
+                libc::IPPROTO_IP.as_(),
+                libc::IP_TTL.as_(),
+                (&mut ttl as *mut c_int).cast(),
+                std::mem::size_of::<c_int>().as_(),
+            );
             let _ = libc::sendmsg(socket.get().as_(), transmute(&mhdr as *const libc::msghdr), 0);
             ttl = 255;
-            libc::setsockopt(socket.get().as_(), libc::IPPROTO_IP.as_(), libc::IP_TTL.as_(), (&mut ttl as *mut c_int).cast(), std::mem::size_of::<c_int>().as_());
+            libc::setsockopt(
+                socket.get().as_(),
+                libc::IPPROTO_IP.as_(),
+                libc::IP_TTL.as_(),
+                (&mut ttl as *mut c_int).cast(),
+                std::mem::size_of::<c_int>().as_(),
+            );
         }
     }
 }
@@ -185,7 +265,14 @@ pub(crate) fn fast_udp_socket_sendto(socket: &FastUDPRawOsSocket, to_address: &I
 fn fast_udp_socket_recvfrom(socket: &FastUDPRawOsSocket, buf: &mut PacketBuffer, from_address: &mut InetAddress) -> isize {
     unsafe {
         let mut addrlen = std::mem::size_of::<InetAddress>() as libc::socklen_t;
-        let s = libc::recvfrom(socket.get().as_(), buf.as_mut_ptr().cast(), buf.capacity().as_(), 0, (from_address as *mut InetAddress).cast(), &mut addrlen) as isize;
+        let s = libc::recvfrom(
+            socket.get().as_(),
+            buf.as_mut_ptr().cast(),
+            buf.capacity().as_(),
+            0,
+            (from_address as *mut InetAddress).cast(),
+            &mut addrlen,
+        ) as isize;
         if s > 0 {
             buf.set_size_unchecked(s as usize);
         }
@@ -194,7 +281,12 @@ fn fast_udp_socket_recvfrom(socket: &FastUDPRawOsSocket, buf: &mut PacketBuffer,
 }
 
 impl FastUDPSocket {
-    pub fn new<F: Fn(&FastUDPRawOsSocket, &InetAddress, PacketBuffer) + Send + Sync + Clone + 'static>(device_name: &str, address: &InetAddress, packet_buffer_pool: &Arc<PacketBufferPool>, handler: F) -> Result<Self, String> {
+    pub fn new<F: Fn(&FastUDPRawOsSocket, &InetAddress, PacketBuffer) + Send + Sync + Clone + 'static>(
+        device_name: &str,
+        address: &InetAddress,
+        packet_buffer_pool: &Arc<PacketBufferPool>,
+        handler: F,
+    ) -> Result<Self, String> {
         let thread_count = num_cpus::get_physical().clamp(1, FAST_UDP_SOCKET_MAX_THREADS);
 
         let mut s = Self {
@@ -273,7 +365,14 @@ impl Drop for FastUDPSocket {
         self.thread_run.store(false, Ordering::Relaxed);
         for s in self.sockets.iter() {
             unsafe {
-                libc::sendto(s.get().as_(), tmp.as_ptr().cast(), 0, 0, (&self.bind_address as *const InetAddress).cast(), std::mem::size_of::<InetAddress>() as libc::socklen_t);
+                libc::sendto(
+                    s.get().as_(),
+                    tmp.as_ptr().cast(),
+                    0,
+                    0,
+                    (&self.bind_address as *const InetAddress).cast(),
+                    std::mem::size_of::<InetAddress>() as libc::socklen_t,
+                );
             }
         }
         for s in self.sockets.iter() {
@@ -309,9 +408,14 @@ mod tests {
             let ba0 = ba0.unwrap();
             let cnt0 = Arc::new(AtomicU32::new(0));
             let cnt0c = cnt0.clone();
-            let s0 = FastUDPSocket::new("", &ba0, &pool, move |sock: &FastUDPRawOsSocket, _: &InetAddress, data: PacketBuffer| {
-                cnt0c.fetch_add(1, Ordering::Relaxed);
-            });
+            let s0 = FastUDPSocket::new(
+                "",
+                &ba0,
+                &pool,
+                move |sock: &FastUDPRawOsSocket, _: &InetAddress, data: PacketBuffer| {
+                    cnt0c.fetch_add(1, Ordering::Relaxed);
+                },
+            );
             assert!(s0.is_ok());
             let s0 = s0.unwrap();
 
@@ -320,9 +424,14 @@ mod tests {
             let ba1 = ba1.unwrap();
             let cnt1 = Arc::new(AtomicU32::new(0));
             let cnt1c = cnt1.clone();
-            let s1 = FastUDPSocket::new("", &ba1, &pool, move |sock: &FastUDPRawOsSocket, _: &InetAddress, data: PacketBuffer| {
-                cnt1c.fetch_add(1, Ordering::Relaxed);
-            });
+            let s1 = FastUDPSocket::new(
+                "",
+                &ba1,
+                &pool,
+                move |sock: &FastUDPRawOsSocket, _: &InetAddress, data: PacketBuffer| {
+                    cnt1c.fetch_add(1, Ordering::Relaxed);
+                },
+            );
             assert!(s1.is_ok());
             let s1 = s1.unwrap();
 

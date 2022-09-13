@@ -84,7 +84,11 @@ impl X25519KeyPair {
 
 impl Clone for X25519KeyPair {
     fn clone(&self) -> Self {
-        Self(x25519_dalek::StaticSecret::from(self.0.to_bytes()), self.1.clone(), x25519_dalek::PublicKey::from(self.1 .0.clone()))
+        Self(
+            x25519_dalek::StaticSecret::from(self.0.to_bytes()),
+            self.1.clone(),
+            x25519_dalek::PublicKey::from(self.1 .0.clone()),
+        )
     }
 }
 

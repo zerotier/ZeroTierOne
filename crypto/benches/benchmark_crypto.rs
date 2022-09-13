@@ -19,7 +19,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("cryptography");
     group.measurement_time(Duration::new(10, 0));
 
-    group.bench_function("ecdhp384", |b| b.iter(|| p384_a.agree(p384_b.public_key()).expect("ecdhp384 failed")));
+    group.bench_function("ecdhp384", |b| {
+        b.iter(|| p384_a.agree(p384_b.public_key()).expect("ecdhp384 failed"))
+    });
     group.bench_function("ecdhx25519", |b| b.iter(|| x25519_a.agree(&x25519_b_pub)));
     group.bench_function("kyber_encapsulate", |b| {
         b.iter(|| pqc_kyber::encapsulate(&kyber_a.public, &mut random::SecureRandom::default()).expect("kyber encapsulate failed"))

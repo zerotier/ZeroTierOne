@@ -43,7 +43,10 @@ impl<O: Send, F: PoolFactory<O>> Pooled<O, F> {
     #[inline(always)]
     pub unsafe fn into_raw(self) -> *mut O {
         // Verify that the structure is not padded before 'obj'.
-        assert_eq!((&self.0.as_ref().obj as *const O).cast::<u8>(), (self.0.as_ref() as *const PoolEntry<O, F>).cast::<u8>());
+        assert_eq!(
+            (&self.0.as_ref().obj as *const O).cast::<u8>(),
+            (self.0.as_ref() as *const PoolEntry<O, F>).cast::<u8>()
+        );
 
         let ptr = self.0.as_ptr().cast::<O>();
         std::mem::forget(self);

@@ -99,17 +99,36 @@ fn main() {
                     .subcommand(Command::new("secondaryport").arg(Arg::new("port#").index(1).validator(utils::is_valid_port)))
                     .subcommand(
                         Command::new("blacklist")
-                            .subcommand(Command::new("cidr").arg(Arg::new("ip_bits").index(1)).arg(Arg::new("boolean").index(2).validator(utils::is_valid_bool)))
-                            .subcommand(Command::new("if").arg(Arg::new("prefix").index(1)).arg(Arg::new("boolean").index(2).validator(utils::is_valid_bool))),
+                            .subcommand(
+                                Command::new("cidr")
+                                    .arg(Arg::new("ip_bits").index(1))
+                                    .arg(Arg::new("boolean").index(2).validator(utils::is_valid_bool)),
+                            )
+                            .subcommand(
+                                Command::new("if")
+                                    .arg(Arg::new("prefix").index(1))
+                                    .arg(Arg::new("boolean").index(2).validator(utils::is_valid_bool)),
+                            ),
                     )
                     .subcommand(Command::new("portmap").arg(Arg::new("boolean").index(1).validator(utils::is_valid_bool))),
             )
-            .subcommand(Command::new("peer").subcommand(Command::new("show").arg(Arg::new("address").index(1).required(true))).subcommand(Command::new("list")).subcommand(Command::new("listroots")).subcommand(Command::new("try")))
+            .subcommand(
+                Command::new("peer")
+                    .subcommand(Command::new("show").arg(Arg::new("address").index(1).required(true)))
+                    .subcommand(Command::new("list"))
+                    .subcommand(Command::new("listroots"))
+                    .subcommand(Command::new("try")),
+            )
             .subcommand(
                 Command::new("network")
                     .subcommand(Command::new("show").arg(Arg::new("nwid").index(1).required(true)))
                     .subcommand(Command::new("list"))
-                    .subcommand(Command::new("set").arg(Arg::new("nwid").index(1).required(true)).arg(Arg::new("setting").index(2).required(false)).arg(Arg::new("value").index(3).required(false))),
+                    .subcommand(
+                        Command::new("set")
+                            .arg(Arg::new("nwid").index(1).required(true))
+                            .arg(Arg::new("setting").index(2).required(false))
+                            .arg(Arg::new("value").index(3).required(false)),
+                    ),
             )
             .subcommand(Command::new("join").arg(Arg::new("nwid").index(1).required(true)))
             .subcommand(Command::new("leave").arg(Arg::new("nwid").index(1).required(true)))
@@ -120,15 +139,28 @@ fn main() {
                     .subcommand(Command::new("getpublic").arg(Arg::new("identity").index(1).required(true)))
                     .subcommand(Command::new("fingerprint").arg(Arg::new("identity").index(1).required(true)))
                     .subcommand(Command::new("validate").arg(Arg::new("identity").index(1).required(true)))
-                    .subcommand(Command::new("sign").arg(Arg::new("identity").index(1).required(true)).arg(Arg::new("path").index(2).required(true)))
-                    .subcommand(Command::new("verify").arg(Arg::new("identity").index(1).required(true)).arg(Arg::new("path").index(2).required(true)).arg(Arg::new("signature").index(3).required(true))),
+                    .subcommand(
+                        Command::new("sign")
+                            .arg(Arg::new("identity").index(1).required(true))
+                            .arg(Arg::new("path").index(2).required(true)),
+                    )
+                    .subcommand(
+                        Command::new("verify")
+                            .arg(Arg::new("identity").index(1).required(true))
+                            .arg(Arg::new("path").index(2).required(true))
+                            .arg(Arg::new("signature").index(3).required(true)),
+                    ),
             )
             .subcommand(
                 Command::new("rootset")
                     .subcommand(Command::new("add").arg(Arg::new("path").index(1).required(true)))
                     .subcommand(Command::new("remove").arg(Arg::new("name").index(1).required(true)))
                     .subcommand(Command::new("list"))
-                    .subcommand(Command::new("sign").arg(Arg::new("path").index(1).required(true)).arg(Arg::new("secret").index(2).required(true)))
+                    .subcommand(
+                        Command::new("sign")
+                            .arg(Arg::new("path").index(1).required(true))
+                            .arg(Arg::new("secret").index(2).required(true)),
+                    )
                     .subcommand(Command::new("verify").arg(Arg::new("path").index(1).required(true)))
                     .subcommand(Command::new("marshal").arg(Arg::new("path").index(1).required(true)))
                     .subcommand(Command::new("restoredefault")),
@@ -163,7 +195,10 @@ fn main() {
                         if suggested.is_empty() {
                             eprintln!("Unrecognized option '{}'. Use 'help' for help.", invalid);
                         } else {
-                            eprintln!("Unrecognized option '{}', did you mean {}? Use 'help' for help.", invalid, suggested);
+                            eprintln!(
+                                "Unrecognized option '{}', did you mean {}? Use 'help' for help.",
+                                invalid, suggested
+                            );
                         }
                     }
                     std::process::exit(exitcode::ERR_USAGE);
@@ -173,10 +208,18 @@ fn main() {
 
     let flags = Flags {
         json_output: global_args.is_present("json"),
-        base_path: global_args.value_of("path").map_or_else(platform_default_home_path, |p| p.to_string()),
+        base_path: global_args
+            .value_of("path")
+            .map_or_else(platform_default_home_path, |p| p.to_string()),
         auth_token_path_override: global_args.value_of("token_path").map(|p| p.to_string()),
         auth_token_override: global_args.value_of("token").map(|t| t.to_string()),
     };
 
-    std::process::exit(tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap().block_on(async_main(flags, global_args)));
+    std::process::exit(
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async_main(flags, global_args)),
+    );
 }

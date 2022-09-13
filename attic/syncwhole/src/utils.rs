@@ -16,12 +16,17 @@ use tokio::task::JoinHandle;
 
 /// Get the real time clock in milliseconds since Unix epoch.
 pub fn ms_since_epoch() -> i64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as i64
 }
 
 /// Encode a byte slice to a hexadecimal string.
 pub fn to_hex_string(b: &[u8]) -> String {
-    const HEX_CHARS: [u8; 16] = [b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'a', b'b', b'c', b'd', b'e', b'f'];
+    const HEX_CHARS: [u8; 16] = [
+        b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'a', b'b', b'c', b'd', b'e', b'f',
+    ];
     let mut s = String::new();
     s.reserve(b.len() * 2);
     for c in b {

@@ -56,7 +56,9 @@ impl AesCtr {
     /// If it's already been used, this also resets the cipher. There is no separate reset.
     #[inline(always)]
     pub fn init(&mut self, iv: &[u8]) {
-        let _ = self.1.replace(Crypter::new(aes_ctr_by_key_size(self.0.len()), Mode::Encrypt, self.0.as_slice(), Some(iv)).unwrap());
+        let _ = self
+            .1
+            .replace(Crypter::new(aes_ctr_by_key_size(self.0.len()), Mode::Encrypt, self.0.as_slice(), Some(iv)).unwrap());
     }
 
     /// Encrypt or decrypt (same operation with CTR mode)
@@ -68,7 +70,11 @@ impl AesCtr {
     /// Encrypt or decrypt in place (same operation with CTR mode)
     #[inline(always)]
     pub fn crypt_in_place(&mut self, data: &mut [u8]) {
-        let _ = self.1.as_mut().unwrap().update(unsafe { &*std::slice::from_raw_parts(data.as_ptr(), data.len()) }, data);
+        let _ = self
+            .1
+            .as_mut()
+            .unwrap()
+            .update(unsafe { &*std::slice::from_raw_parts(data.as_ptr(), data.len()) }, data);
     }
 }
 
@@ -116,7 +122,15 @@ impl AesGmacSiv {
     pub fn encrypt_init(&mut self, iv: &[u8]) {
         self.tag[0..8].copy_from_slice(iv);
         self.tag[8..12].fill(0);
-        let _ = self.gmac.replace(Crypter::new(aes_gcm_by_key_size(self.k0.len()), Mode::Encrypt, self.k0.as_slice(), Some(&self.tag[0..12])).unwrap());
+        let _ = self.gmac.replace(
+            Crypter::new(
+                aes_gcm_by_key_size(self.k0.len()),
+                Mode::Encrypt,
+                self.k0.as_slice(),
+                Some(&self.tag[0..12]),
+            )
+            .unwrap(),
+        );
     }
 
     /// Set additional authenticated data (data to be authenticated but not encrypted).
@@ -164,7 +178,15 @@ impl AesGmacSiv {
         self.tmp.copy_from_slice(&tag_tmp[0..16]);
 
         self.tmp[12] &= 0x7f;
-        let _ = self.ctr.replace(Crypter::new(aes_ctr_by_key_size(self.k1.len()), Mode::Encrypt, self.k1.as_slice(), Some(&self.tmp)).unwrap());
+        let _ = self.ctr.replace(
+            Crypter::new(
+                aes_ctr_by_key_size(self.k1.len()),
+                Mode::Encrypt,
+                self.k1.as_slice(),
+                Some(&self.tmp),
+            )
+            .unwrap(),
+        );
     }
 
     /// Feed plaintext for second pass and write ciphertext to supplied buffer.
@@ -178,7 +200,10 @@ impl AesGmacSiv {
     /// This may be called more than once.
     #[inline(always)]
     pub fn encrypt_second_pass_in_place(&mut self, plaintext_to_ciphertext: &mut [u8]) {
-        let _ = self.ctr.as_mut().unwrap().update(unsafe { std::slice::from_raw_parts(plaintext_to_ciphertext.as_ptr(), plaintext_to_ciphertext.len()) }, plaintext_to_ciphertext);
+        let _ = self.ctr.as_mut().unwrap().update(
+            unsafe { std::slice::from_raw_parts(plaintext_to_ciphertext.as_ptr(), plaintext_to_ciphertext.len()) },
+            plaintext_to_ciphertext,
+        );
     }
 
     /// Finish second pass and return a reference to the tag for this message.
@@ -194,7 +219,15 @@ impl AesGmacSiv {
     pub fn decrypt_init(&mut self, tag: &[u8]) {
         self.tmp.copy_from_slice(tag);
         self.tmp[12] &= 0x7f;
-        let _ = self.ctr.replace(Crypter::new(aes_ctr_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), Some(&self.tmp)).unwrap());
+        let _ = self.ctr.replace(
+            Crypter::new(
+                aes_ctr_by_key_size(self.k1.len()),
+                Mode::Decrypt,
+                self.k1.as_slice(),
+                Some(&self.tmp),
+            )
+            .unwrap(),
+        );
 
         let mut tag_tmp = [0_u8; 32];
         let mut ecb = Crypter::new(aes_ecb_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), None).unwrap();
@@ -204,7 +237,15 @@ impl AesGmacSiv {
         }
         self.tag.copy_from_slice(&tag_tmp[0..16]);
         tag_tmp[8..12].fill(0);
-        let _ = self.gmac.replace(Crypter::new(aes_gcm_by_key_size(self.k0.len()), Mode::Encrypt, self.k0.as_slice(), Some(&tag_tmp[0..12])).unwrap());
+        let _ = self.gmac.replace(
+            Crypter::new(
+                aes_gcm_by_key_size(self.k0.len()),
+                Mode::Encrypt,
+                self.k0.as_slice(),
+                Some(&tag_tmp[0..12]),
+            )
+            .unwrap(),
+        );
     }
 
     /// Set additional authenticated data to be checked.
@@ -225,7 +266,10 @@ impl AesGmacSiv {
     /// This may be called more than once.
     #[inline(always)]
     pub fn decrypt_in_place(&mut self, ciphertext_to_plaintext: &mut [u8]) {
-        self.decrypt(unsafe { std::slice::from_raw_parts(ciphertext_to_plaintext.as_ptr(), ciphertext_to_plaintext.len()) }, ciphertext_to_plaintext);
+        self.decrypt(
+            unsafe { std::slice::from_raw_parts(ciphertext_to_plaintext.as_ptr(), ciphertext_to_plaintext.len()) },
+            ciphertext_to_plaintext,
+        );
     }
 
     /// Finish decryption and return true if authentication appears valid.

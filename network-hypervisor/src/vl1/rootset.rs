@@ -90,7 +90,11 @@ impl RootSet {
     /// Get the ZeroTier default root set, which contains roots run by ZeroTier Inc.
     pub fn zerotier_default() -> Self {
         let mut cursor = 0;
-        let rs = Self::unmarshal(&Buffer::from(include_bytes!("../../default-rootset/root.zerotier.com.bin")), &mut cursor).unwrap();
+        let rs = Self::unmarshal(
+            &Buffer::from(include_bytes!("../../default-rootset/root.zerotier.com.bin")),
+            &mut cursor,
+        )
+        .unwrap();
         assert!(rs.verify());
         rs
     }
@@ -156,7 +160,13 @@ impl RootSet {
     }
 
     /// Add a member to this definition, replacing any current entry with this address.
-    pub fn add<'a, I: Iterator<Item = &'a Endpoint>>(&mut self, member_identity: &Identity, endpoints: Option<I>, priority: u8, protocol_version: u8) {
+    pub fn add<'a, I: Iterator<Item = &'a Endpoint>>(
+        &mut self,
+        member_identity: &Identity,
+        endpoints: Option<I>,
+        priority: u8,
+        protocol_version: u8,
+    ) {
         self.members.retain(|m| m.identity.address != member_identity.address);
         let _ = self.members.push(Root {
             identity: member_identity.clone_without_secret(),
@@ -263,11 +273,15 @@ impl Marshalable for RootSet {
         }
 
         let name_len = buf.read_varint(cursor)?;
-        rc.name = String::from_utf8(buf.read_bytes(name_len as usize, cursor)?.to_vec()).map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid UTF8"))?;
+        rc.name = String::from_utf8(buf.read_bytes(name_len as usize, cursor)?.to_vec())
+            .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid UTF8"))?;
 
         let url_len = buf.read_varint(cursor)?;
         if url_len > 0 {
-            rc.url = Some(String::from_utf8(buf.read_bytes(url_len as usize, cursor)?.to_vec()).map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid UTF8"))?);
+            rc.url = Some(
+                String::from_utf8(buf.read_bytes(url_len as usize, cursor)?.to_vec())
+                    .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid UTF8"))?,
+            );
         }
 
         rc.revision = buf.read_varint(cursor)?;

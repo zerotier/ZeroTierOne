@@ -50,7 +50,14 @@ impl<SI: SystemInterface> Path<SI> {
 
     /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.
     /// This returns None if more fragments are needed to assemble the packet.
-    pub(crate) fn receive_fragment(&self, packet_id: PacketId, fragment_no: u8, fragment_expecting_count: u8, packet: PooledPacketBuffer, time_ticks: i64) -> Option<FragmentedPacket> {
+    pub(crate) fn receive_fragment(
+        &self,
+        packet_id: PacketId,
+        fragment_no: u8,
+        fragment_expecting_count: u8,
+        packet: PooledPacketBuffer,
+        time_ticks: i64,
+    ) -> Option<FragmentedPacket> {
         let mut fp = self.fragmented_packets.lock();
 
         // Discard some old waiting packets if the total incoming fragments for a path exceeds a
@@ -90,7 +97,9 @@ impl<SI: SystemInterface> Path<SI> {
     }
 
     pub(crate) fn service(&self, time_ticks: i64) -> PathServiceResult {
-        self.fragmented_packets.lock().retain(|_, frag| (time_ticks - frag.ts_ticks) < v1::FRAGMENT_EXPIRATION);
+        self.fragmented_packets
+            .lock()
+            .retain(|_, frag| (time_ticks - frag.ts_ticks) < v1::FRAGMENT_EXPIRATION);
         if (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed)) < PATH_EXPIRATION_TIME {
             if (time_ticks - self.last_send_time_ticks.load(Ordering::Relaxed)) >= PATH_KEEPALIVE_INTERVAL {
                 self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);

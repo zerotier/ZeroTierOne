@@ -140,46 +140,57 @@ impl DataStore for TestNodeHost {
 }
 
 fn main() {
-    tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-        println!("Running syncwhole local self-test network with {} nodes starting at 127.0.0.1:{}", TEST_NODE_COUNT, TEST_PORT_RANGE_START);
-        println!();
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async {
+            println!(
+                "Running syncwhole local self-test network with {} nodes starting at 127.0.0.1:{}",
+                TEST_NODE_COUNT, TEST_PORT_RANGE_START
+            );
+            println!();
 
-        println!("Starting nodes on 127.0.0.1...");
-        let mut nodes: Vec<Node<TestNodeHost, TestNodeHost>> = Vec::with_capacity(TEST_NODE_COUNT);
-        for port in TEST_PORT_RANGE_START..(TEST_PORT_RANGE_START + (TEST_NODE_COUNT as u16)) {
-            let mut peers: Vec<SocketAddr> = Vec::with_capacity(TEST_NODE_COUNT);
-            for port2 in TEST_PORT_RANGE_START..(TEST_PORT_RANGE_START + (TEST_NODE_COUNT as u16)) {
-                if port != port2 {
-                    peers.push(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port2)));
+            println!("Starting nodes on 127.0.0.1...");
+            let mut nodes: Vec<Node<TestNodeHost, TestNodeHost>> = Vec::with_capacity(TEST_NODE_COUNT);
+            for port in TEST_PORT_RANGE_START..(TEST_PORT_RANGE_START + (TEST_NODE_COUNT as u16)) {
+                let mut peers: Vec<SocketAddr> = Vec::with_capacity(TEST_NODE_COUNT);
+                for port2 in TEST_PORT_RANGE_START..(TEST_PORT_RANGE_START + (TEST_NODE_COUNT as u16)) {
+                    if port != port2 {
+                        peers.push(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port2)));
+                    }
+                }
+                let mut th = TestNodeHost::new_random(port as usize);
+                th.config.anchors = peers;
+                th.config.name = port.to_string();
+                let nh = Arc::new(th);
+                //println!("Starting node on 127.0.0.1:{}...", port, nh.db.lock().unwrap().len());
+                nodes.push(
+                    Node::new(nh.clone(), nh.clone(), SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port)))
+                        .await
+                        .unwrap(),
+                );
+            }
+
+            print!("Waiting for all connections to be established...");
+            let _ = stdout().flush();
+            loop {
+                tokio::time::sleep(Duration::from_secs(1)).await;
+                let mut count = 0;
+                for n in nodes.iter() {
+                    count += n.connection_count().await;
+                }
+                if count == (TEST_NODE_COUNT * (TEST_NODE_COUNT - 1)) {
+                    println!(" {} connections up.", count);
+                    break;
+                } else {
+                    print!(".");
+                    let _ = stdout().flush();
                 }
             }
-            let mut th = TestNodeHost::new_random(port as usize);
-            th.config.anchors = peers;
-            th.config.name = port.to_string();
-            let nh = Arc::new(th);
-            //println!("Starting node on 127.0.0.1:{}...", port, nh.db.lock().unwrap().len());
-            nodes.push(Node::new(nh.clone(), nh.clone(), SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port))).await.unwrap());
-        }
 
-        print!("Waiting for all connections to be established...");
-        let _ = stdout().flush();
-        loop {
-            tokio::time::sleep(Duration::from_secs(1)).await;
-            let mut count = 0;
-            for n in nodes.iter() {
-                count += n.connection_count().await;
+            loop {
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
-            if count == (TEST_NODE_COUNT * (TEST_NODE_COUNT - 1)) {
-                println!(" {} connections up.", count);
-                break;
-            } else {
-                print!(".");
-                let _ = stdout().flush();
-            }
-        }
-
-        loop {
-            tokio::time::sleep(Duration::from_secs(1)).await;
-        }
-    });
+        });
 }

@@ -55,7 +55,11 @@ impl<const BUCKETS: usize, const ITEM_BYTES: usize, const HASHES: usize> Clone f
         // of implementing clone() may not since check_hash[] is u32.
         unsafe {
             let mut tmp: Self = std::mem::MaybeUninit::uninit().assume_init();
-            std::ptr::copy_nonoverlapping((self as *const Self).cast::<u8>(), (&mut tmp as *mut Self).cast::<u8>(), Self::SIZE_BYTES);
+            std::ptr::copy_nonoverlapping(
+                (self as *const Self).cast::<u8>(),
+                (&mut tmp as *mut Self).cast::<u8>(),
+                Self::SIZE_BYTES,
+            );
             tmp
         }
     }
@@ -159,7 +163,10 @@ impl<const BUCKETS: usize, const ITEM_BYTES: usize, const HASHES: usize> IBLT<BU
     /// Subtract another IBLT from this one to get a set difference.
     pub fn subtract(&mut self, other: &Self) {
         self.check_hash.iter_mut().zip(other.check_hash.iter()).for_each(|(a, b)| *a ^= *b);
-        self.count.iter_mut().zip(other.count.iter()).for_each(|(a, b)| *a = a.wrapping_sub(*b));
+        self.count
+            .iter_mut()
+            .zip(other.count.iter())
+            .for_each(|(a, b)| *a = a.wrapping_sub(*b));
         self.key.iter_mut().zip(other.key.iter()).for_each(|(a, b)| xor_with(a, b));
     }
 
@@ -310,7 +317,14 @@ mod tests {
                 assert!(d);
             });
 
-            println!("inserted: {}\tlisted: {}\tcapacity: {}\tscore: {:.4}\tfill: {:.4}", count, list_count, CAPACITY, (list_count as f64) / (count as f64), (count as f64) / (CAPACITY as f64));
+            println!(
+                "inserted: {}\tlisted: {}\tcapacity: {}\tscore: {:.4}\tfill: {:.4}",
+                count,
+                list_count,
+                CAPACITY,
+                (list_count as f64) / (count as f64),
+                (count as f64) / (CAPACITY as f64)
+            );
             count += 32;
         }
     }
@@ -358,7 +372,17 @@ mod tests {
                 cnt += 1;
             });
 
-            println!("total: {}  missing: {:5}  recovered: {:5}  size: {:5}  score: {:.4}  bytes/item: {:.2}  extract(fill): {:.4}  100%: {}", REMOTE_SIZE, missing.len(), cnt, bytes, (cnt as f64) / (missing.len() as f64), (bytes as f64) / (cnt as f64), (cnt as f64) / (CAPACITY as f64), all_success);
+            println!(
+                "total: {}  missing: {:5}  recovered: {:5}  size: {:5}  score: {:.4}  bytes/item: {:.2}  extract(fill): {:.4}  100%: {}",
+                REMOTE_SIZE,
+                missing.len(),
+                cnt,
+                bytes,
+                (cnt as f64) / (missing.len() as f64),
+                (bytes as f64) / (cnt as f64),
+                (cnt as f64) / (CAPACITY as f64),
+                all_success
+            );
 
             missing_count += STEP;
         }

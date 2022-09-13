@@ -35,7 +35,14 @@ extern "C" {
         options: i32,
         cryyptor_ref: *mut *mut c_void,
     ) -> i32;
-    fn CCCryptorUpdate(cryptor_ref: *mut c_void, data_in: *const c_void, data_in_len: usize, data_out: *mut c_void, data_out_len: usize, data_out_written: *mut usize) -> i32;
+    fn CCCryptorUpdate(
+        cryptor_ref: *mut c_void,
+        data_in: *const c_void,
+        data_in_len: usize,
+        data_out: *mut c_void,
+        data_out_len: usize,
+        data_out_written: *mut usize,
+    ) -> i32;
     fn CCCryptorReset(cryptor_ref: *mut c_void, iv: *const c_void) -> i32;
     fn CCCryptorRelease(cryptor_ref: *mut c_void) -> i32;
     fn CCCryptorGCMSetIV(cryptor_ref: *mut c_void, iv: *const c_void, iv_len: usize) -> i32;
@@ -65,7 +72,20 @@ impl AesCtr {
         }
         unsafe {
             let mut ptr: *mut c_void = null_mut();
-            let result = CCCryptorCreateWithMode(kCCEncrypt, kCCModeCTR, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k.as_ptr().cast(), k.len(), null(), 0, 0, 0, &mut ptr);
+            let result = CCCryptorCreateWithMode(
+                kCCEncrypt,
+                kCCModeCTR,
+                kCCAlgorithmAES,
+                0,
+                crate::ZEROES.as_ptr().cast(),
+                k.as_ptr().cast(),
+                k.len(),
+                null(),
+                0,
+                0,
+                0,
+                &mut ptr,
+            );
             if result != 0 {
                 panic!("CCCryptorCreateWithMode for CTR mode returned {}", result);
             }
@@ -99,7 +119,14 @@ impl AesCtr {
         unsafe {
             assert!(output.len() >= input.len());
             let mut data_out_written: usize = 0;
-            CCCryptorUpdate(self.0, input.as_ptr().cast(), input.len(), output.as_mut_ptr().cast(), output.len(), &mut data_out_written);
+            CCCryptorUpdate(
+                self.0,
+                input.as_ptr().cast(),
+                input.len(),
+                output.as_mut_ptr().cast(),
+                output.len(),
+                &mut data_out_written,
+            );
         }
     }
 
@@ -108,7 +135,14 @@ impl AesCtr {
     pub fn crypt_in_place(&mut self, data: &mut [u8]) {
         unsafe {
             let mut data_out_written: usize = 0;
-            CCCryptorUpdate(self.0, data.as_ptr().cast(), data.len(), data.as_mut_ptr().cast(), data.len(), &mut data_out_written);
+            CCCryptorUpdate(
+                self.0,
+                data.as_ptr().cast(),
+                data.len(),
+                data.as_mut_ptr().cast(),
+                data.len(),
+                &mut data_out_written,
+            );
         }
     }
 }
@@ -164,8 +198,20 @@ impl AesGmacSiv {
             gmac: null_mut(),
         };
         unsafe {
-            let result =
-                CCCryptorCreateWithMode(kCCEncrypt, kCCModeCTR, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k1.as_ptr().cast(), k1.len(), null(), 0, 0, 0, &mut c.ctr);
+            let result = CCCryptorCreateWithMode(
+                kCCEncrypt,
+                kCCModeCTR,
+                kCCAlgorithmAES,
+                0,
+                crate::ZEROES.as_ptr().cast(),
+                k1.as_ptr().cast(),
+                k1.len(),
+                null(),
+                0,
+                0,
+                0,
+                &mut c.ctr,
+            );
             if result != 0 {
                 panic!("CCCryptorCreateWithMode for CTR mode returned {}", result);
             }
@@ -203,8 +249,20 @@ impl AesGmacSiv {
             if result != 0 {
                 panic!("CCCryptorCreateWithMode for ECB decrypt mode returned {}", result);
             }
-            let result =
-                CCCryptorCreateWithMode(kCCEncrypt, kCCModeGCM, kCCAlgorithmAES, 0, crate::ZEROES.as_ptr().cast(), k0.as_ptr().cast(), k0.len(), null(), 0, 0, 0, &mut c.gmac);
+            let result = CCCryptorCreateWithMode(
+                kCCEncrypt,
+                kCCModeGCM,
+                kCCAlgorithmAES,
+                0,
+                crate::ZEROES.as_ptr().cast(),
+                k0.as_ptr().cast(),
+                k0.len(),
+                null(),
+                0,
+                0,
+                0,
+                &mut c.gmac,
+            );
             if result != 0 {
                 panic!("CCCryptorCreateWithMode for GCM (GMAC) mode returned {}", result);
             }
@@ -262,7 +320,14 @@ impl AesGmacSiv {
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
             *self.tag.as_mut_ptr().cast::<u64>().offset(1) = *tmp ^ *tmp.offset(1);
             let mut data_out_written: usize = 0;
-            CCCryptorUpdate(self.ecb_enc, self.tag.as_ptr().cast(), 16, self.tag.as_mut_ptr().cast(), 16, &mut data_out_written);
+            CCCryptorUpdate(
+                self.ecb_enc,
+                self.tag.as_ptr().cast(),
+                16,
+                self.tag.as_mut_ptr().cast(),
+                16,
+                &mut data_out_written,
+            );
         }
         self.tmp.copy_from_slice(&self.tag);
         self.tmp[12] &= 0x7f;
@@ -280,7 +345,14 @@ impl AesGmacSiv {
         unsafe {
             assert!(ciphertext.len() >= plaintext.len());
             let mut data_out_written: usize = 0;
-            CCCryptorUpdate(self.ctr, plaintext.as_ptr().cast(), plaintext.len(), ciphertext.as_mut_ptr().cast(), ciphertext.len(), &mut data_out_written);
+            CCCryptorUpdate(
+                self.ctr,
+                plaintext.as_ptr().cast(),
+                plaintext.len(),
+                ciphertext.as_mut_ptr().cast(),
+                ciphertext.len(),
+                &mut data_out_written,
+            );
         }
     }
 
@@ -316,7 +388,14 @@ impl AesGmacSiv {
                 panic!("CCCryptorReset for CTR mode failed (old MacOS bug)");
             }
             let mut data_out_written = 0;
-            CCCryptorUpdate(self.ecb_dec, self.tag.as_ptr().cast(), 16, self.tag.as_mut_ptr().cast(), 16, &mut data_out_written);
+            CCCryptorUpdate(
+                self.ecb_dec,
+                self.tag.as_ptr().cast(),
+                16,
+                self.tag.as_mut_ptr().cast(),
+                16,
+                &mut data_out_written,
+            );
             let tmp = self.tmp.as_mut_ptr().cast::<u64>();
             *tmp = *self.tag.as_mut_ptr().cast::<u64>();
             *tmp.add(1) = 0;
@@ -345,7 +424,14 @@ impl AesGmacSiv {
     pub fn decrypt(&mut self, ciphertext: &[u8], plaintext: &mut [u8]) {
         unsafe {
             let mut data_out_written = 0;
-            CCCryptorUpdate(self.ctr, ciphertext.as_ptr().cast(), ciphertext.len(), plaintext.as_mut_ptr().cast(), plaintext.len(), &mut data_out_written);
+            CCCryptorUpdate(
+                self.ctr,
+                ciphertext.as_ptr().cast(),
+                ciphertext.len(),
+                plaintext.as_mut_ptr().cast(),
+                plaintext.len(),
+                &mut data_out_written,
+            );
             CCCryptorGCMAddAAD(self.gmac, plaintext.as_ptr().cast(), plaintext.len());
         }
     }

@@ -210,7 +210,12 @@ impl<SI: SystemInterface> Peer<SI> {
     pub fn version(&self) -> Option<[u16; 4]> {
         let rv = self.remote_node_info.read().remote_version;
         if rv != 0 {
-            Some([rv.wrapping_shr(48) as u16, rv.wrapping_shr(32) as u16, rv.wrapping_shr(16) as u16, rv as u16])
+            Some([
+                rv.wrapping_shr(48) as u16,
+                rv.wrapping_shr(32) as u16,
+                rv.wrapping_shr(16) as u16,
+                rv as u16,
+            ])
         } else {
             None
         }
@@ -299,7 +304,12 @@ impl<SI: SystemInterface> Peer<SI> {
         }
 
         // Learn new path if it's not a duplicate or should not replace an existing path.
-        debug_event!(si, "[vl1] {} learned new path: {}", self.identity.address.to_string(), new_path.endpoint.to_string());
+        debug_event!(
+            si,
+            "[vl1] {} learned new path: {}",
+            self.identity.address.to_string(),
+            new_path.endpoint.to_string()
+        );
         paths.push(PeerPath::<SI> {
             path: Arc::downgrade(new_path),
             last_receive_time_ticks: time_ticks,
@@ -314,7 +324,10 @@ impl<SI: SystemInterface> Peer<SI> {
             paths.retain(|p| ((time_ticks - p.last_receive_time_ticks) < PEER_EXPIRATION_TIME) && (p.path.strong_count() > 0));
             prioritize_paths(&mut paths);
         }
-        self.remote_node_info.write().reported_local_endpoints.retain(|_, ts| (time_ticks - *ts) < PEER_EXPIRATION_TIME);
+        self.remote_node_info
+            .write()
+            .reported_local_endpoints
+            .retain(|_, ts| (time_ticks - *ts) < PEER_EXPIRATION_TIME);
         (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed).max(self.create_time_ticks)) < PEER_EXPIRATION_TIME
     }
 
@@ -334,13 +347,17 @@ impl<SI: SystemInterface> Peer<SI> {
         let packet_size = packet.len();
         if packet_size > max_fragment_size {
             let bytes = packet.as_bytes();
-            if !si.wire_send(endpoint, local_socket, local_interface, &[&bytes[0..UDP_DEFAULT_MTU]], 0).await {
+            if !si
+                .wire_send(endpoint, local_socket, local_interface, &[&bytes[0..UDP_DEFAULT_MTU]], 0)
+                .await
+            {
                 return false;
             }
             let mut pos = UDP_DEFAULT_MTU;
 
             let overrun_size = (packet_size - UDP_DEFAULT_MTU) as u32;
-            let fragment_count = (overrun_size / (UDP_DEFAULT_MTU - v1::FRAGMENT_HEADER_SIZE) as u32) + (((overrun_size % (UDP_DEFAULT_MTU - v1::FRAGMENT_HEADER_SIZE) as u32) != 0) as u32);
+            let fragment_count = (overrun_size / (UDP_DEFAULT_MTU - v1::FRAGMENT_HEADER_SIZE) as u32)
+                + (((overrun_size % (UDP_DEFAULT_MTU - v1::FRAGMENT_HEADER_SIZE) as u32) != 0) as u32);
             debug_assert!(fragment_count <= v1::FRAGMENT_COUNT_MAX as u32);
 
             let mut header = v1::FragmentHeader {
@@ -355,7 +372,16 @@ impl<SI: SystemInterface> Peer<SI> {
             loop {
                 header.total_and_fragment_no += 1;
                 let next_pos = pos + chunk_size;
-                if !si.wire_send(endpoint, local_socket, local_interface, &[header.as_bytes(), &bytes[pos..next_pos]], 0).await {
+                if !si
+                    .wire_send(
+                        endpoint,
+                        local_socket,
+                        local_interface,
+                        &[header.as_bytes(), &bytes[pos..next_pos]],
+                        0,
+                    )
+                    .await
+                {
                     return false;
                 }
                 pos = next_pos;
@@ -376,7 +402,14 @@ impl<SI: SystemInterface> Peer<SI> {
     /// via a root or some other route.
     ///
     /// It encrypts and sets the MAC and cipher fields and packet ID and other things.
-    pub(crate) async fn send(&self, si: &SI, path: Option<&Arc<Path<SI>>>, node: &Node<SI>, time_ticks: i64, packet: &mut PacketBuffer) -> bool {
+    pub(crate) async fn send(
+        &self,
+        si: &SI,
+        path: Option<&Arc<Path<SI>>>,
+        node: &Node<SI>,
+        time_ticks: i64,
+        packet: &mut PacketBuffer,
+    ) -> bool {
         let mut _path_arc = None;
         let path = if let Some(path) = path {
             path
@@ -402,7 +435,11 @@ impl<SI: SystemInterface> Peer<SI> {
 
         let mut aes_gmac_siv = self.identity_symmetric_key.aes_gmac_siv.get();
         aes_gmac_siv.encrypt_init(&self.next_message_id().to_ne_bytes());
-        aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(self.identity.address, node.identity.address, flags_cipher_hops));
+        aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(
+            self.identity.address,
+            node.identity.address,
+            flags_cipher_hops,
+        ));
         if let Ok(payload) = packet.as_bytes_starting_at_mut(v1::HEADER_SIZE) {
             aes_gmac_siv.encrypt_first_pass(payload);
             aes_gmac_siv.encrypt_first_pass_finish();
@@ -419,7 +456,14 @@ impl<SI: SystemInterface> Peer<SI> {
         }
 
         if self
-            .internal_send(si, &path.endpoint, Some(&path.local_socket), Some(&path.local_interface), max_fragment_size, packet)
+            .internal_send(
+                si,
+                &path.endpoint,
+                Some(&path.local_socket),
+                Some(&path.local_interface),
+                max_fragment_size,
+                packet,
+            )
             .await
         {
             self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
@@ -438,7 +482,16 @@ impl<SI: SystemInterface> Peer<SI> {
     /// Intermediates don't need to adjust fragmentation.
     pub(crate) async fn forward(&self, si: &SI, time_ticks: i64, packet: &PacketBuffer) -> bool {
         if let Some(path) = self.direct_path() {
-            if si.wire_send(&path.endpoint, Some(&path.local_socket), Some(&path.local_interface), &[packet.as_bytes()], 0).await {
+            if si
+                .wire_send(
+                    &path.endpoint,
+                    Some(&path.local_socket),
+                    Some(&path.local_interface),
+                    &[packet.as_bytes()],
+                    0,
+                )
+                .await
+            {
                 self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
                 return true;
             }
@@ -479,7 +532,8 @@ impl<SI: SystemInterface> Peer<SI> {
             let message_id = self.next_message_id();
 
             {
-                let f: &mut (v1::PacketHeader, v1::message_component_structs::HelloFixedHeaderFields) = packet.append_struct_get_mut().unwrap();
+                let f: &mut (v1::PacketHeader, v1::message_component_structs::HelloFixedHeaderFields) =
+                    packet.append_struct_get_mut().unwrap();
                 f.0.id = message_id.to_ne_bytes();
                 f.0.dest = self.identity.address.to_bytes();
                 f.0.src = node.identity.address.to_bytes();
@@ -495,17 +549,37 @@ impl<SI: SystemInterface> Peer<SI> {
             debug_assert_eq!(packet.len(), 41);
             assert!(packet.append_bytes((&node.identity.to_public_bytes()).into()).is_ok());
 
-            let (_, poly1305_key) = salsa_poly_create(&self.identity_symmetric_key, packet.struct_at::<v1::PacketHeader>(0).unwrap(), packet.len());
+            let (_, poly1305_key) = salsa_poly_create(
+                &self.identity_symmetric_key,
+                packet.struct_at::<v1::PacketHeader>(0).unwrap(),
+                packet.len(),
+            );
             let mac = poly1305::compute(&poly1305_key, packet.as_bytes_starting_at(v1::HEADER_SIZE).unwrap());
             packet.as_mut()[v1::MAC_FIELD_INDEX..v1::MAC_FIELD_INDEX + 8].copy_from_slice(&mac[0..8]);
 
             self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
 
-            debug_event!(si, "HELLO -> {} @ {} ({} bytes)", self.identity.address.to_string(), destination.to_string(), packet.len());
+            debug_event!(
+                si,
+                "HELLO -> {} @ {} ({} bytes)",
+                self.identity.address.to_string(),
+                destination.to_string(),
+                packet.len()
+            );
         }
 
         if let Some(p) = path.as_ref() {
-            if self.internal_send(si, destination, Some(&p.local_socket), Some(&p.local_interface), max_fragment_size, &packet).await {
+            if self
+                .internal_send(
+                    si,
+                    destination,
+                    Some(&p.local_socket),
+                    Some(&p.local_interface),
+                    max_fragment_size,
+                    &packet,
+                )
+                .await
+            {
                 p.log_send_anything(time_ticks);
                 true
             } else {
@@ -536,7 +610,13 @@ impl<SI: SystemInterface> Peer<SI> {
         if let Ok(packet_frag0_payload_bytes) = frag0.as_bytes_starting_at(v1::VERB_INDEX) {
             let mut payload = PacketBuffer::new();
 
-            let message_id = if let Some(message_id2) = try_aead_decrypt(&self.identity_symmetric_key, packet_frag0_payload_bytes, packet_header, fragments, &mut payload) {
+            let message_id = if let Some(message_id2) = try_aead_decrypt(
+                &self.identity_symmetric_key,
+                packet_frag0_payload_bytes,
+                packet_header,
+                fragments,
+                &mut payload,
+            ) {
                 // Decryption successful with static secret.
                 message_id2
             } else {
@@ -582,13 +662,25 @@ impl<SI: SystemInterface> Peer<SI> {
 
                 if match verb {
                     verbs::VL1_NOP => true,
-                    verbs::VL1_HELLO => self.handle_incoming_hello(si, ph, node, time_ticks, message_id, source_path, packet_header.hops(), &payload).await,
+                    verbs::VL1_HELLO => {
+                        self.handle_incoming_hello(si, ph, node, time_ticks, message_id, source_path, packet_header.hops(), &payload)
+                            .await
+                    }
                     verbs::VL1_ERROR => self.handle_incoming_error(si, ph, node, time_ticks, source_path, &payload).await,
-                    verbs::VL1_OK => self.handle_incoming_ok(si, ph, node, time_ticks, source_path, packet_header.hops(), path_is_known, &payload).await,
+                    verbs::VL1_OK => {
+                        self.handle_incoming_ok(si, ph, node, time_ticks, source_path, packet_header.hops(), path_is_known, &payload)
+                            .await
+                    }
                     verbs::VL1_WHOIS => self.handle_incoming_whois(si, ph, node, time_ticks, message_id, &payload).await,
-                    verbs::VL1_RENDEZVOUS => self.handle_incoming_rendezvous(si, node, time_ticks, message_id, source_path, &payload).await,
+                    verbs::VL1_RENDEZVOUS => {
+                        self.handle_incoming_rendezvous(si, node, time_ticks, message_id, source_path, &payload)
+                            .await
+                    }
                     verbs::VL1_ECHO => self.handle_incoming_echo(si, ph, node, time_ticks, message_id, &payload).await,
-                    verbs::VL1_PUSH_DIRECT_PATHS => self.handle_incoming_push_direct_paths(si, node, time_ticks, source_path, &payload).await,
+                    verbs::VL1_PUSH_DIRECT_PATHS => {
+                        self.handle_incoming_push_direct_paths(si, node, time_ticks, source_path, &payload)
+                            .await
+                    }
                     verbs::VL1_USER_MESSAGE => self.handle_incoming_user_message(si, node, time_ticks, source_path, &payload).await,
                     _ => ph.handle_packet(self, &source_path, verb, &payload).await,
                 } {
@@ -614,7 +706,11 @@ impl<SI: SystemInterface> Peer<SI> {
         payload: &PacketBuffer,
     ) -> bool {
         if !(ph.should_communicate_with(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
-            debug_event!(si, "[vl1] dropping HELLO from {} due to lack of trust relationship", self.identity.address.to_string());
+            debug_event!(
+                si,
+                "[vl1] dropping HELLO from {} due to lack of trust relationship",
+                self.identity.address.to_string()
+            );
             return true; // packet wasn't invalid, just ignored
         }
 
@@ -633,7 +729,10 @@ impl<SI: SystemInterface> Peer<SI> {
                     let mut packet = PacketBuffer::new();
                     packet.set_size(v1::HEADER_SIZE);
                     {
-                        let f: &mut (v1::message_component_structs::OkHeader, v1::message_component_structs::OkHelloFixedHeaderFields) = packet.append_struct_get_mut().unwrap();
+                        let f: &mut (
+                            v1::message_component_structs::OkHeader,
+                            v1::message_component_structs::OkHelloFixedHeaderFields,
+                        ) = packet.append_struct_get_mut().unwrap();
                         f.0.verb = verbs::VL1_OK;
                         f.0.in_re_verb = verbs::VL1_HELLO;
                         f.0.in_re_message_id = message_id.to_ne_bytes();
@@ -651,7 +750,15 @@ impl<SI: SystemInterface> Peer<SI> {
         return false;
     }
 
-    async fn handle_incoming_error<PH: InnerProtocolInterface>(&self, _si: &SI, ph: &PH, _node: &Node<SI>, _time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) -> bool {
+    async fn handle_incoming_error<PH: InnerProtocolInterface>(
+        &self,
+        _si: &SI,
+        ph: &PH,
+        _node: &Node<SI>,
+        _time_ticks: i64,
+        source_path: &Arc<Path<SI>>,
+        payload: &PacketBuffer,
+    ) -> bool {
         let mut cursor = 0;
         if let Ok(error_header) = payload.read_struct::<v1::message_component_structs::ErrorHeader>(&mut cursor) {
             let in_re_message_id: MessageId = u64::from_ne_bytes(error_header.in_re_message_id);
@@ -659,7 +766,15 @@ impl<SI: SystemInterface> Peer<SI> {
                 match error_header.in_re_verb {
                     _ => {
                         return ph
-                            .handle_error(self, &source_path, error_header.in_re_verb, in_re_message_id, error_header.error_code, payload, &mut cursor)
+                            .handle_error(
+                                self,
+                                &source_path,
+                                error_header.in_re_verb,
+                                in_re_message_id,
+                                error_header.error_code,
+                                payload,
+                                &mut cursor,
+                            )
                             .await;
                     }
                 }
@@ -685,12 +800,20 @@ impl<SI: SystemInterface> Peer<SI> {
             if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match ok_header.in_re_verb {
                     verbs::VL1_HELLO => {
-                        if let Ok(ok_hello_fixed_header_fields) = payload.read_struct::<v1::message_component_structs::OkHelloFixedHeaderFields>(&mut cursor) {
+                        if let Ok(ok_hello_fixed_header_fields) =
+                            payload.read_struct::<v1::message_component_structs::OkHelloFixedHeaderFields>(&mut cursor)
+                        {
                             if hops == 0 {
                                 if let Ok(reported_endpoint) = Endpoint::unmarshal(&payload, &mut cursor) {
                                     #[cfg(debug_assertions)]
                                     let reported_endpoint2 = reported_endpoint.clone();
-                                    if self.remote_node_info.write().reported_local_endpoints.insert(reported_endpoint, time_ticks).is_none() {
+                                    if self
+                                        .remote_node_info
+                                        .write()
+                                        .reported_local_endpoints
+                                        .insert(reported_endpoint, time_ticks)
+                                        .is_none()
+                                    {
                                         #[cfg(debug_assertions)]
                                         debug_event!(
                                             si,
@@ -725,7 +848,9 @@ impl<SI: SystemInterface> Peer<SI> {
                     }
 
                     _ => {
-                        return ph.handle_ok(self, &source_path, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor).await;
+                        return ph
+                            .handle_ok(self, &source_path, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor)
+                            .await;
                     }
                 }
             }
@@ -733,7 +858,15 @@ impl<SI: SystemInterface> Peer<SI> {
         return false;
     }
 
-    async fn handle_incoming_whois<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, message_id: MessageId, payload: &PacketBuffer) -> bool {
+    async fn handle_incoming_whois<PH: InnerProtocolInterface>(
+        &self,
+        si: &SI,
+        ph: &PH,
+        node: &Node<SI>,
+        time_ticks: i64,
+        message_id: MessageId,
+        payload: &PacketBuffer,
+    ) -> bool {
         if node.this_node_is_root() || ph.should_communicate_with(&self.identity) {
             let mut packet = PacketBuffer::new();
             packet.set_size(v1::HEADER_SIZE);
@@ -763,12 +896,28 @@ impl<SI: SystemInterface> Peer<SI> {
     }
 
     #[allow(unused)]
-    async fn handle_incoming_rendezvous(&self, si: &SI, node: &Node<SI>, time_ticks: i64, message_id: MessageId, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) -> bool {
+    async fn handle_incoming_rendezvous(
+        &self,
+        si: &SI,
+        node: &Node<SI>,
+        time_ticks: i64,
+        message_id: MessageId,
+        source_path: &Arc<Path<SI>>,
+        payload: &PacketBuffer,
+    ) -> bool {
         if node.is_peer_root(self) {}
         return true;
     }
 
-    async fn handle_incoming_echo<PH: InnerProtocolInterface>(&self, si: &SI, ph: &PH, node: &Node<SI>, time_ticks: i64, message_id: MessageId, payload: &PacketBuffer) -> bool {
+    async fn handle_incoming_echo<PH: InnerProtocolInterface>(
+        &self,
+        si: &SI,
+        ph: &PH,
+        node: &Node<SI>,
+        time_ticks: i64,
+        message_id: MessageId,
+        payload: &PacketBuffer,
+    ) -> bool {
         if ph.should_communicate_with(&self.identity) || node.is_peer_root(self) {
             let mut packet = PacketBuffer::new();
             packet.set_size(v1::HEADER_SIZE);
@@ -784,18 +933,36 @@ impl<SI: SystemInterface> Peer<SI> {
                 false
             }
         } else {
-            debug_event!(si, "[vl1] dropping ECHO from {} due to lack of trust relationship", self.identity.address.to_string());
+            debug_event!(
+                si,
+                "[vl1] dropping ECHO from {} due to lack of trust relationship",
+                self.identity.address.to_string()
+            );
             true // packet wasn't invalid, just ignored
         }
     }
 
     #[allow(unused)]
-    async fn handle_incoming_push_direct_paths(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) -> bool {
+    async fn handle_incoming_push_direct_paths(
+        &self,
+        si: &SI,
+        node: &Node<SI>,
+        time_ticks: i64,
+        source_path: &Arc<Path<SI>>,
+        payload: &PacketBuffer,
+    ) -> bool {
         false
     }
 
     #[allow(unused)]
-    async fn handle_incoming_user_message(&self, si: &SI, node: &Node<SI>, time_ticks: i64, source_path: &Arc<Path<SI>>, payload: &PacketBuffer) -> bool {
+    async fn handle_incoming_user_message(
+        &self,
+        si: &SI,
+        node: &Node<SI>,
+        time_ticks: i64,
+        source_path: &Arc<Path<SI>>,
+        payload: &PacketBuffer,
+    ) -> bool {
         false
     }
 }

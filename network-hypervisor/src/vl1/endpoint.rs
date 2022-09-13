@@ -190,19 +190,31 @@ impl Marshalable for Endpoint {
         if type_byte < 16 {
             if type_byte == 4 {
                 let b: &[u8; 6] = buf.read_bytes_fixed(cursor)?;
-                Ok(Endpoint::IpUdp(InetAddress::from_ip_port(&b[0..4], u16::from_be_bytes(b[4..6].try_into().unwrap()))))
+                Ok(Endpoint::IpUdp(InetAddress::from_ip_port(
+                    &b[0..4],
+                    u16::from_be_bytes(b[4..6].try_into().unwrap()),
+                )))
             } else if type_byte == 6 {
                 let b: &[u8; 18] = buf.read_bytes_fixed(cursor)?;
-                Ok(Endpoint::IpUdp(InetAddress::from_ip_port(&b[0..16], u16::from_be_bytes(b[16..18].try_into().unwrap()))))
+                Ok(Endpoint::IpUdp(InetAddress::from_ip_port(
+                    &b[0..16],
+                    u16::from_be_bytes(b[16..18].try_into().unwrap()),
+                )))
             } else {
-                Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream"))
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "unrecognized endpoint type in stream",
+                ))
             }
         } else {
             match type_byte - 16 {
                 TYPE_NIL => Ok(Endpoint::Nil),
                 TYPE_ZEROTIER => {
                     let zt = Address::unmarshal(buf, cursor)?;
-                    Ok(Endpoint::ZeroTier(zt, buf.read_bytes_fixed::<IDENTITY_FINGERPRINT_SIZE>(cursor)?.clone()))
+                    Ok(Endpoint::ZeroTier(
+                        zt,
+                        buf.read_bytes_fixed::<IDENTITY_FINGERPRINT_SIZE>(cursor)?.clone(),
+                    ))
                 }
                 TYPE_ETHERNET => Ok(Endpoint::Ethernet(MAC::unmarshal(buf, cursor)?)),
                 TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(MAC::unmarshal(buf, cursor)?)),
@@ -210,13 +222,20 @@ impl Marshalable for Endpoint {
                 TYPE_ICMP => Ok(Endpoint::Icmp(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_IPUDP => Ok(Endpoint::IpUdp(InetAddress::unmarshal(buf, cursor)?)),
                 TYPE_IPTCP => Ok(Endpoint::IpTcp(InetAddress::unmarshal(buf, cursor)?)),
-                TYPE_HTTP => Ok(Endpoint::Http(String::from_utf8_lossy(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?).to_string())),
-                TYPE_WEBRTC => Ok(Endpoint::WebRTC(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?.to_vec())),
+                TYPE_HTTP => Ok(Endpoint::Http(
+                    String::from_utf8_lossy(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?).to_string(),
+                )),
+                TYPE_WEBRTC => Ok(Endpoint::WebRTC(
+                    buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?.to_vec(),
+                )),
                 TYPE_ZEROTIER_ENCAP => {
                     let zt = Address::unmarshal(buf, cursor)?;
                     Ok(Endpoint::ZeroTierEncap(zt, buf.read_bytes_fixed(cursor)?.clone()))
                 }
-                _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "unrecognized endpoint type in stream")),
+                _ => Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "unrecognized endpoint type in stream",
+                )),
             }
         }
     }
@@ -342,7 +361,10 @@ impl FromStr for Endpoint {
                             if endpoint_type == "zt" {
                                 return Ok(Endpoint::ZeroTier(Address::from_str(address)?, hash.as_slice().try_into().unwrap()));
                             } else {
-                                return Ok(Endpoint::ZeroTierEncap(Address::from_str(address)?, hash.as_slice().try_into().unwrap()));
+                                return Ok(Endpoint::ZeroTierEncap(
+                                    Address::from_str(address)?,
+                                    hash.as_slice().try_into().unwrap(),
+                                ));
                             }
                         }
                     }
@@ -538,7 +560,11 @@ mod tests {
         for _ in 0..1000 {
             let mac = crate::vl1::MAC::from_u64(rand::random()).unwrap();
 
-            for e in [Endpoint::Ethernet(mac.clone()), Endpoint::WifiDirect(mac.clone()), Endpoint::Bluetooth(mac.clone())] {
+            for e in [
+                Endpoint::Ethernet(mac.clone()),
+                Endpoint::WifiDirect(mac.clone()),
+                Endpoint::Bluetooth(mac.clone()),
+            ] {
                 let mut buf = Buffer::<7>::new();
 
                 let res = e.marshal(&mut buf);
@@ -563,7 +589,11 @@ mod tests {
 
             let inet = crate::vl1::InetAddress::from_ip_port(&v, 1234);
 
-            for e in [Endpoint::Icmp(inet.clone()), Endpoint::IpTcp(inet.clone()), Endpoint::IpUdp(inet.clone())] {
+            for e in [
+                Endpoint::Icmp(inet.clone()),
+                Endpoint::IpTcp(inet.clone()),
+                Endpoint::IpUdp(inet.clone()),
+            ] {
                 let mut buf = Buffer::<20>::new();
 
                 let res = e.marshal(&mut buf);

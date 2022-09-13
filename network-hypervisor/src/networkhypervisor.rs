@@ -54,8 +54,17 @@ impl<I: Interface> NetworkHypervisor<I> {
 
     /// Process a physical packet received over a network interface.
     #[inline(always)]
-    pub async fn handle_incoming_physical_packet(&self, ii: &I, source_endpoint: &Endpoint, source_local_socket: &I::LocalSocket, source_local_interface: &I::LocalInterface, data: PooledPacketBuffer) {
-        self.vl1.handle_incoming_physical_packet(ii, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data).await
+    pub async fn handle_incoming_physical_packet(
+        &self,
+        ii: &I,
+        source_endpoint: &Endpoint,
+        source_local_socket: &I::LocalSocket,
+        source_local_interface: &I::LocalInterface,
+        data: PooledPacketBuffer,
+    ) {
+        self.vl1
+            .handle_incoming_physical_packet(ii, &self.vl2, source_endpoint, source_local_socket, source_local_interface, data)
+            .await
     }
 
     /// Add or update a root set.

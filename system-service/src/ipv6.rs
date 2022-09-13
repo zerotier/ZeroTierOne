@@ -56,7 +56,11 @@ mod freebsd_like {
                 let device_name_bytes = device_name.as_bytes();
                 assert!(device_name_bytes.len() <= 15);
                 ifr6.ifr_name[..device_name_bytes.len()].copy_from_slice(device_name_bytes);
-                std::ptr::copy_nonoverlapping((address as *const InetAddress).cast(), &mut ifr6.ifr_ifru.ifru_addr, size_of::<libc::sockaddr_in6>());
+                std::ptr::copy_nonoverlapping(
+                    (address as *const InetAddress).cast(),
+                    &mut ifr6.ifr_ifru.ifru_addr,
+                    size_of::<libc::sockaddr_in6>(),
+                );
                 if libc::ioctl((*info_socket).as_(), SIOCGIFAFLAG_IN6, &mut ifr6 as *mut in6_ifreq) != -1 {
                     if (ifr6.ifr_ifru.ifru_flags6 & IN6_IFF_TEMPORARY) != 0 {
                         return true;

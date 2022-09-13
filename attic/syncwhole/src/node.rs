@@ -75,7 +75,11 @@ pub struct Node<D: DataStore + 'static, H: Host + 'static> {
 
 impl<D: DataStore + 'static, H: Host + 'static> Node<D, H> {
     pub async fn new(db: Arc<D>, host: Arc<H>, bind_address: SocketAddr) -> std::io::Result<Self> {
-        let listener = if bind_address.is_ipv4() { TcpSocket::new_v4() } else { TcpSocket::new_v6() }?;
+        let listener = if bind_address.is_ipv4() {
+            TcpSocket::new_v4()
+        } else {
+            TcpSocket::new_v6()
+        }?;
         configure_tcp_socket(&listener)?;
         listener.bind(bind_address.clone())?;
         let listener = listener.listen(1024)?;
@@ -119,7 +123,12 @@ impl<D: DataStore + 'static, H: Host + 'static> Node<D, H> {
     /// to the endpoint. An error is returned if the connection fails.
     pub async fn connect(&self, address: &SocketAddr) -> std::io::Result<bool> {
         if self.internal.connecting_to.lock().await.insert(address.clone()) {
-            self.internal.connect(address, Instant::now().add(Duration::from_millis(self.internal.host.node_config().connection_timeout))).await
+            self.internal
+                .connect(
+                    address,
+                    Instant::now().add(Duration::from_millis(self.internal.host.node_config().connection_timeout)),
+                )
+                .await
         } else {
             Ok(false)
         }
@@ -161,7 +170,12 @@ fn configure_tcp_socket(socket: &TcpSocket) -> std::io::Result<()> {
 }
 
 fn decode_msgpack<'a, T: Deserialize<'a>>(b: &'a [u8]) -> std::io::Result<T> {
-    rmp_serde::from_slice(b).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, format!("invalid msgpack object: {}", e.to_string())))
+    rmp_serde::from_slice(b).map_err(|e| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("invalid msgpack object: {}", e.to_string()),
+        )
+    })
 }
 
 pub struct NodeInternal<D: DataStore + 'static, H: Host + 'static> {
@@ -228,7 +242,10 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                             let e = j.unwrap().await;
                             if e.is_ok() {
                                 let e = e.unwrap();
-                                host.on_connection_closed(&*cc.info.lock().unwrap(), e.map_or_else(|e| e.to_string(), |_| "unknown error".to_string()));
+                                host.on_connection_closed(
+                                    &*cc.info.lock().unwrap(),
+                                    e.map_or_else(|e| e.to_string(), |_| "unknown error".to_string()),
+                                );
                             } else {
                                 host.on_connection_closed(&*cc.info.lock().unwrap(), "remote host closed connection".to_string());
                             }
@@ -299,7 +316,10 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                         background_tasks.spawn(async move {
                             // If the connection dies this will either fail or time out in 1s. Usually these execute instantly due to
                             // write buffering but a short timeout prevents them from building up too much.
-                            let _ = tokio::time::timeout(announce_timeout, c2.send_msg(MessageType::HaveRecords, have_records.as_slice(), now));
+                            let _ = tokio::time::timeout(
+                                announce_timeout,
+                                c2.send_msg(MessageType::HaveRecords, have_records.as_slice(), now),
+                            );
                         });
                         have_records = Vec::with_capacity(have_records_est_size);
                     }
@@ -332,7 +352,11 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
     /// either succeeds or fails.
     async fn connect(self: &Arc<Self>, address: &SocketAddr, deadline: Instant) -> std::io::Result<bool> {
         let f = async {
-            let stream = if address.is_ipv4() { TcpSocket::new_v4() } else { TcpSocket::new_v6() }?;
+            let stream = if address.is_ipv4() {
+                TcpSocket::new_v4()
+            } else {
+                TcpSocket::new_v6()
+            }?;
             configure_tcp_socket(&stream)?;
             stream.bind(self.bind_address.clone())?;
 
@@ -389,7 +413,12 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
         ok
     }
 
-    async fn connection_io_task_main(self: Arc<Self>, connection: &Arc<Connection>, remote_address: SocketAddr, mut reader: OwnedReadHalf) -> std::io::Result<()> {
+    async fn connection_io_task_main(
+        self: Arc<Self>,
+        connection: &Arc<Connection>,
+        remote_address: SocketAddr,
+        mut reader: OwnedReadHalf,
+    ) -> std::io::Result<()> {
         const BUF_CHUNK_SIZE: usize = 4096;
         const READ_BUF_INITIAL_SIZE: usize = 65536; // should be a multiple of BUF_CHUNK_SIZE
 
@@ -479,20 +508,29 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                         info.name = msg.node_name.to_string();
                         info.contact = msg.node_contact.to_string();
                         let _ = msg.explicit_ipv4.map(|pv4| {
-                            info.explicit_addresses.push(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(pv4.ip), pv4.port)));
+                            info.explicit_addresses
+                                .push(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(pv4.ip), pv4.port)));
                         });
                         let _ = msg.explicit_ipv6.map(|pv6| {
-                            info.explicit_addresses.push(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from(pv6.ip), pv6.port, 0, 0)));
+                            info.explicit_addresses
+                                .push(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from(pv6.ip), pv6.port, 0, 0)));
                         });
                         let info = info.clone();
 
                         let auth_challenge_response = self.host.authenticate(&info, msg.auth_challenge);
                         if auth_challenge_response.is_none() {
-                            return Err(std::io::Error::new(std::io::ErrorKind::Other, "authenticate() returned None, connection dropped"));
+                            return Err(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                "authenticate() returned None, connection dropped",
+                            ));
                         }
                         let auth_challenge_response = auth_challenge_response.unwrap();
 
-                        (H::hmac_sha512(&self.anti_loopback_secret, msg.anti_loopback_challenge), H::hmac_sha512(&H::sha512(&[self.host.node_config().domain.as_bytes()]), msg.domain_challenge), auth_challenge_response)
+                        (
+                            H::hmac_sha512(&self.anti_loopback_secret, msg.anti_loopback_challenge),
+                            H::hmac_sha512(&H::sha512(&[self.host.node_config().domain.as_bytes()]), msg.domain_challenge),
+                            auth_challenge_response,
+                        )
                     };
 
                     connection
@@ -517,14 +555,27 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                         return Err(std::io::Error::new(std::io::ErrorKind::Other, "duplicate init response"));
                     }
 
-                    if msg.anti_loopback_response.eq(&H::hmac_sha512(&self.anti_loopback_secret, &anti_loopback_challenge_sent)) {
+                    if msg
+                        .anti_loopback_response
+                        .eq(&H::hmac_sha512(&self.anti_loopback_secret, &anti_loopback_challenge_sent))
+                    {
                         return Err(std::io::Error::new(std::io::ErrorKind::Other, "rejected connection to self"));
                     }
-                    if !msg.domain_response.eq(&H::hmac_sha512(&H::sha512(&[self.host.node_config().domain.as_bytes()]), &domain_challenge_sent)) {
+                    if !msg.domain_response.eq(&H::hmac_sha512(
+                        &H::sha512(&[self.host.node_config().domain.as_bytes()]),
+                        &domain_challenge_sent,
+                    )) {
                         return Err(std::io::Error::new(std::io::ErrorKind::Other, "domain mismatch"));
                     }
-                    if !self.host.authenticate(&info, &auth_challenge_sent).map_or(false, |cr| msg.auth_response.eq(&cr)) {
-                        return Err(std::io::Error::new(std::io::ErrorKind::Other, "challenge/response authentication failed"));
+                    if !self
+                        .host
+                        .authenticate(&info, &auth_challenge_sent)
+                        .map_or(false, |cr| msg.auth_response.eq(&cr))
+                    {
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            "challenge/response authentication failed",
+                        ));
                     }
 
                     initialized = true;
@@ -537,7 +588,10 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                 // Handle messages other than INIT and INIT_RESPONSE after checking 'initialized' flag.
                 _ => {
                     if !initialized {
-                        return Err(std::io::Error::new(std::io::ErrorKind::Other, "init exchange must be completed before other messages are sent"));
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            "init exchange must be completed before other messages are sent",
+                        ));
                     }
 
                     match message_type {
@@ -556,7 +610,10 @@ impl<D: DataStore + 'static, H: Host + 'static> NodeInternal<D, H> {
                                     }
                                 }
                                 StoreResult::Rejected => {
-                                    return Err(std::io::Error::new(std::io::ErrorKind::Other, format!("record rejected by data store: {}", to_hex_string(&key))));
+                                    return Err(std::io::Error::new(
+                                        std::io::ErrorKind::Other,
+                                        format!("record rejected by data store: {}", to_hex_string(&key)),
+                                    ));
                                 }
                                 _ => {}
                             }
@@ -615,7 +672,14 @@ impl Connection {
         let mut header: [u8; 16] = unsafe { MaybeUninit::uninit().assume_init() };
         header[0] = message_type as u8;
         let header_size = 1 + varint::encode(&mut header[1..], data.len() as u64);
-        if self.writer.lock().await.write_vectored(&[IoSlice::new(&header[0..header_size]), IoSlice::new(data)]).await? == (data.len() + header_size) {
+        if self
+            .writer
+            .lock()
+            .await
+            .write_vectored(&[IoSlice::new(&header[0..header_size]), IoSlice::new(data)])
+            .await?
+            == (data.len() + header_size)
+        {
             self.last_send_time.store(now, Ordering::Relaxed);
             Ok(())
         } else {
@@ -628,7 +692,10 @@ impl Connection {
         if rmp_serde::encode::write_named(write_buf, obj).is_ok() {
             self.send_msg(message_type, write_buf.as_slice(), now).await
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "serialize failure (internal error)"))
+            Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "serialize failure (internal error)",
+            ))
         }
     }
 }

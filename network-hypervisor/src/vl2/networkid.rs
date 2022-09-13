@@ -67,7 +67,10 @@ impl Marshalable for NetworkId {
 
     #[inline(always)]
     fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Self> {
-        Self::from_u64(buf.read_u64(cursor)?).map_or_else(|| Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "cannot be zero")), |a| Ok(a))
+        Self::from_u64(buf.read_u64(cursor)?).map_or_else(
+            || Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "cannot be zero")),
+            |a| Ok(a),
+        )
     }
 }
 

@@ -70,10 +70,23 @@ pub trait SystemInterface: Sync + Send + 'static {
     /// For endpoint types that support a packet TTL, the implementation may set the TTL
     /// if the 'ttl' parameter is not zero. If the parameter is zero or TTL setting is not
     /// supported, the default TTL should be used.
-    async fn wire_send(&self, endpoint: &Endpoint, local_socket: Option<&Self::LocalSocket>, local_interface: Option<&Self::LocalInterface>, data: &[&[u8]], packet_ttl: u8) -> bool;
+    async fn wire_send(
+        &self,
+        endpoint: &Endpoint,
+        local_socket: Option<&Self::LocalSocket>,
+        local_interface: Option<&Self::LocalInterface>,
+        data: &[&[u8]],
+        packet_ttl: u8,
+    ) -> bool;
 
     /// Called to check and see if a physical address should be used for ZeroTier traffic to a node.
-    async fn check_path(&self, id: &Identity, endpoint: &Endpoint, local_socket: Option<&Self::LocalSocket>, local_interface: Option<&Self::LocalInterface>) -> bool;
+    async fn check_path(
+        &self,
+        id: &Identity,
+        endpoint: &Endpoint,
+        local_socket: Option<&Self::LocalSocket>,
+        local_interface: Option<&Self::LocalInterface>,
+    ) -> bool;
 
     /// Called to look up any statically defined or memorized paths to known nodes.
     async fn get_path_hints(&self, id: &Identity) -> Option<Vec<(Endpoint, Option<Self::LocalSocket>, Option<Self::LocalInterface>)>>;
@@ -96,7 +109,8 @@ pub trait InnerProtocolInterface: Sync + Send + 'static {
     /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
-    async fn handle_packet<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, verb: u8, payload: &PacketBuffer) -> bool;
+    async fn handle_packet<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, verb: u8, payload: &PacketBuffer)
+        -> bool;
 
     /// Handle errors, returning true if the error was recognized.
     async fn handle_error<SI: SystemInterface>(
@@ -111,7 +125,15 @@ pub trait InnerProtocolInterface: Sync + Send + 'static {
     ) -> bool;
 
     /// Handle an OK, returing true if the OK was recognized.
-    async fn handle_ok<SI: SystemInterface>(&self, source: &Peer<SI>, source_path: &Path<SI>, in_re_verb: u8, in_re_message_id: u64, payload: &PacketBuffer, cursor: &mut usize) -> bool;
+    async fn handle_ok<SI: SystemInterface>(
+        &self,
+        source: &Peer<SI>,
+        source_path: &Path<SI>,
+        in_re_verb: u8,
+        in_re_message_id: u64,
+        payload: &PacketBuffer,
+        cursor: &mut usize,
+    ) -> bool;
 
     /// Check if this peer should communicate with another at all.
     fn should_communicate_with(&self, id: &Identity) -> bool;
@@ -298,7 +320,12 @@ impl<SI: SystemInterface> Node<SI> {
             let mut best_root = self.best_root.write();
             if let Some(best_root) = best_root.as_mut() {
                 if !Arc::ptr_eq(best_root, best) {
-                    debug_event!(si, "[vl1] new best root: {} (replaced {})", best.identity.address.to_string(), best_root.identity.address.to_string());
+                    debug_event!(
+                        si,
+                        "[vl1] new best root: {} (replaced {})",
+                        best.identity.address.to_string(),
+                        best_root.identity.address.to_string()
+                    );
                     *best_root = best.clone();
                 }
             } else {
@@ -409,8 +436,14 @@ impl<SI: SystemInterface> Node<SI> {
                             for m in rs.members.iter() {
                                 if m.identity.eq(&self.identity) {
                                     let _ = my_root_sets.get_or_insert_with(|| Vec::new()).write_all(rs.to_bytes().as_slice());
-                                } else if self.peers.read().get(&m.identity.address).map_or(false, |p| !p.identity.eq(&m.identity))
-                                    || address_collision_check.insert(m.identity.address, &m.identity).map_or(false, |old_id| !old_id.eq(&m.identity))
+                                } else if self
+                                    .peers
+                                    .read()
+                                    .get(&m.identity.address)
+                                    .map_or(false, |p| !p.identity.eq(&m.identity))
+                                    || address_collision_check
+                                        .insert(m.identity.address, &m.identity)
+                                        .map_or(false, |old_id| !old_id.eq(&m.identity))
                                 {
                                     address_collisions.push(m.identity.address);
                                 }
@@ -420,7 +453,8 @@ impl<SI: SystemInterface> Node<SI> {
 
                     for (_, rs) in roots.sets.iter() {
                         for m in rs.members.iter() {
-                            if m.endpoints.is_some() && !address_collisions.contains(&m.identity.address) && !m.identity.eq(&self.identity) {
+                            if m.endpoints.is_some() && !address_collisions.contains(&m.identity.address) && !m.identity.eq(&self.identity)
+                            {
                                 debug_event!(
                                     si,
                                     "[vl1] examining root {} with {} endpoints",
@@ -493,7 +527,12 @@ impl<SI: SystemInterface> Node<SI> {
             };
             for (root, endpoints) in roots.iter() {
                 for ep in endpoints.iter() {
-                    debug_event!(si, "sending HELLO to root {} (root interval: {})", root.identity.address.to_string(), ROOT_HELLO_INTERVAL);
+                    debug_event!(
+                        si,
+                        "sending HELLO to root {} (root interval: {})",
+                        root.identity.address.to_string(),
+                        ROOT_HELLO_INTERVAL
+                    );
                     root.send_hello(si, self, Some(ep)).await;
                 }
             }
@@ -538,7 +577,8 @@ impl<SI: SystemInterface> Node<SI> {
             let ka = [tt as u8]; // send different bytes every time for keepalive in case some things filter zero packets
             let ka2 = [&ka[..1]];
             for ka in need_keepalive.iter() {
-                si.wire_send(&ka.endpoint, Some(&ka.local_socket), Some(&ka.local_interface), &ka2, 0).await;
+                si.wire_send(&ka.endpoint, Some(&ka.local_socket), Some(&ka.local_interface), &ka2, 0)
+                    .await;
             }
         }
 
@@ -563,7 +603,8 @@ impl<SI: SystemInterface> Node<SI> {
             si,
             "[vl1] {} -> #{} {}->{} length {} (on socket {}@{})",
             source_endpoint.to_string(),
-            data.bytes_fixed_at::<8>(0).map_or("????????????????".into(), |pid| hex::to_string(pid)),
+            data.bytes_fixed_at::<8>(0)
+                .map_or("????????????????".into(), |pid| hex::to_string(pid)),
             data.bytes_fixed_at::<5>(13).map_or("??????????".into(), |src| hex::to_string(src)),
             data.bytes_fixed_at::<5>(8).map_or("??????????".into(), |dest| hex::to_string(dest)),
             data.len(),
@@ -589,7 +630,13 @@ impl<SI: SystemInterface> Node<SI> {
                             fragment_header.total_fragments()
                         );
 
-                        if let Some(assembled_packet) = path.receive_fragment(fragment_header.packet_id(), fragment_header.fragment_no(), fragment_header.total_fragments(), data, time_ticks) {
+                        if let Some(assembled_packet) = path.receive_fragment(
+                            fragment_header.packet_id(),
+                            fragment_header.fragment_no(),
+                            fragment_header.total_fragments(),
+                            data,
+                            time_ticks,
+                        ) {
                             if let Some(frag0) = assembled_packet.frags[0].as_ref() {
                                 #[cfg(debug_assertions)]
                                 debug_event!(si, "[vl1] #{:0>16x} packet fully assembled!", fragment_header_id);
@@ -597,8 +644,17 @@ impl<SI: SystemInterface> Node<SI> {
                                 if let Ok(packet_header) = frag0.struct_at::<v1::PacketHeader>(0) {
                                     if let Some(source) = Address::from_bytes(&packet_header.src) {
                                         if let Some(peer) = self.peer(source) {
-                                            peer.receive(self, si, ph, time_ticks, &path, packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)])
-                                                .await;
+                                            peer.receive(
+                                                self,
+                                                si,
+                                                ph,
+                                                time_ticks,
+                                                &path,
+                                                packet_header,
+                                                frag0,
+                                                &assembled_packet.frags[1..(assembled_packet.have as usize)],
+                                            )
+                                            .await;
                                         } else {
                                             self.whois.query(self, si, source, Some(QueuedPacket::Fragmented(assembled_packet)));
                                         }
@@ -613,7 +669,8 @@ impl<SI: SystemInterface> Node<SI> {
 
                             if let Some(source) = Address::from_bytes(&packet_header.src) {
                                 if let Some(peer) = self.peer(source) {
-                                    peer.receive(self, si, ph, time_ticks, &path, packet_header, data.as_ref(), &[]).await;
+                                    peer.receive(self, si, ph, time_ticks, &path, packet_header, data.as_ref(), &[])
+                                        .await;
                                 } else {
                                     self.whois.query(self, si, source, Some(QueuedPacket::Unfragmented(data)));
                                 }
@@ -628,7 +685,12 @@ impl<SI: SystemInterface> Node<SI> {
                         #[cfg(debug_assertions)]
                         {
                             debug_packet_id = u64::from_be_bytes(fragment_header.id);
-                            debug_event!(si, "[vl1] #{:0>16x} forwarding packet fragment to {}", debug_packet_id, dest.to_string());
+                            debug_event!(
+                                si,
+                                "[vl1] #{:0>16x} forwarding packet fragment to {}",
+                                debug_packet_id,
+                                dest.to_string()
+                            );
                         }
                         if fragment_header.increment_hops() > v1::FORWARD_MAX_HOPS {
                             #[cfg(debug_assertions)]
@@ -644,7 +706,11 @@ impl<SI: SystemInterface> Node<SI> {
                             }
                             if packet_header.increment_hops() > v1::FORWARD_MAX_HOPS {
                                 #[cfg(debug_assertions)]
-                                debug_event!(si, "[vl1] #{:0>16x} discarded: max hops exceeded!", u64::from_be_bytes(packet_header.id));
+                                debug_event!(
+                                    si,
+                                    "[vl1] #{:0>16x} discarded: max hops exceeded!",
+                                    u64::from_be_bytes(packet_header.id)
+                                );
                                 return;
                             }
                         } else {
@@ -714,7 +780,13 @@ impl<SI: SystemInterface> Node<SI> {
         self.roots.read().my_root_sets.is_some()
     }
 
-    pub(crate) fn canonical_path(&self, ep: &Endpoint, local_socket: &SI::LocalSocket, local_interface: &SI::LocalInterface, time_ticks: i64) -> Arc<Path<SI>> {
+    pub(crate) fn canonical_path(
+        &self,
+        ep: &Endpoint,
+        local_socket: &SI::LocalSocket,
+        local_interface: &SI::LocalInterface,
+        time_ticks: i64,
+    ) -> Arc<Path<SI>> {
         if let Some(path) = self.paths.read().get(&PathKey::Ref(ep, local_socket)) {
             return path.clone();
         }

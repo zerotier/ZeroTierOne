@@ -27,9 +27,17 @@ pub fn for_each_address<F: FnMut(&InetAddress, &LocalInterface)>(mut f: F) {
 
                     let sa_family = (*(*i).ifa_addr).sa_family as u8;
                     if sa_family == libc::AF_INET as u8 {
-                        copy_nonoverlapping((*i).ifa_addr.cast::<u8>(), (&mut a as *mut InetAddress).cast::<u8>(), size_of::<libc::sockaddr_in>());
+                        copy_nonoverlapping(
+                            (*i).ifa_addr.cast::<u8>(),
+                            (&mut a as *mut InetAddress).cast::<u8>(),
+                            size_of::<libc::sockaddr_in>(),
+                        );
                     } else if sa_family == libc::AF_INET6 as u8 {
-                        copy_nonoverlapping((*i).ifa_addr.cast::<u8>(), (&mut a as *mut InetAddress).cast::<u8>(), size_of::<libc::sockaddr_in6>());
+                        copy_nonoverlapping(
+                            (*i).ifa_addr.cast::<u8>(),
+                            (&mut a as *mut InetAddress).cast::<u8>(),
+                            size_of::<libc::sockaddr_in6>(),
+                        );
                     } else {
                         i = (*i).ifa_next;
                         continue;
@@ -87,7 +95,9 @@ mod tests {
     #[test]
     fn test_getifaddrs() {
         println!("starting getifaddrs...");
-        crate::getifaddrs::for_each_address(|a: &InetAddress, interface: &LocalInterface| println!("  {} {}", interface.to_string(), a.to_string()));
+        crate::getifaddrs::for_each_address(|a: &InetAddress, interface: &LocalInterface| {
+            println!("  {} {}", interface.to_string(), a.to_string())
+        });
         println!("done.")
     }
 }

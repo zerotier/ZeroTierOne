@@ -18,12 +18,29 @@ impl InnerProtocolInterface for Switch {
     }
 
     #[allow(unused)]
-    async fn handle_error<SI: SystemInterface>(&self, peer: &Peer<SI>, source_path: &Path<SI>, in_re_verb: u8, in_re_message_id: u64, error_code: u8, payload: &PacketBuffer, cursor: &mut usize) -> bool {
+    async fn handle_error<SI: SystemInterface>(
+        &self,
+        peer: &Peer<SI>,
+        source_path: &Path<SI>,
+        in_re_verb: u8,
+        in_re_message_id: u64,
+        error_code: u8,
+        payload: &PacketBuffer,
+        cursor: &mut usize,
+    ) -> bool {
         false
     }
 
     #[allow(unused)]
-    async fn handle_ok<SI: SystemInterface>(&self, peer: &Peer<SI>, source_path: &Path<SI>, in_re_verb: u8, in_re_message_id: u64, payload: &PacketBuffer, cursor: &mut usize) -> bool {
+    async fn handle_ok<SI: SystemInterface>(
+        &self,
+        peer: &Peer<SI>,
+        source_path: &Path<SI>,
+        in_re_verb: u8,
+        in_re_message_id: u64,
+        payload: &PacketBuffer,
+        cursor: &mut usize,
+    ) -> bool {
         false
     }
 

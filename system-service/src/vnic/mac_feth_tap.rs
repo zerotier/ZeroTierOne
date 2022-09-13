@@ -225,7 +225,15 @@ fn device_ipv6_set_params(device: &String, perform_nud: bool, accept_ra: bool) -
         }
 
         let mut nd: in6_ndireq = zeroed();
-        copy_nonoverlapping(dev.as_ptr(), nd.ifname.as_mut_ptr().cast::<u8>(), if dev.len() > (nd.ifname.len() - 1) { nd.ifname.len() - 1 } else { dev.len() });
+        copy_nonoverlapping(
+            dev.as_ptr(),
+            nd.ifname.as_mut_ptr().cast::<u8>(),
+            if dev.len() > (nd.ifname.len() - 1) {
+                nd.ifname.len() - 1
+            } else {
+                dev.len()
+            },
+        );
         if libc::ioctl(s, 76 /* SIOCGIFINFO_IN6 */, (&mut nd as *mut in6_ndireq).cast::<c_void>()) == 0 {
             let oldflags = nd.ndi.flags;
             if perform_nud {
@@ -243,7 +251,15 @@ fn device_ipv6_set_params(device: &String, perform_nud: bool, accept_ra: bool) -
         }
 
         let mut ifr: in6_ifreq = zeroed();
-        copy_nonoverlapping(dev.as_ptr(), ifr.ifr_name.as_mut_ptr().cast::<u8>(), if dev.len() > (ifr.ifr_name.len() - 1) { ifr.ifr_name.len() - 1 } else { dev.len() });
+        copy_nonoverlapping(
+            dev.as_ptr(),
+            ifr.ifr_name.as_mut_ptr().cast::<u8>(),
+            if dev.len() > (ifr.ifr_name.len() - 1) {
+                ifr.ifr_name.len() - 1
+            } else {
+                dev.len()
+            },
+        );
         if libc::ioctl(
             s,
             if accept_ra {
@@ -323,7 +339,13 @@ impl MacFethTap {
     /// given will not remain valid after it returns. Also note that F will be called
     /// from another thread that is spawned here, so all its bound references must
     /// be "Send" and "Sync" e.g. Arc<>.
-    pub fn new<F: Fn(&[u8]) + Send + Sync + 'static>(nwid: u64, mac: &MAC, mtu: i32, metric: i32, eth_frame_func: F) -> Result<MacFethTap, String> {
+    pub fn new<F: Fn(&[u8]) + Send + Sync + 'static>(
+        nwid: u64,
+        mac: &MAC,
+        mtu: i32,
+        metric: i32,
+        eth_frame_func: F,
+    ) -> Result<MacFethTap, String> {
         // This tracks BPF devices we are using so we don't try to reopen them, and also
         // doubles as a global lock to ensure that only one feth tap is created at once per
         // ZeroTier process per system.
@@ -369,12 +391,20 @@ impl MacFethTap {
         // Create pair of feth interfaces and create MacFethDevice struct.
         let cmd = Command::new(IFCONFIG).arg(&device_name).arg("create").spawn();
         if cmd.is_err() {
-            return Err(format!("unable to create device '{}': {}", device_name.as_str(), cmd.err().unwrap().to_string()));
+            return Err(format!(
+                "unable to create device '{}': {}",
+                device_name.as_str(),
+                cmd.err().unwrap().to_string()
+            ));
         }
         let _ = cmd.unwrap().wait();
         let cmd = Command::new(IFCONFIG).arg(&peer_device_name).arg("create").spawn();
         if cmd.is_err() {
-            return Err(format!("unable to create device '{}': {}", peer_device_name.as_str(), cmd.err().unwrap().to_string()));
+            return Err(format!(
+                "unable to create device '{}': {}",
+                peer_device_name.as_str(),
+                cmd.err().unwrap().to_string()
+            ));
         }
         let _ = cmd.unwrap().wait();
         let device = MacFethDevice { name: device_name, peer_name: peer_device_name };
@@ -382,28 +412,60 @@ impl MacFethTap {
         // Set link-layer (MAC) address of primary interface.
         let cmd = Command::new(IFCONFIG).arg(&device.name).arg("lladdr").arg(mac.to_string()).spawn();
         if cmd.is_err() {
-            return Err(format!("unable to configure device '{}': {}", &device.name, cmd.err().unwrap().to_string()));
+            return Err(format!(
+                "unable to configure device '{}': {}",
+                &device.name,
+                cmd.err().unwrap().to_string()
+            ));
         }
         let _ = cmd.unwrap().wait();
 
         // Bind peer interfaces together.
-        let cmd = Command::new(IFCONFIG).arg(&device.peer_name).arg("peer").arg(device.name.as_str()).spawn();
+        let cmd = Command::new(IFCONFIG)
+            .arg(&device.peer_name)
+            .arg("peer")
+            .arg(device.name.as_str())
+            .spawn();
         if cmd.is_err() {
-            return Err(format!("unable to configure device '{}': {}", &device.peer_name, cmd.err().unwrap().to_string()));
+            return Err(format!(
+                "unable to configure device '{}': {}",
+                &device.peer_name,
+                cmd.err().unwrap().to_string()
+            ));
         }
         let _ = cmd.unwrap().wait();
 
         // Set MTU of secondary peer interface, bring up.
-        let cmd = Command::new(IFCONFIG).arg(&device.peer_name).arg("mtu").arg(mtu.to_string()).arg("up").spawn();
+        let cmd = Command::new(IFCONFIG)
+            .arg(&device.peer_name)
+            .arg("mtu")
+            .arg(mtu.to_string())
+            .arg("up")
+            .spawn();
         if cmd.is_err() {
-            return Err(format!("unable to configure device '{}': {}", &device.peer_name, cmd.err().unwrap().to_string()));
+            return Err(format!(
+                "unable to configure device '{}': {}",
+                &device.peer_name,
+                cmd.err().unwrap().to_string()
+            ));
         }
         let _ = cmd.unwrap().wait();
 
         // Set MTU and metric of primary interface, bring up.
-        let cmd = Command::new(IFCONFIG).arg(&device.name).arg("mtu").arg(mtu.to_string()).arg("metric").arg(metric.to_string()).arg("up").spawn();
+        let cmd = Command::new(IFCONFIG)
+            .arg(&device.name)
+            .arg("mtu")
+            .arg(mtu.to_string())
+            .arg("metric")
+            .arg(metric.to_string())
+            .arg("up")
+            .spawn();
         if cmd.is_err() {
-            return Err(format!("unable to configure device '{}': {}", &device.name.as_str(), cmd.err().unwrap().to_string()));
+            return Err(format!(
+                "unable to configure device '{}': {}",
+                &device.name.as_str(),
+                cmd.err().unwrap().to_string()
+            ));
         }
         let _ = cmd.unwrap().wait();
 
@@ -449,7 +511,11 @@ impl MacFethTap {
         // Set immediate mode for "live" capture.
         fl = 1;
         if unsafe {
-            libc::ioctl(bpf_fd as c_int, 112 /* BIOCIMMEDIATE */, (&mut fl as *mut c_int).cast::<c_void>())
+            libc::ioctl(
+                bpf_fd as c_int,
+                112, /* BIOCIMMEDIATE */
+                (&mut fl as *mut c_int).cast::<c_void>(),
+            )
         } != 0
         {
             unsafe {
@@ -461,7 +527,11 @@ impl MacFethTap {
         // Do not send us back packets we inject or send.
         fl = 0;
         if unsafe {
-            libc::ioctl(bpf_fd as c_int, 119 /* BIOCSSEESENT */, (&mut fl as *mut c_int).cast::<c_void>())
+            libc::ioctl(
+                bpf_fd as c_int,
+                119, /* BIOCSSEESENT */
+                (&mut fl as *mut c_int).cast::<c_void>(),
+            )
         } != 0
         {
             unsafe {
@@ -474,10 +544,22 @@ impl MacFethTap {
         let mut bpf_ifr: ifreq = unsafe { std::mem::zeroed() };
         let peer_dev_name_bytes = device.peer_name.as_bytes();
         unsafe {
-            copy_nonoverlapping(peer_dev_name_bytes.as_ptr(), bpf_ifr.ifr_name.as_mut_ptr().cast::<u8>(), if peer_dev_name_bytes.len() > (bpf_ifr.ifr_name.len() - 1) { bpf_ifr.ifr_name.len() - 1 } else { peer_dev_name_bytes.len() });
+            copy_nonoverlapping(
+                peer_dev_name_bytes.as_ptr(),
+                bpf_ifr.ifr_name.as_mut_ptr().cast::<u8>(),
+                if peer_dev_name_bytes.len() > (bpf_ifr.ifr_name.len() - 1) {
+                    bpf_ifr.ifr_name.len() - 1
+                } else {
+                    peer_dev_name_bytes.len()
+                },
+            );
         }
         if unsafe {
-            libc::ioctl(bpf_fd as c_int, 108 /* BIOCSETIF */, (&mut bpf_ifr as *mut ifreq).cast::<c_void>())
+            libc::ioctl(
+                bpf_fd as c_int,
+                108, /* BIOCSETIF */
+                (&mut bpf_ifr as *mut ifreq).cast::<c_void>(),
+            )
         } != 0
         {
             unsafe {
@@ -489,7 +571,11 @@ impl MacFethTap {
         // Include Ethernet header in BPF captures.
         fl = 1;
         if unsafe {
-            libc::ioctl(bpf_fd as c_int, 117 /* BIOCSHDRCMPLT */, (&mut fl as *mut c_int).cast::<c_void>())
+            libc::ioctl(
+                bpf_fd as c_int,
+                117, /* BIOCSHDRCMPLT */
+                (&mut fl as *mut c_int).cast::<c_void>(),
+            )
         } != 0
         {
             unsafe {
@@ -501,7 +587,11 @@ impl MacFethTap {
         // Set promiscuous mode so bridging can work.
         fl = 1;
         if unsafe {
-            libc::ioctl(bpf_fd as c_int, 105 /* BIOCPROMISC */, (&mut fl as *mut c_int).cast::<c_void>())
+            libc::ioctl(
+                bpf_fd as c_int,
+                105, /* BIOCPROMISC */
+                (&mut fl as *mut c_int).cast::<c_void>(),
+            )
         } != 0
         {
             unsafe {
@@ -558,9 +648,24 @@ impl MacFethTap {
         ndrv_sa.snd_len = std::mem::size_of::<sockaddr_ndrv>() as c_uchar;
         ndrv_sa.snd_family = 27 /* AF_NDRV */;
         unsafe {
-            copy_nonoverlapping(peer_dev_name_bytes.as_ptr(), ndrv_sa.snd_name.as_mut_ptr().cast::<u8>(), if peer_dev_name_bytes.len() > (bpf_ifr.ifr_name.len() - 1) { bpf_ifr.ifr_name.len() - 1 } else { peer_dev_name_bytes.len() });
+            copy_nonoverlapping(
+                peer_dev_name_bytes.as_ptr(),
+                ndrv_sa.snd_name.as_mut_ptr().cast::<u8>(),
+                if peer_dev_name_bytes.len() > (bpf_ifr.ifr_name.len() - 1) {
+                    bpf_ifr.ifr_name.len() - 1
+                } else {
+                    peer_dev_name_bytes.len()
+                },
+            );
         }
-        if unsafe { libc::bind(ndrv_fd, (&ndrv_sa as *const sockaddr_ndrv).cast(), std::mem::size_of::<sockaddr_ndrv>() as libc::socklen_t) } != 0 {
+        if unsafe {
+            libc::bind(
+                ndrv_fd,
+                (&ndrv_sa as *const sockaddr_ndrv).cast(),
+                std::mem::size_of::<sockaddr_ndrv>() as libc::socklen_t,
+            )
+        } != 0
+        {
             unsafe {
                 libc::close(bpf_fd);
             }
@@ -569,7 +674,14 @@ impl MacFethTap {
             }
             return Err(String::from("unable to bind AF_NDRV socket"));
         }
-        if unsafe { libc::connect(ndrv_fd, (&ndrv_sa as *const sockaddr_ndrv).cast(), std::mem::size_of::<sockaddr_ndrv>() as libc::socklen_t) } != 0 {
+        if unsafe {
+            libc::connect(
+                ndrv_fd,
+                (&ndrv_sa as *const sockaddr_ndrv).cast(),
+                std::mem::size_of::<sockaddr_ndrv>() as libc::socklen_t,
+            )
+        } != 0
+        {
             unsafe {
                 libc::close(bpf_fd);
             }
@@ -605,7 +717,16 @@ impl MacFethTap {
 impl VNIC for MacFethTap {
     fn add_ip(&self, ip: &InetAddress) -> bool {
         if !self.have_ip(ip) {
-            let cmd = Command::new(IFCONFIG).arg(&self.device.name).arg(if ip.is_v6() { "inet6" } else { "inet" }).arg(ip.to_string()).arg("alias").spawn();
+            let cmd = Command::new(IFCONFIG)
+                .arg(&self.device.name)
+                .arg(if ip.is_v6() {
+                    "inet6"
+                } else {
+                    "inet"
+                })
+                .arg(ip.to_string())
+                .arg("alias")
+                .spawn();
             if cmd.is_ok() {
                 let _ = cmd.unwrap().wait();
             }
@@ -616,7 +737,16 @@ impl VNIC for MacFethTap {
 
     fn remove_ip(&self, ip: &InetAddress) -> bool {
         if self.have_ip(ip) {
-            let cmd = Command::new(IFCONFIG).arg(&self.device.name).arg(if ip.is_v6() { "inet6" } else { "inet" }).arg(ip.to_string()).arg("-alias").spawn();
+            let cmd = Command::new(IFCONFIG)
+                .arg(&self.device.name)
+                .arg(if ip.is_v6() {
+                    "inet6"
+                } else {
+                    "inet"
+                })
+                .arg(ip.to_string())
+                .arg("-alias")
+                .spawn();
             if cmd.is_ok() {
                 let _ = cmd.unwrap().wait();
             }
@@ -644,18 +774,42 @@ impl VNIC for MacFethTap {
 
     fn get_multicast_groups(&self) -> HashSet<MulticastGroup> {
         let mut all_groups: HashSet<MulticastGroup> = HashSet::new();
-        crate::vnic::common::get_l2_multicast_subscriptions(self.device.name.as_str()).into_iter().for_each(|mac| {
-            all_groups.insert(MulticastGroup::from(&mac));
-        });
+        crate::vnic::common::get_l2_multicast_subscriptions(self.device.name.as_str())
+            .into_iter()
+            .for_each(|mac| {
+                all_groups.insert(MulticastGroup::from(&mac));
+            });
         all_groups
     }
 
     #[inline(always)]
-    fn put(&self, source_mac: &zerotier_network_hypervisor::vl1::MAC, dest_mac: &zerotier_network_hypervisor::vl1::MAC, ethertype: u16, _vlan_id: u16, data: *const u8, len: usize) -> bool {
+    fn put(
+        &self,
+        source_mac: &zerotier_network_hypervisor::vl1::MAC,
+        dest_mac: &zerotier_network_hypervisor::vl1::MAC,
+        ethertype: u16,
+        _vlan_id: u16,
+        data: *const u8,
+        len: usize,
+    ) -> bool {
         let dm = dest_mac.0;
         let sm = source_mac.0;
-        let mut hdr: [u8; 14] =
-            [(dm >> 40) as u8, (dm >> 32) as u8, (dm >> 24) as u8, (dm >> 16) as u8, (dm >> 8) as u8, dm as u8, (sm >> 40) as u8, (sm >> 32) as u8, (sm >> 24) as u8, (sm >> 16) as u8, (sm >> 8) as u8, sm as u8, (ethertype >> 8) as u8, ethertype as u8];
+        let mut hdr: [u8; 14] = [
+            (dm >> 40) as u8,
+            (dm >> 32) as u8,
+            (dm >> 24) as u8,
+            (dm >> 16) as u8,
+            (dm >> 8) as u8,
+            dm as u8,
+            (sm >> 40) as u8,
+            (sm >> 32) as u8,
+            (sm >> 24) as u8,
+            (sm >> 16) as u8,
+            (sm >> 8) as u8,
+            sm as u8,
+            (ethertype >> 8) as u8,
+            ethertype as u8,
+        ];
         unsafe {
             let iov: [libc::iovec; 2] = [
                 libc::iovec { iov_base: hdr.as_mut_ptr().cast(), iov_len: 14 },

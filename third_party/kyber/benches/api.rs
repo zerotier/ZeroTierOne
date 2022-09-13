@@ -9,57 +9,45 @@ const CT_HEX: &str = "EADD5ADA14DA57F0AEF3505F1CAA6485D4238D999A3EF4B0A59A1CDBE0
 
 // Benchmarking key generation
 fn keypair_bench(c: &mut Criterion) {
-  let mut rng = rand::thread_rng();
-  c.bench_function(
-    "Keypair Generation", 
-    |b| b.iter(
-      || {
-        let _keys = keypair(&mut rng);
-      }
-    )
-  );
+    let mut rng = rand::thread_rng();
+    c.bench_function("Keypair Generation", |b| {
+        b.iter(|| {
+            let _keys = keypair(&mut rng);
+        })
+    });
 }
 
 // Encapsulating a single public key
 fn encap_bench(c: &mut Criterion) {
-  let pk = crate::decode_hex(PK_HEX);
-  let mut rng = rand::thread_rng();
-  c.bench_function(
-    "Encapsulate", 
-    |b| b.iter(
-      || {
-        let _enc = encapsulate(&pk, &mut rng);
-      }
-    )
-  );
+    let pk = crate::decode_hex(PK_HEX);
+    let mut rng = rand::thread_rng();
+    c.bench_function("Encapsulate", |b| {
+        b.iter(|| {
+            let _enc = encapsulate(&pk, &mut rng);
+        })
+    });
 }
 
 // Decapsulating a single correct ciphertext
 fn decap_bench(c: &mut Criterion) {
-  let sk = decode_hex(SK_HEX);
-  let ct = decode_hex(CT_HEX);
-  c.bench_function(
-    "Decapsulate", 
-    |b| b.iter(
-      || {
-        let _dec = decapsulate(&ct, &sk);
-      }
-    )
-  );
+    let sk = decode_hex(SK_HEX);
+    let ct = decode_hex(CT_HEX);
+    c.bench_function("Decapsulate", |b| {
+        b.iter(|| {
+            let _dec = decapsulate(&ct, &sk);
+        })
+    });
 }
 
 // Decapsulating a single incorrect ciphertext
 fn decap_fail_bench(c: &mut Criterion) {
-  let sk = decode_hex(BAD_SK);
-  let ct = decode_hex(CT_HEX);
-  c.bench_function(
-    "Decapsulate Failure", 
-    |b| b.iter(
-      || {
-        let _dec = decapsulate(&ct, &sk);
-      }
-    )
-  );
+    let sk = decode_hex(BAD_SK);
+    let ct = decode_hex(CT_HEX);
+    c.bench_function("Decapsulate Failure", |b| {
+        b.iter(|| {
+            let _dec = decapsulate(&ct, &sk);
+        })
+    });
 }
 
 criterion_group!(benches, keypair_bench, encap_bench, decap_bench, decap_fail_bench);
@@ -67,8 +55,8 @@ criterion_main!(benches);
 
 // Decodes a hex string into a vector of bytes
 pub fn decode_hex(s: &str) -> Vec<u8> {
-  (0..s.len())
-      .step_by(2)
-      .map(|i| u8::from_str_radix(&s[i..i + 2], 16).expect("Hex string decoding"))
-      .collect::<Vec<u8>>()
+    (0..s.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).expect("Hex string decoding"))
+        .collect::<Vec<u8>>()
 }

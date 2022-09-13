@@ -84,10 +84,22 @@ pub trait DataStore: Sync + Send {
     /// Iterate through keys in a range.
     ///
     /// Keys MUST be output in ascending binary sort order.
-    async fn keys<F: Send + FnMut(&[u8]) -> bool>(&self, subset: Option<&[u8]>, range_start: &[u8; KEY_SIZE], range_end: &[u8; KEY_SIZE], f: F);
+    async fn keys<F: Send + FnMut(&[u8]) -> bool>(
+        &self,
+        subset: Option<&[u8]>,
+        range_start: &[u8; KEY_SIZE],
+        range_end: &[u8; KEY_SIZE],
+        f: F,
+    );
 
     /// Iterate through values in a range.
     ///
     /// Entries MUST be output in ascending binary sort order.
-    async fn values<F: Send + FnMut(&[u8], &[u8]) -> bool>(&self, subset: Option<&[u8]>, range_start: &[u8; KEY_SIZE], range_end: &[u8; KEY_SIZE], f: F);
+    async fn values<F: Send + FnMut(&[u8], &[u8]) -> bool>(
+        &self,
+        subset: Option<&[u8]>,
+        range_start: &[u8; KEY_SIZE],
+        range_end: &[u8; KEY_SIZE],
+        f: F,
+    );
 }
