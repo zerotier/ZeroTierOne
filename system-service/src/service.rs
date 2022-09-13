@@ -12,6 +12,7 @@ use zerotier_network_hypervisor::vl2::*;
 use zerotier_network_hypervisor::*;
 
 use zerotier_crypto::random;
+use zerotier_utils::{ms_monotonic, ms_since_epoch};
 
 use tokio::time::Duration;
 
@@ -19,7 +20,6 @@ use crate::datadir::DataDir;
 use crate::localinterface::LocalInterface;
 use crate::localsocket::LocalSocket;
 use crate::udp::*;
-use crate::utils::{ms_monotonic, ms_since_epoch};
 
 /// Interval between scans of system network interfaces to update port bindings.
 const UDP_UPDATE_BINDINGS_INTERVAL_MS: Duration = Duration::from_millis(5000);

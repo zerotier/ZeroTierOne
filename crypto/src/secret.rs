@@ -20,12 +20,13 @@ extern "C" {
 pub struct Secret<const L: usize>(pub [u8; L]);
 
 impl<const L: usize> Secret<L> {
+    /// Create a new all-zero secret.
     #[inline(always)]
     pub fn new() -> Self {
         Self([0_u8; L])
     }
 
-    /// Copy bytes into secret, will panic if size does not match.
+    /// Copy bytes into secret, will panic if the slice does not match the size of this secret.
     #[inline(always)]
     pub fn from_bytes(b: &[u8]) -> Self {
         Self(b.try_into().unwrap())
@@ -36,15 +37,25 @@ impl<const L: usize> Secret<L> {
         &self.0
     }
 
+    /// Get the first N bytes of this secret as a fixed length array.
     #[inline(always)]
     pub fn first_n<const N: usize>(&self) -> &[u8; N] {
         assert!(N <= L);
         unsafe { &*self.0.as_ptr().cast() }
     }
 
+    /// Clone the first N bytes of this secret as another secret.
     #[inline(always)]
     pub fn first_n_clone<const N: usize>(&self) -> Secret<N> {
         Secret::<N>(self.first_n().clone())
+    }
+
+    /// Destroy the contents of this secret, ignoring normal Rust mutability constraints.
+    ///
+    /// This can be used to force a secret to be forgotten under e.g. key lifetime exceeded or error conditions.
+    #[inline(always)]
+    pub fn nuke(&self) {
+        unsafe { OPENSSL_cleanse(std::mem::transmute(self.0.as_ptr().cast::<c_void>()), L) };
     }
 }
 

@@ -11,3 +11,5 @@ path = "src/main.rs"
 zerotier-crypto = { path = "../crypto" }
 zerotier-utils = { path = "../utils" }
 zerotier-network-hypervisor = { path = "../network-hypervisor" }
+serde = { version = "^1", features = ["derive"], default-features = false }
+serde_json = { version = "^1", features = ["std"], default-features = false }

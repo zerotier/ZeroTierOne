@@ -2,12 +2,9 @@
 
 use std::path::Path;
 use std::str::FromStr;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-
-use lazy_static::lazy_static;
 
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
@@ -19,20 +16,32 @@ use zerotier_network_hypervisor::vl1::Identity;
 /// Default sanity limit parameter for read_limit() used throughout the service.
 pub const DEFAULT_FILE_IO_READ_LIMIT: usize = 1048576;
 
-lazy_static! {
-    static ref STARTUP_INSTANT: Instant = Instant::now();
+/// Convenience function to read up to limit bytes from a file.
+///
+/// If the file is larger than limit, the excess is not read.
+pub async fn read_limit<P: AsRef<Path>>(path: P, limit: usize) -> std::io::Result<Vec<u8>> {
+    let mut f = File::open(path).await?;
+    let bytes = f.metadata().await?.len().min(limit as u64) as usize;
+    let mut v: Vec<u8> = Vec::with_capacity(bytes);
+    v.resize(bytes, 0);
+    f.read_exact(v.as_mut_slice()).await?;
+    Ok(v)
 }
 
-/// Get milliseconds since unix epoch.
-#[inline(always)]
-pub fn ms_since_epoch() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
-}
-
-/// Get milliseconds since an arbitrary time in the past, guaranteed to monotonically increase.
-#[inline(always)]
-pub fn ms_monotonic() -> i64 {
-    Instant::now().duration_since(*STARTUP_INSTANT).as_millis() as i64
+/// Set permissions on a file or directory to be most restrictive (visible only to the service's user).
+#[cfg(unix)]
+pub fn fs_restrict_permissions<P: AsRef<Path>>(path: P) -> bool {
+    unsafe {
+        let c_path = std::ffi::CString::new(path.as_ref().to_str().unwrap()).unwrap();
+        libc::chmod(
+            c_path.as_ptr(),
+            if path.as_ref().is_dir() {
+                0o700
+            } else {
+                0o600
+            },
+        ) == 0
+    }
 }
 
 /// Returns true if the string starts with [yY1tT] or false for [nN0fF].
@@ -143,34 +152,6 @@ pub fn to_json_pretty<O: serde::Serialize>(o: &O) -> String {
     }
 }
 
-/// Convenience function to read up to limit bytes from a file.
-///
-/// If the file is larger than limit, the excess is not read.
-pub async fn read_limit<P: AsRef<Path>>(path: P, limit: usize) -> std::io::Result<Vec<u8>> {
-    let mut f = File::open(path).await?;
-    let bytes = f.metadata().await?.len().min(limit as u64) as usize;
-    let mut v: Vec<u8> = Vec::with_capacity(bytes);
-    v.resize(bytes, 0);
-    f.read_exact(v.as_mut_slice()).await?;
-    Ok(v)
-}
-
-/// Set permissions on a file or directory to be most restrictive (visible only to the service's user).
-#[cfg(unix)]
-pub fn fs_restrict_permissions<P: AsRef<Path>>(path: P) -> bool {
-    unsafe {
-        let c_path = std::ffi::CString::new(path.as_ref().to_str().unwrap()).unwrap();
-        libc::chmod(
-            c_path.as_ptr(),
-            if path.as_ref().is_dir() {
-                0o700
-            } else {
-                0o600
-            },
-        ) == 0
-    }
-}
-
 /// Read an identity as either a literal or from a file.
 pub async fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity, String> {
     let parse_func = |s: &str| {
@@ -201,22 +182,3 @@ pub async fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity,
 //pub fn c_strerror() -> String {
 //    unsafe { std::ffi::CStr::from_ptr(libc::strerror(*libc::__error()).cast()).to_string_lossy().to_string() }
 //}
-
-#[cfg(test)]
-mod tests {
-    use crate::utils::ms_monotonic;
-    use std::time::Duration;
-
-    #[test]
-    fn monotonic_clock_sanity_check() {
-        let start = ms_monotonic();
-        std::thread::sleep(Duration::from_millis(500));
-        let end = ms_monotonic();
-        // per docs:
-        //
-        // The thread may sleep longer than the duration specified due to scheduling specifics or
-        // platform-dependent functionality. It will never sleep less.
-        //
-        assert!((end - start).abs() >= 500);
-    }
-}

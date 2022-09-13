@@ -15,9 +15,9 @@ use zerotier_crypto::secret::Secret;
 use zerotier_crypto::x25519::*;
 
 use zerotier_utils::hex;
+use zerotier_utils::memory::{as_byte_array, as_flat_object};
 
 use crate::error::{InvalidFormatError, InvalidParameterError};
-use crate::util::{bytes_as_flat_object, flat_object_as_bytes, AlignmentNeutral};
 use crate::vl1::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_FINGERPRINT_SIZE, IDENTITY_POW_THRESHOLD};
 use crate::vl1::Address;
 
@@ -394,7 +394,7 @@ impl Identity {
     pub fn to_public_bytes(&self) -> IdentityBytes {
         if let Some(p384) = self.p384.as_ref() {
             IdentityBytes::X25519P384Public(
-                flat_object_as_bytes(&packed::V1 {
+                as_byte_array(&packed::V1 {
                     v0: packed::V0 {
                         address: self.address.to_bytes(),
                         key_type: 0,
@@ -410,12 +410,11 @@ impl Identity {
                     ecdsa_self_signature: p384.ecdsa_self_signature,
                     ed25519_self_signature: p384.ed25519_self_signature,
                 })
-                .try_into()
-                .unwrap(),
+                .clone(),
             )
         } else {
             IdentityBytes::X25519Public(
-                flat_object_as_bytes(&packed::V0 {
+                as_byte_array(&packed::V0 {
                     address: self.address.to_bytes(),
                     key_type: 0,
                     x25519: self.x25519,
@@ -424,8 +423,7 @@ impl Identity {
                     reserved: 0x03,
                     ext_len: [0; 2],
                 })
-                .try_into()
-                .unwrap(),
+                .clone(),
             )
         }
     }
@@ -434,7 +432,7 @@ impl Identity {
         self.secret.as_ref().map(|s| {
             if let Some(p384) = s.p384.as_ref() {
                 IdentityBytes::X25519P384Secret(
-                    flat_object_as_bytes(&packed::V1S {
+                    as_byte_array(&packed::V1S {
                         v0s: packed::V0S {
                             address: self.address.to_bytes(),
                             key_type: 0,
@@ -454,12 +452,11 @@ impl Identity {
                         ecdh_secret: p384.ecdh.secret_key_bytes().0.clone(),
                         ecdsa_secret: p384.ecdsa.secret_key_bytes().0.clone(),
                     })
-                    .try_into()
-                    .unwrap(),
+                    .clone(),
                 )
             } else {
                 IdentityBytes::X25519Secret(
-                    flat_object_as_bytes(&packed::V0S {
+                    as_byte_array(&packed::V0S {
                         address: self.address.to_bytes(),
                         key_type: 0,
                         x25519: self.x25519,
@@ -470,8 +467,7 @@ impl Identity {
                         reserved: 0x03,
                         ext_len: [0; 2],
                     })
-                    .try_into()
-                    .unwrap(),
+                    .clone(),
                 )
             }
         })
@@ -483,7 +479,7 @@ impl Identity {
     pub fn from_bytes(bytes: &IdentityBytes) -> Option<Self> {
         let mut id = match bytes {
             IdentityBytes::X25519Public(b) => {
-                let b: &packed::V0 = bytes_as_flat_object(b);
+                let b: &packed::V0 = as_flat_object(b);
                 if b.key_type == 0 && b.secret_length == 0 && b.reserved == 0x03 && u16::from_be_bytes(b.ext_len) == 0 {
                     Some(Self {
                         address: Address::from_bytes_fixed(&b.address)?,
@@ -498,7 +494,7 @@ impl Identity {
                 }
             }
             IdentityBytes::X25519Secret(b) => {
-                let b: &packed::V0S = bytes_as_flat_object(b);
+                let b: &packed::V0S = as_flat_object(b);
                 if b.key_type == 0
                     && b.secret_length == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8
                     && b.reserved == 0x03
@@ -521,7 +517,7 @@ impl Identity {
                 }
             }
             IdentityBytes::X25519P384Public(b) => {
-                let b: &packed::V1 = bytes_as_flat_object(b);
+                let b: &packed::V1 = as_flat_object(b);
                 if b.v0.key_type == 0
                     && b.v0.secret_length == 0
                     && b.v0.reserved == 0x03
@@ -546,7 +542,7 @@ impl Identity {
                 }
             }
             IdentityBytes::X25519P384Secret(b) => {
-                let b: &packed::V1S = bytes_as_flat_object(b);
+                let b: &packed::V1S = as_flat_object(b);
                 if b.v0s.key_type == 0
                     && b.v0s.secret_length == (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8
                     && b.v0s.reserved == 0x03
@@ -587,7 +583,7 @@ impl Identity {
     pub fn read_bytes<R: Read>(r: &mut R) -> std::io::Result<Self> {
         let mut buf = [0_u8; 512];
         r.read_exact(&mut buf[..Self::BYTE_LENGTH_X25519_PUBLIC])?;
-        let x25519_public = bytes_as_flat_object::<packed::V0>(&buf);
+        let x25519_public: &packed::V0 = as_flat_object(&buf);
         let ext_len = u16::from_be_bytes(x25519_public.ext_len) as usize;
         let obj_len = if x25519_public.secret_length == 0 {
             let obj_len = ext_len + Self::BYTE_LENGTH_X25519_PUBLIC;
@@ -910,11 +906,6 @@ mod packed {
         pub ecdh_secret: [u8; P384_SECRET_KEY_SIZE],
         pub ecdsa_secret: [u8; P384_SECRET_KEY_SIZE],
     }
-
-    unsafe impl AlignmentNeutral for V0 {}
-    unsafe impl AlignmentNeutral for V0S {}
-    unsafe impl AlignmentNeutral for V1 {}
-    unsafe impl AlignmentNeutral for V1S {}
 }
 
 /// Identity rendered as a flat byte array.

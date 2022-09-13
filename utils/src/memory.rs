@@ -2,6 +2,7 @@
 
 use std::mem::size_of;
 
+// Version for architectures that definitely don't care about unaligned memory access.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
 #[allow(unused)]
 mod fast_int_memory_access {
@@ -66,6 +67,7 @@ mod fast_int_memory_access {
     }
 }
 
+// Version for architectures that might care about unaligned memory access.
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
 #[allow(unused)]
 mod fast_int_memory_access {
@@ -122,10 +124,26 @@ mod fast_int_memory_access {
 
 pub use fast_int_memory_access::*;
 
+/// Obtain a view into an array cast as another array.
+/// This will panic if the template parameters would result in out of bounds access.
+#[inline(always)]
+pub fn array_range<T: Copy, const S: usize, const START: usize, const LEN: usize>(a: &[T; S]) -> &[T; LEN] {
+    assert!((START + LEN) <= S);
+    unsafe { &*a.as_ptr().add(START).cast::<[T; LEN]>() }
+}
+
 /// Get a reference to a raw object as a byte array.
 /// The template parameter S must equal the size of the object in bytes or this will panic.
 #[inline(always)]
 pub fn as_byte_array<T: Copy, const S: usize>(o: &T) -> &[u8; S] {
     assert_eq!(S, size_of::<T>());
-    unsafe { &*(o as *const T).cast::<[u8; S]>() }
+    unsafe { &*(o as *const T).cast() }
+}
+
+/// Get a byte array as a flat object.
+///
+/// WARNING: while this is technically safe, care must be taken if the object requires aligned access.
+pub fn as_flat_object<T: Copy, const S: usize>(b: &[u8; S]) -> &T {
+    assert!(std::mem::size_of::<T>() <= S);
+    unsafe { &*b.as_ptr().cast() }
 }

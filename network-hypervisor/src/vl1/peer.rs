@@ -11,9 +11,9 @@ use zerotier_crypto::poly1305;
 use zerotier_crypto::random::next_u64_secure;
 use zerotier_crypto::salsa::Salsa;
 use zerotier_crypto::secret::Secret;
+use zerotier_utils::memory::array_range;
 
 use crate::util::buffer::BufferReader;
-use crate::util::byte_array_range;
 use crate::util::debug_event;
 use crate::util::marshalable::Marshalable;
 use crate::vl1::address::Address;
@@ -142,7 +142,7 @@ fn try_aead_decrypt(
                 // AES-GMAC-SIV encrypts the packet ID too as part of its computation of a single
                 // opaque 128-bit tag, so to get the original packet ID we have to grab it from the
                 // decrypted tag.
-                Some(u64::from_ne_bytes(*byte_array_range::<16, 0, 8>(tag)))
+                Some(u64::from_ne_bytes(*array_range::<u8, 16, 0, 8>(tag)))
             } else {
                 None
             }
@@ -446,11 +446,11 @@ impl<SI: SystemInterface> Peer<SI> {
             aes_gmac_siv.encrypt_second_pass_in_place(payload);
             let tag = aes_gmac_siv.encrypt_second_pass_finish();
             let header = packet.struct_mut_at::<v1::PacketHeader>(0).unwrap();
-            header.id = *byte_array_range::<16, 0, 8>(tag);
+            header.id = *array_range::<u8, 16, 0, 8>(tag);
             header.dest = self.identity.address.to_bytes();
             header.src = node.identity.address.to_bytes();
             header.flags_cipher_hops = flags_cipher_hops;
-            header.mac = *byte_array_range::<16, 8, 8>(tag);
+            header.mac = *array_range::<u8, 16, 8, 8>(tag);
         } else {
             return false;
         }

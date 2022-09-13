@@ -1604,6 +1604,11 @@ impl SessionKey {
                 .pop()
                 .unwrap_or_else(|| Box::new(AesGcm::new(self.send_key.as_bytes(), true))))
         } else {
+            // Not only do we return an error, but we also destroy the key.
+            let mut scp = self.send_cipher_pool.lock();
+            scp.clear();
+            self.send_key.nuke();
+
             Err(Error::MaxKeyLifetimeExceeded)
         }
     }
