@@ -5,15 +5,12 @@ use zerotier_network_hypervisor::vl1::InetAddress;
 
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "freebsd", target_os = "darwin"))]
 mod freebsd_like {
-    use lazy_static::lazy_static;
     use num_traits::AsPrimitive;
     use parking_lot::Mutex;
     use std::mem::size_of;
     use zerotier_network_hypervisor::vl1::InetAddress;
 
-    lazy_static! {
-        static ref INFO_SOCKET: Mutex<i32> = Mutex::new(-1);
-    }
+    static INFO_SOCKET: Mutex<i32> = Mutex::new(-1);
 
     #[allow(unused)]
     const SIZE_OF_IN6_IFREQ: usize = 288;

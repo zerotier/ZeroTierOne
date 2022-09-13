@@ -5,7 +5,6 @@ mod dictionary;
 mod endpoint;
 mod fragmentedpacket;
 mod identity;
-mod inetaddress;
 mod mac;
 mod path;
 mod peer;
@@ -17,11 +16,13 @@ pub(crate) mod node;
 #[allow(unused)]
 pub(crate) mod protocol;
 
+pub mod inetaddress;
+
 pub use address::Address;
 pub use dictionary::Dictionary;
 pub use endpoint::Endpoint;
 pub use identity::*;
-pub use inetaddress::{AddressFamilyType, InetAddress, IpScope, AF_INET, AF_INET6};
+pub use inetaddress::InetAddress;
 pub use mac::MAC;
 pub use node::SystemInterface;
 pub use path::Path;

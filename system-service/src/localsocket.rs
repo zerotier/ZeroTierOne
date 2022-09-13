@@ -6,11 +6,7 @@ use std::sync::{Arc, Weak};
 
 use crate::udp::BoundUdpSocket;
 
-use lazy_static::lazy_static;
-
-lazy_static! {
-    static ref LOCAL_SOCKET_UNIQUE_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
-}
+static LOCAL_SOCKET_UNIQUE_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 /// Local socket wrapper to provide to the core.
 ///

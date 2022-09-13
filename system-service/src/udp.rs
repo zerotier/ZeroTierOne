@@ -19,7 +19,7 @@ use crate::localinterface::LocalInterface;
 #[allow(unused_imports)]
 use num_traits::AsPrimitive;
 
-use zerotier_network_hypervisor::vl1::{InetAddress, IpScope, AF_INET, AF_INET6};
+use zerotier_network_hypervisor::vl1::inetaddress::*;
 
 /// A local port to which one or more UDP sockets is bound.
 ///
