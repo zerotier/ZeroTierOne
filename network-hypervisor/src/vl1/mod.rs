@@ -1,7 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 mod address;
-mod careof;
 mod dictionary;
 mod endpoint;
 mod fragmentedpacket;

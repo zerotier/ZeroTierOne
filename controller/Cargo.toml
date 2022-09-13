@@ -8,5 +8,6 @@ name = "zerotier-controller"
 path = "src/main.rs"
 
 [dependencies]
-zerotier-core-crypto = { path = "../core-crypto" }
+zerotier-crypto = { path = "../crypto" }
+zerotier-utils = { path = "../utils" }
 zerotier-network-hypervisor = { path = "../network-hypervisor" }

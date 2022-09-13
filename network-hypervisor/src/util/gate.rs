@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use std::sync::atomic::{AtomicI64, Ordering};
+//use std::sync::atomic::{AtomicI64, Ordering};
 
 /// Boolean rate limiter with normal (non-atomic) semantics.
 #[repr(transparent)]
@@ -30,6 +30,7 @@ impl<const FREQ: i64> IntervalGate<FREQ> {
     }
 }
 
+/*
 /// Boolean rate limiter with atomic semantics.
 #[repr(transparent)]
 pub struct AtomicIntervalGate<const FREQ: i64>(AtomicI64);
@@ -60,3 +61,4 @@ impl<const FREQ: i64> AtomicIntervalGate<FREQ> {
         }
     }
 }
+*/

@@ -11,7 +11,7 @@ use zerotier_network_hypervisor::vl1::*;
 use zerotier_network_hypervisor::vl2::*;
 use zerotier_network_hypervisor::*;
 
-use zerotier_core_crypto::random;
+use zerotier_crypto::random;
 
 use tokio::time::Duration;
 
@@ -91,7 +91,12 @@ impl ServiceImpl {
     }
 
     /// Called in udp_binding_task_main() to service a particular UDP port.
-    async fn update_udp_bindings_for_port(self: &Arc<Self>, port: u16, interface_prefix_blacklist: &Vec<String>, cidr_blacklist: &Vec<InetAddress>) -> Option<Vec<(LocalInterface, InetAddress, std::io::Error)>> {
+    async fn update_udp_bindings_for_port(
+        self: &Arc<Self>,
+        port: u16,
+        interface_prefix_blacklist: &Vec<String>,
+        cidr_blacklist: &Vec<InetAddress>,
+    ) -> Option<Vec<(LocalInterface, InetAddress, std::io::Error)>> {
         for ns in {
             let mut udp_sockets_by_port = self.udp_sockets_by_port.write().await;
             let bp = udp_sockets_by_port.entry(port).or_insert_with(|| BoundUdpPort::new(port));
@@ -121,7 +126,8 @@ impl ServiceImpl {
                         let mut buf = core.get_packet_buffer();
                         if let Ok((bytes, source)) = socket.recv_from(unsafe { buf.entire_buffer_mut() }).await {
                             unsafe { buf.set_size_unchecked(bytes) };
-                            core.handle_incoming_physical_packet(&self2, &Endpoint::IpUdp(InetAddress::from(source)), &local_socket, &interface, buf).await;
+                            core.handle_incoming_physical_packet(&self2, &Endpoint::IpUdp(InetAddress::from(source)), &local_socket, &interface, buf)
+                                .await;
                         } else {
                             break;
                         }
@@ -137,7 +143,10 @@ impl ServiceImpl {
         loop {
             let config = self.data.config().await;
 
-            if let Some(errors) = self.update_udp_bindings_for_port(config.settings.primary_port, &config.settings.interface_prefix_blacklist, &config.settings.cidr_blacklist).await {
+            if let Some(errors) = self
+                .update_udp_bindings_for_port(config.settings.primary_port, &config.settings.interface_prefix_blacklist, &config.settings.cidr_blacklist)
+                .await
+            {
                 for e in errors.iter() {
                     println!("BIND ERROR: {} {} {}", e.0.to_string(), e.1.to_string(), e.2.to_string());
                 }

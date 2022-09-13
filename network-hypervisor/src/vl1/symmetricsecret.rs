@@ -1,11 +1,12 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use zerotier_core_crypto::aes_gmac_siv::AesGmacSiv;
-use zerotier_core_crypto::kbkdf::*;
-use zerotier_core_crypto::secret::Secret;
+use zerotier_crypto::aes_gmac_siv::AesGmacSiv;
+use zerotier_crypto::kbkdf::zt_kbkdf_hmac_sha384;
+use zerotier_crypto::secret::Secret;
 
-use crate::util::pool::{Pool, PoolFactory};
 use crate::vl1::protocol::*;
+
+use zerotier_utils::pool::{Pool, PoolFactory};
 
 /// A symmetric secret key negotiated between peers.
 ///
@@ -22,8 +23,8 @@ impl SymmetricSecret {
     /// Create a new symmetric secret, deriving all sub-keys and such.
     pub fn new(key: Secret<64>) -> SymmetricSecret {
         let aes_factory = AesGmacSivPoolFactory(
-            zt_kbkdf_hmac_sha384(&key.0[..48], security_constants::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0).first_n_clone(),
-            zt_kbkdf_hmac_sha384(&key.0[..48], security_constants::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1).first_n_clone(),
+            zt_kbkdf_hmac_sha384(&key.0[..48], v1::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0).first_n_clone(),
+            zt_kbkdf_hmac_sha384(&key.0[..48], v1::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1).first_n_clone(),
         );
         SymmetricSecret { key, aes_gmac_siv: Pool::new(2, aes_factory) }
     }

@@ -1614,7 +1614,7 @@ mod tests {
         ));
 
         let mut ts = 0;
-        for test_loop in 0..128 {
+        for test_loop in 0..256 {
             for host in [&alice_host, &bob_host] {
                 let send_to_other = |data: &mut [u8]| {
                     if std::ptr::eq(host, &alice_host) {
@@ -1681,7 +1681,7 @@ mod tests {
                                 );
                             }
                         }
-                        for _ in 0..32 {
+                        for _ in 0..4 {
                             assert!(session
                                 .send(send_to_other, &mut mtu_buffer, &data_buf[..((random::xorshift64_random() as usize) % data_buf.len())])
                                 .is_ok());

@@ -52,16 +52,16 @@ pub const PROTOCOL_VERSION: u8 = 20;
 pub const PROTOCOL_VERSION_MIN: u8 = 11;
 
 /// Buffer sized for ZeroTier packets.
-pub type PacketBuffer = Buffer<{ packet_constants::SIZE_MAX }>;
+pub type PacketBuffer = Buffer<{ v1::SIZE_MAX }>;
 
 /// Factory type to supply to a new PacketBufferPool, used in PooledPacketBuffer and PacketBufferPool types.
-pub type PacketBufferFactory = crate::util::buffer::PooledBufferFactory<{ crate::vl1::protocol::packet_constants::SIZE_MAX }>;
+pub type PacketBufferFactory = crate::util::buffer::PooledBufferFactory<{ crate::vl1::protocol::v1::SIZE_MAX }>;
 
 /// Packet buffer checked out of pool, automatically returns on drop.
-pub type PooledPacketBuffer = crate::util::pool::Pooled<PacketBuffer, PacketBufferFactory>;
+pub type PooledPacketBuffer = zerotier_utils::pool::Pooled<PacketBuffer, PacketBufferFactory>;
 
 /// Source for instances of PacketBuffer
-pub type PacketBufferPool = crate::util::pool::Pool<PacketBuffer, PacketBufferFactory>;
+pub type PacketBufferPool = zerotier_utils::pool::Pool<PacketBuffer, PacketBufferFactory>;
 
 /// 64-bit packet (outer) ID.
 pub type PacketId = u64;
@@ -115,7 +115,9 @@ pub const ADDRESS_RESERVED_PREFIX: u8 = 0xff;
 /// Size of an identity fingerprint (SHA384)
 pub const IDENTITY_FINGERPRINT_SIZE: usize = 48;
 
-pub mod packet_constants {
+pub mod v1 {
+    use super::*;
+
     /// Size of packet header that lies outside the encryption envelope.
     pub const HEADER_SIZE: usize = 27;
 
@@ -192,9 +194,7 @@ pub mod packet_constants {
 
     /// Header (outer) flag indicating that this packet has additional fragments.
     pub const HEADER_FLAG_FRAGMENTED: u8 = 0x40;
-}
 
-pub mod security_constants {
     /// Packet is not encrypted but contains a Poly1305 MAC of the plaintext.
     /// Poly1305 is initialized with Salsa20/12 in the same manner as SALSA2012_POLY1305.
     pub const CIPHER_NOCRYPT_POLY1305: u8 = 0x00;
@@ -218,44 +218,207 @@ pub mod security_constants {
     /// KBKDF usage label for the second AES-GMAC-SIV key.
     pub const KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1: u8 = b'1';
 
-    /// KBKDF usage label for AES-GCM session keys.
-    pub const KBKDF_KEY_USAGE_LABEL_AES_GCM_SESSION_KEY: u8 = b'g';
+    /// Maximum number of packet hops allowed by the protocol.
+    pub const PROTOCOL_MAX_HOPS: u8 = 7;
 
-    /// KBKDF usage label for AES-GCM session keys.
-    pub const KBKDF_KEY_USAGE_LABEL_AES_CTR_SESSION_KEY: u8 = b'c';
+    /// Maximum number of hops to allow.
+    pub const FORWARD_MAX_HOPS: u8 = 3;
 
-    /// Try to re-key ephemeral keys after this time.
-    pub const EPHEMERAL_SECRET_REKEY_AFTER_TIME: i64 = 300000; // 5 minutes
+    /// Attempt to compress a packet's payload with LZ4
+    ///
+    /// If this returns true the destination buffer will contain a compressed packet. If false is
+    /// returned the contents of 'dest' are entirely undefined. This indicates that the data was not
+    /// compressable or some other error occurred.
+    pub fn compress_packet<const S: usize>(src: &[u8], dest: &mut Buffer<S>) -> bool {
+        if src.len() > (VERB_INDEX + 16) {
+            let compressed_data_size = {
+                let d = unsafe { dest.entire_buffer_mut() };
+                d[..VERB_INDEX].copy_from_slice(&src[..VERB_INDEX]);
+                d[VERB_INDEX] = src[VERB_INDEX] | VERB_FLAG_COMPRESSED;
+                lz4_flex::block::compress_into(&src[VERB_INDEX + 1..], &mut d[VERB_INDEX + 1..])
+            };
+            if compressed_data_size.is_ok() {
+                let compressed_data_size = compressed_data_size.unwrap();
+                if compressed_data_size > 0 && compressed_data_size < (src.len() - VERB_INDEX) {
+                    unsafe { dest.set_size_unchecked(VERB_INDEX + 1 + compressed_data_size) };
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
-    /// Maximum number of times to use an ephemeral secret before trying to replace it.
-    pub const EPHEMERAL_SECRET_REKEY_AFTER_USES: usize = 536870912; // 1/4 the NIST/FIPS security bound of 2^31
+    /// Set header flag indicating that a packet is fragmented.
+    ///
+    /// This will panic if the buffer provided doesn't contain a proper header.
+    #[inline(always)]
+    pub fn set_packet_fragment_flag<const S: usize>(pkt: &mut Buffer<S>) {
+        pkt.as_bytes_mut()[FLAGS_FIELD_INDEX] |= HEADER_FLAG_FRAGMENTED;
+    }
 
-    /// Ephemeral secret reject after time.
-    pub const EPHEMERAL_SECRET_REJECT_AFTER_TIME: i64 = EPHEMERAL_SECRET_REKEY_AFTER_TIME * 2;
+    /// ZeroTier unencrypted outer packet header
+    ///
+    /// This is the header for a complete packet. If the fragmented flag is set, it will
+    /// arrive with one or more fragments that must be assembled to complete it.
+    #[derive(Clone, Copy)]
+    #[repr(C, packed)]
+    pub struct PacketHeader {
+        pub id: [u8; 8],
+        pub dest: [u8; 5],
+        pub src: [u8; 5],
+        pub flags_cipher_hops: u8,
+        pub mac: [u8; 8],
+    }
 
-    /// Ephemeral secret reject after uses.
-    pub const EPHEMERAL_SECRET_REJECT_AFTER_USES: usize = 2147483648; // NIST/FIPS security bound
+    impl PacketHeader {
+        #[inline(always)]
+        pub fn packet_id(&self) -> PacketId {
+            u64::from_ne_bytes(self.id)
+        }
+
+        #[inline(always)]
+        pub fn cipher(&self) -> u8 {
+            self.flags_cipher_hops & FLAGS_FIELD_MASK_CIPHER
+        }
+
+        #[inline(always)]
+        pub fn hops(&self) -> u8 {
+            self.flags_cipher_hops & FLAGS_FIELD_MASK_HOPS
+        }
+
+        #[inline(always)]
+        pub fn increment_hops(&mut self) -> u8 {
+            let f = self.flags_cipher_hops;
+            let h = (f + 1) & FLAGS_FIELD_MASK_HOPS;
+            self.flags_cipher_hops = (f & FLAGS_FIELD_MASK_HIDE_HOPS) | h;
+            h
+        }
+
+        #[inline(always)]
+        pub fn is_fragmented(&self) -> bool {
+            (self.flags_cipher_hops & HEADER_FLAG_FRAGMENTED) != 0
+        }
+
+        #[inline(always)]
+        pub fn as_bytes(&self) -> &[u8; HEADER_SIZE] {
+            unsafe { &*(self as *const Self).cast::<[u8; HEADER_SIZE]>() }
+        }
+
+        #[inline(always)]
+        pub fn aes_gmac_siv_tag(&self) -> [u8; 16] {
+            let mut id = unsafe { MaybeUninit::<[u8; 16]>::uninit().assume_init() };
+            id[0..8].copy_from_slice(&self.id);
+            id[8..16].copy_from_slice(&self.mac);
+            id
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_packet_aad_bytes(destination: Address, source: Address, flags_cipher_hops: u8) -> [u8; 11] {
+        let mut id = unsafe { MaybeUninit::<[u8; 11]>::uninit().assume_init() };
+        id[0..5].copy_from_slice(&destination.to_bytes());
+        id[5..10].copy_from_slice(&source.to_bytes());
+        id[10] = flags_cipher_hops & FLAGS_FIELD_MASK_HIDE_HOPS;
+        id
+    }
+
+    /// ZeroTier fragment header
+    ///
+    /// Fragments are indicated by byte 0xff at the start of the source address, which
+    /// is normally illegal since addresses can't begin with that. Fragmented packets
+    /// will arrive with the first fragment carrying a normal header with the fragment
+    /// bit set and remaining fragments being these.
+    #[derive(Clone, Copy)]
+    #[repr(C, packed)]
+    pub struct FragmentHeader {
+        pub id: [u8; 8],               // (outer) packet ID
+        pub dest: [u8; 5],             // destination address
+        pub fragment_indicator: u8,    // always 0xff in fragments
+        pub total_and_fragment_no: u8, // TTTTNNNN (fragment number, total fragments)
+        pub reserved_hops: u8,         // rrrrrHHH (3 hops bits, rest reserved)
+    }
+
+    impl FragmentHeader {
+        #[inline(always)]
+        pub fn packet_id(&self) -> PacketId {
+            u64::from_ne_bytes(self.id)
+        }
+
+        #[inline(always)]
+        pub fn is_fragment(&self) -> bool {
+            self.fragment_indicator == FRAGMENT_INDICATOR
+        }
+
+        #[inline(always)]
+        pub fn total_fragments(&self) -> u8 {
+            self.total_and_fragment_no >> 4
+        }
+
+        #[inline(always)]
+        pub fn fragment_no(&self) -> u8 {
+            self.total_and_fragment_no & 0x0f
+        }
+
+        #[inline(always)]
+        pub fn hops(&self) -> u8 {
+            self.reserved_hops & FLAGS_FIELD_MASK_HOPS
+        }
+
+        #[inline(always)]
+        pub fn increment_hops(&mut self) -> u8 {
+            let f = self.reserved_hops;
+            let h = (f + 1) & FLAGS_FIELD_MASK_HOPS;
+            self.reserved_hops = (f & FLAGS_FIELD_MASK_HIDE_HOPS) | h;
+            h
+        }
+
+        #[inline(always)]
+        pub fn as_bytes(&self) -> &[u8; FRAGMENT_HEADER_SIZE] {
+            unsafe { &*(self as *const Self).cast::<[u8; FRAGMENT_HEADER_SIZE]>() }
+        }
+    }
+
+    /// Flat packed structs for fixed length header blocks in messages.
+    pub(crate) mod message_component_structs {
+        #[derive(Clone, Copy)]
+        #[repr(C, packed)]
+        pub struct OkHeader {
+            pub verb: u8,
+            pub in_re_verb: u8,
+            pub in_re_message_id: [u8; 8],
+        }
+
+        #[derive(Clone, Copy)]
+        #[repr(C, packed)]
+        pub struct ErrorHeader {
+            pub verb: u8,
+            pub in_re_verb: u8,
+            pub in_re_message_id: [u8; 8],
+            pub error_code: u8,
+        }
+
+        #[derive(Clone, Copy)]
+        #[repr(C, packed)]
+        pub struct HelloFixedHeaderFields {
+            pub verb: u8,
+            pub version_proto: u8,
+            pub version_major: u8,
+            pub version_minor: u8,
+            pub version_revision: [u8; 2], // u16
+            pub timestamp: [u8; 8],        // u64
+        }
+
+        #[derive(Clone, Copy)]
+        #[repr(C, packed)]
+        pub struct OkHelloFixedHeaderFields {
+            pub timestamp_echo: [u8; 8], // u64
+            pub version_proto: u8,
+            pub version_major: u8,
+            pub version_minor: u8,
+            pub version_revision: [u8; 2], // u16
+        }
+    }
 }
-
-pub mod session_metadata {
-    /// Random 128-bit ID generated at node startup, allows multiple instances to share an identity and be differentiated.
-    pub const INSTANCE_ID: &'static str = "i";
-
-    /// Endpoint from which HELLO was received, sent with OK(HELLO) if hops is zero.
-    pub const DIRECT_SOURCE: &'static str = "s";
-
-    /// Signed bundle of identity fingerprints through which this node can be reached.
-    pub const CARE_OF: &'static str = "c";
-
-    /// One or more root sets to which THIS node is a member. Included only if this is a root.
-    pub const ROOT_SET_UPDATES: &'static str = "r";
-}
-
-/// Maximum number of packet hops allowed by the protocol.
-pub const PROTOCOL_MAX_HOPS: u8 = 7;
-
-/// Maximum number of hops to allow.
-pub const FORWARD_MAX_HOPS: u8 = 3;
 
 /// Maximum difference between current message ID and OK/ERROR in-re message ID.
 pub const PACKET_RESPONSE_COUNTER_DELTA_MAX: u64 = 4096;
@@ -290,201 +453,6 @@ pub const PEER_EXPIRATION_TIME: i64 = (PEER_HELLO_INTERVAL_MAX * 2) + 10000;
 /// Proof of work difficulty (threshold) for identity generation.
 pub const IDENTITY_POW_THRESHOLD: u8 = 17;
 
-/// Attempt to compress a packet's payload with LZ4
-///
-/// If this returns true the destination buffer will contain a compressed packet. If false is
-/// returned the contents of 'dest' are entirely undefined. This indicates that the data was not
-/// compressable or some other error occurred.
-pub fn compress_packet<const S: usize>(src: &[u8], dest: &mut Buffer<S>) -> bool {
-    if src.len() > (packet_constants::VERB_INDEX + 16) {
-        let compressed_data_size = {
-            let d = unsafe { dest.entire_buffer_mut() };
-            d[..packet_constants::VERB_INDEX].copy_from_slice(&src[0..packet_constants::VERB_INDEX]);
-            d[packet_constants::VERB_INDEX] = src[packet_constants::VERB_INDEX] | packet_constants::VERB_FLAG_COMPRESSED;
-            lz4_flex::block::compress_into(&src[packet_constants::VERB_INDEX + 1..], &mut d[packet_constants::VERB_INDEX + 1..])
-        };
-        if compressed_data_size.is_ok() {
-            let compressed_data_size = compressed_data_size.unwrap();
-            if compressed_data_size > 0 && compressed_data_size < (src.len() - packet_constants::VERB_INDEX) {
-                unsafe { dest.set_size_unchecked(packet_constants::VERB_INDEX + 1 + compressed_data_size) };
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-/// Set header flag indicating that a packet is fragmented.
-///
-/// This will panic if the buffer provided doesn't contain a proper header.
-#[inline(always)]
-pub fn set_packet_fragment_flag<const S: usize>(pkt: &mut Buffer<S>) {
-    pkt.as_bytes_mut()[packet_constants::FLAGS_FIELD_INDEX] |= packet_constants::HEADER_FLAG_FRAGMENTED;
-}
-
-/// ZeroTier unencrypted outer packet header
-///
-/// This is the header for a complete packet. If the fragmented flag is set, it will
-/// arrive with one or more fragments that must be assembled to complete it.
-#[derive(Clone, Copy)]
-#[repr(C, packed)]
-pub struct PacketHeader {
-    pub id: [u8; 8],
-    pub dest: [u8; 5],
-    pub src: [u8; 5],
-    pub flags_cipher_hops: u8,
-    pub mac: [u8; 8],
-}
-
-impl PacketHeader {
-    #[inline(always)]
-    pub fn packet_id(&self) -> PacketId {
-        u64::from_ne_bytes(self.id)
-    }
-
-    #[inline(always)]
-    pub fn cipher(&self) -> u8 {
-        self.flags_cipher_hops & packet_constants::FLAGS_FIELD_MASK_CIPHER
-    }
-
-    #[inline(always)]
-    pub fn hops(&self) -> u8 {
-        self.flags_cipher_hops & packet_constants::FLAGS_FIELD_MASK_HOPS
-    }
-
-    #[inline(always)]
-    pub fn increment_hops(&mut self) -> u8 {
-        let f = self.flags_cipher_hops;
-        let h = (f + 1) & packet_constants::FLAGS_FIELD_MASK_HOPS;
-        self.flags_cipher_hops = (f & packet_constants::FLAGS_FIELD_MASK_HIDE_HOPS) | h;
-        h
-    }
-
-    #[inline(always)]
-    pub fn is_fragmented(&self) -> bool {
-        (self.flags_cipher_hops & packet_constants::HEADER_FLAG_FRAGMENTED) != 0
-    }
-
-    #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8; packet_constants::HEADER_SIZE] {
-        unsafe { &*(self as *const Self).cast::<[u8; packet_constants::HEADER_SIZE]>() }
-    }
-
-    #[inline(always)]
-    pub fn aes_gmac_siv_tag(&self) -> [u8; 16] {
-        let mut id = unsafe { MaybeUninit::<[u8; 16]>::uninit().assume_init() };
-        id[0..8].copy_from_slice(&self.id);
-        id[8..16].copy_from_slice(&self.mac);
-        id
-    }
-}
-
-#[inline(always)]
-pub fn get_packet_aad_bytes(destination: Address, source: Address, flags_cipher_hops: u8) -> [u8; 11] {
-    let mut id = unsafe { MaybeUninit::<[u8; 11]>::uninit().assume_init() };
-    id[0..5].copy_from_slice(&destination.to_bytes());
-    id[5..10].copy_from_slice(&source.to_bytes());
-    id[10] = flags_cipher_hops & packet_constants::FLAGS_FIELD_MASK_HIDE_HOPS;
-    id
-}
-
-/// ZeroTier fragment header
-///
-/// Fragments are indicated by byte 0xff at the start of the source address, which
-/// is normally illegal since addresses can't begin with that. Fragmented packets
-/// will arrive with the first fragment carrying a normal header with the fragment
-/// bit set and remaining fragments being these.
-#[derive(Clone, Copy)]
-#[repr(C, packed)]
-pub struct FragmentHeader {
-    pub id: [u8; 8],               // (outer) packet ID
-    pub dest: [u8; 5],             // destination address
-    pub fragment_indicator: u8,    // always 0xff in fragments
-    pub total_and_fragment_no: u8, // TTTTNNNN (fragment number, total fragments)
-    pub reserved_hops: u8,         // rrrrrHHH (3 hops bits, rest reserved)
-}
-
-impl FragmentHeader {
-    #[inline(always)]
-    pub fn packet_id(&self) -> PacketId {
-        u64::from_ne_bytes(self.id)
-    }
-
-    #[inline(always)]
-    pub fn is_fragment(&self) -> bool {
-        self.fragment_indicator == packet_constants::FRAGMENT_INDICATOR
-    }
-
-    #[inline(always)]
-    pub fn total_fragments(&self) -> u8 {
-        self.total_and_fragment_no >> 4
-    }
-
-    #[inline(always)]
-    pub fn fragment_no(&self) -> u8 {
-        self.total_and_fragment_no & 0x0f
-    }
-
-    #[inline(always)]
-    pub fn hops(&self) -> u8 {
-        self.reserved_hops & packet_constants::FLAGS_FIELD_MASK_HOPS
-    }
-
-    #[inline(always)]
-    pub fn increment_hops(&mut self) -> u8 {
-        let f = self.reserved_hops;
-        let h = (f + 1) & packet_constants::FLAGS_FIELD_MASK_HOPS;
-        self.reserved_hops = (f & packet_constants::FLAGS_FIELD_MASK_HIDE_HOPS) | h;
-        h
-    }
-
-    #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8; packet_constants::FRAGMENT_HEADER_SIZE] {
-        unsafe { &*(self as *const Self).cast::<[u8; packet_constants::FRAGMENT_HEADER_SIZE]>() }
-    }
-}
-
-/// Flat packed structs for fixed length header blocks in messages.
-pub(crate) mod message_component_structs {
-    #[derive(Clone, Copy)]
-    #[repr(C, packed)]
-    pub struct OkHeader {
-        pub verb: u8,
-        pub in_re_verb: u8,
-        pub in_re_message_id: [u8; 8],
-    }
-
-    #[derive(Clone, Copy)]
-    #[repr(C, packed)]
-    pub struct ErrorHeader {
-        pub verb: u8,
-        pub in_re_verb: u8,
-        pub in_re_message_id: [u8; 8],
-        pub error_code: u8,
-    }
-
-    #[derive(Clone, Copy)]
-    #[repr(C, packed)]
-    pub struct HelloFixedHeaderFields {
-        pub verb: u8,
-        pub version_proto: u8,
-        pub version_major: u8,
-        pub version_minor: u8,
-        pub version_revision: [u8; 2], // u16
-        pub timestamp: [u8; 8],        // u64
-    }
-
-    #[derive(Clone, Copy)]
-    #[repr(C, packed)]
-    pub struct OkHelloFixedHeaderFields {
-        pub timestamp_echo: [u8; 8], // u64
-        pub version_proto: u8,
-        pub version_major: u8,
-        pub version_minor: u8,
-        pub version_revision: [u8; 2], // u16
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::mem::size_of;
@@ -493,15 +461,15 @@ mod tests {
 
     #[test]
     fn representation() {
-        assert_eq!(size_of::<message_component_structs::OkHeader>(), 10);
-        assert_eq!(size_of::<message_component_structs::ErrorHeader>(), 11);
-        assert_eq!(size_of::<PacketHeader>(), packet_constants::HEADER_SIZE);
-        assert_eq!(size_of::<FragmentHeader>(), packet_constants::FRAGMENT_HEADER_SIZE);
+        assert_eq!(size_of::<v1::message_component_structs::OkHeader>(), 10);
+        assert_eq!(size_of::<v1::message_component_structs::ErrorHeader>(), 11);
+        assert_eq!(size_of::<v1::PacketHeader>(), v1::HEADER_SIZE);
+        assert_eq!(size_of::<v1::FragmentHeader>(), v1::FRAGMENT_HEADER_SIZE);
 
         let mut foo = [0_u8; 32];
         unsafe {
-            (*foo.as_mut_ptr().cast::<PacketHeader>()).src[0] = 0xff;
-            assert_eq!((*foo.as_ptr().cast::<FragmentHeader>()).fragment_indicator, 0xff);
+            (*foo.as_mut_ptr().cast::<v1::PacketHeader>()).src[0] = 0xff;
+            assert_eq!((*foo.as_ptr().cast::<v1::FragmentHeader>()).fragment_indicator, 0xff);
         }
     }
 }

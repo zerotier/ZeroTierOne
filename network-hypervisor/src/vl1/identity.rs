@@ -8,11 +8,11 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use zerotier_core_crypto::hash::*;
-use zerotier_core_crypto::p384::*;
-use zerotier_core_crypto::salsa::Salsa;
-use zerotier_core_crypto::secret::Secret;
-use zerotier_core_crypto::x25519::*;
+use zerotier_crypto::hash::*;
+use zerotier_crypto::p384::*;
+use zerotier_crypto::salsa::Salsa;
+use zerotier_crypto::secret::Secret;
+use zerotier_crypto::x25519::*;
 
 use zerotier_utils::hex;
 
@@ -218,9 +218,6 @@ impl Identity {
             let _ = self_sign_buf.write_all(p384_ecdh.public_key_bytes());
             let _ = self_sign_buf.write_all(p384_ecdsa.public_key_bytes());
 
-            // Fingerprint includes only the above fields, so calc before appending the ECDSA signature.
-            self.fingerprint = SHA384::hash(self_sign_buf.as_slice());
-
             // Sign all keys including the x25519 ones with the new P-384 keys.
             let ecdsa_self_signature = p384_ecdsa.sign(self_sign_buf.as_slice());
 
@@ -237,6 +234,8 @@ impl Identity {
                 ed25519_self_signature,
             });
             let _ = self.secret.as_mut().unwrap().p384.insert(IdentityP384Secret { ecdh: p384_ecdh, ecdsa: p384_ecdsa });
+
+            self.fingerprint = SHA384::hash(self.to_public_bytes().as_bytes());
 
             return Ok(true);
         }
@@ -451,8 +450,8 @@ impl Identity {
     /// Convert a byte respresentation into an identity.
     ///
     /// WARNING: this performs basic sanity checking but does NOT perform a full validation of address derivation or self-signatures.
-    pub fn from_bytes(b: &IdentityBytes) -> Option<Self> {
-        match b {
+    pub fn from_bytes(bytes: &IdentityBytes) -> Option<Self> {
+        let mut id = match bytes {
             IdentityBytes::X25519Public(b) => {
                 let b: &packed::V0 = bytes_as_flat_object(b);
                 if b.key_type == 0 && b.secret_length == 0 && b.reserved == 0x03 && u16::from_be_bytes(b.ext_len) == 0 {
@@ -462,13 +461,7 @@ impl Identity {
                         ed25519: b.ed25519,
                         p384: None,
                         secret: None,
-                        fingerprint: {
-                            let mut sha = SHA384::new();
-                            sha.update(&b.address);
-                            sha.update(&b.x25519);
-                            sha.update(&b.ed25519);
-                            sha.finish()
-                        },
+                        fingerprint: [0; 48],
                     })
                 } else {
                     None
@@ -487,13 +480,7 @@ impl Identity {
                             ed25519: Ed25519KeyPair::from_bytes(&b.ed25519, &b.ed25519_secret)?,
                             p384: None,
                         }),
-                        fingerprint: {
-                            let mut sha = SHA384::new();
-                            sha.update(&b.address);
-                            sha.update(&b.x25519);
-                            sha.update(&b.ed25519);
-                            sha.finish()
-                        },
+                        fingerprint: [0; 48],
                     })
                 } else {
                     None
@@ -518,16 +505,7 @@ impl Identity {
                             ed25519_self_signature: b.ed25519_self_signature,
                         }),
                         secret: None,
-                        fingerprint: {
-                            let mut sha = SHA384::new();
-                            sha.update(&b.v0.address);
-                            sha.update(&b.v0.x25519);
-                            sha.update(&b.v0.ed25519);
-                            sha.update(&[Self::ALGORITHM_EC_NIST_P384]);
-                            sha.update(&b.ecdh);
-                            sha.update(&b.ecdsa);
-                            sha.finish()
-                        },
+                        fingerprint: [0; 48],
                     })
                 } else {
                     None
@@ -559,22 +537,16 @@ impl Identity {
                                 ecdsa: P384KeyPair::from_bytes(&b.ecdsa, &b.ecdsa_secret)?,
                             }),
                         }),
-                        fingerprint: {
-                            let mut sha = SHA384::new();
-                            sha.update(&b.v0s.address);
-                            sha.update(&b.v0s.x25519);
-                            sha.update(&b.v0s.ed25519);
-                            sha.update(&[Self::ALGORITHM_EC_NIST_P384]);
-                            sha.update(&b.ecdh);
-                            sha.update(&b.ecdsa);
-                            sha.finish()
-                        },
+                        fingerprint: [0; 48],
                     })
                 } else {
                     None
                 }
             }
-        }
+        };
+        let fingerprint = SHA384::hash(id.as_ref().unwrap().to_public_bytes().as_bytes());
+        id.as_mut().unwrap().fingerprint = fingerprint;
+        id
     }
 
     /// Read an identity from a reader, inferring its total length from the stream.
@@ -723,7 +695,7 @@ impl FromStr for Identity {
             sha.update(&keys[2].as_slice()[0..(P384_PUBLIC_KEY_SIZE * 2)]);
         }
 
-        Ok(Identity {
+        let mut id = Ok(Identity {
             address,
             x25519: keys[0].as_slice()[0..32].try_into().unwrap(),
             ed25519: keys[0].as_slice()[32..64].try_into().unwrap(),
@@ -787,8 +759,13 @@ impl FromStr for Identity {
                     },
                 })
             },
-            fingerprint: sha.finish(),
-        })
+            fingerprint: [0; 48],
+        });
+
+        let fingerprint = SHA384::hash(id.as_ref().unwrap().to_public_bytes().as_bytes());
+        id.as_mut().unwrap().fingerprint = fingerprint;
+
+        id
     }
 }
 
@@ -891,6 +868,13 @@ pub enum IdentityBytes {
     X25519Secret([u8; Identity::BYTE_LENGTH_X25519_SECRET]),
     X25519P384Public([u8; Identity::BYTE_LENGTH_X25519P384_PUBLIC]),
     X25519P384Secret([u8; Identity::BYTE_LENGTH_X25519P384_SECRET]),
+}
+
+impl IdentityBytes {
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8] {
+        self.into()
+    }
 }
 
 impl<'a> From<&'a IdentityBytes> for &'a [u8] {

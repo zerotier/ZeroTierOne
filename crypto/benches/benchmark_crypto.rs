@@ -1,9 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::time::Duration;
 
-use zerotier_core_crypto::p384::*;
-use zerotier_core_crypto::random;
-use zerotier_core_crypto::x25519::*;
+use zerotier_crypto::p384::*;
+use zerotier_crypto::random;
+use zerotier_crypto::x25519::*;
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     let p384_a = P384KeyPair::generate();
@@ -21,8 +21,12 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
     group.bench_function("ecdhp384", |b| b.iter(|| p384_a.agree(p384_b.public_key()).expect("ecdhp384 failed")));
     group.bench_function("ecdhx25519", |b| b.iter(|| x25519_a.agree(&x25519_b_pub)));
-    group.bench_function("kyber_encapsulate", |b| b.iter(|| pqc_kyber::encapsulate(&kyber_a.public, &mut random::SecureRandom::default()).expect("kyber encapsulate failed")));
-    group.bench_function("kyber_decapsulate", |b| b.iter(|| pqc_kyber::decapsulate(&kyber_encap.0, &kyber_a.secret).expect("kyber decapsulate failed")));
+    group.bench_function("kyber_encapsulate", |b| {
+        b.iter(|| pqc_kyber::encapsulate(&kyber_a.public, &mut random::SecureRandom::default()).expect("kyber encapsulate failed"))
+    });
+    group.bench_function("kyber_decapsulate", |b| {
+        b.iter(|| pqc_kyber::decapsulate(&kyber_encap.0, &kyber_a.secret).expect("kyber decapsulate failed"))
+    });
 
     group.finish();
 }

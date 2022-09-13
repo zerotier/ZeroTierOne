@@ -6,3 +6,4 @@ name = "zerotier-utils"
 version = "0.1.0"
 
 [dependencies]
+parking_lot = { version = "^0", features = [], default-features = false }

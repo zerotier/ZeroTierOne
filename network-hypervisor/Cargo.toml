@@ -10,7 +10,7 @@ default = ["debug_events"]
 debug_events = []
 
 [dependencies]
-zerotier-core-crypto = { path = "../core-crypto" }
+zerotier-crypto = { path = "../crypto" }
 zerotier-utils = { path = "../utils" }
 async-trait = "^0"
 base64 = "^0"

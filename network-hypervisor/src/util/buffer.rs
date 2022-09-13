@@ -3,8 +3,7 @@
 use std::io::{Read, Write};
 use std::mem::{size_of, MaybeUninit};
 
-use crate::util::pool::PoolFactory;
-
+use zerotier_utils::pool::PoolFactory;
 use zerotier_utils::varint;
 
 /// An I/O buffer with extensions for efficiently reading and writing various objects.

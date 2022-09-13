@@ -14,7 +14,6 @@ use crate::error::InvalidParameterError;
 use crate::util::debug_event;
 use crate::util::gate::IntervalGate;
 use crate::util::marshalable::Marshalable;
-use crate::vl1::careof::CareOf;
 use crate::vl1::path::{Path, PathServiceResult};
 use crate::vl1::peer::Peer;
 use crate::vl1::protocol::*;
@@ -22,6 +21,7 @@ use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
 use crate::vl1::{Address, Endpoint, Identity, RootSet};
 use crate::Event;
 
+use zerotier_crypto::random;
 use zerotier_utils::hex;
 
 /// Trait implemented by external code to handle events and provide an interface to the system or application.
@@ -54,7 +54,7 @@ pub trait SystemInterface: Sync + Send + 'static {
     /// Load this node's identity from the data store.
     async fn load_node_identity(&self) -> Option<Identity>;
 
-    /// Save this node's identity.
+    /// Save this node's identity to the data store.
     async fn save_node_identity(&self, id: &Identity);
 
     /// Called to send a packet over the physical network (virtual -> physical).
@@ -133,7 +133,6 @@ struct BackgroundTaskIntervals {
 struct RootInfo<SI: SystemInterface> {
     sets: HashMap<String, RootSet>,
     roots: HashMap<Arc<Peer<SI>>, Vec<Endpoint>>,
-    care_of: Vec<u8>,
     my_root_sets: Option<Vec<u8>>,
     sets_modified: bool,
     online: bool,
@@ -249,7 +248,7 @@ impl<SI: SystemInterface> Node<SI> {
         debug_event!(si, "[vl1] loaded identity {}", id.to_string());
 
         Ok(Self {
-            instance_id: zerotier_core_crypto::random::get_bytes_secure(),
+            instance_id: random::get_bytes_secure(),
             identity: id,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
             paths: parking_lot::RwLock::new(HashMap::new()),
@@ -257,7 +256,6 @@ impl<SI: SystemInterface> Node<SI> {
             roots: RwLock::new(RootInfo {
                 sets: HashMap::new(),
                 roots: HashMap::new(),
-                care_of: Vec::new(),
                 my_root_sets: None,
                 sets_modified: false,
                 online: false,
@@ -286,7 +284,7 @@ impl<SI: SystemInterface> Node<SI> {
 
         // The best root is the one that has replied to a HELLO most recently. Since we send HELLOs in unison
         // this is a proxy for latency and also causes roots that fail to reply to drop out quickly.
-        let mut best: Option<&Arc<Peer<SI>>> = None;
+        let mut best = None;
         let mut latest_hello_reply = 0;
         for (r, _) in roots.roots.iter() {
             let t = r.last_hello_reply_time_ticks.load(Ordering::Relaxed);
@@ -470,20 +468,9 @@ impl<SI: SystemInterface> Node<SI> {
                 new_root_identities.sort_unstable();
 
                 if !old_root_identities.eq(&new_root_identities) {
-                    let mut care_of = CareOf::new(si.time_clock());
-                    for id in new_root_identities.iter() {
-                        care_of.add_care_of(id);
-                    }
-                    assert!(care_of.sign(&self.identity));
-                    let care_of = care_of.to_bytes();
-
-                    {
-                        let mut roots = self.roots.write();
-                        roots.roots = new_roots;
-                        roots.care_of = care_of;
-                        roots.my_root_sets = my_root_sets;
-                    }
-
+                    let mut roots = self.roots.write();
+                    roots.roots = new_roots;
+                    roots.my_root_sets = my_root_sets;
                     si.event(Event::UpdatedRoots(old_root_identities, new_root_identities));
                 }
             }
@@ -584,7 +571,7 @@ impl<SI: SystemInterface> Node<SI> {
             source_local_interface.to_string()
         );
 
-        if let Ok(fragment_header) = data.struct_mut_at::<FragmentHeader>(0) {
+        if let Ok(fragment_header) = data.struct_mut_at::<v1::FragmentHeader>(0) {
             if let Some(dest) = Address::from_bytes_fixed(&fragment_header.dest) {
                 let time_ticks = si.time_ticks();
                 if dest == self.identity.address {
@@ -607,10 +594,10 @@ impl<SI: SystemInterface> Node<SI> {
                                 #[cfg(debug_assertions)]
                                 debug_event!(si, "[vl1] #{:0>16x} packet fully assembled!", fragment_header_id);
 
-                                if let Ok(packet_header) = frag0.struct_at::<PacketHeader>(0) {
+                                if let Ok(packet_header) = frag0.struct_at::<v1::PacketHeader>(0) {
                                     if let Some(source) = Address::from_bytes(&packet_header.src) {
                                         if let Some(peer) = self.peer(source) {
-                                            peer.receive(self, si, ph, time_ticks, &path, &packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)])
+                                            peer.receive(self, si, ph, time_ticks, &path, packet_header, frag0, &assembled_packet.frags[1..(assembled_packet.have as usize)])
                                                 .await;
                                         } else {
                                             self.whois.query(self, si, source, Some(QueuedPacket::Fragmented(assembled_packet)));
@@ -621,12 +608,12 @@ impl<SI: SystemInterface> Node<SI> {
                         }
                     } else {
                         #[cfg(debug_assertions)]
-                        if let Ok(packet_header) = data.struct_at::<PacketHeader>(0) {
+                        if let Ok(packet_header) = data.struct_at::<v1::PacketHeader>(0) {
                             debug_event!(si, "[vl1] #{:0>16x} is unfragmented", u64::from_be_bytes(packet_header.id));
 
                             if let Some(source) = Address::from_bytes(&packet_header.src) {
                                 if let Some(peer) = self.peer(source) {
-                                    peer.receive(self, si, ph, time_ticks, &path, &packet_header, data.as_ref(), &[]).await;
+                                    peer.receive(self, si, ph, time_ticks, &path, packet_header, data.as_ref(), &[]).await;
                                 } else {
                                     self.whois.query(self, si, source, Some(QueuedPacket::Unfragmented(data)));
                                 }
@@ -643,19 +630,19 @@ impl<SI: SystemInterface> Node<SI> {
                             debug_packet_id = u64::from_be_bytes(fragment_header.id);
                             debug_event!(si, "[vl1] #{:0>16x} forwarding packet fragment to {}", debug_packet_id, dest.to_string());
                         }
-                        if fragment_header.increment_hops() > FORWARD_MAX_HOPS {
+                        if fragment_header.increment_hops() > v1::FORWARD_MAX_HOPS {
                             #[cfg(debug_assertions)]
                             debug_event!(si, "[vl1] #{:0>16x} discarded: max hops exceeded!", debug_packet_id);
                             return;
                         }
                     } else {
-                        if let Ok(packet_header) = data.struct_mut_at::<PacketHeader>(0) {
+                        if let Ok(packet_header) = data.struct_mut_at::<v1::PacketHeader>(0) {
                             #[cfg(debug_assertions)]
                             {
                                 debug_packet_id = u64::from_be_bytes(packet_header.id);
                                 debug_event!(si, "[vl1] #{:0>16x} forwarding packet to {}", debug_packet_id, dest.to_string());
                             }
-                            if packet_header.increment_hops() > FORWARD_MAX_HOPS {
+                            if packet_header.increment_hops() > v1::FORWARD_MAX_HOPS {
                                 #[cfg(debug_assertions)]
                                 debug_event!(si, "[vl1] #{:0>16x} discarded: max hops exceeded!", u64::from_be_bytes(packet_header.id));
                                 return;
@@ -681,7 +668,7 @@ impl<SI: SystemInterface> Node<SI> {
     }
 
     pub fn is_peer_root(&self, peer: &Peer<SI>) -> bool {
-        self.roots.read().roots.keys().any(|p| (**p).eq(peer))
+        self.roots.read().roots.keys().any(|p| p.identity.eq(&peer.identity))
     }
 
     pub(crate) fn remote_update_root_set(&self, received_from: &Identity, rs: RootSet) {
@@ -725,10 +712,6 @@ impl<SI: SystemInterface> Node<SI> {
     #[allow(unused)]
     pub(crate) fn this_node_is_root(&self) -> bool {
         self.roots.read().my_root_sets.is_some()
-    }
-
-    pub(crate) fn care_of_bytes(&self) -> Vec<u8> {
-        self.roots.read().care_of.clone()
     }
 
     pub(crate) fn canonical_path(&self, ep: &Endpoint, local_socket: &SI::LocalSocket, local_interface: &SI::LocalInterface, time_ticks: i64) -> Arc<Path<SI>> {

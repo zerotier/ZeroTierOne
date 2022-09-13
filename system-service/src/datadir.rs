@@ -9,7 +9,7 @@ use crate::utils::{read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 
 use parking_lot::{Mutex, RwLock};
 
-use zerotier_core_crypto::random::next_u32_secure;
+use zerotier_crypto::random::next_u32_secure;
 use zerotier_network_hypervisor::vl1::Identity;
 
 const AUTH_TOKEN_DEFAULT_LENGTH: usize = 48;

@@ -6,11 +6,12 @@ use std::sync::atomic::{AtomicI64, Ordering};
 
 use parking_lot::Mutex;
 
-use crate::util::canonicalobject::CanonicalObject;
 use crate::vl1::endpoint::Endpoint;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::*;
 use crate::vl1::protocol::*;
+
+use zerotier_crypto::random;
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
 
@@ -25,7 +26,6 @@ pub(crate) enum PathServiceResult {
 /// one and only one unique path object. That enables statistics to be tracked
 /// for them and uniform application of things like keepalives.
 pub struct Path<SI: SystemInterface> {
-    pub(crate) canonical: CanonicalObject,
     pub endpoint: Endpoint,
     pub local_socket: SI::LocalSocket,
     pub local_interface: SI::LocalInterface,
@@ -38,14 +38,13 @@ pub struct Path<SI: SystemInterface> {
 impl<SI: SystemInterface> Path<SI> {
     pub fn new(endpoint: Endpoint, local_socket: SI::LocalSocket, local_interface: SI::LocalInterface, time_ticks: i64) -> Self {
         Self {
-            canonical: CanonicalObject::new(),
             endpoint,
             local_socket,
             local_interface,
             last_send_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
             last_receive_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
             create_time_ticks: time_ticks,
-            fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, PacketIdHasher(zerotier_core_crypto::random::xorshift64_random()))),
+            fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, PacketIdHasher(random::xorshift64_random()))),
         }
     }
 
@@ -57,7 +56,7 @@ impl<SI: SystemInterface> Path<SI> {
         // Discard some old waiting packets if the total incoming fragments for a path exceeds a
         // sanity limit. This is to prevent memory exhaustion DOS attacks.
         let fps = fp.len();
-        if fps > packet_constants::FRAGMENT_MAX_INBOUND_PACKETS_PER_PATH {
+        if fps > v1::FRAGMENT_MAX_INBOUND_PACKETS_PER_PATH {
             let mut entries: Vec<(i64, u64)> = Vec::new();
             entries.reserve(fps);
             for f in fp.iter() {
@@ -69,7 +68,11 @@ impl<SI: SystemInterface> Path<SI> {
             }
         }
 
-        if fp.entry(packet_id).or_insert_with(|| FragmentedPacket::new(time_ticks)).add_fragment(packet, fragment_no, fragment_expecting_count) {
+        if fp
+            .entry(packet_id)
+            .or_insert_with(|| FragmentedPacket::new(time_ticks))
+            .add_fragment(packet, fragment_no, fragment_expecting_count)
+        {
             fp.remove(&packet_id)
         } else {
             None
@@ -87,7 +90,7 @@ impl<SI: SystemInterface> Path<SI> {
     }
 
     pub(crate) fn service(&self, time_ticks: i64) -> PathServiceResult {
-        self.fragmented_packets.lock().retain(|_, frag| (time_ticks - frag.ts_ticks) < packet_constants::FRAGMENT_EXPIRATION);
+        self.fragmented_packets.lock().retain(|_, frag| (time_ticks - frag.ts_ticks) < v1::FRAGMENT_EXPIRATION);
         if (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed)) < PATH_EXPIRATION_TIME {
             if (time_ticks - self.last_send_time_ticks.load(Ordering::Relaxed)) >= PATH_KEEPALIVE_INTERVAL {
                 self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
@@ -102,15 +105,6 @@ impl<SI: SystemInterface> Path<SI> {
         }
     }
 }
-
-impl<SI: SystemInterface> PartialEq for Path<SI> {
-    #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        self.canonical.eq(&other.canonical)
-    }
-}
-
-impl<SI: SystemInterface> Eq for Path<SI> {}
 
 #[repr(transparent)]
 struct PacketIdHasher(u64);

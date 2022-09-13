@@ -249,7 +249,7 @@ impl RootSet {
 }
 
 impl Marshalable for RootSet {
-    const MAX_MARSHAL_SIZE: usize = crate::vl1::protocol::packet_constants::SIZE_MAX;
+    const MAX_MARSHAL_SIZE: usize = crate::vl1::protocol::v1::SIZE_MAX;
 
     #[inline(always)]
     fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {

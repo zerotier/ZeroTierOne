@@ -2,7 +2,7 @@
 authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
 edition = "2021"
 license = "MPL-2.0"
-name = "zerotier-core-crypto"
+name = "zerotier-crypto"
 version = "0.1.0"
 
 [dependencies]

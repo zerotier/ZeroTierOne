@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-  "core-crypto",
+  "crypto",
   "network-hypervisor",
   "controller",
   "system-service",

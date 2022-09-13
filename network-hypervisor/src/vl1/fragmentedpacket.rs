@@ -9,7 +9,7 @@ use crate::vl1::protocol::*;
 /// compiler to optimize out any additional state in Option.
 pub(crate) struct FragmentedPacket {
     pub ts_ticks: i64,
-    pub frags: [Option<PooledPacketBuffer>; packet_constants::FRAGMENT_COUNT_MAX],
+    pub frags: [Option<PooledPacketBuffer>; v1::FRAGMENT_COUNT_MAX],
     pub have: u8,
     pub expecting: u8,
 }
@@ -17,7 +17,7 @@ pub(crate) struct FragmentedPacket {
 impl FragmentedPacket {
     pub fn new(ts: i64) -> Self {
         // 'have' and 'expecting' must be expanded if this is >8
-        debug_assert!(packet_constants::FRAGMENT_COUNT_MAX <= 8);
+        debug_assert!(v1::FRAGMENT_COUNT_MAX <= 8);
 
         Self {
             ts_ticks: ts,
