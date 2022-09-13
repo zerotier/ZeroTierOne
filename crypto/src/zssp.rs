@@ -830,39 +830,11 @@ impl<H: Host> ReceiveContext<H> {
                     let (offer_id, alice_session_id, alice_s_public, alice_metadata, alice_e1_public, alice_ratchet_key_fingerprint) =
                         parse_key_offer_after_header(&incoming_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..], packet_type)?;
 
-                    // Important! If there's already a session, make sure the caller is the same endpoint as that session and
-                    // that the ratchet key fingerprint matches a key that we have.
+                    // We either have a session, in which case they should have supplied a ratchet key fingerprint, or
+                    // we don't and they should not have supplied one.
                     if session.is_some() != alice_ratchet_key_fingerprint.is_some() {
-                        // We either have a session, in which case they should have supplied a ratchet key fingerprint, or
-                        // we don't and they should not have supplied one.
                         return Err(Error::FailedAuthentication);
                     }
-                    let (ratchet_key, ratchet_count) = if let Some(session) = session.as_ref() {
-                        if !session.remote_s_public_hash.eq(&SHA384::hash(&alice_s_public)) {
-                            return Err(Error::FailedAuthentication);
-                        }
-                        let alice_ratchet_key_fingerprint = alice_ratchet_key_fingerprint.as_ref().unwrap();
-                        let mut ratchet_key = None;
-                        let mut ratchet_count = 0;
-                        let state = session.state.read();
-                        for k in state.keys.iter() {
-                            if let Some(k) = k.as_ref() {
-                                if key_fingerprint(k.ratchet_key.as_bytes())[..16].eq(alice_ratchet_key_fingerprint) {
-                                    ratchet_key = Some(k.ratchet_key.clone());
-                                    ratchet_count = k.ratchet_count;
-                                    break;
-                                }
-                            }
-                        }
-                        if ratchet_key.is_none() {
-                            // If they supplied a fingerprint that matches none of our keys, this is probably an old
-                            // offer packet and should be ignored.
-                            return Ok(ReceiveResult::Ignored);
-                        }
-                        (ratchet_key, ratchet_count)
-                    } else {
-                        (None, 0)
-                    };
 
                     // Extract alice's static NIST P-384 public key from her public blob.
                     let alice_s_public_p384 = H::extract_p384_static(alice_s_public).ok_or(Error::InvalidPacket)?;
@@ -898,39 +870,69 @@ impl<H: Host> ReceiveContext<H> {
                     // Key agreement: bob (local) static NIST P-384, alice (remote) ephemeral P-384.
                     let se0 = bob_e0_keypair.agree(&alice_s_public_p384).ok_or(Error::FailedAuthentication)?;
 
-                    // Gate (via host) and then create new session object if this is a new session.
-                    let new_session = if session.is_some() {
-                        None
+                    // Perform checks and match ratchet key if there's an existing session, or gate (via host) and
+                    // then create new sessions.
+                    let (new_session, ratchet_key, ratchet_count) = if let Some(session) = session.as_ref() {
+                        // Existing session identity must match the one in this offer.
+                        if !session.remote_s_public_hash.eq(&SHA384::hash(&alice_s_public)) {
+                            return Err(Error::FailedAuthentication);
+                        }
+
+                        // Match ratchet key fingerprint and fail if no match, which likely indicates an old offer packet.
+                        let alice_ratchet_key_fingerprint = alice_ratchet_key_fingerprint.as_ref().unwrap();
+                        let mut ratchet_key = None;
+                        let mut ratchet_count = 0;
+                        let state = session.state.read();
+                        for k in state.keys.iter() {
+                            if let Some(k) = k.as_ref() {
+                                if key_fingerprint(k.ratchet_key.as_bytes())[..16].eq(alice_ratchet_key_fingerprint) {
+                                    ratchet_key = Some(k.ratchet_key.clone());
+                                    ratchet_count = k.ratchet_count;
+                                    break;
+                                }
+                            }
+                        }
+                        if ratchet_key.is_none() {
+                            return Ok(ReceiveResult::Ignored); // old packet?
+                        }
+
+                        (None, ratchet_key, ratchet_count)
                     } else {
                         if let Some((new_session_id, psk, associated_object)) =
                             host.accept_new_session(self, alice_s_public, alice_metadata)
                         {
                             let header_check_cipher = Aes::new(kbkdf512(ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<16>());
-                            Some(Session::<H> {
-                                id: new_session_id,
-                                associated_object,
-                                send_counter: Counter::new(),
-                                psk,
-                                ss,
-                                header_check_cipher,
-                                state: RwLock::new(SessionMutableState {
-                                    remote_session_id: Some(alice_session_id),
-                                    keys: [None, None, None],
-                                    key_ptr: 0,
-                                    offer: None,
+                            (
+                                Some(Session::<H> {
+                                    id: new_session_id,
+                                    associated_object,
+                                    send_counter: Counter::new(),
+                                    psk,
+                                    ss,
+                                    header_check_cipher,
+                                    state: RwLock::new(SessionMutableState {
+                                        remote_session_id: Some(alice_session_id),
+                                        keys: [None, None, None],
+                                        key_ptr: 0,
+                                        offer: None,
+                                    }),
+                                    remote_s_public_hash: SHA384::hash(&alice_s_public),
+                                    remote_s_public_p384: alice_s_public_p384.as_bytes().clone(),
+                                    defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
                                 }),
-                                remote_s_public_hash: SHA384::hash(&alice_s_public),
-                                remote_s_public_p384: alice_s_public_p384.as_bytes().clone(),
-                                defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
-                            })
+                                None,
+                                0,
+                            )
                         } else {
                             return Err(Error::NewSessionRejected);
                         }
                     };
+
+                    // Set 'session' to a reference to either the existing or the new session.
                     let existing_session = session;
                     let session = existing_session.as_ref().map_or_else(|| new_session.as_ref().unwrap(), |s| &*s);
 
-                    // Mix in the psk, the key to this point, our ephemeral public, e0e0, and se0, completing Noise_IK on our side.
+                    // Mix in the psk, the key to this point, our ephemeral public, e0e0, and se0, completing Noise_IK.
                     //
                     // FIPS note: the order of HMAC parameters are flipped here from the usual Noise HMAC(key, X). That's because
                     // NIST/FIPS allows HKDF with HMAC(salt, key) and salt is allowed to be anything. This way if the PSK is not
