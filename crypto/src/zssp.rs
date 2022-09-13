@@ -848,7 +848,8 @@ impl<H: Host> ReceiveContext<H> {
                     // Mix result of 'ss' agreement into master key.
                     key = Secret(hmac_sha512(key.as_bytes(), ss.as_bytes()));
 
-                    // Authenticate entire packet with HMAC-SHA384, verifying alice's identity via 'ss' secret.
+                    // Authenticate entire packet with HMAC-SHA384, verifying alice's identity via 'ss' secret that was
+                    // just mixed into the key.
                     if !hmac_sha384_2(
                         kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
                         pseudoheader,
@@ -860,15 +861,6 @@ impl<H: Host> ReceiveContext<H> {
                     }
 
                     // Alice's offer has been verified and her current key state reconstructed.
-
-                    // Generate our ephemeral NIST P-384 key pair.
-                    let bob_e0_keypair = P384KeyPair::generate();
-
-                    // Key agreement: both sides' ephemeral P-384 public keys.
-                    let e0e0 = bob_e0_keypair.agree(&alice_e0_public).ok_or(Error::FailedAuthentication)?;
-
-                    // Key agreement: bob (local) static NIST P-384, alice (remote) ephemeral P-384.
-                    let se0 = bob_e0_keypair.agree(&alice_s_public_p384).ok_or(Error::FailedAuthentication)?;
 
                     // Perform checks and match ratchet key if there's an existing session, or gate (via host) and
                     // then create new sessions.
@@ -931,6 +923,15 @@ impl<H: Host> ReceiveContext<H> {
                     // Set 'session' to a reference to either the existing or the new session.
                     let existing_session = session;
                     let session = existing_session.as_ref().map_or_else(|| new_session.as_ref().unwrap(), |s| &*s);
+
+                    // Generate our ephemeral NIST P-384 key pair.
+                    let bob_e0_keypair = P384KeyPair::generate();
+
+                    // Key agreement: both sides' ephemeral P-384 public keys.
+                    let e0e0 = bob_e0_keypair.agree(&alice_e0_public).ok_or(Error::FailedAuthentication)?;
+
+                    // Key agreement: bob (local) static NIST P-384, alice (remote) ephemeral P-384.
+                    let se0 = bob_e0_keypair.agree(&alice_s_public_p384).ok_or(Error::FailedAuthentication)?;
 
                     // Mix in the psk, the key to this point, our ephemeral public, e0e0, and se0, completing Noise_IK.
                     //
