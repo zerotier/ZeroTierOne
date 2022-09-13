@@ -82,7 +82,8 @@ impl ToSocketAddrs for InetAddress {
 
     #[inline(always)]
     fn to_socket_addrs(&self) -> std::io::Result<Self::Iter> {
-        self.try_into().map_or_else(|_| Err(std::io::Error::new(std::io::ErrorKind::Other, "not an IP address")), |sa| Ok(std::iter::once(sa)))
+        self.try_into()
+            .map_or_else(|_| Err(std::io::Error::new(std::io::ErrorKind::Other, "not an IP address")), |sa| Ok(std::iter::once(sa)))
     }
 }
 
@@ -166,8 +167,16 @@ impl TryInto<SocketAddr> for &InetAddress {
     fn try_into(self) -> Result<SocketAddr, Self::Error> {
         unsafe {
             match self.sa.sa_family {
-                AF_INET => Ok(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()), u16::from_be(self.sin.sin_port as u16)))),
-                AF_INET6 => Ok(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from(self.sin6.sin6_addr.s6_addr), u16::from_be(self.sin6.sin6_port as u16), 0, 0))),
+                AF_INET => Ok(SocketAddr::V4(SocketAddrV4::new(
+                    Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()),
+                    u16::from_be(self.sin.sin_port as u16),
+                ))),
+                AF_INET6 => Ok(SocketAddr::V6(SocketAddrV6::new(
+                    Ipv6Addr::from(self.sin6.sin6_addr.s6_addr),
+                    u16::from_be(self.sin6.sin6_port as u16),
+                    0,
+                    0,
+                ))),
                 _ => Err(crate::error::InvalidParameterError("not an IP address")),
             }
         }
@@ -536,8 +545,16 @@ impl InetAddress {
     pub fn to_socketaddr(&self) -> Option<SocketAddr> {
         unsafe {
             match self.sa.sa_family as AddressFamilyType {
-                AF_INET => Some(SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()), u16::from_be(self.sin.sin_port as u16)))),
-                AF_INET6 => Some(SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::from(self.sin6.sin6_addr.s6_addr), u16::from_be(self.sin6.sin6_port as u16), 0, 0))),
+                AF_INET => Some(SocketAddr::V4(SocketAddrV4::new(
+                    Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()),
+                    u16::from_be(self.sin.sin_port as u16),
+                ))),
+                AF_INET6 => Some(SocketAddr::V6(SocketAddrV6::new(
+                    Ipv6Addr::from(self.sin6.sin6_addr.s6_addr),
+                    u16::from_be(self.sin6.sin6_port as u16),
+                    0,
+                    0,
+                ))),
                 _ => None,
             }
         }
