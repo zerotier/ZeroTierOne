@@ -80,6 +80,11 @@ pub mod verbs {
     pub const VL1_PUSH_DIRECT_PATHS: u8 = 0x10;
     pub const VL1_USER_MESSAGE: u8 = 0x14;
 
+    pub const VL2_VERB_MULTICAST_LIKE: u8 = 0x09;
+    pub const VL2_VERB_NETWORK_CONFIG_REQUEST: u8 = 0x0b;
+    pub const VL2_VERB_NETWORK_CONFIG: u8 = 0x0c;
+    pub const VL2_VERB_MULTICAST_GATHER: u8 = 0x0d;
+
     pub fn name(verb: u8) -> &'static str {
         match verb {
             VL1_NOP => "VL1_NOP",
@@ -91,6 +96,10 @@ pub mod verbs {
             VL1_ECHO => "VL1_ECHO",
             VL1_PUSH_DIRECT_PATHS => "VL1_PUSH_DIRECT_PATHS",
             VL1_USER_MESSAGE => "VL1_USER_MESSAGE",
+            VL2_VERB_MULTICAST_LIKE => "VL2_VERB_MULTICAST_LIKE",
+            VL2_VERB_NETWORK_CONFIG_REQUEST => "VL2_VERB_NETWORK_CONFIG_REQUEST",
+            VL2_VERB_NETWORK_CONFIG => "VL2_VERB_NETWORK_CONFIG",
+            VL2_VERB_MULTICAST_GATHER => "VL2_VERB_MULTICAST_GATHER",
             _ => "???",
         }
     }

@@ -427,11 +427,11 @@ impl<H: Host> Session<H> {
                         let fragment_size = fragment_data_size + HEADER_SIZE;
                         c.crypt(&data[..fragment_data_size], &mut mtu_buffer[HEADER_SIZE..fragment_size]);
                         data = &data[fragment_data_size..];
-                        armor_header(mtu_buffer, &self.header_check_cipher);
+                        set_header_mac(mtu_buffer, &self.header_check_cipher);
                         send(&mut mtu_buffer[..fragment_size]);
 
-                        debug_assert!(header[7].wrapping_shr(2) < 63);
-                        header[7] += 0x04; // increment fragment number
+                        debug_assert!(header[15].wrapping_shr(2) < 63);
+                        header[15] += 0x04; // increment fragment number
                         mtu_buffer[..HEADER_SIZE].copy_from_slice(&header);
 
                         if data.len() <= last_fragment_data_mtu {
@@ -445,7 +445,7 @@ impl<H: Host> Session<H> {
                 c.crypt(data, &mut mtu_buffer[HEADER_SIZE..gcm_tag_idx]);
                 mtu_buffer[gcm_tag_idx..packet_len].copy_from_slice(&c.finish_encrypt());
 
-                armor_header(mtu_buffer, &self.header_check_cipher);
+                set_header_mac(mtu_buffer, &self.header_check_cipher);
                 send(&mut mtu_buffer[..packet_len]);
 
                 key.return_send_cipher(c);
@@ -562,11 +562,17 @@ impl<H: Host> ReceiveContext<H> {
             return Err(Error::InvalidPacket);
         }
 
-        if let Some(local_session_id) = SessionId::new_from_u64(memory::u64_from_le_bytes(incoming_packet) & SessionId::MAX_BIT_MASK) {
+        let counter = memory::u32_from_le_bytes(incoming_packet);
+        let packet_type_fragment_info = memory::u16_from_le_bytes(&incoming_packet[14..16]);
+        let packet_type = (packet_type_fragment_info & 0x0f) as u8;
+        let fragment_count = ((packet_type_fragment_info.wrapping_shr(4) + 1) as u8) & 63;
+        let fragment_no = packet_type_fragment_info.wrapping_shr(10) as u8;
+
+        if let Some(local_session_id) =
+            SessionId::new_from_u64(memory::u64_from_le_bytes(&incoming_packet[8..16]) & SessionId::MAX_BIT_MASK)
+        {
             if let Some(session) = host.session_lookup(local_session_id) {
-                if let Some((packet_type, fragment_count, fragment_no, counter)) =
-                    dearmor_header(incoming_packet, &session.header_check_cipher)
-                {
+                if check_header_mac(incoming_packet, &session.header_check_cipher) {
                     let pseudoheader = Pseudoheader::make(u64::from(local_session_id), packet_type, counter);
                     if fragment_count > 1 {
                         if fragment_count <= (MAX_FRAGMENTS as u8) && fragment_no < fragment_count {
@@ -613,9 +619,7 @@ impl<H: Host> ReceiveContext<H> {
             }
         } else {
             unlikely_branch();
-            if let Some((packet_type, fragment_count, fragment_no, counter)) =
-                dearmor_header(incoming_packet, &self.incoming_init_header_check_cipher)
-            {
+            if check_header_mac(incoming_packet, &self.incoming_init_header_check_cipher) {
                 let pseudoheader = Pseudoheader::make(0, packet_type, counter);
                 if fragment_count > 1 {
                     let mut defrag = self.initial_offer_defrag.lock();
@@ -1152,7 +1156,7 @@ impl<H: Host> ReceiveContext<H> {
                             reply_buf[HEADER_SIZE..].copy_from_slice(&c.finish_encrypt());
                             key.return_send_cipher(c);
 
-                            armor_header(&mut reply_buf, &session.header_check_cipher);
+                            set_header_mac(&mut reply_buf, &session.header_check_cipher);
                             send(&mut reply_buf);
 
                             let mut state = RwLockUpgradableReadGuard::upgrade(state);
@@ -1351,6 +1355,15 @@ fn create_initial_offer<SendFunction: FnMut(&mut [u8])>(
     }))
 }
 
+#[derive(Copy, Clone)]
+#[repr(C, packed)]
+struct PackedHeader {
+    counter: u32,
+    recipient_session_id_low32: u32,
+    recipient_session_id_high16_packet_type_fragment_info: u32,
+    zero: u32,
+}
+
 #[inline(always)]
 fn create_packet_header(
     header: &mut [u8],
@@ -1365,17 +1378,20 @@ fn create_packet_header(
     debug_assert!(header.len() >= HEADER_SIZE);
     debug_assert!(mtu >= MIN_MTU);
     debug_assert!(packet_len >= MIN_PACKET_SIZE);
-    debug_assert!(fragment_count <= MAX_FRAGMENTS);
     debug_assert!(fragment_count > 0);
     debug_assert!(packet_type <= 0x0f); // packet type is 4 bits
     debug_assert!(recipient_session_id <= 0xffffffffffff); // session ID is 48 bits
 
     if fragment_count <= MAX_FRAGMENTS {
-        header[0..8].copy_from_slice(
-            &(recipient_session_id | (packet_type as u64).wrapping_shl(48) | ((fragment_count - 1) as u64).wrapping_shl(52)).to_le_bytes(),
-        );
-        header[8..12].copy_from_slice(&counter.to_u32().to_le_bytes());
-        header[12..16].fill(0);
+        header[..16].copy_from_slice(memory::as_byte_array::<[u32; 4], 16>(&[
+            counter.to_u32().to_le(),
+            0,
+            (recipient_session_id as u32).to_le(),
+            ((recipient_session_id.wrapping_shr(32) as u32)
+                | (packet_type as u32).wrapping_shl(16)
+                | ((fragment_count - 1) as u32).wrapping_shl(20))
+            .to_le(),
+        ]));
         Ok(())
     } else {
         unlikely_branch();
@@ -1395,11 +1411,11 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
     let mut header: [u8; 16] = packet[..HEADER_SIZE].try_into().unwrap();
     loop {
         let fragment = &mut packet[fragment_start..fragment_end];
-        armor_header(fragment, header_check_cipher);
+        set_header_mac(fragment, header_check_cipher);
         send(fragment);
         if fragment_end < packet_len {
-            debug_assert!(header[7].wrapping_shr(2) < 63);
-            header[7] += 0x04; // increment fragment number
+            debug_assert!(header[15].wrapping_shr(2) < 63);
+            header[15] += 0x04; // increment fragment number
             fragment_start = fragment_end - HEADER_SIZE;
             fragment_end = (fragment_start + mtu).min(packet_len);
             packet[fragment_start..(fragment_start + HEADER_SIZE)].copy_from_slice(&header);
@@ -1410,45 +1426,21 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
     }
 }
 
-/// Encrypt everything in header after session ID using AES-CTR and the second 16 bytes as a nonce.
-/// The last four bytes of the header must be zero, so this also embeds a small header MAC.
+/// Set 32-bit header MAC.
 #[inline(always)]
-fn armor_header(packet: &mut [u8], header_check_cipher: &Aes) {
+fn set_header_mac(packet: &mut [u8], header_check_cipher: &Aes) {
     debug_assert!(packet.len() >= MIN_PACKET_SIZE);
-    let mut header_pad = 0u128.to_ne_bytes();
-    header_check_cipher.encrypt_block(&packet[16..32], &mut header_pad);
-    packet[SESSION_ID_SIZE..HEADER_SIZE]
-        .iter_mut()
-        .zip(header_pad.iter())
-        .for_each(|(x, y)| *x ^= *y);
+    let mut header_mac = 0u128.to_ne_bytes();
+    header_check_cipher.encrypt_block(&packet[8..24], &mut header_mac);
+    packet[4..8].copy_from_slice(&header_mac[..4]);
 }
 
-/// Dearmor the armored part of the header and return it if the 32-bit MAC matches.
-fn dearmor_header(packet: &[u8], header_check_cipher: &Aes) -> Option<(u8, u8, u8, u32)> {
+/// Check 32-bit header MAC on an incoming packet.
+fn check_header_mac(packet: &[u8], header_check_cipher: &Aes) -> bool {
     debug_assert!(packet.len() >= MIN_PACKET_SIZE);
-    let mut header_pad = 0u128.to_ne_bytes();
-    header_check_cipher.encrypt_block(&packet[16..32], &mut header_pad);
-    let header_pad = u128::from_ne_bytes(header_pad);
-
-    #[cfg(target_endian = "little")]
-    let (header_0_8, header_8_16) = {
-        let header = memory::u128_from_ne_bytes(packet) ^ header_pad.wrapping_shl(48);
-        (header as u64, header.wrapping_shr(64) as u64)
-    };
-    #[cfg(target_endian = "big")]
-    let (header_0_8, header_8_16) = {
-        let header = memory::u128_from_ne_bytes(packet) ^ header_pad.wrapping_shr(48);
-        ((header.wrapping_shr(64) as u64).swap_bytes(), (header as u64).swap_bytes())
-    };
-
-    if header_8_16.wrapping_shr(32) == 0 {
-        let packet_type = (header_0_8.wrapping_shr(48) as u8) & 15;
-        let fragment_count = ((header_0_8.wrapping_shr(52) as u8) & 63).wrapping_add(1);
-        let fragment_no = (header_0_8.wrapping_shr(58) as u8) & 63;
-        Some((packet_type, fragment_count, fragment_no, header_8_16 as u32))
-    } else {
-        None
-    }
+    let mut header_mac = 0u128.to_ne_bytes();
+    header_check_cipher.encrypt_block(&packet[8..24], &mut header_mac);
+    memory::u32_from_ne_bytes(&packet[4..8]) == memory::u32_from_ne_bytes(&header_mac)
 }
 
 /// Parse KEY_OFFER and KEY_COUNTER_OFFER starting after the unencrypted public key part.

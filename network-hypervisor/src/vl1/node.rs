@@ -155,7 +155,7 @@ struct BackgroundTaskIntervals {
 struct RootInfo<SI: SystemInterface> {
     sets: HashMap<String, RootSet>,
     roots: HashMap<Arc<Peer<SI>>, Vec<Endpoint>>,
-    my_root_sets: Option<Vec<u8>>,
+    this_root_sets: Option<Vec<u8>>,
     sets_modified: bool,
     online: bool,
 }
@@ -278,7 +278,7 @@ impl<SI: SystemInterface> Node<SI> {
             roots: RwLock::new(RootInfo {
                 sets: HashMap::new(),
                 roots: HashMap::new(),
-                my_root_sets: None,
+                this_root_sets: None,
                 sets_modified: false,
                 online: false,
             }),
@@ -504,7 +504,7 @@ impl<SI: SystemInterface> Node<SI> {
                 if !old_root_identities.eq(&new_root_identities) {
                     let mut roots = self.roots.write();
                     roots.roots = new_roots;
-                    roots.my_root_sets = my_root_sets;
+                    roots.this_root_sets = my_root_sets;
                     si.event(Event::UpdatedRoots(old_root_identities, new_root_identities));
                 }
             }
@@ -729,14 +729,17 @@ impl<SI: SystemInterface> Node<SI> {
         }
     }
 
+    /// Get the current "best" root from among this node's trusted roots.
     pub fn best_root(&self) -> Option<Arc<Peer<SI>>> {
         self.best_root.read().clone()
     }
 
+    /// Check whether this peer is a root according to any root set trusted by this node.
     pub fn is_peer_root(&self, peer: &Peer<SI>) -> bool {
         self.roots.read().roots.keys().any(|p| p.identity.eq(&peer.identity))
     }
 
+    /// Called when a remote node sends us a root set update.
     pub(crate) fn remote_update_root_set(&self, received_from: &Identity, rs: RootSet) {
         let mut roots = self.roots.write();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
@@ -763,23 +766,27 @@ impl<SI: SystemInterface> Node<SI> {
         return false;
     }
 
+    /// Returns whether or not this node has any root sets defined.
     pub fn has_roots_defined(&self) -> bool {
         self.roots.read().sets.iter().any(|rs| !rs.1.members.is_empty())
     }
 
+    /// Get the root sets that this node trusts.
     pub fn root_sets(&self) -> Vec<RootSet> {
         self.roots.read().sets.values().cloned().collect()
     }
 
-    pub(crate) fn my_root_sets(&self) -> Option<Vec<u8>> {
-        self.roots.read().my_root_sets.clone()
+    /// Get the root set(s) to which this node belongs if it is a root.
+    pub(crate) fn this_root_sets_as_bytes(&self) -> Option<Vec<u8>> {
+        self.roots.read().this_root_sets.clone()
     }
 
-    #[allow(unused)]
-    pub(crate) fn this_node_is_root(&self) -> bool {
-        self.roots.read().my_root_sets.is_some()
+    /// Returns true if this node is a member of a root set (that it knows about).
+    pub fn this_node_is_root(&self) -> bool {
+        self.roots.read().this_root_sets.is_some()
     }
 
+    /// Get the canonical Path object corresponding to an endpoint.
     pub(crate) fn canonical_path(
         &self,
         ep: &Endpoint,
@@ -788,13 +795,13 @@ impl<SI: SystemInterface> Node<SI> {
         time_ticks: i64,
     ) -> Arc<Path<SI>> {
         if let Some(path) = self.paths.read().get(&PathKey::Ref(ep, local_socket)) {
-            return path.clone();
+            path.clone()
+        } else {
+            self.paths
+                .write()
+                .entry(PathKey::Copied(ep.clone(), local_socket.clone()))
+                .or_insert_with(|| Arc::new(Path::new(ep.clone(), local_socket.clone(), local_interface.clone(), time_ticks)))
+                .clone()
         }
-        return self
-            .paths
-            .write()
-            .entry(PathKey::Copied(ep.clone(), local_socket.clone()))
-            .or_insert_with(|| Arc::new(Path::new(ep.clone(), local_socket.clone(), local_interface.clone(), time_ticks)))
-            .clone();
     }
 }

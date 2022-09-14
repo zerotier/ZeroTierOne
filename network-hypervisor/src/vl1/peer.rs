@@ -8,7 +8,7 @@ use std::sync::{Arc, Weak};
 use parking_lot::{Mutex, RwLock};
 
 use zerotier_crypto::poly1305;
-use zerotier_crypto::random::next_u64_secure;
+use zerotier_crypto::random;
 use zerotier_crypto::salsa::Salsa;
 use zerotier_crypto::secret::Secret;
 use zerotier_utils::memory::array_range;
@@ -25,50 +25,35 @@ use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = 10000;
 
+pub struct Peer<SI: SystemInterface> {
+    pub identity: Identity,
+
+    static_symmetric_key: SymmetricSecret,
+    paths: Mutex<Vec<PeerPath<SI>>>,
+
+    pub(crate) last_send_time_ticks: AtomicI64,
+    pub(crate) last_receive_time_ticks: AtomicI64,
+    pub(crate) last_hello_reply_time_ticks: AtomicI64,
+    pub(crate) last_forward_time_ticks: AtomicI64,
+    pub(crate) create_time_ticks: i64,
+
+    random_ticks_offset: u32,
+    message_id_counter: AtomicU64,
+    remote_node_info: RwLock<RemoteNodeInfo>,
+}
+
 struct PeerPath<SI: SystemInterface> {
     path: Weak<Path<SI>>,
     last_receive_time_ticks: i64,
 }
 
 struct RemoteNodeInfo {
-    remote_instance_id: [u8; 16],
     reported_local_endpoints: HashMap<Endpoint, i64>,
-    remote_version: u64,
     remote_protocol_version: u8,
+    remote_version: (u8, u8, u16),
 }
 
-/// A remote peer known to this node.
-///
-/// Equality and hashing is implemented in terms of the identity.
-pub struct Peer<SI: SystemInterface> {
-    // This peer's identity.
-    pub identity: Identity,
-
-    // Static shared secret computed from agreement with identity.
-    identity_symmetric_key: SymmetricSecret,
-
-    // Paths sorted in descending order of quality / preference.
-    paths: Mutex<Vec<PeerPath<SI>>>,
-
-    // Statistics and times of events.
-    pub(crate) last_send_time_ticks: AtomicI64,
-    pub(crate) last_receive_time_ticks: AtomicI64,
-    pub(crate) last_hello_reply_time_ticks: AtomicI64,
-    pub(crate) last_forward_time_ticks: AtomicI64,
-    pub(crate) last_incoming_message_id: AtomicU64,
-    pub(crate) create_time_ticks: i64,
-
-    // A random offset added to ticks sent to this peer to avoid disclosing the actual tick count.
-    random_ticks_offset: u64,
-
-    // Counter for assigning sequential message IDs.
-    message_id_counter: AtomicU64,
-
-    // Other information reported by remote node.
-    remote_node_info: RwLock<RemoteNodeInfo>,
-}
-
-/// Attempt AEAD packet encryption and MAC validation. Returns message ID on success.
+/// Attempt ZeroTier V1 protocol AEAD packet encryption and MAC validation. Returns message ID on success.
 fn try_aead_decrypt(
     secret: &SymmetricSecret,
     packet_frag0_payload_bytes: &[u8],
@@ -185,7 +170,7 @@ impl<SI: SystemInterface> Peer<SI> {
         this_node_identity.agree(&id).map(|static_secret| -> Self {
             Self {
                 identity: id,
-                identity_symmetric_key: SymmetricSecret::new(static_secret),
+                static_symmetric_key: SymmetricSecret::new(static_secret),
                 paths: Mutex::new(Vec::with_capacity(4)),
                 last_send_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
                 last_receive_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
@@ -193,29 +178,23 @@ impl<SI: SystemInterface> Peer<SI> {
                 last_hello_reply_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
                 last_incoming_message_id: AtomicU64::new(0),
                 create_time_ticks: time_ticks,
-                random_ticks_offset: next_u64_secure(),
-                message_id_counter: AtomicU64::new(next_u64_secure()),
+                random_ticks_offset: random::xorshift64_random() as u32,
+                message_id_counter: AtomicU64::new(random::xorshift64_random()),
                 remote_node_info: RwLock::new(RemoteNodeInfo {
-                    remote_instance_id: [0_u8; 16],
                     reported_local_endpoints: HashMap::new(),
-                    remote_version: 0,
                     remote_protocol_version: 0,
+                    remote_version: (0, 0, 0),
                 }),
             }
         })
     }
 
-    /// Get the remote version of this peer: major, minor, revision, and build.
+    /// Get the remote version of this peer: major, minor, revision.
     /// Returns None if it's not yet known.
-    pub fn version(&self) -> Option<[u16; 4]> {
+    pub fn version(&self) -> Option<(u8, u8, u16)> {
         let rv = self.remote_node_info.read().remote_version;
-        if rv != 0 {
-            Some([
-                rv.wrapping_shr(48) as u16,
-                rv.wrapping_shr(32) as u16,
-                rv.wrapping_shr(16) as u16,
-                rv as u16,
-            ])
+        if rv.0 != 0 || rv.1 != 0 || rv.2 != 0 {
+            Some(rv)
         } else {
             None
         }
@@ -433,7 +412,7 @@ impl<SI: SystemInterface> Peer<SI> {
             v1::CIPHER_AES_GMAC_SIV
         };
 
-        let mut aes_gmac_siv = self.identity_symmetric_key.aes_gmac_siv.get();
+        let mut aes_gmac_siv = self.static_symmetric_key.aes_gmac_siv.get();
         aes_gmac_siv.encrypt_init(&self.next_message_id().to_ne_bytes());
         aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(
             self.identity.address,
@@ -543,14 +522,14 @@ impl<SI: SystemInterface> Peer<SI> {
                 f.1.version_major = VERSION_MAJOR;
                 f.1.version_minor = VERSION_MINOR;
                 f.1.version_revision = VERSION_REVISION.to_be_bytes();
-                f.1.timestamp = (time_ticks as u64).wrapping_add(self.random_ticks_offset).to_be_bytes();
+                f.1.timestamp = (time_ticks as u64).wrapping_add(self.random_ticks_offset as u64).to_be_bytes();
             }
 
             debug_assert_eq!(packet.len(), 41);
             assert!(packet.append_bytes((&node.identity.to_public_bytes()).into()).is_ok());
 
             let (_, poly1305_key) = salsa_poly_create(
-                &self.identity_symmetric_key,
+                &self.static_symmetric_key,
                 packet.struct_at::<v1::PacketHeader>(0).unwrap(),
                 packet.len(),
             );
@@ -611,7 +590,7 @@ impl<SI: SystemInterface> Peer<SI> {
             let mut payload = PacketBuffer::new();
 
             let message_id = if let Some(message_id2) = try_aead_decrypt(
-                &self.identity_symmetric_key,
+                &self.static_symmetric_key,
                 packet_frag0_payload_bytes,
                 packet_header,
                 fragments,
@@ -684,9 +663,6 @@ impl<SI: SystemInterface> Peer<SI> {
                     verbs::VL1_USER_MESSAGE => self.handle_incoming_user_message(si, node, time_ticks, source_path, &payload).await,
                     _ => ph.handle_packet(self, &source_path, verb, &payload).await,
                 } {
-                    // This needs to be saved AFTER processing the packet since some message types may use it to try to filter for replays.
-                    self.last_incoming_message_id.store(message_id, Ordering::Relaxed);
-
                     return true;
                 }
             }
@@ -721,9 +697,11 @@ impl<SI: SystemInterface> Peer<SI> {
                     {
                         let mut remote_node_info = self.remote_node_info.write();
                         remote_node_info.remote_protocol_version = hello_fixed_headers.version_proto;
-                        remote_node_info.remote_version = (hello_fixed_headers.version_major as u64).wrapping_shl(48)
-                            | (hello_fixed_headers.version_minor as u64).wrapping_shl(32)
-                            | (u16::from_be_bytes(hello_fixed_headers.version_revision) as u64).wrapping_shl(16);
+                        remote_node_info.remote_version = (
+                            hello_fixed_headers.version_major,
+                            hello_fixed_headers.version_minor,
+                            u16::from_be_bytes(hello_fixed_headers.version_revision),
+                        );
                     }
 
                     let mut packet = PacketBuffer::new();
