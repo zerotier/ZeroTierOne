@@ -1355,15 +1355,6 @@ fn create_initial_offer<SendFunction: FnMut(&mut [u8])>(
     }))
 }
 
-#[derive(Copy, Clone)]
-#[repr(C, packed)]
-struct PackedHeader {
-    counter: u32,
-    recipient_session_id_low32: u32,
-    recipient_session_id_high16_packet_type_fragment_info: u32,
-    zero: u32,
-}
-
 #[inline(always)]
 fn create_packet_header(
     header: &mut [u8],
@@ -1383,15 +1374,12 @@ fn create_packet_header(
     debug_assert!(recipient_session_id <= 0xffffffffffff); // session ID is 48 bits
 
     if fragment_count <= MAX_FRAGMENTS {
-        header[..16].copy_from_slice(memory::as_byte_array::<[u32; 4], 16>(&[
-            counter.to_u32().to_le(),
-            0,
-            (recipient_session_id as u32).to_le(),
-            ((recipient_session_id.wrapping_shr(32) as u32)
-                | (packet_type as u32).wrapping_shl(16)
-                | ((fragment_count - 1) as u32).wrapping_shl(20))
-            .to_le(),
-        ]));
+        // CCCC____IIIIIITF
+        memory::u64_to_le_bytes(counter.to_u32() as u64, header);
+        memory::u64_to_le_bytes(
+            recipient_session_id | (packet_type as u64).wrapping_shl(48) | ((fragment_count - 1) as u64).wrapping_shl(52),
+            &mut header[8..],
+        );
         Ok(())
     } else {
         unlikely_branch();
