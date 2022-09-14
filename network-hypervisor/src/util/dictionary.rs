@@ -226,8 +226,8 @@ mod tests {
 
     type TypeMap = HashMap<String, Type>;
 
+    use super::{Dictionary, BOOL_TRUTH};
     use crate::util::testutil::randstring;
-    use crate::vl1::dictionary::{Dictionary, BOOL_TRUTH};
     use std::collections::HashMap;
 
     fn make_dictionary() -> (Dictionary, TypeMap) {

@@ -1,7 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 mod address;
-mod dictionary;
 mod endpoint;
 mod fragmentedpacket;
 mod identity;
@@ -19,7 +18,6 @@ pub(crate) mod protocol;
 pub mod inetaddress;
 
 pub use address::Address;
-pub use dictionary::Dictionary;
 pub use endpoint::Endpoint;
 pub use identity::*;
 pub use inetaddress::InetAddress;
