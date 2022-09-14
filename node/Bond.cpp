@@ -164,7 +164,7 @@ SharedPtr<Link> Bond::getLinkBySocket(const std::string& policyAlias, uint64_t l
 	auto search = _interfaceToLinkMap[policyAlias].find(ifnameStr);
 	if (search == _interfaceToLinkMap[policyAlias].end()) {
 		if (createIfNeeded) {
-			SharedPtr<Link> s = new Link(ifnameStr, 0, 0, true, ZT_BOND_SLAVE_MODE_SPARE, "", 0.0);
+			SharedPtr<Link> s = new Link(ifnameStr, 0, 0, true, ZT_BOND_SLAVE_MODE_PRIMARY, "", 0.0);
 			_interfaceToLinkMap[policyAlias].insert(std::pair<std::string, SharedPtr<Link> >(ifnameStr, s));
 			return s;
 		}
@@ -292,7 +292,7 @@ void Bond::addPathToBond(int nominatedIdx, int bondedIdx)
 {
 	// Map bonded set to nominated set
 	_bondIdxMap[bondedIdx] = nominatedIdx;
-	// Tell the bonding layer that we can now use this bond for traffic
+	// Tell the bonding layer that we can now use this path for traffic
 	_paths[nominatedIdx].bonded = true;
 }
 
@@ -984,9 +984,16 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 		dumpInfo(now, true);
 	}
 
-	if (! _numAliveLinks && ! _numTotalLinks) {
-		return;
+	/**
+	 * Check for failure of (all) primary links and inform bond to use spares if present
+	 */
+	bool foundUsablePrimaryPath = false;
+	for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
+		if (_paths[i].p && _paths[i].bonded && _paths[i].alive) {
+			foundUsablePrimaryPath = true;
+		}
 	}
+	rebuildBond = rebuildBond ? true : ! foundUsablePrimaryPath;
 
 	/**
 	 * Curate the set of paths that are part of the bond proper. Select a set of paths
@@ -998,6 +1005,13 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 		}
 		if (rebuildBond) {
 			debug("rebuilding bond");
+
+			// Clear previous bonded index mapping
+			for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
+				_bondIdxMap[i] = ZT_MAX_PEER_NETWORK_PATHS;
+				_paths[i].bonded = false;
+			}
+
 			int updatedBondedPathCount = 0;
 			// Build map associating paths with local physical links. Will be selected from in next step
 			std::map<SharedPtr<Link>, std::vector<int> > linkMap;
@@ -1015,11 +1029,25 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 				SharedPtr<Link> link = it->first;
 				int ipvPref = link->ipvPref();
 
+				// Bond a spare link if required (no viable primary links left)
+				if (! foundUsablePrimaryPath) {
+					log("no usable primary links remain, will attempt to use spare if available");
+					for (int j = 0; j < it->second.size(); j++) {
+						int idx = it->second.at(j);
+						if (! _paths[idx].p || ! _paths[idx].eligible || ! _paths[idx].allowed() || ! _paths[idx].isSpare()) {
+							continue;
+						}
+						addPathToBond(idx, updatedBondedPathCount);
+						++updatedBondedPathCount;
+						debug("add %s (spare)", pathToStr(_paths[idx].p).c_str());
+					}
+				}
+
 				// If user has no address type preference, then use every path we find on a link
 				if (ipvPref == 0) {
 					for (int j = 0; j < it->second.size(); j++) {
 						int idx = it->second.at(j);
-						if (! _paths[idx].p || ! _paths[idx].eligible || ! _paths[idx].allowed()) {
+						if (! _paths[idx].p || ! _paths[idx].eligible || ! _paths[idx].allowed() || _paths[idx].isSpare()) {
 							continue;
 						}
 						addPathToBond(idx, updatedBondedPathCount);
@@ -1031,7 +1059,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 				if (ipvPref == 4 || ipvPref == 6) {
 					for (int j = 0; j < it->second.size(); j++) {
 						int idx = it->second.at(j);
-						if (! _paths[idx].p || ! _paths[idx].eligible) {
+						if (! _paths[idx].p || ! _paths[idx].eligible || _paths[idx].isSpare()) {
 							continue;
 						}
 						if (! _paths[idx].allowed()) {
@@ -1050,7 +1078,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 					// Search for preferred paths
 					for (int j = 0; j < it->second.size(); j++) {
 						int idx = it->second.at(j);
-						if (! _paths[idx].p || ! _paths[idx].eligible || ! _paths[idx].allowed()) {
+						if (! _paths[idx].p || ! _paths[idx].eligible || ! _paths[idx].allowed() || _paths[idx].isSpare()) {
 							continue;
 						}
 						if (_paths[idx].preferred()) {
@@ -1065,7 +1093,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 						debug("did not find first-choice path type on link %s (user preference %d)", link->ifname().c_str(), ipvPref);
 						for (int j = 0; j < it->second.size(); j++) {
 							int idx = it->second.at(j);
-							if (! _paths[idx].p || ! _paths[idx].eligible) {
+							if (! _paths[idx].p || ! _paths[idx].eligible || _paths[idx].isSpare()) {
 								continue;
 							}
 							addPathToBond(idx, updatedBondedPathCount);
@@ -1412,10 +1440,6 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 				if (bFoundPrimaryLink && (nonPreferredPathIdx != ZT_MAX_PEER_NETWORK_PATHS)) {
 					log("found non-preferred primary link");
 					_abPathIdx = nonPreferredPathIdx;
-				}
-				if (_abPathIdx == ZT_MAX_PEER_NETWORK_PATHS) {
-					log("user-designated primary link is not available");
-					// TODO: Should wait for some time (failover interval?) and then switch to spare link
 				}
 			}
 
@@ -1858,7 +1882,7 @@ void Bond::dumpPathStatus(int64_t now, int pathIdx)
 	std::string aliveOrDead = _paths[pathIdx].alive ? std::string("alive") : std::string("dead");
 	std::string eligibleOrNot = _paths[pathIdx].eligible ? std::string("eligible") : std::string("ineligible");
 	std::string bondedOrNot = _paths[pathIdx].bonded ? std::string("bonded") : std::string("unbonded");
-	log("path[%2u] --- %5s (in %7lld, out: %7lld), %10s, %8s, flows=%-6u lat=%-8.3f pdv=%-7.3f err=%-6.4f loss=%-6.4f alloc=%-3u --- (%s)",
+	log("path[%2u] --- %5s (in %7lld, out: %7lld), %10s, %8s, flows=%-6u lat=%-8.3f pdv=%-7.3f err=%-6.4f loss=%-6.4f alloc=%-3u --- (%s) spare=%d",
 		pathIdx,
 		aliveOrDead.c_str(),
 		static_cast<long long int>(_paths[pathIdx].p->age(now)),
@@ -1871,7 +1895,8 @@ void Bond::dumpPathStatus(int64_t now, int pathIdx)
 		_paths[pathIdx].packetErrorRatio,
 		_paths[pathIdx].packetLossRatio,
 		_paths[pathIdx].allocation,
-		pathToStr(_paths[pathIdx].p).c_str());
+		pathToStr(_paths[pathIdx].p).c_str(),
+		_paths[pathIdx].isSpare());
 #endif
 }
 

@@ -1058,7 +1058,7 @@ class Bond {
 	}
 
 	/**
-	 * @return the number of links comprising this bond which are considered alive
+	 * @return the number of links in this bond which are considered alive
 	 */
 	inline uint8_t getNumAliveLinks()
 	{
@@ -1066,7 +1066,7 @@ class Bond {
 	};
 
 	/**
-	 * @return the number of links comprising this bond
+	 * @return the number of links in this bond
 	 */
 	inline uint8_t getNumTotalLinks()
 	{
@@ -1310,6 +1310,14 @@ class Bond {
 		inline bool allowed()
 		{
 			return (! ipvPref || ((p->_addr.isV4() && (ipvPref == 4 || ipvPref == 46 || ipvPref == 64)) || ((p->_addr.isV6() && (ipvPref == 6 || ipvPref == 46 || ipvPref == 64)))));
+		}
+
+		/**
+		 * @return True if a path exists on a link marked as a spare
+		 */
+		inline bool isSpare()
+		{
+			return mode == ZT_BOND_SLAVE_MODE_SPARE;
 		}
 
 		/**
