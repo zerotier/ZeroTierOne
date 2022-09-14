@@ -63,9 +63,6 @@ const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60; // 1 hour
 /// Maximum random jitter to add to rekey-after time.
 const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 10;
 
-/// Rate limit for sending new offers to attempt to re-key.
-const OFFER_RATE_LIMIT_MS: i64 = 2000;
-
 /// Version 0: NIST P-384 forward secrecy and authentication with optional Kyber1024 forward secrecy (but not authentication)
 const SESSION_PROTOCOL_VERSION: u8 = 0x00;
 
@@ -258,6 +255,12 @@ pub trait Host: Sized {
     /// This can be e.g. a pooled buffer that automatically returns itself to the pool when dropped.
     type IncomingPacketBuffer: AsRef<[u8]>;
 
+    /// Remote address to allow it to be passed back to functions like rate_limit_new_session().
+    type RemoteAddress;
+
+    /// Rate limit for attempts to rekey existing sessions.
+    const REKEY_RATE_LIMIT_MS: i64;
+
     /// Get a reference to this host's static public key blob.
     ///
     /// This must contain a NIST P-384 public key but can contain other information.
@@ -275,6 +278,9 @@ pub trait Host: Sized {
     /// Look up a local session by local ID.
     fn session_lookup(&self, local_session_id: SessionId) -> Option<Self::SessionRef>;
 
+    /// Rate limit and check an attempted new session (called before accept_new_session).
+    fn check_new_session_attempt(&self, rc: &ReceiveContext<Self>, remote_address: &Self::RemoteAddress) -> bool;
+
     /// Check whether a new session should be accepted.
     ///
     /// On success a tuple of local session ID, static secret, and associated object is returned. The
@@ -283,6 +289,7 @@ pub trait Host: Sized {
     fn accept_new_session(
         &self,
         receive_context: &ReceiveContext<Self>,
+        remote_address: &Self::RemoteAddress,
         remote_static_public: &[u8],
         remote_metadata: &[u8],
     ) -> Option<(SessionId, Secret<64>, Self::AssociatedObject)>;
@@ -308,6 +315,7 @@ struct SessionMutableState {
     keys: [Option<SessionKey>; KEY_HISTORY_SIZE],
     key_ptr: usize,
     offer: Option<Box<EphemeralOffer>>,
+    last_remote_offer: i64,
 }
 
 /// State information to associate with receiving contexts such as sockets or remote paths/endpoints.
@@ -374,6 +382,7 @@ impl<H: Host> Session<H> {
                             keys: [None, None, None],
                             key_ptr: 0,
                             offer: Some(offer),
+                            last_remote_offer: i64::MIN,
                         }),
                         remote_s_public_hash,
                         remote_s_public_p384: remote_s_public_p384.as_bytes().clone(),
@@ -498,7 +507,7 @@ impl<H: Host> Session<H> {
             && state
                 .offer
                 .as_ref()
-                .map_or(true, |o| (current_time - o.creation_time) > OFFER_RATE_LIMIT_MS)
+                .map_or(true, |o| (current_time - o.creation_time) > H::REKEY_RATE_LIMIT_MS)
         {
             if let Some(remote_s_public_p384) = P384PublicKey::from_bytes(&self.remote_s_public_p384) {
                 let mut tmp_header_check_cipher = None;
@@ -550,6 +559,7 @@ impl<H: Host> ReceiveContext<H> {
     pub fn receive<'a, SendFunction: FnMut(&mut [u8])>(
         &self,
         host: &H,
+        remote_address: &H::RemoteAddress,
         mut send: SendFunction,
         data_buf: &'a mut [u8],
         incoming_packet_buf: H::IncomingPacketBuffer,
@@ -582,6 +592,7 @@ impl<H: Host> ReceiveContext<H> {
                                 drop(defrag); // release lock
                                 return self.receive_complete(
                                     host,
+                                    remote_address,
                                     &mut send,
                                     data_buf,
                                     memory::as_byte_array(&pseudoheader),
@@ -599,6 +610,7 @@ impl<H: Host> ReceiveContext<H> {
                     } else {
                         return self.receive_complete(
                             host,
+                            remote_address,
                             &mut send,
                             data_buf,
                             memory::as_byte_array(&pseudoheader),
@@ -628,6 +640,7 @@ impl<H: Host> ReceiveContext<H> {
                         drop(defrag); // release lock
                         return self.receive_complete(
                             host,
+                            remote_address,
                             &mut send,
                             data_buf,
                             memory::as_byte_array(&pseudoheader),
@@ -641,6 +654,7 @@ impl<H: Host> ReceiveContext<H> {
                 } else {
                     return self.receive_complete(
                         host,
+                        remote_address,
                         &mut send,
                         data_buf,
                         memory::as_byte_array(&pseudoheader),
@@ -663,6 +677,7 @@ impl<H: Host> ReceiveContext<H> {
     fn receive_complete<'a, SendFunction: FnMut(&mut [u8])>(
         &self,
         host: &H,
+        remote_address: &H::RemoteAddress,
         send: &mut SendFunction,
         data_buf: &'a mut [u8],
         pseudoheader: &[u8; 12],
@@ -803,10 +818,12 @@ impl<H: Host> ReceiveContext<H> {
 
                     // Check rate limits.
                     if let Some(session) = session.as_ref() {
-                        if let Some(offer) = session.state.read().offer.as_ref() {
-                            if (current_time - offer.creation_time) < OFFER_RATE_LIMIT_MS {
-                                return Err(Error::RateLimited);
-                            }
+                        if (current_time - session.state.read().last_remote_offer) < H::REKEY_RATE_LIMIT_MS {
+                            return Err(Error::RateLimited);
+                        }
+                    } else {
+                        if !host.check_new_session_attempt(self, remote_address) {
+                            return Err(Error::RateLimited);
                         }
                     }
 
@@ -895,7 +912,7 @@ impl<H: Host> ReceiveContext<H> {
                         (None, ratchet_key, ratchet_count)
                     } else {
                         if let Some((new_session_id, psk, associated_object)) =
-                            host.accept_new_session(self, alice_s_public, alice_metadata)
+                            host.accept_new_session(self, remote_address, alice_s_public, alice_metadata)
                         {
                             let header_check_cipher = Aes::new(kbkdf512(ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<16>());
                             (
@@ -911,6 +928,7 @@ impl<H: Host> ReceiveContext<H> {
                                         keys: [None, None, None],
                                         key_ptr: 0,
                                         offer: None,
+                                        last_remote_offer: current_time,
                                     }),
                                     remote_s_public_hash: SHA384::hash(&alice_s_public),
                                     remote_s_public_p384: alice_s_public_p384.as_bytes().clone(),
@@ -1679,6 +1697,9 @@ mod tests {
         type AssociatedObject = u32;
         type SessionRef = Arc<Session<Box<TestHost>>>;
         type IncomingPacketBuffer = Vec<u8>;
+        type RemoteAddress = u32;
+
+        const REKEY_RATE_LIMIT_MS: i64 = 0;
 
         fn get_local_s_public(&self) -> &[u8] {
             self.local_s.public_key_bytes()
@@ -1706,9 +1727,14 @@ mod tests {
             })
         }
 
+        fn check_new_session_attempt(&self, _: &ReceiveContext<Self>, _: &Self::RemoteAddress) -> bool {
+            true
+        }
+
         fn accept_new_session(
             &self,
             _: &ReceiveContext<Self>,
+            _: &u32,
             _: &[u8],
             _: &[u8],
         ) -> Option<(SessionId, Secret<64>, Self::AssociatedObject)> {
@@ -1771,7 +1797,7 @@ mod tests {
                     if let Some(qi) = host.queue.lock().pop_back() {
                         let qi_len = qi.len();
                         ts += 1;
-                        let r = rc.receive(host, send_to_other, &mut data_buf, qi, mtu_buffer.len(), ts);
+                        let r = rc.receive(host, &0, send_to_other, &mut data_buf, qi, mtu_buffer.len(), ts);
                         if r.is_ok() {
                             let r = r.unwrap();
                             match r {
