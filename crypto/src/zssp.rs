@@ -572,14 +572,14 @@ impl<H: Host> ReceiveContext<H> {
             return Err(Error::InvalidPacket);
         }
 
-        let counter = memory::u32_from_le_bytes(incoming_packet);
-        let packet_type_fragment_info = memory::u16_from_le_bytes(&incoming_packet[14..16]);
+        let counter = u32::from_le(memory::load_raw(incoming_packet));
+        let packet_type_fragment_info = u16::from_le(memory::load_raw(&incoming_packet[14..16]));
         let packet_type = (packet_type_fragment_info & 0x0f) as u8;
         let fragment_count = ((packet_type_fragment_info.wrapping_shr(4) + 1) as u8) & 63;
         let fragment_no = packet_type_fragment_info.wrapping_shr(10) as u8;
 
         if let Some(local_session_id) =
-            SessionId::new_from_u64(memory::u64_from_le_bytes(&incoming_packet[8..16]) & SessionId::MAX_BIT_MASK)
+            SessionId::new_from_u64(u64::from_le(memory::load_raw(&incoming_packet[8..16])) & SessionId::MAX_BIT_MASK)
         {
             if let Some(session) = host.session_lookup(local_session_id) {
                 if check_header_mac(incoming_packet, &session.header_check_cipher) {
@@ -1393,9 +1393,9 @@ fn create_packet_header(
 
     if fragment_count <= MAX_FRAGMENTS {
         // CCCC____IIIIIITF
-        memory::u64_to_le_bytes(counter.to_u32() as u64, header);
-        memory::u64_to_le_bytes(
-            recipient_session_id | (packet_type as u64).wrapping_shl(48) | ((fragment_count - 1) as u64).wrapping_shl(52),
+        memory::store_raw((counter.to_u32() as u64).to_le(), header);
+        memory::store_raw(
+            (recipient_session_id | (packet_type as u64).wrapping_shl(48) | ((fragment_count - 1) as u64).wrapping_shl(52)).to_le(),
             &mut header[8..],
         );
         Ok(())
@@ -1446,7 +1446,7 @@ fn check_header_mac(packet: &[u8], header_check_cipher: &Aes) -> bool {
     debug_assert!(packet.len() >= MIN_PACKET_SIZE);
     let mut header_mac = 0u128.to_ne_bytes();
     header_check_cipher.encrypt_block(&packet[8..24], &mut header_mac);
-    memory::u32_from_ne_bytes(&packet[4..8]) == memory::u32_from_ne_bytes(&header_mac)
+    memory::load_raw::<u32>(&packet[4..8]) == memory::load_raw::<u32>(&header_mac)
 }
 
 /// Parse KEY_OFFER and KEY_COUNTER_OFFER starting after the unencrypted public key part.

@@ -1,216 +1,54 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use std::mem::size_of;
+#[allow(unused_imports)]
+use std::mem::{needs_drop, size_of, MaybeUninit};
 
-// Version for architectures that definitely don't care about unaligned memory access.
-#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
-#[allow(unused)]
-mod fast_int_memory_access {
-    #[inline(always)]
-    pub fn u64_to_le_bytes(i: u64, b: &mut [u8]) {
-        assert!(b.len() >= 8);
-        unsafe { *b.as_mut_ptr().cast() = i.to_le() };
-    }
+#[allow(unused_imports)]
+use std::ptr::copy_nonoverlapping;
 
-    #[inline(always)]
-    pub fn u32_to_le_bytes(i: u32, b: &mut [u8]) {
-        assert!(b.len() >= 4);
-        unsafe { *b.as_mut_ptr().cast() = i.to_le() };
-    }
-
-    #[inline(always)]
-    pub fn u16_to_le_bytes(i: u16, b: &mut [u8]) {
-        assert!(b.len() >= 2);
-        unsafe { *b.as_mut_ptr().cast() = i.to_le() };
-    }
-
-    #[inline(always)]
-    pub fn u64_from_le_bytes(b: &[u8]) -> u64 {
-        assert!(b.len() >= 8);
-        unsafe { u64::from_le(*b.as_ptr().cast()) }
-    }
-
-    #[inline(always)]
-    pub fn u32_from_le_bytes(b: &[u8]) -> u32 {
-        assert!(b.len() >= 4);
-        unsafe { u32::from_le(*b.as_ptr().cast()) }
-    }
-
-    #[inline(always)]
-    pub fn u16_from_le_bytes(b: &[u8]) -> u16 {
-        assert!(b.len() >= 2);
-        unsafe { u16::from_le(*b.as_ptr().cast()) }
-    }
-
-    #[inline(always)]
-    pub fn u64_to_ne_bytes(i: u64, b: &mut [u8]) {
-        assert!(b.len() >= 8);
-        unsafe { *b.as_mut_ptr().cast() = i };
-    }
-
-    #[inline(always)]
-    pub fn u32_to_ne_bytes(i: u32, b: &mut [u8]) {
-        assert!(b.len() >= 4);
-        unsafe { *b.as_mut_ptr().cast() = i };
-    }
-
-    #[inline(always)]
-    pub fn u16_to_ne_bytes(i: u16, b: &mut [u8]) {
-        assert!(b.len() >= 2);
-        unsafe { *b.as_mut_ptr().cast() = i };
-    }
-
-    #[inline(always)]
-    pub fn u64_from_ne_bytes(b: &[u8]) -> u64 {
-        assert!(b.len() >= 8);
-        unsafe { *b.as_ptr().cast() }
-    }
-
-    #[inline(always)]
-    pub fn u32_from_ne_bytes(b: &[u8]) -> u32 {
-        assert!(b.len() >= 4);
-        unsafe { *b.as_ptr().cast() }
-    }
-
-    #[inline(always)]
-    pub fn u16_from_ne_bytes(b: &[u8]) -> u16 {
-        assert!(b.len() >= 2);
-        unsafe { *b.as_ptr().cast() }
-    }
-
-    #[inline(always)]
-    pub fn u64_to_be_bytes(i: u64, b: &mut [u8]) {
-        assert!(b.len() >= 8);
-        unsafe { *b.as_mut_ptr().cast() = i.to_be() };
-    }
-
-    #[inline(always)]
-    pub fn u32_to_be_bytes(i: u32, b: &mut [u8]) {
-        assert!(b.len() >= 4);
-        unsafe { *b.as_mut_ptr().cast() = i.to_be() };
-    }
-
-    #[inline(always)]
-    pub fn u16_to_be_bytes(i: u16, b: &mut [u8]) {
-        assert!(b.len() >= 2);
-        unsafe { *b.as_mut_ptr().cast() = i.to_be() };
-    }
-
-    #[inline(always)]
-    pub fn u64_from_be_bytes(b: &[u8]) -> u64 {
-        assert!(b.len() >= 8);
-        unsafe { *b.as_ptr().cast::<u64>() }.to_be()
-    }
-
-    #[inline(always)]
-    pub fn u32_from_be_bytes(b: &[u8]) -> u32 {
-        assert!(b.len() >= 4);
-        unsafe { *b.as_ptr().cast::<u32>() }.to_be()
-    }
-
-    #[inline(always)]
-    pub fn u16_from_be_bytes(b: &[u8]) -> u16 {
-        assert!(b.len() >= 2);
-        unsafe { *b.as_ptr().cast::<u16>() }.to_be()
-    }
+/// Store a raw object to a byte array (for architectures known not to care about unaligned access).
+/// This will panic if the slice is too small or the object requires drop.
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
+#[inline(always)]
+pub fn store_raw<T: Copy>(o: T, dest: &mut [u8]) {
+    assert!(!std::mem::needs_drop::<T>());
+    assert!(dest.len() >= size_of::<T>());
+    unsafe { *dest.as_mut_ptr().cast() = o };
 }
 
-// Version for architectures that might care about unaligned memory access.
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
-#[allow(unused)]
-mod fast_int_memory_access {
-    #[inline(always)]
-    pub fn u64_to_le_bytes(i: u64, b: &mut [u8]) {
-        b[..8].copy_from_slice(&i.to_le_bytes());
-    }
-
-    #[inline(always)]
-    pub fn u32_to_le_bytes(i: u32, b: &mut [u8]) {
-        b[..4].copy_from_slice(&i.to_le_bytes());
-    }
-
-    #[inline(always)]
-    pub fn u16_to_le_bytes(i: u16, b: &mut [u8]) {
-        b[..2].copy_from_slice(&i.to_le_bytes());
-    }
-
-    #[inline(always)]
-    pub fn u64_from_le_bytes(b: &[u8]) -> u64 {
-        u64::from_le_bytes(b[..8].try_into().unwrap())
-    }
-
-    #[inline(always)]
-    pub fn u32_from_le_bytes(b: &[u8]) -> u32 {
-        u32::from_le_bytes(b[..4].try_into().unwrap())
-    }
-
-    #[inline(always)]
-    pub fn u16_from_le_bytes(b: &[u8]) -> u16 {
-        u16::from_le_bytes(b[..2].try_into().unwrap())
-    }
-
-    #[inline(always)]
-    pub fn u64_to_ne_bytes(i: u64, b: &mut [u8]) {
-        b[..8].copy_from_slice(&i.to_ne_bytes());
-    }
-
-    #[inline(always)]
-    pub fn u32_to_ne_bytes(i: u32, b: &mut [u8]) {
-        b[..4].copy_from_slice(&i.to_ne_bytes());
-    }
-
-    #[inline(always)]
-    pub fn u16_to_ne_bytes(i: u16, b: &mut [u8]) {
-        b[..2].copy_from_slice(&i.to_ne_bytes());
-    }
-
-    #[inline(always)]
-    pub fn u64_from_ne_bytes(b: &[u8]) -> u64 {
-        u64::from_ne_bytes(b[..8].try_into().unwrap())
-    }
-
-    #[inline(always)]
-    pub fn u32_from_ne_bytes(b: &[u8]) -> u32 {
-        u32::from_ne_bytes(b[..4].try_into().unwrap())
-    }
-
-    #[inline(always)]
-    pub fn u16_from_ne_bytes(b: &[u8]) -> u16 {
-        u16::from_ne_bytes(b[..2].try_into().unwrap())
-    }
-
-    #[inline(always)]
-    pub fn u64_to_be_bytes(i: u64, b: &mut [u8]) {
-        b[..8].copy_from_slice(&i.to_be_bytes());
-    }
-
-    #[inline(always)]
-    pub fn u32_to_be_bytes(i: u32, b: &mut [u8]) {
-        b[..4].copy_from_slice(&i.to_be_bytes());
-    }
-
-    #[inline(always)]
-    pub fn u16_to_be_bytes(i: u16, b: &mut [u8]) {
-        b[..2].copy_from_slice(&i.to_be_bytes());
-    }
-
-    #[inline(always)]
-    pub fn u64_from_be_bytes(b: &[u8]) -> u64 {
-        u64::from_be_bytes(b[..8].try_into().unwrap())
-    }
-
-    #[inline(always)]
-    pub fn u32_from_be_bytes(b: &[u8]) -> u32 {
-        u32::from_be_bytes(b[..4].try_into().unwrap())
-    }
-
-    #[inline(always)]
-    pub fn u16_from_be_bytes(b: &[u8]) -> u16 {
-        u16::from_be_bytes(b[..2].try_into().unwrap())
-    }
+/// Store a raw object to a byte array (portable).
+/// This will panic if the slice is too small or the object requires drop.
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
+#[inline(always)]
+pub fn store_raw<T: Copy>(o: T, dest: &mut [u8]) {
+    assert!(!std::mem::needs_drop::<T>());
+    assert!(dest.len() >= size_of::<T>());
+    unsafe { copy_nonoverlapping((&o as *const T).cast(), dest.as_mut_ptr(), size_of::<T>()) };
 }
 
-pub use fast_int_memory_access::*;
+/// Load a raw object from a byte array (for architectures known not to care about unaligned access).
+/// This will panic if the slice is too small or the object requires drop.
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
+#[inline(always)]
+pub fn load_raw<T: Copy>(src: &[u8]) -> T {
+    assert!(!std::mem::needs_drop::<T>());
+    assert!(src.len() >= size_of::<T>());
+    unsafe { *src.as_ptr().cast() }
+}
+
+/// Load a raw object from a byte array (portable).
+/// This will panic if the slice is too small or the object requires drop.
+#[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64")))]
+#[inline(always)]
+pub fn load_raw<T: Copy>(src: &[u8]) -> T {
+    assert!(!std::mem::needs_drop::<T>());
+    assert!(src.len() >= size_of::<T>());
+    unsafe {
+        let mut tmp: T = MaybeUninit::uninit().assume_init();
+        copy_nonoverlapping(src.as_ptr(), (&mut tmp as *mut T).cast(), size_of::<T>());
+        tmp
+    }
+}
 
 /// Obtain a view into an array cast as another array.
 /// This will panic if the template parameters would result in out of bounds access.
@@ -231,6 +69,7 @@ pub fn as_byte_array<T: Copy, const S: usize>(o: &T) -> &[u8; S] {
 /// Get a byte array as a flat object.
 ///
 /// WARNING: while this is technically safe, care must be taken if the object requires aligned access.
+#[inline(always)]
 pub fn as_flat_object<T: Copy, const S: usize>(b: &[u8; S]) -> &T {
     assert!(std::mem::size_of::<T>() <= S);
     unsafe { &*b.as_ptr().cast() }

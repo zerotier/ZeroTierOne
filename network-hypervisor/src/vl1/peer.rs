@@ -176,7 +176,6 @@ impl<SI: SystemInterface> Peer<SI> {
                 last_receive_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
                 last_forward_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
                 last_hello_reply_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
-                last_incoming_message_id: AtomicU64::new(0),
                 create_time_ticks: time_ticks,
                 random_ticks_offset: random::xorshift64_random() as u32,
                 message_id_counter: AtomicU64::new(random::xorshift64_random()),
