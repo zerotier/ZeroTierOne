@@ -1,0 +1,21 @@
+[package]
+name = "zerotier-vl1-service"
+version = "0.1.0"
+authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
+edition = "2021"
+license = "MPL-2.0"
+
+[dependencies]
+zerotier-network-hypervisor = { path = "../network-hypervisor" }
+zerotier-crypto = { path = "../crypto" }
+zerotier-utils = { path = "../utils" }
+async-trait = "^0"
+num-traits = "^0"
+tokio = { version = "^1", features = ["fs", "io-util", "io-std", "net", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "sync", "time"], default-features = false }
+parking_lot = { version = "^0", features = [], default-features = false }
+
+[target."cfg(windows)".dependencies]
+winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
+
+[target."cfg(not(windows))".dependencies]
+libc = "^0"

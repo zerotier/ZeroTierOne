@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 
-use crate::vl1::node::{InnerProtocolInterface, SystemInterface};
+use crate::vl1::node::{HostSystem, InnerProtocol};
 use crate::vl1::protocol::*;
 use crate::vl1::{Identity, Path, Peer};
 
@@ -11,17 +11,23 @@ pub trait SwitchInterface: Sync + Send {}
 pub struct Switch {}
 
 #[async_trait]
-impl InnerProtocolInterface for Switch {
+impl InnerProtocol for Switch {
     #[allow(unused)]
-    async fn handle_packet<SI: SystemInterface>(&self, peer: &Peer<SI>, source_path: &Path<SI>, verb: u8, payload: &PacketBuffer) -> bool {
+    async fn handle_packet<HostSystemImpl: HostSystem>(
+        &self,
+        peer: &Peer<HostSystemImpl>,
+        source_path: &Path<HostSystemImpl>,
+        verb: u8,
+        payload: &PacketBuffer,
+    ) -> bool {
         false
     }
 
     #[allow(unused)]
-    async fn handle_error<SI: SystemInterface>(
+    async fn handle_error<HostSystemImpl: HostSystem>(
         &self,
-        peer: &Peer<SI>,
-        source_path: &Path<SI>,
+        peer: &Peer<HostSystemImpl>,
+        source_path: &Path<HostSystemImpl>,
         in_re_verb: u8,
         in_re_message_id: u64,
         error_code: u8,
@@ -32,10 +38,10 @@ impl InnerProtocolInterface for Switch {
     }
 
     #[allow(unused)]
-    async fn handle_ok<SI: SystemInterface>(
+    async fn handle_ok<HostSystemImpl: HostSystem>(
         &self,
-        peer: &Peer<SI>,
-        source_path: &Path<SI>,
+        peer: &Peer<HostSystemImpl>,
+        source_path: &Path<HostSystemImpl>,
         in_re_verb: u8,
         in_re_message_id: u64,
         payload: &PacketBuffer,
@@ -50,8 +56,4 @@ impl InnerProtocolInterface for Switch {
     }
 }
 
-impl Switch {
-    pub async fn new() -> Self {
-        Self {}
-    }
-}
+impl Switch {}

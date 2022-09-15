@@ -25,18 +25,23 @@ pub(crate) enum PathServiceResult {
 /// These are maintained in Node and canonicalized so that all unique paths have
 /// one and only one unique path object. That enables statistics to be tracked
 /// for them and uniform application of things like keepalives.
-pub struct Path<SI: SystemInterface> {
+pub struct Path<HostSystemImpl: HostSystem> {
     pub endpoint: Endpoint,
-    pub local_socket: SI::LocalSocket,
-    pub local_interface: SI::LocalInterface,
+    pub local_socket: HostSystemImpl::LocalSocket,
+    pub local_interface: HostSystemImpl::LocalInterface,
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     create_time_ticks: i64,
     fragmented_packets: Mutex<HashMap<PacketId, FragmentedPacket, PacketIdHasher>>,
 }
 
-impl<SI: SystemInterface> Path<SI> {
-    pub fn new(endpoint: Endpoint, local_socket: SI::LocalSocket, local_interface: SI::LocalInterface, time_ticks: i64) -> Self {
+impl<HostSystemImpl: HostSystem> Path<HostSystemImpl> {
+    pub fn new(
+        endpoint: Endpoint,
+        local_socket: HostSystemImpl::LocalSocket,
+        local_interface: HostSystemImpl::LocalInterface,
+        time_ticks: i64,
+    ) -> Self {
         Self {
             endpoint,
             local_socket,

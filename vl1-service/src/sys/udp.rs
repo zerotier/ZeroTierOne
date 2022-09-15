@@ -12,14 +12,14 @@ use std::sync::Arc;
 #[cfg(unix)]
 use std::os::unix::io::{FromRawFd, RawFd};
 
-use crate::getifaddrs;
-use crate::ipv6;
 use crate::localinterface::LocalInterface;
 
 #[allow(unused_imports)]
 use num_traits::AsPrimitive;
 
 use zerotier_network_hypervisor::vl1::inetaddress::*;
+
+use crate::sys::{getifaddrs, ipv6};
 
 /// A local port to which one or more UDP sockets is bound.
 ///
@@ -35,16 +35,7 @@ pub struct BoundUdpSocket {
     pub address: InetAddress,
     pub socket: Arc<tokio::net::UdpSocket>,
     pub interface: LocalInterface,
-    pub socket_associated_tasks: parking_lot::Mutex<Vec<tokio::task::JoinHandle<()>>>,
     fd: RawFd,
-}
-
-impl Drop for BoundUdpSocket {
-    fn drop(&mut self) {
-        for t in self.socket_associated_tasks.lock().drain(..) {
-            t.abort();
-        }
-    }
 }
 
 impl BoundUdpSocket {
@@ -64,43 +55,21 @@ impl BoundUdpSocket {
     }
 
     #[cfg(any(target_os = "macos", target_os = "freebsd"))]
-    pub fn send_sync_nonblock(&self, dest: &InetAddress, b: &[&[u8]], packet_ttl: u8) -> bool {
+    pub fn send_sync_nonblock(&self, dest: &InetAddress, b: &[u8], packet_ttl: u8) -> bool {
         let mut ok = false;
         if dest.family() == self.address.family() {
             if packet_ttl > 0 && dest.is_ipv4() {
                 self.set_ttl(packet_ttl);
             }
             unsafe {
-                if b.len() == 1 {
-                    let bb = *b.get_unchecked(0);
-                    ok = libc::sendto(
-                        self.fd.as_(),
-                        bb.as_ptr().cast(),
-                        bb.len().as_(),
-                        0,
-                        (dest as *const InetAddress).cast(),
-                        size_of::<InetAddress>().as_(),
-                    ) > 0;
-                } else {
-                    let mut iov: [libc::iovec; 16] = MaybeUninit::uninit().assume_init();
-                    assert!(b.len() <= iov.len());
-                    for i in 0..b.len() {
-                        let bb = *b.get_unchecked(i);
-                        let ii = iov.get_unchecked_mut(i);
-                        ii.iov_base = transmute(bb.as_ptr());
-                        ii.iov_len = bb.len().as_();
-                    }
-                    let msghdr = libc::msghdr {
-                        msg_name: transmute(dest as *const InetAddress),
-                        msg_namelen: size_of::<InetAddress>().as_(),
-                        msg_iov: iov.as_mut_ptr(),
-                        msg_iovlen: b.len().as_(),
-                        msg_control: null_mut(),
-                        msg_controllen: 0,
-                        msg_flags: 0,
-                    };
-                    ok = libc::sendmsg(self.fd.as_(), &msghdr, 0) > 0;
-                }
+                ok = libc::sendto(
+                    self.fd.as_(),
+                    b.as_ptr().cast(),
+                    b.len().as_(),
+                    0,
+                    (dest as *const InetAddress).cast(),
+                    size_of::<InetAddress>().as_(),
+                ) > 0;
             }
             if packet_ttl > 0 && dest.is_ipv4() {
                 self.set_ttl(0xff);
@@ -110,32 +79,15 @@ impl BoundUdpSocket {
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "freebsd")))]
-    pub fn send_sync_nonblock(&self, dest: &InetAddress, b: &[&[u8]], packet_ttl: u8) -> bool {
+    pub fn send_sync_nonblock(&self, dest: &InetAddress, b: &[u8], packet_ttl: u8) -> bool {
         let mut ok = false;
         if dest.family() == self.address.family() {
-            let mut tmp: [u8; 16384] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
-            let data = if b.len() == 1 {
-                *unsafe { b.get_unchecked(0) }
-            } else {
-                let mut p = 0;
-                for bb in b.iter() {
-                    let pp = p + bb.len();
-                    if pp < 16384 {
-                        tmp[p..pp].copy_from_slice(*bb);
-                        p = pp;
-                    } else {
-                        return false;
-                    }
-                }
-                &tmp[..p]
-            };
-
             if packet_ttl > 0 && dest.is_ipv4() {
                 self.set_ttl(packet_ttl);
-                ok = self.socket.try_send_to(data, dest.try_into().unwrap()).is_ok();
+                ok = self.socket.try_send_to(b, dest.try_into().unwrap()).is_ok();
                 self.set_ttl(0xff);
             } else {
-                ok = self.socket.try_send_to(data, dest.try_into().unwrap()).is_ok();
+                ok = self.socket.try_send_to(b, dest.try_into().unwrap()).is_ok();
             }
         }
         ok
@@ -202,7 +154,6 @@ impl BoundUdpPort {
                             let s = Arc::new(BoundUdpSocket {
                                 address: addr_with_port,
                                 socket: Arc::new(s.unwrap()),
-                                socket_associated_tasks: parking_lot::Mutex::new(Vec::new()),
                                 interface: interface.clone(),
                                 fd,
                             });

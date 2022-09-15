@@ -89,15 +89,12 @@ pub fn for_each_address<F: FnMut(&InetAddress, &LocalInterface)>(mut f: F) {
 
 #[cfg(test)]
 mod tests {
-    use crate::localinterface::LocalInterface;
-    use zerotier_network_hypervisor::vl1::InetAddress;
+    use super::*;
 
     #[test]
     fn test_getifaddrs() {
         println!("starting getifaddrs...");
-        crate::getifaddrs::for_each_address(|a: &InetAddress, interface: &LocalInterface| {
-            println!("  {} {}", interface.to_string(), a.to_string())
-        });
+        for_each_address(|a: &InetAddress, interface: &LocalInterface| println!("  {} {}", interface.to_string(), a.to_string()));
         println!("done.")
     }
 }

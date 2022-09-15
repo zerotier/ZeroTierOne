@@ -1,11 +1,12 @@
 [workspace]
 
 members = [
-  "crypto",
-  "network-hypervisor",
-  "controller",
-  "system-service",
-  "utils",
+    "crypto",
+    "network-hypervisor",
+    "controller",
+    "service",
+    "vl1-service",
+    "utils",
 ]
 
 [profile.release]

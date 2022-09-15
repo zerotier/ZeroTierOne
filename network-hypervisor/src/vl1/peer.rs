@@ -25,11 +25,11 @@ use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = 10000;
 
-pub struct Peer<SI: SystemInterface> {
+pub struct Peer<HostSystemImpl: HostSystem> {
     pub identity: Identity,
 
     static_symmetric_key: SymmetricSecret,
-    paths: Mutex<Vec<PeerPath<SI>>>,
+    paths: Mutex<Vec<PeerPath<HostSystemImpl>>>,
 
     pub(crate) last_send_time_ticks: AtomicI64,
     pub(crate) last_receive_time_ticks: AtomicI64,
@@ -42,8 +42,8 @@ pub struct Peer<SI: SystemInterface> {
     remote_node_info: RwLock<RemoteNodeInfo>,
 }
 
-struct PeerPath<SI: SystemInterface> {
-    path: Weak<Path<SI>>,
+struct PeerPath<HostSystemImpl: HostSystem> {
+    path: Weak<Path<HostSystemImpl>>,
     last_receive_time_ticks: i64,
 }
 
@@ -52,6 +52,846 @@ struct RemoteNodeInfo {
     remote_protocol_version: u8,
     remote_version: (u8, u8, u16),
 }
+
+/// Sort a list of paths by quality or priority, with best paths first.
+fn prioritize_paths<HostSystemImpl: HostSystem>(paths: &mut Vec<PeerPath<HostSystemImpl>>) {
+    paths.sort_unstable_by(|a, b| a.last_receive_time_ticks.cmp(&b.last_receive_time_ticks).reverse());
+}
+
+impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
+    /// Create a new peer.
+    ///
+    /// This only returns None if this_node_identity does not have its secrets or if some
+    /// fatal error occurs performing key agreement between the two identities.
+    pub(crate) fn new(this_node_identity: &Identity, id: Identity, time_ticks: i64) -> Option<Self> {
+        this_node_identity.agree(&id).map(|static_secret| -> Self {
+            Self {
+                identity: id,
+                static_symmetric_key: SymmetricSecret::new(static_secret),
+                paths: Mutex::new(Vec::with_capacity(4)),
+                last_send_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
+                last_receive_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
+                last_forward_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
+                last_hello_reply_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
+                create_time_ticks: time_ticks,
+                random_ticks_offset: random::xorshift64_random() as u32,
+                message_id_counter: AtomicU64::new(random::xorshift64_random()),
+                remote_node_info: RwLock::new(RemoteNodeInfo {
+                    reported_local_endpoints: HashMap::new(),
+                    remote_protocol_version: 0,
+                    remote_version: (0, 0, 0),
+                }),
+            }
+        })
+    }
+
+    /// Get the remote version of this peer: major, minor, revision.
+    /// Returns None if it's not yet known.
+    pub fn version(&self) -> Option<(u8, u8, u16)> {
+        let rv = self.remote_node_info.read().remote_version;
+        if rv.0 != 0 || rv.1 != 0 || rv.2 != 0 {
+            Some(rv)
+        } else {
+            None
+        }
+    }
+
+    /// Get the remote protocol version of this peer or None if not yet known.
+    pub fn protocol_version(&self) -> Option<u8> {
+        let pv = self.remote_node_info.read().remote_protocol_version;
+        if pv != 0 {
+            Some(pv)
+        } else {
+            None
+        }
+    }
+
+    /// Get the next message ID for sending a message to this peer.
+    #[inline(always)]
+    pub(crate) fn next_message_id(&self) -> MessageId {
+        self.message_id_counter.fetch_add(1, Ordering::SeqCst)
+    }
+
+    /// Get current best path or None if there are no direct paths to this peer.
+    pub fn direct_path(&self) -> Option<Arc<Path<HostSystemImpl>>> {
+        for p in self.paths.lock().iter() {
+            let pp = p.path.upgrade();
+            if pp.is_some() {
+                return pp;
+            }
+        }
+        return None;
+    }
+
+    /// Get either the current best direct path or an indirect path via e.g. a root.
+    pub fn path(&self, node: &Node<HostSystemImpl>) -> Option<Arc<Path<HostSystemImpl>>> {
+        let direct_path = self.direct_path();
+        if direct_path.is_some() {
+            return direct_path;
+        }
+        if let Some(root) = node.best_root() {
+            return root.direct_path();
+        }
+        return None;
+    }
+
+    pub(crate) fn learn_path(&self, host_system: &HostSystemImpl, new_path: &Arc<Path<HostSystemImpl>>, time_ticks: i64) {
+        let mut paths = self.paths.lock();
+
+        match &new_path.endpoint {
+            Endpoint::IpUdp(new_ip) => {
+                // If this is an IpUdp endpoint, scan the existing paths and replace any that come from
+                // the same IP address but a different port. This prevents the accumulation of duplicate
+                // paths to the same peer over different ports.
+                for pi in paths.iter_mut() {
+                    if std::ptr::eq(pi.path.as_ptr(), new_path.as_ref()) {
+                        return;
+                    }
+                    if let Some(p) = pi.path.upgrade() {
+                        match &p.endpoint {
+                            Endpoint::IpUdp(existing_ip) => {
+                                if existing_ip.ip_bytes().eq(new_ip.ip_bytes()) {
+                                    debug_event!(
+                                        host_system,
+                                        "[vl1] {} replacing path {} with {} (same IP, different port)",
+                                        self.identity.address.to_string(),
+                                        p.endpoint.to_string(),
+                                        new_path.endpoint.to_string()
+                                    );
+                                    pi.path = Arc::downgrade(new_path);
+                                    pi.last_receive_time_ticks = time_ticks;
+                                    prioritize_paths(&mut paths);
+                                    return;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            _ => {
+                for pi in paths.iter() {
+                    if std::ptr::eq(pi.path.as_ptr(), new_path.as_ref()) {
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Learn new path if it's not a duplicate or should not replace an existing path.
+        debug_event!(
+            host_system,
+            "[vl1] {} learned new path: {}",
+            self.identity.address.to_string(),
+            new_path.endpoint.to_string()
+        );
+        paths.push(PeerPath::<HostSystemImpl> {
+            path: Arc::downgrade(new_path),
+            last_receive_time_ticks: time_ticks,
+        });
+        prioritize_paths(&mut paths);
+    }
+
+    /// Called every SERVICE_INTERVAL_MS by the background service loop in Node.
+    pub(crate) fn service(&self, _: &HostSystemImpl, _: &Node<HostSystemImpl>, time_ticks: i64) -> bool {
+        {
+            let mut paths = self.paths.lock();
+            paths.retain(|p| ((time_ticks - p.last_receive_time_ticks) < PEER_EXPIRATION_TIME) && (p.path.strong_count() > 0));
+            prioritize_paths(&mut paths);
+        }
+        self.remote_node_info
+            .write()
+            .reported_local_endpoints
+            .retain(|_, ts| (time_ticks - *ts) < PEER_EXPIRATION_TIME);
+        (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed).max(self.create_time_ticks)) < PEER_EXPIRATION_TIME
+    }
+
+    async fn internal_send(
+        &self,
+        host_system: &HostSystemImpl,
+        endpoint: &Endpoint,
+        local_socket: Option<&HostSystemImpl::LocalSocket>,
+        local_interface: Option<&HostSystemImpl::LocalInterface>,
+        max_fragment_size: usize,
+        packet: &PacketBuffer,
+    ) -> bool {
+        let packet_size = packet.len();
+        if packet_size > max_fragment_size {
+            let bytes = packet.as_bytes();
+            if !host_system
+                .wire_send(endpoint, local_socket, local_interface, &bytes[0..UDP_DEFAULT_MTU], 0)
+                .await
+            {
+                return false;
+            }
+            let mut pos = UDP_DEFAULT_MTU;
+
+            let overrun_size = (packet_size - UDP_DEFAULT_MTU) as u32;
+            let fragment_count = (overrun_size / (UDP_DEFAULT_MTU - v1::FRAGMENT_HEADER_SIZE) as u32)
+                + (((overrun_size % (UDP_DEFAULT_MTU - v1::FRAGMENT_HEADER_SIZE) as u32) != 0) as u32);
+            debug_assert!(fragment_count <= v1::FRAGMENT_COUNT_MAX as u32);
+
+            let mut header = v1::FragmentHeader {
+                id: *packet.bytes_fixed_at(0).unwrap(),
+                dest: *packet.bytes_fixed_at(v1::DESTINATION_INDEX).unwrap(),
+                fragment_indicator: v1::FRAGMENT_INDICATOR,
+                total_and_fragment_no: ((fragment_count + 1) << 4) as u8,
+                reserved_hops: 0,
+            };
+
+            let mut chunk_size = (packet_size - pos).min(UDP_DEFAULT_MTU - v1::HEADER_SIZE);
+            let mut tmp_buf: [u8; v1::SIZE_MAX] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
+            loop {
+                header.total_and_fragment_no += 1;
+                let next_pos = pos + chunk_size;
+                let fragment_size = v1::FRAGMENT_HEADER_SIZE + chunk_size;
+                tmp_buf[..v1::FRAGMENT_HEADER_SIZE].copy_from_slice(header.as_bytes());
+                tmp_buf[v1::FRAGMENT_HEADER_SIZE..fragment_size].copy_from_slice(&bytes[pos..next_pos]);
+                if !host_system
+                    .wire_send(endpoint, local_socket, local_interface, &tmp_buf[..fragment_size], 0)
+                    .await
+                {
+                    return false;
+                }
+                pos = next_pos;
+                if pos < packet_size {
+                    chunk_size = (packet_size - pos).min(UDP_DEFAULT_MTU - v1::HEADER_SIZE);
+                } else {
+                    return true;
+                }
+            }
+        } else {
+            return host_system
+                .wire_send(endpoint, local_socket, local_interface, packet.as_bytes(), 0)
+                .await;
+        }
+    }
+
+    /// Send a packet to this peer, returning true on (potential) success.
+    ///
+    /// This will go directly if there is an active path, or otherwise indirectly
+    /// via a root or some other route.
+    ///
+    /// It encrypts and sets the MAC and cipher fields and packet ID and other things.
+    pub(crate) async fn send(
+        &self,
+        host_system: &HostSystemImpl,
+        path: Option<&Arc<Path<HostSystemImpl>>>,
+        node: &Node<HostSystemImpl>,
+        time_ticks: i64,
+        packet: &mut PacketBuffer,
+    ) -> bool {
+        let mut _path_arc = None;
+        let path = if let Some(path) = path {
+            path
+        } else {
+            _path_arc = self.path(node);
+            if let Some(path) = _path_arc.as_ref() {
+                path
+            } else {
+                return false;
+            }
+        };
+
+        let max_fragment_size = if path.endpoint.requires_fragmentation() {
+            UDP_DEFAULT_MTU
+        } else {
+            usize::MAX
+        };
+        let flags_cipher_hops = if packet.len() > max_fragment_size {
+            v1::HEADER_FLAG_FRAGMENTED | v1::CIPHER_AES_GMAC_SIV
+        } else {
+            v1::CIPHER_AES_GMAC_SIV
+        };
+
+        let mut aes_gmac_siv = self.static_symmetric_key.aes_gmac_siv.get();
+        aes_gmac_siv.encrypt_init(&self.next_message_id().to_ne_bytes());
+        aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(
+            self.identity.address,
+            node.identity.address,
+            flags_cipher_hops,
+        ));
+        if let Ok(payload) = packet.as_bytes_starting_at_mut(v1::HEADER_SIZE) {
+            aes_gmac_siv.encrypt_first_pass(payload);
+            aes_gmac_siv.encrypt_first_pass_finish();
+            aes_gmac_siv.encrypt_second_pass_in_place(payload);
+            let tag = aes_gmac_siv.encrypt_second_pass_finish();
+            let header = packet.struct_mut_at::<v1::PacketHeader>(0).unwrap();
+            header.id = *array_range::<u8, 16, 0, 8>(tag);
+            header.dest = self.identity.address.to_bytes();
+            header.src = node.identity.address.to_bytes();
+            header.flags_cipher_hops = flags_cipher_hops;
+            header.mac = *array_range::<u8, 16, 8, 8>(tag);
+        } else {
+            return false;
+        }
+
+        if self
+            .internal_send(
+                host_system,
+                &path.endpoint,
+                Some(&path.local_socket),
+                Some(&path.local_interface),
+                max_fragment_size,
+                packet,
+            )
+            .await
+        {
+            self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
+            return true;
+        }
+
+        return false;
+    }
+
+    /// Forward a packet to this peer.
+    ///
+    /// This is called when we receive a packet not addressed to this node and
+    /// want to pass it along.
+    ///
+    /// This doesn't fragment large packets since fragments are forwarded individually.
+    /// Intermediates don't need to adjust fragmentation.
+    pub(crate) async fn forward(&self, host_system: &HostSystemImpl, time_ticks: i64, packet: &PacketBuffer) -> bool {
+        if let Some(path) = self.direct_path() {
+            if host_system
+                .wire_send(
+                    &path.endpoint,
+                    Some(&path.local_socket),
+                    Some(&path.local_interface),
+                    packet.as_bytes(),
+                    0,
+                )
+                .await
+            {
+                self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// Send a HELLO to this peer.
+    ///
+    /// If explicit_endpoint is not None the packet will be sent directly to this endpoint.
+    /// Otherwise it will be sent via the best direct or indirect path known.
+    ///
+    /// Unlike other messages HELLO is sent partially in the clear and always with the long-lived
+    /// static identity key. Authentication in old versions is via Poly1305 and in new versions
+    /// via HMAC-SHA512.
+    pub(crate) async fn send_hello(
+        &self,
+        host_system: &HostSystemImpl,
+        node: &Node<HostSystemImpl>,
+        explicit_endpoint: Option<&Endpoint>,
+    ) -> bool {
+        let mut path = None;
+        let destination = if let Some(explicit_endpoint) = explicit_endpoint {
+            explicit_endpoint
+        } else {
+            if let Some(p) = self.path(node) {
+                let _ = path.insert(p);
+                &path.as_ref().unwrap().endpoint
+            } else {
+                return false;
+            }
+        };
+
+        let max_fragment_size = if destination.requires_fragmentation() {
+            UDP_DEFAULT_MTU
+        } else {
+            usize::MAX
+        };
+        let time_ticks = host_system.time_ticks();
+
+        let mut packet = PacketBuffer::new();
+        {
+            let message_id = self.next_message_id();
+
+            {
+                let f: &mut (v1::PacketHeader, v1::message_component_structs::HelloFixedHeaderFields) =
+                    packet.append_struct_get_mut().unwrap();
+                f.0.id = message_id.to_ne_bytes();
+                f.0.dest = self.identity.address.to_bytes();
+                f.0.src = node.identity.address.to_bytes();
+                f.0.flags_cipher_hops = v1::CIPHER_NOCRYPT_POLY1305;
+                f.1.verb = verbs::VL1_HELLO | v1::VERB_FLAG_EXTENDED_AUTHENTICATION;
+                f.1.version_proto = PROTOCOL_VERSION;
+                f.1.version_major = VERSION_MAJOR;
+                f.1.version_minor = VERSION_MINOR;
+                f.1.version_revision = VERSION_REVISION.to_be_bytes();
+                f.1.timestamp = (time_ticks as u64).wrapping_add(self.random_ticks_offset as u64).to_be_bytes();
+            }
+
+            debug_assert_eq!(packet.len(), 41);
+            assert!(packet.append_bytes((&node.identity.to_public_bytes()).into()).is_ok());
+
+            let (_, poly1305_key) = salsa_poly_create(
+                &self.static_symmetric_key,
+                packet.struct_at::<v1::PacketHeader>(0).unwrap(),
+                packet.len(),
+            );
+            let mac = poly1305::compute(&poly1305_key, packet.as_bytes_starting_at(v1::HEADER_SIZE).unwrap());
+            packet.as_mut()[v1::MAC_FIELD_INDEX..v1::MAC_FIELD_INDEX + 8].copy_from_slice(&mac[0..8]);
+
+            self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
+
+            debug_event!(
+                host_system,
+                "HELLO -> {} @ {} ({} bytes)",
+                self.identity.address.to_string(),
+                destination.to_string(),
+                packet.len()
+            );
+        }
+
+        if let Some(p) = path.as_ref() {
+            if self
+                .internal_send(
+                    host_system,
+                    destination,
+                    Some(&p.local_socket),
+                    Some(&p.local_interface),
+                    max_fragment_size,
+                    &packet,
+                )
+                .await
+            {
+                p.log_send_anything(time_ticks);
+                true
+            } else {
+                false
+            }
+        } else {
+            self.internal_send(host_system, destination, None, None, max_fragment_size, &packet)
+                .await
+        }
+    }
+
+    /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
+    ///
+    /// If the packet comes in multiple fragments, the fragments slice should contain all
+    /// those fragments after the main packet header and first chunk.
+    ///
+    /// This returns true if the packet decrypted and passed authentication.
+    pub(crate) async fn receive<InnerProtocolImpl: InnerProtocol>(
+        &self,
+        node: &Node<HostSystemImpl>,
+        host_system: &HostSystemImpl,
+        inner: &InnerProtocolImpl,
+        time_ticks: i64,
+        source_path: &Arc<Path<HostSystemImpl>>,
+        packet_header: &v1::PacketHeader,
+        frag0: &PacketBuffer,
+        fragments: &[Option<PooledPacketBuffer>],
+    ) -> bool {
+        if let Ok(packet_frag0_payload_bytes) = frag0.as_bytes_starting_at(v1::VERB_INDEX) {
+            let mut payload = PacketBuffer::new();
+
+            let message_id = if let Some(message_id2) = try_aead_decrypt(
+                &self.static_symmetric_key,
+                packet_frag0_payload_bytes,
+                packet_header,
+                fragments,
+                &mut payload,
+            ) {
+                // Decryption successful with static secret.
+                message_id2
+            } else {
+                // Packet failed to decrypt using either ephemeral or permament key, reject.
+                debug_event!(
+                    host_system,
+                    "[vl1] #{:0>16x} failed authentication",
+                    u64::from_be_bytes(packet_header.id)
+                );
+                return false;
+            };
+
+            if let Ok(mut verb) = payload.u8_at(0) {
+                if (verb & v1::VERB_FLAG_COMPRESSED) != 0 {
+                    let mut decompressed_payload = [0u8; v1::SIZE_MAX];
+                    decompressed_payload[0] = verb;
+                    if let Ok(dlen) = lz4_flex::block::decompress_into(&payload.as_bytes()[1..], &mut decompressed_payload[1..]) {
+                        payload.set_to(&decompressed_payload[..(dlen + 1)]);
+                    } else {
+                        return false;
+                    }
+                }
+
+                // ---------------------------------------------------------------
+                // If we made it here it decrypted and passed authentication.
+                // ---------------------------------------------------------------
+
+                self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
+
+                let mut path_is_known = false;
+                for p in self.paths.lock().iter_mut() {
+                    if std::ptr::eq(p.path.as_ptr(), source_path.as_ref()) {
+                        p.last_receive_time_ticks = time_ticks;
+                        path_is_known = true;
+                        break;
+                    }
+                }
+
+                verb &= v1::VERB_MASK; // mask off flags
+                debug_event!(
+                    host_system,
+                    "[vl1] #{:0>16x} decrypted and authenticated, verb: {} ({:0>2x})",
+                    u64::from_be_bytes(packet_header.id),
+                    verbs::name(verb),
+                    verb as u32
+                );
+
+                if match verb {
+                    verbs::VL1_NOP => true,
+                    verbs::VL1_HELLO => {
+                        self.handle_incoming_hello(
+                            host_system,
+                            inner,
+                            node,
+                            time_ticks,
+                            message_id,
+                            source_path,
+                            packet_header.hops(),
+                            &payload,
+                        )
+                        .await
+                    }
+                    verbs::VL1_ERROR => {
+                        self.handle_incoming_error(host_system, inner, node, time_ticks, source_path, &payload)
+                            .await
+                    }
+                    verbs::VL1_OK => {
+                        self.handle_incoming_ok(
+                            host_system,
+                            inner,
+                            node,
+                            time_ticks,
+                            source_path,
+                            packet_header.hops(),
+                            path_is_known,
+                            &payload,
+                        )
+                        .await
+                    }
+                    verbs::VL1_WHOIS => {
+                        self.handle_incoming_whois(host_system, inner, node, time_ticks, message_id, &payload)
+                            .await
+                    }
+                    verbs::VL1_RENDEZVOUS => {
+                        self.handle_incoming_rendezvous(host_system, node, time_ticks, message_id, source_path, &payload)
+                            .await
+                    }
+                    verbs::VL1_ECHO => {
+                        self.handle_incoming_echo(host_system, inner, node, time_ticks, message_id, &payload)
+                            .await
+                    }
+                    verbs::VL1_PUSH_DIRECT_PATHS => {
+                        self.handle_incoming_push_direct_paths(host_system, node, time_ticks, source_path, &payload)
+                            .await
+                    }
+                    verbs::VL1_USER_MESSAGE => {
+                        self.handle_incoming_user_message(host_system, node, time_ticks, source_path, &payload)
+                            .await
+                    }
+                    _ => inner.handle_packet(self, &source_path, verb, &payload).await,
+                } {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    async fn handle_incoming_hello<InnerProtocolImpl: InnerProtocol>(
+        &self,
+        host_system: &HostSystemImpl,
+        inner: &InnerProtocolImpl,
+        node: &Node<HostSystemImpl>,
+        time_ticks: i64,
+        message_id: MessageId,
+        source_path: &Arc<Path<HostSystemImpl>>,
+        hops: u8,
+        payload: &PacketBuffer,
+    ) -> bool {
+        if !(inner.should_communicate_with(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
+            debug_event!(
+                host_system,
+                "[vl1] dropping HELLO from {} due to lack of trust relationship",
+                self.identity.address.to_string()
+            );
+            return true; // packet wasn't invalid, just ignored
+        }
+
+        let mut cursor = 0;
+        if let Ok(hello_fixed_headers) = payload.read_struct::<v1::message_component_structs::HelloFixedHeaderFields>(&mut cursor) {
+            if let Ok(identity) = Identity::read_bytes(&mut BufferReader::new(payload, &mut cursor)) {
+                if identity.eq(&self.identity) {
+                    {
+                        let mut remote_node_info = self.remote_node_info.write();
+                        remote_node_info.remote_protocol_version = hello_fixed_headers.version_proto;
+                        remote_node_info.remote_version = (
+                            hello_fixed_headers.version_major,
+                            hello_fixed_headers.version_minor,
+                            u16::from_be_bytes(hello_fixed_headers.version_revision),
+                        );
+                    }
+
+                    let mut packet = PacketBuffer::new();
+                    packet.set_size(v1::HEADER_SIZE);
+                    {
+                        let f: &mut (
+                            v1::message_component_structs::OkHeader,
+                            v1::message_component_structs::OkHelloFixedHeaderFields,
+                        ) = packet.append_struct_get_mut().unwrap();
+                        f.0.verb = verbs::VL1_OK;
+                        f.0.in_re_verb = verbs::VL1_HELLO;
+                        f.0.in_re_message_id = message_id.to_ne_bytes();
+                        f.1.timestamp_echo = hello_fixed_headers.timestamp;
+                        f.1.version_proto = PROTOCOL_VERSION;
+                        f.1.version_major = VERSION_MAJOR;
+                        f.1.version_minor = VERSION_MINOR;
+                        f.1.version_revision = VERSION_REVISION.to_be_bytes();
+                    }
+
+                    return self.send(host_system, Some(source_path), node, time_ticks, &mut packet).await;
+                }
+            }
+        }
+        return false;
+    }
+
+    async fn handle_incoming_error<InnerProtocolImpl: InnerProtocol>(
+        &self,
+        _: &HostSystemImpl,
+        inner: &InnerProtocolImpl,
+        _: &Node<HostSystemImpl>,
+        _: i64,
+        source_path: &Arc<Path<HostSystemImpl>>,
+        payload: &PacketBuffer,
+    ) -> bool {
+        let mut cursor = 0;
+        if let Ok(error_header) = payload.read_struct::<v1::message_component_structs::ErrorHeader>(&mut cursor) {
+            let in_re_message_id: MessageId = u64::from_ne_bytes(error_header.in_re_message_id);
+            if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
+                match error_header.in_re_verb {
+                    _ => {
+                        return inner
+                            .handle_error(
+                                self,
+                                &source_path,
+                                error_header.in_re_verb,
+                                in_re_message_id,
+                                error_header.error_code,
+                                payload,
+                                &mut cursor,
+                            )
+                            .await;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    async fn handle_incoming_ok<InnerProtocolImpl: InnerProtocol>(
+        &self,
+        host_system: &HostSystemImpl,
+        inner: &InnerProtocolImpl,
+        node: &Node<HostSystemImpl>,
+        time_ticks: i64,
+        source_path: &Arc<Path<HostSystemImpl>>,
+        hops: u8,
+        path_is_known: bool,
+        payload: &PacketBuffer,
+    ) -> bool {
+        let mut cursor = 0;
+        if let Ok(ok_header) = payload.read_struct::<v1::message_component_structs::OkHeader>(&mut cursor) {
+            let in_re_message_id: MessageId = u64::from_ne_bytes(ok_header.in_re_message_id);
+            if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
+                match ok_header.in_re_verb {
+                    verbs::VL1_HELLO => {
+                        if let Ok(ok_hello_fixed_header_fields) =
+                            payload.read_struct::<v1::message_component_structs::OkHelloFixedHeaderFields>(&mut cursor)
+                        {
+                            if hops == 0 {
+                                if let Ok(reported_endpoint) = Endpoint::unmarshal(&payload, &mut cursor) {
+                                    #[cfg(debug_assertions)]
+                                    let reported_endpoint2 = reported_endpoint.clone();
+                                    if self
+                                        .remote_node_info
+                                        .write()
+                                        .reported_local_endpoints
+                                        .insert(reported_endpoint, time_ticks)
+                                        .is_none()
+                                    {
+                                        #[cfg(debug_assertions)]
+                                        debug_event!(
+                                            host_system,
+                                            "[vl1] {} reported new remote perspective, local endpoint: {}",
+                                            self.identity.address.to_string(),
+                                            reported_endpoint2.to_string()
+                                        );
+                                    }
+                                }
+                            }
+
+                            if hops == 0 && !path_is_known {
+                                self.learn_path(host_system, source_path, time_ticks);
+                            }
+
+                            self.last_hello_reply_time_ticks.store(time_ticks, Ordering::Relaxed);
+                        }
+                    }
+
+                    verbs::VL1_WHOIS => {
+                        if node.is_peer_root(self) {
+                            while cursor < payload.len() {
+                                if let Ok(_whois_response) = Identity::read_bytes(&mut BufferReader::new(payload, &mut cursor)) {
+                                    // TODO
+                                } else {
+                                    break;
+                                }
+                            }
+                        } else {
+                            return true; // not invalid, just ignored
+                        }
+                    }
+
+                    _ => {
+                        return inner
+                            .handle_ok(self, &source_path, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor)
+                            .await;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    async fn handle_incoming_whois<InnerProtocolImpl: InnerProtocol>(
+        &self,
+        host_system: &HostSystemImpl,
+        inner: &InnerProtocolImpl,
+        node: &Node<HostSystemImpl>,
+        time_ticks: i64,
+        message_id: MessageId,
+        payload: &PacketBuffer,
+    ) -> bool {
+        if node.this_node_is_root() || inner.should_communicate_with(&self.identity) {
+            let mut packet = PacketBuffer::new();
+            packet.set_size(v1::HEADER_SIZE);
+            {
+                let mut f: &mut v1::message_component_structs::OkHeader = packet.append_struct_get_mut().unwrap();
+                f.verb = verbs::VL1_OK;
+                f.in_re_verb = verbs::VL1_WHOIS;
+                f.in_re_message_id = message_id.to_ne_bytes();
+            }
+
+            let mut cursor = 0;
+            while cursor < payload.len() {
+                if let Ok(zt_address) = Address::unmarshal(payload, &mut cursor) {
+                    if let Some(peer) = node.peer(zt_address) {
+                        if !packet.append_bytes((&peer.identity.to_public_bytes()).into()).is_ok() {
+                            debug_event!(host_system, "unexpected error serializing an identity into a WHOIS packet response");
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            self.send(host_system, None, node, time_ticks, &mut packet).await
+        } else {
+            true // packet wasn't invalid, just ignored
+        }
+    }
+
+    #[allow(unused)]
+    async fn handle_incoming_rendezvous(
+        &self,
+        host_system: &HostSystemImpl,
+        node: &Node<HostSystemImpl>,
+        time_ticks: i64,
+        message_id: MessageId,
+        source_path: &Arc<Path<HostSystemImpl>>,
+        payload: &PacketBuffer,
+    ) -> bool {
+        if node.is_peer_root(self) {}
+        return true;
+    }
+
+    async fn handle_incoming_echo<InnerProtocolImpl: InnerProtocol>(
+        &self,
+        host_system: &HostSystemImpl,
+        inner: &InnerProtocolImpl,
+        node: &Node<HostSystemImpl>,
+        time_ticks: i64,
+        message_id: MessageId,
+        payload: &PacketBuffer,
+    ) -> bool {
+        if inner.should_communicate_with(&self.identity) || node.is_peer_root(self) {
+            let mut packet = PacketBuffer::new();
+            packet.set_size(v1::HEADER_SIZE);
+            {
+                let mut f: &mut v1::message_component_structs::OkHeader = packet.append_struct_get_mut().unwrap();
+                f.verb = verbs::VL1_OK;
+                f.in_re_verb = verbs::VL1_ECHO;
+                f.in_re_message_id = message_id.to_ne_bytes();
+            }
+            if packet.append_bytes(payload.as_bytes()).is_ok() {
+                self.send(host_system, None, node, time_ticks, &mut packet).await
+            } else {
+                false
+            }
+        } else {
+            debug_event!(
+                host_system,
+                "[vl1] dropping ECHO from {} due to lack of trust relationship",
+                self.identity.address.to_string()
+            );
+            true // packet wasn't invalid, just ignored
+        }
+    }
+
+    #[allow(unused)]
+    async fn handle_incoming_push_direct_paths(
+        &self,
+        host_system: &HostSystemImpl,
+        node: &Node<HostSystemImpl>,
+        time_ticks: i64,
+        source_path: &Arc<Path<HostSystemImpl>>,
+        payload: &PacketBuffer,
+    ) -> bool {
+        false
+    }
+
+    #[allow(unused)]
+    async fn handle_incoming_user_message(
+        &self,
+        host_system: &HostSystemImpl,
+        node: &Node<HostSystemImpl>,
+        time_ticks: i64,
+        source_path: &Arc<Path<HostSystemImpl>>,
+        payload: &PacketBuffer,
+    ) -> bool {
+        false
+    }
+}
+
+impl<HostSystemImpl: HostSystem> Hash for Peer<HostSystemImpl> {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write_u64(self.identity.address.into());
+    }
+}
+
+impl<HostSystemImpl: HostSystem> PartialEq for Peer<HostSystemImpl> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.identity.fingerprint.eq(&other.identity.fingerprint)
+    }
+}
+
+impl<HostSystemImpl: HostSystem> Eq for Peer<HostSystemImpl> {}
 
 /// Attempt ZeroTier V1 protocol AEAD packet encryption and MAC validation. Returns message ID on success.
 fn try_aead_decrypt(
@@ -155,807 +995,3 @@ fn salsa_poly_create(secret: &SymmetricSecret, header: &v1::PacketHeader, packet
     salsa.crypt_in_place(&mut poly1305_key);
     (salsa, poly1305_key)
 }
-
-/// Sort a list of paths by quality or priority, with best paths first.
-fn prioritize_paths<SI: SystemInterface>(paths: &mut Vec<PeerPath<SI>>) {
-    paths.sort_unstable_by(|a, b| a.last_receive_time_ticks.cmp(&b.last_receive_time_ticks).reverse());
-}
-
-impl<SI: SystemInterface> Peer<SI> {
-    /// Create a new peer.
-    ///
-    /// This only returns None if this_node_identity does not have its secrets or if some
-    /// fatal error occurs performing key agreement between the two identities.
-    pub(crate) fn new(this_node_identity: &Identity, id: Identity, time_ticks: i64) -> Option<Peer<SI>> {
-        this_node_identity.agree(&id).map(|static_secret| -> Self {
-            Self {
-                identity: id,
-                static_symmetric_key: SymmetricSecret::new(static_secret),
-                paths: Mutex::new(Vec::with_capacity(4)),
-                last_send_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
-                last_receive_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
-                last_forward_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
-                last_hello_reply_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
-                create_time_ticks: time_ticks,
-                random_ticks_offset: random::xorshift64_random() as u32,
-                message_id_counter: AtomicU64::new(random::xorshift64_random()),
-                remote_node_info: RwLock::new(RemoteNodeInfo {
-                    reported_local_endpoints: HashMap::new(),
-                    remote_protocol_version: 0,
-                    remote_version: (0, 0, 0),
-                }),
-            }
-        })
-    }
-
-    /// Get the remote version of this peer: major, minor, revision.
-    /// Returns None if it's not yet known.
-    pub fn version(&self) -> Option<(u8, u8, u16)> {
-        let rv = self.remote_node_info.read().remote_version;
-        if rv.0 != 0 || rv.1 != 0 || rv.2 != 0 {
-            Some(rv)
-        } else {
-            None
-        }
-    }
-
-    /// Get the remote protocol version of this peer or None if not yet known.
-    pub fn protocol_version(&self) -> Option<u8> {
-        let pv = self.remote_node_info.read().remote_protocol_version;
-        if pv != 0 {
-            Some(pv)
-        } else {
-            None
-        }
-    }
-
-    /// Get the next message ID for sending a message to this peer.
-    #[inline(always)]
-    pub(crate) fn next_message_id(&self) -> MessageId {
-        self.message_id_counter.fetch_add(1, Ordering::SeqCst)
-    }
-
-    /// Get current best path or None if there are no direct paths to this peer.
-    pub fn direct_path(&self) -> Option<Arc<Path<SI>>> {
-        for p in self.paths.lock().iter() {
-            let pp = p.path.upgrade();
-            if pp.is_some() {
-                return pp;
-            }
-        }
-        return None;
-    }
-
-    /// Get either the current best direct path or an indirect path via e.g. a root.
-    pub fn path(&self, node: &Node<SI>) -> Option<Arc<Path<SI>>> {
-        let direct_path = self.direct_path();
-        if direct_path.is_some() {
-            return direct_path;
-        }
-        if let Some(root) = node.best_root() {
-            return root.direct_path();
-        }
-        return None;
-    }
-
-    pub(crate) fn learn_path(&self, si: &SI, new_path: &Arc<Path<SI>>, time_ticks: i64) {
-        let mut paths = self.paths.lock();
-
-        match &new_path.endpoint {
-            Endpoint::IpUdp(new_ip) => {
-                // If this is an IpUdp endpoint, scan the existing paths and replace any that come from
-                // the same IP address but a different port. This prevents the accumulation of duplicate
-                // paths to the same peer over different ports.
-                for pi in paths.iter_mut() {
-                    if std::ptr::eq(pi.path.as_ptr(), new_path.as_ref()) {
-                        return;
-                    }
-                    if let Some(p) = pi.path.upgrade() {
-                        match &p.endpoint {
-                            Endpoint::IpUdp(existing_ip) => {
-                                if existing_ip.ip_bytes().eq(new_ip.ip_bytes()) {
-                                    debug_event!(
-                                        si,
-                                        "[vl1] {} replacing path {} with {} (same IP, different port)",
-                                        self.identity.address.to_string(),
-                                        p.endpoint.to_string(),
-                                        new_path.endpoint.to_string()
-                                    );
-                                    pi.path = Arc::downgrade(new_path);
-                                    pi.last_receive_time_ticks = time_ticks;
-                                    prioritize_paths(&mut paths);
-                                    return;
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
-            _ => {
-                for pi in paths.iter() {
-                    if std::ptr::eq(pi.path.as_ptr(), new_path.as_ref()) {
-                        return;
-                    }
-                }
-            }
-        }
-
-        // Learn new path if it's not a duplicate or should not replace an existing path.
-        debug_event!(
-            si,
-            "[vl1] {} learned new path: {}",
-            self.identity.address.to_string(),
-            new_path.endpoint.to_string()
-        );
-        paths.push(PeerPath::<SI> {
-            path: Arc::downgrade(new_path),
-            last_receive_time_ticks: time_ticks,
-        });
-        prioritize_paths(&mut paths);
-    }
-
-    /// Called every SERVICE_INTERVAL_MS by the background service loop in Node.
-    pub(crate) fn service(&self, _: &SI, _: &Node<SI>, time_ticks: i64) -> bool {
-        {
-            let mut paths = self.paths.lock();
-            paths.retain(|p| ((time_ticks - p.last_receive_time_ticks) < PEER_EXPIRATION_TIME) && (p.path.strong_count() > 0));
-            prioritize_paths(&mut paths);
-        }
-        self.remote_node_info
-            .write()
-            .reported_local_endpoints
-            .retain(|_, ts| (time_ticks - *ts) < PEER_EXPIRATION_TIME);
-        (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed).max(self.create_time_ticks)) < PEER_EXPIRATION_TIME
-    }
-
-    /// Send to an endpoint, fragmenting if needed.
-    ///
-    /// This does not set the fragmentation field in the packet header, MAC, or encrypt the packet. The sender
-    /// must do that while building the packet. The fragmentation flag must be set if fragmentation will be needed.
-    async fn internal_send(
-        &self,
-        si: &SI,
-        endpoint: &Endpoint,
-        local_socket: Option<&SI::LocalSocket>,
-        local_interface: Option<&SI::LocalInterface>,
-        max_fragment_size: usize,
-        packet: &PacketBuffer,
-    ) -> bool {
-        let packet_size = packet.len();
-        if packet_size > max_fragment_size {
-            let bytes = packet.as_bytes();
-            if !si
-                .wire_send(endpoint, local_socket, local_interface, &[&bytes[0..UDP_DEFAULT_MTU]], 0)
-                .await
-            {
-                return false;
-            }
-            let mut pos = UDP_DEFAULT_MTU;
-
-            let overrun_size = (packet_size - UDP_DEFAULT_MTU) as u32;
-            let fragment_count = (overrun_size / (UDP_DEFAULT_MTU - v1::FRAGMENT_HEADER_SIZE) as u32)
-                + (((overrun_size % (UDP_DEFAULT_MTU - v1::FRAGMENT_HEADER_SIZE) as u32) != 0) as u32);
-            debug_assert!(fragment_count <= v1::FRAGMENT_COUNT_MAX as u32);
-
-            let mut header = v1::FragmentHeader {
-                id: *packet.bytes_fixed_at(0).unwrap(),
-                dest: *packet.bytes_fixed_at(v1::DESTINATION_INDEX).unwrap(),
-                fragment_indicator: v1::FRAGMENT_INDICATOR,
-                total_and_fragment_no: ((fragment_count + 1) << 4) as u8,
-                reserved_hops: 0,
-            };
-
-            let mut chunk_size = (packet_size - pos).min(UDP_DEFAULT_MTU - v1::HEADER_SIZE);
-            loop {
-                header.total_and_fragment_no += 1;
-                let next_pos = pos + chunk_size;
-                if !si
-                    .wire_send(
-                        endpoint,
-                        local_socket,
-                        local_interface,
-                        &[header.as_bytes(), &bytes[pos..next_pos]],
-                        0,
-                    )
-                    .await
-                {
-                    return false;
-                }
-                pos = next_pos;
-                if pos < packet_size {
-                    chunk_size = (packet_size - pos).min(UDP_DEFAULT_MTU - v1::HEADER_SIZE);
-                } else {
-                    return true;
-                }
-            }
-        } else {
-            return si.wire_send(endpoint, local_socket, local_interface, &[packet.as_bytes()], 0).await;
-        }
-    }
-
-    /// Send a packet to this peer, returning true on (potential) success.
-    ///
-    /// This will go directly if there is an active path, or otherwise indirectly
-    /// via a root or some other route.
-    ///
-    /// It encrypts and sets the MAC and cipher fields and packet ID and other things.
-    pub(crate) async fn send(
-        &self,
-        si: &SI,
-        path: Option<&Arc<Path<SI>>>,
-        node: &Node<SI>,
-        time_ticks: i64,
-        packet: &mut PacketBuffer,
-    ) -> bool {
-        let mut _path_arc = None;
-        let path = if let Some(path) = path {
-            path
-        } else {
-            _path_arc = self.path(node);
-            if let Some(path) = _path_arc.as_ref() {
-                path
-            } else {
-                return false;
-            }
-        };
-
-        let max_fragment_size = if path.endpoint.requires_fragmentation() {
-            UDP_DEFAULT_MTU
-        } else {
-            usize::MAX
-        };
-        let flags_cipher_hops = if packet.len() > max_fragment_size {
-            v1::HEADER_FLAG_FRAGMENTED | v1::CIPHER_AES_GMAC_SIV
-        } else {
-            v1::CIPHER_AES_GMAC_SIV
-        };
-
-        let mut aes_gmac_siv = self.static_symmetric_key.aes_gmac_siv.get();
-        aes_gmac_siv.encrypt_init(&self.next_message_id().to_ne_bytes());
-        aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(
-            self.identity.address,
-            node.identity.address,
-            flags_cipher_hops,
-        ));
-        if let Ok(payload) = packet.as_bytes_starting_at_mut(v1::HEADER_SIZE) {
-            aes_gmac_siv.encrypt_first_pass(payload);
-            aes_gmac_siv.encrypt_first_pass_finish();
-            aes_gmac_siv.encrypt_second_pass_in_place(payload);
-            let tag = aes_gmac_siv.encrypt_second_pass_finish();
-            let header = packet.struct_mut_at::<v1::PacketHeader>(0).unwrap();
-            header.id = *array_range::<u8, 16, 0, 8>(tag);
-            header.dest = self.identity.address.to_bytes();
-            header.src = node.identity.address.to_bytes();
-            header.flags_cipher_hops = flags_cipher_hops;
-            header.mac = *array_range::<u8, 16, 8, 8>(tag);
-        } else {
-            return false;
-        }
-
-        if self
-            .internal_send(
-                si,
-                &path.endpoint,
-                Some(&path.local_socket),
-                Some(&path.local_interface),
-                max_fragment_size,
-                packet,
-            )
-            .await
-        {
-            self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
-            return true;
-        }
-
-        return false;
-    }
-
-    /// Forward a packet to this peer.
-    ///
-    /// This is called when we receive a packet not addressed to this node and
-    /// want to pass it along.
-    ///
-    /// This doesn't fragment large packets since fragments are forwarded individually.
-    /// Intermediates don't need to adjust fragmentation.
-    pub(crate) async fn forward(&self, si: &SI, time_ticks: i64, packet: &PacketBuffer) -> bool {
-        if let Some(path) = self.direct_path() {
-            if si
-                .wire_send(
-                    &path.endpoint,
-                    Some(&path.local_socket),
-                    Some(&path.local_interface),
-                    &[packet.as_bytes()],
-                    0,
-                )
-                .await
-            {
-                self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /// Send a HELLO to this peer.
-    ///
-    /// If explicit_endpoint is not None the packet will be sent directly to this endpoint.
-    /// Otherwise it will be sent via the best direct or indirect path known.
-    ///
-    /// Unlike other messages HELLO is sent partially in the clear and always with the long-lived
-    /// static identity key. Authentication in old versions is via Poly1305 and in new versions
-    /// via HMAC-SHA512.
-    pub(crate) async fn send_hello(&self, si: &SI, node: &Node<SI>, explicit_endpoint: Option<&Endpoint>) -> bool {
-        let mut path = None;
-        let destination = if let Some(explicit_endpoint) = explicit_endpoint {
-            explicit_endpoint
-        } else {
-            if let Some(p) = self.path(node) {
-                let _ = path.insert(p);
-                &path.as_ref().unwrap().endpoint
-            } else {
-                return false;
-            }
-        };
-
-        let max_fragment_size = if destination.requires_fragmentation() {
-            UDP_DEFAULT_MTU
-        } else {
-            usize::MAX
-        };
-        let time_ticks = si.time_ticks();
-
-        let mut packet = PacketBuffer::new();
-        {
-            let message_id = self.next_message_id();
-
-            {
-                let f: &mut (v1::PacketHeader, v1::message_component_structs::HelloFixedHeaderFields) =
-                    packet.append_struct_get_mut().unwrap();
-                f.0.id = message_id.to_ne_bytes();
-                f.0.dest = self.identity.address.to_bytes();
-                f.0.src = node.identity.address.to_bytes();
-                f.0.flags_cipher_hops = v1::CIPHER_NOCRYPT_POLY1305;
-                f.1.verb = verbs::VL1_HELLO | v1::VERB_FLAG_EXTENDED_AUTHENTICATION;
-                f.1.version_proto = PROTOCOL_VERSION;
-                f.1.version_major = VERSION_MAJOR;
-                f.1.version_minor = VERSION_MINOR;
-                f.1.version_revision = VERSION_REVISION.to_be_bytes();
-                f.1.timestamp = (time_ticks as u64).wrapping_add(self.random_ticks_offset as u64).to_be_bytes();
-            }
-
-            debug_assert_eq!(packet.len(), 41);
-            assert!(packet.append_bytes((&node.identity.to_public_bytes()).into()).is_ok());
-
-            let (_, poly1305_key) = salsa_poly_create(
-                &self.static_symmetric_key,
-                packet.struct_at::<v1::PacketHeader>(0).unwrap(),
-                packet.len(),
-            );
-            let mac = poly1305::compute(&poly1305_key, packet.as_bytes_starting_at(v1::HEADER_SIZE).unwrap());
-            packet.as_mut()[v1::MAC_FIELD_INDEX..v1::MAC_FIELD_INDEX + 8].copy_from_slice(&mac[0..8]);
-
-            self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
-
-            debug_event!(
-                si,
-                "HELLO -> {} @ {} ({} bytes)",
-                self.identity.address.to_string(),
-                destination.to_string(),
-                packet.len()
-            );
-        }
-
-        if let Some(p) = path.as_ref() {
-            if self
-                .internal_send(
-                    si,
-                    destination,
-                    Some(&p.local_socket),
-                    Some(&p.local_interface),
-                    max_fragment_size,
-                    &packet,
-                )
-                .await
-            {
-                p.log_send_anything(time_ticks);
-                true
-            } else {
-                false
-            }
-        } else {
-            self.internal_send(si, destination, None, None, max_fragment_size, &packet).await
-        }
-    }
-
-    /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
-    ///
-    /// If the packet comes in multiple fragments, the fragments slice should contain all
-    /// those fragments after the main packet header and first chunk.
-    ///
-    /// This returns true if the packet decrypted and passed authentication.
-    pub(crate) async fn receive<PH: InnerProtocolInterface>(
-        &self,
-        node: &Node<SI>,
-        si: &SI,
-        ph: &PH,
-        time_ticks: i64,
-        source_path: &Arc<Path<SI>>,
-        packet_header: &v1::PacketHeader,
-        frag0: &PacketBuffer,
-        fragments: &[Option<PooledPacketBuffer>],
-    ) -> bool {
-        if let Ok(packet_frag0_payload_bytes) = frag0.as_bytes_starting_at(v1::VERB_INDEX) {
-            let mut payload = PacketBuffer::new();
-
-            let message_id = if let Some(message_id2) = try_aead_decrypt(
-                &self.static_symmetric_key,
-                packet_frag0_payload_bytes,
-                packet_header,
-                fragments,
-                &mut payload,
-            ) {
-                // Decryption successful with static secret.
-                message_id2
-            } else {
-                // Packet failed to decrypt using either ephemeral or permament key, reject.
-                debug_event!(si, "[vl1] #{:0>16x} failed authentication", u64::from_be_bytes(packet_header.id));
-                return false;
-            };
-
-            if let Ok(mut verb) = payload.u8_at(0) {
-                if (verb & v1::VERB_FLAG_COMPRESSED) != 0 {
-                    let mut decompressed_payload = [0u8; v1::SIZE_MAX];
-                    decompressed_payload[0] = verb;
-                    if let Ok(dlen) = lz4_flex::block::decompress_into(&payload.as_bytes()[1..], &mut decompressed_payload[1..]) {
-                        payload.set_to(&decompressed_payload[..(dlen + 1)]);
-                    } else {
-                        return false;
-                    }
-                }
-
-                // ---------------------------------------------------------------
-                // If we made it here it decrypted and passed authentication.
-                // ---------------------------------------------------------------
-
-                self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
-
-                let mut path_is_known = false;
-                for p in self.paths.lock().iter_mut() {
-                    if std::ptr::eq(p.path.as_ptr(), source_path.as_ref()) {
-                        p.last_receive_time_ticks = time_ticks;
-                        path_is_known = true;
-                        break;
-                    }
-                }
-
-                verb &= v1::VERB_MASK; // mask off flags
-                debug_event!(
-                    si,
-                    "[vl1] #{:0>16x} decrypted and authenticated, verb: {} ({:0>2x})",
-                    u64::from_be_bytes(packet_header.id),
-                    verbs::name(verb),
-                    verb as u32
-                );
-
-                if match verb {
-                    verbs::VL1_NOP => true,
-                    verbs::VL1_HELLO => {
-                        self.handle_incoming_hello(si, ph, node, time_ticks, message_id, source_path, packet_header.hops(), &payload)
-                            .await
-                    }
-                    verbs::VL1_ERROR => self.handle_incoming_error(si, ph, node, time_ticks, source_path, &payload).await,
-                    verbs::VL1_OK => {
-                        self.handle_incoming_ok(si, ph, node, time_ticks, source_path, packet_header.hops(), path_is_known, &payload)
-                            .await
-                    }
-                    verbs::VL1_WHOIS => self.handle_incoming_whois(si, ph, node, time_ticks, message_id, &payload).await,
-                    verbs::VL1_RENDEZVOUS => {
-                        self.handle_incoming_rendezvous(si, node, time_ticks, message_id, source_path, &payload)
-                            .await
-                    }
-                    verbs::VL1_ECHO => self.handle_incoming_echo(si, ph, node, time_ticks, message_id, &payload).await,
-                    verbs::VL1_PUSH_DIRECT_PATHS => {
-                        self.handle_incoming_push_direct_paths(si, node, time_ticks, source_path, &payload)
-                            .await
-                    }
-                    verbs::VL1_USER_MESSAGE => self.handle_incoming_user_message(si, node, time_ticks, source_path, &payload).await,
-                    _ => ph.handle_packet(self, &source_path, verb, &payload).await,
-                } {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    async fn handle_incoming_hello<PH: InnerProtocolInterface>(
-        &self,
-        si: &SI,
-        ph: &PH,
-        node: &Node<SI>,
-        time_ticks: i64,
-        message_id: MessageId,
-        source_path: &Arc<Path<SI>>,
-        hops: u8,
-        payload: &PacketBuffer,
-    ) -> bool {
-        if !(ph.should_communicate_with(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
-            debug_event!(
-                si,
-                "[vl1] dropping HELLO from {} due to lack of trust relationship",
-                self.identity.address.to_string()
-            );
-            return true; // packet wasn't invalid, just ignored
-        }
-
-        let mut cursor = 0;
-        if let Ok(hello_fixed_headers) = payload.read_struct::<v1::message_component_structs::HelloFixedHeaderFields>(&mut cursor) {
-            if let Ok(identity) = Identity::read_bytes(&mut BufferReader::new(payload, &mut cursor)) {
-                if identity.eq(&self.identity) {
-                    {
-                        let mut remote_node_info = self.remote_node_info.write();
-                        remote_node_info.remote_protocol_version = hello_fixed_headers.version_proto;
-                        remote_node_info.remote_version = (
-                            hello_fixed_headers.version_major,
-                            hello_fixed_headers.version_minor,
-                            u16::from_be_bytes(hello_fixed_headers.version_revision),
-                        );
-                    }
-
-                    let mut packet = PacketBuffer::new();
-                    packet.set_size(v1::HEADER_SIZE);
-                    {
-                        let f: &mut (
-                            v1::message_component_structs::OkHeader,
-                            v1::message_component_structs::OkHelloFixedHeaderFields,
-                        ) = packet.append_struct_get_mut().unwrap();
-                        f.0.verb = verbs::VL1_OK;
-                        f.0.in_re_verb = verbs::VL1_HELLO;
-                        f.0.in_re_message_id = message_id.to_ne_bytes();
-                        f.1.timestamp_echo = hello_fixed_headers.timestamp;
-                        f.1.version_proto = PROTOCOL_VERSION;
-                        f.1.version_major = VERSION_MAJOR;
-                        f.1.version_minor = VERSION_MINOR;
-                        f.1.version_revision = VERSION_REVISION.to_be_bytes();
-                    }
-
-                    return self.send(si, Some(source_path), node, time_ticks, &mut packet).await;
-                }
-            }
-        }
-        return false;
-    }
-
-    async fn handle_incoming_error<PH: InnerProtocolInterface>(
-        &self,
-        _si: &SI,
-        ph: &PH,
-        _node: &Node<SI>,
-        _time_ticks: i64,
-        source_path: &Arc<Path<SI>>,
-        payload: &PacketBuffer,
-    ) -> bool {
-        let mut cursor = 0;
-        if let Ok(error_header) = payload.read_struct::<v1::message_component_structs::ErrorHeader>(&mut cursor) {
-            let in_re_message_id: MessageId = u64::from_ne_bytes(error_header.in_re_message_id);
-            if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
-                match error_header.in_re_verb {
-                    _ => {
-                        return ph
-                            .handle_error(
-                                self,
-                                &source_path,
-                                error_header.in_re_verb,
-                                in_re_message_id,
-                                error_header.error_code,
-                                payload,
-                                &mut cursor,
-                            )
-                            .await;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    async fn handle_incoming_ok<PH: InnerProtocolInterface>(
-        &self,
-        si: &SI,
-        ph: &PH,
-        node: &Node<SI>,
-        time_ticks: i64,
-        source_path: &Arc<Path<SI>>,
-        hops: u8,
-        path_is_known: bool,
-        payload: &PacketBuffer,
-    ) -> bool {
-        let mut cursor = 0;
-        if let Ok(ok_header) = payload.read_struct::<v1::message_component_structs::OkHeader>(&mut cursor) {
-            let in_re_message_id: MessageId = u64::from_ne_bytes(ok_header.in_re_message_id);
-            if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
-                match ok_header.in_re_verb {
-                    verbs::VL1_HELLO => {
-                        if let Ok(ok_hello_fixed_header_fields) =
-                            payload.read_struct::<v1::message_component_structs::OkHelloFixedHeaderFields>(&mut cursor)
-                        {
-                            if hops == 0 {
-                                if let Ok(reported_endpoint) = Endpoint::unmarshal(&payload, &mut cursor) {
-                                    #[cfg(debug_assertions)]
-                                    let reported_endpoint2 = reported_endpoint.clone();
-                                    if self
-                                        .remote_node_info
-                                        .write()
-                                        .reported_local_endpoints
-                                        .insert(reported_endpoint, time_ticks)
-                                        .is_none()
-                                    {
-                                        #[cfg(debug_assertions)]
-                                        debug_event!(
-                                            si,
-                                            "[vl1] {} reported new remote perspective, local endpoint: {}",
-                                            self.identity.address.to_string(),
-                                            reported_endpoint2.to_string()
-                                        );
-                                    }
-                                }
-                            }
-
-                            if hops == 0 && !path_is_known {
-                                self.learn_path(si, source_path, time_ticks);
-                            }
-
-                            self.last_hello_reply_time_ticks.store(time_ticks, Ordering::Relaxed);
-                        }
-                    }
-
-                    verbs::VL1_WHOIS => {
-                        if node.is_peer_root(self) {
-                            while cursor < payload.len() {
-                                if let Ok(_whois_response) = Identity::read_bytes(&mut BufferReader::new(payload, &mut cursor)) {
-                                    // TODO
-                                } else {
-                                    break;
-                                }
-                            }
-                        } else {
-                            return true; // not invalid, just ignored
-                        }
-                    }
-
-                    _ => {
-                        return ph
-                            .handle_ok(self, &source_path, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor)
-                            .await;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    async fn handle_incoming_whois<PH: InnerProtocolInterface>(
-        &self,
-        si: &SI,
-        ph: &PH,
-        node: &Node<SI>,
-        time_ticks: i64,
-        message_id: MessageId,
-        payload: &PacketBuffer,
-    ) -> bool {
-        if node.this_node_is_root() || ph.should_communicate_with(&self.identity) {
-            let mut packet = PacketBuffer::new();
-            packet.set_size(v1::HEADER_SIZE);
-            {
-                let mut f: &mut v1::message_component_structs::OkHeader = packet.append_struct_get_mut().unwrap();
-                f.verb = verbs::VL1_OK;
-                f.in_re_verb = verbs::VL1_WHOIS;
-                f.in_re_message_id = message_id.to_ne_bytes();
-            }
-
-            let mut cursor = 0;
-            while cursor < payload.len() {
-                if let Ok(zt_address) = Address::unmarshal(payload, &mut cursor) {
-                    if let Some(peer) = node.peer(zt_address) {
-                        if !packet.append_bytes((&peer.identity.to_public_bytes()).into()).is_ok() {
-                            debug_event!(si, "unexpected error serializing an identity into a WHOIS packet response");
-                            return false;
-                        }
-                    }
-                }
-            }
-
-            self.send(si, None, node, time_ticks, &mut packet).await
-        } else {
-            true // packet wasn't invalid, just ignored
-        }
-    }
-
-    #[allow(unused)]
-    async fn handle_incoming_rendezvous(
-        &self,
-        si: &SI,
-        node: &Node<SI>,
-        time_ticks: i64,
-        message_id: MessageId,
-        source_path: &Arc<Path<SI>>,
-        payload: &PacketBuffer,
-    ) -> bool {
-        if node.is_peer_root(self) {}
-        return true;
-    }
-
-    async fn handle_incoming_echo<PH: InnerProtocolInterface>(
-        &self,
-        si: &SI,
-        ph: &PH,
-        node: &Node<SI>,
-        time_ticks: i64,
-        message_id: MessageId,
-        payload: &PacketBuffer,
-    ) -> bool {
-        if ph.should_communicate_with(&self.identity) || node.is_peer_root(self) {
-            let mut packet = PacketBuffer::new();
-            packet.set_size(v1::HEADER_SIZE);
-            {
-                let mut f: &mut v1::message_component_structs::OkHeader = packet.append_struct_get_mut().unwrap();
-                f.verb = verbs::VL1_OK;
-                f.in_re_verb = verbs::VL1_ECHO;
-                f.in_re_message_id = message_id.to_ne_bytes();
-            }
-            if packet.append_bytes(payload.as_bytes()).is_ok() {
-                self.send(si, None, node, time_ticks, &mut packet).await
-            } else {
-                false
-            }
-        } else {
-            debug_event!(
-                si,
-                "[vl1] dropping ECHO from {} due to lack of trust relationship",
-                self.identity.address.to_string()
-            );
-            true // packet wasn't invalid, just ignored
-        }
-    }
-
-    #[allow(unused)]
-    async fn handle_incoming_push_direct_paths(
-        &self,
-        si: &SI,
-        node: &Node<SI>,
-        time_ticks: i64,
-        source_path: &Arc<Path<SI>>,
-        payload: &PacketBuffer,
-    ) -> bool {
-        false
-    }
-
-    #[allow(unused)]
-    async fn handle_incoming_user_message(
-        &self,
-        si: &SI,
-        node: &Node<SI>,
-        time_ticks: i64,
-        source_path: &Arc<Path<SI>>,
-        payload: &PacketBuffer,
-    ) -> bool {
-        false
-    }
-}
-
-impl<SI: SystemInterface> Hash for Peer<SI> {
-    #[inline(always)]
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        state.write_u64(self.identity.address.into());
-    }
-}
-
-impl<SI: SystemInterface> PartialEq for Peer<SI> {
-    #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        self.identity.fingerprint.eq(&other.identity.fingerprint)
-    }
-}
-
-impl<SI: SystemInterface> Eq for Peer<SI> {}

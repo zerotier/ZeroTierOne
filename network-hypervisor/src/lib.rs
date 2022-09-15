@@ -9,9 +9,4 @@ pub mod util;
 pub mod vl1;
 pub mod vl2;
 
-mod event;
-mod networkhypervisor;
-
-pub use event::Event;
-pub use networkhypervisor::{Interface, NetworkHypervisor};
 pub use vl1::protocol::{PacketBuffer, PooledPacketBuffer};

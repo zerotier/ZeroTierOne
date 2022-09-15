@@ -4,7 +4,7 @@ use std::hash::Hash;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 
-use crate::udp::BoundUdpSocket;
+use crate::sys::udp::BoundUdpSocket;
 
 static LOCAL_SOCKET_UNIQUE_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
@@ -22,10 +22,9 @@ impl LocalSocket {
         Self(Arc::downgrade(s), LOCAL_SOCKET_UNIQUE_ID_COUNTER.fetch_add(1, Ordering::SeqCst))
     }
 
-    /// Returns true if the wrapped socket appears to be in use by the core.
     #[inline(always)]
-    pub fn in_use(&self) -> bool {
-        self.0.weak_count() > 0
+    pub fn is_valid(&self) -> bool {
+        self.0.strong_count() > 0
     }
 
     #[inline(always)]
