@@ -1808,7 +1808,6 @@ void Bond::setBondParameters(int policy, SharedPtr<Bond> templateBond, bool useT
 	_qw[ZT_QOS_PDV_IDX] = 0.3f;
 	_qw[ZT_QOS_PLR_IDX] = 0.1f;
 	_qw[ZT_QOS_PER_IDX] = 0.1f;
-	_qw[ZT_QOS_SCP_IDX] = 0.1f;
 
 	_failoverInterval = ZT_BOND_FAILOVER_DEFAULT_INTERVAL;
 

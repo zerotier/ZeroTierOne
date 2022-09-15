@@ -28,7 +28,7 @@
 /**
  * Indices for the path quality weight vector
  */
-enum ZT_BondQualityWeightIndex { ZT_QOS_LAT_IDX, ZT_QOS_LTM_IDX, ZT_QOS_PDV_IDX, ZT_QOS_PLR_IDX, ZT_QOS_PER_IDX, ZT_QOS_THR_IDX, ZT_QOS_THM_IDX, ZT_QOS_THV_IDX, ZT_QOS_AGE_IDX, ZT_QOS_SCP_IDX, ZT_QOS_WEIGHT_SIZE };
+enum ZT_BondQualityWeightIndex { ZT_QOS_LAT_IDX, ZT_QOS_LTM_IDX, ZT_QOS_PDV_IDX, ZT_QOS_PLR_IDX, ZT_QOS_PER_IDX, ZT_QOS_WEIGHT_SIZE };
 
 /**
  *  Multipath bonding policy
