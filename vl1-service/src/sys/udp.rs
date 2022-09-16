@@ -163,6 +163,7 @@ impl BoundUdpPort {
                                 address: addr_with_port,
                                 socket: Arc::new(s.unwrap()),
                                 interface: interface.clone(),
+                                associated_tasks: parking_lot::Mutex::new(Vec::new()),
                                 last_receive_time: AtomicI64::new(i64::MIN),
                                 fd,
                             });

@@ -4,14 +4,8 @@ pub mod cli;
 pub mod cmdline_help;
 pub mod datadir;
 pub mod exitcode;
-pub mod getifaddrs;
-pub mod ipv6;
 pub mod jsonformatter;
 pub mod localconfig;
-pub mod localinterface;
-pub mod localsocket;
-pub mod service;
-pub mod udp;
 pub mod utils;
 pub mod vnic;
 
@@ -20,6 +14,7 @@ use std::io::Write;
 use clap::error::{ContextKind, ContextValue};
 use clap::{Arg, ArgMatches, Command};
 
+use zerotier_network_hypervisor::vl2::Switch;
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
 pub fn print_help() {
@@ -63,6 +58,8 @@ async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
         Some(("leave", cmd_args)) => todo!(),
         Some(("service", _)) => {
             drop(global_args); // free unnecessary heap before starting service as we're done with CLI args
+
+            /*
             let svc = service::Service::new(tokio::runtime::Handle::current(), &flags.base_path, true).await;
             if svc.is_ok() {
                 let _ = tokio::signal::ctrl_c().await;
@@ -72,6 +69,8 @@ async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
                 println!("FATAL: error launching service: {}", svc.err().unwrap().to_string());
                 exitcode::ERR_IOERR
             }
+            */
+            todo!()
         }
         Some(("identity", cmd_args)) => todo!(),
         Some(("rootset", cmd_args)) => cli::rootset::cmd(flags, cmd_args).await,

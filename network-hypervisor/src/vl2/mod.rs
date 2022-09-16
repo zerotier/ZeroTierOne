@@ -2,9 +2,8 @@
 
 mod multicastgroup;
 mod networkid;
-
-pub(crate) mod switch;
+mod switch;
 
 pub use multicastgroup::MulticastGroup;
 pub use networkid::NetworkId;
-pub use switch::SwitchInterface;
+pub use switch::{Switch, SwitchInterface};
