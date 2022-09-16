@@ -97,9 +97,9 @@ pub trait Storage: Sync + Send + 'static {
 
 /// Trait to be implemented to provide path hints and a filter to approve physical paths
 #[async_trait]
-pub trait PathFilter<HostSystemImpl: HostSystem>: Sync + Send + 'static {
+pub trait PathFilter: Sync + Send + 'static {
     /// Called to check and see if a physical address should be used for ZeroTier traffic to a node.
-    async fn check_path(
+    async fn check_path<HostSystemImpl: HostSystem>(
         &self,
         id: &Identity,
         endpoint: &Endpoint,
@@ -108,7 +108,7 @@ pub trait PathFilter<HostSystemImpl: HostSystem>: Sync + Send + 'static {
     ) -> bool;
 
     /// Called to look up any statically defined or memorized paths to known nodes.
-    async fn get_path_hints(
+    async fn get_path_hints<HostSystemImpl: HostSystem>(
         &self,
         id: &Identity,
     ) -> Option<
@@ -847,5 +847,81 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                 .or_insert_with(|| Arc::new(Path::new(ep.clone(), local_socket.clone(), local_interface.clone(), time_ticks)))
                 .clone()
         }
+    }
+}
+
+/// Dummy no-op inner protocol for debugging and testing.
+#[derive(Default)]
+pub struct DummyInnerProtocol;
+
+#[async_trait]
+impl InnerProtocol for DummyInnerProtocol {
+    async fn handle_packet<HostSystemImpl: HostSystem>(
+        &self,
+        _source: &Peer<HostSystemImpl>,
+        _source_path: &Path<HostSystemImpl>,
+        _verb: u8,
+        _payload: &PacketBuffer,
+    ) -> bool {
+        false
+    }
+
+    async fn handle_error<HostSystemImpl: HostSystem>(
+        &self,
+        _source: &Peer<HostSystemImpl>,
+        _source_path: &Path<HostSystemImpl>,
+        _in_re_verb: u8,
+        _in_re_message_id: u64,
+        _error_code: u8,
+        _payload: &PacketBuffer,
+        _cursor: &mut usize,
+    ) -> bool {
+        false
+    }
+
+    async fn handle_ok<HostSystemImpl: HostSystem>(
+        &self,
+        _source: &Peer<HostSystemImpl>,
+        _source_path: &Path<HostSystemImpl>,
+        _in_re_verb: u8,
+        _in_re_message_id: u64,
+        _payload: &PacketBuffer,
+        _cursor: &mut usize,
+    ) -> bool {
+        false
+    }
+
+    fn should_communicate_with(&self, _id: &Identity) -> bool {
+        true
+    }
+}
+
+/// Dummy no-op path filter for debugging and testing.
+#[derive(Default)]
+pub struct DummyPathFilter;
+
+#[async_trait]
+impl PathFilter for DummyPathFilter {
+    async fn check_path<HostSystemImpl: HostSystem>(
+        &self,
+        _id: &Identity,
+        _endpoint: &Endpoint,
+        _local_socket: Option<&<HostSystemImpl as HostSystem>::LocalSocket>,
+        _local_interface: Option<&<HostSystemImpl as HostSystem>::LocalInterface>,
+    ) -> bool {
+        true
+    }
+
+    async fn get_path_hints<HostSystemImpl: HostSystem>(
+        &self,
+        _id: &Identity,
+    ) -> Option<
+        Vec<(
+            Endpoint,
+            Option<<HostSystemImpl as HostSystem>::LocalSocket>,
+            Option<<HostSystemImpl as HostSystem>::LocalInterface>,
+        )>,
+    > {
+        None
     }
 }

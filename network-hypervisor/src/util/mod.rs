@@ -8,9 +8,6 @@ pub mod marshalable;
 /// A value for ticks that indicates that something never happened, and is thus very long before zero ticks.
 pub(crate) const NEVER_HAPPENED_TICKS: i64 = -2147483648;
 
-#[cfg(test)]
-pub mod testutil;
-
 #[cfg(feature = "debug_events")]
 #[allow(unused_macros)]
 macro_rules! debug_event {

@@ -24,7 +24,7 @@ pub use event::Event;
 pub use identity::Identity;
 pub use inetaddress::InetAddress;
 pub use mac::MAC;
-pub use node::{HostSystem, InnerProtocol, Node, PathFilter, Storage};
+pub use node::{DummyInnerProtocol, DummyPathFilter, HostSystem, InnerProtocol, Node, PathFilter, Storage};
 pub use path::Path;
 pub use peer::Peer;
 pub use rootset::{Root, RootSet};

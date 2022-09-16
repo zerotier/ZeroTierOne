@@ -459,6 +459,21 @@ mod tests {
         },
     };
 
+    fn randstring(len: u8) -> String {
+        (0..len)
+            .map(|_| (rand::random::<u8>() % 26) + 'a' as u8)
+            .map(|c| {
+                if rand::random::<bool>() {
+                    (c as char).to_ascii_uppercase()
+                } else {
+                    c as char
+                }
+            })
+            .map(|c| c.to_string())
+            .collect::<Vec<String>>()
+            .join("")
+    }
+
     #[test]
     fn endpoint_default() {
         let e: Endpoint = Default::default();
@@ -611,7 +626,6 @@ mod tests {
     #[test]
     fn endpoint_marshal_http() {
         use crate::util::buffer::Buffer;
-        use crate::util::testutil::randstring;
 
         for _ in 0..1000 {
             let http = Endpoint::Http(randstring(30));
@@ -650,7 +664,6 @@ mod tests {
 
     #[test]
     fn endpoint_to_from_string() {
-        use crate::util::testutil::randstring;
         use std::str::FromStr;
 
         for _ in 0..1000 {

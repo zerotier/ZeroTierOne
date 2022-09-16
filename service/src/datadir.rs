@@ -7,10 +7,12 @@ use std::sync::Arc;
 use crate::localconfig::Config;
 use crate::utils::{read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 
+use async_trait::async_trait;
+
 use parking_lot::{Mutex, RwLock};
 
 use zerotier_crypto::random::next_u32_secure;
-use zerotier_network_hypervisor::vl1::Identity;
+use zerotier_network_hypervisor::vl1::{Identity, Storage};
 
 const AUTH_TOKEN_DEFAULT_LENGTH: usize = 48;
 const AUTH_TOKEN_POSSIBLE_CHARS: &'static str = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -24,6 +26,32 @@ pub struct DataDir {
     pub base_path: PathBuf,
     config: RwLock<Arc<Config>>,
     authtoken: Mutex<String>,
+}
+
+#[async_trait]
+impl Storage for DataDir {
+    async fn load_node_identity(&self) -> Option<Identity> {
+        let id_data = read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 4096).await;
+        if id_data.is_err() {
+            return None;
+        }
+        let id_data = Identity::from_str(String::from_utf8_lossy(id_data.unwrap().as_slice()).as_ref());
+        if id_data.is_err() {
+            return None;
+        }
+        Some(id_data.unwrap())
+    }
+
+    async fn save_node_identity(&self, id: &Identity) {
+        assert!(id.secret.is_some());
+        let id_secret_str = id.to_secret_string();
+        let id_public_str = id.to_string();
+        let secret_path = self.base_path.join(IDENTITY_SECRET_FILENAME);
+        // TODO: handle errors
+        let _ = tokio::fs::write(&secret_path, id_secret_str.as_bytes()).await;
+        assert!(crate::utils::fs_restrict_permissions(&secret_path));
+        let _ = tokio::fs::write(self.base_path.join(IDENTITY_PUBLIC_FILENAME), id_public_str.as_bytes()).await;
+    }
 }
 
 impl DataDir {
@@ -56,28 +84,6 @@ impl DataDir {
         }));
 
         return Ok(Self { base_path, config, authtoken: Mutex::new(String::new()) });
-    }
-
-    /// Load identity.secret from data directory.
-    pub async fn load_identity(&self) -> std::io::Result<Identity> {
-        let id_data = Identity::from_str(
-            String::from_utf8_lossy(read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 4096).await?.as_slice()).as_ref(),
-        );
-        if id_data.is_err() {
-            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, id_data.err().unwrap()));
-        }
-        Ok(id_data.unwrap())
-    }
-
-    /// Save identity.secret and identity.public to data directory.
-    pub async fn save_identity(&self, id: &Identity) -> std::io::Result<()> {
-        assert!(id.secret.is_some());
-        let id_secret_str = id.to_secret_string();
-        let id_public_str = id.to_string();
-        let secret_path = self.base_path.join(IDENTITY_SECRET_FILENAME);
-        tokio::fs::write(&secret_path, id_secret_str.as_bytes()).await?;
-        assert!(crate::utils::fs_restrict_permissions(&secret_path));
-        tokio::fs::write(self.base_path.join(IDENTITY_PUBLIC_FILENAME), id_public_str.as_bytes()).await
     }
 
     /// Get authorization token for local API, creating and saving if it does not exist.

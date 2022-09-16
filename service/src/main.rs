@@ -10,12 +10,15 @@ pub mod utils;
 pub mod vnic;
 
 use std::io::Write;
+use std::sync::Arc;
 
 use clap::error::{ContextKind, ContextValue};
 use clap::{Arg, ArgMatches, Command};
 
-use zerotier_network_hypervisor::vl2::Switch;
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
+use zerotier_vl1_service::VL1Service;
+
+use crate::datadir::DataDir;
 
 pub fn print_help() {
     let h = crate::cmdline_help::make_cmdline_help();
@@ -39,6 +42,19 @@ pub struct Flags {
     pub auth_token_override: Option<String>,
 }
 
+async fn open_datadir(flags: &Flags) -> Arc<DataDir> {
+    let datadir = DataDir::open(flags.base_path.as_str()).await;
+    if datadir.is_ok() {
+        return Arc::new(datadir.unwrap());
+    }
+    eprintln!(
+        "FATAL: unable to open data directory {}: {}",
+        flags.base_path,
+        datadir.err().unwrap().to_string()
+    );
+    std::process::exit(exitcode::ERR_IOERR);
+}
+
 async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
     #[allow(unused)]
     match global_args.subcommand() {
@@ -59,8 +75,10 @@ async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
         Some(("service", _)) => {
             drop(global_args); // free unnecessary heap before starting service as we're done with CLI args
 
-            /*
-            let svc = service::Service::new(tokio::runtime::Handle::current(), &flags.base_path, true).await;
+            let test_inner = Arc::new(zerotier_network_hypervisor::vl1::DummyInnerProtocol::default());
+            let test_path_filter = Arc::new(zerotier_network_hypervisor::vl1::DummyPathFilter::default());
+            let datadir = open_datadir(&flags).await;
+            let svc = VL1Service::new(datadir, test_inner, test_path_filter, zerotier_vl1_service::Settings::default()).await;
             if svc.is_ok() {
                 let _ = tokio::signal::ctrl_c().await;
                 println!("Terminate signal received, shutting down...");
@@ -69,8 +87,6 @@ async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
                 println!("FATAL: error launching service: {}", svc.err().unwrap().to_string());
                 exitcode::ERR_IOERR
             }
-            */
-            todo!()
         }
         Some(("identity", cmd_args)) => todo!(),
         Some(("rootset", cmd_args)) => cli::rootset::cmd(flags, cmd_args).await,

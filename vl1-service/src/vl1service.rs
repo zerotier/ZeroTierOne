@@ -24,7 +24,7 @@ use tokio::time::Duration;
 /// talks to the physical network, manages the vl1 node, and presents a templated interface for
 /// whatever inner protocol implementation is using it. This would typically be VL2 but could be
 /// a test harness or just the controller for a controller that runs stand-alone.
-pub struct VL1Service<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: InnerProtocol> {
+pub struct VL1Service<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> {
     state: tokio::sync::RwLock<VL1ServiceMutableState>,
     storage: Arc<StorageImpl>,
     inner: Arc<InnerProtocolImpl>,
@@ -38,7 +38,7 @@ struct VL1ServiceMutableState {
     settings: Settings,
 }
 
-impl<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: InnerProtocol>
+impl<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol>
     VL1Service<StorageImpl, PathFilterImpl, InnerProtocolImpl>
 {
     pub async fn new(
@@ -199,7 +199,7 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: 
 }
 
 #[async_trait]
-impl<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: InnerProtocol> HostSystem
+impl<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> HostSystem
     for VL1Service<StorageImpl, PathFilterImpl, InnerProtocolImpl>
 {
     type LocalSocket = crate::LocalSocket;
@@ -297,7 +297,7 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: 
     }
 }
 
-impl<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: InnerProtocol> Drop
+impl<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> Drop
     for VL1Service<StorageImpl, PathFilterImpl, InnerProtocolImpl>
 {
     fn drop(&mut self) {
