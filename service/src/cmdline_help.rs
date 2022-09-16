@@ -73,9 +73,9 @@ Advanced Operations:
   service                                  Start local service
    (usually not invoked manually)
 
-    · Command requires a running node to control.
-    @ Argument is the path to a file containing the object.
-    ? Argument can be either the object or a path to it (auto-detected).
+· Command requires a running node to control.
+@ Argument is the path to a file containing the object.
+? Argument can be either the object or a path to it (auto-detected).
 
 "###,
         VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION,

@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use zerotier_network_hypervisor::vl1::{Address, Endpoint, InetAddress};
+use zerotier_network_hypervisor::vl1::{Address, Endpoint};
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_vl1_service::Settings;
 

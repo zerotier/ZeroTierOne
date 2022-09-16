@@ -80,6 +80,8 @@ async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
             let datadir = open_datadir(&flags).await;
             let svc = VL1Service::new(datadir, test_inner, test_path_filter, zerotier_vl1_service::Settings::default()).await;
             if svc.is_ok() {
+                let svc = svc.unwrap();
+                svc.node().init_default_roots();
                 let _ = tokio::signal::ctrl_c().await;
                 println!("Terminate signal received, shutting down...");
                 exitcode::OK

@@ -820,6 +820,15 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         self.roots.read().sets.iter().any(|rs| !rs.1.members.is_empty())
     }
 
+    /// Initialize with default roots if there are no roots defined, otherwise do nothing.
+    pub fn init_default_roots(&self) -> bool {
+        if !self.has_roots_defined() {
+            self.add_update_root_set(RootSet::zerotier_default())
+        } else {
+            false
+        }
+    }
+
     /// Get the root sets that this node trusts.
     pub fn root_sets(&self) -> Vec<RootSet> {
         self.roots.read().sets.values().cloned().collect()

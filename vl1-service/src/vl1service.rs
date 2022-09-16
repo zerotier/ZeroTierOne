@@ -135,7 +135,10 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerP
 
                     let p = 50000 + ((random::xorshift64_random() as u16) % 15535);
                     if !state.udp_sockets.contains_key(&p) && udp_test_bind(p) {
-                        let _ = state.udp_sockets.insert(p, parking_lot::RwLock::new(BoundUdpPort::new(p)));
+                        have_random_port_count += state
+                            .udp_sockets
+                            .insert(p, parking_lot::RwLock::new(BoundUdpPort::new(p)))
+                            .is_none() as usize;
                     }
                 }
 
@@ -192,6 +195,7 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerP
     }
 
     async fn node_background_task_daemon(self: Arc<Self>) {
+        tokio::time::sleep(Duration::from_secs(1)).await;
         loop {
             tokio::time::sleep(self.node().do_background_tasks(self.as_ref()).await).await;
         }
@@ -238,7 +242,9 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerP
                     }
                 }
 
+                println!("wire_send {}", endpoint.to_string());
                 let state = self.state.read().await;
+                println!("2 wire_send {}", endpoint.to_string());
                 if !state.udp_sockets.is_empty() {
                     if let Some(specific_interface) = local_interface {
                         // Send from a specific interface if that interface is specified.
