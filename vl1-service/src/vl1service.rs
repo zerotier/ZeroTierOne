@@ -242,9 +242,7 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerP
                     }
                 }
 
-                println!("wire_send {}", endpoint.to_string());
                 let state = self.state.read().await;
-                println!("2 wire_send {}", endpoint.to_string());
                 if !state.udp_sockets.is_empty() {
                     if let Some(specific_interface) = local_interface {
                         // Send from a specific interface if that interface is specified.
