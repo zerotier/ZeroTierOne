@@ -7,10 +7,13 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use zerotier_crypto::random;
-use zerotier_network_hypervisor::vl1::{Endpoint, Event, HostSystem, Identity, InnerProtocol, Node, PathFilter, Storage};
+use zerotier_network_hypervisor::vl1::{Endpoint, Event, HostSystem, Identity, InetAddress, InnerProtocol, Node, PathFilter, Storage};
 use zerotier_utils::{ms_monotonic, ms_since_epoch};
 
-use crate::sys::udp::BoundUdpPort;
+use crate::constants::UNASSIGNED_PRIVILEGED_PORTS;
+use crate::settings::Settings;
+use crate::sys::udp::{udp_test_bind, BoundUdpPort};
+use crate::LocalSocket;
 
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
@@ -22,12 +25,17 @@ use tokio::time::Duration;
 /// whatever inner protocol implementation is using it. This would typically be VL2 but could be
 /// a test harness or just the controller for a controller that runs stand-alone.
 pub struct VL1Service<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: InnerProtocol> {
-    daemons: parking_lot::Mutex<Vec<JoinHandle<()>>>,
-    udp_sockets_by_port: tokio::sync::RwLock<HashMap<u16, BoundUdpPort>>,
+    state: tokio::sync::RwLock<VL1ServiceMutableState>,
     storage: Arc<StorageImpl>,
     inner: Arc<InnerProtocolImpl>,
     path_filter: Arc<PathFilterImpl>,
     node_container: Option<Node<Self>>,
+}
+
+struct VL1ServiceMutableState {
+    daemons: Vec<JoinHandle<()>>,
+    udp_sockets: HashMap<u16, parking_lot::RwLock<BoundUdpPort>>,
+    settings: Settings,
 }
 
 impl<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: InnerProtocol>
@@ -37,26 +45,28 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: 
         storage: Arc<StorageImpl>,
         inner: Arc<InnerProtocolImpl>,
         path_filter: Arc<PathFilterImpl>,
+        settings: Settings,
     ) -> Result<Arc<Self>, Box<dyn Error>> {
         let mut service = VL1Service {
-            daemons: parking_lot::Mutex::new(Vec::with_capacity(2)),
-            udp_sockets_by_port: tokio::sync::RwLock::new(HashMap::with_capacity(8)),
+            state: tokio::sync::RwLock::new(VL1ServiceMutableState {
+                daemons: Vec::with_capacity(2),
+                udp_sockets: HashMap::with_capacity(8),
+                settings,
+            }),
             storage,
             inner,
             path_filter,
             node_container: None,
         };
-
         service
             .node_container
             .replace(Node::new(&service, &*service.storage, true, false).await?);
-
         let service = Arc::new(service);
 
-        let mut daemons = service.daemons.lock();
-        daemons.push(tokio::spawn(service.clone().udp_bind_daemon()));
-        daemons.push(tokio::spawn(service.clone().node_background_task_daemon()));
-        drop(daemons);
+        let mut state = service.state.write().await;
+        state.daemons.push(tokio::spawn(service.clone().udp_bind_daemon()));
+        state.daemons.push(tokio::spawn(service.clone().node_background_task_daemon()));
+        drop(state);
 
         Ok(service)
     }
@@ -67,9 +77,125 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: 
         unsafe { self.node_container.as_ref().unwrap_unchecked() }
     }
 
-    async fn udp_bind_daemon(self: Arc<Self>) {}
+    pub async fn bound_udp_ports(&self) -> Vec<u16> {
+        self.state.read().await.udp_sockets.keys().cloned().collect()
+    }
 
-    async fn node_background_task_daemon(self: Arc<Self>) {}
+    async fn udp_bind_daemon(self: Arc<Self>) {
+        loop {
+            let state = self.state.read().await;
+            let mut need_fixed_ports: HashSet<u16> = HashSet::from_iter(state.settings.fixed_ports.iter().cloned());
+            let mut have_random_port_count = 0;
+            for (p, _) in state.udp_sockets.iter() {
+                need_fixed_ports.remove(p);
+                have_random_port_count += (!state.settings.fixed_ports.contains(p)) as usize;
+            }
+            let desired_random_port_count = state.settings.random_port_count;
+
+            let state = if !need_fixed_ports.is_empty() || have_random_port_count != desired_random_port_count {
+                drop(state);
+                let mut state = self.state.write().await;
+
+                for p in need_fixed_ports.iter() {
+                    state.udp_sockets.insert(*p, parking_lot::RwLock::new(BoundUdpPort::new(*p)));
+                }
+
+                while have_random_port_count > desired_random_port_count {
+                    let mut most_stale_binding_liveness = (usize::MAX, i64::MAX);
+                    let mut most_stale_binding_port = 0;
+                    for (p, s) in state.udp_sockets.iter() {
+                        if !state.settings.fixed_ports.contains(p) {
+                            let (total_smart_ptr_handles, most_recent_receive) = s.read().liveness();
+                            if total_smart_ptr_handles < most_stale_binding_liveness.0
+                                || (total_smart_ptr_handles == most_stale_binding_liveness.0
+                                    && most_recent_receive <= most_stale_binding_liveness.1)
+                            {
+                                most_stale_binding_liveness.0 = total_smart_ptr_handles;
+                                most_stale_binding_liveness.1 = most_recent_receive;
+                                most_stale_binding_port = *p;
+                            }
+                        }
+                    }
+                    if most_stale_binding_port != 0 {
+                        have_random_port_count -= state.udp_sockets.remove(&most_stale_binding_port).is_some() as usize;
+                    } else {
+                        break;
+                    }
+                }
+
+                'outer_add_port_loop: while have_random_port_count < desired_random_port_count {
+                    let rn = random::xorshift64_random() as usize;
+                    for i in 0..UNASSIGNED_PRIVILEGED_PORTS.len() {
+                        let p = UNASSIGNED_PRIVILEGED_PORTS[rn.wrapping_add(i) % UNASSIGNED_PRIVILEGED_PORTS.len()];
+                        if !state.udp_sockets.contains_key(&p) && udp_test_bind(p) {
+                            let _ = state.udp_sockets.insert(p, parking_lot::RwLock::new(BoundUdpPort::new(p)));
+                            continue 'outer_add_port_loop;
+                        }
+                    }
+
+                    let p = 50000 + ((random::xorshift64_random() as u16) % 15535);
+                    if !state.udp_sockets.contains_key(&p) && udp_test_bind(p) {
+                        let _ = state.udp_sockets.insert(p, parking_lot::RwLock::new(BoundUdpPort::new(p)));
+                    }
+                }
+
+                drop(state);
+                self.state.read().await
+            } else {
+                state
+            };
+
+            let num_cores = std::thread::available_parallelism().map_or(1, |c| c.get());
+            for (_, binding) in state.udp_sockets.iter() {
+                let mut binding = binding.write();
+                let (_, mut new_sockets) =
+                    binding.update_bindings(&state.settings.interface_prefix_blacklist, &state.settings.cidr_blacklist);
+                for s in new_sockets.drain(..) {
+                    // Start one async task per system core. This is technically not necessary because tokio
+                    // schedules and multiplexes, but this enables tokio to grab and schedule packets
+                    // concurrently for up to the number of cores available for any given socket and is
+                    // probably faster than other patterns that involve iterating through sockets and creating
+                    // arrays of futures or using channels.
+                    let mut socket_tasks = Vec::with_capacity(num_cores);
+                    for _ in 0..num_cores {
+                        let self_copy = self.clone();
+                        let s_copy = s.clone();
+                        let local_socket = LocalSocket::new(&s);
+                        socket_tasks.push(tokio::spawn(async move {
+                            loop {
+                                let mut buf = self_copy.node().get_packet_buffer();
+                                let now = ms_monotonic();
+                                if let Ok((bytes, from_sockaddr)) = s_copy.receive(unsafe { buf.entire_buffer_mut() }, now).await {
+                                    unsafe { buf.set_size_unchecked(bytes) };
+                                    self_copy
+                                        .node()
+                                        .handle_incoming_physical_packet(
+                                            &*self_copy,
+                                            &*self_copy.inner,
+                                            &Endpoint::IpUdp(InetAddress::from(from_sockaddr)),
+                                            &local_socket,
+                                            &s_copy.interface,
+                                            buf,
+                                        )
+                                        .await;
+                                }
+                            }
+                        }));
+                    }
+                    debug_assert!(s.associated_tasks.lock().is_empty());
+                    *s.associated_tasks.lock() = socket_tasks;
+                }
+            }
+
+            tokio::time::sleep(Duration::from_secs(10)).await;
+        }
+    }
+
+    async fn node_background_task_daemon(self: Arc<Self>) {
+        loop {
+            tokio::time::sleep(self.node().do_background_tasks(self.as_ref()).await).await;
+        }
+    }
 }
 
 #[async_trait]
@@ -112,11 +238,12 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: 
                     }
                 }
 
-                let udp_sockets_by_port = self.udp_sockets_by_port.read().await;
-                if !udp_sockets_by_port.is_empty() {
+                let state = self.state.read().await;
+                if !state.udp_sockets.is_empty() {
                     if let Some(specific_interface) = local_interface {
                         // Send from a specific interface if that interface is specified.
-                        for (_, p) in udp_sockets_by_port.iter() {
+                        for (_, p) in state.udp_sockets.iter() {
+                            let p = p.read();
                             if !p.sockets.is_empty() {
                                 let mut i = (random::next_u32_secure() as usize) % p.sockets.len();
                                 for _ in 0..p.sockets.len() {
@@ -133,7 +260,8 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: 
                     } else {
                         // Otherwise send from one socket on every interface.
                         let mut sent_on_interfaces = HashSet::with_capacity(4);
-                        for p in udp_sockets_by_port.values() {
+                        for p in state.udp_sockets.values() {
+                            let p = p.read();
                             if !p.sockets.is_empty() {
                                 let mut i = (random::next_u32_secure() as usize) % p.sockets.len();
                                 for _ in 0..p.sockets.len() {
@@ -173,16 +301,12 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter<Self>, InnerProtocolImpl: 
     for VL1Service<StorageImpl, PathFilterImpl, InnerProtocolImpl>
 {
     fn drop(&mut self) {
-        for d in self.daemons.lock().drain(..) {
-            d.abort();
-        }
-
-        // Drop all bound sockets since these can hold circular Arc<> references to 'internal'.
-        // This shouldn't have to loop much if at all to acquire the lock, but it might if something
-        // is still completing somewhere in an aborting task.
         loop {
-            if let Ok(mut udp_sockets) = self.udp_sockets_by_port.try_write() {
-                udp_sockets.clear();
+            if let Ok(mut state) = self.state.try_write() {
+                for d in state.daemons.drain(..) {
+                    d.abort();
+                }
+                state.udp_sockets.clear();
                 break;
             }
             std::thread::sleep(Duration::from_millis(2));

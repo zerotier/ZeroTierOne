@@ -4,9 +4,10 @@ use std::collections::HashMap;
 #[allow(unused_imports)]
 use std::mem::{size_of, transmute, MaybeUninit};
 #[allow(unused_imports)]
-use std::net::SocketAddr;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 #[allow(unused_imports)]
 use std::ptr::{null, null_mut};
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Arc;
 
 #[cfg(unix)]
@@ -35,7 +36,18 @@ pub struct BoundUdpSocket {
     pub address: InetAddress,
     pub socket: Arc<tokio::net::UdpSocket>,
     pub interface: LocalInterface,
+    pub associated_tasks: parking_lot::Mutex<Vec<tokio::task::JoinHandle<()>>>,
+    last_receive_time: AtomicI64,
     fd: RawFd,
+}
+
+impl Drop for BoundUdpSocket {
+    fn drop(&mut self) {
+        let mut associated_tasks = self.associated_tasks.lock();
+        for t in associated_tasks.drain(..) {
+            t.abort();
+        }
+    }
 }
 
 impl BoundUdpSocket {
@@ -54,31 +66,6 @@ impl BoundUdpSocket {
         };
     }
 
-    #[cfg(any(target_os = "macos", target_os = "freebsd"))]
-    pub fn send_sync_nonblock(&self, dest: &InetAddress, b: &[u8], packet_ttl: u8) -> bool {
-        let mut ok = false;
-        if dest.family() == self.address.family() {
-            if packet_ttl > 0 && dest.is_ipv4() {
-                self.set_ttl(packet_ttl);
-            }
-            unsafe {
-                ok = libc::sendto(
-                    self.fd.as_(),
-                    b.as_ptr().cast(),
-                    b.len().as_(),
-                    0,
-                    (dest as *const InetAddress).cast(),
-                    size_of::<InetAddress>().as_(),
-                ) > 0;
-            }
-            if packet_ttl > 0 && dest.is_ipv4() {
-                self.set_ttl(0xff);
-            }
-        }
-        ok
-    }
-
-    #[cfg(not(any(target_os = "macos", target_os = "freebsd")))]
     pub fn send_sync_nonblock(&self, dest: &InetAddress, b: &[u8], packet_ttl: u8) -> bool {
         let mut ok = false;
         if dest.family() == self.address.family() {
@@ -92,6 +79,14 @@ impl BoundUdpSocket {
         }
         ok
     }
+
+    pub async fn receive<B: AsMut<[u8]> + Send>(&self, mut buffer: B, current_time: i64) -> tokio::io::Result<(usize, SocketAddr)> {
+        let result = self.socket.recv_from(buffer.as_mut()).await;
+        if result.is_ok() {
+            self.last_receive_time.store(current_time, Ordering::Relaxed);
+        }
+        result
+    }
 }
 
 impl BoundUdpPort {
@@ -100,6 +95,17 @@ impl BoundUdpPort {
     /// You must call update_bindings() after this to actually bind to system interfaces.
     pub fn new(port: u16) -> Self {
         Self { sockets: Vec::new(), port }
+    }
+
+    /// Return a tuple of: total number of Arc<>+Weak<> references to sockets, and most recent receive time on any socket.
+    pub fn liveness(&self) -> (usize, i64) {
+        let mut rt_latest = i64::MIN;
+        let mut total_handles = 0;
+        for s in self.sockets.iter() {
+            rt_latest = rt_latest.max(s.last_receive_time.load(Ordering::Relaxed));
+            total_handles += Arc::strong_count(s) + Arc::weak_count(s);
+        }
+        (total_handles, rt_latest)
     }
 
     /// Synchronize bindings with devices and IPs in system.
@@ -129,6 +135,7 @@ impl BoundUdpPort {
             let interface_str = interface.to_string();
             let mut addr_with_port = address.clone();
             addr_with_port.set_port(self.port);
+
             if address.is_ip()
                 && matches!(
                     address.scope(),
@@ -145,6 +152,7 @@ impl BoundUdpPort {
                         self.sockets.push(socket.clone());
                     }
                 }
+
                 if !found {
                     let s = unsafe { bind_udp_to_device(interface_str.as_str(), &addr_with_port) };
                     if s.is_ok() {
@@ -155,6 +163,7 @@ impl BoundUdpPort {
                                 address: addr_with_port,
                                 socket: Arc::new(s.unwrap()),
                                 interface: interface.clone(),
+                                last_receive_time: AtomicI64::new(i64::MIN),
                                 fd,
                             });
                             self.sockets.push(s.clone());
@@ -175,6 +184,19 @@ impl BoundUdpPort {
 
         (errors, new_sockets)
     }
+}
+
+/// Attempt to bind universally to a given UDP port and then close to determine if we can use it.
+///
+/// This succeeds if either IPv4 or IPv6 global can be bound.
+pub fn udp_test_bind(port: u16) -> bool {
+    std::net::UdpSocket::bind(
+        &[
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port),
+            SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port),
+        ][..],
+    )
+    .is_ok()
 }
 
 #[allow(unused_variables)]

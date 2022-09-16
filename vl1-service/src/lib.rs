@@ -2,10 +2,13 @@
 
 mod localinterface;
 mod localsocket;
+mod settings;
 mod vl1service;
 
+pub mod constants;
 pub mod sys;
 
 pub use localinterface::LocalInterface;
 pub use localsocket::LocalSocket;
+pub use settings::Settings;
 pub use vl1service::*;

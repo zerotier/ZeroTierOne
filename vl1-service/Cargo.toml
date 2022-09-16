@@ -13,6 +13,7 @@ async-trait = "^0"
 num-traits = "^0"
 tokio = { version = "^1", features = ["fs", "io-util", "io-std", "net", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "sync", "time"], default-features = false }
 parking_lot = { version = "^0", features = [], default-features = false }
+serde = { version = "^1", features = ["derive"], default-features = false }
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
