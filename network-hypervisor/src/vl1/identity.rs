@@ -21,6 +21,9 @@ use crate::error::{InvalidFormatError, InvalidParameterError};
 use crate::vl1::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_FINGERPRINT_SIZE, IDENTITY_POW_THRESHOLD};
 use crate::vl1::Address;
 
+/// Current maximum size for an identity signature.
+pub const MAX_SIGNATURE_SIZE: usize = P384_ECDSA_SIGNATURE_SIZE + 1;
+
 /// Secret keys associated with NIST P-384 public keys.
 #[derive(Clone)]
 pub struct IdentityP384Secret {
