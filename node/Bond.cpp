@@ -1159,16 +1159,17 @@ void Bond::estimatePathQuality(int64_t now)
 		// Compute/Smooth average of real-world observations
 		_paths[i].latencyMean = _paths[i].latencySamples.mean();
 		_paths[i].latencyVariance = _paths[i].latencySamples.stddev();
-		//_paths[i].packetErrorRatio = 1.0 - (_paths[i].packetValiditySamples.count() ? _paths[i].packetValiditySamples.mean() : 1.0);
 
-		if (userHasSpecifiedLinkSpeeds()) {
-			// Use user-reported metrics
-			SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i].p->localSocket());
-			if (link) {
-				_paths[i].throughputMean = link->speed();
-				_paths[i].throughputVariance = 0;
-			}
-		}
+		// Write values to external path object so that it can be propagated to the user
+		_paths[i].p->_latencyMean = _paths[i].latencyMean;
+		_paths[i].p->_latencyVariance = _paths[i].latencyVariance;
+		_paths[i].p->_packetLossRatio = _paths[i].packetLossRatio;
+		_paths[i].p->_packetErrorRatio = _paths[i].packetErrorRatio;
+		_paths[i].p->_bonded = _paths[i].bonded;
+		_paths[i].p->_givenLinkSpeed = 0;//_paths[i].givenLinkSpeed;
+		_paths[i].p->_allocation = _paths[i].allocation;
+
+		//_paths[i].packetErrorRatio = 1.0 - (_paths[i].packetValiditySamples.count() ? _paths[i].packetValiditySamples.mean() : 1.0);
 
 		// Drain unacknowledged QoS records
 		int qosRecordTimeout = (_qosSendInterval * 3);
@@ -1184,7 +1185,7 @@ void Bond::estimatePathQuality(int64_t now)
 			}
 		}
 		if (numDroppedQosOutRecords) {
-			log("Dropped %d QOS out-records", numDroppedQosOutRecords);
+			debug("Dropped %d QOS out-records", numDroppedQosOutRecords);
 		}
 
 		/*

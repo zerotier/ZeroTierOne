@@ -613,9 +613,7 @@ static int cli(int argc,char **argv)
 						int numTotalLinks = OSUtils::jsonInt(j["numTotalLinks"],0);
 						printf("Peer               : %s\n", arg1.c_str());
 						printf("Bond               : %s\n", OSUtils::jsonString(j["bondingPolicy"],"-").c_str());
-						//if (bondingPolicy == ZT_BOND_POLICY_ACTIVE_BACKUP) {
 						printf("Link Select Method : %d\n", (int)OSUtils::jsonInt(j["linkSelectMethod"],0));
-						//}
 						printf("Links              : %d/%d\n", numAliveLinks, numTotalLinks);
 						printf("Failover Interval  : %d (ms)\n", (int)OSUtils::jsonInt(j["failoverInterval"],0));
 						printf("Up Delay           : %d (ms)\n", (int)OSUtils::jsonInt(j["upDelay"],0));
@@ -623,30 +621,32 @@ static int cli(int argc,char **argv)
 						printf("Packets Per Link   : %d (ms)\n", (int)OSUtils::jsonInt(j["packetsPerLink"],0));
 						nlohmann::json &p = j["links"];
 						if (p.is_array()) {
-							printf("\n     Interface Name\t\t\t\t\t     Path\t Alive\n");
+							printf("\n                  interface\t\t\t\t\t          path\n");
 							for(int i=0; i<80; i++) { printf("-"); }
 							printf("\n");
 							for (int i=0; i<p.size(); i++)
 							{
-								printf("[%d] %15s %45s %12d\n",
+								printf("[%3d] %21s %50s\n",
 									i,
 									OSUtils::jsonString(p[i]["ifname"],"-").c_str(),
-									OSUtils::jsonString(p[i]["path"],"-").c_str(),
-									(int)OSUtils::jsonInt(p[i]["alive"],0));
+									OSUtils::jsonString(p[i]["path"],"-").c_str()
+									);
 							}
-							printf("\n        Latency     Jitter     Loss     Error        Speed   Alloc\n");
+							printf("\n           lat      pdv     plr     per    speed      alloc     alive   bonded\n");
 							for(int i=0; i<80; i++) { printf("-"); }
 							printf("\n");
 							for (int i=0; i<p.size(); i++)
 							{
-								printf("[%d]       %5.3f      %5.3f    %5.3f     %5.3f     %8d   %5d\n",
+								printf("[%3d]  %7.2f  %7.2f  %6.2f  %6.2f %8d  %9d  %8d %8d\n",
 									i,
 									OSUtils::jsonDouble(p[i]["latencyMean"], 0),
 									OSUtils::jsonDouble(p[i]["latencyVariance"], 0),
 									OSUtils::jsonDouble(p[i]["packetLossRatio"], 0),
 									OSUtils::jsonDouble(p[i]["packetErrorRatio"], 0),
 									(int)OSUtils::jsonInt(p[i]["givenLinkSpeed"], 0),
-									(int)OSUtils::jsonInt(p[i]["allocation"], 0));
+									(int)OSUtils::jsonInt(p[i]["allocation"], 0),
+									(int)OSUtils::jsonInt(p[i]["alive"],0),
+									(int)OSUtils::jsonInt(p[i]["bonded"],0));
 							}
 						}
 					}

@@ -597,16 +597,14 @@ static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
 		nlohmann::json j;
 		j["ifname"] = bond->getLink(paths[i])->ifname();
 		j["path"] = pathStr;
-		/*
-		j["alive"] = paths[i]->alive(now,true);
-		j["bonded"] = paths[i]->bonded();
 		j["latencyMean"] = paths[i]->latencyMean();
 		j["latencyVariance"] = paths[i]->latencyVariance();
 		j["packetLossRatio"] = paths[i]->packetLossRatio();
 		j["packetErrorRatio"] = paths[i]->packetErrorRatio();
-		j["givenLinkSpeed"] = 1000;
+		j["alive"] = paths[i]->alive(now);
+		j["bonded"] = paths[i]->bonded();
+		j["givenLinkSpeed"] = paths[i]->givenLinkSpeed();
 		j["allocation"] = paths[i]->allocation();
-		*/
 		pa.push_back(j);
 	}
 	pj["links"] = pa;

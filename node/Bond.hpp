@@ -1159,8 +1159,9 @@ class Bond {
 		std::vector<SharedPtr<Path> > pp;
 		Mutex::Lock _l(_paths_m);
 		for (unsigned int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
-			if (! _paths[i].p)
-				break;
+			if (! _paths[i].p) {
+				continue;
+			}
 			pp.push_back(_paths[i].p);
 		}
 		return pp;
@@ -1258,9 +1259,6 @@ class Bond {
 			, latencyVariance(0)
 			, packetLossRatio(0)
 			, packetErrorRatio(0)
-			, throughputMean(0)
-			, throughputMax(0)
-			, throughputVariance(0)
 			, allocation(0)
 			, byteLoad(0)
 			, relativeByteLoad(0)
@@ -1394,9 +1392,6 @@ class Bond {
 		float latencyVariance;				   // Packet delay variance (computed from a sliding window.)
 		float packetLossRatio;				   // The ratio of lost packets to received packets.
 		float packetErrorRatio;				   // The ratio of packets that failed their MAC/CRC checks to those that did not.
-		uint64_t throughputMean;			   // The estimated mean throughput of this path.
-		uint64_t throughputMax;				   // The maximum observed throughput of this path.
-		float throughputVariance;			   // The variance in the estimated throughput of this path.
 		uint8_t allocation;					   // The relative quality of this path to all others in the bond, [0-255].
 		uint64_t byteLoad;					   // How much load this path is under.
 		uint8_t relativeByteLoad;			   // How much load this path is under (relative to other paths in the bond.)

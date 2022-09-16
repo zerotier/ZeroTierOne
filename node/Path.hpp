@@ -280,6 +280,41 @@ public:
 		return false;
 	}
 
+	/**
+	 * @return Mean latency as reported by the bonding layer
+	 */
+	inline unsigned int latencyMean() const { return _latencyMean; }
+
+	/**
+	 * @return Latency variance as reported by the bonding layer
+	 */
+	inline unsigned int latencyVariance() const { return _latencyVariance; }
+
+	/**
+	 * @return Packet Loss Ratio as reported by the bonding layer
+	 */
+	inline unsigned int packetLossRatio() const { return _packetLossRatio; }
+
+	/**
+	 * @return Packet Error Ratio as reported by the bonding layer
+	 */
+	inline unsigned int packetErrorRatio() const { return _packetErrorRatio; }
+
+	/**
+	 * @return Whether this path is bonded as reported by the bonding layer
+	 */
+	inline unsigned int bonded() const { return _bonded; }
+
+	/**
+	 * @return Given link speed as reported by the bonding layer
+	 */
+	inline unsigned int givenLinkSpeed() const { return _givenLinkSpeed; }
+
+	/**
+	 * @return Traffic allocation as reported by the bonding layer
+	 */
+	inline unsigned int allocation() const { return _allocation; }
+
 	void *_bondingMetricPtr;
 
 private:
@@ -288,9 +323,18 @@ private:
 	volatile int64_t _lastIn;
 	volatile int64_t _lastTrustEstablishedPacketReceived;
 
+	volatile float _latencyMean;
+	volatile float _latencyVariance;
+	volatile float _packetLossRatio;
+	volatile float _packetErrorRatio;
+	volatile bool _bonded;
+	volatile int64_t _givenLinkSpeed;
+	volatile int8_t _allocation;
+
 	int64_t _lastEchoRequestReceived;
 
 	int64_t _localSocket;
+
 	volatile unsigned int _latency;
 	InetAddress _addr;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
