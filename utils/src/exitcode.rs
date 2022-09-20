@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-// These were taken from BSD sysexits.h to provide some standard.
+// These were taken from BSD sysexits.h to provide some standard for process exit codes.
 
 pub const OK: i32 = 0;
 

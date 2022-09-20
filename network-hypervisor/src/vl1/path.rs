@@ -6,10 +6,10 @@ use std::sync::atomic::{AtomicI64, Ordering};
 
 use parking_lot::Mutex;
 
+use crate::protocol::*;
 use crate::vl1::endpoint::Endpoint;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::*;
-use crate::vl1::protocol::*;
 
 use zerotier_crypto::random;
 

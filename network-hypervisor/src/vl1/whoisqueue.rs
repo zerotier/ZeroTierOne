@@ -4,10 +4,10 @@ use std::collections::{HashMap, LinkedList};
 
 use parking_lot::Mutex;
 
+use crate::protocol::{PooledPacketBuffer, WHOIS_MAX_WAITING_PACKETS, WHOIS_RETRY_INTERVAL, WHOIS_RETRY_MAX};
 use crate::util::gate::IntervalGate;
 use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::{HostSystem, Node};
-use crate::vl1::protocol::{PooledPacketBuffer, WHOIS_MAX_WAITING_PACKETS, WHOIS_RETRY_INTERVAL, WHOIS_RETRY_MAX};
 use crate::vl1::Address;
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = WHOIS_RETRY_INTERVAL;

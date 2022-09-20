@@ -8,6 +8,7 @@ pub mod poly1305;
 pub mod random;
 pub mod salsa;
 pub mod secret;
+pub mod verified;
 pub mod x25519;
 pub mod zssp;
 

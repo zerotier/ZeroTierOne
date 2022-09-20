@@ -13,6 +13,7 @@ use parking_lot::{Mutex, RwLock};
 
 use zerotier_crypto::random::next_u32_secure;
 use zerotier_network_hypervisor::vl1::{Identity, Storage};
+use zerotier_utils::json::to_json_pretty;
 
 const AUTH_TOKEN_DEFAULT_LENGTH: usize = 48;
 const AUTH_TOKEN_POSSIBLE_CHARS: &'static str = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -119,7 +120,7 @@ impl DataDir {
     /// Save a modified copy of the configuration and replace the internal copy in this structure (if it's actually changed).
     pub async fn save_config(&self, modified_config: Config) -> std::io::Result<()> {
         if !modified_config.eq(&self.config.read()) {
-            let config_data = crate::utils::to_json_pretty(&modified_config);
+            let config_data = to_json_pretty(&modified_config);
             tokio::fs::write(self.base_path.join(CONFIG_FILENAME), config_data.as_bytes()).await?;
             *self.config.write() = Arc::new(modified_config);
         }

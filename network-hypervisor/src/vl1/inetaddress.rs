@@ -9,13 +9,14 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::util::marshalable::Marshalable;
+use crate::util::marshalable::*;
+
+use crate::error::InvalidFormatError;
+
+use zerotier_utils::buffer::Buffer;
 
 #[cfg(windows)]
 use winapi::um::winsock2;
-
-use crate::error::InvalidFormatError;
-use crate::util::buffer::Buffer;
 
 #[allow(non_camel_case_types)]
 #[cfg(not(windows))]
@@ -782,7 +783,7 @@ impl InetAddress {
 impl Marshalable for InetAddress {
     const MAX_MARSHAL_SIZE: usize = 19;
 
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), MarshalUnmarshalError> {
         unsafe {
             match self.sa.sa_family as AddressFamilyType {
                 AF_INET => {
@@ -791,7 +792,6 @@ impl Marshalable for InetAddress {
                     copy_nonoverlapping((&self.sin.sin_addr.s_addr as *const u32).cast::<u8>(), b.as_mut_ptr().offset(1), 4);
                     b[5] = *(&self.sin.sin_port as *const u16).cast::<u8>();
                     b[6] = *(&self.sin.sin_port as *const u16).cast::<u8>().offset(1);
-                    Ok(())
                 }
                 AF_INET6 => {
                     let b = buf.append_bytes_fixed_get_mut::<19>()?;
@@ -803,14 +803,14 @@ impl Marshalable for InetAddress {
                     );
                     b[17] = *(&self.sin6.sin6_port as *const u16).cast::<u8>();
                     b[18] = *(&self.sin6.sin6_port as *const u16).cast::<u8>().offset(1);
-                    Ok(())
                 }
-                _ => buf.append_u8(0),
+                _ => buf.append_u8(0)?,
             }
+            Ok(())
         }
     }
 
-    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<InetAddress> {
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<InetAddress, MarshalUnmarshalError> {
         let t = buf.read_u8(cursor)?;
         if t == 4 {
             let b: &[u8; 6] = buf.read_bytes_fixed(cursor)?;

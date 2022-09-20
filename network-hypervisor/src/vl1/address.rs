@@ -7,10 +7,10 @@ use std::str::FromStr;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::InvalidFormatError;
-use crate::util::buffer::Buffer;
-use crate::util::marshalable::Marshalable;
-use crate::vl1::protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
+use crate::protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
+use crate::util::marshalable::*;
 
+use zerotier_utils::buffer::Buffer;
 use zerotier_utils::hex;
 use zerotier_utils::hex::HEX_CHARS;
 
@@ -72,16 +72,14 @@ impl Marshalable for Address {
     const MAX_MARSHAL_SIZE: usize = ADDRESS_SIZE;
 
     #[inline(always)]
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), MarshalUnmarshalError> {
         buf.append_bytes(&self.0.get().to_be_bytes()[8 - ADDRESS_SIZE..])
+            .map_err(|_| MarshalUnmarshalError::OutOfBounds)
     }
 
     #[inline(always)]
-    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Self> {
-        Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).map_or_else(
-            || Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "cannot be zero")),
-            |a| Ok(a),
-        )
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Self, MarshalUnmarshalError> {
+        Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(MarshalUnmarshalError::InvalidData)
     }
 }
 
@@ -194,13 +192,13 @@ mod tests {
         rawaddr = 0;
         assert!(super::Address::from_u64(rawaddr).is_none());
 
-        rawaddr = (crate::vl1::protocol::ADDRESS_RESERVED_PREFIX as u64) << 32;
+        rawaddr = (crate::protocol::ADDRESS_RESERVED_PREFIX as u64) << 32;
         assert!(super::Address::from_u64(rawaddr).is_none());
     }
 
     #[test]
     fn address_marshal_bytes() {
-        use crate::vl1::protocol::ADDRESS_SIZE;
+        use crate::protocol::ADDRESS_SIZE;
         let mut v: Vec<u8> = Vec::with_capacity(ADDRESS_SIZE);
         let mut i = 0;
         while i < ADDRESS_SIZE {

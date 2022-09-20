@@ -1,8 +1,13 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 pub mod arrayvec;
+pub mod blob;
+pub mod buffer;
+#[allow(unused)]
+pub mod exitcode;
 pub mod gatherarray;
 pub mod hex;
+pub mod json;
 pub mod memory;
 pub mod pool;
 pub mod ringbuffermap;
@@ -27,6 +32,10 @@ pub fn ms_monotonic() -> i64 {
     };
     std::time::Instant::now().duration_since(instant_zero).as_millis() as i64
 }
+
+#[cold]
+#[inline(never)]
+pub extern "C" fn unlikely_branch() {}
 
 #[cfg(test)]
 mod tests {

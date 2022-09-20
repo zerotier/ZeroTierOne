@@ -7,11 +7,12 @@ use std::str::FromStr;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::InvalidFormatError;
-use crate::util::buffer::Buffer;
-use crate::util::marshalable::Marshalable;
+use crate::protocol::IDENTITY_FINGERPRINT_SIZE;
+use crate::util::marshalable::*;
 use crate::vl1::inetaddress::InetAddress;
-use crate::vl1::protocol::IDENTITY_FINGERPRINT_SIZE;
 use crate::vl1::{Address, MAC};
+
+use zerotier_utils::buffer::Buffer;
 
 pub const TYPE_NIL: u8 = 0;
 pub const TYPE_ZEROTIER: u8 = 1;
@@ -129,29 +130,31 @@ impl Endpoint {
 impl Marshalable for Endpoint {
     const MAX_MARSHAL_SIZE: usize = MAX_MARSHAL_SIZE;
 
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> std::io::Result<()> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), MarshalUnmarshalError> {
         match self {
-            Endpoint::Nil => buf.append_u8(16 + TYPE_NIL),
+            Endpoint::Nil => {
+                buf.append_u8(16 + TYPE_NIL)?;
+            }
             Endpoint::ZeroTier(a, h) => {
                 buf.append_u8(16 + TYPE_ZEROTIER)?;
                 buf.append_bytes_fixed(&a.to_bytes())?;
-                buf.append_bytes_fixed(h)
+                buf.append_bytes_fixed(h)?;
             }
             Endpoint::Ethernet(m) => {
                 buf.append_u8(16 + TYPE_ETHERNET)?;
-                buf.append_bytes_fixed(&m.to_bytes())
+                buf.append_bytes_fixed(&m.to_bytes())?;
             }
             Endpoint::WifiDirect(m) => {
                 buf.append_u8(16 + TYPE_WIFIDIRECT)?;
-                buf.append_bytes_fixed(&m.to_bytes())
+                buf.append_bytes_fixed(&m.to_bytes())?;
             }
             Endpoint::Bluetooth(m) => {
                 buf.append_u8(16 + TYPE_BLUETOOTH)?;
-                buf.append_bytes_fixed(&m.to_bytes())
+                buf.append_bytes_fixed(&m.to_bytes())?;
             }
             Endpoint::Icmp(ip) => {
                 buf.append_u8(16 + TYPE_ICMP)?;
-                ip.marshal(buf)
+                ip.marshal(buf)?;
             }
             Endpoint::IpUdp(ip) => {
                 // Wire encoding of IP/UDP type endpoints is the same as naked InetAddress
@@ -159,33 +162,34 @@ impl Marshalable for Endpoint {
                 // here as an IP/UDP Endpoint and vice versa. Supporting this is why 16 is added
                 // to all Endpoint type IDs for wire encoding so that values of 4 or 6 can be
                 // interpreted as IP/UDP InetAddress.
-                ip.marshal(buf)
+                ip.marshal(buf)?;
             }
             Endpoint::IpTcp(ip) => {
                 buf.append_u8(16 + TYPE_IPTCP)?;
-                ip.marshal(buf)
+                ip.marshal(buf)?;
             }
             Endpoint::Http(url) => {
                 buf.append_u8(16 + TYPE_HTTP)?;
                 let b = url.as_bytes();
                 buf.append_varint(b.len() as u64)?;
-                buf.append_bytes(b)
+                buf.append_bytes(b)?;
             }
             Endpoint::WebRTC(offer) => {
                 buf.append_u8(16 + TYPE_WEBRTC)?;
                 let b = offer.as_slice();
                 buf.append_varint(b.len() as u64)?;
-                buf.append_bytes(b)
+                buf.append_bytes(b)?;
             }
             Endpoint::ZeroTierEncap(a, h) => {
                 buf.append_u8(16 + TYPE_ZEROTIER_ENCAP)?;
                 buf.append_bytes_fixed(&a.to_bytes())?;
-                buf.append_bytes_fixed(h)
+                buf.append_bytes_fixed(h)?;
             }
         }
+        Ok(())
     }
 
-    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> std::io::Result<Endpoint> {
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Endpoint, MarshalUnmarshalError> {
         let type_byte = buf.read_u8(cursor)?;
         if type_byte < 16 {
             if type_byte == 4 {
@@ -201,10 +205,7 @@ impl Marshalable for Endpoint {
                     u16::from_be_bytes(b[16..18].try_into().unwrap()),
                 )))
             } else {
-                Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "unrecognized endpoint type in stream",
-                ))
+                Err(MarshalUnmarshalError::InvalidData)
             }
         } else {
             match type_byte - 16 {
@@ -232,10 +233,7 @@ impl Marshalable for Endpoint {
                     let zt = Address::unmarshal(buf, cursor)?;
                     Ok(Endpoint::ZeroTierEncap(zt, buf.read_bytes_fixed(cursor)?.clone()))
                 }
-                _ => Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "unrecognized endpoint type in stream",
-                )),
+                _ => Err(MarshalUnmarshalError::InvalidData),
             }
         }
     }
@@ -451,13 +449,10 @@ impl<'de> Deserialize<'de> for Endpoint {
 #[cfg(test)]
 mod tests {
     use super::{Endpoint, MAX_MARSHAL_SIZE};
-    use crate::{
-        util::marshalable::Marshalable,
-        vl1::{
-            protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE, IDENTITY_FINGERPRINT_SIZE},
-            Address,
-        },
-    };
+    use crate::protocol::*;
+    use crate::util::marshalable::*;
+    use crate::vl1::address::Address;
+    use zerotier_utils::buffer::*;
 
     fn randstring(len: u8) -> String {
         (0..len)
@@ -488,8 +483,6 @@ mod tests {
 
     #[test]
     fn endpoint_marshal_nil() {
-        use crate::util::buffer::Buffer;
-
         let n = Endpoint::Nil;
 
         let mut buf = Buffer::<1>::new();
@@ -506,8 +499,6 @@ mod tests {
 
     #[test]
     fn endpoint_marshal_zerotier() {
-        use crate::util::buffer::Buffer;
-
         for _ in 0..1000 {
             let mut hash = [0u8; IDENTITY_FINGERPRINT_SIZE];
             hash.fill_with(|| rand::random());
@@ -538,8 +529,6 @@ mod tests {
 
     #[test]
     fn endpoint_marshal_zerotier_encap() {
-        use crate::util::buffer::Buffer;
-
         for _ in 0..1000 {
             let mut hash = [0u8; IDENTITY_FINGERPRINT_SIZE];
             hash.fill_with(|| rand::random());
@@ -570,8 +559,6 @@ mod tests {
 
     #[test]
     fn endpoint_marshal_mac() {
-        use crate::util::buffer::Buffer;
-
         for _ in 0..1000 {
             let mac = crate::vl1::MAC::from_u64(rand::random()).unwrap();
 
@@ -596,8 +583,6 @@ mod tests {
 
     #[test]
     fn endpoint_marshal_inetaddress() {
-        use crate::util::buffer::Buffer;
-
         for _ in 0..1000 {
             let mut v = [0u8; 16];
             v.fill_with(|| rand::random());
@@ -625,8 +610,6 @@ mod tests {
 
     #[test]
     fn endpoint_marshal_http() {
-        use crate::util::buffer::Buffer;
-
         for _ in 0..1000 {
             let http = Endpoint::Http(randstring(30));
             let mut buf = Buffer::<33>::new();
@@ -643,8 +626,6 @@ mod tests {
 
     #[test]
     fn endpoint_marshal_webrtc() {
-        use crate::util::buffer::Buffer;
-
         for _ in 0..1000 {
             let mut v = Vec::with_capacity(100);
             v.fill_with(|| rand::random());

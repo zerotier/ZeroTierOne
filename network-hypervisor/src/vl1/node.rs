@@ -8,23 +8,23 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use parking_lot::{Mutex, RwLock};
 
 use crate::error::InvalidParameterError;
-use crate::util::debug_event;
+use crate::protocol::*;
 use crate::util::gate::IntervalGate;
 use crate::util::marshalable::Marshalable;
 use crate::vl1::address::Address;
+use crate::vl1::debug_event;
 use crate::vl1::endpoint::Endpoint;
 use crate::vl1::event::Event;
 use crate::vl1::identity::Identity;
 use crate::vl1::path::{Path, PathServiceResult};
 use crate::vl1::peer::Peer;
-use crate::vl1::protocol::*;
 use crate::vl1::rootset::RootSet;
 use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
 
 use zerotier_crypto::random;
+use zerotier_crypto::verified::Verified;
 use zerotier_utils::hex;
 
 /// Trait implemented by external code to handle events and provide an interface to the system or application.
@@ -87,7 +87,7 @@ pub trait HostSystem: Sync + Send + 'static {
 
 /// Trait to be implemented by outside code to provide object storage to VL1
 #[async_trait]
-pub trait Storage: Sync + Send + 'static {
+pub trait NodeStorage: Sync + Send + 'static {
     /// Load this node's identity from the data store.
     async fn load_node_identity(&self) -> Option<Identity>;
 
@@ -177,14 +177,27 @@ struct BackgroundTaskIntervals {
     whois_service: IntervalGate<{ crate::vl1::whoisqueue::SERVICE_INTERVAL_MS }>,
 }
 
+/// Mutable fields related to roots and root sets.
 struct RootInfo<HostSystemImpl: HostSystem> {
-    sets: HashMap<String, RootSet>,
+    /// Root sets to which we are a member.
+    sets: HashMap<String, Verified<RootSet>>,
+
+    /// Root peers and their statically defined endpoints (from root sets).
     roots: HashMap<Arc<Peer<HostSystemImpl>>, Vec<Endpoint>>,
+
+    /// If this node is a root, these are the root sets to which it's a member in binary serialized form.
+    /// Set to None if this node is not a root, meaning it doesn't appear in any of its root sets.
     this_root_sets: Option<Vec<u8>>,
+
+    /// True if sets have been modified and things like 'roots' need to be rebuilt.
     sets_modified: bool,
+
+    /// True if this node is online, which means it can talk to at least one of its roots.
     online: bool,
 }
 
+/// Key used to look up paths in a hash map
+/// This supports copied keys for storing and refs for fast lookup without having to copy anything.
 enum PathKey<'a, HostSystemImpl: HostSystem> {
     Copied(Endpoint, HostSystemImpl::LocalSocket),
     Ref(&'a Endpoint, &'a HostSystemImpl::LocalSocket),
@@ -227,7 +240,6 @@ impl<'a, HostSystemImpl: HostSystem> PathKey<'a, HostSystemImpl> {
         }
     }
 
-    #[inline(always)]
     fn to_copied(&self) -> PathKey<'static, HostSystemImpl> {
         match self {
             Self::Copied(ep, ls) => PathKey::<'static, HostSystemImpl>::Copied(ep.clone(), ls.clone()),
@@ -236,16 +248,19 @@ impl<'a, HostSystemImpl: HostSystem> PathKey<'a, HostSystemImpl> {
     }
 }
 
-/// A VL1 global P2P network node.
+/// A ZeroTier VL1 node that can communicate securely with the ZeroTier peer-to-peer network.
 pub struct Node<HostSystemImpl: HostSystem> {
     /// A random ID generated to identify this particular running instance.
+    ///
+    /// This can be used to implement multi-homing by allowing remote nodes to distinguish instances
+    /// that share an identity.
     pub instance_id: [u8; 16],
 
     /// This node's identity and permanent keys.
     pub identity: Identity,
 
     /// Interval latches for periodic background tasks.
-    intervals: Mutex<BackgroundTaskIntervals>,
+    intervals: parking_lot::Mutex<BackgroundTaskIntervals>,
 
     /// Canonicalized network paths, held as Weak<> to be automatically cleaned when no longer in use.
     paths: parking_lot::RwLock<HashMap<PathKey<'static, HostSystemImpl>, Arc<Path<HostSystemImpl>>>>,
@@ -254,22 +269,19 @@ pub struct Node<HostSystemImpl: HostSystem> {
     peers: parking_lot::RwLock<HashMap<Address, Arc<Peer<HostSystemImpl>>>>,
 
     /// This node's trusted roots, sorted in ascending order of quality/preference, and cluster definitions.
-    roots: RwLock<RootInfo<HostSystemImpl>>,
+    roots: parking_lot::RwLock<RootInfo<HostSystemImpl>>,
 
     /// Current best root.
-    best_root: RwLock<Option<Arc<Peer<HostSystemImpl>>>>,
+    best_root: parking_lot::RwLock<Option<Arc<Peer<HostSystemImpl>>>>,
 
     /// Identity lookup queue, also holds packets waiting on a lookup.
     whois: WhoisQueue,
-
-    /// Reusable network buffer pool.
-    buffer_pool: PacketBufferPool,
 }
 
 impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
-    pub async fn new<StorageImpl: Storage>(
+    pub async fn new<NodeStorageImpl: NodeStorage>(
         host_system: &HostSystemImpl,
-        storage: &StorageImpl,
+        storage: &NodeStorageImpl,
         auto_generate_identity: bool,
         auto_upgrade_identity: bool,
     ) -> Result<Self, InvalidParameterError> {
@@ -302,25 +314,19 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         Ok(Self {
             instance_id: random::get_bytes_secure(),
             identity: id,
-            intervals: Mutex::new(BackgroundTaskIntervals::default()),
+            intervals: parking_lot::Mutex::new(BackgroundTaskIntervals::default()),
             paths: parking_lot::RwLock::new(HashMap::new()),
             peers: parking_lot::RwLock::new(HashMap::new()),
-            roots: RwLock::new(RootInfo {
+            roots: parking_lot::RwLock::new(RootInfo {
                 sets: HashMap::new(),
                 roots: HashMap::new(),
                 this_root_sets: None,
                 sets_modified: false,
                 online: false,
             }),
-            best_root: RwLock::new(None),
+            best_root: parking_lot::RwLock::new(None),
             whois: WhoisQueue::new(),
-            buffer_pool: PacketBufferPool::new(64, PacketBufferFactory::new()),
         })
-    }
-
-    #[inline(always)]
-    pub fn get_packet_buffer(&self) -> PooledPacketBuffer {
-        self.buffer_pool.get()
     }
 
     pub fn peer(&self, a: Address) -> Option<Arc<Peer<HostSystemImpl>>> {
@@ -404,7 +410,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
             )
         };
 
-        // We only "spam" if we are offline.
+        // We only "spam" (try to contact roots more often) if we are offline.
         if root_spam_hello {
             root_spam_hello = !self.is_online();
         }
@@ -778,18 +784,21 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         self.best_root.read().clone()
     }
 
-    /// Check whether this peer is a root according to any root set trusted by this node.
+    /// Check whether a peer is a root according to any root set trusted by this node.
     pub fn is_peer_root(&self, peer: &Peer<HostSystemImpl>) -> bool {
         self.roots.read().roots.keys().any(|p| p.identity.eq(&peer.identity))
+    }
+
+    /// Returns true if this node is a member of a root set (that it knows about).
+    pub fn this_node_is_root(&self) -> bool {
+        self.roots.read().this_root_sets.is_some()
     }
 
     /// Called when a remote node sends us a root set update, applying the update if it is valid and applicable.
     ///
     /// This will only replace an existing root set with a newer one. It won't add a new root set, which must be
     /// done by an authorized user or administrator not just by a root.
-    ///
-    /// SECURITY NOTE: this DOES NOT validate certificates in the supplied root set! Caller must do that first!
-    pub(crate) fn remote_update_root_set(&self, received_from: &Identity, rs: RootSet) {
+    pub(crate) fn remote_update_root_set(&self, received_from: &Identity, rs: Verified<RootSet>) {
         let mut roots = self.roots.write();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
             if entry.members.iter().any(|m| m.identity.eq(received_from)) && rs.should_replace(entry) {
@@ -799,20 +808,22 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         }
     }
 
-    pub fn add_update_root_set(&self, rs: RootSet) -> bool {
+    /// Add a new root set or update the existing root set if the new root set is newer and otherwise matches.
+    pub fn add_update_root_set(&self, rs: Verified<RootSet>) -> bool {
         let mut roots = self.roots.write();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
             if rs.should_replace(entry) {
                 *entry = rs;
                 roots.sets_modified = true;
-                return true;
+                true
+            } else {
+                false
             }
-        } else if rs.verify() {
-            roots.sets.insert(rs.name.clone(), rs);
+        } else {
+            let _ = roots.sets.insert(rs.name.clone(), rs);
             roots.sets_modified = true;
-            return true;
+            true
         }
-        return false;
     }
 
     /// Returns whether or not this node has any root sets defined.
@@ -831,12 +842,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
 
     /// Get the root sets that this node trusts.
     pub fn root_sets(&self) -> Vec<RootSet> {
-        self.roots.read().sets.values().cloned().collect()
-    }
-
-    /// Returns true if this node is a member of a root set (that it knows about).
-    pub fn this_node_is_root(&self) -> bool {
-        self.roots.read().this_root_sets.is_some()
+        self.roots.read().sets.values().cloned().map(|s| s.unwrap()).collect()
     }
 
     /// Get the canonical Path object corresponding to an endpoint.

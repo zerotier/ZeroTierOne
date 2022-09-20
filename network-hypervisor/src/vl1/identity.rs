@@ -14,11 +14,12 @@ use zerotier_crypto::salsa::Salsa;
 use zerotier_crypto::secret::Secret;
 use zerotier_crypto::x25519::*;
 
+use zerotier_utils::arrayvec::ArrayVec;
 use zerotier_utils::hex;
 use zerotier_utils::memory::{as_byte_array, as_flat_object};
 
 use crate::error::{InvalidFormatError, InvalidParameterError};
-use crate::vl1::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_FINGERPRINT_SIZE, IDENTITY_POW_THRESHOLD};
+use crate::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_FINGERPRINT_SIZE, IDENTITY_POW_THRESHOLD};
 use crate::vl1::Address;
 
 /// Current maximum size for an identity signature.
@@ -357,17 +358,17 @@ impl Identity {
     /// set the old 96-byte signature plus hash format used in ZeroTier v1 is used.
     ///
     /// A return of None happens if we don't have our secret key(s) or some other error occurs.
-    pub fn sign(&self, msg: &[u8], legacy_ed25519_only: bool) -> Option<Vec<u8>> {
+    pub fn sign(&self, msg: &[u8], legacy_ed25519_only: bool) -> Option<ArrayVec<u8, MAX_SIGNATURE_SIZE>> {
         if let Some(secret) = self.secret.as_ref() {
             if legacy_ed25519_only {
-                Some(secret.ed25519.sign_zt(msg).to_vec())
+                Some(secret.ed25519.sign_zt(msg).into())
             } else if let Some(p384s) = secret.p384.as_ref() {
-                let mut tmp: Vec<u8> = Vec::with_capacity(1 + P384_ECDSA_SIGNATURE_SIZE);
+                let mut tmp = ArrayVec::new();
                 tmp.push(Self::ALGORITHM_EC_NIST_P384);
                 let _ = tmp.write_all(&p384s.ecdsa.sign(msg));
                 Some(tmp)
             } else {
-                let mut tmp: Vec<u8> = Vec::with_capacity(1 + ED25519_SIGNATURE_SIZE);
+                let mut tmp = ArrayVec::new();
                 tmp.push(Self::ALGORITHM_X25519);
                 let _ = tmp.write_all(&secret.ed25519.sign(msg));
                 Some(tmp)

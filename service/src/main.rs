@@ -3,8 +3,6 @@
 pub mod cli;
 pub mod cmdline_help;
 pub mod datadir;
-pub mod exitcode;
-pub mod jsonformatter;
 pub mod localconfig;
 pub mod utils;
 pub mod vnic;
@@ -16,6 +14,7 @@ use clap::error::{ContextKind, ContextValue};
 use clap::{Arg, ArgMatches, Command};
 
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
+use zerotier_utils::exitcode;
 use zerotier_vl1_service::VL1Service;
 
 use crate::datadir::DataDir;
@@ -78,7 +77,7 @@ async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
             let test_inner = Arc::new(zerotier_network_hypervisor::vl1::DummyInnerProtocol::default());
             let test_path_filter = Arc::new(zerotier_network_hypervisor::vl1::DummyPathFilter::default());
             let datadir = open_datadir(&flags).await;
-            let svc = VL1Service::new(datadir, test_inner, test_path_filter, zerotier_vl1_service::Settings::default()).await;
+            let svc = VL1Service::new(datadir, test_inner, test_path_filter, zerotier_vl1_service::VL1Settings::default()).await;
             if svc.is_ok() {
                 let svc = svc.unwrap();
                 svc.node().init_default_roots();

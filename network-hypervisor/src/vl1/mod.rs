@@ -12,8 +12,6 @@ mod symmetricsecret;
 mod whoisqueue;
 
 pub(crate) mod node;
-#[allow(unused)]
-pub(crate) mod protocol;
 
 pub mod identity;
 pub mod inetaddress;
@@ -24,7 +22,24 @@ pub use event::Event;
 pub use identity::Identity;
 pub use inetaddress::InetAddress;
 pub use mac::MAC;
-pub use node::{DummyInnerProtocol, DummyPathFilter, HostSystem, InnerProtocol, Node, PathFilter, Storage};
+pub use node::{DummyInnerProtocol, DummyPathFilter, HostSystem, InnerProtocol, Node, NodeStorage, PathFilter};
 pub use path::Path;
 pub use peer::Peer;
 pub use rootset::{Root, RootSet};
+
+#[cfg(feature = "debug_events")]
+#[allow(unused_macros)]
+macro_rules! debug_event {
+    ($si:expr, $fmt:expr $(, $($arg:tt)*)?) => {
+        $si.event(crate::vl1::Event::Debug(file!(), line!(), format!($fmt, $($($arg)*)?)));
+    }
+}
+
+#[cfg(not(feature = "debug_events"))]
+#[allow(unused_macros)]
+macro_rules! debug_event {
+    ($si:expr, $fmt:expr $(, $($arg:tt)*)?) => {};
+}
+
+#[allow(unused_imports)]
+pub(crate) use debug_event;

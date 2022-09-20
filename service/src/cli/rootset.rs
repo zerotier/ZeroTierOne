@@ -8,6 +8,7 @@ use crate::{exitcode, Flags};
 
 use zerotier_network_hypervisor::util::marshalable::Marshalable;
 use zerotier_network_hypervisor::vl1::RootSet;
+use zerotier_utils::json::to_json_pretty;
 
 pub async fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
     match cmd_args.subcommand() {
@@ -49,7 +50,7 @@ pub async fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
                     eprintln!("ERROR: root set signing failed, invalid identity?");
                     return exitcode::ERR_INTERNAL;
                 }
-                println!("{}", crate::utils::to_json_pretty(&root_set));
+                println!("{}", to_json_pretty(&root_set));
             } else {
                 eprintln!("ERROR: 'rootset sign' requires a path to a root set in JSON format and a secret identity.");
                 return exitcode::ERR_IOERR;
@@ -107,7 +108,7 @@ pub async fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
         }
 
         Some(("restoredefault", _)) => {
-            let _ = std::io::stdout().write_all(crate::utils::to_json_pretty(&RootSet::zerotier_default()).as_bytes());
+            let _ = std::io::stdout().write_all(to_json_pretty(&RootSet::zerotier_default()).as_bytes());
         }
 
         _ => panic!(),

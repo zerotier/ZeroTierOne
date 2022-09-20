@@ -3,8 +3,10 @@
 use std::convert::TryFrom;
 use std::mem::MaybeUninit;
 
-use crate::util::buffer::Buffer;
 use crate::vl1::Address;
+
+use zerotier_utils::buffer::{Buffer, PooledBufferFactory};
+use zerotier_utils::pool::{Pool, Pooled};
 
 /*
  * Protocol versions
@@ -36,13 +38,6 @@ use crate::vl1::Address;
  *    + Contained early pre-alpha versions of multipath, which are deprecated
  * 11 - 1.6.0 ... 2.0.0
  *    + Supports and prefers AES-GMAC-SIV symmetric crypto, backported.
- *
- * 20 - 2.0.0 ... CURRENT
- *    + Forward secrecy with cryptographic ratchet! Finally!!!
- *    + New identity format including both x25519 and NIST P-521 keys.
- *    + AES-GMAC-SIV, a FIPS-compliant SIV construction using AES.
- *    + HELLO and OK(HELLO) include an extra HMAC to harden authentication
- *    + HELLO and OK(HELLO) use a dictionary for better extensibilit.
  */
 pub const PROTOCOL_VERSION: u8 = 20;
 
@@ -55,13 +50,13 @@ pub const PROTOCOL_VERSION_MIN: u8 = 11;
 pub type PacketBuffer = Buffer<{ v1::SIZE_MAX }>;
 
 /// Factory type to supply to a new PacketBufferPool, used in PooledPacketBuffer and PacketBufferPool types.
-pub type PacketBufferFactory = crate::util::buffer::PooledBufferFactory<{ crate::vl1::protocol::v1::SIZE_MAX }>;
+pub type PacketBufferFactory = PooledBufferFactory<{ crate::protocol::v1::SIZE_MAX }>;
 
 /// Packet buffer checked out of pool, automatically returns on drop.
-pub type PooledPacketBuffer = zerotier_utils::pool::Pooled<PacketBuffer, PacketBufferFactory>;
+pub type PooledPacketBuffer = Pooled<PacketBuffer, PacketBufferFactory>;
 
 /// Source for instances of PacketBuffer
-pub type PacketBufferPool = zerotier_utils::pool::Pool<PacketBuffer, PacketBufferFactory>;
+pub type PacketBufferPool = Pool<PacketBuffer, PacketBufferFactory>;
 
 /// 64-bit packet (outer) ID.
 pub type PacketId = u64;
@@ -124,7 +119,7 @@ pub const ADDRESS_RESERVED_PREFIX: u8 = 0xff;
 /// Size of an identity fingerprint (SHA384)
 pub const IDENTITY_FINGERPRINT_SIZE: usize = 48;
 
-pub mod v1 {
+pub(crate) mod v1 {
     use super::*;
 
     /// Size of packet header that lies outside the encryption envelope.
@@ -466,7 +461,7 @@ pub const IDENTITY_POW_THRESHOLD: u8 = 17;
 mod tests {
     use std::mem::size_of;
 
-    use crate::vl1::protocol::*;
+    use crate::protocol::*;
 
     #[test]
     fn representation() {

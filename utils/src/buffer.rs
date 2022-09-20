@@ -1,11 +1,39 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::error::Error;
+use std::fmt::{Debug, Display};
 use std::io::{Read, Write};
 use std::mem::{size_of, MaybeUninit};
 
-use zerotier_utils::memory;
-use zerotier_utils::pool::PoolFactory;
-use zerotier_utils::varint;
+use crate::memory;
+use crate::pool::PoolFactory;
+use crate::unlikely_branch;
+use crate::varint;
+
+const OUT_OF_BOUNDS_MSG: &'static str = "Buffer access out of bounds";
+
+pub struct OutOfBoundsError;
+
+impl Display for OutOfBoundsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(OUT_OF_BOUNDS_MSG)
+    }
+}
+
+impl Debug for OutOfBoundsError {
+    #[inline(always)]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(self, f)
+    }
+}
+
+impl Error for OutOfBoundsError {}
+
+impl From<OutOfBoundsError> for std::io::Error {
+    fn from(_: OutOfBoundsError) -> Self {
+        std::io::Error::new(std::io::ErrorKind::Other, OUT_OF_BOUNDS_MSG)
+    }
+}
 
 /// An I/O buffer with extensions for efficiently reading and writing various objects.
 ///
@@ -24,15 +52,8 @@ pub struct Buffer<const L: usize>(usize, [u8; L]);
 impl<const L: usize> Default for Buffer<L> {
     #[inline(always)]
     fn default() -> Self {
-        Self::new()
+        unsafe { std::mem::zeroed() }
     }
-}
-
-// Setting attributes this way causes the 'overflow' branches to be treated as unlikely by LLVM.
-#[inline(never)]
-#[cold]
-fn overflow_err() -> std::io::Error {
-    std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "buffer overflow")
 }
 
 impl<const L: usize> Buffer<L> {
@@ -41,7 +62,7 @@ impl<const L: usize> Buffer<L> {
     /// Create an empty zeroed buffer.
     #[inline(always)]
     pub fn new() -> Self {
-        Self(0, [0_u8; L])
+        unsafe { std::mem::zeroed() }
     }
 
     /// Create an empty zeroed buffer on the heap without intermediate stack allocation.
@@ -65,7 +86,7 @@ impl<const L: usize> Buffer<L> {
         Self::CAPACITY
     }
 
-    pub fn from_bytes(b: &[u8]) -> std::io::Result<Self> {
+    pub fn from_bytes(b: &[u8]) -> Result<Self, OutOfBoundsError> {
         let l = b.len();
         if l <= L {
             let mut tmp = Self::new();
@@ -73,7 +94,8 @@ impl<const L: usize> Buffer<L> {
             tmp.1[0..l].copy_from_slice(b);
             Ok(tmp)
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
@@ -98,32 +120,36 @@ impl<const L: usize> Buffer<L> {
     }
 
     #[inline(always)]
-    pub fn as_bytes_starting_at(&self, start: usize) -> std::io::Result<&[u8]> {
+    pub fn as_bytes_starting_at(&self, start: usize) -> Result<&[u8], OutOfBoundsError> {
         if start <= self.0 {
             Ok(&self.1[start..self.0])
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn as_bytes_starting_at_mut(&mut self, start: usize) -> std::io::Result<&mut [u8]> {
+    pub fn as_bytes_starting_at_mut(&mut self, start: usize) -> Result<&mut [u8], OutOfBoundsError> {
         if start <= self.0 {
             Ok(&mut self.1[start..self.0])
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn as_byte_range(&self, start: usize, end: usize) -> std::io::Result<&[u8]> {
+    pub fn as_byte_range(&self, start: usize, end: usize) -> Result<&[u8], OutOfBoundsError> {
         if end <= self.0 {
             Ok(&self.1[start..end])
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
+    #[inline(always)]
     pub fn clear(&mut self) {
         self.1[0..self.0].fill(0);
         self.0 = 0;
@@ -131,6 +157,7 @@ impl<const L: usize> Buffer<L> {
 
     /// Load array into buffer.
     /// This will panic if the array is larger than L.
+    #[inline(always)]
     pub fn set_to(&mut self, b: &[u8]) {
         let len = b.len();
         self.0 = len;
@@ -151,7 +178,6 @@ impl<const L: usize> Buffer<L> {
     ///
     /// This will panic if the specified size is larger than L. If the size is larger
     /// than the current size uninitialized space will be zeroed.
-    #[inline(always)]
     pub fn set_size(&mut self, s: usize) {
         let prev_len = self.0;
         self.0 = s;
@@ -180,45 +206,48 @@ impl<const L: usize> Buffer<L> {
 
     /// Append a structure and return a mutable reference to its memory.
     #[inline(always)]
-    pub fn append_struct_get_mut<T: Copy>(&mut self) -> std::io::Result<&mut T> {
+    pub fn append_struct_get_mut<T: Copy>(&mut self) -> Result<&mut T, OutOfBoundsError> {
         let ptr = self.0;
         let end = ptr + size_of::<T>();
         if end <= L {
             self.0 = end;
             Ok(unsafe { &mut *self.1.as_mut_ptr().add(ptr).cast() })
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     /// Append a fixed size array and return a mutable reference to its memory.
     #[inline(always)]
-    pub fn append_bytes_fixed_get_mut<const S: usize>(&mut self) -> std::io::Result<&mut [u8; S]> {
+    pub fn append_bytes_fixed_get_mut<const S: usize>(&mut self) -> Result<&mut [u8; S], OutOfBoundsError> {
         let ptr = self.0;
         let end = ptr + S;
         if end <= L {
             self.0 = end;
             Ok(unsafe { &mut *self.1.as_mut_ptr().add(ptr).cast() })
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     /// Append a runtime sized array and return a mutable reference to its memory.
     #[inline(always)]
-    pub fn append_bytes_get_mut(&mut self, s: usize) -> std::io::Result<&mut [u8]> {
+    pub fn append_bytes_get_mut(&mut self, s: usize) -> Result<&mut [u8], OutOfBoundsError> {
         let ptr = self.0;
         let end = ptr + s;
         if end <= L {
             self.0 = end;
             Ok(&mut self.1[ptr..end])
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn append_padding(&mut self, b: u8, count: usize) -> std::io::Result<()> {
+    pub fn append_padding(&mut self, b: u8, count: usize) -> Result<(), OutOfBoundsError> {
         let ptr = self.0;
         let end = ptr + count;
         if end <= L {
@@ -226,12 +255,13 @@ impl<const L: usize> Buffer<L> {
             self.1[ptr..end].fill(b);
             Ok(())
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn append_bytes(&mut self, buf: &[u8]) -> std::io::Result<()> {
+    pub fn append_bytes(&mut self, buf: &[u8]) -> Result<(), OutOfBoundsError> {
         let ptr = self.0;
         let end = ptr + buf.len();
         if end <= L {
@@ -239,12 +269,13 @@ impl<const L: usize> Buffer<L> {
             self.1[ptr..end].copy_from_slice(buf);
             Ok(())
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn append_bytes_fixed<const S: usize>(&mut self, buf: &[u8; S]) -> std::io::Result<()> {
+    pub fn append_bytes_fixed<const S: usize>(&mut self, buf: &[u8; S]) -> Result<(), OutOfBoundsError> {
         let ptr = self.0;
         let end = ptr + S;
         if end <= L {
@@ -252,29 +283,26 @@ impl<const L: usize> Buffer<L> {
             self.1[ptr..end].copy_from_slice(buf);
             Ok(())
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn append_varint(&mut self, i: u64) -> std::io::Result<()> {
-        varint::write(self, i)
-    }
-
-    #[inline(always)]
-    pub fn append_u8(&mut self, i: u8) -> std::io::Result<()> {
+    pub fn append_u8(&mut self, i: u8) -> Result<(), OutOfBoundsError> {
         let ptr = self.0;
         if ptr < L {
             self.0 = ptr + 1;
             self.1[ptr] = i;
             Ok(())
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn append_u16(&mut self, i: u16) -> std::io::Result<()> {
+    pub fn append_u16(&mut self, i: u16) -> Result<(), OutOfBoundsError> {
         let ptr = self.0;
         let end = ptr + 2;
         if end <= L {
@@ -282,12 +310,13 @@ impl<const L: usize> Buffer<L> {
             memory::store_raw(i.to_be(), &mut self.1[ptr..]);
             Ok(())
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn append_u32(&mut self, i: u32) -> std::io::Result<()> {
+    pub fn append_u32(&mut self, i: u32) -> Result<(), OutOfBoundsError> {
         let ptr = self.0;
         let end = ptr + 4;
         if end <= L {
@@ -295,12 +324,13 @@ impl<const L: usize> Buffer<L> {
             memory::store_raw(i.to_be(), &mut self.1[ptr..]);
             Ok(())
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn append_u64(&mut self, i: u64) -> std::io::Result<()> {
+    pub fn append_u64(&mut self, i: u64) -> Result<(), OutOfBoundsError> {
         let ptr = self.0;
         let end = ptr + 8;
         if end <= L {
@@ -308,12 +338,13 @@ impl<const L: usize> Buffer<L> {
             memory::store_raw(i.to_be(), &mut self.1[ptr..]);
             Ok(())
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn append_u64_le(&mut self, i: u64) -> std::io::Result<()> {
+    pub fn append_u64_le(&mut self, i: u64) -> Result<(), OutOfBoundsError> {
         let ptr = self.0;
         let end = ptr + 8;
         if end <= L {
@@ -321,90 +352,107 @@ impl<const L: usize> Buffer<L> {
             memory::store_raw(i.to_be(), &mut self.1[ptr..]);
             Ok(())
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
+        }
+    }
+
+    pub fn append_varint(&mut self, i: u64) -> Result<(), OutOfBoundsError> {
+        if varint::write(self, i).is_ok() {
+            Ok(())
+        } else {
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn bytes_fixed_at<const S: usize>(&self, ptr: usize) -> std::io::Result<&[u8; S]> {
+    pub fn bytes_fixed_at<const S: usize>(&self, ptr: usize) -> Result<&[u8; S], OutOfBoundsError> {
         if (ptr + S) <= self.0 {
             unsafe { Ok(&*self.1.as_ptr().cast::<u8>().add(ptr).cast::<[u8; S]>()) }
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn bytes_fixed_mut_at<const S: usize>(&mut self, ptr: usize) -> std::io::Result<&mut [u8; S]> {
+    pub fn bytes_fixed_mut_at<const S: usize>(&mut self, ptr: usize) -> Result<&mut [u8; S], OutOfBoundsError> {
         if (ptr + S) <= self.0 {
             unsafe { Ok(&mut *self.1.as_mut_ptr().cast::<u8>().add(ptr).cast::<[u8; S]>()) }
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn struct_at<T: Copy>(&self, ptr: usize) -> std::io::Result<&T> {
+    pub fn struct_at<T: Copy>(&self, ptr: usize) -> Result<&T, OutOfBoundsError> {
         if (ptr + size_of::<T>()) <= self.0 {
             unsafe { Ok(&*self.1.as_ptr().cast::<u8>().add(ptr).cast::<T>()) }
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn struct_mut_at<T: Copy>(&mut self, ptr: usize) -> std::io::Result<&mut T> {
+    pub fn struct_mut_at<T: Copy>(&mut self, ptr: usize) -> Result<&mut T, OutOfBoundsError> {
         if (ptr + size_of::<T>()) <= self.0 {
             unsafe { Ok(&mut *self.1.as_mut_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()) }
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn u8_at(&self, ptr: usize) -> std::io::Result<u8> {
+    pub fn u8_at(&self, ptr: usize) -> Result<u8, OutOfBoundsError> {
         if ptr < self.0 {
             Ok(self.1[ptr])
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn u16_at(&self, ptr: usize) -> std::io::Result<u16> {
+    pub fn u16_at(&self, ptr: usize) -> Result<u16, OutOfBoundsError> {
         let end = ptr + 2;
         debug_assert!(end <= L);
         if end <= self.0 {
             Ok(u16::from_be(memory::load_raw(&self.1[ptr..])))
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn u32_at(&self, ptr: usize) -> std::io::Result<u32> {
+    pub fn u32_at(&self, ptr: usize) -> Result<u32, OutOfBoundsError> {
         let end = ptr + 4;
         debug_assert!(end <= L);
         if end <= self.0 {
             Ok(u32::from_be(memory::load_raw(&self.1[ptr..])))
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn u64_at(&self, ptr: usize) -> std::io::Result<u64> {
+    pub fn u64_at(&self, ptr: usize) -> Result<u64, OutOfBoundsError> {
         let end = ptr + 8;
         debug_assert!(end <= L);
         if end <= self.0 {
             Ok(u64::from_be(memory::load_raw(&self.1[ptr..])))
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn read_struct<T: Copy>(&self, cursor: &mut usize) -> std::io::Result<&T> {
+    pub fn read_struct<T: Copy>(&self, cursor: &mut usize) -> Result<&T, OutOfBoundsError> {
         let ptr = *cursor;
         let end = ptr + size_of::<T>();
         debug_assert!(end <= L);
@@ -412,12 +460,13 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             unsafe { Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<T>()) }
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn read_bytes_fixed<const S: usize>(&self, cursor: &mut usize) -> std::io::Result<&[u8; S]> {
+    pub fn read_bytes_fixed<const S: usize>(&self, cursor: &mut usize) -> Result<&[u8; S], OutOfBoundsError> {
         let ptr = *cursor;
         let end = ptr + S;
         debug_assert!(end <= L);
@@ -425,12 +474,13 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             unsafe { Ok(&*self.1.as_ptr().cast::<u8>().offset(ptr as isize).cast::<[u8; S]>()) }
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn read_bytes(&self, l: usize, cursor: &mut usize) -> std::io::Result<&[u8]> {
+    pub fn read_bytes(&self, l: usize, cursor: &mut usize) -> Result<&[u8], OutOfBoundsError> {
         let ptr = *cursor;
         let end = ptr + l;
         debug_assert!(end <= L);
@@ -438,39 +488,43 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             Ok(&self.1[ptr..end])
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
-    #[inline(always)]
-    pub fn read_varint(&self, cursor: &mut usize) -> std::io::Result<u64> {
+    pub fn read_varint(&self, cursor: &mut usize) -> Result<u64, OutOfBoundsError> {
         let c = *cursor;
         if c < self.0 {
             let mut a = &self.1[c..];
-            varint::read(&mut a).map(|r| {
-                *cursor = c + r.1;
-                debug_assert!(*cursor <= self.0);
-                r.0
-            })
+            varint::read(&mut a)
+                .map(|r| {
+                    *cursor = c + r.1;
+                    debug_assert!(*cursor <= self.0);
+                    r.0
+                })
+                .map_err(|_| OutOfBoundsError)
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn read_u8(&self, cursor: &mut usize) -> std::io::Result<u8> {
+    pub fn read_u8(&self, cursor: &mut usize) -> Result<u8, OutOfBoundsError> {
         let ptr = *cursor;
         debug_assert!(ptr < L);
         if ptr < self.0 {
             *cursor = ptr + 1;
             Ok(self.1[ptr])
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn read_u16(&self, cursor: &mut usize) -> std::io::Result<u16> {
+    pub fn read_u16(&self, cursor: &mut usize) -> Result<u16, OutOfBoundsError> {
         let ptr = *cursor;
         let end = ptr + 2;
         debug_assert!(end <= L);
@@ -478,12 +532,13 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             Ok(u16::from_be(memory::load_raw(&self.1[ptr..])))
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn read_u32(&self, cursor: &mut usize) -> std::io::Result<u32> {
+    pub fn read_u32(&self, cursor: &mut usize) -> Result<u32, OutOfBoundsError> {
         let ptr = *cursor;
         let end = ptr + 4;
         debug_assert!(end <= L);
@@ -491,12 +546,13 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             Ok(u32::from_be(memory::load_raw(&self.1[ptr..])))
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 
     #[inline(always)]
-    pub fn read_u64(&self, cursor: &mut usize) -> std::io::Result<u64> {
+    pub fn read_u64(&self, cursor: &mut usize) -> Result<u64, OutOfBoundsError> {
         let ptr = *cursor;
         let end = ptr + 8;
         debug_assert!(end <= L);
@@ -504,7 +560,8 @@ impl<const L: usize> Buffer<L> {
             *cursor = end;
             Ok(u64::from_be(memory::load_raw(&self.1[ptr..])))
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(OutOfBoundsError)
         }
     }
 }
@@ -519,7 +576,8 @@ impl<const L: usize> Write for Buffer<L> {
             self.1[ptr..end].copy_from_slice(buf);
             Ok(buf.len())
         } else {
-            Err(overflow_err())
+            unlikely_branch();
+            Err(std::io::Error::new(std::io::ErrorKind::Other, OUT_OF_BOUNDS_MSG))
         }
     }
 
@@ -654,92 +712,6 @@ mod tests {
         b.clear();
         assert_eq!(b.len(), 0);
         assert!(b.is_empty());
-    }
-
-    #[test]
-    fn buffer_bytes() {
-        const SIZE: usize = 100;
-
-        for _ in 0..1000 {
-            let mut v: Vec<u8> = Vec::with_capacity(SIZE);
-            v.fill_with(|| rand::random());
-
-            let mut b = Buffer::<SIZE>::new();
-            assert!(b.append_bytes(&v).is_ok());
-            assert_eq!(b.read_bytes(v.len(), &mut 0).unwrap(), &v);
-
-            let mut v: [u8; SIZE] = [0u8; SIZE];
-            v.fill_with(|| rand::random());
-
-            let mut b = Buffer::<SIZE>::new();
-            assert!(b.append_bytes_fixed(&v).is_ok());
-            assert_eq!(b.read_bytes_fixed(&mut 0).unwrap(), &v);
-
-            // FIXME: append calls for _get_mut style do not accept anything to append, so we can't
-            // test them.
-            //
-            // let mut b = Buffer::<SIZE>::new();
-            // let res = b.append_bytes_fixed_get_mut(&v);
-            // assert!(res.is_ok());
-            // let byt = res.unwrap();
-            // assert_eq!(byt, &v);
-        }
-    }
-
-    #[test]
-    fn buffer_at() {
-        const SIZE: usize = 100;
-
-        for _ in 0..1000 {
-            let mut v = [0u8; SIZE];
-            let mut idx: usize = rand::random::<usize>() % SIZE;
-            v[idx] = 1;
-
-            let mut b = Buffer::<SIZE>::new();
-            assert!(b.append_bytes(&v).is_ok());
-
-            let res = b.bytes_fixed_at::<1>(idx);
-            assert!(res.is_ok());
-            assert_eq!(res.unwrap()[0], 1);
-
-            let res = b.bytes_fixed_mut_at::<1>(idx);
-            assert!(res.is_ok());
-            assert_eq!(res.unwrap()[0], 1);
-
-            // the uX integer tests require a little more massage. we're going to rewind the index
-            // by 8, correcting to 0 if necessary, and then write 1's in. our numbers will be
-            // consistent this way.
-            v[idx] = 0;
-
-            if idx < 8 {
-                idx = 0;
-            } else if (idx + 7) >= SIZE {
-                idx -= 7;
-            }
-
-            for i in idx..(idx + 8) {
-                v[i] = 1;
-            }
-
-            let mut b = Buffer::<SIZE>::new();
-            assert!(b.append_bytes(&v).is_ok());
-
-            let res = b.u8_at(idx);
-            assert!(res.is_ok());
-            assert_eq!(res.unwrap(), 1);
-
-            let res = b.u16_at(idx);
-            assert!(res.is_ok());
-            assert_eq!(res.unwrap(), 257);
-
-            let res = b.u32_at(idx);
-            assert!(res.is_ok());
-            assert_eq!(res.unwrap(), 16843009);
-
-            let res = b.u64_at(idx);
-            assert!(res.is_ok());
-            assert_eq!(res.unwrap(), 72340172838076673);
-        }
     }
 
     #[test]

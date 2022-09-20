@@ -7,11 +7,11 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use zerotier_crypto::random;
-use zerotier_network_hypervisor::vl1::{Endpoint, Event, HostSystem, Identity, InetAddress, InnerProtocol, Node, PathFilter, Storage};
+use zerotier_network_hypervisor::vl1::{Endpoint, Event, HostSystem, Identity, InetAddress, InnerProtocol, Node, NodeStorage, PathFilter};
 use zerotier_utils::{ms_monotonic, ms_since_epoch};
 
 use crate::constants::UNASSIGNED_PRIVILEGED_PORTS;
-use crate::settings::Settings;
+use crate::settings::VL1Settings;
 use crate::sys::udp::{udp_test_bind, BoundUdpPort};
 use crate::LocalSocket;
 
@@ -24,9 +24,9 @@ use tokio::time::Duration;
 /// talks to the physical network, manages the vl1 node, and presents a templated interface for
 /// whatever inner protocol implementation is using it. This would typically be VL2 but could be
 /// a test harness or just the controller for a controller that runs stand-alone.
-pub struct VL1Service<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> {
+pub struct VL1Service<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> {
     state: tokio::sync::RwLock<VL1ServiceMutableState>,
-    storage: Arc<StorageImpl>,
+    storage: Arc<NodeStorageImpl>,
     inner: Arc<InnerProtocolImpl>,
     path_filter: Arc<PathFilterImpl>,
     node_container: Option<Node<Self>>,
@@ -35,17 +35,17 @@ pub struct VL1Service<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerPro
 struct VL1ServiceMutableState {
     daemons: Vec<JoinHandle<()>>,
     udp_sockets: HashMap<u16, parking_lot::RwLock<BoundUdpPort>>,
-    settings: Settings,
+    settings: VL1Settings,
 }
 
-impl<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol>
-    VL1Service<StorageImpl, PathFilterImpl, InnerProtocolImpl>
+impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol>
+    VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
 {
     pub async fn new(
-        storage: Arc<StorageImpl>,
+        storage: Arc<NodeStorageImpl>,
         inner: Arc<InnerProtocolImpl>,
         path_filter: Arc<PathFilterImpl>,
-        settings: Settings,
+        settings: VL1Settings,
     ) -> Result<Arc<Self>, Box<dyn Error>> {
         let mut service = VL1Service {
             state: tokio::sync::RwLock::new(VL1ServiceMutableState {
@@ -203,8 +203,8 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerP
 }
 
 #[async_trait]
-impl<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> HostSystem
-    for VL1Service<StorageImpl, PathFilterImpl, InnerProtocolImpl>
+impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> HostSystem
+    for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
 {
     type LocalSocket = crate::LocalSocket;
     type LocalInterface = crate::LocalInterface;
@@ -301,8 +301,8 @@ impl<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerP
     }
 }
 
-impl<StorageImpl: Storage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> Drop
-    for VL1Service<StorageImpl, PathFilterImpl, InnerProtocolImpl>
+impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> Drop
+    for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
 {
     fn drop(&mut self) {
         loop {

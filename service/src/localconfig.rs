@@ -6,10 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::{Address, Endpoint};
 use zerotier_network_hypervisor::vl2::NetworkId;
-use zerotier_vl1_service::Settings;
-
-/// Default primary ZeroTier port.
-pub const DEFAULT_PORT: u16 = 9993;
+use zerotier_vl1_service::VL1Settings;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
@@ -70,7 +67,7 @@ pub struct Config {
     #[serde(rename = "virtual")]
     pub virtual_: BTreeMap<Address, VirtualPathSettings>,
     pub network: BTreeMap<NetworkId, NetworkSettings>,
-    pub settings: Settings,
+    pub settings: VL1Settings,
 }
 
 impl Default for Config {
@@ -79,7 +76,7 @@ impl Default for Config {
             physical: BTreeMap::new(),
             virtual_: BTreeMap::new(),
             network: BTreeMap::new(),
-            settings: Settings::default(),
+            settings: VL1Settings::default(),
         }
     }
 }

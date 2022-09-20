@@ -11,14 +11,14 @@ use zerotier_crypto::poly1305;
 use zerotier_crypto::random;
 use zerotier_crypto::salsa::Salsa;
 use zerotier_crypto::secret::Secret;
+use zerotier_utils::buffer::BufferReader;
 use zerotier_utils::memory::array_range;
 
-use crate::util::buffer::BufferReader;
-use crate::util::debug_event;
+use crate::protocol::*;
 use crate::util::marshalable::Marshalable;
 use crate::vl1::address::Address;
+use crate::vl1::debug_event;
 use crate::vl1::node::*;
-use crate::vl1::protocol::*;
 use crate::vl1::symmetricsecret::SymmetricSecret;
 use crate::vl1::{Endpoint, Identity, Path};
 use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};

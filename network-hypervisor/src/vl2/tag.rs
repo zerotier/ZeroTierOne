@@ -14,5 +14,5 @@ pub struct Tag {
     pub timestamp: i64,
     pub issued_to: Address,
     pub signed_by: Address,
-    //pub signature: ArrayVec<u8, { identity::MAX_SIGNATURE_SIZE }>,
+    pub signature: ArrayVec<u8, { identity::MAX_SIGNATURE_SIZE }>,
 }

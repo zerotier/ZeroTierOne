@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 
+use crate::protocol::PacketBuffer;
 use crate::vl1::node::{HostSystem, InnerProtocol};
-use crate::vl1::protocol::*;
 use crate::vl1::{Identity, Path, Peer};
 
 pub trait SwitchInterface: Sync + Send {}

@@ -5,7 +5,7 @@ use zerotier_network_hypervisor::vl1::InetAddress;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]
-pub struct Settings {
+pub struct VL1Settings {
     /// Primary ZeroTier port that is always bound, default is 9993.
     pub fixed_ports: Vec<u16>,
 
@@ -22,7 +22,7 @@ pub struct Settings {
     pub cidr_blacklist: Vec<InetAddress>,
 }
 
-impl Settings {
+impl VL1Settings {
     #[cfg(target_os = "macos")]
     pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 10] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth", "zt", "llw", "anpi"];
 
@@ -33,7 +33,7 @@ impl Settings {
     pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 0] = [];
 }
 
-impl Default for Settings {
+impl Default for VL1Settings {
     fn default() -> Self {
         Self {
             fixed_ports: vec![9993],

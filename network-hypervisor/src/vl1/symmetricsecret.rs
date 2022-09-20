@@ -4,7 +4,7 @@ use zerotier_crypto::aes_gmac_siv::AesGmacSiv;
 use zerotier_crypto::hash::hmac_sha384;
 use zerotier_crypto::secret::Secret;
 
-use crate::vl1::protocol::*;
+use crate::protocol::*;
 
 use zerotier_utils::pool::{Pool, PoolFactory};
 

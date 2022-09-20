@@ -10,5 +10,5 @@ pub mod sys;
 
 pub use localinterface::LocalInterface;
 pub use localsocket::LocalSocket;
-pub use settings::Settings;
+pub use settings::VL1Settings;
 pub use vl1service::*;
