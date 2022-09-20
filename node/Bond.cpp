@@ -28,6 +28,8 @@ uint8_t Bond::_defaultPolicy = ZT_BOND_POLICY_NONE;
 
 Phy<Bond*>* Bond::_phy;
 
+Binder* Bond::_binder;
+
 Mutex Bond::_bonds_m;
 Mutex Bond::_links_m;
 
@@ -158,13 +160,13 @@ void Bond::destroyBond(uint64_t peerId)
 SharedPtr<Link> Bond::getLinkBySocket(const std::string& policyAlias, uint64_t localSocket, bool createIfNeeded = false)
 {
 	Mutex::Lock _l(_links_m);
-	char ifname[64] = { 0 };
-	_phy->getIfName((PhySocket*)((uintptr_t)localSocket), ifname, sizeof(ifname) - 1);
+	char ifname[ZT_MAX_PHYSIFNAME] = {};
+	_binder->getIfName((PhySocket*)((uintptr_t)localSocket), ifname, sizeof(ifname) - 1);
 	std::string ifnameStr(ifname);
 	auto search = _interfaceToLinkMap[policyAlias].find(ifnameStr);
 	if (search == _interfaceToLinkMap[policyAlias].end()) {
 		if (createIfNeeded) {
-			SharedPtr<Link> s = new Link(ifnameStr, 0, 0, true, ZT_BOND_SLAVE_MODE_PRIMARY, "", 0.0);
+			SharedPtr<Link> s = new Link(ifnameStr, 0, 0, true, ZT_BOND_SLAVE_MODE_PRIMARY, "");
 			_interfaceToLinkMap[policyAlias].insert(std::pair<std::string, SharedPtr<Link> >(ifnameStr, s));
 			return s;
 		}
@@ -250,6 +252,12 @@ void Bond::nominatePathToBond(const SharedPtr<Path>& path, int64_t now)
 		}
 	}
 	if (! alreadyPresent) {
+		SharedPtr<Link> link = getLink(path);
+		if (link) {
+			std::string ifnameStr = std::string(link->ifname());
+			memset(path->_ifname, 0x0, ZT_MAX_PHYSIFNAME);
+			memcpy(path->_ifname, ifnameStr.c_str(), std::min((int)ifnameStr.length(), ZT_MAX_PHYSIFNAME));
+		}
 		/**
 		 * Find somewhere to stick it
 		 */
@@ -523,6 +531,7 @@ int32_t Bond::generateQoSPacket(int pathIdx, int64_t now, char* qosBuffer)
 	std::map<uint64_t, uint64_t>::iterator it = _paths[pathIdx].qosStatsIn.begin();
 	int i = 0;
 	int numRecords = std::min(_paths[pathIdx].packetsReceivedSinceLastQoS, ZT_QOS_TABLE_SIZE);
+	debug("numRecords=%3d, packetsReceivedSinceLastQoS=%3d, _paths[pathIdx].qosStatsIn.size()=%3lu", numRecords, _paths[pathIdx].packetsReceivedSinceLastQoS, _paths[pathIdx].qosStatsIn.size());
 	while (i < numRecords && it != _paths[pathIdx].qosStatsIn.end()) {
 		uint64_t id = it->first;
 		memcpy(qosBuffer, &id, sizeof(uint64_t));
@@ -800,8 +809,8 @@ void Bond::sendQOS_MEASUREMENT(void* tPtr, int pathIdx, int64_t localSocket, con
 	Packet outp(_peer->_id.address(), RR->identity.address(), Packet::VERB_QOS_MEASUREMENT);
 	char qosData[ZT_QOS_MAX_PACKET_SIZE];
 	int16_t len = generateQoSPacket(pathIdx, _now, qosData);
-	debug("sending QOS via link %s (len=%d)", pathToStr(_paths[pathIdx].p).c_str(), len);
 	if (len) {
+		debug("sending QOS via link %s (len=%d)", pathToStr(_paths[pathIdx].p).c_str(), len);
 		outp.append(qosData, len);
 		if (atAddress) {
 			outp.armor(_peer->key(), false, _peer->aesKeysIfSupported());
@@ -905,6 +914,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 		SharedPtr<Link> link = getLink(_paths[i].p);
 		if (! link) {
 			log("link is no longer valid, removing from bond");
+			_paths[i].p->_valid = false;
 			_paths[i] = NominatedPath();
 			_paths[i].p = SharedPtr<Path>();
 			continue;
@@ -1109,6 +1119,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 			if (_policy == ZT_BOND_POLICY_BALANCE_RR) {
 				// Cause a RR reset since the current index might no longer be valid
 				_rrPacketsSentOnCurrLink = _packetsPerLink;
+				_rrIdx = 0;
 			}
 		}
 	}
@@ -1166,9 +1177,13 @@ void Bond::estimatePathQuality(int64_t now)
 		_paths[i].p->_packetLossRatio = _paths[i].packetLossRatio;
 		_paths[i].p->_packetErrorRatio = _paths[i].packetErrorRatio;
 		_paths[i].p->_bonded = _paths[i].bonded;
-		_paths[i].p->_givenLinkSpeed = 0;//_paths[i].givenLinkSpeed;
+		_paths[i].p->_eligible = _paths[i].eligible;
+		// _valid is written elsewhere
 		_paths[i].p->_allocation = _paths[i].allocation;
-
+		SharedPtr<Link> link = RR->bc->getLinkBySocket(_policyAlias, _paths[i].p->localSocket());
+		if (link) {
+			_paths[i].p->_givenLinkSpeed = link->speed();
+		}
 		//_paths[i].packetErrorRatio = 1.0 - (_paths[i].packetValiditySamples.count() ? _paths[i].packetValiditySamples.mean() : 1.0);
 
 		// Drain unacknowledged QoS records
@@ -1725,10 +1740,11 @@ void Bond::setBondParameters(int policy, SharedPtr<Bond> templateBond, bool useT
 	_policy = (policy <= ZT_BOND_POLICY_NONE || policy > ZT_BOND_POLICY_BALANCE_AWARE) ? _defaultPolicy : policy;
 
 	// Check if non-leaf to prevent spamming infrastructure
+	ZT_PeerRole role;
 	if (_peer) {
-		ZT_PeerRole role = RR->topology->role(_peer->address());
-		_isLeaf = (role != ZT_PEER_ROLE_PLANET && role != ZT_PEER_ROLE_MOON);
+		role = RR->topology->role(_peer->address());
 	}
+	_isLeaf = _peer ? (role != ZT_PEER_ROLE_PLANET && role != ZT_PEER_ROLE_MOON) : false;
 
 	// Flows
 

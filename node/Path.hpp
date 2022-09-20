@@ -85,6 +85,15 @@ public:
 		_lastTrustEstablishedPacketReceived(0),
 		_lastEchoRequestReceived(0),
 		_localSocket(-1),
+		_latencyMean(0.0),
+		_latencyVariance(0.0),
+		_packetLossRatio(0.0),
+		_packetErrorRatio(0.0),
+		_valid(true),
+		_eligible(false),
+		_bonded(false),
+		_givenLinkSpeed(0),
+		_allocation(0),
 		_latency(0xffff),
 		_addr(),
 		_ipScope(InetAddress::IP_SCOPE_NONE)
@@ -96,6 +105,15 @@ public:
 		_lastTrustEstablishedPacketReceived(0),
 		_lastEchoRequestReceived(0),
 		_localSocket(localSocket),
+		_latencyMean(0.0),
+		_latencyVariance(0.0),
+		_packetLossRatio(0.0),
+		_packetErrorRatio(0.0),
+		_valid(true),
+		_eligible(false),
+		_bonded(false),
+		_givenLinkSpeed(0),
+		_allocation(0),
 		_latency(0xffff),
 		_addr(addr),
 		_ipScope(addr.ipScope())
@@ -301,6 +319,17 @@ public:
 	inline unsigned int packetErrorRatio() const { return _packetErrorRatio; }
 
 	/**
+	 * @return Whether this path is valid as reported by the bonding layer. The bonding layer
+	 * actually checks with Phy to see if the interface is still up
+	 */
+	inline unsigned int valid() const { return _valid; }
+
+	/**
+	 * @return Whether this path is eligible for use in a bond as reported by the bonding layer
+	 */
+	inline unsigned int eligible() const { return _eligible; }
+
+	/**
 	 * @return Whether this path is bonded as reported by the bonding layer
 	 */
 	inline unsigned int bonded() const { return _bonded; }
@@ -313,27 +342,36 @@ public:
 	/**
 	 * @return Traffic allocation as reported by the bonding layer
 	 */
-	inline unsigned int allocation() const { return _allocation; }
+	inline unsigned char allocation() const { return _allocation; }
 
-	void *_bondingMetricPtr;
+	/**
+	 * @return Physical interface name that this path lives on
+	 */
+	char *ifname() {
+		return _ifname;
+	}
 
 private:
+
+	char _ifname[ZT_MAX_PHYSIFNAME] = { };
 
 	volatile int64_t _lastOut;
 	volatile int64_t _lastIn;
 	volatile int64_t _lastTrustEstablishedPacketReceived;
 
+	int64_t _lastEchoRequestReceived;
+
+	int64_t _localSocket;
+
 	volatile float _latencyMean;
 	volatile float _latencyVariance;
 	volatile float _packetLossRatio;
 	volatile float _packetErrorRatio;
+	volatile bool _valid;
+	volatile bool _eligible;
 	volatile bool _bonded;
-	volatile int64_t _givenLinkSpeed;
-	volatile int8_t _allocation;
-
-	int64_t _lastEchoRequestReceived;
-
-	int64_t _localSocket;
+	volatile uint32_t _givenLinkSpeed;
+	volatile uint8_t _allocation;
 
 	volatile unsigned int _latency;
 	InetAddress _addr;

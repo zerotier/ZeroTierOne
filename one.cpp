@@ -611,41 +611,49 @@ static int cli(int argc,char **argv)
 					} else {
 						int numAliveLinks = OSUtils::jsonInt(j["numAliveLinks"],0);
 						int numTotalLinks = OSUtils::jsonInt(j["numTotalLinks"],0);
-						printf("Peer               : %s\n", arg1.c_str());
-						printf("Bond               : %s\n", OSUtils::jsonString(j["bondingPolicy"],"-").c_str());
-						printf("Link Select Method : %d\n", (int)OSUtils::jsonInt(j["linkSelectMethod"],0));
-						printf("Links              : %d/%d\n", numAliveLinks, numTotalLinks);
-						printf("Failover Interval  : %d (ms)\n", (int)OSUtils::jsonInt(j["failoverInterval"],0));
-						printf("Up Delay           : %d (ms)\n", (int)OSUtils::jsonInt(j["upDelay"],0));
-						printf("Down Delay         : %d (ms)\n", (int)OSUtils::jsonInt(j["downDelay"],0));
-						printf("Packets Per Link   : %d (ms)\n", (int)OSUtils::jsonInt(j["packetsPerLink"],0));
-						nlohmann::json &p = j["links"];
+						printf("Peer                   : %s\n", arg1.c_str());
+						printf("Bond                   : %s\n", OSUtils::jsonString(j["bondingPolicyStr"],"-").c_str());
+						printf("Link Select Method     : %d\n", (int)OSUtils::jsonInt(j["linkSelectMethod"],0));
+						printf("Links                  : %d/%d\n", numAliveLinks, numTotalLinks);
+						printf("Failover Interval (ms) : %d\n", (int)OSUtils::jsonInt(j["failoverInterval"],0));
+						printf("Up Delay (ms)          : %d\n", (int)OSUtils::jsonInt(j["upDelay"],0));
+						printf("Down Delay (ms)        : %d\n", (int)OSUtils::jsonInt(j["downDelay"],0));
+						printf("Packets Per Link       : %d\n", (int)OSUtils::jsonInt(j["packetsPerLink"],0));
+						nlohmann::json &p = j["paths"];
 						if (p.is_array()) {
-							printf("\n                  interface\t\t\t\t\t          path\n");
-							for(int i=0; i<80; i++) { printf("-"); }
+							printf("\nidx"
+							"                  interface"
+							"                                  "
+							"path               socket\n");
+							for(int i=0; i<100; i++) { printf("-"); }
 							printf("\n");
 							for (int i=0; i<p.size(); i++)
 							{
-								printf("[%3d] %21s %50s\n",
+								printf("%2d: %26s %51s %.16llx\n",
 									i,
 									OSUtils::jsonString(p[i]["ifname"],"-").c_str(),
-									OSUtils::jsonString(p[i]["path"],"-").c_str()
+									OSUtils::jsonString(p[i]["address"],"-").c_str(),
+									(unsigned long long)OSUtils::jsonInt(p[i]["localSocket"],0)
 									);
 							}
-							printf("\n           lat      pdv     plr     per    speed      alloc     alive   bonded\n");
-							for(int i=0; i<80; i++) { printf("-"); }
+							printf("\nidx     lat      pdv     "
+							"plr     per    speed  alloc      "
+							"rx_age      tx_age  eligible  bonded\n");
+							for(int i=0; i<100; i++) { printf("-"); }
 							printf("\n");
 							for (int i=0; i<p.size(); i++)
 							{
-								printf("[%3d]  %7.2f  %7.2f  %6.2f  %6.2f %8d  %9d  %8d %8d\n",
+								printf("%2d: %8.2f %8.2f %7.4f %7.4f %7d %6.2f %11d %11d %9d %7d\n",
 									i,
 									OSUtils::jsonDouble(p[i]["latencyMean"], 0),
 									OSUtils::jsonDouble(p[i]["latencyVariance"], 0),
 									OSUtils::jsonDouble(p[i]["packetLossRatio"], 0),
 									OSUtils::jsonDouble(p[i]["packetErrorRatio"], 0),
 									(int)OSUtils::jsonInt(p[i]["givenLinkSpeed"], 0),
-									(int)OSUtils::jsonInt(p[i]["allocation"], 0),
-									(int)OSUtils::jsonInt(p[i]["alive"],0),
+									OSUtils::jsonDouble(p[i]["allocation"], 0),
+									(int)OSUtils::jsonInt(p[i]["lastInAge"], 0),
+									(int)OSUtils::jsonInt(p[i]["lastOutAge"], 0),
+									(int)OSUtils::jsonInt(p[i]["eligible"],0),
 									(int)OSUtils::jsonInt(p[i]["bonded"],0));
 							}
 						}

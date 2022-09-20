@@ -140,12 +140,11 @@ private:
 	};
 
 	struct PhySocketImpl {
-		PhySocketImpl() { memset(ifname, 0, sizeof(ifname)); }
+		PhySocketImpl() {}
 		PhySocketType type;
 		ZT_PHY_SOCKFD_TYPE sock;
 		void *uptr; // user-settable pointer
 		ZT_PHY_SOCKADDR_STORAGE_TYPE saddr; // remote for TCP_OUT and TCP_IN, local for TCP_LISTEN, RAW, and UDP
-		char ifname[256 + 4];
 	};
 
 	std::list<PhySocketImpl> _socks;
@@ -241,38 +240,6 @@ public:
 	static inline void** getuptr(PhySocket* s) throw()
 	{
 		return &(reinterpret_cast<PhySocketImpl*>(s)->uptr);
-	}
-
-	/**
-	 * @param s Socket object
-	 * @param nameBuf Buffer to store name of interface which this Socket object is bound to
-	 * @param buflen Length of buffer to copy name into
-	 */
-	static inline void getIfName(PhySocket* s, char* nameBuf, int buflen)
-	{
-		PhySocketImpl& sws = *(reinterpret_cast<PhySocketImpl*>(s));
-		if (sws.type == ZT_PHY_SOCKET_CLOSED) {
-			return;
-		}
-		if (s) {
-			memcpy(nameBuf, reinterpret_cast<PhySocketImpl*>(s)->ifname, buflen);
-		}
-	}
-
-	/**
-	 * @param s Socket object
-	 * @param ifname Buffer containing name of interface that this Socket object is bound to
-	 * @param len Length of name of interface
-	 */
-	static inline void setIfName(PhySocket* s, char* ifname, int len)
-	{
-		PhySocketImpl& sws = *(reinterpret_cast<PhySocketImpl*>(s));
-		if (sws.type == ZT_PHY_SOCKET_CLOSED) {
-			return;
-		}
-		if (s) {
-			memcpy(&(reinterpret_cast<PhySocketImpl*>(s)->ifname), ifname, len);
-		}
 	}
 
 	/**

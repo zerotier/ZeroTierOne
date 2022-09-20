@@ -496,15 +496,30 @@ ZT_PeerList *Node::peers() const
 		SharedPtr<Path> bestp(pi->second->getAppropriatePath(_now,false));
 		p->pathCount = 0;
 		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
-			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
-			p->paths[p->pathCount].localSocket = (*path)->localSocket();
-			p->paths[p->pathCount].lastSend = (*path)->lastOut();
-			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
-			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
-			p->paths[p->pathCount].expired = 0;
-			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
-			p->paths[p->pathCount].scope = (*path)->ipScope();
-			++p->pathCount;
+			if((*path)->valid()) {
+				memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
+				p->paths[p->pathCount].localSocket = (*path)->localSocket();
+				p->paths[p->pathCount].lastSend = (*path)->lastOut();
+				p->paths[p->pathCount].lastReceive = (*path)->lastIn();
+				p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
+				p->paths[p->pathCount].expired = 0;
+				p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
+				p->paths[p->pathCount].scope = (*path)->ipScope();
+				if (pi->second->bond()) {
+					p->paths[p->pathCount].latencyMean = (*path)->latencyMean();
+					p->paths[p->pathCount].latencyVariance = (*path)->latencyVariance();
+					p->paths[p->pathCount].packetLossRatio = (*path)->packetLossRatio();
+					p->paths[p->pathCount].packetErrorRatio = (*path)->packetErrorRatio();
+					p->paths[p->pathCount].allocation = (*path)->allocation();
+					p->paths[p->pathCount].linkSpeed = (*path)->givenLinkSpeed();
+					p->paths[p->pathCount].bonded = (*path)->bonded();
+					p->paths[p->pathCount].eligible = (*path)->eligible();
+					std::string ifname = std::string((*path)->ifname());
+					memset(p->paths[p->pathCount].ifname, 0x0, std::min((int)ifname.length() + 1, ZT_MAX_PHYSIFNAME));
+					memcpy(p->paths[p->pathCount].ifname, ifname.c_str(), std::min((int)ifname.length(), ZT_MAX_PHYSIFNAME));
+				}
+				++p->pathCount;
+			}
 		}
 		if (pi->second->bond()) {
 			p->isBonded = pi->second->bond();

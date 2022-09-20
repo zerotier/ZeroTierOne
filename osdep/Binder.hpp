@@ -66,6 +66,9 @@
 // Max number of bindings
 #define ZT_BINDER_MAX_BINDINGS 256
 
+// Maximum physical interface name length. This number is gigantic because of Windows.
+#define ZT_MAX_PHYSIFNAME 256
+
 namespace ZeroTier {
 
 /**
@@ -88,6 +91,7 @@ class Binder {
 		PhySocket* udpSock;
 		PhySocket* tcpListenSock;
 		InetAddress address;
+		char ifname[256] = {};
 	};
 
   public:
@@ -443,7 +447,7 @@ class Binder {
 						_bindings[_bindingCount].udpSock = udps;
 						_bindings[_bindingCount].tcpListenSock = tcps;
 						_bindings[_bindingCount].address = ii->first;
-						phy.setIfName(udps, (char*)ii->second.c_str(), (int)ii->second.length());
+						memcpy(_bindings[_bindingCount].ifname, (char*)ii->second.c_str(), (int)ii->second.length());
 						++_bindingCount;
 					}
 				}
@@ -512,6 +516,22 @@ class Binder {
 				return (b < _bindingCount);	  // double check atomic which may have changed
 		}
 		return false;
+	}
+
+	/**
+	 * @param s Socket object
+	 * @param nameBuf Buffer to store name of interface which this Socket object is bound to
+	 * @param buflen Length of buffer to copy name into
+	 */
+	void getIfName(PhySocket* s, char* nameBuf, int buflen) const
+	{
+		Mutex::Lock _l(_lock);
+		for (unsigned int b = 0, c = _bindingCount; b < c; ++b) {
+			if (_bindings[b].udpSock == s) {
+				memcpy(nameBuf, _bindings[b].ifname, buflen);
+				break;
+			}
+		}
 	}
 
   private:

@@ -87,6 +87,11 @@ extern "C" {
 #define ZT_MIN_PHYSMTU 1400
 
 /**
+ * Maximum physical interface name length. This number is gigantic because of Windows.
+ */
+#define ZT_MAX_PHYSIFNAME 256
+
+/**
  * Default UDP payload size (physical path MTU) not including UDP and IP overhead
  *
  * This is small enough for PPPoE and for Google Cloud's bizarrely tiny MTUs.
@@ -1318,34 +1323,19 @@ typedef struct
 	float packetErrorRatio;
 
 	/**
-	 * Mean throughput
-	 */
-	uint64_t throughputMean;
-
-	/**
-	 * Maximum observed throughput
-	 */
-	float throughputMax;
-
-	/**
-	 * Throughput variance
-	 */
-	float throughputVariance;
-
-	/**
 	 * Address scope
 	 */
 	uint8_t scope;
 
 	/**
-	 * Percentage of traffic allocated to this path
+	 * Percentage of traffic allocated to this path (0-255)
 	 */
-	float allocation;
+	uint8_t allocation;
 
 	/**
-	 * Name of physical interface (for monitoring)
+	 * Name of physical interface this path resides on
 	 */
-	char ifname[32];
+	char ifname[ZT_MAX_PHYSIFNAME];
 
 	uint64_t localSocket;
 
@@ -1353,6 +1343,21 @@ typedef struct
 	 * Is path expired?
 	 */
 	int expired;
+
+	/**
+	 * Whether this path is currently included in the bond
+	 */
+	uint8_t bonded;
+
+	/**
+	 * Whether this path is currently eligible to be used in a bond
+	 */
+	uint8_t eligible;
+
+	/**
+	 * The speed of this link (as given to bonding layer)
+	 */
+	uint32_t linkSpeed;
 
 	/**
 	 * Is path preferred?

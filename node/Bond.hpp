@@ -14,6 +14,7 @@
 #ifndef ZT_BOND_HPP
 #define ZT_BOND_HPP
 
+#include "../osdep/Binder.hpp"
 #include "../osdep/Phy.hpp"
 #include "Packet.hpp"
 #include "Path.hpp"
@@ -122,7 +123,7 @@ class Link {
 	 * @param failoverToLinkStr
 	 * @param userSpecifiedAlloc
 	 */
-	Link(std::string ifnameStr, uint8_t ipvPref, uint32_t speed, bool enabled, uint8_t mode, std::string failoverToLinkStr, float userSpecifiedAlloc)
+	Link(std::string ifnameStr, uint8_t ipvPref, uint32_t speed, bool enabled, uint8_t mode, std::string failoverToLinkStr)
 		: _ifnameStr(ifnameStr)
 		, _ipvPref(ipvPref)
 		, _speed(speed)
@@ -130,7 +131,6 @@ class Link {
 		, _enabled(enabled)
 		, _mode(mode)
 		, _failoverToLinkStr(failoverToLinkStr)
-		, _userSpecifiedAlloc(userSpecifiedAlloc)
 		, _isUserSpecified(false)
 	{
 	}
@@ -288,11 +288,6 @@ class Link {
 	std::string _failoverToLinkStr;
 
 	/**
-	 * User-specified allocation
-	 */
-	float _userSpecifiedAlloc;
-
-	/**
 	 * Whether or not this link was created as a result of manual user specification. This is
 	 * important to know because certain policy decisions are dependent on whether the user
 	 * intents to use a specific set of interfaces.
@@ -326,6 +321,14 @@ class Bond {
 	static bool inUse()
 	{
 		return ! _bondPolicyTemplates.empty() || _defaultPolicy;
+	}
+
+	/**
+	 * Sets a pointer to an instance of _binder used by the Bond to get interface data
+	 */
+	static void setBinder(Binder* b)
+	{
+		_binder = b;
 	}
 
 	/**
@@ -461,7 +464,7 @@ class Bond {
 	 * @param createIfNeeded Whether a Link object is created if the name wasn't previously in the link map
 	 * @return Physical link definition
 	 */
-	static SharedPtr<Link> getLinkBySocket(const std::string& policyAlias, uint64_t localSocket, bool createIfNeeded);
+	SharedPtr<Link> getLinkBySocket(const std::string& policyAlias, uint64_t localSocket, bool createIfNeeded);
 
 	/**
 	 * Gets a reference to a physical link definition given its human-readable system name.
@@ -841,14 +844,6 @@ class Bond {
 	}
 
 	/**
-	 * @param errorRatio Maximum acceptable packet error ratio (PER).
-	 */
-	void setMinAcceptableAllocation(float minAlloc)
-	{
-		_minAcceptableAllocation = (uint8_t)(minAlloc * 255);
-	}
-
-	/**
 	 * @return Whether the user has defined links for use on this bond
 	 */
 	inline bool userHasSpecifiedLinks()
@@ -968,14 +963,6 @@ class Bond {
 	inline uint32_t getFailoverInterval()
 	{
 		return _failoverInterval;
-	}
-
-	/**
-	 * @param strategy Strategy that the bond uses to re-assign protocol flows.
-	 */
-	inline void setFlowRebalanceStrategy(uint32_t strategy)
-	{
-		_flowRebalanceStrategy = strategy;
 	}
 
 	/**
@@ -1151,25 +1138,7 @@ class Bond {
 	bool abForciblyRotateLink();
 
 	/**
-	 * @param now Current time
-	 * @return All known paths to this peer
-	 */
-	inline std::vector<SharedPtr<Path> > paths(const int64_t now) const
-	{
-		std::vector<SharedPtr<Path> > pp;
-		Mutex::Lock _l(_paths_m);
-		for (unsigned int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
-			if (! _paths[i].p) {
-				continue;
-			}
-			pp.push_back(_paths[i].p);
-		}
-		return pp;
-	}
-
-	/**
 	 * Emit message to tracing system but with added timestamp and subsystem info
-	 *
 	 */
 	void log(const char* fmt, ...)
 #ifdef __GNUC__
@@ -1201,7 +1170,6 @@ class Bond {
 
 	/**
 	 * Emit message to tracing system but with added timestamp and subsystem info
-	 *
 	 */
 	void debug(const char* fmt, ...)
 #ifdef __GNUC__
@@ -1412,7 +1380,6 @@ class Bond {
 		{
 			p = path;
 			whenNominated = now;
-			p->_bondingMetricPtr = (void*)this;
 		}
 	};
 
@@ -1487,6 +1454,8 @@ class Bond {
 
 	std::string _policyAlias;	// Custom name given by the user to this bond type.
 
+	static Binder* _binder;
+
 	/**
 	 * Set of indices corresponding to paths currently included in the bond proper. This
 	 * may only be updated during a call to curateBond(). The reason for this is so that
@@ -1518,7 +1487,6 @@ class Bond {
 
 	// balance-aware
 	uint64_t _totalBondUnderload;
-	uint8_t _flowRebalanceStrategy;
 
 	// dynamic link monitoring
 	uint8_t _linkMonitorStrategy;
@@ -1546,7 +1514,6 @@ class Bond {
 	uint16_t _maxAcceptableLatency;
 	uint16_t _maxAcceptableMeanLatency;
 	uint16_t _maxAcceptablePacketDelayVariance;
-	uint8_t _minAcceptableAllocation;
 
 	/**
 	 * Link state reporting
