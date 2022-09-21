@@ -50,7 +50,6 @@ impl Drop for BoundUdpSocket {
 
 impl BoundUdpSocket {
     #[cfg(unix)]
-    #[inline(always)]
     fn set_ttl(&self, packet_ttl: u8) {
         let ttl = packet_ttl as libc::c_int;
         unsafe {
@@ -98,24 +97,6 @@ impl BoundUdpSocket {
         return false;
     }
 
-    fn close(&self) {
-        unsafe {
-            self.open.store(false, Ordering::SeqCst);
-            let mut timeo: libc::timeval = std::mem::zeroed();
-            timeo.tv_sec = 0;
-            timeo.tv_usec = 1;
-            libc::setsockopt(
-                self.fd.as_(),
-                libc::SOL_SOCKET.as_(),
-                libc::SO_RCVTIMEO.as_(),
-                (&mut timeo as *mut libc::timeval).cast(),
-                std::mem::size_of::<libc::timeval>().as_(),
-            );
-            libc::shutdown(self.fd.as_(), libc::SHUT_RDWR);
-            libc::close(self.fd.as_());
-        }
-    }
-
     /// Receive a packet or return None if this UDP socket is being closed.
     #[cfg(unix)]
     pub fn blocking_receive<B: AsMut<[u8]>>(&self, mut buffer: B, current_time: i64) -> Option<(usize, InetAddress)> {
@@ -139,6 +120,25 @@ impl BoundUdpSocket {
                 }
             }
             return None;
+        }
+    }
+
+    #[cfg(unix)]
+    fn close(&self) {
+        unsafe {
+            self.open.store(false, Ordering::SeqCst);
+            let mut timeo: libc::timeval = std::mem::zeroed();
+            timeo.tv_sec = 0;
+            timeo.tv_usec = 1;
+            libc::setsockopt(
+                self.fd.as_(),
+                libc::SOL_SOCKET.as_(),
+                libc::SO_RCVTIMEO.as_(),
+                (&mut timeo as *mut libc::timeval).cast(),
+                std::mem::size_of::<libc::timeval>().as_(),
+            );
+            libc::shutdown(self.fd.as_(), libc::SHUT_RDWR);
+            libc::close(self.fd.as_());
         }
     }
 }
