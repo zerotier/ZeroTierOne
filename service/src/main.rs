@@ -8,9 +8,12 @@ pub mod utils;
 pub mod vnic;
 
 use std::io::Write;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
 use clap::error::{ContextKind, ContextValue};
+#[allow(unused_imports)]
 use clap::{Arg, ArgMatches, Command};
 
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
@@ -41,8 +44,8 @@ pub struct Flags {
     pub auth_token_override: Option<String>,
 }
 
-async fn open_datadir(flags: &Flags) -> Arc<DataDir> {
-    let datadir = DataDir::open(flags.base_path.as_str()).await;
+fn open_datadir(flags: &Flags) -> Arc<DataDir> {
+    let datadir = DataDir::open(flags.base_path.as_str());
     if datadir.is_ok() {
         return Arc::new(datadir.unwrap());
     }
@@ -52,50 +55,6 @@ async fn open_datadir(flags: &Flags) -> Arc<DataDir> {
         datadir.err().unwrap().to_string()
     );
     std::process::exit(exitcode::ERR_IOERR);
-}
-
-async fn async_main(flags: Flags, global_args: Box<ArgMatches>) -> i32 {
-    #[allow(unused)]
-    match global_args.subcommand() {
-        Some(("help", _)) => {
-            print_help();
-            exitcode::OK
-        }
-        Some(("version", _)) => {
-            println!("{}.{}.{}", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION);
-            exitcode::OK
-        }
-        Some(("status", _)) => todo!(),
-        Some(("set", cmd_args)) => todo!(),
-        Some(("peer", cmd_args)) => todo!(),
-        Some(("network", cmd_args)) => todo!(),
-        Some(("join", cmd_args)) => todo!(),
-        Some(("leave", cmd_args)) => todo!(),
-        Some(("service", _)) => {
-            drop(global_args); // free unnecessary heap before starting service as we're done with CLI args
-
-            let test_inner = Arc::new(zerotier_network_hypervisor::vl1::DummyInnerProtocol::default());
-            let test_path_filter = Arc::new(zerotier_network_hypervisor::vl1::DummyPathFilter::default());
-            let datadir = open_datadir(&flags).await;
-            let svc = VL1Service::new(datadir, test_inner, test_path_filter, zerotier_vl1_service::VL1Settings::default()).await;
-            if svc.is_ok() {
-                let svc = svc.unwrap();
-                svc.node().init_default_roots();
-                let _ = tokio::signal::ctrl_c().await;
-                println!("Terminate signal received, shutting down...");
-                exitcode::OK
-            } else {
-                println!("FATAL: error launching service: {}", svc.err().unwrap().to_string());
-                exitcode::ERR_IOERR
-            }
-        }
-        Some(("identity", cmd_args)) => todo!(),
-        Some(("rootset", cmd_args)) => cli::rootset::cmd(flags, cmd_args).await,
-        _ => {
-            eprintln!("Invalid command line. Use 'help' for help.");
-            exitcode::ERR_USAGE
-        }
-    }
 }
 
 fn main() {
@@ -231,11 +190,58 @@ fn main() {
         auth_token_override: global_args.value_of("token").map(|t| t.to_string()),
     };
 
-    std::process::exit(
-        tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(async_main(flags, global_args)),
-    );
+    #[allow(unused)]
+    let exit_code = match global_args.subcommand() {
+        Some(("help", _)) => {
+            print_help();
+            exitcode::OK
+        }
+        Some(("version", _)) => {
+            println!("{}.{}.{}", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION);
+            exitcode::OK
+        }
+        Some(("status", _)) => todo!(),
+        Some(("set", cmd_args)) => todo!(),
+        Some(("peer", cmd_args)) => todo!(),
+        Some(("network", cmd_args)) => todo!(),
+        Some(("join", cmd_args)) => todo!(),
+        Some(("leave", cmd_args)) => todo!(),
+        Some(("service", _)) => {
+            drop(global_args); // free unnecessary heap before starting service as we're done with CLI args
+
+            let test_inner = Arc::new(zerotier_network_hypervisor::vl1::DummyInnerProtocol::default());
+            let test_path_filter = Arc::new(zerotier_network_hypervisor::vl1::DummyPathFilter::default());
+            let datadir = open_datadir(&flags);
+            let svc = VL1Service::new(datadir, test_inner, test_path_filter, zerotier_vl1_service::VL1Settings::default());
+            if svc.is_ok() {
+                let svc = svc.unwrap();
+                svc.node().init_default_roots();
+
+                #[cfg(unix)]
+                {
+                    let term = Arc::new(AtomicBool::new(false));
+                    let _ = signal_hook::flag::register(libc::SIGINT, term.clone());
+                    let _ = signal_hook::flag::register(libc::SIGTERM, term.clone());
+                    let _ = signal_hook::flag::register(libc::SIGQUIT, term.clone());
+                    while !term.load(Ordering::Relaxed) {
+                        std::thread::sleep(Duration::from_secs(1));
+                    }
+                }
+
+                println!("Terminate signal received, shutting down...");
+                exitcode::OK
+            } else {
+                println!("FATAL: error launching service: {}", svc.err().unwrap().to_string());
+                exitcode::ERR_IOERR
+            }
+        }
+        Some(("identity", cmd_args)) => todo!(),
+        Some(("rootset", cmd_args)) => cli::rootset::cmd(flags, cmd_args),
+        _ => {
+            eprintln!("Invalid command line. Use 'help' for help.");
+            exitcode::ERR_USAGE
+        }
+    };
+
+    std::process::exit(exit_code);
 }

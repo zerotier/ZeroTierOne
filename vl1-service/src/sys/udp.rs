@@ -7,11 +7,11 @@ use std::mem::{size_of, transmute, MaybeUninit};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 #[allow(unused_imports)]
 use std::ptr::{null, null_mut};
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Arc;
 
 #[cfg(unix)]
-use std::os::unix::io::{FromRawFd, RawFd};
+use std::os::unix::io::RawFd;
 
 use crate::localinterface::LocalInterface;
 
@@ -34,19 +34,17 @@ pub struct BoundUdpPort {
 /// A socket bound to a specific interface and IP.
 pub struct BoundUdpSocket {
     pub address: InetAddress,
-    pub socket: Arc<tokio::net::UdpSocket>,
     pub interface: LocalInterface,
-    pub associated_tasks: parking_lot::Mutex<Vec<tokio::task::JoinHandle<()>>>,
     last_receive_time: AtomicI64,
     fd: RawFd,
+    lock: parking_lot::RwLock<()>,
+    open: AtomicBool,
 }
 
 impl Drop for BoundUdpSocket {
     fn drop(&mut self) {
-        let mut associated_tasks = self.associated_tasks.lock();
-        for t in associated_tasks.drain(..) {
-            t.abort();
-        }
+        self.close();
+        let _wait_for_close = self.lock.write();
     }
 }
 
@@ -66,26 +64,82 @@ impl BoundUdpSocket {
         };
     }
 
-    pub fn send_sync_nonblock(&self, dest: &InetAddress, b: &[u8], packet_ttl: u8) -> bool {
-        let mut ok = false;
+    #[cfg(unix)]
+    pub fn send(&self, dest: &InetAddress, data: &[u8], packet_ttl: u8) -> bool {
         if dest.family() == self.address.family() {
-            if packet_ttl > 0 && dest.is_ipv4() {
-                self.set_ttl(packet_ttl);
-                ok = self.socket.try_send_to(b, dest.try_into().unwrap()).is_ok();
-                self.set_ttl(0xff);
+            let (c_sockaddr, c_addrlen) = dest.c_sockaddr();
+            if packet_ttl == 0 || !dest.is_ipv4() {
+                unsafe {
+                    return libc::sendto(
+                        self.fd.as_(),
+                        data.as_ptr().cast(),
+                        data.len().as_(),
+                        0,
+                        c_sockaddr.cast(),
+                        c_addrlen.as_(),
+                    ) >= 0;
+                }
             } else {
-                ok = self.socket.try_send_to(b, dest.try_into().unwrap()).is_ok();
+                self.set_ttl(packet_ttl);
+                let ok = unsafe {
+                    libc::sendto(
+                        self.fd.as_(),
+                        data.as_ptr().cast(),
+                        data.len().as_(),
+                        0,
+                        c_sockaddr.cast(),
+                        c_addrlen.as_(),
+                    ) >= 0
+                };
+                self.set_ttl(0xff);
+                return ok;
             }
         }
-        ok
+        return false;
     }
 
-    pub async fn receive<B: AsMut<[u8]> + Send>(&self, mut buffer: B, current_time: i64) -> tokio::io::Result<(usize, SocketAddr)> {
-        let result = self.socket.recv_from(buffer.as_mut()).await;
-        if result.is_ok() {
-            self.last_receive_time.store(current_time, Ordering::Relaxed);
+    fn close(&self) {
+        unsafe {
+            self.open.store(false, Ordering::SeqCst);
+            let mut timeo: libc::timeval = std::mem::zeroed();
+            timeo.tv_sec = 0;
+            timeo.tv_usec = 1;
+            libc::setsockopt(
+                self.fd.as_(),
+                libc::SOL_SOCKET.as_(),
+                libc::SO_RCVTIMEO.as_(),
+                (&mut timeo as *mut libc::timeval).cast(),
+                std::mem::size_of::<libc::timeval>().as_(),
+            );
+            libc::shutdown(self.fd.as_(), libc::SHUT_RDWR);
+            libc::close(self.fd.as_());
         }
-        result
+    }
+
+    /// Receive a packet or return None if this UDP socket is being closed.
+    #[cfg(unix)]
+    pub fn blocking_receive<B: AsMut<[u8]>>(&self, mut buffer: B, current_time: i64) -> Option<(usize, InetAddress)> {
+        unsafe {
+            let _hold = self.lock.read();
+            let b = buffer.as_mut();
+            let mut from = InetAddress::new();
+            while self.open.load(Ordering::Relaxed) {
+                let mut addrlen = std::mem::size_of::<InetAddress>().as_();
+                let s = libc::recvfrom(
+                    self.fd.as_(),
+                    b.as_mut_ptr().cast(),
+                    b.len().as_(),
+                    0,
+                    (&mut from as *mut InetAddress).cast(),
+                    &mut addrlen,
+                );
+                if s > 0 {
+                    self.last_receive_time.store(current_time, Ordering::Relaxed);
+                    return Some((s as usize, from));
+                }
+            }
+            return None;
+        }
     }
 }
 
@@ -129,7 +183,7 @@ impl BoundUdpPort {
                 .insert(s.address.clone(), s);
         }
 
-        let mut errors = Vec::new();
+        let mut errors: Vec<(LocalInterface, InetAddress, std::io::Error)> = Vec::new();
         let mut new_sockets = Vec::new();
         getifaddrs::for_each_address(|address, interface| {
             let interface_str = interface.to_string();
@@ -146,10 +200,10 @@ impl BoundUdpPort {
                 && !ipv6::is_ipv6_temporary(interface_str.as_str(), address)
             {
                 let mut found = false;
-                if let Some(byaddr) = existing_bindings.get(interface) {
-                    if let Some(socket) = byaddr.get(&addr_with_port) {
+                if let Some(byaddr) = existing_bindings.get_mut(interface) {
+                    if let Some(socket) = byaddr.remove(&addr_with_port) {
                         found = true;
-                        self.sockets.push(socket.clone());
+                        self.sockets.push(socket);
                     }
                 }
 
@@ -157,20 +211,23 @@ impl BoundUdpPort {
                     let s = unsafe { bind_udp_to_device(interface_str.as_str(), &addr_with_port) };
                     if s.is_ok() {
                         let fd = s.unwrap();
-                        let s = tokio::net::UdpSocket::from_std(unsafe { std::net::UdpSocket::from_raw_fd(fd) });
                         if s.is_ok() {
                             let s = Arc::new(BoundUdpSocket {
                                 address: addr_with_port,
-                                socket: Arc::new(s.unwrap()),
                                 interface: interface.clone(),
-                                associated_tasks: parking_lot::Mutex::new(Vec::new()),
                                 last_receive_time: AtomicI64::new(i64::MIN),
                                 fd,
+                                lock: parking_lot::RwLock::new(()),
+                                open: AtomicBool::new(true),
                             });
                             self.sockets.push(s.clone());
                             new_sockets.push(s);
                         } else {
-                            errors.push((interface.clone(), addr_with_port, s.err().unwrap()));
+                            errors.push((
+                                interface.clone(),
+                                addr_with_port,
+                                std::io::Error::new(std::io::ErrorKind::Other, s.err().unwrap()),
+                            ));
                         }
                     } else {
                         errors.push((
@@ -183,7 +240,21 @@ impl BoundUdpPort {
             }
         });
 
+        for (_, byaddr) in existing_bindings.iter() {
+            for (_, s) in byaddr.iter() {
+                s.close();
+            }
+        }
+
         (errors, new_sockets)
+    }
+}
+
+impl Drop for BoundUdpPort {
+    fn drop(&mut self) {
+        for s in self.sockets.iter() {
+            s.close();
+        }
     }
 }
 
@@ -216,12 +287,25 @@ unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result
         return Err("unable to create new UDP socket");
     }
 
-    assert_ne!(libc::fcntl(s, libc::F_SETFL, libc::O_NONBLOCK), -1);
-
     #[allow(unused_variables)]
     let mut setsockopt_results: libc::c_int = 0;
-    let mut fl: libc::c_int;
+    let mut fl;
 
+    //assert_ne!(libc::fcntl(s, libc::F_SETFL, libc::O_NONBLOCK), -1);
+
+    let mut timeo: libc::timeval = std::mem::zeroed();
+    timeo.tv_sec = 1;
+    timeo.tv_usec = 0;
+    setsockopt_results |= libc::setsockopt(
+        s,
+        libc::SOL_SOCKET.as_(),
+        libc::SO_RCVTIMEO.as_(),
+        (&mut timeo as *mut libc::timeval).cast(),
+        std::mem::size_of::<libc::timeval>().as_(),
+    );
+    debug_assert!(setsockopt_results == 0);
+
+    /*
     fl = 1;
     setsockopt_results |= libc::setsockopt(
         s,
@@ -231,6 +315,7 @@ unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result
         std::mem::size_of::<libc::c_int>().as_(),
     );
     debug_assert!(setsockopt_results == 0);
+    */
 
     fl = 1;
     setsockopt_results |= libc::setsockopt(

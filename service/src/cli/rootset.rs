@@ -10,7 +10,7 @@ use zerotier_network_hypervisor::util::marshalable::Marshalable;
 use zerotier_network_hypervisor::vl1::RootSet;
 use zerotier_utils::json::to_json_pretty;
 
-pub async fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
+pub fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
     match cmd_args.subcommand() {
         Some(("add", _sc_args)) => todo!(),
 
@@ -24,8 +24,8 @@ pub async fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
             if path.is_some() && secret_arg.is_some() {
                 let path = path.unwrap();
                 let secret_arg = secret_arg.unwrap();
-                let secret = crate::utils::parse_cli_identity(secret_arg, true).await;
-                let json_data = crate::utils::read_limit(path, crate::utils::DEFAULT_FILE_IO_READ_LIMIT).await;
+                let secret = crate::utils::parse_cli_identity(secret_arg, true);
+                let json_data = crate::utils::read_limit(path, crate::utils::DEFAULT_FILE_IO_READ_LIMIT);
                 if secret.is_err() {
                     eprintln!("ERROR: unable to parse '{}' or read as a file.", secret_arg);
                     return exitcode::ERR_IOERR;
@@ -61,7 +61,7 @@ pub async fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
             let path = sc_args.value_of("path");
             if path.is_some() {
                 let path = path.unwrap();
-                let json_data = crate::utils::read_limit(path, crate::utils::DEFAULT_FILE_IO_READ_LIMIT).await;
+                let json_data = crate::utils::read_limit(path, crate::utils::DEFAULT_FILE_IO_READ_LIMIT);
                 if json_data.is_err() {
                     eprintln!("ERROR: unable to read '{}'.", path);
                     return exitcode::ERR_IOERR;
@@ -89,7 +89,7 @@ pub async fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
             let path = sc_args.value_of("path");
             if path.is_some() {
                 let path = path.unwrap();
-                let json_data = crate::utils::read_limit(path, 1048576).await;
+                let json_data = crate::utils::read_limit(path, 1048576);
                 if json_data.is_err() {
                     eprintln!("ERROR: unable to read '{}'.", path);
                     return exitcode::ERR_IOERR;

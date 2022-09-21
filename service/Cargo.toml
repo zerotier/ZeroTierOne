@@ -14,8 +14,7 @@ zerotier-network-hypervisor = { path = "../network-hypervisor" }
 zerotier-crypto = { path = "../crypto" }
 zerotier-utils = { path = "../utils" }
 zerotier-vl1-service = { path = "../vl1-service" }
-async-trait = "^0"
-tokio = { version = "^1", features = ["fs", "io-util", "io-std", "net", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "sync", "time"], default-features = false }
+#tokio = { version = "^1", features = ["fs", "io-util", "io-std", "net", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "sync", "time"], default-features = false }
 serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = ["std"], default-features = false }
 parking_lot = { version = "^0", features = [], default-features = false }
@@ -27,3 +26,4 @@ winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
 
 [target."cfg(not(windows))".dependencies]
 libc = "^0"
+signal-hook = "^0"

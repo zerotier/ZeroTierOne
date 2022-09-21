@@ -1,10 +1,9 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 use std::str::FromStr;
-
-use tokio::fs::File;
-use tokio::io::AsyncReadExt;
 
 use zerotier_network_hypervisor::vl1::Identity;
 
@@ -14,12 +13,12 @@ pub const DEFAULT_FILE_IO_READ_LIMIT: usize = 1048576;
 /// Convenience function to read up to limit bytes from a file.
 ///
 /// If the file is larger than limit, the excess is not read.
-pub async fn read_limit<P: AsRef<Path>>(path: P, limit: usize) -> std::io::Result<Vec<u8>> {
-    let mut f = File::open(path).await?;
-    let bytes = f.metadata().await?.len().min(limit as u64) as usize;
+pub fn read_limit<P: AsRef<Path>>(path: P, limit: usize) -> std::io::Result<Vec<u8>> {
+    let mut f = File::open(path)?;
+    let bytes = f.metadata()?.len().min(limit as u64) as usize;
     let mut v: Vec<u8> = Vec::with_capacity(bytes);
     v.resize(bytes, 0);
-    f.read_exact(v.as_mut_slice()).await?;
+    f.read_exact(v.as_mut_slice())?;
     Ok(v)
 }
 
@@ -70,7 +69,7 @@ pub fn is_valid_port(v: &str) -> Result<(), String> {
 }
 
 /// Read an identity as either a literal or from a file.
-pub async fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity, String> {
+pub fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity, String> {
     let parse_func = |s: &str| {
         Identity::from_str(s).map_or_else(
             |e| Err(format!("invalid identity: {}", e.to_string())),
@@ -86,7 +85,7 @@ pub async fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity,
 
     let input_p = Path::new(input);
     if input_p.is_file() {
-        read_limit(input_p, 16384).await.map_or_else(
+        read_limit(input_p, 16384).map_or_else(
             |e| Err(e.to_string()),
             |v| String::from_utf8(v).map_or_else(|e| Err(e.to_string()), |s| parse_func(s.as_str())),
         )
