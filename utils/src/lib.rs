@@ -10,6 +10,8 @@ pub mod hex;
 pub mod json;
 pub mod memory;
 pub mod pool;
+pub mod reaper;
+pub mod ringbuffer;
 pub mod ringbuffermap;
 pub mod varint;
 

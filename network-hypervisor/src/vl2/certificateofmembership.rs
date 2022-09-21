@@ -14,5 +14,5 @@ pub struct CertificateOfMembership {
     pub network_id: NetworkId,
     pub timestamp: i64,
     pub max_delta: i64,
-    pub signature: ArrayVec<u8, { identity::MAX_SIGNATURE_SIZE }>,
+    pub signature: ArrayVec<u8, { identity::IDENTITY_MAX_SIGNATURE_SIZE }>,
 }

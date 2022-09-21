@@ -9,7 +9,6 @@ mod path;
 mod peer;
 mod rootset;
 mod symmetricsecret;
-mod whoisqueue;
 
 pub(crate) mod node;
 
@@ -22,7 +21,7 @@ pub use event::Event;
 pub use identity::Identity;
 pub use inetaddress::InetAddress;
 pub use mac::MAC;
-pub use node::{DummyInnerProtocol, DummyPathFilter, HostSystem, InnerProtocol, Node, NodeStorage, PathFilter};
+pub use node::{DummyInnerProtocol, DummyPathFilter, HostSystem, InnerProtocol, Node, NodeStorage, PacketHandlerResult, PathFilter};
 pub use path::Path;
 pub use peer::Peer;
 pub use rootset::{Root, RootSet};

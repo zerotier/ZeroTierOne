@@ -32,7 +32,7 @@ pub struct Path<HostSystemImpl: HostSystem> {
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     create_time_ticks: i64,
-    fragmented_packets: Mutex<HashMap<PacketId, FragmentedPacket, PacketIdHasher>>,
+    fragmented_packets: Mutex<HashMap<u64, FragmentedPacket, PacketIdHasher>>,
 }
 
 impl<HostSystemImpl: HostSystem> Path<HostSystemImpl> {
@@ -57,7 +57,7 @@ impl<HostSystemImpl: HostSystem> Path<HostSystemImpl> {
     /// This returns None if more fragments are needed to assemble the packet.
     pub(crate) fn receive_fragment(
         &self,
-        packet_id: PacketId,
+        packet_id: u64,
         fragment_no: u8,
         fragment_expecting_count: u8,
         packet: PooledPacketBuffer,

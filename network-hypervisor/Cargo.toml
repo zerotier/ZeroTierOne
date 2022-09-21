@@ -12,7 +12,6 @@ debug_events = []
 [dependencies]
 zerotier-crypto = { path = "../crypto" }
 zerotier-utils = { path = "../utils" }
-async-trait = "^0"
 base64 = "^0"
 lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }
 parking_lot = { version = "^0", features = [], default-features = false }
@@ -22,7 +21,7 @@ serde = { version = "^1", features = ["derive"], default-features = false }
 rand = "*"
 serde_json = "*"
 serde_cbor = "*"
-criterion = "0.3"
+criterion = "^0"
 
 [target."cfg(not(windows))".dependencies]
 libc = "^0"

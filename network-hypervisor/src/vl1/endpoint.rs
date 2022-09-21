@@ -7,8 +7,8 @@ use std::str::FromStr;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::InvalidFormatError;
-use crate::protocol::IDENTITY_FINGERPRINT_SIZE;
 use crate::util::marshalable::*;
+use crate::vl1::identity::IDENTITY_FINGERPRINT_SIZE;
 use crate::vl1::inetaddress::InetAddress;
 use crate::vl1::{Address, MAC};
 

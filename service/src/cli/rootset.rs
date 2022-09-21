@@ -73,7 +73,7 @@ pub async fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
                     return exitcode::ERR_IOERR;
                 }
                 let root_set = root_set.unwrap();
-                if root_set.verify() {
+                if root_set.verify().is_some() {
                     println!("OK");
                 } else {
                     println!("FAILED");
@@ -108,7 +108,9 @@ pub async fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
         }
 
         Some(("restoredefault", _)) => {
-            let _ = std::io::stdout().write_all(to_json_pretty(&RootSet::zerotier_default()).as_bytes());
+            let rs = RootSet::zerotier_default();
+            let _ = std::io::stdout().write_all(to_json_pretty(&*rs).as_bytes());
+            // TODO: re-add
         }
 
         _ => panic!(),

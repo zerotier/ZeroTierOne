@@ -19,11 +19,14 @@ use zerotier_utils::hex;
 use zerotier_utils::memory::{as_byte_array, as_flat_object};
 
 use crate::error::{InvalidFormatError, InvalidParameterError};
-use crate::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_FINGERPRINT_SIZE, IDENTITY_POW_THRESHOLD};
+use crate::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_POW_THRESHOLD};
 use crate::vl1::Address;
 
 /// Current maximum size for an identity signature.
-pub const MAX_SIGNATURE_SIZE: usize = P384_ECDSA_SIGNATURE_SIZE + 1;
+pub const IDENTITY_MAX_SIGNATURE_SIZE: usize = P384_ECDSA_SIGNATURE_SIZE + 1;
+
+/// Size of an identity fingerprint (SHA384)
+pub const IDENTITY_FINGERPRINT_SIZE: usize = 48;
 
 /// Secret keys associated with NIST P-384 public keys.
 #[derive(Clone)]
@@ -358,7 +361,7 @@ impl Identity {
     /// set the old 96-byte signature plus hash format used in ZeroTier v1 is used.
     ///
     /// A return of None happens if we don't have our secret key(s) or some other error occurs.
-    pub fn sign(&self, msg: &[u8], legacy_ed25519_only: bool) -> Option<ArrayVec<u8, MAX_SIGNATURE_SIZE>> {
+    pub fn sign(&self, msg: &[u8], legacy_ed25519_only: bool) -> Option<ArrayVec<u8, IDENTITY_MAX_SIGNATURE_SIZE>> {
         if let Some(secret) = self.secret.as_ref() {
             if legacy_ed25519_only {
                 Some(secret.ed25519.sign_zt(msg).into())

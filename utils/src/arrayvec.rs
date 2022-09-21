@@ -142,8 +142,8 @@ impl<T, const C: usize> ArrayVec<T, C> {
 
     #[inline(always)]
     pub fn push(&mut self, v: T) {
-        if self.s < C {
-            let i = self.s;
+        let i = self.s;
+        if i < C {
             unsafe { self.a.get_unchecked_mut(i).write(v) };
             self.s = i + 1;
         } else {

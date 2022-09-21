@@ -9,7 +9,7 @@ use zerotier_utils::buffer::{Buffer, PooledBufferFactory};
 use zerotier_utils::pool::{Pool, Pooled};
 
 /*
- * Protocol versions
+ * Legacy V1 protocol versions:
  *
  * 1  - 0.2.0 ... 0.2.5
  * 2  - 0.3.0 ... 0.4.5
@@ -46,20 +46,20 @@ pub const PROTOCOL_VERSION: u8 = 20;
 /// We could probably push it back to 8 or 9 with some added support for sending Salsa/Poly packets.
 pub const PROTOCOL_VERSION_MIN: u8 = 11;
 
+/// Size of a pooled packet buffer.
+pub const PACKET_BUFFER_SIZE: usize = 16384;
+
 /// Buffer sized for ZeroTier packets.
-pub type PacketBuffer = Buffer<{ v1::SIZE_MAX }>;
+pub type PacketBuffer = Buffer<PACKET_BUFFER_SIZE>;
 
 /// Factory type to supply to a new PacketBufferPool, used in PooledPacketBuffer and PacketBufferPool types.
-pub type PacketBufferFactory = PooledBufferFactory<{ crate::protocol::v1::SIZE_MAX }>;
+pub type PacketBufferFactory = PooledBufferFactory<PACKET_BUFFER_SIZE>;
 
 /// Packet buffer checked out of pool, automatically returns on drop.
 pub type PooledPacketBuffer = Pooled<PacketBuffer, PacketBufferFactory>;
 
 /// Source for instances of PacketBuffer
 pub type PacketBufferPool = Pool<PacketBuffer, PacketBufferFactory>;
-
-/// 64-bit packet (outer) ID.
-pub type PacketId = u64;
 
 /// 64-bit message ID (obtained after AEAD decryption).
 pub type MessageId = u64;
@@ -115,9 +115,6 @@ pub const ADDRESS_SIZE_STRING: usize = 10;
 
 /// Prefix indicating reserved addresses (that can't actually be addresses).
 pub const ADDRESS_RESERVED_PREFIX: u8 = 0xff;
-
-/// Size of an identity fingerprint (SHA384)
-pub const IDENTITY_FINGERPRINT_SIZE: usize = 48;
 
 pub(crate) mod v1 {
     use super::*;
@@ -276,7 +273,7 @@ pub(crate) mod v1 {
 
     impl PacketHeader {
         #[inline(always)]
-        pub fn packet_id(&self) -> PacketId {
+        pub fn packet_id(&self) -> u64 {
             u64::from_ne_bytes(self.id)
         }
 
@@ -344,7 +341,7 @@ pub(crate) mod v1 {
 
     impl FragmentHeader {
         #[inline(always)]
-        pub fn packet_id(&self) -> PacketId {
+        pub fn packet_id(&self) -> u64 {
             u64::from_ne_bytes(self.id)
         }
 
@@ -424,38 +421,38 @@ pub(crate) mod v1 {
     }
 }
 
-/// Maximum difference between current message ID and OK/ERROR in-re message ID.
-pub const PACKET_RESPONSE_COUNTER_DELTA_MAX: u64 = 4096;
+/// Maximum delta between the message ID of a sent packet and its response.
+pub(crate) const PACKET_RESPONSE_COUNTER_DELTA_MAX: u64 = 256;
 
-/// Frequency for WHOIS retries
-pub const WHOIS_RETRY_INTERVAL: i64 = 1000;
+/// Frequency for WHOIS retries in milliseconds.
+pub(crate) const WHOIS_RETRY_INTERVAL: i64 = 1500;
 
 /// Maximum number of WHOIS retries
-pub const WHOIS_RETRY_MAX: u16 = 3;
+pub(crate) const WHOIS_RETRY_COUNT_MAX: u16 = 3;
 
 /// Maximum number of packets to queue up behind a WHOIS.
-pub const WHOIS_MAX_WAITING_PACKETS: usize = 64;
+pub(crate) const WHOIS_MAX_WAITING_PACKETS: usize = 32;
 
 /// Keepalive interval for paths in milliseconds.
-pub const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
+pub(crate) const PATH_KEEPALIVE_INTERVAL: i64 = 20000;
 
 /// Path object expiration time in milliseconds since last receive.
-pub const PATH_EXPIRATION_TIME: i64 = (PATH_KEEPALIVE_INTERVAL * 2) + 10000;
+pub(crate) const PATH_EXPIRATION_TIME: i64 = (PATH_KEEPALIVE_INTERVAL * 2) + 10000;
 
 /// How often to send HELLOs to roots, which is more often than normal peers.
-pub const ROOT_HELLO_INTERVAL: i64 = PATH_KEEPALIVE_INTERVAL * 2;
+pub(crate) const ROOT_HELLO_INTERVAL: i64 = PATH_KEEPALIVE_INTERVAL * 2;
 
 /// How often to send HELLOs to roots when we are offline.
-pub const ROOT_HELLO_SPAM_INTERVAL: i64 = 5000;
+pub(crate) const ROOT_HELLO_SPAM_INTERVAL: i64 = 5000;
 
 /// How often to send HELLOs to regular peers.
-pub const PEER_HELLO_INTERVAL_MAX: i64 = 300000;
+pub(crate) const PEER_HELLO_INTERVAL_MAX: i64 = 300000;
 
 /// Timeout for path association with peers and for peers themselves.
-pub const PEER_EXPIRATION_TIME: i64 = (PEER_HELLO_INTERVAL_MAX * 2) + 10000;
+pub(crate) const PEER_EXPIRATION_TIME: i64 = (PEER_HELLO_INTERVAL_MAX * 2) + 10000;
 
 /// Proof of work difficulty (threshold) for identity generation.
-pub const IDENTITY_POW_THRESHOLD: u8 = 17;
+pub(crate) const IDENTITY_POW_THRESHOLD: u8 = 17;
 
 #[cfg(test)]
 mod tests {

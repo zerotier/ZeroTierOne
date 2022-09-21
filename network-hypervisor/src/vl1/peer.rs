@@ -206,7 +206,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed).max(self.create_time_ticks)) < PEER_EXPIRATION_TIME
     }
 
-    async fn internal_send(
+    fn internal_send(
         &self,
         host_system: &HostSystemImpl,
         endpoint: &Endpoint,
@@ -214,16 +214,11 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         local_interface: Option<&HostSystemImpl::LocalInterface>,
         max_fragment_size: usize,
         packet: &PacketBuffer,
-    ) -> bool {
+    ) {
         let packet_size = packet.len();
         if packet_size > max_fragment_size {
             let bytes = packet.as_bytes();
-            if !host_system
-                .wire_send(endpoint, local_socket, local_interface, &bytes[0..UDP_DEFAULT_MTU], 0)
-                .await
-            {
-                return false;
-            }
+            host_system.wire_send(endpoint, local_socket, local_interface, &bytes[0..UDP_DEFAULT_MTU], 0);
             let mut pos = UDP_DEFAULT_MTU;
 
             let overrun_size = (packet_size - UDP_DEFAULT_MTU) as u32;
@@ -247,23 +242,16 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 let fragment_size = v1::FRAGMENT_HEADER_SIZE + chunk_size;
                 tmp_buf[..v1::FRAGMENT_HEADER_SIZE].copy_from_slice(header.as_bytes());
                 tmp_buf[v1::FRAGMENT_HEADER_SIZE..fragment_size].copy_from_slice(&bytes[pos..next_pos]);
-                if !host_system
-                    .wire_send(endpoint, local_socket, local_interface, &tmp_buf[..fragment_size], 0)
-                    .await
-                {
-                    return false;
-                }
+                host_system.wire_send(endpoint, local_socket, local_interface, &tmp_buf[..fragment_size], 0);
                 pos = next_pos;
                 if pos < packet_size {
                     chunk_size = (packet_size - pos).min(UDP_DEFAULT_MTU - v1::HEADER_SIZE);
                 } else {
-                    return true;
+                    break;
                 }
             }
         } else {
-            return host_system
-                .wire_send(endpoint, local_socket, local_interface, packet.as_bytes(), 0)
-                .await;
+            host_system.wire_send(endpoint, local_socket, local_interface, packet.as_bytes(), 0);
         }
     }
 
@@ -273,7 +261,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
     /// via a root or some other route.
     ///
     /// It encrypts and sets the MAC and cipher fields and packet ID and other things.
-    pub(crate) async fn send(
+    pub(crate) fn send(
         &self,
         host_system: &HostSystemImpl,
         path: Option<&Arc<Path<HostSystemImpl>>>,
@@ -326,22 +314,18 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             return false;
         }
 
-        if self
-            .internal_send(
-                host_system,
-                &path.endpoint,
-                Some(&path.local_socket),
-                Some(&path.local_interface),
-                max_fragment_size,
-                packet,
-            )
-            .await
-        {
-            self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
-            return true;
-        }
+        self.internal_send(
+            host_system,
+            &path.endpoint,
+            Some(&path.local_socket),
+            Some(&path.local_interface),
+            max_fragment_size,
+            packet,
+        );
 
-        return false;
+        self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
+
+        return true;
     }
 
     /// Forward a packet to this peer.
@@ -351,21 +335,17 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
     ///
     /// This doesn't fragment large packets since fragments are forwarded individually.
     /// Intermediates don't need to adjust fragmentation.
-    pub(crate) async fn forward(&self, host_system: &HostSystemImpl, time_ticks: i64, packet: &PacketBuffer) -> bool {
+    pub(crate) fn forward(&self, host_system: &HostSystemImpl, time_ticks: i64, packet: &PacketBuffer) -> bool {
         if let Some(path) = self.direct_path() {
-            if host_system
-                .wire_send(
-                    &path.endpoint,
-                    Some(&path.local_socket),
-                    Some(&path.local_interface),
-                    packet.as_bytes(),
-                    0,
-                )
-                .await
-            {
-                self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
-                return true;
-            }
+            host_system.wire_send(
+                &path.endpoint,
+                Some(&path.local_socket),
+                Some(&path.local_interface),
+                packet.as_bytes(),
+                0,
+            );
+            self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
+            return true;
         }
         return false;
     }
@@ -378,7 +358,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
     /// Unlike other messages HELLO is sent partially in the clear and always with the long-lived
     /// static identity key. Authentication in old versions is via Poly1305 and in new versions
     /// via HMAC-SHA512.
-    pub(crate) async fn send_hello(
+    pub(crate) fn send_hello(
         &self,
         host_system: &HostSystemImpl,
         node: &Node<HostSystemImpl>,
@@ -445,26 +425,20 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         }
 
         if let Some(p) = path.as_ref() {
-            if self
-                .internal_send(
-                    host_system,
-                    destination,
-                    Some(&p.local_socket),
-                    Some(&p.local_interface),
-                    max_fragment_size,
-                    &packet,
-                )
-                .await
-            {
-                p.log_send_anything(time_ticks);
-                true
-            } else {
-                false
-            }
+            self.internal_send(
+                host_system,
+                destination,
+                Some(&p.local_socket),
+                Some(&p.local_interface),
+                max_fragment_size,
+                &packet,
+            );
+            p.log_send_anything(time_ticks);
         } else {
-            self.internal_send(host_system, destination, None, None, max_fragment_size, &packet)
-                .await
+            self.internal_send(host_system, destination, None, None, max_fragment_size, &packet);
         }
+
+        return true;
     }
 
     /// Receive, decrypt, authenticate, and process an incoming packet from this peer.
@@ -473,8 +447,8 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
     /// those fragments after the main packet header and first chunk.
     ///
     /// This returns true if the packet decrypted and passed authentication.
-    pub(crate) async fn receive<InnerProtocolImpl: InnerProtocol>(
-        &self,
+    pub(crate) fn receive<InnerProtocolImpl: InnerProtocol>(
+        self: &Arc<Self>,
         node: &Node<HostSystemImpl>,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -483,7 +457,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         packet_header: &v1::PacketHeader,
         frag0: &PacketBuffer,
         fragments: &[Option<PooledPacketBuffer>],
-    ) -> bool {
+    ) -> PacketHandlerResult {
         if let Ok(packet_frag0_payload_bytes) = frag0.as_bytes_starting_at(v1::VERB_INDEX) {
             let mut payload = PacketBuffer::new();
 
@@ -503,7 +477,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                     "[vl1] #{:0>16x} failed authentication",
                     u64::from_be_bytes(packet_header.id)
                 );
-                return false;
+                return PacketHandlerResult::Error;
             };
 
             if let Ok(mut verb) = payload.u8_at(0) {
@@ -513,7 +487,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                     if let Ok(dlen) = lz4_flex::block::decompress_into(&payload.as_bytes()[1..], &mut decompressed_payload[1..]) {
                         payload.set_to(&decompressed_payload[..(dlen + 1)]);
                     } else {
-                        return false;
+                        return PacketHandlerResult::Error;
                     }
                 }
 
@@ -541,68 +515,47 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                     verb as u32
                 );
 
-                if match verb {
-                    verbs::VL1_NOP => true,
-                    verbs::VL1_HELLO => {
-                        self.handle_incoming_hello(
-                            host_system,
-                            inner,
-                            node,
-                            time_ticks,
-                            message_id,
-                            source_path,
-                            packet_header.hops(),
-                            &payload,
-                        )
-                        .await
-                    }
-                    verbs::VL1_ERROR => {
-                        self.handle_incoming_error(host_system, inner, node, time_ticks, source_path, &payload)
-                            .await
-                    }
-                    verbs::VL1_OK => {
-                        self.handle_incoming_ok(
-                            host_system,
-                            inner,
-                            node,
-                            time_ticks,
-                            source_path,
-                            packet_header.hops(),
-                            path_is_known,
-                            &payload,
-                        )
-                        .await
-                    }
-                    verbs::VL1_WHOIS => {
-                        self.handle_incoming_whois(host_system, inner, node, time_ticks, message_id, &payload)
-                            .await
-                    }
+                return match verb {
+                    verbs::VL1_NOP => PacketHandlerResult::Ok,
+                    verbs::VL1_HELLO => self.handle_incoming_hello(
+                        host_system,
+                        inner,
+                        node,
+                        time_ticks,
+                        message_id,
+                        source_path,
+                        packet_header.hops(),
+                        &payload,
+                    ),
+                    verbs::VL1_ERROR => self.handle_incoming_error(host_system, inner, node, time_ticks, source_path, &payload),
+                    verbs::VL1_OK => self.handle_incoming_ok(
+                        host_system,
+                        inner,
+                        node,
+                        time_ticks,
+                        source_path,
+                        packet_header.hops(),
+                        path_is_known,
+                        &payload,
+                    ),
+                    verbs::VL1_WHOIS => self.handle_incoming_whois(host_system, inner, node, time_ticks, message_id, &payload),
                     verbs::VL1_RENDEZVOUS => {
                         self.handle_incoming_rendezvous(host_system, node, time_ticks, message_id, source_path, &payload)
-                            .await
                     }
-                    verbs::VL1_ECHO => {
-                        self.handle_incoming_echo(host_system, inner, node, time_ticks, message_id, &payload)
-                            .await
-                    }
+                    verbs::VL1_ECHO => self.handle_incoming_echo(host_system, inner, node, time_ticks, message_id, &payload),
                     verbs::VL1_PUSH_DIRECT_PATHS => {
                         self.handle_incoming_push_direct_paths(host_system, node, time_ticks, source_path, &payload)
-                            .await
                     }
-                    verbs::VL1_USER_MESSAGE => {
-                        self.handle_incoming_user_message(host_system, node, time_ticks, source_path, &payload)
-                            .await
-                    }
-                    _ => inner.handle_packet(self, &source_path, verb, &payload).await,
-                } {
-                    return true;
-                }
+                    verbs::VL1_USER_MESSAGE => self.handle_incoming_user_message(host_system, node, time_ticks, source_path, &payload),
+                    _ => inner.handle_packet(self, &source_path, verb, &payload),
+                };
             }
         }
-        return false;
+
+        return PacketHandlerResult::Error;
     }
 
-    async fn handle_incoming_hello<InnerProtocolImpl: InnerProtocol>(
+    fn handle_incoming_hello<InnerProtocolImpl: InnerProtocol>(
         &self,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -612,14 +565,14 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         source_path: &Arc<Path<HostSystemImpl>>,
         hops: u8,
         payload: &PacketBuffer,
-    ) -> bool {
+    ) -> PacketHandlerResult {
         if !(inner.should_communicate_with(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
             debug_event!(
                 host_system,
                 "[vl1] dropping HELLO from {} due to lack of trust relationship",
                 self.identity.address.to_string()
             );
-            return true; // packet wasn't invalid, just ignored
+            return PacketHandlerResult::Ok; // packet wasn't invalid, just ignored
         }
 
         let mut cursor = 0;
@@ -653,48 +606,48 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                         f.1.version_revision = VERSION_REVISION.to_be_bytes();
                     }
 
-                    return self.send(host_system, Some(source_path), node, time_ticks, &mut packet).await;
+                    self.send(host_system, Some(source_path), node, time_ticks, &mut packet);
+                    return PacketHandlerResult::Ok;
                 }
             }
         }
-        return false;
+
+        return PacketHandlerResult::Error;
     }
 
-    async fn handle_incoming_error<InnerProtocolImpl: InnerProtocol>(
-        &self,
+    fn handle_incoming_error<InnerProtocolImpl: InnerProtocol>(
+        self: &Arc<Self>,
         _: &HostSystemImpl,
         inner: &InnerProtocolImpl,
         _: &Node<HostSystemImpl>,
         _: i64,
         source_path: &Arc<Path<HostSystemImpl>>,
         payload: &PacketBuffer,
-    ) -> bool {
+    ) -> PacketHandlerResult {
         let mut cursor = 0;
         if let Ok(error_header) = payload.read_struct::<v1::message_component_structs::ErrorHeader>(&mut cursor) {
             let in_re_message_id: MessageId = u64::from_ne_bytes(error_header.in_re_message_id);
             if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match error_header.in_re_verb {
                     _ => {
-                        return inner
-                            .handle_error(
-                                self,
-                                &source_path,
-                                error_header.in_re_verb,
-                                in_re_message_id,
-                                error_header.error_code,
-                                payload,
-                                &mut cursor,
-                            )
-                            .await;
+                        return inner.handle_error(
+                            self,
+                            &source_path,
+                            error_header.in_re_verb,
+                            in_re_message_id,
+                            error_header.error_code,
+                            payload,
+                            &mut cursor,
+                        );
                     }
                 }
             }
         }
-        return false;
+        return PacketHandlerResult::Error;
     }
 
-    async fn handle_incoming_ok<InnerProtocolImpl: InnerProtocol>(
-        &self,
+    fn handle_incoming_ok<InnerProtocolImpl: InnerProtocol>(
+        self: &Arc<Self>,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
         node: &Node<HostSystemImpl>,
@@ -703,7 +656,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         hops: u8,
         path_is_known: bool,
         payload: &PacketBuffer,
-    ) -> bool {
+    ) -> PacketHandlerResult {
         let mut cursor = 0;
         if let Ok(ok_header) = payload.read_struct::<v1::message_component_structs::OkHeader>(&mut cursor) {
             let in_re_message_id: MessageId = u64::from_ne_bytes(ok_header.in_re_message_id);
@@ -753,30 +706,28 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                                 }
                             }
                         } else {
-                            return true; // not invalid, just ignored
+                            return PacketHandlerResult::Ok; // not invalid, just ignored
                         }
                     }
 
                     _ => {
-                        return inner
-                            .handle_ok(self, &source_path, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor)
-                            .await;
+                        return inner.handle_ok(self, &source_path, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor);
                     }
                 }
             }
         }
-        return false;
+        return PacketHandlerResult::Error;
     }
 
-    async fn handle_incoming_whois<InnerProtocolImpl: InnerProtocol>(
-        &self,
+    fn handle_incoming_whois<InnerProtocolImpl: InnerProtocol>(
+        self: &Arc<Self>,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
         node: &Node<HostSystemImpl>,
         time_ticks: i64,
         message_id: MessageId,
         payload: &PacketBuffer,
-    ) -> bool {
+    ) -> PacketHandlerResult {
         if node.this_node_is_root() || inner.should_communicate_with(&self.identity) {
             let mut packet = PacketBuffer::new();
             packet.set_size(v1::HEADER_SIZE);
@@ -793,33 +744,31 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                     if let Some(peer) = node.peer(zt_address) {
                         if !packet.append_bytes((&peer.identity.to_public_bytes()).into()).is_ok() {
                             debug_event!(host_system, "unexpected error serializing an identity into a WHOIS packet response");
-                            return false;
+                            return PacketHandlerResult::Error;
                         }
                     }
                 }
             }
 
-            self.send(host_system, None, node, time_ticks, &mut packet).await
-        } else {
-            true // packet wasn't invalid, just ignored
+            self.send(host_system, None, node, time_ticks, &mut packet);
         }
+        return PacketHandlerResult::Ok;
     }
 
-    #[allow(unused)]
-    async fn handle_incoming_rendezvous(
-        &self,
+    fn handle_incoming_rendezvous(
+        self: &Arc<Self>,
         host_system: &HostSystemImpl,
         node: &Node<HostSystemImpl>,
         time_ticks: i64,
         message_id: MessageId,
         source_path: &Arc<Path<HostSystemImpl>>,
         payload: &PacketBuffer,
-    ) -> bool {
+    ) -> PacketHandlerResult {
         if node.is_peer_root(self) {}
-        return true;
+        return PacketHandlerResult::Ok;
     }
 
-    async fn handle_incoming_echo<InnerProtocolImpl: InnerProtocol>(
+    fn handle_incoming_echo<InnerProtocolImpl: InnerProtocol>(
         &self,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -827,7 +776,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         time_ticks: i64,
         message_id: MessageId,
         payload: &PacketBuffer,
-    ) -> bool {
+    ) -> PacketHandlerResult {
         if inner.should_communicate_with(&self.identity) || node.is_peer_root(self) {
             let mut packet = PacketBuffer::new();
             packet.set_size(v1::HEADER_SIZE);
@@ -838,9 +787,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 f.in_re_message_id = message_id.to_ne_bytes();
             }
             if packet.append_bytes(payload.as_bytes()).is_ok() {
-                self.send(host_system, None, node, time_ticks, &mut packet).await
-            } else {
-                false
+                self.send(host_system, None, node, time_ticks, &mut packet);
             }
         } else {
             debug_event!(
@@ -848,32 +795,30 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 "[vl1] dropping ECHO from {} due to lack of trust relationship",
                 self.identity.address.to_string()
             );
-            true // packet wasn't invalid, just ignored
         }
+        return PacketHandlerResult::Ok;
     }
 
-    #[allow(unused)]
-    async fn handle_incoming_push_direct_paths(
-        &self,
+    fn handle_incoming_push_direct_paths(
+        self: &Arc<Self>,
         host_system: &HostSystemImpl,
         node: &Node<HostSystemImpl>,
         time_ticks: i64,
         source_path: &Arc<Path<HostSystemImpl>>,
         payload: &PacketBuffer,
-    ) -> bool {
-        false
+    ) -> PacketHandlerResult {
+        PacketHandlerResult::Ok
     }
 
-    #[allow(unused)]
-    async fn handle_incoming_user_message(
-        &self,
+    fn handle_incoming_user_message(
+        self: &Arc<Self>,
         host_system: &HostSystemImpl,
         node: &Node<HostSystemImpl>,
         time_ticks: i64,
         source_path: &Arc<Path<HostSystemImpl>>,
         payload: &PacketBuffer,
-    ) -> bool {
-        false
+    ) -> PacketHandlerResult {
+        PacketHandlerResult::Ok
     }
 }
 

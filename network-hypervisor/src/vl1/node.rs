@@ -7,7 +7,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
-use async_trait::async_trait;
+use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
 
 use crate::error::InvalidParameterError;
 use crate::protocol::*;
@@ -21,32 +21,25 @@ use crate::vl1::identity::Identity;
 use crate::vl1::path::{Path, PathServiceResult};
 use crate::vl1::peer::Peer;
 use crate::vl1::rootset::RootSet;
-use crate::vl1::whoisqueue::{QueuedPacket, WhoisQueue};
 
 use zerotier_crypto::random;
 use zerotier_crypto::verified::Verified;
 use zerotier_utils::hex;
+use zerotier_utils::ringbuffer::RingBuffer;
 
 /// Trait implemented by external code to handle events and provide an interface to the system or application.
 ///
 /// These methods are basically callbacks that the core calls to request or transmit things. They are called
 /// during calls to things like wire_recieve() and do_background_tasks().
-#[async_trait]
 pub trait HostSystem: Sync + Send + 'static {
     /// Type for local system sockets.
-    type LocalSocket: Sync + Send + Sized + Hash + PartialEq + Eq + Clone + ToString;
+    type LocalSocket: Sync + Send + Hash + PartialEq + Eq + Clone + ToString + 'static;
 
     /// Type for local system interfaces.    
-    type LocalInterface: Sync + Send + Sized + Hash + PartialEq + Eq + Clone + ToString;
+    type LocalInterface: Sync + Send + Hash + PartialEq + Eq + Clone + ToString;
 
-    /// An event occurred.
-    ///
-    /// This isn't async to avoid all kinds of issues in code that deals with locks. If you need
-    /// it to be async use a channel or something.
+    /// A VL1 level event occurred.
     fn event(&self, event: Event);
-
-    /// A USER_MESSAGE packet was received.
-    async fn user_message(&self, source: &Identity, message_type: u64, message: &[u8]);
 
     /// Check a local socket for validity.
     ///
@@ -56,8 +49,7 @@ pub trait HostSystem: Sync + Send + 'static {
 
     /// Called to send a packet over the physical network (virtual -> physical).
     ///
-    /// This may return false if the send definitely failed. Otherwise it should return true
-    /// which indicates possible success but with no guarantee (UDP semantics).
+    /// This sends with UDP-like semantics. It should do whatever best effort it can and return.
     ///
     /// If a local socket is specified the implementation should send from that socket or not
     /// at all (returning false). If a local interface is specified the implementation should
@@ -66,15 +58,16 @@ pub trait HostSystem: Sync + Send + 'static {
     ///
     /// For endpoint types that support a packet TTL, the implementation may set the TTL
     /// if the 'ttl' parameter is not zero. If the parameter is zero or TTL setting is not
-    /// supported, the default TTL should be used.
-    async fn wire_send(
+    /// supported, the default TTL should be used. This parameter is ignored for types that
+    /// don't support it.
+    fn wire_send(
         &self,
         endpoint: &Endpoint,
         local_socket: Option<&Self::LocalSocket>,
         local_interface: Option<&Self::LocalInterface>,
         data: &[u8],
         packet_ttl: u8,
-    ) -> bool;
+    );
 
     /// Called to get the current time in milliseconds from the system monotonically increasing clock.
     /// This needs to be accurate to about 250 milliseconds resolution or better.
@@ -86,20 +79,18 @@ pub trait HostSystem: Sync + Send + 'static {
 }
 
 /// Trait to be implemented by outside code to provide object storage to VL1
-#[async_trait]
 pub trait NodeStorage: Sync + Send + 'static {
     /// Load this node's identity from the data store.
-    async fn load_node_identity(&self) -> Option<Identity>;
+    fn load_node_identity(&self) -> Option<Identity>;
 
     /// Save this node's identity to the data store.
-    async fn save_node_identity(&self, id: &Identity);
+    fn save_node_identity(&self, id: &Identity);
 }
 
 /// Trait to be implemented to provide path hints and a filter to approve physical paths
-#[async_trait]
 pub trait PathFilter: Sync + Send + 'static {
     /// Called to check and see if a physical address should be used for ZeroTier traffic to a node.
-    async fn check_path<HostSystemImpl: HostSystem>(
+    fn check_path<HostSystemImpl: HostSystem>(
         &self,
         id: &Identity,
         endpoint: &Endpoint,
@@ -108,7 +99,7 @@ pub trait PathFilter: Sync + Send + 'static {
     ) -> bool;
 
     /// Called to look up any statically defined or memorized paths to known nodes.
-    async fn get_path_hints<HostSystemImpl: HostSystem>(
+    fn get_path_hints<HostSystemImpl: HostSystem>(
         &self,
         id: &Identity,
     ) -> Option<
@@ -120,45 +111,56 @@ pub trait PathFilter: Sync + Send + 'static {
     >;
 }
 
+/// Result of a packet handler.
+pub enum PacketHandlerResult {
+    /// Packet was handled successfully.
+    Ok,
+
+    /// Packet was handled and an error occurred (malformed, authentication failure, etc.)
+    Error,
+
+    /// Packet was not handled by this handler.
+    NotHandled,
+}
+
 /// Interface between VL1 and higher/inner protocol layers.
 ///
 /// This is implemented by Switch in VL2. It's usually not used outside of VL2 in the core but
 /// it could also be implemented for testing or "off label" use of VL1 to carry different protocols.
-#[async_trait]
 pub trait InnerProtocol: Sync + Send + 'static {
     /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
-    async fn handle_packet<HostSystemImpl: HostSystem>(
+    fn handle_packet<HostSystemImpl: HostSystem>(
         &self,
-        source: &Peer<HostSystemImpl>,
-        source_path: &Path<HostSystemImpl>,
+        source: &Arc<Peer<HostSystemImpl>>,
+        source_path: &Arc<Path<HostSystemImpl>>,
         verb: u8,
         payload: &PacketBuffer,
-    ) -> bool;
+    ) -> PacketHandlerResult;
 
     /// Handle errors, returning true if the error was recognized.
-    async fn handle_error<HostSystemImpl: HostSystem>(
+    fn handle_error<HostSystemImpl: HostSystem>(
         &self,
-        source: &Peer<HostSystemImpl>,
-        source_path: &Path<HostSystemImpl>,
+        source: &Arc<Peer<HostSystemImpl>>,
+        source_path: &Arc<Path<HostSystemImpl>>,
         in_re_verb: u8,
         in_re_message_id: u64,
         error_code: u8,
         payload: &PacketBuffer,
         cursor: &mut usize,
-    ) -> bool;
+    ) -> PacketHandlerResult;
 
     /// Handle an OK, returing true if the OK was recognized.
-    async fn handle_ok<HostSystemImpl: HostSystem>(
+    fn handle_ok<HostSystemImpl: HostSystem>(
         &self,
-        source: &Peer<HostSystemImpl>,
-        source_path: &Path<HostSystemImpl>,
+        source: &Arc<Peer<HostSystemImpl>>,
+        source_path: &Arc<Path<HostSystemImpl>>,
         in_re_verb: u8,
         in_re_message_id: u64,
         payload: &PacketBuffer,
         cursor: &mut usize,
-    ) -> bool;
+    ) -> PacketHandlerResult;
 
     /// Check if this peer should communicate with another at all.
     fn should_communicate_with(&self, id: &Identity) -> bool;
@@ -167,17 +169,6 @@ pub trait InnerProtocol: Sync + Send + 'static {
 /// How often to check the root cluster definitions against the root list and update.
 const ROOT_SYNC_INTERVAL_MS: i64 = 1000;
 
-#[derive(Default)]
-struct BackgroundTaskIntervals {
-    root_sync: IntervalGate<{ ROOT_SYNC_INTERVAL_MS }>,
-    root_hello: IntervalGate<{ ROOT_HELLO_INTERVAL }>,
-    root_spam_hello: IntervalGate<{ ROOT_HELLO_SPAM_INTERVAL }>,
-    peer_service: IntervalGate<{ crate::vl1::peer::SERVICE_INTERVAL_MS }>,
-    path_service: IntervalGate<{ crate::vl1::path::SERVICE_INTERVAL_MS }>,
-    whois_service: IntervalGate<{ crate::vl1::whoisqueue::SERVICE_INTERVAL_MS }>,
-}
-
-/// Mutable fields related to roots and root sets.
 struct RootInfo<HostSystemImpl: HostSystem> {
     /// Root sets to which we are a member.
     sets: HashMap<String, Verified<RootSet>>,
@@ -196,56 +187,20 @@ struct RootInfo<HostSystemImpl: HostSystem> {
     online: bool,
 }
 
-/// Key used to look up paths in a hash map
-/// This supports copied keys for storing and refs for fast lookup without having to copy anything.
-enum PathKey<'a, HostSystemImpl: HostSystem> {
-    Copied(Endpoint, HostSystemImpl::LocalSocket),
-    Ref(&'a Endpoint, &'a HostSystemImpl::LocalSocket),
+#[derive(Default)]
+struct BackgroundTaskIntervals {
+    root_sync: IntervalGate<{ ROOT_SYNC_INTERVAL_MS }>,
+    root_hello: IntervalGate<{ ROOT_HELLO_INTERVAL }>,
+    root_spam_hello: IntervalGate<{ ROOT_HELLO_SPAM_INTERVAL }>,
+    peer_service: IntervalGate<{ crate::vl1::peer::SERVICE_INTERVAL_MS }>,
+    path_service: IntervalGate<{ crate::vl1::path::SERVICE_INTERVAL_MS }>,
+    whois_queue_retry: IntervalGate<{ WHOIS_RETRY_INTERVAL }>,
 }
 
-impl<'a, HostSystemImpl: HostSystem> Hash for PathKey<'a, HostSystemImpl> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        match self {
-            Self::Copied(ep, ls) => {
-                ep.hash(state);
-                ls.hash(state);
-            }
-            Self::Ref(ep, ls) => {
-                (*ep).hash(state);
-                (*ls).hash(state);
-            }
-        }
-    }
-}
-
-impl<'a, HostSystemImpl: HostSystem> PartialEq for PathKey<'_, HostSystemImpl> {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Copied(ep1, ls1), Self::Copied(ep2, ls2)) => ep1.eq(ep2) && ls1.eq(ls2),
-            (Self::Copied(ep1, ls1), Self::Ref(ep2, ls2)) => ep1.eq(*ep2) && ls1.eq(*ls2),
-            (Self::Ref(ep1, ls1), Self::Copied(ep2, ls2)) => (*ep1).eq(ep2) && (*ls1).eq(ls2),
-            (Self::Ref(ep1, ls1), Self::Ref(ep2, ls2)) => (*ep1).eq(*ep2) && (*ls1).eq(*ls2),
-        }
-    }
-}
-
-impl<'a, HostSystemImpl: HostSystem> Eq for PathKey<'_, HostSystemImpl> {}
-
-impl<'a, HostSystemImpl: HostSystem> PathKey<'a, HostSystemImpl> {
-    #[inline(always)]
-    fn local_socket(&self) -> &HostSystemImpl::LocalSocket {
-        match self {
-            Self::Copied(_, ls) => ls,
-            Self::Ref(_, ls) => *ls,
-        }
-    }
-
-    fn to_copied(&self) -> PathKey<'static, HostSystemImpl> {
-        match self {
-            Self::Copied(ep, ls) => PathKey::<'static, HostSystemImpl>::Copied(ep.clone(), ls.clone()),
-            Self::Ref(ep, ls) => PathKey::<'static, HostSystemImpl>::Copied((*ep).clone(), (*ls).clone()),
-        }
-    }
+#[derive(Default)]
+struct WhoisQueueItem {
+    waiting_packets: RingBuffer<PooledPacketBuffer, WHOIS_MAX_WAITING_PACKETS>,
+    retry_count: u16,
 }
 
 /// A ZeroTier VL1 node that can communicate securely with the ZeroTier peer-to-peer network.
@@ -260,40 +215,40 @@ pub struct Node<HostSystemImpl: HostSystem> {
     pub identity: Identity,
 
     /// Interval latches for periodic background tasks.
-    intervals: parking_lot::Mutex<BackgroundTaskIntervals>,
+    intervals: Mutex<BackgroundTaskIntervals>,
 
     /// Canonicalized network paths, held as Weak<> to be automatically cleaned when no longer in use.
-    paths: parking_lot::RwLock<HashMap<PathKey<'static, HostSystemImpl>, Arc<Path<HostSystemImpl>>>>,
+    paths: RwLock<HashMap<PathKey<'static, 'static, HostSystemImpl>, Arc<Path<HostSystemImpl>>>>,
 
     /// Peers with which we are currently communicating.
-    peers: parking_lot::RwLock<HashMap<Address, Arc<Peer<HostSystemImpl>>>>,
+    peers: RwLock<HashMap<Address, Arc<Peer<HostSystemImpl>>>>,
 
     /// This node's trusted roots, sorted in ascending order of quality/preference, and cluster definitions.
-    roots: parking_lot::RwLock<RootInfo<HostSystemImpl>>,
+    roots: RwLock<RootInfo<HostSystemImpl>>,
 
     /// Current best root.
-    best_root: parking_lot::RwLock<Option<Arc<Peer<HostSystemImpl>>>>,
+    best_root: RwLock<Option<Arc<Peer<HostSystemImpl>>>>,
 
-    /// Identity lookup queue, also holds packets waiting on a lookup.
-    whois: WhoisQueue,
+    /// Queue of identities being looked up.
+    whois_queue: Mutex<HashMap<Address, WhoisQueueItem>>,
 }
 
 impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
-    pub async fn new<NodeStorageImpl: NodeStorage>(
+    pub fn new<NodeStorageImpl: NodeStorage>(
         host_system: &HostSystemImpl,
         storage: &NodeStorageImpl,
         auto_generate_identity: bool,
         auto_upgrade_identity: bool,
     ) -> Result<Self, InvalidParameterError> {
         let mut id = {
-            let id = storage.load_node_identity().await;
+            let id = storage.load_node_identity();
             if id.is_none() {
                 if !auto_generate_identity {
                     return Err(InvalidParameterError("no identity found and auto-generate not enabled"));
                 } else {
                     let id = Identity::generate();
                     host_system.event(Event::IdentityAutoGenerated(id.clone()));
-                    storage.save_node_identity(&id).await;
+                    storage.save_node_identity(&id);
                     id
                 }
             } else {
@@ -304,7 +259,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         if auto_upgrade_identity {
             let old = id.clone();
             if id.upgrade()? {
-                storage.save_node_identity(&id).await;
+                storage.save_node_identity(&id);
                 host_system.event(Event::IdentityAutoUpgraded(old, id.clone()));
             }
         }
@@ -314,18 +269,18 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         Ok(Self {
             instance_id: random::get_bytes_secure(),
             identity: id,
-            intervals: parking_lot::Mutex::new(BackgroundTaskIntervals::default()),
-            paths: parking_lot::RwLock::new(HashMap::new()),
-            peers: parking_lot::RwLock::new(HashMap::new()),
-            roots: parking_lot::RwLock::new(RootInfo {
+            intervals: Mutex::new(BackgroundTaskIntervals::default()),
+            paths: RwLock::new(HashMap::new()),
+            peers: RwLock::new(HashMap::new()),
+            roots: RwLock::new(RootInfo {
                 sets: HashMap::new(),
                 roots: HashMap::new(),
                 this_root_sets: None,
                 sets_modified: false,
                 online: false,
             }),
-            best_root: parking_lot::RwLock::new(None),
-            whois: WhoisQueue::new(),
+            best_root: RwLock::new(None),
+            whois_queue: Mutex::new(HashMap::new()),
         })
     }
 
@@ -396,17 +351,20 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         }
     }
 
-    pub async fn do_background_tasks(&self, host_system: &HostSystemImpl) -> Duration {
-        let tt = host_system.time_ticks();
-        let (root_sync, root_hello, mut root_spam_hello, peer_service, path_service, whois_service) = {
+    pub fn do_background_tasks(&self, host_system: &HostSystemImpl) -> Duration {
+        const INTERVAL_MS: i64 = 1000;
+        const INTERVAL: Duration = Duration::from_millis(INTERVAL_MS as u64);
+        let time_ticks = host_system.time_ticks();
+
+        let (root_sync, root_hello, mut root_spam_hello, peer_service, path_service, whois_queue_retry) = {
             let mut intervals = self.intervals.lock();
             (
-                intervals.root_sync.gate(tt),
-                intervals.root_hello.gate(tt),
-                intervals.root_spam_hello.gate(tt),
-                intervals.peer_service.gate(tt),
-                intervals.path_service.gate(tt),
-                intervals.whois_service.gate(tt),
+                intervals.root_sync.gate(time_ticks),
+                intervals.root_hello.gate(time_ticks),
+                intervals.root_spam_hello.gate(time_ticks),
+                intervals.peer_service.gate(time_ticks),
+                intervals.path_service.gate(time_ticks),
+                intervals.whois_queue_retry.gate(time_ticks),
             )
         };
 
@@ -443,11 +401,11 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
             } else {
                 ""
             },
-            if whois_service {
-                " whois_service"
+            if whois_queue_retry {
+                " whois_queue_retry"
             } else {
                 ""
-            },
+            }
         );
 
         if root_sync {
@@ -509,9 +467,9 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                 if let Some(peer) = peers.get(&m.identity.address) {
                                     new_roots.insert(peer.clone(), m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                 } else {
-                                    if let Some(peer) = Peer::<HostSystemImpl>::new(&self.identity, m.identity.clone(), tt) {
+                                    if let Some(peer) = Peer::<HostSystemImpl>::new(&self.identity, m.identity.clone(), time_ticks) {
                                         new_roots.insert(
-                                            parking_lot::RwLockUpgradableReadGuard::upgrade(peers)
+                                            RwLockUpgradableReadGuard::upgrade(peers)
                                                 .entry(m.identity.address)
                                                 .or_insert_with(|| Arc::new(peer))
                                                 .clone(),
@@ -553,7 +511,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                 }
             }
 
-            self.update_best_root(host_system, tt);
+            self.update_best_root(host_system, time_ticks);
         }
 
         // Say HELLO to all roots periodically. For roots we send HELLO to every single endpoint
@@ -577,7 +535,9 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                         root.identity.address.to_string(),
                         ROOT_HELLO_INTERVAL
                     );
-                    root.send_hello(host_system, self, Some(ep)).await;
+                    let root = root.clone();
+                    let ep = ep.clone();
+                    root.send_hello(host_system, self, Some(&ep));
                 }
             }
         }
@@ -589,7 +549,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
             {
                 let roots = self.roots.read();
                 for (a, peer) in self.peers.read().iter() {
-                    if !peer.service(host_system, self, tt) && !roots.roots.contains_key(peer) {
+                    if !peer.service(host_system, self, time_ticks) && !roots.roots.contains_key(peer) {
                         dead_peers.push(*a);
                     }
                 }
@@ -600,13 +560,13 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         }
 
         if path_service {
-            // Service all paths, removing expired or invalid ones. This is done in two passes to
-            // avoid introducing latency into a flow.
             let mut dead_paths = Vec::new();
             let mut need_keepalive = Vec::new();
+
+            // First check all paths in read mode to avoid blocking the entire node.
             for (k, path) in self.paths.read().iter() {
                 if host_system.local_socket_is_valid(k.local_socket()) {
-                    match path.service(tt) {
+                    match path.service(time_ticks) {
                         PathServiceResult::Ok => {}
                         PathServiceResult::Dead => dead_paths.push(k.to_copied()),
                         PathServiceResult::NeedsKeepalive => need_keepalive.push(path.clone()),
@@ -615,26 +575,40 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                     dead_paths.push(k.to_copied());
                 }
             }
+
+            // Lock in write mode and remove dead paths, doing so piecemeal to again avoid blocking.
             for dp in dead_paths.iter() {
                 self.paths.write().remove(dp);
             }
-            let ka = [tt as u8]; // send different bytes every time for keepalive in case some things filter zero packets
+
+            // Finally run keepalive sends as a batch.
+            let keepalive_buf = [time_ticks as u8]; // just an arbitrary byte, no significance
             for p in need_keepalive.iter() {
-                host_system
-                    .wire_send(&p.endpoint, Some(&p.local_socket), Some(&p.local_interface), &ka[..1], 0)
-                    .await;
+                host_system.wire_send(&p.endpoint, Some(&p.local_socket), Some(&p.local_interface), &keepalive_buf, 0);
             }
         }
 
-        if whois_service {
-            self.whois.service(host_system, self, tt);
+        if whois_queue_retry {
+            let need_whois = {
+                let mut need_whois = Vec::new();
+                let mut whois_queue = self.whois_queue.lock();
+                whois_queue.retain(|_, qi| qi.retry_count <= WHOIS_RETRY_COUNT_MAX);
+                for (address, qi) in whois_queue.iter_mut() {
+                    qi.retry_count += 1;
+                    need_whois.push(*address);
+                }
+                need_whois
+            };
+            if !need_whois.is_empty() {
+                self.send_whois(host_system, need_whois.as_slice());
+            }
         }
 
         debug_event!(host_system, "[vl1] do_background_tasks DONE ----");
-        Duration::from_millis(1000)
+        INTERVAL
     }
 
-    pub async fn handle_incoming_physical_packet<InnerProtocolImpl: InnerProtocol>(
+    pub fn handle_incoming_physical_packet<InnerProtocolImpl: InnerProtocol>(
         &self,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -656,6 +630,16 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
             source_local_interface.to_string()
         );
 
+        // An 0xff value at byte [8] means this is a ZSSP packet. This is accomplished via the
+        // backward compatibilty hack of always having 0xff at byte [4] of 6-byte session IDs
+        // and by having 0xffffffffffff be the "nil" session ID for session init packets. ZSSP
+        // is the new V2 Noise-based forward-secure transport protocol. What follows below this
+        // is legacy handling of the old v1 protocol.
+        if data.u8_at(8).map_or(false, |x| x == 0xff) {
+            todo!();
+        }
+
+        // Legacy ZeroTier V1 packet handling
         if let Ok(fragment_header) = data.struct_mut_at::<v1::FragmentHeader>(0) {
             if let Some(dest) = Address::from_bytes_fixed(&fragment_header.dest) {
                 let time_ticks = host_system.time_ticks();
@@ -668,7 +652,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                         let fragment_header_id = u64::from_be_bytes(fragment_header.id);
                         debug_event!(
                             host_system,
-                            "[vl1] #{:0>16x} fragment {} of {} received",
+                            "[vl1] [v1] #{:0>16x} fragment {} of {} received",
                             u64::from_be_bytes(fragment_header.id),
                             fragment_header.fragment_no(),
                             fragment_header.total_fragments()
@@ -683,7 +667,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                         ) {
                             if let Some(frag0) = assembled_packet.frags[0].as_ref() {
                                 #[cfg(debug_assertions)]
-                                debug_event!(host_system, "[vl1] #{:0>16x} packet fully assembled!", fragment_header_id);
+                                debug_event!(host_system, "[vl1] [v1] #{:0>16x} packet fully assembled!", fragment_header_id);
 
                                 if let Ok(packet_header) = frag0.struct_at::<v1::PacketHeader>(0) {
                                     if let Some(source) = Address::from_bytes(&packet_header.src) {
@@ -697,11 +681,16 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                                 packet_header,
                                                 frag0,
                                                 &assembled_packet.frags[1..(assembled_packet.have as usize)],
-                                            )
-                                            .await;
+                                            );
                                         } else {
-                                            self.whois
-                                                .query(self, host_system, source, Some(QueuedPacket::Fragmented(assembled_packet)));
+                                            /*
+                                            self.whois_lookup_queue.query(
+                                                self,
+                                                host_system,
+                                                source,
+                                                Some(QueuedPacket::Fragmented(assembled_packet)),
+                                            );
+                                            */
                                         }
                                     }
                                 }
@@ -710,14 +699,17 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                     } else {
                         #[cfg(debug_assertions)]
                         if let Ok(packet_header) = data.struct_at::<v1::PacketHeader>(0) {
-                            debug_event!(host_system, "[vl1] #{:0>16x} is unfragmented", u64::from_be_bytes(packet_header.id));
+                            debug_event!(
+                                host_system,
+                                "[vl1] [v1] #{:0>16x} is unfragmented",
+                                u64::from_be_bytes(packet_header.id)
+                            );
 
                             if let Some(source) = Address::from_bytes(&packet_header.src) {
                                 if let Some(peer) = self.peer(source) {
-                                    peer.receive(self, host_system, inner, time_ticks, &path, packet_header, data.as_ref(), &[])
-                                        .await;
+                                    peer.receive(self, host_system, inner, time_ticks, &path, packet_header, data.as_ref(), &[]);
                                 } else {
-                                    self.whois.query(self, host_system, source, Some(QueuedPacket::Unfragmented(data)));
+                                    self.whois(host_system, source, Some(data));
                                 }
                             }
                         }
@@ -732,14 +724,14 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                             debug_packet_id = u64::from_be_bytes(fragment_header.id);
                             debug_event!(
                                 host_system,
-                                "[vl1] #{:0>16x} forwarding packet fragment to {}",
+                                "[vl1] [v1] #{:0>16x} forwarding packet fragment to {}",
                                 debug_packet_id,
                                 dest.to_string()
                             );
                         }
                         if fragment_header.increment_hops() > v1::FORWARD_MAX_HOPS {
                             #[cfg(debug_assertions)]
-                            debug_event!(host_system, "[vl1] #{:0>16x} discarded: max hops exceeded!", debug_packet_id);
+                            debug_event!(host_system, "[vl1] [v1] #{:0>16x} discarded: max hops exceeded!", debug_packet_id);
                             return;
                         }
                     } else {
@@ -749,7 +741,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                 debug_packet_id = u64::from_be_bytes(packet_header.id);
                                 debug_event!(
                                     host_system,
-                                    "[vl1] #{:0>16x} forwarding packet to {}",
+                                    "[vl1] [v1] #{:0>16x} forwarding packet to {}",
                                     debug_packet_id,
                                     dest.to_string()
                                 );
@@ -758,7 +750,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                 #[cfg(debug_assertions)]
                                 debug_event!(
                                     host_system,
-                                    "[vl1] #{:0>16x} discarded: max hops exceeded!",
+                                    "[vl1] [v1] #{:0>16x} discarded: max hops exceeded!",
                                     u64::from_be_bytes(packet_header.id)
                                 );
                                 return;
@@ -770,13 +762,33 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
 
                     if let Some(peer) = self.peer(dest) {
                         // TODO: SHOULD we forward? Need a way to check.
-                        peer.forward(host_system, time_ticks, data.as_ref()).await;
+                        peer.forward(host_system, time_ticks, data.as_ref());
                         #[cfg(debug_assertions)]
-                        debug_event!(host_system, "[vl1] #{:0>16x} forwarded successfully", debug_packet_id);
+                        debug_event!(host_system, "[vl1] [v1] #{:0>16x} forwarded successfully", debug_packet_id);
                     }
                 }
             }
         }
+    }
+
+    fn whois(&self, host_system: &HostSystemImpl, address: Address, waiting_packet: Option<PooledPacketBuffer>) {
+        {
+            let mut whois_queue = self.whois_queue.lock();
+            let qi = whois_queue.entry(address).or_default();
+            if let Some(p) = waiting_packet {
+                qi.waiting_packets.add(p);
+            }
+            if qi.retry_count > 0 {
+                return;
+            } else {
+                qi.retry_count += 1;
+            }
+        }
+        self.send_whois(host_system, &[address]);
+    }
+
+    fn send_whois(&self, host_system: &HostSystemImpl, addresses: &[Address]) {
+        if let Some(root) = self.best_root() {}
     }
 
     /// Get the current "best" root from among this node's trusted roots.
@@ -865,47 +877,103 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
     }
 }
 
+/// Key used to look up paths in a hash map
+/// This supports copied keys for storing and refs for fast lookup without having to copy anything.
+enum PathKey<'a, 'b, HostSystemImpl: HostSystem> {
+    Copied(Endpoint, HostSystemImpl::LocalSocket),
+    Ref(&'a Endpoint, &'b HostSystemImpl::LocalSocket),
+}
+
+impl<'a, 'b, HostSystemImpl: HostSystem> Hash for PathKey<'a, 'b, HostSystemImpl> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Self::Copied(ep, ls) => {
+                ep.hash(state);
+                ls.hash(state);
+            }
+            Self::Ref(ep, ls) => {
+                (*ep).hash(state);
+                (*ls).hash(state);
+            }
+        }
+    }
+}
+
+impl<HostSystemImpl: HostSystem> PartialEq for PathKey<'_, '_, HostSystemImpl> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Copied(ep1, ls1), Self::Copied(ep2, ls2)) => ep1.eq(ep2) && ls1.eq(ls2),
+            (Self::Copied(ep1, ls1), Self::Ref(ep2, ls2)) => ep1.eq(*ep2) && ls1.eq(*ls2),
+            (Self::Ref(ep1, ls1), Self::Copied(ep2, ls2)) => (*ep1).eq(ep2) && (*ls1).eq(ls2),
+            (Self::Ref(ep1, ls1), Self::Ref(ep2, ls2)) => (*ep1).eq(*ep2) && (*ls1).eq(*ls2),
+        }
+    }
+}
+
+impl<HostSystemImpl: HostSystem> Eq for PathKey<'_, '_, HostSystemImpl> {}
+
+impl<'a, 'b, HostSystemImpl: HostSystem> PathKey<'a, 'b, HostSystemImpl> {
+    #[inline(always)]
+    fn local_socket(&self) -> &HostSystemImpl::LocalSocket {
+        match self {
+            Self::Copied(_, ls) => ls,
+            Self::Ref(_, ls) => *ls,
+        }
+    }
+
+    #[inline(always)]
+    fn to_copied(&self) -> PathKey<'static, 'static, HostSystemImpl> {
+        match self {
+            Self::Copied(ep, ls) => PathKey::<'static, 'static, HostSystemImpl>::Copied(ep.clone(), ls.clone()),
+            Self::Ref(ep, ls) => PathKey::<'static, 'static, HostSystemImpl>::Copied((*ep).clone(), (*ls).clone()),
+        }
+    }
+}
+
 /// Dummy no-op inner protocol for debugging and testing.
 #[derive(Default)]
 pub struct DummyInnerProtocol;
 
-#[async_trait]
 impl InnerProtocol for DummyInnerProtocol {
-    async fn handle_packet<HostSystemImpl: HostSystem>(
+    #[inline(always)]
+    fn handle_packet<HostSystemImpl: HostSystem>(
         &self,
-        _source: &Peer<HostSystemImpl>,
-        _source_path: &Path<HostSystemImpl>,
+        _source: &Arc<Peer<HostSystemImpl>>,
+        _source_path: &Arc<Path<HostSystemImpl>>,
         _verb: u8,
         _payload: &PacketBuffer,
-    ) -> bool {
-        false
+    ) -> PacketHandlerResult {
+        PacketHandlerResult::NotHandled
     }
 
-    async fn handle_error<HostSystemImpl: HostSystem>(
+    #[inline(always)]
+    fn handle_error<HostSystemImpl: HostSystem>(
         &self,
-        _source: &Peer<HostSystemImpl>,
-        _source_path: &Path<HostSystemImpl>,
+        _source: &Arc<Peer<HostSystemImpl>>,
+        _source_path: &Arc<Path<HostSystemImpl>>,
         _in_re_verb: u8,
         _in_re_message_id: u64,
         _error_code: u8,
         _payload: &PacketBuffer,
         _cursor: &mut usize,
-    ) -> bool {
-        false
+    ) -> PacketHandlerResult {
+        PacketHandlerResult::NotHandled
     }
 
-    async fn handle_ok<HostSystemImpl: HostSystem>(
+    #[inline(always)]
+    fn handle_ok<HostSystemImpl: HostSystem>(
         &self,
-        _source: &Peer<HostSystemImpl>,
-        _source_path: &Path<HostSystemImpl>,
+        _source: &Arc<Peer<HostSystemImpl>>,
+        _source_path: &Arc<Path<HostSystemImpl>>,
         _in_re_verb: u8,
         _in_re_message_id: u64,
         _payload: &PacketBuffer,
         _cursor: &mut usize,
-    ) -> bool {
-        false
+    ) -> PacketHandlerResult {
+        PacketHandlerResult::NotHandled
     }
 
+    #[inline(always)]
     fn should_communicate_with(&self, _id: &Identity) -> bool {
         true
     }
@@ -915,9 +983,9 @@ impl InnerProtocol for DummyInnerProtocol {
 #[derive(Default)]
 pub struct DummyPathFilter;
 
-#[async_trait]
 impl PathFilter for DummyPathFilter {
-    async fn check_path<HostSystemImpl: HostSystem>(
+    #[inline(always)]
+    fn check_path<HostSystemImpl: HostSystem>(
         &self,
         _id: &Identity,
         _endpoint: &Endpoint,
@@ -927,7 +995,8 @@ impl PathFilter for DummyPathFilter {
         true
     }
 
-    async fn get_path_hints<HostSystemImpl: HostSystem>(
+    #[inline(always)]
+    fn get_path_hints<HostSystemImpl: HostSystem>(
         &self,
         _id: &Identity,
     ) -> Option<

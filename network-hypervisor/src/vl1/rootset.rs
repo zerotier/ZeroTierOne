@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 use std::io::Write;
 
 use crate::util::marshalable::*;
-use crate::vl1::identity::{Identity, MAX_SIGNATURE_SIZE};
+use crate::vl1::identity::{Identity, IDENTITY_MAX_SIGNATURE_SIZE};
 use crate::vl1::Endpoint;
 
 use zerotier_utils::arrayvec::ArrayVec;
@@ -33,7 +33,7 @@ pub struct Root {
     /// This is populated by the sign() method when the completed root set is signed by each member.
     /// All member roots must sign.
     #[serde(default)]
-    pub signature: ArrayVec<u8, MAX_SIGNATURE_SIZE>,
+    pub signature: ArrayVec<u8, IDENTITY_MAX_SIGNATURE_SIZE>,
 
     /// Priority (higher number is lower priority, 0 is default).
     ///

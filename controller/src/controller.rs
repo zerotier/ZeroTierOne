@@ -1,102 +1,135 @@
-use std::sync::Arc;
-
 use crate::database::Database;
 
-use async_trait::async_trait;
+use std::sync::Arc;
+
+use tokio::time::{Duration, Instant};
 
 use zerotier_network_hypervisor::protocol::{verbs, PacketBuffer};
 use zerotier_network_hypervisor::util::dictionary::Dictionary;
-use zerotier_network_hypervisor::util::marshalable::MarshalUnmarshalError;
-use zerotier_network_hypervisor::vl1::{HostSystem, Identity, InnerProtocol, Path, Peer};
+use zerotier_network_hypervisor::vl1::{HostSystem, Identity, InnerProtocol, PacketHandlerResult, Path, Peer};
 use zerotier_network_hypervisor::vl2::NetworkId;
 
+use zerotier_utils::reaper::Reaper;
+
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+
 pub struct Controller<DatabaseImpl: Database> {
-    pub database: Arc<DatabaseImpl>,
+    database: Arc<DatabaseImpl>,
+    reaper: Reaper,
 }
 
 impl<DatabaseImpl: Database> Controller<DatabaseImpl> {
     pub async fn new(database: Arc<DatabaseImpl>) -> Arc<Self> {
-        Arc::new(Self { database })
+        Arc::new(Self { database, reaper: Reaper::new() })
     }
 
     async fn handle_network_config_request<HostSystemImpl: HostSystem>(
-        &self,
-        source: &Peer<HostSystemImpl>,
-        source_path: &Path<HostSystemImpl>,
-        payload: &PacketBuffer,
-    ) -> Result<(), MarshalUnmarshalError> {
-        let mut cursor = 0;
-        let network_id = NetworkId::from_u64(payload.read_u64(&mut cursor)?);
-        if network_id.is_none() {
-            return Err(MarshalUnmarshalError::InvalidData);
-        }
-        let network_id = network_id.unwrap();
-        let meta_data = if cursor < payload.len() {
-            let meta_data_len = payload.read_u16(&mut cursor)?;
-            let d = Dictionary::from_bytes(payload.read_bytes(meta_data_len as usize, &mut cursor)?);
-            if d.is_none() {
-                return Err(MarshalUnmarshalError::InvalidData);
-            }
-            d.unwrap()
-        } else {
-            Dictionary::new()
-        };
-        let (have_revision, have_timestamp) = if cursor < payload.len() {
-            let r = payload.read_u64(&mut cursor)?;
-            let t = payload.read_u64(&mut cursor)?;
-            (Some(r), Some(t))
-        } else {
-            (None, None)
-        };
-
-        if let Ok(Some(network)) = self.database.get_network(network_id).await {}
-
-        return Ok(());
+        database: Arc<DatabaseImpl>,
+        source: Arc<Peer<HostSystemImpl>>,
+        source_path: Arc<Path<HostSystemImpl>>,
+        network_id: NetworkId,
+        meta_data: Dictionary,
+        have_revision: Option<u64>,
+        have_timestamp: Option<u64>,
+    ) {
+        if let Ok(Some(network)) = database.get_network(network_id).await {}
     }
 }
 
-#[async_trait]
 impl<DatabaseImpl: Database> InnerProtocol for Controller<DatabaseImpl> {
-    async fn handle_packet<HostSystemImpl: HostSystem>(
+    fn handle_packet<HostSystemImpl: HostSystem>(
         &self,
-        source: &Peer<HostSystemImpl>,
-        source_path: &Path<HostSystemImpl>,
+        source: &Arc<Peer<HostSystemImpl>>,
+        source_path: &Arc<Path<HostSystemImpl>>,
         verb: u8,
         payload: &PacketBuffer,
-    ) -> bool {
+    ) -> PacketHandlerResult {
         match verb {
             verbs::VL2_VERB_NETWORK_CONFIG_REQUEST => {
-                let _ = self.handle_network_config_request(source, source_path, payload).await;
-                // TODO: display/log errors
-                true
+                let mut cursor = 0;
+                let network_id = payload.read_u64(&mut cursor);
+                if network_id.is_err() {
+                    return PacketHandlerResult::Error;
+                }
+                let network_id = NetworkId::from_u64(network_id.unwrap());
+                if network_id.is_none() {
+                    return PacketHandlerResult::Error;
+                }
+                let network_id = network_id.unwrap();
+                let meta_data = if cursor < payload.len() {
+                    let meta_data_len = payload.read_u16(&mut cursor);
+                    if meta_data_len.is_err() {
+                        return PacketHandlerResult::Error;
+                    }
+                    if let Ok(d) = payload.read_bytes(meta_data_len.unwrap() as usize, &mut cursor) {
+                        let d = Dictionary::from_bytes(d);
+                        if d.is_none() {
+                            return PacketHandlerResult::Error;
+                        }
+                        d.unwrap()
+                    } else {
+                        return PacketHandlerResult::Error;
+                    }
+                } else {
+                    Dictionary::new()
+                };
+                let (have_revision, have_timestamp) = if cursor < payload.len() {
+                    let r = payload.read_u64(&mut cursor);
+                    let t = payload.read_u64(&mut cursor);
+                    if r.is_err() || t.is_err() {
+                        return PacketHandlerResult::Error;
+                    }
+                    (Some(r.unwrap()), Some(t.unwrap()))
+                } else {
+                    (None, None)
+                };
+
+                if let Some(deadline) = Instant::now().checked_add(REQUEST_TIMEOUT) {
+                    self.reaper.add(
+                        tokio::spawn(Self::handle_network_config_request(
+                            self.database.clone(),
+                            source.clone(),
+                            source_path.clone(),
+                            network_id,
+                            meta_data,
+                            have_revision,
+                            have_timestamp,
+                        )),
+                        deadline,
+                    );
+                } else {
+                    eprintln!("WARNING: instant + REQUEST_TIMEOUT overflowed! should be impossible.");
+                }
+
+                PacketHandlerResult::Ok
             }
-            _ => false,
+            _ => PacketHandlerResult::NotHandled,
         }
     }
 
-    async fn handle_error<HostSystemImpl: HostSystem>(
+    fn handle_error<HostSystemImpl: HostSystem>(
         &self,
-        source: &Peer<HostSystemImpl>,
-        source_path: &Path<HostSystemImpl>,
+        source: &Arc<Peer<HostSystemImpl>>,
+        source_path: &Arc<Path<HostSystemImpl>>,
         in_re_verb: u8,
         in_re_message_id: u64,
         error_code: u8,
         payload: &PacketBuffer,
         cursor: &mut usize,
-    ) -> bool {
-        false
+    ) -> PacketHandlerResult {
+        PacketHandlerResult::NotHandled
     }
 
-    async fn handle_ok<HostSystemImpl: HostSystem>(
+    fn handle_ok<HostSystemImpl: HostSystem>(
         &self,
-        source: &Peer<HostSystemImpl>,
-        source_path: &Path<HostSystemImpl>,
+        source: &Arc<Peer<HostSystemImpl>>,
+        source_path: &Arc<Path<HostSystemImpl>>,
         in_re_verb: u8,
         in_re_message_id: u64,
         payload: &PacketBuffer,
         cursor: &mut usize,
-    ) -> bool {
-        false
+    ) -> PacketHandlerResult {
+        PacketHandlerResult::NotHandled
     }
 
     fn should_communicate_with(&self, _: &Identity) -> bool {

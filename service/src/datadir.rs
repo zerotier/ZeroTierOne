@@ -7,12 +7,10 @@ use std::sync::Arc;
 use crate::localconfig::Config;
 use crate::utils::{read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 
-use async_trait::async_trait;
-
 use parking_lot::{Mutex, RwLock};
 
 use zerotier_crypto::random::next_u32_secure;
-use zerotier_network_hypervisor::vl1::{Identity, Storage};
+use zerotier_network_hypervisor::vl1::{Identity, NodeStorage};
 use zerotier_utils::json::to_json_pretty;
 
 const AUTH_TOKEN_DEFAULT_LENGTH: usize = 48;
@@ -29,29 +27,35 @@ pub struct DataDir {
     authtoken: Mutex<String>,
 }
 
-#[async_trait]
-impl Storage for DataDir {
-    async fn load_node_identity(&self) -> Option<Identity> {
-        let id_data = read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 4096).await;
-        if id_data.is_err() {
-            return None;
-        }
-        let id_data = Identity::from_str(String::from_utf8_lossy(id_data.unwrap().as_slice()).as_ref());
-        if id_data.is_err() {
-            return None;
-        }
-        Some(id_data.unwrap())
+impl NodeStorage for DataDir {
+    fn load_node_identity(&self) -> Option<Identity> {
+        todo!()
+        /*
+        tokio::runtime::Handle::current().spawn(async {
+            let id_data = read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 4096).await;
+            if id_data.is_err() {
+                return None;
+            }
+            let id_data = Identity::from_str(String::from_utf8_lossy(id_data.unwrap().as_slice()).as_ref());
+            if id_data.is_err() {
+                return None;
+            }
+            Some(id_data.unwrap())
+        })
+        */
     }
 
-    async fn save_node_identity(&self, id: &Identity) {
-        assert!(id.secret.is_some());
-        let id_secret_str = id.to_secret_string();
-        let id_public_str = id.to_string();
-        let secret_path = self.base_path.join(IDENTITY_SECRET_FILENAME);
-        // TODO: handle errors
-        let _ = tokio::fs::write(&secret_path, id_secret_str.as_bytes()).await;
-        assert!(crate::utils::fs_restrict_permissions(&secret_path));
-        let _ = tokio::fs::write(self.base_path.join(IDENTITY_PUBLIC_FILENAME), id_public_str.as_bytes()).await;
+    fn save_node_identity(&self, id: &Identity) {
+        tokio::runtime::Handle::current().block_on(async {
+            assert!(id.secret.is_some());
+            let id_secret_str = id.to_secret_string();
+            let id_public_str = id.to_string();
+            let secret_path = self.base_path.join(IDENTITY_SECRET_FILENAME);
+            // TODO: handle errors
+            let _ = tokio::fs::write(&secret_path, id_secret_str.as_bytes()).await;
+            assert!(crate::utils::fs_restrict_permissions(&secret_path));
+            let _ = tokio::fs::write(self.base_path.join(IDENTITY_PUBLIC_FILENAME), id_public_str.as_bytes()).await;
+        })
     }
 }
 
