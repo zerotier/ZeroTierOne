@@ -1,11 +1,10 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use crate::localconfig::Config;
+use crate::utils::{read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
-
-use crate::localconfig::Config;
-use crate::utils::{read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 
 use parking_lot::{Mutex, RwLock};
 
@@ -46,7 +45,8 @@ impl NodeStorage for DataDir {
     }
 
     fn save_node_identity(&self, id: &Identity) {
-        tokio::runtime::Handle::current().block_on(async {
+        /*
+        tokio::runtime::Handle::current().spawn(async move {
             assert!(id.secret.is_some());
             let id_secret_str = id.to_secret_string();
             let id_public_str = id.to_string();
@@ -55,7 +55,8 @@ impl NodeStorage for DataDir {
             let _ = tokio::fs::write(&secret_path, id_secret_str.as_bytes()).await;
             assert!(crate::utils::fs_restrict_permissions(&secret_path));
             let _ = tokio::fs::write(self.base_path.join(IDENTITY_PUBLIC_FILENAME), id_public_str.as_bytes()).await;
-        })
+        });
+        */
     }
 }
 

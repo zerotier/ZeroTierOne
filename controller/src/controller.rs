@@ -109,25 +109,25 @@ impl<DatabaseImpl: Database> InnerProtocol for Controller<DatabaseImpl> {
 
     fn handle_error<HostSystemImpl: HostSystem>(
         &self,
-        source: &Arc<Peer<HostSystemImpl>>,
-        source_path: &Arc<Path<HostSystemImpl>>,
-        in_re_verb: u8,
-        in_re_message_id: u64,
-        error_code: u8,
-        payload: &PacketBuffer,
-        cursor: &mut usize,
+        _source: &Arc<Peer<HostSystemImpl>>,
+        _source_path: &Arc<Path<HostSystemImpl>>,
+        _in_re_verb: u8,
+        _in_re_message_id: u64,
+        _error_code: u8,
+        _payload: &PacketBuffer,
+        _cursor: &mut usize,
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
     }
 
     fn handle_ok<HostSystemImpl: HostSystem>(
         &self,
-        source: &Arc<Peer<HostSystemImpl>>,
-        source_path: &Arc<Path<HostSystemImpl>>,
-        in_re_verb: u8,
-        in_re_message_id: u64,
-        payload: &PacketBuffer,
-        cursor: &mut usize,
+        _source: &Arc<Peer<HostSystemImpl>>,
+        _source_path: &Arc<Path<HostSystemImpl>>,
+        _in_re_verb: u8,
+        _in_re_message_id: u64,
+        _payload: &PacketBuffer,
+        _cursor: &mut usize,
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
     }
