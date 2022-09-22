@@ -23,7 +23,7 @@ pub struct Controller<DatabaseImpl: Database> {
 }
 
 impl<DatabaseImpl: Database> Controller<DatabaseImpl> {
-    pub async fn new(database: Arc<DatabaseImpl>, runtime: tokio::runtime::Handle) -> Arc<Self> {
+    pub fn new(database: Arc<DatabaseImpl>, runtime: tokio::runtime::Handle) -> Arc<Self> {
         Arc::new(Self { database, reaper: Reaper::new(&runtime), runtime })
     }
 

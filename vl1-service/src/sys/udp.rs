@@ -10,17 +10,44 @@ use std::ptr::{null, null_mut};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Arc;
 
-#[cfg(unix)]
-use std::os::unix::io::RawFd;
-
 use crate::localinterface::LocalInterface;
 
 #[allow(unused_imports)]
 use num_traits::AsPrimitive;
 
+use zerotier_network_hypervisor::protocol::{PacketBufferPool, PooledPacketBuffer};
 use zerotier_network_hypervisor::vl1::inetaddress::*;
+use zerotier_utils::ms_monotonic;
 
 use crate::sys::{getifaddrs, ipv6};
+
+fn socket_read_concurrency() -> usize {
+    const MAX_PER_SOCKET_CONCURRENCY: usize = 8;
+
+    static mut THREADS_PER_SOCKET: usize = 0;
+    unsafe {
+        let mut t = THREADS_PER_SOCKET;
+        if t == 0 {
+            t = std::thread::available_parallelism()
+                .unwrap()
+                .get()
+                .max(1)
+                .min(MAX_PER_SOCKET_CONCURRENCY);
+            THREADS_PER_SOCKET = t;
+        }
+        t
+    }
+}
+
+pub trait UdpPacketHandler: Send + Sync + 'static {
+    fn incoming_udp_packet(
+        self: &Arc<Self>,
+        time_ticks: i64,
+        socket: &Arc<BoundUdpSocket>,
+        source_address: &InetAddress,
+        packet: PooledPacketBuffer,
+    );
+}
 
 /// A local port to which one or more UDP sockets is bound.
 ///
@@ -36,7 +63,7 @@ pub struct BoundUdpSocket {
     pub address: InetAddress,
     pub interface: LocalInterface,
     last_receive_time: AtomicI64,
-    fd: RawFd,
+    fd: i32,
     lock: parking_lot::RwLock<()>,
     open: AtomicBool,
 }
@@ -97,32 +124,6 @@ impl BoundUdpSocket {
         return false;
     }
 
-    /// Receive a packet or return None if this UDP socket is being closed.
-    #[cfg(unix)]
-    pub fn blocking_receive<B: AsMut<[u8]>>(&self, mut buffer: B, current_time: i64) -> Option<(usize, InetAddress)> {
-        unsafe {
-            let _hold = self.lock.read();
-            let b = buffer.as_mut();
-            let mut from = InetAddress::new();
-            while self.open.load(Ordering::Relaxed) {
-                let mut addrlen = std::mem::size_of::<InetAddress>().as_();
-                let s = libc::recvfrom(
-                    self.fd.as_(),
-                    b.as_mut_ptr().cast(),
-                    b.len().as_(),
-                    0,
-                    (&mut from as *mut InetAddress).cast(),
-                    &mut addrlen,
-                );
-                if s > 0 {
-                    self.last_receive_time.store(current_time, Ordering::Relaxed);
-                    return Some((s as usize, from));
-                }
-            }
-            return None;
-        }
-    }
-
     #[cfg(unix)]
     fn close(&self) {
         unsafe {
@@ -170,11 +171,13 @@ impl BoundUdpPort {
     /// The caller can check the 'sockets' member variable after calling to determine which if any bindings were
     /// successful. Any errors that occurred are returned as tuples of (interface, address, error). The second vector
     /// returned contains newly bound sockets.
-    pub fn update_bindings(
+    pub fn update_bindings<UdpPacketHandlerImpl: UdpPacketHandler>(
         &mut self,
         interface_prefix_blacklist: &Vec<String>,
         cidr_blacklist: &Vec<InetAddress>,
-    ) -> (Vec<(LocalInterface, InetAddress, std::io::Error)>, Vec<Arc<BoundUdpSocket>>) {
+        buffer_pool: &Arc<PacketBufferPool>,
+        handler: &Arc<UdpPacketHandlerImpl>,
+    ) -> Vec<(LocalInterface, InetAddress, std::io::Error)> {
         let mut existing_bindings: HashMap<LocalInterface, HashMap<InetAddress, Arc<BoundUdpSocket>>> = HashMap::with_capacity(4);
         for s in self.sockets.drain(..) {
             existing_bindings
@@ -184,7 +187,6 @@ impl BoundUdpPort {
         }
 
         let mut errors: Vec<(LocalInterface, InetAddress, std::io::Error)> = Vec::new();
-        let mut new_sockets = Vec::new();
         getifaddrs::for_each_address(|address, interface| {
             let interface_str = interface.to_string();
             let mut addr_with_port = address.clone();
@@ -220,8 +222,36 @@ impl BoundUdpPort {
                                 lock: parking_lot::RwLock::new(()),
                                 open: AtomicBool::new(true),
                             });
-                            self.sockets.push(s.clone());
-                            new_sockets.push(s);
+
+                            for _ in 0..socket_read_concurrency() {
+                                let ss = s.clone();
+                                let bp = buffer_pool.clone();
+                                let h = handler.clone();
+                                std::thread::spawn(move || unsafe {
+                                    let _hold = ss.lock.read();
+                                    let mut from = InetAddress::new();
+                                    while ss.open.load(Ordering::Relaxed) {
+                                        let mut b = bp.get();
+                                        let mut addrlen = std::mem::size_of::<InetAddress>().as_();
+                                        let s = libc::recvfrom(
+                                            ss.fd.as_(),
+                                            b.entire_buffer_mut().as_mut_ptr().cast(),
+                                            b.capacity().as_(),
+                                            0,
+                                            (&mut from as *mut InetAddress).cast(),
+                                            &mut addrlen,
+                                        );
+                                        if s > 0 {
+                                            b.set_size_unchecked(s as usize);
+                                            let time_ticks = ms_monotonic();
+                                            ss.last_receive_time.store(time_ticks, Ordering::Relaxed);
+                                            h.incoming_udp_packet(time_ticks, &ss, &from, b);
+                                        }
+                                    }
+                                });
+                            }
+
+                            self.sockets.push(s);
                         } else {
                             errors.push((
                                 interface.clone(),
@@ -246,7 +276,7 @@ impl BoundUdpPort {
             }
         }
 
-        (errors, new_sockets)
+        errors
     }
 }
 
@@ -273,7 +303,7 @@ pub fn udp_test_bind(port: u16) -> bool {
 
 #[allow(unused_variables)]
 #[cfg(unix)]
-unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result<RawFd, &'static str> {
+unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result<i32, &'static str> {
     let (af, sa_len) = match address.family() {
         AF_INET => (AF_INET, std::mem::size_of::<libc::sockaddr_in>().as_()),
         AF_INET6 => (AF_INET6, std::mem::size_of::<libc::sockaddr_in6>().as_()),
@@ -429,5 +459,5 @@ unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result
         return Err("bind to address failed");
     }
 
-    Ok(s as RawFd)
+    Ok(s as i32)
 }

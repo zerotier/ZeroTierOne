@@ -142,8 +142,7 @@ impl Dictionary {
 
     /// Write a dictionary in transport format to a byte vector.
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut b: Vec<u8> = Vec::new();
-        b.reserve(32 * self.0.len());
+        let mut b: Vec<u8> = Vec::with_capacity(32 * self.0.len());
         let _ = self.write_to(&mut b);
         b
     }

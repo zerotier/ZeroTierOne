@@ -13,7 +13,7 @@ use zerotier_utils::{ms_monotonic, ms_since_epoch};
 
 use crate::constants::UNASSIGNED_PRIVILEGED_PORTS;
 use crate::settings::VL1Settings;
-use crate::sys::udp::{udp_test_bind, BoundUdpPort};
+use crate::sys::udp::{udp_test_bind, BoundUdpPort, UdpPacketHandler};
 use crate::LocalSocket;
 
 /// This can be adjusted to trade thread count for maximum I/O concurrency.
@@ -37,7 +37,7 @@ pub struct VL1Service<
     storage: Arc<NodeStorageImpl>,
     inner: Arc<InnerProtocolImpl>,
     path_filter: Arc<PathFilterImpl>,
-    buffer_pool: PacketBufferPool,
+    buffer_pool: Arc<PacketBufferPool>,
     node_container: Option<Node<Self>>,
 }
 
@@ -67,10 +67,10 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
             storage,
             inner,
             path_filter,
-            buffer_pool: PacketBufferPool::new(
+            buffer_pool: Arc::new(PacketBufferPool::new(
                 std::thread::available_parallelism().map_or(2, |c| c.get() + 2),
                 PacketBufferFactory::new(),
-            ),
+            )),
             node_container: None,
         };
         service.node_container.replace(Node::new(&service, &*service.storage, true, false)?);
@@ -162,43 +162,20 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
             state
         };
 
-        let per_socket_concurrency = std::thread::available_parallelism()
-            .map_or(1, |c| c.get())
-            .min(MAX_PER_SOCKET_CONCURRENCY);
         for (_, binding) in state.udp_sockets.iter() {
             let mut binding = binding.write();
-            let (_, mut new_sockets) = binding.update_bindings(&state.settings.interface_prefix_blacklist, &state.settings.cidr_blacklist);
-            for s in new_sockets.drain(..) {
-                for _ in 0..per_socket_concurrency {
-                    let self_copy = self.clone();
-                    let s_copy = s.clone();
-                    std::thread::spawn(move || loop {
-                        let local_socket = LocalSocket::new(&s_copy);
-                        loop {
-                            let mut buf = self_copy.buffer_pool.get();
-                            let now = ms_monotonic();
-                            if let Some((bytes, from)) = s_copy.blocking_receive(unsafe { buf.entire_buffer_mut() }, now) {
-                                unsafe { buf.set_size_unchecked(bytes) };
-                                self_copy.node().handle_incoming_physical_packet(
-                                    &*self_copy,
-                                    &*self_copy.inner,
-                                    &Endpoint::IpUdp(from),
-                                    &local_socket,
-                                    &s_copy.interface,
-                                    buf,
-                                );
-                            } else {
-                                break;
-                            }
-                        }
-                    });
-                }
-            }
+            let _ = binding.update_bindings(
+                &state.settings.interface_prefix_blacklist,
+                &state.settings.cidr_blacklist,
+                &self.buffer_pool,
+                self,
+            );
+            // TODO: if no bindings were successful do something with errors
         }
     }
 
     fn background_task_daemon(self: Arc<Self>) {
-        std::thread::sleep(Duration::from_secs(1));
+        std::thread::sleep(Duration::from_millis(500));
         let mut udp_binding_check_every: usize = 0;
         loop {
             if !self.state.read().running {
@@ -210,6 +187,28 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
             udp_binding_check_every = udp_binding_check_every.wrapping_add(1);
             std::thread::sleep(self.node().do_background_tasks(self.as_ref()));
         }
+    }
+}
+
+impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> UdpPacketHandler
+    for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
+{
+    #[inline(always)]
+    fn incoming_udp_packet(
+        self: &Arc<Self>,
+        _time_ticks: i64,
+        socket: &Arc<crate::sys::udp::BoundUdpSocket>,
+        source_address: &InetAddress,
+        packet: zerotier_network_hypervisor::protocol::PooledPacketBuffer,
+    ) {
+        self.node().handle_incoming_physical_packet(
+            &*self,
+            &*self.inner,
+            &Endpoint::IpUdp(source_address.clone()),
+            &LocalSocket::new(socket),
+            &socket.interface,
+            packet,
+        );
     }
 }
 

@@ -12,9 +12,8 @@ path = "src/main.rs"
 [dependencies]
 zerotier-network-hypervisor = { path = "../network-hypervisor" }
 zerotier-crypto = { path = "../crypto" }
-zerotier-utils = { path = "../utils" }
+zerotier-utils = { path = "../utils", features = ["tokio"] }
 zerotier-vl1-service = { path = "../vl1-service" }
-#tokio = { version = "^1", features = ["fs", "io-util", "io-std", "net", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "sync", "time"], default-features = false }
 serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = ["std"], default-features = false }
 parking_lot = { version = "^0", features = [], default-features = false }

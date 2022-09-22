@@ -2,4 +2,5 @@
 
 pub mod controller;
 pub mod database;
+pub mod filedatabase;
 pub mod model;
