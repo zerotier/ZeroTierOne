@@ -12,11 +12,11 @@ pub struct Reaper {
 }
 
 impl Reaper {
-    pub fn new() -> Self {
+    pub fn new(runtime: &tokio::runtime::Handle) -> Self {
         let q = Arc::new((parking_lot::Mutex::new(VecDeque::with_capacity(16)), Notify::new()));
         Self {
             q: q.clone(),
-            finisher: tokio::spawn(async move {
+            finisher: runtime.spawn(async move {
                 loop {
                     q.1.notified().await;
                     loop {

@@ -315,7 +315,7 @@ impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl
         let mut daemons: Vec<JoinHandle<()>> = state.daemons.drain(..).collect();
         drop(state);
         for d in daemons.drain(..) {
-            d.join();
+            let _ = d.join();
         }
     }
 }

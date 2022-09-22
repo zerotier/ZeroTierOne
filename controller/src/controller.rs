@@ -1,8 +1,9 @@
-use crate::database::Database;
+// (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 use std::sync::Arc;
 
 use tokio::time::{Duration, Instant};
+use zerotier_utils::tokio;
 
 use zerotier_network_hypervisor::protocol::{verbs, PacketBuffer};
 use zerotier_network_hypervisor::util::dictionary::Dictionary;
@@ -11,16 +12,19 @@ use zerotier_network_hypervisor::vl2::NetworkId;
 
 use zerotier_utils::reaper::Reaper;
 
+use crate::database::Database;
+
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub struct Controller<DatabaseImpl: Database> {
     database: Arc<DatabaseImpl>,
     reaper: Reaper,
+    runtime: tokio::runtime::Handle,
 }
 
 impl<DatabaseImpl: Database> Controller<DatabaseImpl> {
-    pub async fn new(database: Arc<DatabaseImpl>) -> Arc<Self> {
-        Arc::new(Self { database, reaper: Reaper::new() })
+    pub async fn new(database: Arc<DatabaseImpl>, runtime: tokio::runtime::Handle) -> Arc<Self> {
+        Arc::new(Self { database, reaper: Reaper::new(&runtime), runtime })
     }
 
     async fn handle_network_config_request<HostSystemImpl: HostSystem>(
@@ -86,7 +90,7 @@ impl<DatabaseImpl: Database> InnerProtocol for Controller<DatabaseImpl> {
 
                 if let Some(deadline) = Instant::now().checked_add(REQUEST_TIMEOUT) {
                     self.reaper.add(
-                        tokio::spawn(Self::handle_network_config_request(
+                        self.runtime.spawn(Self::handle_network_config_request(
                             self.database.clone(),
                             source.clone(),
                             source_path.clone(),
@@ -98,7 +102,7 @@ impl<DatabaseImpl: Database> InnerProtocol for Controller<DatabaseImpl> {
                         deadline,
                     );
                 } else {
-                    eprintln!("WARNING: instant + REQUEST_TIMEOUT overflowed! should be impossible.");
+                    eprintln!("WARNING: Instant::now() + REQUEST_TIMEOUT overflowed! should be impossible.");
                 }
 
                 PacketHandlerResult::Ok

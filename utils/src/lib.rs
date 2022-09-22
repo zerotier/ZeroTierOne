@@ -10,10 +10,15 @@ pub mod hex;
 pub mod json;
 pub mod memory;
 pub mod pool;
-pub mod reaper;
 pub mod ringbuffer;
 pub mod ringbuffermap;
 pub mod varint;
+
+#[cfg(feature = "tokio")]
+pub mod reaper;
+
+#[cfg(feature = "tokio")]
+pub use tokio;
 
 /// Get milliseconds since unix epoch.
 pub fn ms_since_epoch() -> i64 {
