@@ -94,8 +94,8 @@ impl RootSet {
     /// Get the ZeroTier default root set, which contains roots run by ZeroTier Inc.
     pub fn zerotier_default() -> Verified<Self> {
         let mut cursor = 0;
-        //let rs = include_bytes!("../../default-rootset/root.zerotier.com.bin");
-        let rs = include_bytes!("../../default-rootset/test-root.bin");
+        let rs = include_bytes!("../../default-rootset/root.zerotier.com.bin");
+        //let rs = include_bytes!("../../default-rootset/test-root.bin");
         let rs = Self::unmarshal(&Buffer::from(rs), &mut cursor).unwrap();
         rs.verify().unwrap()
     }
