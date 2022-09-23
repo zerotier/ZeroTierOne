@@ -645,6 +645,8 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         // Legacy ZeroTier V1 packet handling
         if let Ok(fragment_header) = data.struct_mut_at::<v1::FragmentHeader>(0) {
             if let Some(dest) = Address::from_bytes_fixed(&fragment_header.dest) {
+                // Packet is addressed to this node.
+
                 if dest == self.identity.address {
                     let fragment_header = &*fragment_header; // discard mut
                     let path = self.canonical_path(source_endpoint, source_local_socket, source_local_interface, time_ticks);
@@ -706,24 +708,24 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                 }
                             }
                         }
-                    } else {
-                        if let Ok(packet_header) = data.struct_at::<v1::PacketHeader>(0) {
-                            debug_event!(
-                                host_system,
-                                "[vl1] [v1] #{:0>16x} is unfragmented",
-                                u64::from_be_bytes(packet_header.id)
-                            );
+                    } else if let Ok(packet_header) = data.struct_at::<v1::PacketHeader>(0) {
+                        debug_event!(
+                            host_system,
+                            "[vl1] [v1] #{:0>16x} is unfragmented",
+                            u64::from_be_bytes(packet_header.id)
+                        );
 
-                            if let Some(source) = Address::from_bytes(&packet_header.src) {
-                                if let Some(peer) = self.peer(source) {
-                                    peer.receive(self, host_system, inner, time_ticks, &path, packet_header, data.as_ref(), &[]);
-                                } else {
-                                    self.whois(host_system, source, Some((Arc::downgrade(&path), data)), time_ticks);
-                                }
+                        if let Some(source) = Address::from_bytes(&packet_header.src) {
+                            if let Some(peer) = self.peer(source) {
+                                peer.receive(self, host_system, inner, time_ticks, &path, packet_header, data.as_ref(), &[]);
+                            } else {
+                                self.whois(host_system, source, Some((Arc::downgrade(&path), data)), time_ticks);
                             }
                         }
                     }
                 } else {
+                    // Packet is addressed somewhere else.
+
                     #[cfg(debug_assertions)]
                     let debug_packet_id;
 
@@ -743,30 +745,28 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                             debug_event!(host_system, "[vl1] [v1] #{:0>16x} discarded: max hops exceeded!", debug_packet_id);
                             return;
                         }
-                    } else {
-                        if let Ok(packet_header) = data.struct_mut_at::<v1::PacketHeader>(0) {
+                    } else if let Ok(packet_header) = data.struct_mut_at::<v1::PacketHeader>(0) {
+                        #[cfg(debug_assertions)]
+                        {
+                            debug_packet_id = u64::from_be_bytes(packet_header.id);
+                            debug_event!(
+                                host_system,
+                                "[vl1] [v1] #{:0>16x} forwarding packet to {}",
+                                debug_packet_id,
+                                dest.to_string()
+                            );
+                        }
+                        if packet_header.increment_hops() > v1::FORWARD_MAX_HOPS {
                             #[cfg(debug_assertions)]
-                            {
-                                debug_packet_id = u64::from_be_bytes(packet_header.id);
-                                debug_event!(
-                                    host_system,
-                                    "[vl1] [v1] #{:0>16x} forwarding packet to {}",
-                                    debug_packet_id,
-                                    dest.to_string()
-                                );
-                            }
-                            if packet_header.increment_hops() > v1::FORWARD_MAX_HOPS {
-                                #[cfg(debug_assertions)]
-                                debug_event!(
-                                    host_system,
-                                    "[vl1] [v1] #{:0>16x} discarded: max hops exceeded!",
-                                    u64::from_be_bytes(packet_header.id)
-                                );
-                                return;
-                            }
-                        } else {
+                            debug_event!(
+                                host_system,
+                                "[vl1] [v1] #{:0>16x} discarded: max hops exceeded!",
+                                u64::from_be_bytes(packet_header.id)
+                            );
                             return;
                         }
+                    } else {
+                        return;
                     }
 
                     if let Some(peer) = self.peer(dest) {
