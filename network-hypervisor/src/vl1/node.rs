@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::io::Write;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use std::time::Duration;
 
 use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
@@ -40,6 +40,9 @@ pub trait HostSystem: Sync + Send + 'static {
 
     /// A VL1 level event occurred.
     fn event(&self, event: Event);
+
+    /// Get a pooled packet buffer for internal use.
+    fn get_buffer(&self) -> PooledPacketBuffer;
 
     /// Check a local socket for validity.
     ///
@@ -197,9 +200,8 @@ struct BackgroundTaskIntervals {
     whois_queue_retry: IntervalGate<{ WHOIS_RETRY_INTERVAL }>,
 }
 
-#[derive(Default)]
-struct WhoisQueueItem {
-    waiting_packets: RingBuffer<PooledPacketBuffer, WHOIS_MAX_WAITING_PACKETS>,
+struct WhoisQueueItem<HostSystemImpl: HostSystem> {
+    waiting_packets: RingBuffer<(Weak<Path<HostSystemImpl>>, PooledPacketBuffer), WHOIS_MAX_WAITING_PACKETS>,
     retry_count: u16,
 }
 
@@ -230,7 +232,7 @@ pub struct Node<HostSystemImpl: HostSystem> {
     best_root: RwLock<Option<Arc<Peer<HostSystemImpl>>>>,
 
     /// Queue of identities being looked up.
-    whois_queue: Mutex<HashMap<Address, WhoisQueueItem>>,
+    whois_queue: Mutex<HashMap<Address, WhoisQueueItem<HostSystemImpl>>>,
 }
 
 impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
@@ -644,6 +646,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         if let Ok(fragment_header) = data.struct_mut_at::<v1::FragmentHeader>(0) {
             if let Some(dest) = Address::from_bytes_fixed(&fragment_header.dest) {
                 if dest == self.identity.address {
+                    let fragment_header = &*fragment_header; // discard mut
                     let path = self.canonical_path(source_endpoint, source_local_socket, source_local_interface, time_ticks);
                     path.log_receive_anything(time_ticks);
 
@@ -683,7 +686,9 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                                 &assembled_packet.frags[1..(assembled_packet.have as usize)],
                                             );
                                         } else {
-                                            let mut combined_packet = PooledPacketBuffer::naked(PacketBuffer::new());
+                                            // If WHOIS is needed we need to go ahead and combine the packet so it can be cached
+                                            // for later processing when a WHOIS reply comes back.
+                                            let mut combined_packet = host_system.get_buffer();
                                             let mut ok = combined_packet.append_bytes(frag0.as_bytes()).is_ok();
                                             for i in 1..assembled_packet.have {
                                                 if let Some(f) = assembled_packet.frags[i as usize].as_ref() {
@@ -694,7 +699,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                                 }
                                             }
                                             if ok {
-                                                self.whois(host_system, source, Some(combined_packet), time_ticks);
+                                                self.whois(host_system, source, Some((Arc::downgrade(&path), combined_packet)), time_ticks);
                                             }
                                         }
                                     }
@@ -702,7 +707,6 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                             }
                         }
                     } else {
-                        #[cfg(debug_assertions)]
                         if let Ok(packet_header) = data.struct_at::<v1::PacketHeader>(0) {
                             debug_event!(
                                 host_system,
@@ -714,7 +718,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                 if let Some(peer) = self.peer(source) {
                                     peer.receive(self, host_system, inner, time_ticks, &path, packet_header, data.as_ref(), &[]);
                                 } else {
-                                    self.whois(host_system, source, Some(PooledPacketBuffer::naked(data.clone())), time_ticks);
+                                    self.whois(host_system, source, Some((Arc::downgrade(&path), data)), time_ticks);
                                 }
                             }
                         }
@@ -777,11 +781,19 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
     }
 
     /// Enqueue and send a WHOIS query for a given address, adding the supplied packet (if any) to the list to be processed on reply.
-    fn whois(&self, host_system: &HostSystemImpl, address: Address, waiting_packet: Option<PooledPacketBuffer>, time_ticks: i64) {
+    fn whois(
+        &self,
+        host_system: &HostSystemImpl,
+        address: Address,
+        waiting_packet: Option<(Weak<Path<HostSystemImpl>>, PooledPacketBuffer)>,
+        time_ticks: i64,
+    ) {
         debug_event!(host_system, "[vl1] [v1] WHOIS {}", address.to_string());
         {
             let mut whois_queue = self.whois_queue.lock();
-            let qi = whois_queue.entry(address).or_default();
+            let qi = whois_queue
+                .entry(address)
+                .or_insert_with(|| WhoisQueueItem::<HostSystemImpl> { waiting_packets: RingBuffer::new(), retry_count: 0 });
             if let Some(p) = waiting_packet {
                 qi.waiting_packets.add(p);
             }
@@ -813,6 +825,43 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                     }
                 }
                 root.send(host_system, None, self, time_ticks, &mut packet);
+            }
+        }
+    }
+
+    /// Called by Peer when an identity is received from another node, e.g. via OK(WHOIS).
+    pub(crate) fn handle_incoming_identity<InnerProtocolImpl: InnerProtocol>(
+        &self,
+        host_system: &HostSystemImpl,
+        inner: &InnerProtocolImpl,
+        received_identity: Identity,
+        time_ticks: i64,
+        authoritative: bool,
+    ) {
+        if authoritative {
+            if received_identity.validate_identity() {
+                let mut whois_queue = self.whois_queue.lock();
+                if let Some(qi) = whois_queue.get_mut(&received_identity.address) {
+                    let address = received_identity.address;
+                    if inner.should_communicate_with(&received_identity) {
+                        let mut peers = self.peers.write();
+                        if let Some(peer) = peers.get(&address).cloned().or_else(|| {
+                            Peer::new(&self.identity, received_identity, time_ticks)
+                                .map(|p| Arc::new(p))
+                                .and_then(|peer| Some(peers.entry(address).or_insert(peer).clone()))
+                        }) {
+                            drop(peers);
+                            for p in qi.waiting_packets.iter() {
+                                if let Some(path) = p.0.upgrade() {
+                                    if let Ok(packet_header) = p.1.struct_at::<v1::PacketHeader>(0) {
+                                        peer.receive(self, host_system, inner, time_ticks, &path, packet_header, &p.1, &[]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    whois_queue.remove(&address);
+                }
             }
         }
     }
@@ -891,9 +940,11 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         local_interface: &HostSystemImpl::LocalInterface,
         time_ticks: i64,
     ) -> Arc<Path<HostSystemImpl>> {
-        if let Some(path) = self.paths.read().get(&PathKey::Ref(ep, local_socket)) {
+        let paths = self.paths.read();
+        if let Some(path) = paths.get(&PathKey::Ref(ep, local_socket)) {
             path.clone()
         } else {
+            drop(paths);
             self.paths
                 .write()
                 .entry(PathKey::Copied(ep.clone(), local_socket.clone()))

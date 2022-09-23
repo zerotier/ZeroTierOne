@@ -135,7 +135,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         return None;
     }
 
-    pub(crate) fn learn_path(&self, host_system: &HostSystemImpl, new_path: &Arc<Path<HostSystemImpl>>, time_ticks: i64) {
+    fn learn_path(&self, host_system: &HostSystemImpl, new_path: &Arc<Path<HostSystemImpl>>, time_ticks: i64) {
         let mut paths = self.paths.lock();
 
         match &new_path.endpoint {
@@ -259,8 +259,6 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
     ///
     /// This will go directly if there is an active path, or otherwise indirectly
     /// via a root or some other route.
-    ///
-    /// It encrypts and sets the MAC and cipher fields and packet ID and other things.
     pub(crate) fn send(
         &self,
         host_system: &HostSystemImpl,
@@ -663,10 +661,11 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match ok_header.in_re_verb {
                     verbs::VL1_HELLO => {
-                        if let Ok(ok_hello_fixed_header_fields) =
+                        if let Ok(_ok_hello_fixed_header_fields) =
                             payload.read_struct::<v1::message_component_structs::OkHelloFixedHeaderFields>(&mut cursor)
                         {
                             if hops == 0 {
+                                debug_event!(host_system, "[vl1] {} OK(HELLO)", self.identity.address.to_string(),);
                                 if let Ok(reported_endpoint) = Endpoint::unmarshal(&payload, &mut cursor) {
                                     #[cfg(debug_assertions)]
                                     let reported_endpoint2 = reported_endpoint.clone();
@@ -699,8 +698,14 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                     verbs::VL1_WHOIS => {
                         if node.is_peer_root(self) {
                             while cursor < payload.len() {
-                                if let Ok(_whois_response) = Identity::read_bytes(&mut BufferReader::new(payload, &mut cursor)) {
-                                    // TODO
+                                if let Ok(received_identity) = Identity::read_bytes(&mut BufferReader::new(payload, &mut cursor)) {
+                                    debug_event!(
+                                        host_system,
+                                        "[vl1] {} OK(WHOIS): {}",
+                                        self.identity.address.to_string(),
+                                        received_identity.to_string()
+                                    );
+                                    node.handle_incoming_identity(host_system, inner, received_identity, time_ticks, true);
                                 } else {
                                     break;
                                 }

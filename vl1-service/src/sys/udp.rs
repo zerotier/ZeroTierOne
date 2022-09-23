@@ -21,6 +21,9 @@ use zerotier_utils::ms_monotonic;
 
 use crate::sys::{getifaddrs, ipv6};
 
+/// UDP socket receive timeout to allow sockets to close properly on some systems (seconds).
+const SOCKET_RECV_TIMEOUT_SECONDS: i64 = 2;
+
 fn socket_read_concurrency() -> usize {
     const MAX_PER_SOCKET_CONCURRENCY: usize = 8;
 
@@ -60,7 +63,7 @@ pub struct BoundUdpPort {
 
 /// A socket bound to a specific interface and IP.
 pub struct BoundUdpSocket {
-    pub address: InetAddress,
+    pub bind_address: InetAddress,
     pub interface: LocalInterface,
     last_receive_time: AtomicI64,
     fd: i32,
@@ -92,7 +95,7 @@ impl BoundUdpSocket {
 
     #[cfg(unix)]
     pub fn send(&self, dest: &InetAddress, data: &[u8], packet_ttl: u8) -> bool {
-        if dest.family() == self.address.family() {
+        if dest.family() == self.bind_address.family() {
             let (c_sockaddr, c_addrlen) = dest.c_sockaddr();
             if packet_ttl == 0 || !dest.is_ipv4() {
                 unsafe {
@@ -183,7 +186,7 @@ impl BoundUdpPort {
             existing_bindings
                 .entry(s.interface)
                 .or_insert_with(|| HashMap::with_capacity(4))
-                .insert(s.address.clone(), s);
+                .insert(s.bind_address.clone(), s);
         }
 
         let mut errors: Vec<(LocalInterface, InetAddress, std::io::Error)> = Vec::new();
@@ -215,7 +218,7 @@ impl BoundUdpPort {
                         let fd = s.unwrap();
                         if s.is_ok() {
                             let s = Arc::new(BoundUdpSocket {
-                                address: addr_with_port,
+                                bind_address: addr_with_port,
                                 interface: interface.clone(),
                                 last_receive_time: AtomicI64::new(i64::MIN),
                                 fd,
@@ -324,7 +327,7 @@ unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result
     //assert_ne!(libc::fcntl(s, libc::F_SETFL, libc::O_NONBLOCK), -1);
 
     let mut timeo: libc::timeval = std::mem::zeroed();
-    timeo.tv_sec = 1;
+    timeo.tv_sec = SOCKET_RECV_TIMEOUT_SECONDS.as_();
     timeo.tv_usec = 0;
     setsockopt_results |= libc::setsockopt(
         s,

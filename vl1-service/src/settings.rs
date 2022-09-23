@@ -24,7 +24,8 @@ pub struct VL1Settings {
 
 impl VL1Settings {
     #[cfg(target_os = "macos")]
-    pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 10] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth", "zt", "llw", "anpi"];
+    pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 11] =
+        ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth", "zt", "llw", "anpi", "bridge"];
 
     #[cfg(target_os = "linux")]
     pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 5] = ["lo", "tun", "tap", "ipsec", "zt"];

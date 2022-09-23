@@ -52,7 +52,7 @@ impl Hash for LocalSocket {
 impl ToString for LocalSocket {
     fn to_string(&self) -> String {
         if let Some(s) = self.0.upgrade() {
-            s.address.to_string()
+            s.bind_address.to_string()
         } else {
             "(closed socket)".into()
         }

@@ -226,9 +226,14 @@ impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl
         }
     }
 
-    #[inline(always)]
+    #[inline]
     fn local_socket_is_valid(&self, socket: &Self::LocalSocket) -> bool {
         socket.is_valid()
+    }
+
+    #[inline]
+    fn get_buffer(&self) -> zerotier_network_hypervisor::protocol::PooledPacketBuffer {
+        self.buffer_pool.get()
     }
 
     fn wire_send(
