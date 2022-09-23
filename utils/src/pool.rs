@@ -32,6 +32,17 @@ struct PoolEntry<O, F: PoolFactory<O>> {
 }
 
 impl<O, F: PoolFactory<O>> Pooled<O, F> {
+    /// Create a pooled object wrapper around an object but with no pool to return it to.
+    /// The object will be freed when this pooled container is dropped.
+    pub fn naked(o: O) -> Self {
+        unsafe {
+            Self(NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
+                obj: o,
+                return_pool: Weak::new(),
+            }))))
+        }
+    }
+
     /// Get a raw pointer to the object wrapped by this pooled object container.
     /// The returned raw pointer MUST be restored into a Pooled instance with
     /// from_raw() or memory will leak.

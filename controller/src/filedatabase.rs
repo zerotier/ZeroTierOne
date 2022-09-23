@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 
@@ -29,11 +30,11 @@ fn member_path(base: &PathBuf, network_id: NetworkId, member_id: Address) -> Pat
 }
 
 impl FileDatabase {
-    pub async fn new<P: AsRef<Path>>(base_path: P) -> Self {
+    pub async fn new<P: AsRef<Path>>(base_path: P) -> Arc<Self> {
         let base: PathBuf = base_path.as_ref().into();
         let live: PathBuf = base_path.as_ref().join("live");
         let _ = fs::create_dir_all(&live).await;
-        Self { base, live }
+        Arc::new(Self { base, live })
     }
 
     async fn merge_with_live<O: Serialize + DeserializeOwned>(&self, live_path: PathBuf, changes: O) -> O {
@@ -151,6 +152,11 @@ impl Database for FileDatabase {
             serde_json::to_vec(obj)?.as_slice(),
         )
         .await?;
+        Ok(())
+    }
+
+    async fn log_request(&self, obj: &RequestLogItem) -> Result<(), Self::Error> {
+        println!("{}", obj.to_string());
         Ok(())
     }
 }

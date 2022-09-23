@@ -600,7 +600,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                 need_whois
             };
             if !need_whois.is_empty() {
-                self.send_whois(host_system, need_whois.as_slice());
+                self.send_whois(host_system, need_whois.as_slice(), time_ticks);
             }
         }
 
@@ -615,6 +615,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         source_endpoint: &Endpoint,
         source_local_socket: &HostSystemImpl::LocalSocket,
         source_local_interface: &HostSystemImpl::LocalInterface,
+        time_ticks: i64,
         mut data: PooledPacketBuffer,
     ) {
         debug_event!(
@@ -642,7 +643,6 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         // Legacy ZeroTier V1 packet handling
         if let Ok(fragment_header) = data.struct_mut_at::<v1::FragmentHeader>(0) {
             if let Some(dest) = Address::from_bytes_fixed(&fragment_header.dest) {
-                let time_ticks = host_system.time_ticks();
                 if dest == self.identity.address {
                     let path = self.canonical_path(source_endpoint, source_local_socket, source_local_interface, time_ticks);
                     path.log_receive_anything(time_ticks);
@@ -683,14 +683,19 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                                 &assembled_packet.frags[1..(assembled_packet.have as usize)],
                                             );
                                         } else {
-                                            /*
-                                            self.whois_lookup_queue.query(
-                                                self,
-                                                host_system,
-                                                source,
-                                                Some(QueuedPacket::Fragmented(assembled_packet)),
-                                            );
-                                            */
+                                            let mut combined_packet = PooledPacketBuffer::naked(PacketBuffer::new());
+                                            let mut ok = combined_packet.append_bytes(frag0.as_bytes()).is_ok();
+                                            for i in 1..assembled_packet.have {
+                                                if let Some(f) = assembled_packet.frags[i as usize].as_ref() {
+                                                    if f.len() > v1::FRAGMENT_HEADER_SIZE {
+                                                        ok |=
+                                                            combined_packet.append_bytes(&f.as_bytes()[v1::FRAGMENT_HEADER_SIZE..]).is_ok();
+                                                    }
+                                                }
+                                            }
+                                            if ok {
+                                                self.whois(host_system, source, Some(combined_packet), time_ticks);
+                                            }
                                         }
                                     }
                                 }
@@ -709,7 +714,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                 if let Some(peer) = self.peer(source) {
                                     peer.receive(self, host_system, inner, time_ticks, &path, packet_header, data.as_ref(), &[]);
                                 } else {
-                                    self.whois(host_system, source, Some(data));
+                                    self.whois(host_system, source, Some(PooledPacketBuffer::naked(data.clone())), time_ticks);
                                 }
                             }
                         }
@@ -771,7 +776,9 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         }
     }
 
-    fn whois(&self, host_system: &HostSystemImpl, address: Address, waiting_packet: Option<PooledPacketBuffer>) {
+    /// Enqueue and send a WHOIS query for a given address, adding the supplied packet (if any) to the list to be processed on reply.
+    fn whois(&self, host_system: &HostSystemImpl, address: Address, waiting_packet: Option<PooledPacketBuffer>, time_ticks: i64) {
+        debug_event!(host_system, "[vl1] [v1] WHOIS {}", address.to_string());
         {
             let mut whois_queue = self.whois_queue.lock();
             let qi = whois_queue.entry(address).or_default();
@@ -784,11 +791,30 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                 qi.retry_count += 1;
             }
         }
-        self.send_whois(host_system, &[address]);
+        self.send_whois(host_system, &[address], time_ticks);
     }
 
-    fn send_whois(&self, host_system: &HostSystemImpl, addresses: &[Address]) {
-        if let Some(root) = self.best_root() {}
+    /// Send a WHOIS query to the current best root.
+    fn send_whois(&self, host_system: &HostSystemImpl, addresses: &[Address], time_ticks: i64) {
+        debug_assert!(!addresses.is_empty());
+        if !addresses.is_empty() {
+            if let Some(root) = self.best_root() {
+                let mut packet = PacketBuffer::new();
+                packet.set_size(v1::HEADER_SIZE);
+                let _ = packet.append_u8(verbs::VL1_WHOIS);
+                for a in addresses.iter() {
+                    if (packet.len() + ADDRESS_SIZE) > UDP_DEFAULT_MTU {
+                        root.send(host_system, None, self, time_ticks, &mut packet);
+                        packet.clear();
+                        packet.set_size(v1::HEADER_SIZE);
+                        let _ = packet.append_u8(verbs::VL1_WHOIS);
+                    } else {
+                        let _ = packet.append_bytes_fixed(&a.to_bytes());
+                    }
+                }
+                root.send(host_system, None, self, time_ticks, &mut packet);
+            }
+        }
     }
 
     /// Get the current "best" root from among this node's trusted roots.

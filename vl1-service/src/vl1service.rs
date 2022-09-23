@@ -196,7 +196,7 @@ impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl
     #[inline(always)]
     fn incoming_udp_packet(
         self: &Arc<Self>,
-        _time_ticks: i64,
+        time_ticks: i64,
         socket: &Arc<crate::sys::udp::BoundUdpSocket>,
         source_address: &InetAddress,
         packet: zerotier_network_hypervisor::protocol::PooledPacketBuffer,
@@ -207,6 +207,7 @@ impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl
             &Endpoint::IpUdp(source_address.clone()),
             &LocalSocket::new(socket),
             &socket.interface,
+            time_ticks,
             packet,
         );
     }

@@ -8,11 +8,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::InvalidFormatError;
 use crate::protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
-use crate::util::marshalable::*;
 
-use zerotier_utils::buffer::Buffer;
 use zerotier_utils::hex;
-use zerotier_utils::hex::HEX_CHARS;
 
 /// A unique address on the global ZeroTier VL1 network.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -68,27 +65,12 @@ impl From<&Address> for u64 {
     }
 }
 
-impl Marshalable for Address {
-    const MAX_MARSHAL_SIZE: usize = ADDRESS_SIZE;
-
-    #[inline(always)]
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), MarshalUnmarshalError> {
-        buf.append_bytes(&self.0.get().to_be_bytes()[8 - ADDRESS_SIZE..])
-            .map_err(|_| MarshalUnmarshalError::OutOfBounds)
-    }
-
-    #[inline(always)]
-    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Self, MarshalUnmarshalError> {
-        Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(MarshalUnmarshalError::InvalidData)
-    }
-}
-
 impl ToString for Address {
     fn to_string(&self) -> String {
         let mut v = self.0.get() << 24;
         let mut s = String::with_capacity(ADDRESS_SIZE * 2);
         for _ in 0..(ADDRESS_SIZE * 2) {
-            s.push(HEX_CHARS[(v >> 60) as usize] as char);
+            s.push(hex::HEX_CHARS[(v >> 60) as usize] as char);
             v <<= 4;
         }
         s

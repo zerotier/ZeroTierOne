@@ -211,7 +211,7 @@ impl Marshalable for Endpoint {
             match type_byte - 16 {
                 TYPE_NIL => Ok(Endpoint::Nil),
                 TYPE_ZEROTIER => {
-                    let zt = Address::unmarshal(buf, cursor)?;
+                    let zt = Address::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(MarshalUnmarshalError::InvalidData)?;
                     Ok(Endpoint::ZeroTier(
                         zt,
                         buf.read_bytes_fixed::<IDENTITY_FINGERPRINT_SIZE>(cursor)?.clone(),
@@ -230,7 +230,7 @@ impl Marshalable for Endpoint {
                     buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?.to_vec(),
                 )),
                 TYPE_ZEROTIER_ENCAP => {
-                    let zt = Address::unmarshal(buf, cursor)?;
+                    let zt = Address::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(MarshalUnmarshalError::InvalidData)?;
                     Ok(Endpoint::ZeroTierEncap(zt, buf.read_bytes_fixed(cursor)?.clone()))
                 }
                 _ => Err(MarshalUnmarshalError::InvalidData),
@@ -448,11 +448,8 @@ impl<'de> Deserialize<'de> for Endpoint {
 
 #[cfg(test)]
 mod tests {
-    use super::{Endpoint, MAX_MARSHAL_SIZE};
+    use super::*;
     use crate::protocol::*;
-    use crate::util::marshalable::*;
-    use crate::vl1::address::Address;
-    use zerotier_utils::buffer::*;
 
     fn randstring(len: u8) -> String {
         (0..len)

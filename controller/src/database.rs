@@ -15,4 +15,6 @@ pub trait Database: Sync + Send + Sized + 'static {
     async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Self::Error>;
     async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Self::Error>;
     async fn save_member(&self, obj: &Member) -> Result<(), Self::Error>;
+
+    async fn log_request(&self, obj: &RequestLogItem) -> Result<(), Self::Error>;
 }

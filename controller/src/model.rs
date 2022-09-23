@@ -164,8 +164,18 @@ pub enum AuthorizationResult {
     ApprovedViaToken = 18,
 }
 
+impl ToString for AuthorizationResult {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Rejected => "rejected",
+            _ => "",
+        }
+        .to_string()
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct QueryLogItem {
+pub struct RequestLogItem {
     #[serde(rename = "nwid")]
     pub network_id: NetworkId,
     #[serde(rename = "nid")]
@@ -184,4 +194,23 @@ pub struct QueryLogItem {
     pub source_hops: u8,
     #[serde(rename = "r")]
     pub result: AuthorizationResult,
+}
+
+impl ToString for RequestLogItem {
+    fn to_string(&self) -> String {
+        format!(
+            "{} {} {} ts={} v={}.{}.{},{} s={},{} {}",
+            self.controller_node_id.to_string(),
+            self.network_id.to_string(),
+            self.node_id.to_string(),
+            self.timestamp,
+            self.version.0,
+            self.version.1,
+            self.version.2,
+            self.version.3,
+            self.source_remote_endpoint.to_string(),
+            self.source_hops,
+            self.result.to_string()
+        )
+    }
 }

@@ -729,24 +729,35 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         if node.this_node_is_root() || inner.should_communicate_with(&self.identity) {
-            let mut packet = PacketBuffer::new();
-            packet.set_size(v1::HEADER_SIZE);
-            {
+            let init_packet = |packet: &mut PacketBuffer| {
+                packet.set_size(v1::HEADER_SIZE);
                 let mut f: &mut v1::message_component_structs::OkHeader = packet.append_struct_get_mut().unwrap();
                 f.verb = verbs::VL1_OK;
                 f.in_re_verb = verbs::VL1_WHOIS;
                 f.in_re_message_id = message_id.to_ne_bytes();
-            }
+            };
 
-            let mut cursor = 0;
-            while cursor < payload.len() {
-                if let Ok(zt_address) = Address::unmarshal(payload, &mut cursor) {
-                    if let Some(peer) = node.peer(zt_address) {
-                        if !packet.append_bytes((&peer.identity.to_public_bytes()).into()).is_ok() {
-                            debug_event!(host_system, "unexpected error serializing an identity into a WHOIS packet response");
-                            return PacketHandlerResult::Error;
+            let mut packet = PacketBuffer::new();
+            init_packet(&mut packet);
+
+            let mut addresses = payload.as_bytes();
+            loop {
+                if addresses.len() >= ADDRESS_SIZE {
+                    if let Some(zt_address) = Address::from_bytes(&addresses[..ADDRESS_SIZE]) {
+                        if let Some(peer) = node.peer(zt_address) {
+                            let id_bytes_tmp = peer.identity.to_public_bytes();
+                            let id_bytes = id_bytes_tmp.as_bytes();
+                            if (packet.capacity() - packet.len()) < id_bytes.len() {
+                                self.send(host_system, None, node, time_ticks, &mut packet);
+                                packet.clear();
+                                init_packet(&mut packet);
+                            }
+                            let _ = packet.append_bytes(id_bytes);
                         }
                     }
+                    addresses = &addresses[ADDRESS_SIZE..];
+                } else {
+                    break;
                 }
             }
 
