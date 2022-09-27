@@ -6,9 +6,9 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::error::InvalidFormatError;
 use crate::protocol::{ADDRESS_RESERVED_PREFIX, ADDRESS_SIZE};
 
+use zerotier_utils::error::InvalidFormatError;
 use zerotier_utils::hex;
 
 /// A unique address on the global ZeroTier VL1 network.

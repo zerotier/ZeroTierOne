@@ -191,6 +191,22 @@ impl<T, const C: usize> ArrayVec<T, C> {
     }
 }
 
+impl<T: Copy, const C: usize> ArrayVec<T, C> {
+    /// Push a slice of copyable objects, panic if capacity exceeded.
+    pub fn push_slice(&mut self, v: &[T]) {
+        let start = self.s;
+        let end = self.s + v.len();
+        if end <= C {
+            for i in start..end {
+                unsafe { self.a.get_unchecked_mut(i).write(*v.get_unchecked(i - start)) };
+            }
+            self.s = end;
+        } else {
+            panic!();
+        }
+    }
+}
+
 impl<T, const C: usize> Drop for ArrayVec<T, C> {
     #[inline(always)]
     fn drop(&mut self) {

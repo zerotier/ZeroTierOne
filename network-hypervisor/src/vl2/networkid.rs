@@ -6,12 +6,11 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::error::InvalidFormatError;
-use crate::util::marshalable::*;
-
 use zerotier_utils::buffer::Buffer;
+use zerotier_utils::error::InvalidFormatError;
 use zerotier_utils::hex;
 use zerotier_utils::hex::HEX_CHARS;
+use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
@@ -61,13 +60,13 @@ impl Marshalable for NetworkId {
     const MAX_MARSHAL_SIZE: usize = 8;
 
     #[inline(always)]
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), MarshalUnmarshalError> {
-        buf.append_u64(self.0.get()).map_err(|_| MarshalUnmarshalError::OutOfBounds)
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), UnmarshalError> {
+        buf.append_u64(self.0.get()).map_err(|_| UnmarshalError::OutOfBounds)
     }
 
     #[inline(always)]
-    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Self, MarshalUnmarshalError> {
-        Self::from_u64(buf.read_u64(cursor)?).ok_or(MarshalUnmarshalError::InvalidData)
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Self, UnmarshalError> {
+        Self::from_u64(buf.read_u64(cursor)?).ok_or(UnmarshalError::InvalidData)
     }
 }
 

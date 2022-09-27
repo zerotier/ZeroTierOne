@@ -9,7 +9,7 @@ pub struct IntervalGate<const FREQ: i64>(i64);
 impl<const FREQ: i64> Default for IntervalGate<FREQ> {
     #[inline(always)]
     fn default() -> Self {
-        Self(crate::util::NEVER_HAPPENED_TICKS)
+        Self(crate::NEVER_HAPPENED_TICKS)
     }
 }
 

@@ -3,72 +3,31 @@
 use std::error::Error;
 use std::fmt::{Debug, Display};
 
-use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
+use crate::buffer::Buffer;
 
 /// Must be larger than any object we want to use with to_bytes() or from_bytes().
 /// This hack can go away once Rust allows us to reference trait consts as generics.
 const TEMP_BUF_SIZE: usize = 8192;
-
-pub enum MarshalUnmarshalError {
-    OutOfBounds,
-    InvalidData,
-    UnsupportedVersion,
-    IoError(std::io::Error),
-}
-
-impl Display for MarshalUnmarshalError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::OutOfBounds => f.write_str("out of bounds"),
-            Self::InvalidData => f.write_str("invalid data"),
-            Self::UnsupportedVersion => f.write_str("unsupported version"),
-            Self::IoError(e) => f.write_str(e.to_string().as_str()),
-        }
-    }
-}
-
-impl Debug for MarshalUnmarshalError {
-    #[inline(always)]
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(self, f)
-    }
-}
-
-impl Error for MarshalUnmarshalError {}
-
-impl From<OutOfBoundsError> for MarshalUnmarshalError {
-    #[inline(always)]
-    fn from(_: OutOfBoundsError) -> Self {
-        Self::OutOfBounds
-    }
-}
-
-impl From<std::io::Error> for MarshalUnmarshalError {
-    #[inline(always)]
-    fn from(e: std::io::Error) -> Self {
-        Self::IoError(e)
-    }
-}
 
 /// A super-lightweight zero-allocation serialization interface.
 pub trait Marshalable: Sized {
     const MAX_MARSHAL_SIZE: usize;
 
     /// Write this object into a buffer.
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), MarshalUnmarshalError>;
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), UnmarshalError>;
 
     /// Read this object from a buffer.
     ///
     /// The supplied cursor is advanced by the number of bytes read. If an Err is returned
     /// the value of the cursor is undefined but likely points to about where the error
     /// occurred. It may also point beyond the buffer, which would indicate an overrun error.
-    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Self, MarshalUnmarshalError>;
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Self, UnmarshalError>;
 
     /// Write this marshalable entity into a buffer of the given size.
     ///
     /// This will return an Err if the buffer is too small or some other error occurs. It's just
     /// a shortcut to creating a buffer and marshaling into it.
-    fn to_buffer<const BL: usize>(&self) -> Result<Buffer<BL>, MarshalUnmarshalError> {
+    fn to_buffer<const BL: usize>(&self) -> Result<Buffer<BL>, UnmarshalError> {
         let mut tmp = Buffer::new();
         self.marshal(&mut tmp)?;
         Ok(tmp)
@@ -77,7 +36,7 @@ pub trait Marshalable: Sized {
     /// Unmarshal this object from a buffer.
     ///
     /// This is just a shortcut to calling unmarshal() with a zero cursor and then discarding the cursor.
-    fn from_buffer<const BL: usize>(buf: &Buffer<BL>) -> Result<Self, MarshalUnmarshalError> {
+    fn from_buffer<const BL: usize>(buf: &Buffer<BL>) -> Result<Self, UnmarshalError> {
         let mut tmp = 0;
         Self::unmarshal(buf, &mut tmp)
     }
@@ -90,14 +49,55 @@ pub trait Marshalable: Sized {
     }
 
     /// Unmarshal from a raw slice.
-    fn from_bytes(b: &[u8]) -> Result<Self, MarshalUnmarshalError> {
+    fn from_bytes(b: &[u8]) -> Result<Self, UnmarshalError> {
         if b.len() <= TEMP_BUF_SIZE {
             let mut tmp = Buffer::<TEMP_BUF_SIZE>::new_boxed();
             assert!(tmp.append_bytes(b).is_ok());
             let mut cursor = 0;
             Self::unmarshal(&tmp, &mut cursor)
         } else {
-            Err(MarshalUnmarshalError::OutOfBounds)
+            Err(UnmarshalError::OutOfBounds)
         }
+    }
+}
+
+pub enum UnmarshalError {
+    OutOfBounds,
+    InvalidData,
+    UnsupportedVersion,
+    IoError(std::io::Error),
+}
+
+impl Display for UnmarshalError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::OutOfBounds => f.write_str("out of bounds"),
+            Self::InvalidData => f.write_str("invalid data"),
+            Self::UnsupportedVersion => f.write_str("unsupported version"),
+            Self::IoError(e) => f.write_str(e.to_string().as_str()),
+        }
+    }
+}
+
+impl Debug for UnmarshalError {
+    #[inline(always)]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(self, f)
+    }
+}
+
+impl Error for UnmarshalError {}
+
+impl From<crate::buffer::OutOfBoundsError> for UnmarshalError {
+    #[inline(always)]
+    fn from(_: crate::buffer::OutOfBoundsError) -> Self {
+        Self::OutOfBounds
+    }
+}
+
+impl From<std::io::Error> for UnmarshalError {
+    #[inline(always)]
+    fn from(e: std::io::Error) -> Self {
+        Self::IoError(e)
     }
 }

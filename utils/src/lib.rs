@@ -3,11 +3,15 @@
 pub mod arrayvec;
 pub mod blob;
 pub mod buffer;
+pub mod dictionary;
+pub mod error;
 #[allow(unused)]
 pub mod exitcode;
+pub mod gate;
 pub mod gatherarray;
 pub mod hex;
 pub mod json;
+pub mod marshalable;
 pub mod memory;
 pub mod pool;
 pub mod ringbuffer;
@@ -19,6 +23,9 @@ pub mod reaper;
 
 #[cfg(feature = "tokio")]
 pub use tokio;
+
+/// A monotonic ticks value for "never happened" that should be lower than any initial value.
+pub const NEVER_HAPPENED_TICKS: i64 = i64::MIN / 2;
 
 /// Get milliseconds since unix epoch.
 pub fn ms_since_epoch() -> i64 {

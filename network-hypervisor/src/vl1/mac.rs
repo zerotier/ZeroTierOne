@@ -7,11 +7,10 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::error::InvalidFormatError;
-use crate::util::marshalable::*;
-
 use zerotier_utils::buffer::Buffer;
+use zerotier_utils::error::InvalidFormatError;
 use zerotier_utils::hex;
+use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
 /// An Ethernet MAC address.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -87,14 +86,14 @@ impl Marshalable for MAC {
     const MAX_MARSHAL_SIZE: usize = 6;
 
     #[inline(always)]
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), MarshalUnmarshalError> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), UnmarshalError> {
         buf.append_bytes(&self.0.get().to_be_bytes()[2..])
-            .map_err(|_| MarshalUnmarshalError::OutOfBounds)
+            .map_err(|_| UnmarshalError::OutOfBounds)
     }
 
     #[inline(always)]
-    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Self, MarshalUnmarshalError> {
-        Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(MarshalUnmarshalError::InvalidData)
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Self, UnmarshalError> {
+        Self::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(UnmarshalError::InvalidData)
     }
 }
 

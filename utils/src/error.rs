@@ -37,7 +37,7 @@ impl Debug for InvalidFormatError {
 
 impl Error for InvalidFormatError {}
 
-pub struct InvalidParameterError(pub(crate) &'static str);
+pub struct InvalidParameterError(pub &'static str);
 
 impl Display for InvalidParameterError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -53,20 +53,3 @@ impl Debug for InvalidParameterError {
 }
 
 impl Error for InvalidParameterError {}
-
-pub struct MalformedRecordError(pub(crate) &'static str);
-
-impl Display for MalformedRecordError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "InvalidParameterError: {}", self.0)
-    }
-}
-
-impl Debug for MalformedRecordError {
-    #[inline(always)]
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        <Self as Display>::fmt(self, f)
-    }
-}
-
-impl Error for MalformedRecordError {}

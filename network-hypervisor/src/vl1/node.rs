@@ -9,10 +9,7 @@ use std::time::Duration;
 
 use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
 
-use crate::error::InvalidParameterError;
 use crate::protocol::*;
-use crate::util::gate::IntervalGate;
-use crate::util::marshalable::Marshalable;
 use crate::vl1::address::Address;
 use crate::vl1::debug_event;
 use crate::vl1::endpoint::Endpoint;
@@ -24,7 +21,10 @@ use crate::vl1::rootset::RootSet;
 
 use zerotier_crypto::random;
 use zerotier_crypto::verified::Verified;
+use zerotier_utils::error::InvalidParameterError;
+use zerotier_utils::gate::IntervalGate;
 use zerotier_utils::hex;
+use zerotier_utils::marshalable::Marshalable;
 use zerotier_utils::ringbuffer::RingBuffer;
 
 /// Trait implemented by external code to handle events and provide an interface to the system or application.
@@ -820,11 +820,12 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                         packet.clear();
                         packet.set_size(v1::HEADER_SIZE);
                         let _ = packet.append_u8(verbs::VL1_WHOIS);
-                    } else {
-                        let _ = packet.append_bytes_fixed(&a.to_bytes());
                     }
+                    let _ = packet.append_bytes_fixed(&a.to_bytes());
                 }
-                root.send(host_system, None, self, time_ticks, &mut packet);
+                if packet.len() > (v1::HEADER_SIZE + 1) {
+                    root.send(host_system, None, self, time_ticks, &mut packet);
+                }
             }
         }
     }

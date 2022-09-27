@@ -11,11 +11,11 @@ use zerotier_crypto::poly1305;
 use zerotier_crypto::random;
 use zerotier_crypto::salsa::Salsa;
 use zerotier_crypto::secret::Secret;
-use zerotier_utils::buffer::BufferReader;
+use zerotier_utils::marshalable::Marshalable;
 use zerotier_utils::memory::array_range;
+use zerotier_utils::NEVER_HAPPENED_TICKS;
 
 use crate::protocol::*;
-use crate::util::marshalable::Marshalable;
 use crate::vl1::address::Address;
 use crate::vl1::debug_event;
 use crate::vl1::node::*;
@@ -69,10 +69,10 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 identity: id,
                 static_symmetric_key: SymmetricSecret::new(static_secret),
                 paths: Mutex::new(Vec::with_capacity(4)),
-                last_send_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
-                last_receive_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
-                last_forward_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
-                last_hello_reply_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
+                last_send_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
+                last_receive_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
+                last_forward_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
+                last_hello_reply_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
                 create_time_ticks: time_ticks,
                 random_ticks_offset: random::xorshift64_random() as u32,
                 message_id_counter: AtomicU64::new(random::xorshift64_random()),
@@ -279,37 +279,64 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             }
         };
 
-        let max_fragment_size = if path.endpoint.requires_fragmentation() {
-            UDP_DEFAULT_MTU
-        } else {
-            usize::MAX
-        };
-        let flags_cipher_hops = if packet.len() > max_fragment_size {
-            v1::HEADER_FLAG_FRAGMENTED | v1::CIPHER_AES_GMAC_SIV
-        } else {
-            v1::CIPHER_AES_GMAC_SIV
-        };
+        let max_fragment_size = path.endpoint.max_fragment_size();
+        if self.remote_node_info.read().remote_protocol_version >= 12 {
+            let flags_cipher_hops = if packet.len() > max_fragment_size {
+                v1::HEADER_FLAG_FRAGMENTED | v1::CIPHER_AES_GMAC_SIV
+            } else {
+                v1::CIPHER_AES_GMAC_SIV
+            };
 
-        let mut aes_gmac_siv = self.static_symmetric_key.aes_gmac_siv.get();
-        aes_gmac_siv.encrypt_init(&self.next_message_id().to_ne_bytes());
-        aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(
-            self.identity.address,
-            node.identity.address,
-            flags_cipher_hops,
-        ));
-        if let Ok(payload) = packet.as_bytes_starting_at_mut(v1::HEADER_SIZE) {
-            aes_gmac_siv.encrypt_first_pass(payload);
-            aes_gmac_siv.encrypt_first_pass_finish();
-            aes_gmac_siv.encrypt_second_pass_in_place(payload);
-            let tag = aes_gmac_siv.encrypt_second_pass_finish();
+            let mut aes_gmac_siv = self.static_symmetric_key.aes_gmac_siv.get();
+            aes_gmac_siv.encrypt_init(&self.next_message_id().to_ne_bytes());
+            aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(
+                self.identity.address,
+                node.identity.address,
+                flags_cipher_hops,
+            ));
+            let tag = if let Ok(payload) = packet.as_bytes_starting_at_mut(v1::HEADER_SIZE) {
+                aes_gmac_siv.encrypt_first_pass(payload);
+                aes_gmac_siv.encrypt_first_pass_finish();
+                aes_gmac_siv.encrypt_second_pass_in_place(payload);
+                aes_gmac_siv.encrypt_second_pass_finish()
+            } else {
+                return false;
+            };
+
             let header = packet.struct_mut_at::<v1::PacketHeader>(0).unwrap();
-            header.id = *array_range::<u8, 16, 0, 8>(tag);
+            header.id.copy_from_slice(&tag[0..8]);
             header.dest = self.identity.address.to_bytes();
             header.src = node.identity.address.to_bytes();
             header.flags_cipher_hops = flags_cipher_hops;
-            header.mac = *array_range::<u8, 16, 8, 8>(tag);
+            header.mac.copy_from_slice(&tag[8..16]);
         } else {
-            return false;
+            let packet_len = packet.len();
+            let flags_cipher_hops = if packet.len() > max_fragment_size {
+                v1::HEADER_FLAG_FRAGMENTED | v1::CIPHER_SALSA2012_POLY1305
+            } else {
+                v1::CIPHER_SALSA2012_POLY1305
+            };
+
+            let (mut salsa, poly1305_otk) = salsa_poly_create(
+                &self.static_symmetric_key,
+                {
+                    let header = packet.struct_mut_at::<v1::PacketHeader>(0).unwrap();
+                    header.id = self.next_message_id().to_ne_bytes();
+                    header.dest = self.identity.address.to_bytes();
+                    header.src = node.identity.address.to_bytes();
+                    header.flags_cipher_hops = flags_cipher_hops;
+                    header
+                },
+                packet_len,
+            );
+
+            let tag = if let Ok(payload) = packet.as_bytes_starting_at_mut(v1::HEADER_SIZE) {
+                salsa.crypt_in_place(payload);
+                poly1305::compute(&poly1305_otk, payload)
+            } else {
+                return false;
+            };
+            packet.as_bytes_mut()[v1::MAC_FIELD_INDEX..(v1::MAC_FIELD_INDEX + 8)].copy_from_slice(&tag[0..8]);
         }
 
         self.internal_send(
@@ -374,11 +401,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             }
         };
 
-        let max_fragment_size = if destination.requires_fragmentation() {
-            UDP_DEFAULT_MTU
-        } else {
-            usize::MAX
-        };
+        let max_fragment_size = destination.max_fragment_size();
         let time_ticks = host_system.time_ticks();
 
         let mut packet = PacketBuffer::new();
@@ -401,7 +424,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             }
 
             debug_assert_eq!(packet.len(), 41);
-            assert!(packet.append_bytes((&node.identity.to_public_bytes()).into()).is_ok());
+            assert!(node.identity.write_public(&mut packet, self.identity.p384.is_none()).is_ok());
 
             let (_, poly1305_key) = salsa_poly_create(
                 &self.static_symmetric_key,
@@ -575,7 +598,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
 
         let mut cursor = 0;
         if let Ok(hello_fixed_headers) = payload.read_struct::<v1::message_component_structs::HelloFixedHeaderFields>(&mut cursor) {
-            if let Ok(identity) = Identity::read_bytes(&mut BufferReader::new(payload, &mut cursor)) {
+            if let Ok(identity) = Identity::unmarshal(payload, &mut cursor) {
                 if identity.eq(&self.identity) {
                     {
                         let mut remote_node_info = self.remote_node_info.write();
@@ -698,15 +721,22 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                     verbs::VL1_WHOIS => {
                         if node.is_peer_root(self) {
                             while cursor < payload.len() {
-                                if let Ok(received_identity) = Identity::read_bytes(&mut BufferReader::new(payload, &mut cursor)) {
+                                let r = Identity::unmarshal(payload, &mut cursor);
+                                if let Ok(received_identity) = r {
                                     debug_event!(
                                         host_system,
-                                        "[vl1] {} OK(WHOIS): {}",
+                                        "[vl1] {} OK(WHOIS): new identity: {}",
                                         self.identity.address.to_string(),
                                         received_identity.to_string()
                                     );
                                     node.handle_incoming_identity(host_system, inner, received_identity, time_ticks, true);
                                 } else {
+                                    debug_event!(
+                                        host_system,
+                                        "[vl1] {} OK(WHOIS): bad identity: {}",
+                                        self.identity.address.to_string(),
+                                        r.err().unwrap().to_string()
+                                    );
                                     break;
                                 }
                             }
@@ -750,14 +780,14 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 if addresses.len() >= ADDRESS_SIZE {
                     if let Some(zt_address) = Address::from_bytes(&addresses[..ADDRESS_SIZE]) {
                         if let Some(peer) = node.peer(zt_address) {
-                            let id_bytes_tmp = peer.identity.to_public_bytes();
-                            let id_bytes = id_bytes_tmp.as_bytes();
-                            if (packet.capacity() - packet.len()) < id_bytes.len() {
-                                self.send(host_system, None, node, time_ticks, &mut packet);
-                                packet.clear();
-                                init_packet(&mut packet);
+                            if let Ok(id_bytes) = peer.identity.to_public_bytes(self.identity.p384.is_none()) {
+                                if (packet.capacity() - packet.len()) < id_bytes.len() {
+                                    self.send(host_system, None, node, time_ticks, &mut packet);
+                                    packet.clear();
+                                    init_packet(&mut packet);
+                                }
+                                let _ = packet.append_bytes(id_bytes.as_bytes());
                             }
-                            let _ = packet.append_bytes(id_bytes);
                         }
                     }
                     addresses = &addresses[ADDRESS_SIZE..];

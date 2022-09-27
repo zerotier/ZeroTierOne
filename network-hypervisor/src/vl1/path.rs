@@ -12,6 +12,7 @@ use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::*;
 
 use zerotier_crypto::random;
+use zerotier_utils::NEVER_HAPPENED_TICKS;
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
 
@@ -46,8 +47,8 @@ impl<HostSystemImpl: HostSystem> Path<HostSystemImpl> {
             endpoint,
             local_socket,
             local_interface,
-            last_send_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
-            last_receive_time_ticks: AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS),
+            last_send_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
+            last_receive_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             create_time_ticks: time_ticks,
             fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, PacketIdHasher(random::xorshift64_random()))),
         }

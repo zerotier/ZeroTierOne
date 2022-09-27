@@ -3,12 +3,12 @@
 use std::collections::BTreeSet;
 use std::io::Write;
 
-use crate::util::marshalable::*;
 use crate::vl1::identity::{Identity, IDENTITY_MAX_SIGNATURE_SIZE};
 use crate::vl1::Endpoint;
 
 use zerotier_utils::arrayvec::ArrayVec;
-use zerotier_utils::buffer::{Buffer, BufferReader};
+use zerotier_utils::buffer::Buffer;
+use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
 use zerotier_crypto::verified::Verified;
 
@@ -98,43 +98,6 @@ impl RootSet {
         //let rs = include_bytes!("../../default-rootset/test-root.bin");
         let rs = Self::unmarshal(&Buffer::from(rs), &mut cursor).unwrap();
         rs.verify().unwrap()
-    }
-
-    fn marshal_internal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_signatures: bool) -> Result<(), MarshalUnmarshalError> {
-        buf.append_u8(0)?; // version byte for future use
-        buf.append_varint(self.name.as_bytes().len() as u64)?;
-        buf.append_bytes(self.name.as_bytes())?;
-        if self.url.is_some() {
-            let url = self.url.as_ref().unwrap().as_bytes();
-            buf.append_varint(url.len() as u64)?;
-            buf.append_bytes(url)?;
-        } else {
-            buf.append_varint(0)?;
-        }
-        buf.append_varint(self.revision)?;
-        buf.append_varint(self.members.len() as u64)?;
-        for m in self.members.iter() {
-            buf.append_bytes((&m.identity.to_public_bytes()).into())?;
-            if m.endpoints.is_some() {
-                let endpoints = m.endpoints.as_ref().unwrap();
-                buf.append_varint(endpoints.len() as u64)?;
-                for a in endpoints.iter() {
-                    a.marshal(buf)?;
-                }
-            } else {
-                buf.append_varint(0)?;
-            }
-            if include_signatures {
-                buf.append_varint(m.signature.len() as u64)?;
-                buf.append_bytes(m.signature.as_ref())?;
-            }
-            buf.append_varint(0)?; // flags, currently always 0
-            buf.append_u8(m.priority)?;
-            buf.append_u8(m.protocol_version)?;
-            buf.append_varint(0)?; // size of additional fields for future use
-        }
-        buf.append_varint(0)?; // size of additional fields for future use
-        Ok(())
     }
 
     /// Internal method to marshal without signatures for use during sign and verify.
@@ -254,20 +217,57 @@ impl RootSet {
             false
         }
     }
+
+    fn marshal_internal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_signatures: bool) -> Result<(), UnmarshalError> {
+        buf.append_u8(0)?; // version byte for future use
+        buf.append_varint(self.name.as_bytes().len() as u64)?;
+        buf.append_bytes(self.name.as_bytes())?;
+        if self.url.is_some() {
+            let url = self.url.as_ref().unwrap().as_bytes();
+            buf.append_varint(url.len() as u64)?;
+            buf.append_bytes(url)?;
+        } else {
+            buf.append_varint(0)?;
+        }
+        buf.append_varint(self.revision)?;
+        buf.append_varint(self.members.len() as u64)?;
+        for m in self.members.iter() {
+            m.identity.marshal(buf)?;
+            if m.endpoints.is_some() {
+                let endpoints = m.endpoints.as_ref().unwrap();
+                buf.append_varint(endpoints.len() as u64)?;
+                for a in endpoints.iter() {
+                    a.marshal(buf)?;
+                }
+            } else {
+                buf.append_varint(0)?;
+            }
+            if include_signatures {
+                buf.append_varint(m.signature.len() as u64)?;
+                buf.append_bytes(m.signature.as_ref())?;
+            }
+            buf.append_varint(0)?; // flags, currently always 0
+            buf.append_u8(m.priority)?;
+            buf.append_u8(m.protocol_version)?;
+            buf.append_varint(0)?; // size of additional fields for future use
+        }
+        buf.append_varint(0)?; // size of additional fields for future use
+        Ok(())
+    }
 }
 
 impl Marshalable for RootSet {
     const MAX_MARSHAL_SIZE: usize = crate::protocol::v1::SIZE_MAX;
 
     #[inline(always)]
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), MarshalUnmarshalError> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), UnmarshalError> {
         self.marshal_internal(buf, true)
     }
 
-    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Self, MarshalUnmarshalError> {
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Self, UnmarshalError> {
         let mut rc = Self::new(String::new(), None, 0);
         if buf.read_u8(cursor)? != 0 {
-            return Err(MarshalUnmarshalError::UnsupportedVersion);
+            return Err(UnmarshalError::UnsupportedVersion);
         }
 
         let name_len = buf.read_varint(cursor)?;
@@ -283,7 +283,7 @@ impl Marshalable for RootSet {
         let member_count = buf.read_varint(cursor)?;
         for _ in 0..member_count {
             let mut m = Root {
-                identity: Identity::read_bytes(&mut BufferReader::new(buf, cursor)).map_err(|e| MarshalUnmarshalError::IoError(e))?,
+                identity: Identity::unmarshal(buf, cursor)?,
                 endpoints: None,
                 signature: ArrayVec::new(),
                 priority: 0,
@@ -313,7 +313,7 @@ impl Marshalable for RootSet {
 
         *cursor += buf.read_varint(cursor)? as usize;
         if *cursor > buf.len() {
-            return Err(MarshalUnmarshalError::OutOfBounds);
+            return Err(UnmarshalError::OutOfBounds);
         }
 
         rc.members.sort();

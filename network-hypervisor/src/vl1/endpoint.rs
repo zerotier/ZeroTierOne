@@ -6,13 +6,13 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::error::InvalidFormatError;
-use crate::util::marshalable::*;
 use crate::vl1::identity::IDENTITY_FINGERPRINT_SIZE;
 use crate::vl1::inetaddress::InetAddress;
 use crate::vl1::{Address, MAC};
 
 use zerotier_utils::buffer::Buffer;
+use zerotier_utils::error::InvalidFormatError;
+use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
 pub const TYPE_NIL: u8 = 0;
 pub const TYPE_ZEROTIER: u8 = 1;
@@ -118,11 +118,14 @@ impl Endpoint {
         }
     }
 
-    /// Returns true if this is an endpoint type that requires that large packets be fragmented.
-    pub fn requires_fragmentation(&self) -> bool {
+    /// Get the maximum fragment size for this endpoint or usize::MAX if there is no hard limit.
+    #[inline(always)]
+    pub fn max_fragment_size(&self) -> usize {
         match self {
-            Endpoint::Icmp(_) | Endpoint::IpUdp(_) | Endpoint::Ethernet(_) | Endpoint::Bluetooth(_) | Endpoint::WifiDirect(_) => true,
-            _ => false,
+            Endpoint::Icmp(_) | Endpoint::IpUdp(_) | Endpoint::Ethernet(_) | Endpoint::Bluetooth(_) | Endpoint::WifiDirect(_) => {
+                crate::protocol::UDP_DEFAULT_MTU
+            }
+            _ => usize::MAX,
         }
     }
 }
@@ -130,7 +133,7 @@ impl Endpoint {
 impl Marshalable for Endpoint {
     const MAX_MARSHAL_SIZE: usize = MAX_MARSHAL_SIZE;
 
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), MarshalUnmarshalError> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), UnmarshalError> {
         match self {
             Endpoint::Nil => {
                 buf.append_u8(16 + TYPE_NIL)?;
@@ -189,7 +192,7 @@ impl Marshalable for Endpoint {
         Ok(())
     }
 
-    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Endpoint, MarshalUnmarshalError> {
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Endpoint, UnmarshalError> {
         let type_byte = buf.read_u8(cursor)?;
         if type_byte < 16 {
             if type_byte == 4 {
@@ -205,13 +208,13 @@ impl Marshalable for Endpoint {
                     u16::from_be_bytes(b[16..18].try_into().unwrap()),
                 )))
             } else {
-                Err(MarshalUnmarshalError::InvalidData)
+                Err(UnmarshalError::InvalidData)
             }
         } else {
             match type_byte - 16 {
                 TYPE_NIL => Ok(Endpoint::Nil),
                 TYPE_ZEROTIER => {
-                    let zt = Address::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(MarshalUnmarshalError::InvalidData)?;
+                    let zt = Address::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(UnmarshalError::InvalidData)?;
                     Ok(Endpoint::ZeroTier(
                         zt,
                         buf.read_bytes_fixed::<IDENTITY_FINGERPRINT_SIZE>(cursor)?.clone(),
@@ -230,10 +233,10 @@ impl Marshalable for Endpoint {
                     buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?.to_vec(),
                 )),
                 TYPE_ZEROTIER_ENCAP => {
-                    let zt = Address::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(MarshalUnmarshalError::InvalidData)?;
+                    let zt = Address::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(UnmarshalError::InvalidData)?;
                     Ok(Endpoint::ZeroTierEncap(zt, buf.read_bytes_fixed(cursor)?.clone()))
                 }
-                _ => Err(MarshalUnmarshalError::InvalidData),
+                _ => Err(UnmarshalError::InvalidData),
             }
         }
     }

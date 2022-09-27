@@ -6,9 +6,10 @@ use clap::ArgMatches;
 
 use crate::{exitcode, Flags};
 
-use zerotier_network_hypervisor::util::marshalable::Marshalable;
 use zerotier_network_hypervisor::vl1::RootSet;
+
 use zerotier_utils::json::to_json_pretty;
+use zerotier_utils::marshalable::Marshalable;
 
 pub fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
     match cmd_args.subcommand() {

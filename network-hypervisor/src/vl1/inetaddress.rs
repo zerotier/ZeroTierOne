@@ -9,11 +9,9 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::util::marshalable::*;
-
-use crate::error::InvalidFormatError;
-
 use zerotier_utils::buffer::Buffer;
+use zerotier_utils::error::{InvalidFormatError, InvalidParameterError};
+use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
 #[cfg(windows)]
 use winapi::um::winsock2;
@@ -91,7 +89,7 @@ impl ToSocketAddrs for InetAddress {
 }
 
 impl TryInto<IpAddr> for InetAddress {
-    type Error = crate::error::InvalidParameterError;
+    type Error = InvalidParameterError;
 
     #[inline(always)]
     fn try_into(self) -> Result<IpAddr, Self::Error> {
@@ -100,20 +98,20 @@ impl TryInto<IpAddr> for InetAddress {
 }
 
 impl TryInto<IpAddr> for &InetAddress {
-    type Error = crate::error::InvalidParameterError;
+    type Error = InvalidParameterError;
 
     #[inline(always)]
     fn try_into(self) -> Result<IpAddr, Self::Error> {
         match unsafe { self.sa.sa_family } {
             AF_INET => Ok(IpAddr::V4(Ipv4Addr::from(unsafe { self.sin.sin_addr.s_addr.to_ne_bytes() }))),
             AF_INET6 => Ok(IpAddr::V6(Ipv6Addr::from(unsafe { self.sin6.sin6_addr.s6_addr }))),
-            _ => Err(crate::error::InvalidParameterError("not an IP address")),
+            _ => Err(InvalidParameterError("not an IP address")),
         }
     }
 }
 
 impl TryInto<Ipv4Addr> for InetAddress {
-    type Error = crate::error::InvalidParameterError;
+    type Error = InvalidParameterError;
 
     #[inline(always)]
     fn try_into(self) -> Result<Ipv4Addr, Self::Error> {
@@ -122,19 +120,19 @@ impl TryInto<Ipv4Addr> for InetAddress {
 }
 
 impl TryInto<Ipv4Addr> for &InetAddress {
-    type Error = crate::error::InvalidParameterError;
+    type Error = InvalidParameterError;
 
     #[inline(always)]
     fn try_into(self) -> Result<Ipv4Addr, Self::Error> {
         match unsafe { self.sa.sa_family } {
             AF_INET => Ok(Ipv4Addr::from(unsafe { self.sin.sin_addr.s_addr.to_ne_bytes() })),
-            _ => Err(crate::error::InvalidParameterError("not an IPv4 address")),
+            _ => Err(InvalidParameterError("not an IPv4 address")),
         }
     }
 }
 
 impl TryInto<Ipv6Addr> for InetAddress {
-    type Error = crate::error::InvalidParameterError;
+    type Error = InvalidParameterError;
 
     #[inline(always)]
     fn try_into(self) -> Result<Ipv6Addr, Self::Error> {
@@ -143,19 +141,19 @@ impl TryInto<Ipv6Addr> for InetAddress {
 }
 
 impl TryInto<Ipv6Addr> for &InetAddress {
-    type Error = crate::error::InvalidParameterError;
+    type Error = InvalidParameterError;
 
     #[inline(always)]
     fn try_into(self) -> Result<Ipv6Addr, Self::Error> {
         match unsafe { self.sa.sa_family } {
             AF_INET6 => Ok(Ipv6Addr::from(unsafe { self.sin6.sin6_addr.s6_addr })),
-            _ => Err(crate::error::InvalidParameterError("not an IPv6 address")),
+            _ => Err(InvalidParameterError("not an IPv6 address")),
         }
     }
 }
 
 impl TryInto<SocketAddr> for InetAddress {
-    type Error = crate::error::InvalidParameterError;
+    type Error = InvalidParameterError;
 
     #[inline(always)]
     fn try_into(self) -> Result<SocketAddr, Self::Error> {
@@ -164,7 +162,7 @@ impl TryInto<SocketAddr> for InetAddress {
 }
 
 impl TryInto<SocketAddr> for &InetAddress {
-    type Error = crate::error::InvalidParameterError;
+    type Error = InvalidParameterError;
 
     #[inline(always)]
     fn try_into(self) -> Result<SocketAddr, Self::Error> {
@@ -180,14 +178,14 @@ impl TryInto<SocketAddr> for &InetAddress {
                     0,
                     0,
                 ))),
-                _ => Err(crate::error::InvalidParameterError("not an IP address")),
+                _ => Err(InvalidParameterError("not an IP address")),
             }
         }
     }
 }
 
 impl TryInto<SocketAddrV4> for InetAddress {
-    type Error = crate::error::InvalidParameterError;
+    type Error = InvalidParameterError;
 
     #[inline(always)]
     fn try_into(self) -> Result<SocketAddrV4, Self::Error> {
@@ -196,7 +194,7 @@ impl TryInto<SocketAddrV4> for InetAddress {
 }
 
 impl TryInto<SocketAddrV4> for &InetAddress {
-    type Error = crate::error::InvalidParameterError;
+    type Error = InvalidParameterError;
 
     #[inline(always)]
     fn try_into(self) -> Result<SocketAddrV4, Self::Error> {
@@ -206,14 +204,14 @@ impl TryInto<SocketAddrV4> for &InetAddress {
                     Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()),
                     u16::from_be(self.sin.sin_port as u16),
                 )),
-                _ => Err(crate::error::InvalidParameterError("not an IPv4 address")),
+                _ => Err(InvalidParameterError("not an IPv4 address")),
             }
         }
     }
 }
 
 impl TryInto<SocketAddrV6> for InetAddress {
-    type Error = crate::error::InvalidParameterError;
+    type Error = InvalidParameterError;
 
     #[inline(always)]
     fn try_into(self) -> Result<SocketAddrV6, Self::Error> {
@@ -222,7 +220,7 @@ impl TryInto<SocketAddrV6> for InetAddress {
 }
 
 impl TryInto<SocketAddrV6> for &InetAddress {
-    type Error = crate::error::InvalidParameterError;
+    type Error = InvalidParameterError;
 
     #[inline(always)]
     fn try_into(self) -> Result<SocketAddrV6, Self::Error> {
@@ -234,7 +232,7 @@ impl TryInto<SocketAddrV6> for &InetAddress {
                     0,
                     0,
                 )),
-                _ => Err(crate::error::InvalidParameterError("not an IPv6 address")),
+                _ => Err(InvalidParameterError("not an IPv6 address")),
             }
         }
     }
@@ -783,7 +781,7 @@ impl InetAddress {
 impl Marshalable for InetAddress {
     const MAX_MARSHAL_SIZE: usize = 19;
 
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), MarshalUnmarshalError> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), UnmarshalError> {
         unsafe {
             match self.sa.sa_family as AddressFamilyType {
                 AF_INET => {
@@ -810,7 +808,7 @@ impl Marshalable for InetAddress {
         }
     }
 
-    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<InetAddress, MarshalUnmarshalError> {
+    fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<InetAddress, UnmarshalError> {
         let t = buf.read_u8(cursor)?;
         if t == 4 {
             let b: &[u8; 6] = buf.read_bytes_fixed(cursor)?;

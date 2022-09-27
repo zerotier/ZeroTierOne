@@ -3,8 +3,7 @@
 use std::collections::BTreeMap;
 use std::io::Write;
 
-use zerotier_utils::hex;
-use zerotier_utils::hex::HEX_CHARS;
+use crate::hex;
 
 const BOOL_TRUTH: &str = "1tTyY";
 
@@ -55,8 +54,8 @@ fn append_printable(s: &mut String, b: &[u8]) {
         } else {
             s.push('\\');
             s.push('x');
-            s.push(HEX_CHARS[((c as u8) >> 4) as usize] as char);
-            s.push(HEX_CHARS[((c as u8) & 0xf) as usize] as char);
+            s.push(hex::HEX_CHARS[((c as u8) >> 4) as usize] as char);
+            s.push(hex::HEX_CHARS[((c as u8) & 0xf) as usize] as char);
         }
     }
 }
@@ -210,165 +209,5 @@ impl ToString for Dictionary {
             s.push('\n');
         }
         s
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[derive(PartialEq, Eq, Clone, Debug)]
-    enum Type {
-        String,
-        Bytes,
-        U64,
-        Bool,
-    }
-
-    type TypeMap = HashMap<String, Type>;
-
-    use super::{Dictionary, BOOL_TRUTH};
-    use std::collections::HashMap;
-
-    fn randstring(len: u8) -> String {
-        (0..len)
-            .map(|_| (rand::random::<u8>() % 26) + 'a' as u8)
-            .map(|c| {
-                if rand::random::<bool>() {
-                    (c as char).to_ascii_uppercase()
-                } else {
-                    c as char
-                }
-            })
-            .map(|c| c.to_string())
-            .collect::<Vec<String>>()
-            .join("")
-    }
-
-    fn make_dictionary() -> (Dictionary, TypeMap) {
-        let mut d = Dictionary::new();
-        let mut tm = TypeMap::new();
-
-        for _ in 0..(rand::random::<usize>() % 20) + 1 {
-            // NOTE: just doing this twice because I want to keep the code a little cleaner.
-            let selection = rand::random::<usize>() % 4;
-
-            let key = randstring(10);
-
-            // set the key
-            match selection {
-                0 => d.set_str(&key, &randstring(10)),
-                1 => d.set_u64(&key, rand::random()),
-                2 => d.set_bytes(
-                    &key,
-                    (0..((rand::random::<usize>() % 10) + 1))
-                        .into_iter()
-                        .map(|_| rand::random())
-                        .collect::<Vec<u8>>(),
-                ),
-                3 => d.set_bool(&key, rand::random::<bool>()),
-                _ => unreachable!(),
-            }
-
-            match selection {
-                0 => tm.insert(key, Type::String),
-                1 => tm.insert(key, Type::U64),
-                2 => tm.insert(key, Type::Bytes),
-                3 => tm.insert(key, Type::Bool),
-                _ => unreachable!(),
-            };
-        }
-
-        (d, tm)
-    }
-
-    #[test]
-    fn dictionary_basic() {
-        let mut d = Dictionary::new();
-        d.set_str("foo", "bar");
-        d.set_u64("bar", 0xfeedcafebabebeef);
-        d.set_bytes("baz", vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
-        d.set_bool("lala", true);
-        d.set_bool("haha", false);
-        let bytes = d.to_bytes();
-        let d2 = Dictionary::from_bytes(bytes.as_slice()).unwrap();
-        assert!(d.eq(&d2));
-    }
-
-    #[test]
-    fn dictionary_to_string() {
-        for _ in 0..1000 {
-            let (d, _) = make_dictionary();
-            assert_ne!(d.to_string().len(), 0)
-        }
-    }
-
-    #[test]
-    fn dictionary_clear() {
-        for _ in 0..1000 {
-            let (mut d, _) = make_dictionary();
-            assert_ne!(d.len(), 0);
-            assert!(!d.is_empty());
-            d.clear();
-            assert!(d.is_empty());
-            assert_eq!(d.len(), 0);
-        }
-    }
-
-    #[test]
-    fn dictionary_io() {
-        for _ in 0..1000 {
-            let (d, _) = make_dictionary();
-            assert_ne!(d.len(), 0);
-            assert!(!d.is_empty());
-
-            let mut v = Vec::new();
-            let mut cursor = std::io::Cursor::new(&mut v);
-            assert!(d.write_to(&mut cursor).is_ok());
-            drop(cursor);
-            assert!(!v.is_empty());
-
-            let d2 = super::Dictionary::from_bytes(v.as_slice());
-            assert!(d2.is_some());
-            let d2 = d2.unwrap();
-            assert_eq!(d, d2);
-
-            let d2 = super::Dictionary::from_bytes(&d.to_bytes());
-            assert!(d2.is_some());
-            let d2 = d2.unwrap();
-            assert_eq!(d, d2);
-        }
-    }
-
-    #[test]
-    fn dictionary_accessors() {
-        for _ in 0..1000 {
-            let (d, tm) = make_dictionary();
-
-            for (k, v) in d.iter() {
-                match tm.get(k).unwrap() {
-                    Type::String => {
-                        let v2 = d.get_str(k);
-                        assert!(v2.is_some());
-                        assert_eq!(String::from_utf8(v.to_vec()).unwrap(), String::from(v2.unwrap()));
-                    }
-                    Type::Bytes => {
-                        let v2 = d.get_bytes(k);
-                        assert!(v2.is_some());
-                        assert_eq!(v, v2.unwrap());
-                    }
-                    Type::Bool => {
-                        let v2 = d.get_bool(k);
-                        assert!(v2.is_some());
-                        // FIXME move this lettering to a constant
-                        assert_eq!(BOOL_TRUTH.contains(*v.iter().nth(0).unwrap() as char), v2.unwrap());
-                    }
-                    Type::U64 => {
-                        let v2 = d.get_u64(k);
-                        assert!(v2.is_some());
-
-                        assert_eq!(u64::from_str_radix(d.get_str(k).unwrap(), 16).unwrap(), v2.unwrap());
-                    }
-                }
-            }
-        }
     }
 }
