@@ -202,6 +202,7 @@ struct BackgroundTaskIntervals {
 
 struct WhoisQueueItem<HostSystemImpl: HostSystem> {
     waiting_packets: RingBuffer<(Weak<Path<HostSystemImpl>>, PooledPacketBuffer), WHOIS_MAX_WAITING_PACKETS>,
+    last_retry_time: i64,
     retry_count: u16,
 }
 
@@ -596,8 +597,11 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                 let mut whois_queue = self.whois_queue.lock();
                 whois_queue.retain(|_, qi| qi.retry_count <= WHOIS_RETRY_COUNT_MAX);
                 for (address, qi) in whois_queue.iter_mut() {
-                    qi.retry_count += 1;
-                    need_whois.push(*address);
+                    if (time_ticks - qi.last_retry_time) >= WHOIS_RETRY_INTERVAL {
+                        qi.retry_count += 1;
+                        qi.last_retry_time = time_ticks;
+                        need_whois.push(*address);
+                    }
                 }
                 need_whois
             };
@@ -791,15 +795,18 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         debug_event!(host_system, "[vl1] [v1] WHOIS {}", address.to_string());
         {
             let mut whois_queue = self.whois_queue.lock();
-            let qi = whois_queue
-                .entry(address)
-                .or_insert_with(|| WhoisQueueItem::<HostSystemImpl> { waiting_packets: RingBuffer::new(), retry_count: 0 });
+            let qi = whois_queue.entry(address).or_insert_with(|| WhoisQueueItem::<HostSystemImpl> {
+                waiting_packets: RingBuffer::new(),
+                last_retry_time: 0,
+                retry_count: 0,
+            });
             if let Some(p) = waiting_packet {
                 qi.waiting_packets.add(p);
             }
             if qi.retry_count > 0 {
                 return;
             } else {
+                qi.last_retry_time = time_ticks;
                 qi.retry_count += 1;
             }
         }

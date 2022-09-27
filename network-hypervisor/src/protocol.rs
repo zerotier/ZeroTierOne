@@ -425,7 +425,7 @@ pub(crate) mod v1 {
 pub(crate) const PACKET_RESPONSE_COUNTER_DELTA_MAX: u64 = 256;
 
 /// Frequency for WHOIS retries in milliseconds.
-pub(crate) const WHOIS_RETRY_INTERVAL: i64 = 1500;
+pub(crate) const WHOIS_RETRY_INTERVAL: i64 = 3000;
 
 /// Maximum number of WHOIS retries
 pub(crate) const WHOIS_RETRY_COUNT_MAX: u16 = 3;
