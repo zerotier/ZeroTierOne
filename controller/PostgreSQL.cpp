@@ -34,7 +34,7 @@ using json = nlohmann::json;
 
 namespace {
 
-static const int DB_MINIMUM_VERSION = 38;
+static const int DB_MINIMUM_VERSION = 20;
 
 static const char *_timestr()
 {
