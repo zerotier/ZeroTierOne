@@ -442,13 +442,9 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 				exit(7);
 			}
 
-			r = w.exec_params("SELECT oc.client_id, oc.authorization_endpoint, oc.issuer, oc.sso_impl_version "
-							  "FROM ztc_network n "
-							  "INNER JOIN ztc_network_oidc_config noc "
-							  "  ON noc.network_id = n.id "
-							  "INNER JOIN ztc_oidc_config oc "
-							  "  ON noc.client_id = oc.client_id "
-							  "WHERE n.id = $1 AND n.sso_enabled = true", networkId);
+			r = w.exec_params("SELECT org.client_id, org.authorization_endpoint, org.issuer, org.sso_impl_version "
+				"FROM ztc_network AS nw, ztc_org AS org "
+				"WHERE nw.id = $1 AND nw.sso_enabled = true AND org.owner_id = nw.owner_id", networkId);
 		
 			std::string client_id = "";
 			std::string authorization_endpoint = "";
