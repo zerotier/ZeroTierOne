@@ -16,9 +16,6 @@ use crate::settings::VL1Settings;
 use crate::sys::udp::{udp_test_bind, BoundUdpPort, UdpPacketHandler};
 use crate::LocalSocket;
 
-/// This can be adjusted to trade thread count for maximum I/O concurrency.
-const MAX_PER_SOCKET_CONCURRENCY: usize = 8;
-
 /// Update UDP bindings every this many seconds.
 const UPDATE_UDP_BINDINGS_EVERY_SECS: usize = 10;
 

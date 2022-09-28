@@ -1,20 +1,24 @@
 use std::error::Error;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::str::FromStr;
 
 use async_trait::async_trait;
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use zerotier_network_hypervisor::vl1::Address;
+use zerotier_network_hypervisor::vl1::{Address, Identity, NodeStorage};
 use zerotier_network_hypervisor::vl2::NetworkId;
+
+use zerotier_utils::io::{fs_restrict_permissions, read_limit};
 use zerotier_utils::json::{json_patch, to_json_pretty};
 use zerotier_utils::tokio::fs;
 use zerotier_utils::tokio::io::ErrorKind;
 
 use crate::database::Database;
 use crate::model::*;
+
+const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
 
 pub struct FileDatabase {
     base: PathBuf,
@@ -30,11 +34,11 @@ fn member_path(base: &PathBuf, network_id: NetworkId, member_id: Address) -> Pat
 }
 
 impl FileDatabase {
-    pub async fn new<P: AsRef<Path>>(base_path: P) -> Arc<Self> {
+    pub async fn new<P: AsRef<Path>>(base_path: P) -> Self {
         let base: PathBuf = base_path.as_ref().into();
         let cache: PathBuf = base_path.as_ref().join("cache");
         let _ = fs::create_dir_all(&cache).await;
-        Arc::new(Self { base, cache })
+        Self { base, cache }
     }
 
     /// Merge an object with its cached instance and save the result to the 'cache' path.
@@ -59,11 +63,31 @@ impl FileDatabase {
     }
 }
 
+impl NodeStorage for FileDatabase {
+    fn load_node_identity(&self) -> Option<Identity> {
+        let id_data = read_limit(self.base.join(IDENTITY_SECRET_FILENAME), 4096);
+        if id_data.is_err() {
+            return None;
+        }
+        let id_data = Identity::from_str(String::from_utf8_lossy(id_data.unwrap().as_slice()).as_ref());
+        if id_data.is_err() {
+            return None;
+        }
+        Some(id_data.unwrap())
+    }
+
+    fn save_node_identity(&self, id: &Identity) {
+        assert!(id.secret.is_some());
+        let id_secret_str = id.to_secret_string();
+        let secret_path = self.base.join(IDENTITY_SECRET_FILENAME);
+        assert!(std::fs::write(&secret_path, id_secret_str.as_bytes()).is_ok());
+        assert!(fs_restrict_permissions(&secret_path));
+    }
+}
+
 #[async_trait]
 impl Database for FileDatabase {
-    type Error = Box<dyn Error>;
-
-    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Self::Error> {
+    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error>> {
         let r = fs::read(network_path(&self.base, id)).await;
         if let Ok(raw) = r {
             let r = serde_json::from_slice::<Network>(raw.as_slice());
@@ -83,7 +107,7 @@ impl Database for FileDatabase {
         }
     }
 
-    async fn save_network(&self, obj: &Network) -> Result<(), Self::Error> {
+    async fn save_network(&self, obj: &Network) -> Result<(), Box<dyn Error>> {
         let _ = fs::create_dir_all(self.base.join(obj.id.to_string())).await;
         let _ = fs::create_dir_all(self.cache.join(obj.id.to_string())).await;
 
@@ -97,7 +121,7 @@ impl Database for FileDatabase {
         Ok(())
     }
 
-    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Self::Error> {
+    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Box<dyn Error>> {
         let mut members = Vec::new();
         let mut dir = fs::read_dir(self.base.join(network_id.to_string())).await?;
         while let Ok(Some(ent)) = dir.next_entry().await {
@@ -117,7 +141,7 @@ impl Database for FileDatabase {
         Ok(members)
     }
 
-    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Self::Error> {
+    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Box<dyn Error>> {
         let r = fs::read(member_path(&self.base, network_id, node_id)).await;
         if let Ok(raw) = r {
             let r = serde_json::from_slice::<Member>(raw.as_slice());
@@ -139,7 +163,7 @@ impl Database for FileDatabase {
         }
     }
 
-    async fn save_member(&self, obj: &Member) -> Result<(), Self::Error> {
+    async fn save_member(&self, obj: &Member) -> Result<(), Box<dyn Error>> {
         let base_member_path = member_path(&self.base, obj.network_id, obj.node_id);
         if !fs::metadata(&base_member_path).await.is_ok() {
             fs::write(base_member_path, to_json_pretty(obj).as_bytes()).await?;
@@ -153,7 +177,7 @@ impl Database for FileDatabase {
         Ok(())
     }
 
-    async fn log_request(&self, obj: &RequestLogItem) -> Result<(), Self::Error> {
+    async fn log_request(&self, obj: &RequestLogItem) -> Result<(), Box<dyn Error>> {
         println!("{}", obj.to_string());
         Ok(())
     }

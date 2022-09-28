@@ -5,7 +5,7 @@ use std::io::Read;
 use std::path::Path;
 
 /// Default sanity limit parameter for read_limit() used throughout the service.
-pub const DEFAULT_FILE_IO_READ_LIMIT: usize = 1048576;
+pub const DEFAULT_FILE_IO_READ_LIMIT: usize = 262144;
 
 /// Convenience function to read up to limit bytes from a file.
 ///

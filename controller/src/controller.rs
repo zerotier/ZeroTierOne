@@ -6,7 +6,7 @@ use tokio::time::{Duration, Instant};
 use zerotier_utils::tokio;
 
 use zerotier_network_hypervisor::protocol::{verbs, PacketBuffer};
-use zerotier_network_hypervisor::vl1::{HostSystem, Identity, InnerProtocol, PacketHandlerResult, Path, Peer};
+use zerotier_network_hypervisor::vl1::{HostSystem, Identity, InnerProtocol, PacketHandlerResult, Path, PathFilter, Peer};
 use zerotier_network_hypervisor::vl2::NetworkId;
 
 use zerotier_utils::dictionary::Dictionary;
@@ -37,6 +37,31 @@ impl<DatabaseImpl: Database> Controller<DatabaseImpl> {
         have_timestamp: Option<u64>,
     ) {
         if let Ok(Some(network)) = database.get_network(network_id).await {}
+    }
+}
+
+impl<DatabaseImpl: Database> PathFilter for Controller<DatabaseImpl> {
+    fn check_path<HostSystemImpl: HostSystem>(
+        &self,
+        _id: &Identity,
+        _endpoint: &zerotier_network_hypervisor::vl1::Endpoint,
+        _local_socket: Option<&HostSystemImpl::LocalSocket>,
+        _local_interface: Option<&HostSystemImpl::LocalInterface>,
+    ) -> bool {
+        true
+    }
+
+    fn get_path_hints<HostSystemImpl: HostSystem>(
+        &self,
+        _id: &Identity,
+    ) -> Option<
+        Vec<(
+            zerotier_network_hypervisor::vl1::Endpoint,
+            Option<HostSystemImpl::LocalSocket>,
+            Option<HostSystemImpl::LocalInterface>,
+        )>,
+    > {
+        None
     }
 }
 

@@ -8,6 +8,7 @@ use crate::{exitcode, Flags};
 
 use zerotier_network_hypervisor::vl1::RootSet;
 
+use zerotier_utils::io::{read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 use zerotier_utils::json::to_json_pretty;
 use zerotier_utils::marshalable::Marshalable;
 
@@ -26,7 +27,7 @@ pub fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
                 let path = path.unwrap();
                 let secret_arg = secret_arg.unwrap();
                 let secret = crate::utils::parse_cli_identity(secret_arg, true);
-                let json_data = crate::utils::read_limit(path, crate::utils::DEFAULT_FILE_IO_READ_LIMIT);
+                let json_data = read_limit(path, DEFAULT_FILE_IO_READ_LIMIT);
                 if secret.is_err() {
                     eprintln!("ERROR: unable to parse '{}' or read as a file.", secret_arg);
                     return exitcode::ERR_IOERR;
@@ -62,7 +63,7 @@ pub fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
             let path = sc_args.value_of("path");
             if path.is_some() {
                 let path = path.unwrap();
-                let json_data = crate::utils::read_limit(path, crate::utils::DEFAULT_FILE_IO_READ_LIMIT);
+                let json_data = read_limit(path, DEFAULT_FILE_IO_READ_LIMIT);
                 if json_data.is_err() {
                     eprintln!("ERROR: unable to read '{}'.", path);
                     return exitcode::ERR_IOERR;
@@ -90,7 +91,7 @@ pub fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
             let path = sc_args.value_of("path");
             if path.is_some() {
                 let path = path.unwrap();
-                let json_data = crate::utils::read_limit(path, 1048576);
+                let json_data = read_limit(path, DEFAULT_FILE_IO_READ_LIMIT);
                 if json_data.is_err() {
                     eprintln!("ERROR: unable to read '{}'.", path);
                     return exitcode::ERR_IOERR;
