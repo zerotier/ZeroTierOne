@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use zerotier_network_hypervisor::vl1::{Address, Endpoint, Identity, InetAddress};
 use zerotier_network_hypervisor::vl2::NetworkId;
 
+/// Static string included in JSON-serializable objects to indicate their object type through the API.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ObjectType {
     #[serde(rename = "network")]
@@ -83,7 +84,7 @@ pub struct Network {
 }
 
 impl Hash for Network {
-    #[inline(always)]
+    #[inline]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state)
     }
@@ -136,6 +137,14 @@ pub struct Member {
     /// API object type documentation field, not actually edited/used.
     #[serde(default = "ObjectType::member")]
     pub objtype: ObjectType,
+}
+
+impl Hash for Member {
+    #[inline]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.node_id.hash(state);
+        self.network_id.hash(state);
+    }
 }
 
 /// A complete network with all member configuration information for import/export or blob storage.

@@ -18,11 +18,11 @@ use crate::model::*;
 
 pub struct FileDatabase {
     base: PathBuf,
-    live: PathBuf,
+    cache: PathBuf,
 }
 
 fn network_path(base: &PathBuf, network_id: NetworkId) -> PathBuf {
-    base.join(network_id.to_string()).join("config.json")
+    base.join(network_id.to_string()).join(format!("n{}.json", network_id.to_string()))
 }
 
 fn member_path(base: &PathBuf, network_id: NetworkId, member_id: Address) -> PathBuf {
@@ -32,32 +32,30 @@ fn member_path(base: &PathBuf, network_id: NetworkId, member_id: Address) -> Pat
 impl FileDatabase {
     pub async fn new<P: AsRef<Path>>(base_path: P) -> Arc<Self> {
         let base: PathBuf = base_path.as_ref().into();
-        let live: PathBuf = base_path.as_ref().join("live");
-        let _ = fs::create_dir_all(&live).await;
-        Arc::new(Self { base, live })
+        let cache: PathBuf = base_path.as_ref().join("cache");
+        let _ = fs::create_dir_all(&cache).await;
+        Arc::new(Self { base, cache })
     }
 
-    async fn merge_with_live<O: Serialize + DeserializeOwned>(&self, live_path: PathBuf, changes: O) -> O {
-        if let Ok(changes) = serde_json::to_value(&changes) {
-            if let Ok(old_raw_json) = fs::read(&live_path).await {
-                if let Ok(mut patched) = serde_json::from_slice::<serde_json::Value>(old_raw_json.as_slice()) {
-                    json_patch(&mut patched, &changes, 64);
-                    if let Ok(patched) = serde_json::from_value::<O>(patched) {
-                        if let Ok(patched_json) = serde_json::to_vec(&patched) {
-                            if let Ok(to_replace) = fs::read(&live_path).await {
-                                if to_replace.as_slice().eq(patched_json.as_slice()) {
-                                    return patched;
-                                }
-                            }
-                            let _ = fs::write(live_path, patched_json.as_slice()).await;
-                            return patched;
-                        }
-                    }
-                }
-            }
+    /// Merge an object with its cached instance and save the result to the 'cache' path.
+    async fn merge_with_cache<O: Serialize + DeserializeOwned>(
+        &self,
+        object_path_in_cache: PathBuf,
+        changes: O,
+    ) -> Result<O, Box<dyn Error>> {
+        let changes = serde_json::to_value(&changes)?;
+        let cached_json = fs::read(&object_path_in_cache).await?;
+
+        let mut patched = serde_json::from_slice::<serde_json::Value>(cached_json.as_slice())?;
+        json_patch(&mut patched, &changes, 64);
+        let patched = serde_json::from_value::<O>(patched)?;
+
+        let patched_json = serde_json::to_vec(&patched)?;
+        if !cached_json.as_slice().eq(patched_json.as_slice()) {
+            let _ = fs::write(object_path_in_cache, patched_json.as_slice()).await;
         }
-        // TODO: report error
-        return changes;
+
+        return Ok(patched);
     }
 }
 
@@ -70,14 +68,14 @@ impl Database for FileDatabase {
         if let Ok(raw) = r {
             let r = serde_json::from_slice::<Network>(raw.as_slice());
             if let Ok(network) = r {
-                return Ok(Some(self.merge_with_live(network_path(&self.live, id), network).await));
+                return Ok(Some(self.merge_with_cache(network_path(&self.cache, id), network).await?));
             } else {
                 return Err(Box::new(r.err().unwrap()));
             }
         } else {
             let e = r.unwrap_err();
             if matches!(e.kind(), ErrorKind::NotFound) {
-                let _ = fs::remove_dir_all(self.live.join(id.to_string())).await;
+                let _ = fs::remove_dir_all(self.cache.join(id.to_string())).await;
                 return Ok(None);
             } else {
                 return Err(Box::new(e));
@@ -87,14 +85,14 @@ impl Database for FileDatabase {
 
     async fn save_network(&self, obj: &Network) -> Result<(), Self::Error> {
         let _ = fs::create_dir_all(self.base.join(obj.id.to_string())).await;
-        let _ = fs::create_dir_all(self.live.join(obj.id.to_string())).await;
+        let _ = fs::create_dir_all(self.cache.join(obj.id.to_string())).await;
 
         let base_network_path = network_path(&self.base, obj.id);
         if !fs::metadata(&base_network_path).await.is_ok() {
             fs::write(base_network_path, to_json_pretty(obj).as_bytes()).await?;
         }
 
-        fs::write(network_path(&self.live, obj.id), serde_json::to_vec(obj)?.as_slice()).await?;
+        fs::write(network_path(&self.cache, obj.id), serde_json::to_vec(obj)?.as_slice()).await?;
 
         Ok(())
     }
@@ -125,7 +123,7 @@ impl Database for FileDatabase {
             let r = serde_json::from_slice::<Member>(raw.as_slice());
             if let Ok(member) = r {
                 return Ok(Some(
-                    self.merge_with_live(member_path(&self.live, network_id, node_id), member).await,
+                    self.merge_with_cache(member_path(&self.cache, network_id, node_id), member).await?,
                 ));
             } else {
                 return Err(Box::new(r.err().unwrap()));
@@ -133,7 +131,7 @@ impl Database for FileDatabase {
         } else {
             let e = r.unwrap_err();
             if matches!(e.kind(), ErrorKind::NotFound) {
-                let _ = fs::remove_file(member_path(&self.live, network_id, node_id)).await;
+                let _ = fs::remove_file(member_path(&self.cache, network_id, node_id)).await;
                 return Ok(None);
             } else {
                 return Err(Box::new(e));
@@ -148,7 +146,7 @@ impl Database for FileDatabase {
         }
 
         fs::write(
-            member_path(&self.live, obj.network_id, obj.node_id),
+            member_path(&self.cache, obj.network_id, obj.node_id),
             serde_json::to_vec(obj)?.as_slice(),
         )
         .await?;
@@ -159,4 +157,13 @@ impl Database for FileDatabase {
         println!("{}", obj.to_string());
         Ok(())
     }
+}
+
+#[cfg(test)]
+mod tests {
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[test]
+    fn test_db() {}
 }
