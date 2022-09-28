@@ -1,32 +1,33 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use crate::localconfig::Config;
-use crate::utils::{read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
 use parking_lot::{Mutex, RwLock};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use zerotier_crypto::random::next_u32_secure;
 use zerotier_network_hypervisor::vl1::{Identity, NodeStorage};
+use zerotier_utils::io::{fs_restrict_permissions, read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 use zerotier_utils::json::to_json_pretty;
+
+pub const AUTH_TOKEN_FILENAME: &'static str = "authtoken.secret";
+pub const IDENTITY_PUBLIC_FILENAME: &'static str = "identity.public";
+pub const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
+pub const CONFIG_FILENAME: &'static str = "local.conf";
 
 const AUTH_TOKEN_DEFAULT_LENGTH: usize = 48;
 const AUTH_TOKEN_POSSIBLE_CHARS: &'static str = "0123456789abcdefghijklmnopqrstuvwxyz";
-const AUTH_TOKEN_FILENAME: &'static str = "authtoken.secret";
-const IDENTITY_PUBLIC_FILENAME: &'static str = "identity.public";
-const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
-const CONFIG_FILENAME: &'static str = "local.conf";
 
-/// Abstraction around ZeroTier's home data directory.
-pub struct DataDir {
+pub struct DataDir<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + DeserializeOwned + 'static> {
     pub base_path: PathBuf,
     config: RwLock<Arc<Config>>,
     authtoken: Mutex<String>,
 }
 
-impl NodeStorage for DataDir {
+impl<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + DeserializeOwned + 'static> NodeStorage for DataDir<Config> {
     fn load_node_identity(&self) -> Option<Identity> {
         let id_data = read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 4096);
         if id_data.is_err() {
@@ -46,12 +47,12 @@ impl NodeStorage for DataDir {
         let secret_path = self.base_path.join(IDENTITY_SECRET_FILENAME);
         // TODO: handle errors
         let _ = std::fs::write(&secret_path, id_secret_str.as_bytes());
-        assert!(crate::utils::fs_restrict_permissions(&secret_path));
+        assert!(fs_restrict_permissions(&secret_path));
         let _ = std::fs::write(self.base_path.join(IDENTITY_PUBLIC_FILENAME), id_public_str.as_bytes());
     }
 }
 
-impl DataDir {
+impl<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + DeserializeOwned + 'static> DataDir<Config> {
     pub fn open<P: AsRef<Path>>(path: P) -> std::io::Result<Self> {
         let base_path = path.as_ref().to_path_buf();
         if !base_path.is_dir() {
@@ -95,7 +96,7 @@ impl DataDir {
                     tmp.push(AUTH_TOKEN_POSSIBLE_CHARS.as_bytes()[(next_u32_secure() as usize) % AUTH_TOKEN_POSSIBLE_CHARS.len()] as char);
                 }
                 std::fs::write(&authtoken_path, tmp.as_bytes())?;
-                assert!(crate::utils::fs_restrict_permissions(&authtoken_path));
+                assert!(fs_restrict_permissions(&authtoken_path));
                 *self.authtoken.lock() = tmp;
             } else {
                 *self.authtoken.lock() = String::from_utf8_lossy(authtoken_bytes.unwrap().as_slice()).into();

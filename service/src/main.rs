@@ -2,7 +2,6 @@
 
 pub mod cli;
 pub mod cmdline_help;
-pub mod datadir;
 pub mod localconfig;
 pub mod utils;
 pub mod vnic;
@@ -18,9 +17,10 @@ use clap::{Arg, ArgMatches, Command};
 
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 use zerotier_utils::exitcode;
+use zerotier_vl1_service::datadir::DataDir;
 use zerotier_vl1_service::VL1Service;
 
-use crate::datadir::DataDir;
+use crate::localconfig::Config;
 
 pub fn print_help() {
     let h = crate::cmdline_help::make_cmdline_help();
@@ -44,7 +44,7 @@ pub struct Flags {
     pub auth_token_override: Option<String>,
 }
 
-fn open_datadir(flags: &Flags) -> Arc<DataDir> {
+fn open_datadir(flags: &Flags) -> Arc<DataDir<Config>> {
     let datadir = DataDir::open(flags.base_path.as_str());
     if datadir.is_ok() {
         return Arc::new(datadir.unwrap());

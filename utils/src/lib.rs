@@ -10,6 +10,7 @@ pub mod exitcode;
 pub mod gate;
 pub mod gatherarray;
 pub mod hex;
+pub mod io;
 pub mod json;
 pub mod marshalable;
 pub mod memory;

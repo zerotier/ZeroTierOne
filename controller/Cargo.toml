@@ -17,3 +17,7 @@ parking_lot = { version = "^0", features = [], default-features = false }
 serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = ["std"], default-features = false }
 clap = { version = "^3", features = ["std", "suggestions"], default-features = false }
+
+[target."cfg(not(windows))".dependencies]
+signal-hook = "^0"
+libc = "^0"

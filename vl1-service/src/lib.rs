@@ -6,6 +6,7 @@ mod settings;
 mod vl1service;
 
 pub mod constants;
+pub mod datadir;
 pub mod sys;
 
 pub use localinterface::LocalInterface;
