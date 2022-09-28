@@ -36,6 +36,12 @@ impl<DatabaseImpl: Database> Controller<DatabaseImpl> {
         have_revision: Option<u64>,
         have_timestamp: Option<u64>,
     ) {
+        println!(
+            "handle_network_config_request {} {} {}",
+            source.identity.to_string(),
+            source_path.endpoint.to_string(),
+            network_id.to_string()
+        );
         if let Ok(Some(network)) = database.get_network(network_id).await {}
     }
 }
@@ -75,7 +81,8 @@ impl<DatabaseImpl: Database> InnerProtocol for Controller<DatabaseImpl> {
     ) -> PacketHandlerResult {
         match verb {
             verbs::VL2_VERB_NETWORK_CONFIG_REQUEST => {
-                let mut cursor = 0;
+                let mut cursor = 1;
+
                 let network_id = payload.read_u64(&mut cursor);
                 if network_id.is_err() {
                     return PacketHandlerResult::Error;
@@ -85,7 +92,8 @@ impl<DatabaseImpl: Database> InnerProtocol for Controller<DatabaseImpl> {
                     return PacketHandlerResult::Error;
                 }
                 let network_id = network_id.unwrap();
-                let meta_data = if cursor < payload.len() {
+
+                let meta_data = if (cursor + 2) < payload.len() {
                     let meta_data_len = payload.read_u16(&mut cursor);
                     if meta_data_len.is_err() {
                         return PacketHandlerResult::Error;
@@ -102,7 +110,8 @@ impl<DatabaseImpl: Database> InnerProtocol for Controller<DatabaseImpl> {
                 } else {
                     Dictionary::new()
                 };
-                let (have_revision, have_timestamp) = if cursor < payload.len() {
+
+                let (have_revision, have_timestamp) = if (cursor + 16) <= payload.len() {
                     let r = payload.read_u64(&mut cursor);
                     let t = payload.read_u64(&mut cursor);
                     if r.is_err() || t.is_err() {

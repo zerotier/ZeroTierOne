@@ -20,9 +20,14 @@ use crate::model::*;
 
 const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
 
+/// An in-filesystem database that permits live editing.
+///
+/// A cache is maintained that contains the actual objects. When an object is live edited,
+/// once it successfully reads and loads it is merged with the cached object and saved to
+/// the cache. The cache will also contain any ephemeral data, generated data, etc.
 pub struct FileDatabase {
-    base: PathBuf,
-    cache: PathBuf,
+    base_path: PathBuf,
+    cache_path: PathBuf,
 }
 
 fn network_path(base: &PathBuf, network_id: NetworkId) -> PathBuf {
@@ -38,7 +43,7 @@ impl FileDatabase {
         let base: PathBuf = base_path.as_ref().into();
         let cache: PathBuf = base_path.as_ref().join("cache");
         let _ = fs::create_dir_all(&cache).await;
-        Self { base, cache }
+        Self { base_path: base, cache_path: cache }
     }
 
     /// Merge an object with its cached instance and save the result to the 'cache' path.
@@ -65,7 +70,7 @@ impl FileDatabase {
 
 impl NodeStorage for FileDatabase {
     fn load_node_identity(&self) -> Option<Identity> {
-        let id_data = read_limit(self.base.join(IDENTITY_SECRET_FILENAME), 4096);
+        let id_data = read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 4096);
         if id_data.is_err() {
             return None;
         }
@@ -79,7 +84,7 @@ impl NodeStorage for FileDatabase {
     fn save_node_identity(&self, id: &Identity) {
         assert!(id.secret.is_some());
         let id_secret_str = id.to_secret_string();
-        let secret_path = self.base.join(IDENTITY_SECRET_FILENAME);
+        let secret_path = self.base_path.join(IDENTITY_SECRET_FILENAME);
         assert!(std::fs::write(&secret_path, id_secret_str.as_bytes()).is_ok());
         assert!(fs_restrict_permissions(&secret_path));
     }
@@ -88,18 +93,18 @@ impl NodeStorage for FileDatabase {
 #[async_trait]
 impl Database for FileDatabase {
     async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error>> {
-        let r = fs::read(network_path(&self.base, id)).await;
+        let r = fs::read(network_path(&self.base_path, id)).await;
         if let Ok(raw) = r {
             let r = serde_json::from_slice::<Network>(raw.as_slice());
             if let Ok(network) = r {
-                return Ok(Some(self.merge_with_cache(network_path(&self.cache, id), network).await?));
+                return Ok(Some(self.merge_with_cache(network_path(&self.cache_path, id), network).await?));
             } else {
                 return Err(Box::new(r.err().unwrap()));
             }
         } else {
             let e = r.unwrap_err();
             if matches!(e.kind(), ErrorKind::NotFound) {
-                let _ = fs::remove_dir_all(self.cache.join(id.to_string())).await;
+                let _ = fs::remove_dir_all(self.cache_path.join(id.to_string())).await;
                 return Ok(None);
             } else {
                 return Err(Box::new(e));
@@ -108,22 +113,22 @@ impl Database for FileDatabase {
     }
 
     async fn save_network(&self, obj: &Network) -> Result<(), Box<dyn Error>> {
-        let _ = fs::create_dir_all(self.base.join(obj.id.to_string())).await;
-        let _ = fs::create_dir_all(self.cache.join(obj.id.to_string())).await;
+        let _ = fs::create_dir_all(self.base_path.join(obj.id.to_string())).await;
+        let _ = fs::create_dir_all(self.cache_path.join(obj.id.to_string())).await;
 
-        let base_network_path = network_path(&self.base, obj.id);
+        let base_network_path = network_path(&self.base_path, obj.id);
         if !fs::metadata(&base_network_path).await.is_ok() {
             fs::write(base_network_path, to_json_pretty(obj).as_bytes()).await?;
         }
 
-        fs::write(network_path(&self.cache, obj.id), serde_json::to_vec(obj)?.as_slice()).await?;
+        fs::write(network_path(&self.cache_path, obj.id), serde_json::to_vec(obj)?.as_slice()).await?;
 
         Ok(())
     }
 
     async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Box<dyn Error>> {
         let mut members = Vec::new();
-        let mut dir = fs::read_dir(self.base.join(network_id.to_string())).await?;
+        let mut dir = fs::read_dir(self.base_path.join(network_id.to_string())).await?;
         while let Ok(Some(ent)) = dir.next_entry().await {
             let osname = ent.file_name();
             let name = osname.to_string_lossy();
@@ -142,12 +147,13 @@ impl Database for FileDatabase {
     }
 
     async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Box<dyn Error>> {
-        let r = fs::read(member_path(&self.base, network_id, node_id)).await;
+        let r = fs::read(member_path(&self.base_path, network_id, node_id)).await;
         if let Ok(raw) = r {
             let r = serde_json::from_slice::<Member>(raw.as_slice());
             if let Ok(member) = r {
                 return Ok(Some(
-                    self.merge_with_cache(member_path(&self.cache, network_id, node_id), member).await?,
+                    self.merge_with_cache(member_path(&self.cache_path, network_id, node_id), member)
+                        .await?,
                 ));
             } else {
                 return Err(Box::new(r.err().unwrap()));
@@ -155,7 +161,7 @@ impl Database for FileDatabase {
         } else {
             let e = r.unwrap_err();
             if matches!(e.kind(), ErrorKind::NotFound) {
-                let _ = fs::remove_file(member_path(&self.cache, network_id, node_id)).await;
+                let _ = fs::remove_file(member_path(&self.cache_path, network_id, node_id)).await;
                 return Ok(None);
             } else {
                 return Err(Box::new(e));
@@ -164,13 +170,13 @@ impl Database for FileDatabase {
     }
 
     async fn save_member(&self, obj: &Member) -> Result<(), Box<dyn Error>> {
-        let base_member_path = member_path(&self.base, obj.network_id, obj.node_id);
+        let base_member_path = member_path(&self.base_path, obj.network_id, obj.node_id);
         if !fs::metadata(&base_member_path).await.is_ok() {
             fs::write(base_member_path, to_json_pretty(obj).as_bytes()).await?;
         }
 
         fs::write(
-            member_path(&self.cache, obj.network_id, obj.node_id),
+            member_path(&self.cache_path, obj.network_id, obj.node_id),
             serde_json::to_vec(obj)?.as_slice(),
         )
         .await?;
