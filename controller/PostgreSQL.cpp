@@ -789,22 +789,29 @@ void PostgreSQL::initializeMembers()
 		}
 
 		char qbuf[2048];
-		sprintf(qbuf, "SELECT m.id, m.network_id, m.active_bridge, m.authorized, m.capabilities, (EXTRACT(EPOCH FROM m.creation_time AT TIME ZONE 'UTC')*1000)::bigint, m.identity, "
-			"	(EXTRACT(EPOCH FROM m.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
-			"	(EXTRACT(EPOCH FROM m.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
-			"	m.remote_trace_level, m.remote_trace_target, m.tags, m.v_major, m.v_minor, m.v_rev, m.v_proto, "
-			"	m.no_auto_assign_ips, m.revision, sso_exempt, "
-			"	(SELECT (EXTRACT(EPOCH FROM e.authentication_expiry_time)*1000)::bigint "
-	 		"		FROM ztc_sso_expiry e "
-			"		INNER JOIN ztc_network n1 "
-			"			ON n.id = e.network_id "
-			"		WHERE e.network_id = m.network_id AND e.member_id = m.id AND n.sso_enabled = TRUE AND e.authentication_expiry_time IS NOT NULL "
-			"		ORDER BY e.authentication_expiry_time DESC LIMIT 1) AS authentication_expiry_time, "
-			"	ARRAY(SELECT DISTINCT address FROM ztc_member_ip_assignment WHERE member_id = m.id AND network_id = m.network_id) AS assigned_addresses "
+		sprintf(qbuf,
+			"SELECT m.id, m.network_id, m.active_bridge, m.authorized, m.capabilities, "
+				"(EXTRACT(EPOCH FROM m.creation_time AT TIME ZONE 'UTC')*1000)::bigint, m.identity, "
+				"(EXTRACT(EPOCH FROM m.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
+				"(EXTRACT(EPOCH FROM m.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
+				"m.remote_trace_level, m.remote_trace_target, m.tags, m.v_major, m.v_minor, m.v_rev, m.v_proto, "
+				"m.no_auto_assign_ips, m.revision, m.sso_exempt, "
+				"(CASE WHEN n.sso_enabled = TRUE AND m.sso_exempt = FALSE THEN "
+				" ( "
+				"	SELECT (EXTRACT(EPOCH FROM e.authentication_expiry_time)*1000)::bigint "
+				"	FROM ztc_sso_expiry e "
+				"	INNER JOIN ztc_network n1 "
+				"	ON n1.id = e.network_id  AND n1.deleted = TRUE "
+				"	WHERE e.network_id = m.network_id AND e.member_id = m.id AND n.sso_enabled = TRUE AND e.authentication_expiry_time IS NOT NULL "
+				"	ORDER BY e.authentication_expiry_time DESC LIMIT 1 "
+				" ) "
+				" ELSE NULL "
+				" END) AS authentication_expiry_time, "
+				"ARRAY(SELECT DISTINCT address FROM ztc_member_ip_assignment WHERE member_id = m.id AND network_id = m.network_id) AS assigned_addresses "
 			"FROM ztc_member m "
 			"INNER JOIN ztc_network n "
 			"	ON n.id = m.network_id "
-			"WHERE n.controller_id = '%s' AND m.deleted = false", _myAddressStr.c_str());
+			"WHERE n.controller_id = '%s' AND n.deleted = FALSE AND m.deleted = FALSE", _myAddressStr.c_str());
 		auto c = _pool->borrow();
 		auto c2 = _pool->borrow();
 		pqxx::work w{*c->c};
