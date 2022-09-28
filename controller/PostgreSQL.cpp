@@ -547,11 +547,7 @@ void PostgreSQL::initializeNetworks()
 			"ARRAY(SELECT CONCAT(host(address),'/',bits::text,'|',COALESCE(host(via), 'NULL'))FROM ztc_network_route WHERE network_id = n.id) AS routes "
 			"FROM ztc_network n "
 			"LEFT OUTER JOIN ztc_org o "
-			" ON o.owner_id = n.owner_id "
-			"LEFT OUTER JOIN ztc_network_oidc_config noc "
-			"	ON noc.network_id = n.id "
-			"LEFT OUTER JOIN ztc_oidc_config oc "
-			"   ON noc.client_id = oc.client_id AND o.org_id = oc.org_id "
+			"	ON o.owner_id = n.owner_id "
 			"LEFT OUTER JOIN ztc_network_dns d "
 			"	ON d.network_id = n.id "
 			"WHERE deleted = false AND controller_id = '%s'", _myAddressStr.c_str());
