@@ -10,10 +10,9 @@ default = []
 tokio = ["dep:tokio"]
 
 [dependencies]
-parking_lot = { version = "^0", features = [], default-features = false }
 serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = ["std"], default-features = false }
-tokio = { version = "^1", default-features = false, features = ["fs", "io-util", "io-std", "net", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "sync", "time"], optional = true }
+tokio = { version = "^1", default-features = false, features = ["fs", "io-util", "io-std", "net", "process", "rt", "rt-multi-thread", "signal", "sync", "time"], optional = true }
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }

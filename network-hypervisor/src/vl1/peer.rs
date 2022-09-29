@@ -3,9 +3,7 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
-use std::sync::{Arc, Weak};
-
-use parking_lot::{Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock, Weak};
 
 use zerotier_crypto::poly1305;
 use zerotier_crypto::random;
@@ -87,7 +85,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
     /// Get the remote version of this peer: major, minor, revision.
     /// Returns None if it's not yet known.
     pub fn version(&self) -> Option<(u8, u8, u16)> {
-        let rv = self.remote_node_info.read().remote_version;
+        let rv = self.remote_node_info.read().unwrap().remote_version;
         if rv.0 != 0 || rv.1 != 0 || rv.2 != 0 {
             Some(rv)
         } else {
@@ -97,7 +95,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
 
     /// Get the remote protocol version of this peer or None if not yet known.
     pub fn protocol_version(&self) -> Option<u8> {
-        let pv = self.remote_node_info.read().remote_protocol_version;
+        let pv = self.remote_node_info.read().unwrap().remote_protocol_version;
         if pv != 0 {
             Some(pv)
         } else {
@@ -107,7 +105,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
 
     /// Get current best path or None if there are no direct paths to this peer.
     pub fn direct_path(&self) -> Option<Arc<Path<HostSystemImpl>>> {
-        for p in self.paths.lock().iter() {
+        for p in self.paths.lock().unwrap().iter() {
             let pp = p.path.upgrade();
             if pp.is_some() {
                 return pp;
@@ -129,7 +127,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
     }
 
     fn learn_path(&self, host_system: &HostSystemImpl, new_path: &Arc<Path<HostSystemImpl>>, time_ticks: i64) {
-        let mut paths = self.paths.lock();
+        let mut paths = self.paths.lock().unwrap();
 
         match &new_path.endpoint {
             Endpoint::IpUdp(new_ip) => {
@@ -194,7 +192,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
     pub(crate) fn service(&self, _: &HostSystemImpl, _: &Node<HostSystemImpl>, time_ticks: i64) -> bool {
         // Prune dead paths and sort in descending order of quality.
         {
-            let mut paths = self.paths.lock();
+            let mut paths = self.paths.lock().unwrap();
             paths.retain(|p| ((time_ticks - p.last_receive_time_ticks) < PEER_EXPIRATION_TIME) && (p.path.strong_count() > 0));
             if paths.capacity() > 16 {
                 paths.shrink_to_fit();
@@ -205,6 +203,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         // Prune dead entries from the map of reported local endpoints (e.g. externally visible IPs).
         self.remote_node_info
             .write()
+            .unwrap()
             .reported_local_endpoints
             .retain(|_, ts| (time_ticks - *ts) < PEER_EXPIRATION_TIME);
         (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed).max(self.create_time_ticks)) < PEER_EXPIRATION_TIME
@@ -286,7 +285,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
 
         let max_fragment_size = path.endpoint.max_fragment_size();
 
-        if self.remote_node_info.read().remote_protocol_version >= 12 {
+        if self.remote_node_info.read().unwrap().remote_protocol_version >= 12 {
             let flags_cipher_hops = if packet.len() > max_fragment_size {
                 v1::HEADER_FLAG_FRAGMENTED | v1::CIPHER_AES_GMAC_SIV
             } else {
@@ -503,7 +502,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 self.last_receive_time_ticks.store(time_ticks, Ordering::Relaxed);
 
                 let mut path_is_known = false;
-                for p in self.paths.lock().iter_mut() {
+                for p in self.paths.lock().unwrap().iter_mut() {
                     if std::ptr::eq(p.path.as_ptr(), source_path.as_ref()) {
                         p.last_receive_time_ticks = time_ticks;
                         path_is_known = true;
@@ -585,7 +584,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             if let Ok(identity) = Identity::unmarshal(payload, &mut cursor) {
                 if identity.eq(&self.identity) {
                     {
-                        let mut remote_node_info = self.remote_node_info.write();
+                        let mut remote_node_info = self.remote_node_info.write().unwrap();
                         remote_node_info.remote_protocol_version = hello_fixed_headers.version_proto;
                         remote_node_info.remote_version = (
                             hello_fixed_headers.version_major,
@@ -679,6 +678,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                                     if self
                                         .remote_node_info
                                         .write()
+                                        .unwrap()
                                         .reported_local_endpoints
                                         .insert(reported_endpoint, time_ticks)
                                         .is_none()

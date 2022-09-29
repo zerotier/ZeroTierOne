@@ -1,7 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 use std::hash::{Hash, Hasher};
-
 use std::mem::MaybeUninit;
 
 const EMPTY: u16 = 0xffff;

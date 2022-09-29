@@ -8,7 +8,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 #[allow(unused_imports)]
 use std::ptr::{null, null_mut};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use crate::localinterface::LocalInterface;
 
@@ -67,7 +67,7 @@ pub struct BoundUdpSocket {
     pub interface: LocalInterface,
     last_receive_time: AtomicI64,
     fd: i32,
-    lock: parking_lot::RwLock<()>,
+    lock: RwLock<()>,
     open: AtomicBool,
 }
 
@@ -222,7 +222,7 @@ impl BoundUdpPort {
                                 interface: interface.clone(),
                                 last_receive_time: AtomicI64::new(i64::MIN),
                                 fd,
-                                lock: parking_lot::RwLock::new(()),
+                                lock: RwLock::new(()),
                                 open: AtomicBool::new(true),
                             });
 

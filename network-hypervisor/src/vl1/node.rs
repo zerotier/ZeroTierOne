@@ -4,10 +4,8 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::io::Write;
 use std::sync::atomic::Ordering;
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::time::Duration;
-
-use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
 
 use crate::protocol::*;
 use crate::vl1::address::Address;
@@ -290,11 +288,11 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
     }
 
     pub fn peer(&self, a: Address) -> Option<Arc<Peer<HostSystemImpl>>> {
-        self.peers.read().get(&a).cloned()
+        self.peers.read().unwrap().get(&a).cloned()
     }
 
     pub fn is_online(&self) -> bool {
-        self.roots.read().online
+        self.roots.read().unwrap().online
     }
 
     pub fn do_background_tasks(&self, host_system: &HostSystemImpl) -> Duration {
@@ -303,7 +301,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         let time_ticks = host_system.time_ticks();
 
         let (root_sync, root_hello, mut root_spam_hello, peer_service, path_service, whois_queue_retry) = {
-            let mut intervals = self.intervals.lock();
+            let mut intervals = self.intervals.lock().unwrap();
             (
                 intervals.root_sync.gate(time_ticks),
                 intervals.root_hello.gate(time_ticks),
@@ -356,7 +354,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
 
         if root_sync {
             if {
-                let mut roots = self.roots.write();
+                let mut roots = self.roots.write().unwrap();
                 if roots.sets_modified {
                     roots.sets_modified = false;
                     true
@@ -367,7 +365,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                 debug_event!(host_system, "[vl1] root sets modified, synchronizing internal data structures");
 
                 let (mut old_root_identities, address_collisions, new_roots, bad_identities, my_root_sets) = {
-                    let roots = self.roots.read();
+                    let roots = self.roots.read().unwrap();
 
                     let old_root_identities: Vec<Identity> = roots.roots.iter().map(|(p, _)| p.identity.clone()).collect();
                     let mut new_roots = HashMap::new();
@@ -387,6 +385,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                 } else if self
                                     .peers
                                     .read()
+                                    .unwrap()
                                     .get(&m.identity.address)
                                     .map_or(false, |p| !p.identity.eq(&m.identity))
                                     || address_collision_check
@@ -409,13 +408,16 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                     m.identity.address.to_string(),
                                     m.endpoints.as_ref().map_or(0, |e| e.len())
                                 );
-                                let peers = self.peers.upgradable_read();
+                                let peers = self.peers.read().unwrap();
                                 if let Some(peer) = peers.get(&m.identity.address) {
                                     new_roots.insert(peer.clone(), m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                 } else {
                                     if let Some(peer) = Peer::<HostSystemImpl>::new(&self.identity, m.identity.clone(), time_ticks) {
+                                        drop(peers);
                                         new_roots.insert(
-                                            RwLockUpgradableReadGuard::upgrade(peers)
+                                            self.peers
+                                                .write()
+                                                .unwrap()
                                                 .entry(m.identity.address)
                                                 .or_insert_with(|| Arc::new(peer))
                                                 .clone(),
@@ -450,7 +452,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                 new_root_identities.sort_unstable();
 
                 if !old_root_identities.eq(&new_root_identities) {
-                    let mut roots = self.roots.write();
+                    let mut roots = self.roots.write().unwrap();
                     roots.roots = new_roots;
                     roots.this_root_sets = my_root_sets;
                     host_system.event(Event::UpdatedRoots(old_root_identities, new_root_identities));
@@ -458,7 +460,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
             }
 
             {
-                let roots = self.roots.read();
+                let roots = self.roots.read().unwrap();
 
                 // The best root is the one that has replied to a HELLO most recently. Since we send HELLOs in unison
                 // this is a proxy for latency and also causes roots that fail to reply to drop out quickly.
@@ -473,9 +475,10 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                 }
 
                 if let Some(best) = best {
-                    let best_root = self.best_root.upgradable_read();
+                    let best_root = self.best_root.read().unwrap();
                     if best_root.as_ref().map_or(true, |br| !Arc::ptr_eq(&br, best)) {
-                        let mut best_root = RwLockUpgradableReadGuard::upgrade(best_root);
+                        drop(best_root);
+                        let mut best_root = self.best_root.write().unwrap();
                         if let Some(best_root) = best_root.as_mut() {
                             debug_event!(
                                 host_system,
@@ -494,7 +497,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                         }
                     }
                 } else {
-                    if let Some(old_best) = self.best_root.write().take() {
+                    if let Some(old_best) = self.best_root.write().unwrap().take() {
                         debug_event!(
                             host_system,
                             "[vl1] selected new best root: NONE (replaced {})",
@@ -507,12 +510,12 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                 if (time_ticks - latest_hello_reply) < (ROOT_HELLO_INTERVAL * 2) && best.is_some() {
                     if !roots.online {
                         drop(roots);
-                        self.roots.write().online = true;
+                        self.roots.write().unwrap().online = true;
                         host_system.event(Event::Online(true));
                     }
                 } else if roots.online {
                     drop(roots);
-                    self.roots.write().online = false;
+                    self.roots.write().unwrap().online = false;
                     host_system.event(Event::Online(false));
                 }
             }
@@ -524,7 +527,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         // external addresses from them.
         if root_hello || root_spam_hello {
             let roots = {
-                let roots = self.roots.read();
+                let roots = self.roots.read().unwrap();
                 let mut roots_copy = Vec::with_capacity(roots.roots.len());
                 for (root, endpoints) in roots.roots.iter() {
                     roots_copy.push((root.clone(), endpoints.clone()));
@@ -551,15 +554,15 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
             // roots. Roots on the other hand remain in the peer list as long as they are roots.
             let mut dead_peers = Vec::new();
             {
-                let roots = self.roots.read();
-                for (a, peer) in self.peers.read().iter() {
+                let roots = self.roots.read().unwrap();
+                for (a, peer) in self.peers.read().unwrap().iter() {
                     if !peer.service(host_system, self, time_ticks) && !roots.roots.contains_key(peer) {
                         dead_peers.push(*a);
                     }
                 }
             }
             for dp in dead_peers.iter() {
-                self.peers.write().remove(dp);
+                self.peers.write().unwrap().remove(dp);
             }
         }
 
@@ -568,7 +571,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
             let mut need_keepalive = Vec::new();
 
             // First check all paths in read mode to avoid blocking the entire node.
-            for (k, path) in self.paths.read().iter() {
+            for (k, path) in self.paths.read().unwrap().iter() {
                 if host_system.local_socket_is_valid(k.local_socket()) {
                     match path.service(time_ticks) {
                         PathServiceResult::Ok => {}
@@ -582,7 +585,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
 
             // Lock in write mode and remove dead paths, doing so piecemeal to again avoid blocking.
             for dp in dead_paths.iter() {
-                self.paths.write().remove(dp);
+                self.paths.write().unwrap().remove(dp);
             }
 
             // Finally run keepalive sends as a batch.
@@ -595,7 +598,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         if whois_queue_retry {
             let need_whois = {
                 let mut need_whois = Vec::new();
-                let mut whois_queue = self.whois_queue.lock();
+                let mut whois_queue = self.whois_queue.lock().unwrap();
                 whois_queue.retain(|_, qi| qi.retry_count <= WHOIS_RETRY_COUNT_MAX);
                 for (address, qi) in whois_queue.iter_mut() {
                     if (time_ticks - qi.last_retry_time) >= WHOIS_RETRY_INTERVAL {
@@ -811,7 +814,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
     ) {
         debug_event!(host_system, "[vl1] [v1] WHOIS {}", address.to_string());
         {
-            let mut whois_queue = self.whois_queue.lock();
+            let mut whois_queue = self.whois_queue.lock().unwrap();
             let qi = whois_queue.entry(address).or_insert_with(|| WhoisQueueItem::<HostSystemImpl> {
                 v1_proto_waiting_packets: RingBuffer::new(),
                 last_retry_time: 0,
@@ -865,11 +868,11 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
     ) {
         if authoritative {
             if received_identity.validate_identity() {
-                let mut whois_queue = self.whois_queue.lock();
+                let mut whois_queue = self.whois_queue.lock().unwrap();
                 if let Some(qi) = whois_queue.get_mut(&received_identity.address) {
                     let address = received_identity.address;
                     if inner.should_communicate_with(&received_identity) {
-                        let mut peers = self.peers.write();
+                        let mut peers = self.peers.write().unwrap();
                         if let Some(peer) = peers.get(&address).cloned().or_else(|| {
                             Peer::new(&self.identity, received_identity, time_ticks)
                                 .map(|p| Arc::new(p))
@@ -893,17 +896,17 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
 
     /// Get the current "best" root from among this node's trusted roots.
     pub fn best_root(&self) -> Option<Arc<Peer<HostSystemImpl>>> {
-        self.best_root.read().clone()
+        self.best_root.read().unwrap().clone()
     }
 
     /// Check whether a peer is a root according to any root set trusted by this node.
     pub fn is_peer_root(&self, peer: &Peer<HostSystemImpl>) -> bool {
-        self.roots.read().roots.keys().any(|p| p.identity.eq(&peer.identity))
+        self.roots.read().unwrap().roots.keys().any(|p| p.identity.eq(&peer.identity))
     }
 
     /// Returns true if this node is a member of a root set (that it knows about).
     pub fn this_node_is_root(&self) -> bool {
-        self.roots.read().this_root_sets.is_some()
+        self.roots.read().unwrap().this_root_sets.is_some()
     }
 
     /// Called when a remote node sends us a root set update, applying the update if it is valid and applicable.
@@ -911,7 +914,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
     /// This will only replace an existing root set with a newer one. It won't add a new root set, which must be
     /// done by an authorized user or administrator not just by a root.
     pub(crate) fn remote_update_root_set(&self, received_from: &Identity, rs: Verified<RootSet>) {
-        let mut roots = self.roots.write();
+        let mut roots = self.roots.write().unwrap();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
             if entry.members.iter().any(|m| m.identity.eq(received_from)) && rs.should_replace(entry) {
                 *entry = rs;
@@ -922,7 +925,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
 
     /// Add a new root set or update the existing root set if the new root set is newer and otherwise matches.
     pub fn add_update_root_set(&self, rs: Verified<RootSet>) -> bool {
-        let mut roots = self.roots.write();
+        let mut roots = self.roots.write().unwrap();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
             if rs.should_replace(entry) {
                 *entry = rs;
@@ -940,7 +943,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
 
     /// Returns whether or not this node has any root sets defined.
     pub fn has_roots_defined(&self) -> bool {
-        self.roots.read().sets.iter().any(|rs| !rs.1.members.is_empty())
+        self.roots.read().unwrap().sets.iter().any(|rs| !rs.1.members.is_empty())
     }
 
     /// Initialize with default roots if there are no roots defined, otherwise do nothing.
@@ -954,7 +957,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
 
     /// Get the root sets that this node trusts.
     pub fn root_sets(&self) -> Vec<RootSet> {
-        self.roots.read().sets.values().cloned().map(|s| s.unwrap()).collect()
+        self.roots.read().unwrap().sets.values().cloned().map(|s| s.unwrap()).collect()
     }
 
     /// Get the canonical Path object corresponding to an endpoint.
@@ -965,13 +968,14 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         local_interface: &HostSystemImpl::LocalInterface,
         time_ticks: i64,
     ) -> Arc<Path<HostSystemImpl>> {
-        let paths = self.paths.read();
+        let paths = self.paths.read().unwrap();
         if let Some(path) = paths.get(&PathKey::Ref(ep, local_socket)) {
             path.clone()
         } else {
             drop(paths);
             self.paths
                 .write()
+                .unwrap()
                 .entry(PathKey::Copied(ep.clone(), local_socket.clone()))
                 .or_insert_with(|| Arc::new(Path::new(ep.clone(), local_socket.clone(), local_interface.clone(), time_ticks)))
                 .clone()

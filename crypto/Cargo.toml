@@ -11,7 +11,6 @@ ed25519-dalek = { version = "1.0.1", features = ["std", "u64_backend"], default-
 foreign-types = "0.3.1"
 lazy_static = "^1"
 openssl = { version = "^0", features = [], default-features = false }
-parking_lot = { version = "^0", features = [], default-features = false }
 poly1305 = { version = "0.7.2", features = [], default-features = false }
 pqc_kyber = { path = "../third_party/kyber", features = ["kyber1024", "reference"], default-features = false }
 #pqc_kyber = { version = "^0", features = ["kyber1024", "reference"], default-features = false }

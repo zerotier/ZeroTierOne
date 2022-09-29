@@ -2,9 +2,7 @@
 
 use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
-use std::sync::{Arc, Weak};
-
-use parking_lot::Mutex;
+use std::sync::{Arc, Mutex, Weak};
 
 /// Each pool requires a factory that creates and resets (for re-use) pooled objects.
 pub trait PoolFactory<O> {
@@ -78,7 +76,7 @@ where
     fn clone(&self) -> Self {
         let internal = unsafe { &mut *self.0.as_ptr() };
         if let Some(p) = internal.return_pool.upgrade() {
-            if let Some(o) = p.pool.lock().pop() {
+            if let Some(o) = p.pool.lock().unwrap().pop() {
                 let mut o = Self(o);
                 *o.as_mut() = self.as_ref().clone();
                 o
@@ -135,7 +133,7 @@ impl<O, F: PoolFactory<O>> Drop for Pooled<O, F> {
         let internal = unsafe { &mut *self.0.as_ptr() };
         if let Some(p) = internal.return_pool.upgrade() {
             p.factory.reset(&mut internal.obj);
-            p.pool.lock().push(self.0);
+            p.pool.lock().unwrap().push(self.0);
         } else {
             drop(unsafe { Box::from_raw(self.0.as_ptr()) });
         }
@@ -164,7 +162,7 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
     /// Get a pooled object, or allocate one if the pool is empty.
     #[inline]
     pub fn get(&self) -> Pooled<O, F> {
-        if let Some(o) = self.0.pool.lock().pop() {
+        if let Some(o) = self.0.pool.lock().unwrap().pop() {
             return Pooled::<O, F>(o);
         }
         return Pooled::<O, F>(unsafe {
@@ -182,7 +180,7 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
     /// be done to free some memory if there has been a spike in memory use.
     #[inline]
     pub fn purge(&self) {
-        for o in self.0.pool.lock().drain(..) {
+        for o in self.0.pool.lock().unwrap().drain(..) {
             drop(unsafe { Box::from_raw(o.as_ptr()) })
         }
     }

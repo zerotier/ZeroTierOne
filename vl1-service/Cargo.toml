@@ -10,7 +10,6 @@ zerotier-network-hypervisor = { path = "../network-hypervisor" }
 zerotier-crypto = { path = "../crypto" }
 zerotier-utils = { path = "../utils" }
 num-traits = "^0"
-parking_lot = { version = "^0", features = [], default-features = false }
 serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = ["std"], default-features = false }
 

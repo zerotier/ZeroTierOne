@@ -6,11 +6,10 @@ use std::io::Write;
 use crate::vl1::identity::{Identity, IDENTITY_MAX_SIGNATURE_SIZE};
 use crate::vl1::Endpoint;
 
+use zerotier_crypto::verified::Verified;
 use zerotier_utils::arrayvec::ArrayVec;
 use zerotier_utils::buffer::Buffer;
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
-
-use zerotier_crypto::verified::Verified;
 
 use serde::{Deserialize, Serialize};
 

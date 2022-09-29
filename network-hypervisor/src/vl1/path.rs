@@ -3,8 +3,7 @@
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hasher};
 use std::sync::atomic::{AtomicI64, Ordering};
-
-use parking_lot::Mutex;
+use std::sync::Mutex;
 
 use crate::protocol::*;
 use crate::vl1::endpoint::Endpoint;
@@ -65,7 +64,7 @@ impl<HostSystemImpl: HostSystem> Path<HostSystemImpl> {
         packet: PooledPacketBuffer,
         time_ticks: i64,
     ) -> Option<v1::FragmentedPacket> {
-        let mut fp = self.fragmented_packets.lock();
+        let mut fp = self.fragmented_packets.lock().unwrap();
 
         // Discard some old waiting packets if the total incoming fragments for a path exceeds a
         // sanity limit. This is to prevent memory exhaustion DOS attacks.
@@ -107,6 +106,7 @@ impl<HostSystemImpl: HostSystem> Path<HostSystemImpl> {
     pub(crate) fn service(&self, time_ticks: i64) -> PathServiceResult {
         self.fragmented_packets
             .lock()
+            .unwrap()
             .retain(|_, frag| (time_ticks - frag.ts_ticks) < v1::FRAGMENT_EXPIRATION);
         if (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed)) < PATH_EXPIRATION_TIME {
             if (time_ticks - self.last_send_time_ticks.load(Ordering::Relaxed)) >= PATH_KEEPALIVE_INTERVAL {

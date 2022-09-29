@@ -13,7 +13,6 @@ zerotier-utils = { path = "../utils", features = ["tokio"] }
 zerotier-network-hypervisor = { path = "../network-hypervisor" }
 zerotier-vl1-service = { path = "../vl1-service" }
 async-trait = "^0"
-parking_lot = { version = "^0", features = [], default-features = false }
 serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = ["std"], default-features = false }
 clap = { version = "^3", features = ["std", "suggestions"], default-features = false }

@@ -2,9 +2,8 @@
 
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, RwLock};
 
-use parking_lot::{Mutex, RwLock};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -86,7 +85,7 @@ impl<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + Deseri
 
     /// Get authorization token for local API, creating and saving if it does not exist.
     pub fn authtoken(&self) -> std::io::Result<String> {
-        let authtoken = self.authtoken.lock().clone();
+        let authtoken = self.authtoken.lock().unwrap().clone();
         if authtoken.is_empty() {
             let authtoken_path = self.base_path.join(AUTH_TOKEN_FILENAME);
             let authtoken_bytes = read_limit(&authtoken_path, 4096);
@@ -97,9 +96,9 @@ impl<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + Deseri
                 }
                 std::fs::write(&authtoken_path, tmp.as_bytes())?;
                 assert!(fs_restrict_permissions(&authtoken_path));
-                *self.authtoken.lock() = tmp;
+                *self.authtoken.lock().unwrap() = tmp;
             } else {
-                *self.authtoken.lock() = String::from_utf8_lossy(authtoken_bytes.unwrap().as_slice()).into();
+                *self.authtoken.lock().unwrap() = String::from_utf8_lossy(authtoken_bytes.unwrap().as_slice()).into();
             }
         }
         Ok(authtoken)
@@ -111,15 +110,15 @@ impl<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + Deseri
     /// save_config() to save the modified configuration and update the internal copy in
     /// this structure.
     pub fn config(&self) -> Arc<Config> {
-        self.config.read().clone()
+        self.config.read().unwrap().clone()
     }
 
     /// Save a modified copy of the configuration and replace the internal copy in this structure (if it's actually changed).
     pub fn save_config(&self, modified_config: Config) -> std::io::Result<()> {
-        if !modified_config.eq(&self.config.read()) {
+        if !modified_config.eq(&self.config.read().unwrap()) {
             let config_data = to_json_pretty(&modified_config);
             std::fs::write(self.base_path.join(CONFIG_FILENAME), config_data.as_bytes())?;
-            *self.config.write() = Arc::new(modified_config);
+            *self.config.write().unwrap() = Arc::new(modified_config);
         }
         Ok(())
     }

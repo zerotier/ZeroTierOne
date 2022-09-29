@@ -6,6 +6,7 @@
 use std::io::{Read, Write};
 use std::ops::Deref;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, RwLock};
 
 use crate::aes::{Aes, AesGcm};
 use crate::hash::{hmac_sha512, HMACSHA384, SHA384};
@@ -18,8 +19,6 @@ use zerotier_utils::memory;
 use zerotier_utils::ringbuffermap::RingBufferMap;
 use zerotier_utils::unlikely_branch;
 use zerotier_utils::varint;
-
-use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
 
 /// Minimum size of a valid packet.
 pub const MIN_PACKET_SIZE: usize = HEADER_SIZE + AES_GCM_TAG_SIZE;
@@ -410,7 +409,7 @@ impl<H: Host> Session<H> {
         mut data: &[u8],
     ) -> Result<(), Error> {
         debug_assert!(mtu_buffer.len() >= MIN_MTU);
-        let state = self.state.read();
+        let state = self.state.read().unwrap();
         if let Some(remote_session_id) = state.remote_session_id {
             if let Some(key) = state.keys[state.key_ptr].as_ref() {
                 let mut packet_len = data.len() + HEADER_SIZE + AES_GCM_TAG_SIZE;
@@ -472,7 +471,7 @@ impl<H: Host> Session<H> {
 
     /// Check whether this session is established.
     pub fn established(&self) -> bool {
-        let state = self.state.read();
+        let state = self.state.read().unwrap();
         state.remote_session_id.is_some() && state.keys[state.key_ptr].is_some()
     }
 
@@ -481,7 +480,7 @@ impl<H: Host> Session<H> {
     /// This returns a tuple of: the key fingerprint, the time it was established, the length of its ratchet chain,
     /// and whether Kyber1024 was used. None is returned if the session isn't established.
     pub fn security_info(&self) -> Option<([u8; 16], i64, u64, bool)> {
-        let state = self.state.read();
+        let state = self.state.read().unwrap();
         if let Some(key) = state.keys[state.key_ptr].as_ref() {
             Some((key.fingerprint, key.establish_time, key.ratchet_count, key.jedi))
         } else {
@@ -504,7 +503,7 @@ impl<H: Host> Session<H> {
         current_time: i64,
         force_rekey: bool,
     ) {
-        let state = self.state.upgradable_read();
+        let state = self.state.read().unwrap();
         if (force_rekey
             || state.keys[state.key_ptr]
                 .as_ref()
@@ -538,7 +537,8 @@ impl<H: Host> Session<H> {
                     mtu,
                     current_time,
                 ) {
-                    let _ = RwLockUpgradableReadGuard::upgrade(state).offer.replace(offer);
+                    drop(state);
+                    let _ = self.state.write().unwrap().offer.replace(offer);
                 }
             }
         }
@@ -590,7 +590,7 @@ impl<H: Host> ReceiveContext<H> {
                     let pseudoheader = Pseudoheader::make(u64::from(local_session_id), packet_type, counter);
                     if fragment_count > 1 {
                         if fragment_count <= (MAX_FRAGMENTS as u8) && fragment_no < fragment_count {
-                            let mut defrag = session.defrag.lock();
+                            let mut defrag = session.defrag.lock().unwrap();
                             let fragment_gather_array = defrag.get_or_create_mut(&counter, || GatherArray::new(fragment_count));
                             if let Some(assembled_packet) = fragment_gather_array.add(fragment_no, incoming_packet_buf) {
                                 drop(defrag); // release lock
@@ -638,7 +638,7 @@ impl<H: Host> ReceiveContext<H> {
             if check_header_mac(incoming_packet, &self.incoming_init_header_check_cipher) {
                 let pseudoheader = Pseudoheader::make(SessionId::NIL.0, packet_type, counter);
                 if fragment_count > 1 {
-                    let mut defrag = self.initial_offer_defrag.lock();
+                    let mut defrag = self.initial_offer_defrag.lock().unwrap();
                     let fragment_gather_array = defrag.get_or_create_mut(&counter, || GatherArray::new(fragment_count));
                     if let Some(assembled_packet) = fragment_gather_array.add(fragment_no, incoming_packet_buf) {
                         drop(defrag); // release lock
@@ -697,7 +697,7 @@ impl<H: Host> ReceiveContext<H> {
         debug_assert_eq!(PACKET_TYPE_NOP, 1);
         if packet_type <= PACKET_TYPE_NOP {
             if let Some(session) = session {
-                let state = session.state.read();
+                let state = session.state.read().unwrap();
                 for p in 0..KEY_HISTORY_SIZE {
                     let key_ptr = (state.key_ptr + p) % KEY_HISTORY_SIZE;
                     if let Some(key) = state.keys[key_ptr].as_ref() {
@@ -747,14 +747,14 @@ impl<H: Host> ReceiveContext<H> {
                                     .map_or(true, |old| old.establish_counter < key.establish_counter)
                             {
                                 drop(state);
-                                let mut state = session.state.write();
+                                let mut state = session.state.write().unwrap();
                                 state.key_ptr = key_ptr;
                                 for i in 0..KEY_HISTORY_SIZE {
                                     if i != key_ptr {
                                         if let Some(old_key) = state.keys[key_ptr].as_ref() {
                                             // Release pooled cipher memory from old keys.
-                                            old_key.receive_cipher_pool.lock().clear();
-                                            old_key.send_cipher_pool.lock().clear();
+                                            old_key.receive_cipher_pool.lock().unwrap().clear();
+                                            old_key.send_cipher_pool.lock().unwrap().clear();
                                         }
                                     }
                                 }
@@ -822,7 +822,7 @@ impl<H: Host> ReceiveContext<H> {
 
                     // Check rate limits.
                     if let Some(session) = session.as_ref() {
-                        if (current_time - session.state.read().last_remote_offer) < H::REKEY_RATE_LIMIT_MS {
+                        if (current_time - session.state.read().unwrap().last_remote_offer) < H::REKEY_RATE_LIMIT_MS {
                             return Err(Error::RateLimited);
                         }
                     } else {
@@ -899,7 +899,7 @@ impl<H: Host> ReceiveContext<H> {
                         let alice_ratchet_key_fingerprint = alice_ratchet_key_fingerprint.as_ref().unwrap();
                         let mut ratchet_key = None;
                         let mut ratchet_count = 0;
-                        let state = session.state.read();
+                        let state = session.state.read().unwrap();
                         for k in state.keys.iter() {
                             if let Some(k) = k.as_ref() {
                                 if key_fingerprint(k.ratchet_key.as_bytes())[..16].eq(alice_ratchet_key_fingerprint) {
@@ -1060,7 +1060,7 @@ impl<H: Host> ReceiveContext<H> {
 
                     let key = SessionKey::new(key, Role::Bob, current_time, reply_counter, ratchet_count + 1, e1e1.is_some());
 
-                    let mut state = session.state.write();
+                    let mut state = session.state.write().unwrap();
                     let _ = state.remote_session_id.replace(alice_session_id);
                     let next_key_ptr = (state.key_ptr + 1) % KEY_HISTORY_SIZE;
                     let _ = state.keys[next_key_ptr].replace(key);
@@ -1087,7 +1087,7 @@ impl<H: Host> ReceiveContext<H> {
                     let aes_gcm_tag_end = incoming_packet_len - HMAC_SIZE;
 
                     if let Some(session) = session {
-                        let state = session.state.upgradable_read();
+                        let state = session.state.read().unwrap();
                         if let Some(offer) = state.offer.as_ref() {
                             let (bob_e0_public, e0e0) =
                                 P384PublicKey::from_bytes(&incoming_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
@@ -1181,7 +1181,8 @@ impl<H: Host> ReceiveContext<H> {
                             set_header_mac(&mut reply_buf, &session.header_check_cipher);
                             send(&mut reply_buf);
 
-                            let mut state = RwLockUpgradableReadGuard::upgrade(state);
+                            drop(state);
+                            let mut state = session.state.write().unwrap();
                             let _ = state.remote_session_id.replace(bob_session_id);
                             let next_key_ptr = (state.key_ptr + 1) % KEY_HISTORY_SIZE;
                             let _ = state.keys[next_key_ptr].replace(key);
@@ -1603,11 +1604,12 @@ impl SessionKey {
             Ok(self
                 .send_cipher_pool
                 .lock()
+                .unwrap()
                 .pop()
                 .unwrap_or_else(|| Box::new(AesGcm::new(self.send_key.as_bytes(), true))))
         } else {
             // Not only do we return an error, but we also destroy the key.
-            let mut scp = self.send_cipher_pool.lock();
+            let mut scp = self.send_cipher_pool.lock().unwrap();
             scp.clear();
             self.send_key.nuke();
 
@@ -1617,20 +1619,21 @@ impl SessionKey {
 
     #[inline(always)]
     fn return_send_cipher(&self, c: Box<AesGcm>) {
-        self.send_cipher_pool.lock().push(c);
+        self.send_cipher_pool.lock().unwrap().push(c);
     }
 
     #[inline(always)]
     fn get_receive_cipher(&self) -> Box<AesGcm> {
         self.receive_cipher_pool
             .lock()
+            .unwrap()
             .pop()
             .unwrap_or_else(|| Box::new(AesGcm::new(self.receive_key.as_bytes(), false)))
     }
 
     #[inline(always)]
     fn return_receive_cipher(&self, c: Box<AesGcm>) {
-        self.receive_cipher_pool.lock().push(c);
+        self.receive_cipher_pool.lock().unwrap().push(c);
     }
 }
 
@@ -1659,9 +1662,8 @@ fn key_fingerprint(key: &[u8]) -> [u8; 48] {
 
 #[cfg(test)]
 mod tests {
-    use parking_lot::Mutex;
     use std::collections::LinkedList;
-    use std::sync::Arc;
+    use std::sync::{Arc, Mutex};
     use zerotier_utils::hex;
 
     #[allow(unused_imports)]
@@ -1722,7 +1724,7 @@ mod tests {
         }
 
         fn session_lookup(&self, local_session_id: SessionId) -> Option<Self::SessionRef> {
-            self.session.lock().as_ref().and_then(|s| {
+            self.session.lock().unwrap().as_ref().and_then(|s| {
                 if s.id == local_session_id {
                     Some(s.clone())
                 } else {
@@ -1743,7 +1745,7 @@ mod tests {
             _: &[u8],
         ) -> Option<(SessionId, Secret<64>, Self::AssociatedObject)> {
             loop {
-                let mut new_id = self.session_id_counter.lock();
+                let mut new_id = self.session_id_counter.lock().unwrap();
                 *new_id += 1;
                 return Some((SessionId::new_from_u64(*new_id).unwrap(), self.psk.clone(), 0));
             }
@@ -1765,10 +1767,10 @@ mod tests {
 
         //println!("zssp: size of session (bytes): {}", std::mem::size_of::<Session<Box<TestHost>>>());
 
-        let _ = alice_host.session.lock().insert(Arc::new(
+        let _ = alice_host.session.lock().unwrap().insert(Arc::new(
             Session::new(
                 &alice_host,
-                |data| bob_host.queue.lock().push_front(data.to_vec()),
+                |data| bob_host.queue.lock().unwrap().push_front(data.to_vec()),
                 SessionId::new_random(),
                 bob_host.local_s.public_key_bytes(),
                 &[],
@@ -1785,9 +1787,9 @@ mod tests {
             for host in [&alice_host, &bob_host] {
                 let send_to_other = |data: &mut [u8]| {
                     if std::ptr::eq(host, &alice_host) {
-                        bob_host.queue.lock().push_front(data.to_vec());
+                        bob_host.queue.lock().unwrap().push_front(data.to_vec());
                     } else {
-                        alice_host.queue.lock().push_front(data.to_vec());
+                        alice_host.queue.lock().unwrap().push_front(data.to_vec());
                     }
                 };
 
@@ -1798,7 +1800,7 @@ mod tests {
                 };
 
                 loop {
-                    if let Some(qi) = host.queue.lock().pop_back() {
+                    if let Some(qi) = host.queue.lock().unwrap().pop_back() {
                         let qi_len = qi.len();
                         ts += 1;
                         let r = rc.receive(host, &0, send_to_other, &mut data_buf, qi, mtu_buffer.len(), ts);
@@ -1820,7 +1822,7 @@ mod tests {
                                         qi_len,
                                         u64::from(new_session.id)
                                     );
-                                    let mut hs = host.session.lock();
+                                    let mut hs = host.session.lock().unwrap();
                                     assert!(hs.is_none());
                                     let _ = hs.insert(Arc::new(new_session));
                                 }
@@ -1844,10 +1846,10 @@ mod tests {
                 }
 
                 data_buf.fill(0x12);
-                if let Some(session) = host.session.lock().as_ref().cloned() {
+                if let Some(session) = host.session.lock().unwrap().as_ref().cloned() {
                     if session.established() {
                         {
-                            let mut key_id = host.key_id.lock();
+                            let mut key_id = host.key_id.lock().unwrap();
                             let security_info = session.security_info().unwrap();
                             if !security_info.0.eq(key_id.as_ref()) {
                                 *key_id = security_info.0;

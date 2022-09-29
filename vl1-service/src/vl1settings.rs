@@ -1,6 +1,7 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 use serde::{Deserialize, Serialize};
+
 use zerotier_network_hypervisor::vl1::InetAddress;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]

@@ -14,7 +14,6 @@ zerotier-crypto = { path = "../crypto" }
 zerotier-utils = { path = "../utils" }
 base64 = "^0"
 lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }
-parking_lot = { version = "^0", features = [], default-features = false }
 serde = { version = "^1", features = ["derive"], default-features = false }
 
 [dev-dependencies]

@@ -3,14 +3,13 @@
 use std::sync::Arc;
 
 use tokio::time::{Duration, Instant};
-use zerotier_utils::tokio;
 
 use zerotier_network_hypervisor::protocol::{verbs, PacketBuffer};
 use zerotier_network_hypervisor::vl1::{HostSystem, Identity, InnerProtocol, PacketHandlerResult, Path, PathFilter, Peer};
 use zerotier_network_hypervisor::vl2::NetworkId;
-
 use zerotier_utils::dictionary::Dictionary;
 use zerotier_utils::reaper::Reaper;
+use zerotier_utils::tokio;
 
 use crate::database::Database;
 

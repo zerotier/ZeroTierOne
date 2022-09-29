@@ -40,12 +40,12 @@ pub fn ms_since_epoch() -> i64 {
 /// Get milliseconds since an arbitrary time in the past, guaranteed to monotonically increase.
 #[inline]
 pub fn ms_monotonic() -> i64 {
-    static STARTUP_INSTANT: parking_lot::RwLock<Option<std::time::Instant>> = parking_lot::RwLock::new(None);
-    let si = *STARTUP_INSTANT.read();
+    static STARTUP_INSTANT: std::sync::RwLock<Option<std::time::Instant>> = std::sync::RwLock::new(None);
+    let si = *STARTUP_INSTANT.read().unwrap();
     let instant_zero = if let Some(si) = si {
         si
     } else {
-        *STARTUP_INSTANT.write().get_or_insert(std::time::Instant::now())
+        *STARTUP_INSTANT.write().unwrap().get_or_insert(std::time::Instant::now())
     };
     std::time::Instant::now().duration_since(instant_zero).as_millis() as i64
 }

@@ -3,6 +3,7 @@
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::sync::Arc;
+use std::sync::RwLock;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
@@ -30,7 +31,7 @@ pub struct VL1Service<
     PathFilterImpl: PathFilter + 'static,
     InnerProtocolImpl: InnerProtocol + 'static,
 > {
-    state: parking_lot::RwLock<VL1ServiceMutableState>,
+    state: RwLock<VL1ServiceMutableState>,
     storage: Arc<NodeStorageImpl>,
     inner: Arc<InnerProtocolImpl>,
     path_filter: Arc<PathFilterImpl>,
@@ -40,7 +41,7 @@ pub struct VL1Service<
 
 struct VL1ServiceMutableState {
     daemons: Vec<JoinHandle<()>>,
-    udp_sockets: HashMap<u16, parking_lot::RwLock<BoundUdpPort>>,
+    udp_sockets: HashMap<u16, RwLock<BoundUdpPort>>,
     settings: VL1Settings,
     running: bool,
 }
@@ -55,7 +56,7 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
         settings: VL1Settings,
     ) -> Result<Arc<Self>, Box<dyn Error>> {
         let mut service = VL1Service {
-            state: parking_lot::RwLock::new(VL1ServiceMutableState {
+            state: RwLock::new(VL1ServiceMutableState {
                 daemons: Vec::with_capacity(2),
                 udp_sockets: HashMap::with_capacity(8),
                 settings,
@@ -78,7 +79,7 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
         daemons.push(std::thread::spawn(move || {
             s.background_task_daemon();
         }));
-        service.state.write().daemons = daemons;
+        service.state.write().unwrap().daemons = daemons;
 
         Ok(service)
     }
@@ -90,11 +91,11 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
     }
 
     pub fn bound_udp_ports(&self) -> Vec<u16> {
-        self.state.read().udp_sockets.keys().cloned().collect()
+        self.state.read().unwrap().udp_sockets.keys().cloned().collect()
     }
 
     fn update_udp_bindings(self: &Arc<Self>) {
-        let state = self.state.read();
+        let state = self.state.read().unwrap();
         let mut need_fixed_ports: HashSet<u16> = HashSet::from_iter(state.settings.fixed_ports.iter().cloned());
         let mut have_random_port_count = 0;
         for (p, _) in state.udp_sockets.iter() {
@@ -105,10 +106,10 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
 
         let state = if !need_fixed_ports.is_empty() || have_random_port_count != desired_random_port_count {
             drop(state);
-            let mut state = self.state.write();
+            let mut state = self.state.write().unwrap();
 
             for p in need_fixed_ports.iter() {
-                state.udp_sockets.insert(*p, parking_lot::RwLock::new(BoundUdpPort::new(*p)));
+                state.udp_sockets.insert(*p, RwLock::new(BoundUdpPort::new(*p)));
             }
 
             while have_random_port_count > desired_random_port_count {
@@ -116,7 +117,7 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
                 let mut most_stale_binding_port = 0;
                 for (p, s) in state.udp_sockets.iter() {
                     if !state.settings.fixed_ports.contains(p) {
-                        let (total_smart_ptr_handles, most_recent_receive) = s.read().liveness();
+                        let (total_smart_ptr_handles, most_recent_receive) = s.read().unwrap().liveness();
                         if total_smart_ptr_handles < most_stale_binding_liveness.0
                             || (total_smart_ptr_handles == most_stale_binding_liveness.0
                                 && most_recent_receive <= most_stale_binding_liveness.1)
@@ -139,28 +140,25 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
                 for i in 0..UNASSIGNED_PRIVILEGED_PORTS.len() {
                     let p = UNASSIGNED_PRIVILEGED_PORTS[rn.wrapping_add(i) % UNASSIGNED_PRIVILEGED_PORTS.len()];
                     if !state.udp_sockets.contains_key(&p) && udp_test_bind(p) {
-                        let _ = state.udp_sockets.insert(p, parking_lot::RwLock::new(BoundUdpPort::new(p)));
+                        let _ = state.udp_sockets.insert(p, RwLock::new(BoundUdpPort::new(p)));
                         continue 'outer_add_port_loop;
                     }
                 }
 
                 let p = 50000 + ((random::xorshift64_random() as u16) % 15535);
                 if !state.udp_sockets.contains_key(&p) && udp_test_bind(p) {
-                    have_random_port_count += state
-                        .udp_sockets
-                        .insert(p, parking_lot::RwLock::new(BoundUdpPort::new(p)))
-                        .is_none() as usize;
+                    have_random_port_count += state.udp_sockets.insert(p, RwLock::new(BoundUdpPort::new(p))).is_none() as usize;
                 }
             }
 
             drop(state);
-            self.state.read()
+            self.state.read().unwrap()
         } else {
             state
         };
 
         for (_, binding) in state.udp_sockets.iter() {
-            let mut binding = binding.write();
+            let mut binding = binding.write().unwrap();
             let _ = binding.update_bindings(
                 &state.settings.interface_prefix_blacklist,
                 &state.settings.cidr_blacklist,
@@ -175,7 +173,7 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
         std::thread::sleep(Duration::from_millis(500));
         let mut udp_binding_check_every: usize = 0;
         loop {
-            if !self.state.read().running {
+            if !self.state.read().unwrap().running {
                 break;
             }
             if (udp_binding_check_every % UPDATE_UDP_BINDINGS_EVERY_SECS) == 0 {
@@ -252,12 +250,12 @@ impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl
                     }
                 }
 
-                let state = self.state.read();
+                let state = self.state.read().unwrap();
                 if !state.udp_sockets.is_empty() {
                     if let Some(specific_interface) = local_interface {
                         // Send from a specific interface if that interface is specified.
                         'socket_search: for (_, p) in state.udp_sockets.iter() {
-                            let p = p.read();
+                            let p = p.read().unwrap();
                             if !p.sockets.is_empty() {
                                 let mut i = (random::next_u32_secure() as usize) % p.sockets.len();
                                 for _ in 0..p.sockets.len() {
@@ -275,7 +273,7 @@ impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl
                         // Otherwise send from one socket on every interface.
                         let mut sent_on_interfaces = HashSet::with_capacity(4);
                         for p in state.udp_sockets.values() {
-                            let p = p.read();
+                            let p = p.read().unwrap();
                             if !p.sockets.is_empty() {
                                 let mut i = (random::next_u32_secure() as usize) % p.sockets.len();
                                 for _ in 0..p.sockets.len() {
@@ -311,7 +309,7 @@ impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl
     for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
 {
     fn drop(&mut self) {
-        let mut state = self.state.write();
+        let mut state = self.state.write().unwrap();
         state.running = false;
         state.udp_sockets.clear();
         let mut daemons: Vec<JoinHandle<()>> = state.daemons.drain(..).collect();

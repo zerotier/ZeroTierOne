@@ -6,8 +6,8 @@ use zerotier_network_hypervisor::vl1::InetAddress;
 #[cfg(any(target_os = "macos", target_os = "ios", target_os = "freebsd", target_os = "darwin"))]
 mod freebsd_like {
     use num_traits::AsPrimitive;
-    use parking_lot::Mutex;
     use std::mem::size_of;
+    use std::sync::Mutex;
     use zerotier_network_hypervisor::vl1::InetAddress;
 
     static INFO_SOCKET: Mutex<i32> = Mutex::new(-1);
@@ -41,7 +41,7 @@ mod freebsd_like {
     pub fn is_ipv6_temporary(device_name: &str, address: &InetAddress) -> bool {
         if address.is_ipv6() {
             unsafe {
-                let mut info_socket = INFO_SOCKET.lock();
+                let mut info_socket = INFO_SOCKET.lock().unwrap();
                 if *info_socket < 0 {
                     *info_socket = libc::socket(libc::AF_INET6.as_(), libc::SOCK_DGRAM.as_(), 0) as i32;
                     if *info_socket < 0 {
