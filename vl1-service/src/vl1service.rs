@@ -12,8 +12,8 @@ use zerotier_network_hypervisor::vl1::*;
 use zerotier_utils::{ms_monotonic, ms_since_epoch};
 
 use crate::constants::UNASSIGNED_PRIVILEGED_PORTS;
-use crate::settings::VL1Settings;
 use crate::sys::udp::{udp_test_bind, BoundUdpPort, UdpPacketHandler};
+use crate::vl1settings::VL1Settings;
 use crate::LocalSocket;
 
 /// Update UDP bindings every this many seconds.

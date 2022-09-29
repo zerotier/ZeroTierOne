@@ -3,7 +3,6 @@
 mod address;
 mod endpoint;
 mod event;
-mod fragmentedpacket;
 mod mac;
 mod path;
 mod peer;

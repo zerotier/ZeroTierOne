@@ -27,6 +27,7 @@ pub trait Marshalable: Sized {
     ///
     /// This will return an Err if the buffer is too small or some other error occurs. It's just
     /// a shortcut to creating a buffer and marshaling into it.
+    #[inline]
     fn to_buffer<const BL: usize>(&self) -> Result<Buffer<BL>, UnmarshalError> {
         let mut tmp = Buffer::new();
         self.marshal(&mut tmp)?;
@@ -36,12 +37,14 @@ pub trait Marshalable: Sized {
     /// Unmarshal this object from a buffer.
     ///
     /// This is just a shortcut to calling unmarshal() with a zero cursor and then discarding the cursor.
+    #[inline]
     fn from_buffer<const BL: usize>(buf: &Buffer<BL>) -> Result<Self, UnmarshalError> {
         let mut tmp = 0;
         Self::unmarshal(buf, &mut tmp)
     }
 
     /// Marshal and convert to a Rust vector.
+    #[inline]
     fn to_bytes(&self) -> Vec<u8> {
         let mut tmp = Buffer::<TEMP_BUF_SIZE>::new();
         assert!(self.marshal(&mut tmp).is_ok()); // panics if TEMP_BUF_SIZE is too small
@@ -49,6 +52,7 @@ pub trait Marshalable: Sized {
     }
 
     /// Unmarshal from a raw slice.
+    #[inline]
     fn from_bytes(b: &[u8]) -> Result<Self, UnmarshalError> {
         if b.len() <= TEMP_BUF_SIZE {
             let mut tmp = Buffer::<TEMP_BUF_SIZE>::new_boxed();

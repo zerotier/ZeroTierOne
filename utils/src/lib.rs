@@ -29,6 +29,7 @@ pub use tokio;
 pub const NEVER_HAPPENED_TICKS: i64 = i64::MIN / 2;
 
 /// Get milliseconds since unix epoch.
+#[inline]
 pub fn ms_since_epoch() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -37,6 +38,7 @@ pub fn ms_since_epoch() -> i64 {
 }
 
 /// Get milliseconds since an arbitrary time in the past, guaranteed to monotonically increase.
+#[inline]
 pub fn ms_monotonic() -> i64 {
     static STARTUP_INSTANT: parking_lot::RwLock<Option<std::time::Instant>> = parking_lot::RwLock::new(None);
     let si = *STARTUP_INSTANT.read();

@@ -191,8 +191,12 @@ impl<T, const C: usize> ArrayVec<T, C> {
     }
 }
 
-impl<T: Copy, const C: usize> ArrayVec<T, C> {
+impl<T, const C: usize> ArrayVec<T, C>
+where
+    T: Copy,
+{
     /// Push a slice of copyable objects, panic if capacity exceeded.
+    #[inline]
     pub fn push_slice(&mut self, v: &[T]) {
         let start = self.s;
         let end = self.s + v.len();

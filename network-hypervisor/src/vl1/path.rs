@@ -8,7 +8,6 @@ use parking_lot::Mutex;
 
 use crate::protocol::*;
 use crate::vl1::endpoint::Endpoint;
-use crate::vl1::fragmentedpacket::FragmentedPacket;
 use crate::vl1::node::*;
 
 use zerotier_crypto::random;
@@ -33,10 +32,11 @@ pub struct Path<HostSystemImpl: HostSystem> {
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     create_time_ticks: i64,
-    fragmented_packets: Mutex<HashMap<u64, FragmentedPacket, PacketIdHasher>>,
+    fragmented_packets: Mutex<HashMap<u64, v1::FragmentedPacket, PacketIdHasher>>,
 }
 
 impl<HostSystemImpl: HostSystem> Path<HostSystemImpl> {
+    #[inline]
     pub fn new(
         endpoint: Endpoint,
         local_socket: HostSystemImpl::LocalSocket,
@@ -56,6 +56,7 @@ impl<HostSystemImpl: HostSystem> Path<HostSystemImpl> {
 
     /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.
     /// This returns None if more fragments are needed to assemble the packet.
+    #[inline]
     pub(crate) fn receive_fragment(
         &self,
         packet_id: u64,
@@ -63,7 +64,7 @@ impl<HostSystemImpl: HostSystem> Path<HostSystemImpl> {
         fragment_expecting_count: u8,
         packet: PooledPacketBuffer,
         time_ticks: i64,
-    ) -> Option<FragmentedPacket> {
+    ) -> Option<v1::FragmentedPacket> {
         let mut fp = self.fragmented_packets.lock();
 
         // Discard some old waiting packets if the total incoming fragments for a path exceeds a
@@ -83,7 +84,7 @@ impl<HostSystemImpl: HostSystem> Path<HostSystemImpl> {
 
         if fp
             .entry(packet_id)
-            .or_insert_with(|| FragmentedPacket::new(time_ticks))
+            .or_insert_with(|| v1::FragmentedPacket::new(time_ticks))
             .add_fragment(packet, fragment_no, fragment_expecting_count)
         {
             fp.remove(&packet_id)
@@ -102,6 +103,7 @@ impl<HostSystemImpl: HostSystem> Path<HostSystemImpl> {
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
     }
 
+    #[inline]
     pub(crate) fn service(&self, time_ticks: i64) -> PathServiceResult {
         self.fragmented_packets
             .lock()
