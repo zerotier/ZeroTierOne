@@ -7,7 +7,6 @@ mod mac;
 mod path;
 mod peer;
 mod rootset;
-mod symmetricsecret;
 
 pub(crate) mod node;
 

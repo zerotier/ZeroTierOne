@@ -6,7 +6,11 @@ use std::mem::MaybeUninit;
 use crate::vl1::Address;
 
 use zerotier_utils::buffer::{Buffer, PooledBufferFactory};
-use zerotier_utils::pool::{Pool, Pooled};
+use zerotier_utils::pool::{Pool, PoolFactory, Pooled};
+
+use zerotier_crypto::aes_gmac_siv::AesGmacSiv;
+use zerotier_crypto::hash::hmac_sha384;
+use zerotier_crypto::secret::Secret;
 
 /*
  * Legacy V1 protocol versions:
@@ -480,6 +484,41 @@ pub(crate) mod v1 {
             } else {
                 false
             }
+        }
+    }
+
+    /// A V1 symmetric secret with master key and sub-keys for AES-GMAC-SIV
+    pub(crate) struct SymmetricSecret {
+        pub key: Secret<64>,
+        pub aes_gmac_siv: Pool<AesGmacSiv, AesGmacSivPoolFactory>,
+    }
+
+    fn zt_kbkdf_hmac_sha384(key: &[u8], label: u8) -> Secret<48> {
+        Secret(hmac_sha384(key, &[0, 0, 0, 0, b'Z', b'T', label, 0, 0, 0, 0, 0x01, 0x80]))
+    }
+
+    impl SymmetricSecret {
+        /// Create a new symmetric secret, deriving all sub-keys and such.
+        pub fn new(key: Secret<64>) -> SymmetricSecret {
+            let aes_factory = AesGmacSivPoolFactory(
+                zt_kbkdf_hmac_sha384(&key.0[..48], v1::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K0).first_n_clone(),
+                zt_kbkdf_hmac_sha384(&key.0[..48], v1::KBKDF_KEY_USAGE_LABEL_AES_GMAC_SIV_K1).first_n_clone(),
+            );
+            SymmetricSecret { key, aes_gmac_siv: Pool::new(2, aes_factory) }
+        }
+    }
+
+    pub(crate) struct AesGmacSivPoolFactory(Secret<32>, Secret<32>);
+
+    impl PoolFactory<AesGmacSiv> for AesGmacSivPoolFactory {
+        #[inline(always)]
+        fn create(&self) -> AesGmacSiv {
+            AesGmacSiv::new(self.0.as_bytes(), self.1.as_bytes())
+        }
+
+        #[inline(always)]
+        fn reset(&self, obj: &mut AesGmacSiv) {
+            obj.reset();
         }
     }
 }

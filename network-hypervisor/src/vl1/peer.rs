@@ -19,7 +19,6 @@ use crate::protocol::*;
 use crate::vl1::address::Address;
 use crate::vl1::debug_event;
 use crate::vl1::node::*;
-use crate::vl1::symmetricsecret::SymmetricSecret;
 use crate::vl1::{Endpoint, Identity, Path};
 use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
@@ -28,7 +27,7 @@ pub(crate) const SERVICE_INTERVAL_MS: i64 = 10000;
 pub struct Peer<HostSystemImpl: HostSystem> {
     pub identity: Identity,
 
-    static_symmetric_key: SymmetricSecret,
+    v1_proto_static_secret: v1::SymmetricSecret,
     paths: Mutex<Vec<PeerPath<HostSystemImpl>>>,
 
     pub(crate) last_send_time_ticks: AtomicI64,
@@ -67,7 +66,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         this_node_identity.agree(&id).map(|static_secret| -> Self {
             Self {
                 identity: id,
-                static_symmetric_key: SymmetricSecret::new(static_secret),
+                v1_proto_static_secret: v1::SymmetricSecret::new(static_secret),
                 paths: Mutex::new(Vec::with_capacity(4)),
                 last_send_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
                 last_receive_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
@@ -294,7 +293,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 v1::CIPHER_AES_GMAC_SIV
             };
 
-            let mut aes_gmac_siv = self.static_symmetric_key.aes_gmac_siv.get();
+            let mut aes_gmac_siv = self.v1_proto_static_secret.aes_gmac_siv.get();
             aes_gmac_siv.encrypt_init(&self.v1_proto_next_message_id().to_ne_bytes());
             aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(
                 self.identity.address,
@@ -325,7 +324,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             };
 
             let (mut salsa, poly1305_otk) = v1_proto_salsa_poly_create(
-                &self.static_symmetric_key,
+                &self.v1_proto_static_secret,
                 {
                     let header = packet.struct_mut_at::<v1::PacketHeader>(0).unwrap();
                     header.id = self.v1_proto_next_message_id().to_ne_bytes();
@@ -412,7 +411,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             assert!(node.identity.write_public(&mut packet, self.identity.p384.is_none()).is_ok());
 
             let (_, poly1305_key) = v1_proto_salsa_poly_create(
-                &self.static_symmetric_key,
+                &self.v1_proto_static_secret,
                 packet.struct_at::<v1::PacketHeader>(0).unwrap(),
                 packet.len(),
             );
@@ -468,7 +467,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             let mut payload = PacketBuffer::new();
 
             let message_id = if let Some(message_id2) = v1_proto_try_aead_decrypt(
-                &self.static_symmetric_key,
+                &self.v1_proto_static_secret,
                 packet_frag0_payload_bytes,
                 packet_header,
                 fragments,
@@ -870,7 +869,7 @@ impl<HostSystemImpl: HostSystem> PartialEq for Peer<HostSystemImpl> {
 impl<HostSystemImpl: HostSystem> Eq for Peer<HostSystemImpl> {}
 
 fn v1_proto_try_aead_decrypt(
-    secret: &SymmetricSecret,
+    secret: &v1::SymmetricSecret,
     packet_frag0_payload_bytes: &[u8],
     packet_header: &v1::PacketHeader,
     fragments: &[Option<PooledPacketBuffer>],
@@ -952,7 +951,7 @@ fn v1_proto_try_aead_decrypt(
     }
 }
 
-fn v1_proto_salsa_poly_create(secret: &SymmetricSecret, header: &v1::PacketHeader, packet_size: usize) -> (Salsa<12>, [u8; 32]) {
+fn v1_proto_salsa_poly_create(secret: &v1::SymmetricSecret, header: &v1::PacketHeader, packet_size: usize) -> (Salsa<12>, [u8; 32]) {
     // Create a per-packet key from the IV, source, destination, and packet size.
     let mut key: Secret<32> = secret.key.first_n_clone();
     let hb = header.as_bytes();
