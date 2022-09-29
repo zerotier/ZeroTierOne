@@ -47,7 +47,7 @@ impl<DatabaseImpl: Database> Controller<DatabaseImpl> {
 }
 
 impl<DatabaseImpl: Database> PathFilter for Controller<DatabaseImpl> {
-    fn check_path<HostSystemImpl: HostSystem>(
+    fn should_use_physical_path<HostSystemImpl: HostSystem>(
         &self,
         _id: &Identity,
         _endpoint: &zerotier_network_hypervisor::vl1::Endpoint,

@@ -220,8 +220,10 @@ impl RootSet {
 
     fn marshal_internal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_signatures: bool) -> Result<(), UnmarshalError> {
         buf.append_u8(0)?; // version byte for future use
+
         buf.append_varint(self.name.as_bytes().len() as u64)?;
         buf.append_bytes(self.name.as_bytes())?;
+
         if self.url.is_some() {
             let url = self.url.as_ref().unwrap().as_bytes();
             buf.append_varint(url.len() as u64)?;
@@ -229,7 +231,9 @@ impl RootSet {
         } else {
             buf.append_varint(0)?;
         }
+
         buf.append_varint(self.revision)?;
+
         buf.append_varint(self.members.len() as u64)?;
         for m in self.members.iter() {
             m.identity.marshal(buf)?;
@@ -251,7 +255,9 @@ impl RootSet {
             buf.append_u8(m.protocol_version)?;
             buf.append_varint(0)?; // size of additional fields for future use
         }
+
         buf.append_varint(0)?; // size of additional fields for future use
+
         Ok(())
     }
 }

@@ -90,10 +90,10 @@ pub trait NodeStorage: Sync + Send + 'static {
     fn save_node_identity(&self, id: &Identity);
 }
 
-/// Trait to be implemented to provide path hints and a filter to approve physical paths
+/// Trait to be implemented to provide path hints and a filter to approve physical paths.
 pub trait PathFilter: Sync + Send + 'static {
     /// Called to check and see if a physical address should be used for ZeroTier traffic to a node.
-    fn check_path<HostSystemImpl: HostSystem>(
+    fn should_use_physical_path<HostSystemImpl: HostSystem>(
         &self,
         id: &Identity,
         endpoint: &Endpoint,
@@ -190,6 +190,7 @@ struct RootInfo<HostSystemImpl: HostSystem> {
     online: bool,
 }
 
+/// Interval gate objects used ot fire off background tasks, see do_background_tasks().
 #[derive(Default)]
 struct BackgroundTaskIntervals {
     root_sync: IntervalGate<{ ROOT_SYNC_INTERVAL_MS }>,
@@ -200,8 +201,9 @@ struct BackgroundTaskIntervals {
     whois_queue_retry: IntervalGate<{ WHOIS_RETRY_INTERVAL }>,
 }
 
+/// WHOIS requests and any packets that are waiting on them to be decrypted and authenticated.
 struct WhoisQueueItem<HostSystemImpl: HostSystem> {
-    waiting_packets: RingBuffer<(Weak<Path<HostSystemImpl>>, PooledPacketBuffer), WHOIS_MAX_WAITING_PACKETS>,
+    v1_proto_waiting_packets: RingBuffer<(Weak<Path<HostSystemImpl>>, PooledPacketBuffer), WHOIS_MAX_WAITING_PACKETS>,
     last_retry_time: i64,
     retry_count: u16,
 }
@@ -293,65 +295,6 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
 
     pub fn is_online(&self) -> bool {
         self.roots.read().online
-    }
-
-    fn update_best_root(&self, host_system: &HostSystemImpl, time_ticks: i64) {
-        let roots = self.roots.read();
-
-        // The best root is the one that has replied to a HELLO most recently. Since we send HELLOs in unison
-        // this is a proxy for latency and also causes roots that fail to reply to drop out quickly.
-        let mut best = None;
-        let mut latest_hello_reply = 0;
-        for (r, _) in roots.roots.iter() {
-            let t = r.last_hello_reply_time_ticks.load(Ordering::Relaxed);
-            if t > latest_hello_reply {
-                latest_hello_reply = t;
-                let _ = best.insert(r);
-            }
-        }
-
-        if let Some(best) = best {
-            let mut best_root = self.best_root.write();
-            if let Some(best_root) = best_root.as_mut() {
-                if !Arc::ptr_eq(best_root, best) {
-                    debug_event!(
-                        host_system,
-                        "[vl1] new best root: {} (replaced {})",
-                        best.identity.address.to_string(),
-                        best_root.identity.address.to_string()
-                    );
-                    *best_root = best.clone();
-                }
-            } else {
-                debug_event!(
-                    host_system,
-                    "[vl1] new best root: {} (was empty)",
-                    best.identity.address.to_string()
-                );
-                let _ = best_root.insert(best.clone());
-            }
-        } else {
-            if let Some(old_best) = self.best_root.write().take() {
-                debug_event!(
-                    host_system,
-                    "[vl1] new best root: NONE (replaced {})",
-                    old_best.identity.address.to_string()
-                );
-            }
-        }
-
-        // Determine if the node is online by whether there is a currently reachable root.
-        if (time_ticks - latest_hello_reply) < (ROOT_HELLO_INTERVAL * 2) && best.is_some() {
-            if !roots.online {
-                drop(roots);
-                self.roots.write().online = true;
-                host_system.event(Event::Online(true));
-            }
-        } else if roots.online {
-            drop(roots);
-            self.roots.write().online = false;
-            host_system.event(Event::Online(false));
-        }
     }
 
     pub fn do_background_tasks(&self, host_system: &HostSystemImpl) -> Duration {
@@ -514,7 +457,65 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                 }
             }
 
-            self.update_best_root(host_system, time_ticks);
+            {
+                let roots = self.roots.read();
+
+                // The best root is the one that has replied to a HELLO most recently. Since we send HELLOs in unison
+                // this is a proxy for latency and also causes roots that fail to reply to drop out quickly.
+                let mut best = None;
+                let mut latest_hello_reply = 0;
+                for (r, _) in roots.roots.iter() {
+                    let t = r.last_hello_reply_time_ticks.load(Ordering::Relaxed);
+                    if t > latest_hello_reply {
+                        latest_hello_reply = t;
+                        let _ = best.insert(r);
+                    }
+                }
+
+                if let Some(best) = best {
+                    let best_root = self.best_root.upgradable_read();
+                    if best_root.as_ref().map_or(true, |br| !Arc::ptr_eq(&br, best)) {
+                        let mut best_root = RwLockUpgradableReadGuard::upgrade(best_root);
+                        if let Some(best_root) = best_root.as_mut() {
+                            debug_event!(
+                                host_system,
+                                "[vl1] selected new best root: {} (replaced {})",
+                                best.identity.address.to_string(),
+                                best_root.identity.address.to_string()
+                            );
+                            *best_root = best.clone();
+                        } else {
+                            debug_event!(
+                                host_system,
+                                "[vl1] selected new best root: {} (was empty)",
+                                best.identity.address.to_string()
+                            );
+                            let _ = best_root.insert(best.clone());
+                        }
+                    }
+                } else {
+                    if let Some(old_best) = self.best_root.write().take() {
+                        debug_event!(
+                            host_system,
+                            "[vl1] selected new best root: NONE (replaced {})",
+                            old_best.identity.address.to_string()
+                        );
+                    }
+                }
+
+                // Determine if the node is online by whether there is a currently reachable root.
+                if (time_ticks - latest_hello_reply) < (ROOT_HELLO_INTERVAL * 2) && best.is_some() {
+                    if !roots.online {
+                        drop(roots);
+                        self.roots.write().online = true;
+                        host_system.event(Event::Online(true));
+                    }
+                } else if roots.online {
+                    drop(roots);
+                    self.roots.write().online = false;
+                    host_system.event(Event::Online(false));
+                }
+            }
         }
 
         // Say HELLO to all roots periodically. For roots we send HELLO to every single endpoint
@@ -622,17 +623,22 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         source_local_socket: &HostSystemImpl::LocalSocket,
         source_local_interface: &HostSystemImpl::LocalInterface,
         time_ticks: i64,
-        mut data: PooledPacketBuffer,
+        mut packet: PooledPacketBuffer,
     ) {
         debug_event!(
             host_system,
             "[vl1] {} -> #{} {}->{} length {} (on socket {}@{})",
             source_endpoint.to_string(),
-            data.bytes_fixed_at::<8>(0)
+            packet
+                .bytes_fixed_at::<8>(0)
                 .map_or("????????????????".into(), |pid| hex::to_string(pid)),
-            data.bytes_fixed_at::<5>(13).map_or("??????????".into(), |src| hex::to_string(src)),
-            data.bytes_fixed_at::<5>(8).map_or("??????????".into(), |dest| hex::to_string(dest)),
-            data.len(),
+            packet
+                .bytes_fixed_at::<5>(13)
+                .map_or("??????????".into(), |src| hex::to_string(src)),
+            packet
+                .bytes_fixed_at::<5>(8)
+                .map_or("??????????".into(), |dest| hex::to_string(dest)),
+            packet.len(),
             source_local_socket.to_string(),
             source_local_interface.to_string()
         );
@@ -642,12 +648,12 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         // and by having 0xffffffffffff be the "nil" session ID for session init packets. ZSSP
         // is the new V2 Noise-based forward-secure transport protocol. What follows below this
         // is legacy handling of the old v1 protocol.
-        if data.u8_at(8).map_or(false, |x| x == 0xff) {
+        if packet.u8_at(8).map_or(false, |x| x == 0xff) {
             todo!();
         }
 
         // Legacy ZeroTier V1 packet handling
-        if let Ok(fragment_header) = data.struct_mut_at::<v1::FragmentHeader>(0) {
+        if let Ok(fragment_header) = packet.struct_mut_at::<v1::FragmentHeader>(0) {
             if let Some(dest) = Address::from_bytes_fixed(&fragment_header.dest) {
                 // Packet is addressed to this node.
 
@@ -671,7 +677,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                             fragment_header.packet_id(),
                             fragment_header.fragment_no(),
                             fragment_header.total_fragments(),
-                            data,
+                            packet,
                             time_ticks,
                         ) {
                             if let Some(frag0) = assembled_packet.frags[0].as_ref() {
@@ -681,7 +687,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                 if let Ok(packet_header) = frag0.struct_at::<v1::PacketHeader>(0) {
                                     if let Some(source) = Address::from_bytes(&packet_header.src) {
                                         if let Some(peer) = self.peer(source) {
-                                            peer.receive(
+                                            peer.v1_proto_receive(
                                                 self,
                                                 host_system,
                                                 inner,
@@ -708,11 +714,11 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                                 self.whois(host_system, source, Some((Arc::downgrade(&path), combined_packet)), time_ticks);
                                             }
                                         }
-                                    }
-                                }
-                            }
-                        }
-                    } else if let Ok(packet_header) = data.struct_at::<v1::PacketHeader>(0) {
+                                    } // else source address invalid
+                                } // else header incomplete
+                            } // else reassembly failed (in a way that shouldn't be possible)
+                        } // else packet not fully assembled yet
+                    } else if let Ok(packet_header) = packet.struct_at::<v1::PacketHeader>(0) {
                         debug_event!(
                             host_system,
                             "[vl1] [v1] #{:0>16x} is unfragmented",
@@ -721,18 +727,19 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
 
                         if let Some(source) = Address::from_bytes(&packet_header.src) {
                             if let Some(peer) = self.peer(source) {
-                                peer.receive(self, host_system, inner, time_ticks, &path, packet_header, data.as_ref(), &[]);
+                                peer.v1_proto_receive(self, host_system, inner, time_ticks, &path, packet_header, packet.as_ref(), &[]);
                             } else {
-                                self.whois(host_system, source, Some((Arc::downgrade(&path), data)), time_ticks);
+                                self.whois(host_system, source, Some((Arc::downgrade(&path), packet)), time_ticks);
                             }
                         }
-                    }
-                } else {
-                    // Packet is addressed somewhere else.
+                    } // else not fragment and header incomplete
+                } else if self.this_node_is_root() {
+                    // Packet is addressed somewhere else, forward if this node is a root.
 
                     #[cfg(debug_assertions)]
                     let debug_packet_id;
 
+                    // Increment and check hop count in packet header, return if max hops exceeded or error.
                     if fragment_header.is_fragment() {
                         #[cfg(debug_assertions)]
                         {
@@ -749,7 +756,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                             debug_event!(host_system, "[vl1] [v1] #{:0>16x} discarded: max hops exceeded!", debug_packet_id);
                             return;
                         }
-                    } else if let Ok(packet_header) = data.struct_mut_at::<v1::PacketHeader>(0) {
+                    } else if let Ok(packet_header) = packet.struct_mut_at::<v1::PacketHeader>(0) {
                         #[cfg(debug_assertions)]
                         {
                             debug_packet_id = u64::from_be_bytes(packet_header.id);
@@ -774,12 +781,22 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                     }
 
                     if let Some(peer) = self.peer(dest) {
-                        // TODO: SHOULD we forward? Need a way to check.
-                        peer.forward(host_system, time_ticks, data.as_ref());
-                        #[cfg(debug_assertions)]
-                        debug_event!(host_system, "[vl1] [v1] #{:0>16x} forwarded successfully", debug_packet_id);
+                        if let Some(forward_path) = peer.direct_path() {
+                            host_system.wire_send(
+                                &forward_path.endpoint,
+                                Some(&forward_path.local_socket),
+                                Some(&forward_path.local_interface),
+                                packet.as_bytes(),
+                                0,
+                            );
+
+                            peer.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
+
+                            #[cfg(debug_assertions)]
+                            debug_event!(host_system, "[vl1] [v1] #{:0>16x} forwarded successfully", debug_packet_id);
+                        }
                     }
-                }
+                } // else not for this node and shouldn't be forwarded
             }
         }
     }
@@ -796,12 +813,12 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         {
             let mut whois_queue = self.whois_queue.lock();
             let qi = whois_queue.entry(address).or_insert_with(|| WhoisQueueItem::<HostSystemImpl> {
-                waiting_packets: RingBuffer::new(),
+                v1_proto_waiting_packets: RingBuffer::new(),
                 last_retry_time: 0,
                 retry_count: 0,
             });
             if let Some(p) = waiting_packet {
-                qi.waiting_packets.add(p);
+                qi.v1_proto_waiting_packets.add(p);
             }
             if qi.retry_count > 0 {
                 return;
@@ -859,10 +876,10 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                                 .and_then(|peer| Some(peers.entry(address).or_insert(peer).clone()))
                         }) {
                             drop(peers);
-                            for p in qi.waiting_packets.iter() {
+                            for p in qi.v1_proto_waiting_packets.iter() {
                                 if let Some(path) = p.0.upgrade() {
                                     if let Ok(packet_header) = p.1.struct_at::<v1::PacketHeader>(0) {
-                                        peer.receive(self, host_system, inner, time_ticks, &path, packet_header, &p.1, &[]);
+                                        peer.v1_proto_receive(self, host_system, inner, time_ticks, &path, packet_header, &p.1, &[]);
                                     }
                                 }
                             }
@@ -1070,7 +1087,7 @@ pub struct DummyPathFilter;
 
 impl PathFilter for DummyPathFilter {
     #[inline(always)]
-    fn check_path<HostSystemImpl: HostSystem>(
+    fn should_use_physical_path<HostSystemImpl: HostSystem>(
         &self,
         _id: &Identity,
         _endpoint: &Endpoint,

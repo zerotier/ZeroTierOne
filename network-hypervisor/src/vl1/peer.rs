@@ -106,12 +106,6 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         }
     }
 
-    /// Get the next message ID for sending a message to this peer.
-    #[inline(always)]
-    pub(crate) fn next_message_id(&self) -> MessageId {
-        self.message_id_counter.fetch_add(1, Ordering::SeqCst)
-    }
-
     /// Get current best path or None if there are no direct paths to this peer.
     pub fn direct_path(&self) -> Option<Arc<Path<HostSystemImpl>>> {
         for p in self.paths.lock().iter() {
@@ -192,13 +186,24 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         prioritize_paths(&mut paths);
     }
 
+    #[inline(always)]
+    pub(crate) fn v1_proto_next_message_id(&self) -> MessageId {
+        self.message_id_counter.fetch_add(1, Ordering::SeqCst)
+    }
+
     /// Called every SERVICE_INTERVAL_MS by the background service loop in Node.
     pub(crate) fn service(&self, _: &HostSystemImpl, _: &Node<HostSystemImpl>, time_ticks: i64) -> bool {
+        // Prune dead paths and sort in descending order of quality.
         {
             let mut paths = self.paths.lock();
             paths.retain(|p| ((time_ticks - p.last_receive_time_ticks) < PEER_EXPIRATION_TIME) && (p.path.strong_count() > 0));
+            if paths.capacity() > 16 {
+                paths.shrink_to_fit();
+            }
             prioritize_paths(&mut paths);
         }
+
+        // Prune dead entries from the map of reported local endpoints (e.g. externally visible IPs).
         self.remote_node_info
             .write()
             .reported_local_endpoints
@@ -206,7 +211,8 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         (time_ticks - self.last_receive_time_ticks.load(Ordering::Relaxed).max(self.create_time_ticks)) < PEER_EXPIRATION_TIME
     }
 
-    fn internal_send(
+    /// Send a prepared and encrypted packet using the V1 protocol with fragmentation if needed.
+    fn v1_proto_internal_send(
         &self,
         host_system: &HostSystemImpl,
         endpoint: &Endpoint,
@@ -280,7 +286,8 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         };
 
         let max_fragment_size = path.endpoint.max_fragment_size();
-        if self.remote_node_info.read().remote_protocol_version >= 12 {
+
+        if self.remote_node_info.read().remote_protocol_version >= 12 || self.identity.p384.is_some() {
             let flags_cipher_hops = if packet.len() > max_fragment_size {
                 v1::HEADER_FLAG_FRAGMENTED | v1::CIPHER_AES_GMAC_SIV
             } else {
@@ -288,7 +295,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             };
 
             let mut aes_gmac_siv = self.static_symmetric_key.aes_gmac_siv.get();
-            aes_gmac_siv.encrypt_init(&self.next_message_id().to_ne_bytes());
+            aes_gmac_siv.encrypt_init(&self.v1_proto_next_message_id().to_ne_bytes());
             aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(
                 self.identity.address,
                 node.identity.address,
@@ -317,11 +324,11 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 v1::CIPHER_SALSA2012_POLY1305
             };
 
-            let (mut salsa, poly1305_otk) = salsa_poly_create(
+            let (mut salsa, poly1305_otk) = v1_proto_salsa_poly_create(
                 &self.static_symmetric_key,
                 {
                     let header = packet.struct_mut_at::<v1::PacketHeader>(0).unwrap();
-                    header.id = self.next_message_id().to_ne_bytes();
+                    header.id = self.v1_proto_next_message_id().to_ne_bytes();
                     header.dest = self.identity.address.to_bytes();
                     header.src = node.identity.address.to_bytes();
                     header.flags_cipher_hops = flags_cipher_hops;
@@ -339,7 +346,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             packet.as_bytes_mut()[v1::MAC_FIELD_INDEX..(v1::MAC_FIELD_INDEX + 8)].copy_from_slice(&tag[0..8]);
         }
 
-        self.internal_send(
+        self.v1_proto_internal_send(
             host_system,
             &path.endpoint,
             Some(&path.local_socket),
@@ -351,28 +358,6 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
 
         return true;
-    }
-
-    /// Forward a packet to this peer.
-    ///
-    /// This is called when we receive a packet not addressed to this node and
-    /// want to pass it along.
-    ///
-    /// This doesn't fragment large packets since fragments are forwarded individually.
-    /// Intermediates don't need to adjust fragmentation.
-    pub(crate) fn forward(&self, host_system: &HostSystemImpl, time_ticks: i64, packet: &PacketBuffer) -> bool {
-        if let Some(path) = self.direct_path() {
-            host_system.wire_send(
-                &path.endpoint,
-                Some(&path.local_socket),
-                Some(&path.local_interface),
-                packet.as_bytes(),
-                0,
-            );
-            self.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
-            return true;
-        }
-        return false;
     }
 
     /// Send a HELLO to this peer.
@@ -406,7 +391,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
 
         let mut packet = PacketBuffer::new();
         {
-            let message_id = self.next_message_id();
+            let message_id = self.v1_proto_next_message_id();
 
             {
                 let f: &mut (v1::PacketHeader, v1::message_component_structs::HelloFixedHeaderFields) =
@@ -426,7 +411,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             debug_assert_eq!(packet.len(), 41);
             assert!(node.identity.write_public(&mut packet, self.identity.p384.is_none()).is_ok());
 
-            let (_, poly1305_key) = salsa_poly_create(
+            let (_, poly1305_key) = v1_proto_salsa_poly_create(
                 &self.static_symmetric_key,
                 packet.struct_at::<v1::PacketHeader>(0).unwrap(),
                 packet.len(),
@@ -446,7 +431,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         }
 
         if let Some(p) = path.as_ref() {
-            self.internal_send(
+            self.v1_proto_internal_send(
                 host_system,
                 destination,
                 Some(&p.local_socket),
@@ -456,7 +441,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             );
             p.log_send_anything(time_ticks);
         } else {
-            self.internal_send(host_system, destination, None, None, max_fragment_size, &packet);
+            self.v1_proto_internal_send(host_system, destination, None, None, max_fragment_size, &packet);
         }
 
         return true;
@@ -468,7 +453,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
     /// those fragments after the main packet header and first chunk.
     ///
     /// This returns true if the packet decrypted and passed authentication.
-    pub(crate) fn receive<InnerProtocolImpl: InnerProtocol>(
+    pub(crate) fn v1_proto_receive<InnerProtocolImpl: InnerProtocol>(
         self: &Arc<Self>,
         node: &Node<HostSystemImpl>,
         host_system: &HostSystemImpl,
@@ -482,7 +467,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         if let Ok(packet_frag0_payload_bytes) = frag0.as_bytes_starting_at(v1::VERB_INDEX) {
             let mut payload = PacketBuffer::new();
 
-            let message_id = if let Some(message_id2) = try_aead_decrypt(
+            let message_id = if let Some(message_id2) = v1_proto_try_aead_decrypt(
                 &self.static_symmetric_key,
                 packet_frag0_payload_bytes,
                 packet_header,
@@ -584,7 +569,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         time_ticks: i64,
         message_id: MessageId,
         source_path: &Arc<Path<HostSystemImpl>>,
-        hops: u8,
+        _hops: u8,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         if !(inner.should_communicate_with(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
@@ -737,7 +722,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                                         self.identity.address.to_string(),
                                         r.err().unwrap().to_string()
                                     );
-                                    break;
+                                    return PacketHandlerResult::Error;
                                 }
                             }
                         } else {
@@ -884,8 +869,7 @@ impl<HostSystemImpl: HostSystem> PartialEq for Peer<HostSystemImpl> {
 
 impl<HostSystemImpl: HostSystem> Eq for Peer<HostSystemImpl> {}
 
-/// Attempt ZeroTier V1 protocol AEAD packet encryption and MAC validation. Returns message ID on success.
-fn try_aead_decrypt(
+fn v1_proto_try_aead_decrypt(
     secret: &SymmetricSecret,
     packet_frag0_payload_bytes: &[u8],
     packet_header: &v1::PacketHeader,
@@ -904,7 +888,7 @@ fn try_aead_decrypt(
                 }
             }
 
-            let (mut salsa, poly1305_key) = salsa_poly_create(secret, packet_header, payload.len() + v1::HEADER_SIZE);
+            let (mut salsa, poly1305_key) = v1_proto_salsa_poly_create(secret, packet_header, payload.len() + v1::HEADER_SIZE);
             let mac = poly1305::compute(&poly1305_key, &payload.as_bytes());
             if mac[0..8].eq(&packet_header.mac) {
                 let message_id = u64::from_ne_bytes(packet_header.id);
@@ -968,9 +952,7 @@ fn try_aead_decrypt(
     }
 }
 
-/// Create initialized instances of Salsa20/12 and Poly1305 for a packet.
-/// (Note that this is a legacy cipher suite.)
-fn salsa_poly_create(secret: &SymmetricSecret, header: &v1::PacketHeader, packet_size: usize) -> (Salsa<12>, [u8; 32]) {
+fn v1_proto_salsa_poly_create(secret: &SymmetricSecret, header: &v1::PacketHeader, packet_size: usize) -> (Salsa<12>, [u8; 32]) {
     // Create a per-packet key from the IV, source, destination, and packet size.
     let mut key: Secret<32> = secret.key.first_n_clone();
     let hb = header.as_bytes();
