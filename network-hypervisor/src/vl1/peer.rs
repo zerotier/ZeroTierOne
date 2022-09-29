@@ -218,7 +218,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         local_socket: Option<&HostSystemImpl::LocalSocket>,
         local_interface: Option<&HostSystemImpl::LocalInterface>,
         max_fragment_size: usize,
-        packet: &PacketBuffer,
+        packet: PooledPacketBuffer,
     ) {
         let packet_size = packet.len();
         if packet_size > max_fragment_size {
@@ -270,7 +270,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         path: Option<&Arc<Path<HostSystemImpl>>>,
         node: &Node<HostSystemImpl>,
         time_ticks: i64,
-        packet: &mut PacketBuffer,
+        mut packet: PooledPacketBuffer,
     ) -> bool {
         let mut _path_arc = None;
         let path = if let Some(path) = path {
@@ -286,7 +286,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
 
         let max_fragment_size = path.endpoint.max_fragment_size();
 
-        if self.remote_node_info.read().remote_protocol_version >= 12 || self.identity.p384.is_some() {
+        if self.remote_node_info.read().remote_protocol_version >= 12 {
             let flags_cipher_hops = if packet.len() > max_fragment_size {
                 v1::HEADER_FLAG_FRAGMENTED | v1::CIPHER_AES_GMAC_SIV
             } else {
@@ -388,7 +388,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         let max_fragment_size = destination.max_fragment_size();
         let time_ticks = host_system.time_ticks();
 
-        let mut packet = PacketBuffer::new();
+        let mut packet = host_system.get_buffer();
         {
             let message_id = self.v1_proto_next_message_id();
 
@@ -408,7 +408,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             }
 
             debug_assert_eq!(packet.len(), 41);
-            assert!(node.identity.write_public(&mut packet, self.identity.p384.is_none()).is_ok());
+            assert!(node.identity.write_public(packet.as_mut(), self.identity.p384.is_none()).is_ok());
 
             let (_, poly1305_key) = v1_proto_salsa_poly_create(
                 &self.v1_proto_static_secret,
@@ -416,7 +416,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 packet.len(),
             );
             let mac = poly1305::compute(&poly1305_key, packet.as_bytes_starting_at(v1::HEADER_SIZE).unwrap());
-            packet.as_mut()[v1::MAC_FIELD_INDEX..v1::MAC_FIELD_INDEX + 8].copy_from_slice(&mac[0..8]);
+            packet.as_bytes_mut()[v1::MAC_FIELD_INDEX..v1::MAC_FIELD_INDEX + 8].copy_from_slice(&mac[0..8]);
 
             self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
 
@@ -436,11 +436,11 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 Some(&p.local_socket),
                 Some(&p.local_interface),
                 max_fragment_size,
-                &packet,
+                packet,
             );
             p.log_send_anything(time_ticks);
         } else {
-            self.v1_proto_internal_send(host_system, destination, None, None, max_fragment_size, &packet);
+            self.v1_proto_internal_send(host_system, destination, None, None, max_fragment_size, packet);
         }
 
         return true;
@@ -594,7 +594,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                         );
                     }
 
-                    let mut packet = PacketBuffer::new();
+                    let mut packet = host_system.get_buffer();
                     packet.set_size(v1::HEADER_SIZE);
                     {
                         let f: &mut (
@@ -611,7 +611,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                         f.1.version_revision = VERSION_REVISION.to_be_bytes();
                     }
 
-                    self.send(host_system, Some(source_path), node, time_ticks, &mut packet);
+                    self.send(host_system, Some(source_path), node, time_ticks, packet);
                     return PacketHandlerResult::Ok;
                 }
             }
@@ -756,7 +756,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 f.in_re_message_id = message_id.to_ne_bytes();
             };
 
-            let mut packet = PacketBuffer::new();
+            let mut packet = host_system.get_buffer();
             init_packet(&mut packet);
 
             let mut addresses = payload.as_bytes();
@@ -766,8 +766,8 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                         if let Some(peer) = node.peer(zt_address) {
                             if let Ok(id_bytes) = peer.identity.to_public_bytes(self.identity.p384.is_none()) {
                                 if (packet.capacity() - packet.len()) < id_bytes.len() {
-                                    self.send(host_system, None, node, time_ticks, &mut packet);
-                                    packet.clear();
+                                    self.send(host_system, None, node, time_ticks, packet);
+                                    packet = host_system.get_buffer();
                                     init_packet(&mut packet);
                                 }
                                 let _ = packet.append_bytes(id_bytes.as_bytes());
@@ -780,7 +780,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 }
             }
 
-            self.send(host_system, None, node, time_ticks, &mut packet);
+            self.send(host_system, None, node, time_ticks, packet);
         }
         return PacketHandlerResult::Ok;
     }
@@ -808,7 +808,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         if inner.should_communicate_with(&self.identity) || node.is_peer_root(self) {
-            let mut packet = PacketBuffer::new();
+            let mut packet = host_system.get_buffer();
             packet.set_size(v1::HEADER_SIZE);
             {
                 let mut f: &mut v1::message_component_structs::OkHeader = packet.append_struct_get_mut().unwrap();
@@ -817,7 +817,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 f.in_re_message_id = message_id.to_ne_bytes();
             }
             if packet.append_bytes(payload.as_bytes()).is_ok() {
-                self.send(host_system, None, node, time_ticks, &mut packet);
+                self.send(host_system, None, node, time_ticks, packet);
             }
         } else {
             debug_event!(

@@ -835,20 +835,20 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         debug_assert!(!addresses.is_empty());
         if !addresses.is_empty() {
             if let Some(root) = self.best_root() {
-                let mut packet = PacketBuffer::new();
+                let mut packet = host_system.get_buffer();
                 packet.set_size(v1::HEADER_SIZE);
                 let _ = packet.append_u8(verbs::VL1_WHOIS);
                 for a in addresses.iter() {
                     if (packet.len() + ADDRESS_SIZE) > UDP_DEFAULT_MTU {
-                        root.send(host_system, None, self, time_ticks, &mut packet);
-                        packet.clear();
+                        root.send(host_system, None, self, time_ticks, packet);
+                        packet = host_system.get_buffer();
                         packet.set_size(v1::HEADER_SIZE);
                         let _ = packet.append_u8(verbs::VL1_WHOIS);
                     }
                     let _ = packet.append_bytes_fixed(&a.to_bytes());
                 }
                 if packet.len() > (v1::HEADER_SIZE + 1) {
-                    root.send(host_system, None, self, time_ticks, &mut packet);
+                    root.send(host_system, None, self, time_ticks, packet);
                 }
             }
         }
