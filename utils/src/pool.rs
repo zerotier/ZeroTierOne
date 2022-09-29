@@ -14,14 +14,9 @@ pub trait PoolFactory<O> {
 
 /// Container for pooled objects that have been checked out of the pool.
 ///
-/// When this is dropped the object is returned to the pool or if the pool or is
-/// dropped if the pool has been dropped. There is also an into_raw() and from_raw()
-/// functionality that allows conversion to/from naked pointers to O for
-/// interoperation with C/C++ APIs. This in addition to being as slim as possible is
-/// why we implemented our own pool.
-///
-/// Note that pooled objects are not clonable. If you want to share them use Rc<>
-/// or Arc<>.
+/// Objects are automagically returned to the pool when Pooled<> is dropped if the pool still exists.
+/// If the pool itself is gone objects are freed. Two methods for conversion to/from raw pointers are
+/// available for interoperation with foreign APIs.
 #[repr(transparent)]
 pub struct Pooled<O, F: PoolFactory<O>>(NonNull<PoolEntry<O, F>>);
 
@@ -34,6 +29,7 @@ struct PoolEntry<O, F: PoolFactory<O>> {
 impl<O, F: PoolFactory<O>> Pooled<O, F> {
     /// Create a pooled object wrapper around an object but with no pool to return it to.
     /// The object will be freed when this pooled container is dropped.
+    #[inline]
     pub fn naked(o: O) -> Self {
         unsafe {
             Self(NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
@@ -44,9 +40,10 @@ impl<O, F: PoolFactory<O>> Pooled<O, F> {
     }
 
     /// Get a raw pointer to the object wrapped by this pooled object container.
-    /// The returned raw pointer MUST be restored into a Pooled instance with
-    /// from_raw() or memory will leak.
-    #[inline(always)]
+    ///
+    /// The returned pointer MUST be returned to the pooling system with from_raw() or memory
+    /// will leak.
+    #[inline]
     pub unsafe fn into_raw(self) -> *mut O {
         // Verify that the structure is not padded before 'obj'.
         assert_eq!(
@@ -60,15 +57,41 @@ impl<O, F: PoolFactory<O>> Pooled<O, F> {
     }
 
     /// Restore a raw pointer from into_raw() into a Pooled object.
-    /// The supplied pointer MUST have been obtained from a Pooled object or
-    /// undefined behavior will occur. Pointers from other sources can't be used
-    /// here. None is returned if the pointer is null.
-    #[inline(always)]
+    ///
+    /// The supplied pointer MUST have been obtained from a Pooled object. None is returned
+    /// if the pointer is null.
+    #[inline]
     pub unsafe fn from_raw(raw: *mut O) -> Option<Self> {
         if !raw.is_null() {
             Some(Self(NonNull::new_unchecked(raw.cast())))
         } else {
             None
+        }
+    }
+}
+
+impl<O, F: PoolFactory<O>> Clone for Pooled<O, F>
+where
+    O: Clone,
+{
+    #[inline]
+    fn clone(&self) -> Self {
+        let internal = unsafe { &mut *self.0.as_ptr() };
+        if let Some(p) = internal.return_pool.upgrade() {
+            if let Some(o) = p.pool.lock().pop() {
+                let mut o = Self(o);
+                *o.as_mut() = self.as_ref().clone();
+                o
+            } else {
+                Pooled::<O, F>(unsafe {
+                    NonNull::new_unchecked(Box::into_raw(Box::new(PoolEntry::<O, F> {
+                        obj: self.as_ref().clone(),
+                        return_pool: Arc::downgrade(&p),
+                    })))
+                })
+            }
+        } else {
+            Self::naked(self.as_ref().clone())
         }
     }
 }
@@ -109,7 +132,7 @@ impl<O, F: PoolFactory<O>> AsMut<O> for Pooled<O, F> {
 impl<O, F: PoolFactory<O>> Drop for Pooled<O, F> {
     #[inline]
     fn drop(&mut self) {
-        let internal = unsafe { self.0.as_mut() };
+        let internal = unsafe { &mut *self.0.as_ptr() };
         if let Some(p) = internal.return_pool.upgrade() {
             p.factory.reset(&mut internal.obj);
             p.pool.lock().push(self.0);
@@ -130,6 +153,7 @@ struct PoolInner<O, F: PoolFactory<O>> {
 }
 
 impl<O, F: PoolFactory<O>> Pool<O, F> {
+    #[inline]
     pub fn new(initial_stack_capacity: usize, factory: F) -> Self {
         Self(Arc::new(PoolInner::<O, F> {
             factory,
@@ -156,6 +180,7 @@ impl<O, F: PoolFactory<O>> Pool<O, F> {
     /// If get() is called after this new objects will be allocated, and any outstanding
     /// objects will still be returned on drop unless the pool itself is dropped. This can
     /// be done to free some memory if there has been a spike in memory use.
+    #[inline]
     pub fn purge(&self) {
         for o in self.0.pool.lock().drain(..) {
             drop(unsafe { Box::from_raw(o.as_ptr()) })
