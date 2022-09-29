@@ -15,6 +15,7 @@ zerotier-utils = { path = "../utils" }
 base64 = "^0"
 lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-decode"] }
 serde = { version = "^1", features = ["derive"], default-features = false }
+phf = { version = "^0", features = ["macros", "std"], default-features = false }
 
 [dev-dependencies]
 rand = "*"

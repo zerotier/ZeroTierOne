@@ -2,6 +2,8 @@ use std::mem::{size_of, zeroed};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use phf::phf_map;
+
 use zerotier_utils::buffer::Buffer;
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
@@ -11,7 +13,6 @@ use crate::vl1::{Address, InetAddress, MAC};
 #[allow(unused)]
 pub const RULES_ENGINE_REVISION: u8 = 1;
 
-/// Packet characteristic flags
 #[allow(unused)]
 pub mod characteristic {
     pub const INBOUND: u64 = 0x8000000000000000;
@@ -33,7 +34,6 @@ pub mod characteristic {
     pub const TCP_FIN: u64 = 0x0000000000000001;
 }
 
-/// An action to be taken if a series of conditionals match.
 #[allow(unused)]
 pub mod action {
     pub const DROP: u8 = 0;
@@ -45,9 +45,8 @@ pub mod action {
     pub const PRIORITY: u8 = 6;
 }
 
-/// A conditional in a rule set (called "match" in old C++ code).
 #[allow(unused)]
-pub mod condition {
+pub mod match_cond {
     pub const SOURCE_ZEROTIER_ADDRESS: u8 = 24;
     pub const DEST_ZEROTIER_ADDRESS: u8 = 25;
     pub const VLAN_ID: u8 = 26;
@@ -98,7 +97,7 @@ mod rule_value {
     #[derive(Clone, Copy)]
     pub struct IntRange {
         pub start: u64,
-        pub end: u32, // + start
+        pub end: u64,
         pub idx: u16,
         pub format: u8,
     }
@@ -170,34 +169,34 @@ pub trait RuleVisitor {
 
     fn invalid_rule(self) -> bool;
 
-    fn condition_source_zerotier_address(self, not: bool, or: bool, address: Address);
-    fn condition_dest_zerotier_address(self, not: bool, or: bool, address: Address);
-    fn condition_vlan_id(self, not: bool, or: bool, id: u16);
-    fn condition_vlan_pcp(self, not: bool, or: bool, pcp: u8);
-    fn condition_vlan_dei(self, not: bool, or: bool, dei: u8);
-    fn condition_mac_source(self, not: bool, or: bool, mac: MAC);
-    fn condition_mac_dest(self, not: bool, or: bool, mac: MAC);
-    fn condition_ipv4_source(self, not: bool, or: bool, ip: &[u8; 4], mask: u8);
-    fn condition_ipv4_dest(self, not: bool, or: bool, ip: &[u8; 4], mask: u8);
-    fn condition_ipv6_source(self, not: bool, or: bool, ip: &[u8; 16], mask: u8);
-    fn condition_ipv6_dest(self, not: bool, or: bool, ip: &[u8; 16], mask: u8);
-    fn condition_ip_tos(self, not: bool, or: bool, mask: u8, start: u8, end: u8);
-    fn condition_ip_protocol(self, not: bool, or: bool, protocol: u8);
-    fn condition_ethertype(self, not: bool, or: bool, ethertype: u16);
-    fn condition_icmp(self, not: bool, or: bool, _type: u8, code: u8, flags: u8);
-    fn condition_ip_source_port_range(self, not: bool, or: bool, start: u16, end: u16);
-    fn condition_ip_dest_port_range(self, not: bool, or: bool, start: u16, end: u16);
-    fn condition_characteristics(self, not: bool, or: bool, characteristics: u64);
-    fn condition_frame_size_range(self, not: bool, or: bool, start: u16, end: u16);
-    fn condition_random(self, not: bool, or: bool, probability: u32);
-    fn condition_tags_difference(self, not: bool, or: bool, id: u32, value: u32);
-    fn condition_tags_bitwise_and(self, not: bool, or: bool, id: u32, value: u32);
-    fn condition_tags_bitwise_or(self, not: bool, or: bool, id: u32, value: u32);
-    fn condition_tags_bitwise_xor(self, not: bool, or: bool, id: u32, value: u32);
-    fn condition_tags_equal(self, not: bool, or: bool, id: u32, value: u32);
-    fn condition_tag_sender(self, not: bool, or: bool, id: u32, value: u32);
-    fn condition_tag_receiver(self, not: bool, or: bool, id: u32, value: u32);
-    fn condition_integer_range(self, not: bool, or: bool, start: u64, end: u64, idx: u16, format: u8);
+    fn match_source_zerotier_address(self, not: bool, or: bool, address: Address);
+    fn match_dest_zerotier_address(self, not: bool, or: bool, address: Address);
+    fn match_vlan_id(self, not: bool, or: bool, id: u16);
+    fn match_vlan_pcp(self, not: bool, or: bool, pcp: u8);
+    fn match_vlan_dei(self, not: bool, or: bool, dei: u8);
+    fn match_mac_source(self, not: bool, or: bool, mac: MAC);
+    fn match_mac_dest(self, not: bool, or: bool, mac: MAC);
+    fn match_ipv4_source(self, not: bool, or: bool, ip: &[u8; 4], mask: u8);
+    fn match_ipv4_dest(self, not: bool, or: bool, ip: &[u8; 4], mask: u8);
+    fn match_ipv6_source(self, not: bool, or: bool, ip: &[u8; 16], mask: u8);
+    fn match_ipv6_dest(self, not: bool, or: bool, ip: &[u8; 16], mask: u8);
+    fn match_ip_tos(self, not: bool, or: bool, mask: u8, start: u8, end: u8);
+    fn match_ip_protocol(self, not: bool, or: bool, protocol: u8);
+    fn match_ethertype(self, not: bool, or: bool, ethertype: u16);
+    fn match_icmp(self, not: bool, or: bool, _type: u8, code: u8, flags: u8);
+    fn match_ip_source_port_range(self, not: bool, or: bool, start: u16, end: u16);
+    fn match_ip_dest_port_range(self, not: bool, or: bool, start: u16, end: u16);
+    fn match_characteristics(self, not: bool, or: bool, characteristics: u64);
+    fn match_frame_size_range(self, not: bool, or: bool, start: u16, end: u16);
+    fn match_random(self, not: bool, or: bool, probability: u32);
+    fn match_tags_difference(self, not: bool, or: bool, id: u32, value: u32);
+    fn match_tags_bitwise_and(self, not: bool, or: bool, id: u32, value: u32);
+    fn match_tags_bitwise_or(self, not: bool, or: bool, id: u32, value: u32);
+    fn match_tags_bitwise_xor(self, not: bool, or: bool, id: u32, value: u32);
+    fn match_tags_equal(self, not: bool, or: bool, id: u32, value: u32);
+    fn match_tag_sender(self, not: bool, or: bool, id: u32, value: u32);
+    fn match_tag_receiver(self, not: bool, or: bool, id: u32, value: u32);
+    fn match_integer_range(self, not: bool, or: bool, start: u64, end: u64, idx: u16, format: u8);
 }
 
 #[repr(C, packed)]
@@ -258,104 +257,104 @@ impl Rule {
                 action::PRIORITY => {
                     return v.action_priority(self.v.qos_bucket);
                 }
-                condition::SOURCE_ZEROTIER_ADDRESS => {
+                match_cond::SOURCE_ZEROTIER_ADDRESS => {
                     if let Some(a) = Address::from_u64(self.v.zt) {
-                        v.condition_source_zerotier_address(not, or, a);
+                        v.match_source_zerotier_address(not, or, a);
                     } else {
                         return v.invalid_rule();
                     }
                 }
-                condition::DEST_ZEROTIER_ADDRESS => {
+                match_cond::DEST_ZEROTIER_ADDRESS => {
                     if let Some(a) = Address::from_u64(self.v.zt) {
-                        v.condition_dest_zerotier_address(not, or, a);
+                        v.match_dest_zerotier_address(not, or, a);
                     } else {
                         return v.invalid_rule();
                     }
                 }
-                condition::VLAN_ID => {
-                    v.condition_vlan_id(not, or, self.v.vlan_id);
+                match_cond::VLAN_ID => {
+                    v.match_vlan_id(not, or, self.v.vlan_id);
                 }
-                condition::VLAN_PCP => {
-                    v.condition_vlan_pcp(not, or, self.v.vlan_pcp);
+                match_cond::VLAN_PCP => {
+                    v.match_vlan_pcp(not, or, self.v.vlan_pcp);
                 }
-                condition::VLAN_DEI => {
-                    v.condition_vlan_dei(not, or, self.v.vlan_dei);
+                match_cond::VLAN_DEI => {
+                    v.match_vlan_dei(not, or, self.v.vlan_dei);
                 }
-                condition::MAC_SOURCE => {
+                match_cond::MAC_SOURCE => {
                     if let Some(m) = MAC::from_bytes_fixed(&self.v.mac) {
-                        v.condition_mac_source(not, or, m);
+                        v.match_mac_source(not, or, m);
                     } else {
                         return v.invalid_rule();
                     }
                 }
-                condition::MAC_DEST => {
+                match_cond::MAC_DEST => {
                     if let Some(m) = MAC::from_bytes_fixed(&self.v.mac) {
-                        v.condition_mac_dest(not, or, m);
+                        v.match_mac_dest(not, or, m);
                     } else {
                         return v.invalid_rule();
                     }
                 }
-                condition::IPV4_SOURCE => {
-                    v.condition_ipv4_source(not, or, &self.v.ipv4.ip, self.v.ipv4.mask);
+                match_cond::IPV4_SOURCE => {
+                    v.match_ipv4_source(not, or, &self.v.ipv4.ip, self.v.ipv4.mask);
                 }
-                condition::IPV4_DEST => {
-                    v.condition_ipv4_dest(not, or, &self.v.ipv4.ip, self.v.ipv4.mask);
+                match_cond::IPV4_DEST => {
+                    v.match_ipv4_dest(not, or, &self.v.ipv4.ip, self.v.ipv4.mask);
                 }
-                condition::IPV6_SOURCE => {
-                    v.condition_ipv6_source(not, or, &self.v.ipv6.ip, self.v.ipv6.mask);
+                match_cond::IPV6_SOURCE => {
+                    v.match_ipv6_source(not, or, &self.v.ipv6.ip, self.v.ipv6.mask);
                 }
-                condition::IPV6_DEST => {
-                    v.condition_ipv6_dest(not, or, &self.v.ipv6.ip, self.v.ipv6.mask);
+                match_cond::IPV6_DEST => {
+                    v.match_ipv6_dest(not, or, &self.v.ipv6.ip, self.v.ipv6.mask);
                 }
-                condition::IP_TOS => {
-                    v.condition_ip_tos(not, or, self.v.ip_tos.mask, self.v.ip_tos.value[0], self.v.ip_tos.value[1]);
+                match_cond::IP_TOS => {
+                    v.match_ip_tos(not, or, self.v.ip_tos.mask, self.v.ip_tos.value[0], self.v.ip_tos.value[1]);
                 }
-                condition::IP_PROTOCOL => {
-                    v.condition_ip_protocol(not, or, self.v.ip_protocol);
+                match_cond::IP_PROTOCOL => {
+                    v.match_ip_protocol(not, or, self.v.ip_protocol);
                 }
-                condition::ETHERTYPE => {
-                    v.condition_ethertype(not, or, self.v.ethertype);
+                match_cond::ETHERTYPE => {
+                    v.match_ethertype(not, or, self.v.ethertype);
                 }
-                condition::ICMP => {
-                    v.condition_icmp(not, or, self.v.icmp._type, self.v.icmp.code, self.v.icmp.flags);
+                match_cond::ICMP => {
+                    v.match_icmp(not, or, self.v.icmp._type, self.v.icmp.code, self.v.icmp.flags);
                 }
-                condition::IP_SOURCE_PORT_RANGE => {
-                    v.condition_ip_source_port_range(not, or, self.v.port_range[0], self.v.port_range[1]);
+                match_cond::IP_SOURCE_PORT_RANGE => {
+                    v.match_ip_source_port_range(not, or, self.v.port_range[0], self.v.port_range[1]);
                 }
-                condition::IP_DEST_PORT_RANGE => {
-                    v.condition_ip_dest_port_range(not, or, self.v.port_range[0], self.v.port_range[1]);
+                match_cond::IP_DEST_PORT_RANGE => {
+                    v.match_ip_dest_port_range(not, or, self.v.port_range[0], self.v.port_range[1]);
                 }
-                condition::CHARACTERISTICS => {
-                    v.condition_characteristics(not, or, self.v.characteristics);
+                match_cond::CHARACTERISTICS => {
+                    v.match_characteristics(not, or, self.v.characteristics);
                 }
-                condition::FRAME_SIZE_RANGE => {
-                    v.condition_frame_size_range(not, or, self.v.frame_size_range[0], self.v.frame_size_range[1]);
+                match_cond::FRAME_SIZE_RANGE => {
+                    v.match_frame_size_range(not, or, self.v.frame_size_range[0], self.v.frame_size_range[1]);
                 }
-                condition::RANDOM => {
-                    v.condition_random(not, or, self.v.random_probability);
+                match_cond::RANDOM => {
+                    v.match_random(not, or, self.v.random_probability);
                 }
-                condition::TAGS_DIFFERENCE => {
-                    v.condition_tags_difference(not, or, self.v.tag.id, self.v.tag.value);
+                match_cond::TAGS_DIFFERENCE => {
+                    v.match_tags_difference(not, or, self.v.tag.id, self.v.tag.value);
                 }
-                condition::TAGS_BITWISE_AND => {
-                    v.condition_tags_bitwise_and(not, or, self.v.tag.id, self.v.tag.value);
+                match_cond::TAGS_BITWISE_AND => {
+                    v.match_tags_bitwise_and(not, or, self.v.tag.id, self.v.tag.value);
                 }
-                condition::TAGS_BITWISE_OR => {
-                    v.condition_tags_bitwise_or(not, or, self.v.tag.id, self.v.tag.value);
+                match_cond::TAGS_BITWISE_OR => {
+                    v.match_tags_bitwise_or(not, or, self.v.tag.id, self.v.tag.value);
                 }
-                condition::TAGS_BITWISE_XOR => {
-                    v.condition_tags_bitwise_xor(not, or, self.v.tag.id, self.v.tag.value);
+                match_cond::TAGS_BITWISE_XOR => {
+                    v.match_tags_bitwise_xor(not, or, self.v.tag.id, self.v.tag.value);
                 }
-                condition::TAGS_EQUAL => {
-                    v.condition_tags_equal(not, or, self.v.tag.id, self.v.tag.value);
+                match_cond::TAGS_EQUAL => {
+                    v.match_tags_equal(not, or, self.v.tag.id, self.v.tag.value);
                 }
-                condition::TAG_SENDER => {
-                    v.condition_tag_sender(not, or, self.v.tag.id, self.v.tag.value);
+                match_cond::TAG_SENDER => {
+                    v.match_tag_sender(not, or, self.v.tag.id, self.v.tag.value);
                 }
-                condition::TAG_RECEIVER => {
-                    v.condition_tag_receiver(not, or, self.v.tag.id, self.v.tag.value);
+                match_cond::TAG_RECEIVER => {
+                    v.match_tag_receiver(not, or, self.v.tag.id, self.v.tag.value);
                 }
-                condition::INTEGER_RANGE => v.condition_integer_range(
+                match_cond::INTEGER_RANGE => v.match_integer_range(
                     not,
                     or,
                     self.v.int_range.start,
@@ -386,77 +385,77 @@ impl Marshalable for Rule {
                 action::PRIORITY => {
                     buf.append_bytes_fixed(&[1u8, self.v.qos_bucket])?;
                 }
-                condition::SOURCE_ZEROTIER_ADDRESS | condition::DEST_ZEROTIER_ADDRESS => {
+                match_cond::SOURCE_ZEROTIER_ADDRESS | match_cond::DEST_ZEROTIER_ADDRESS => {
                     buf.append_u8(5)?;
                     buf.append_bytes(&self.v.zt.to_be_bytes()[..protocol::ADDRESS_SIZE])?;
                 }
-                condition::VLAN_ID => {
+                match_cond::VLAN_ID => {
                     buf.append_u8(2)?;
                     buf.append_u16(self.v.vlan_id)?;
                 }
-                condition::VLAN_PCP => {
+                match_cond::VLAN_PCP => {
                     buf.append_bytes_fixed(&[1u8, self.v.vlan_pcp])?;
                 }
-                condition::VLAN_DEI => {
+                match_cond::VLAN_DEI => {
                     buf.append_bytes_fixed(&[1u8, self.v.vlan_dei])?;
                 }
-                condition::MAC_SOURCE | condition::MAC_DEST => {
+                match_cond::MAC_SOURCE | match_cond::MAC_DEST => {
                     buf.append_u8(6)?;
                     buf.append_bytes_fixed(&self.v.mac)?;
                 }
-                condition::IPV4_SOURCE | condition::IPV4_DEST => {
+                match_cond::IPV4_SOURCE | match_cond::IPV4_DEST => {
                     buf.append_u8(5)?;
                     buf.append_bytes_fixed(&self.v.ipv4.ip)?;
                     buf.append_u8(self.v.ipv4.mask)?;
                 }
-                condition::IPV6_SOURCE | condition::IPV6_DEST => {
+                match_cond::IPV6_SOURCE | match_cond::IPV6_DEST => {
                     buf.append_u8(17)?;
                     buf.append_bytes_fixed(&self.v.ipv6.ip)?;
                     buf.append_u8(self.v.ipv6.mask)?;
                 }
-                condition::IP_TOS => {
+                match_cond::IP_TOS => {
                     buf.append_bytes_fixed(&[3u8, self.v.ip_tos.mask, self.v.ip_tos.value[0], self.v.ip_tos.value[1]])?;
                 }
-                condition::IP_PROTOCOL => {
+                match_cond::IP_PROTOCOL => {
                     buf.append_bytes_fixed(&[1u8, self.v.ip_protocol])?;
                 }
-                condition::ETHERTYPE => {
+                match_cond::ETHERTYPE => {
                     buf.append_u8(2)?;
                     buf.append_u16(self.v.ethertype)?;
                 }
-                condition::ICMP => {
+                match_cond::ICMP => {
                     buf.append_bytes_fixed(&[3u8, self.v.icmp._type, self.v.icmp.code, self.v.icmp.flags])?;
                 }
-                condition::IP_SOURCE_PORT_RANGE | condition::IP_DEST_PORT_RANGE => {
+                match_cond::IP_SOURCE_PORT_RANGE | match_cond::IP_DEST_PORT_RANGE => {
                     buf.append_u8(4)?;
                     buf.append_u16(self.v.port_range[0])?;
                     buf.append_u16(self.v.port_range[1])?;
                 }
-                condition::CHARACTERISTICS => {
+                match_cond::CHARACTERISTICS => {
                     buf.append_u8(8)?;
                     buf.append_u64(self.v.characteristics)?;
                 }
-                condition::FRAME_SIZE_RANGE => {
+                match_cond::FRAME_SIZE_RANGE => {
                     buf.append_u8(4)?;
                     buf.append_u16(self.v.frame_size_range[0])?;
                     buf.append_u16(self.v.frame_size_range[1])?;
                 }
-                condition::RANDOM => {
+                match_cond::RANDOM => {
                     buf.append_u8(4)?;
                     buf.append_u32(self.v.random_probability)?;
                 }
-                condition::TAGS_DIFFERENCE
-                | condition::TAGS_BITWISE_AND
-                | condition::TAGS_BITWISE_OR
-                | condition::TAGS_BITWISE_XOR
-                | condition::TAGS_EQUAL
-                | condition::TAG_SENDER
-                | condition::TAG_RECEIVER => {
+                match_cond::TAGS_DIFFERENCE
+                | match_cond::TAGS_BITWISE_AND
+                | match_cond::TAGS_BITWISE_OR
+                | match_cond::TAGS_BITWISE_XOR
+                | match_cond::TAGS_EQUAL
+                | match_cond::TAG_SENDER
+                | match_cond::TAG_RECEIVER => {
                     buf.append_u8(8)?;
                     buf.append_u32(self.v.tag.id)?;
                     buf.append_u32(self.v.tag.value)?;
                 }
-                condition::INTEGER_RANGE => {
+                match_cond::INTEGER_RANGE => {
                     buf.append_u8(19)?;
                     buf.append_u64(self.v.int_range.start)?;
                     buf.append_u64(self.v.int_range.start.wrapping_add(self.v.int_range.end as u64))?;
@@ -487,7 +486,7 @@ impl Marshalable for Rule {
                 action::PRIORITY => {
                     r.v.qos_bucket = buf.read_u8(cursor)?;
                 }
-                condition::SOURCE_ZEROTIER_ADDRESS | condition::DEST_ZEROTIER_ADDRESS => {
+                match_cond::SOURCE_ZEROTIER_ADDRESS | match_cond::DEST_ZEROTIER_ADDRESS => {
                     let a = buf.read_bytes_fixed::<{ protocol::ADDRESS_SIZE }>(cursor)?;
                     r.v.zt = a[0].wrapping_shl(32) as u64
                         | a[1].wrapping_shl(24) as u64
@@ -495,68 +494,68 @@ impl Marshalable for Rule {
                         | a[3].wrapping_shl(8) as u64
                         | a[4] as u64;
                 }
-                condition::VLAN_ID => {
+                match_cond::VLAN_ID => {
                     r.v.vlan_id = buf.read_u16(cursor)?;
                 }
-                condition::VLAN_PCP => {
+                match_cond::VLAN_PCP => {
                     r.v.vlan_pcp = buf.read_u8(cursor)?;
                 }
-                condition::VLAN_DEI => {
+                match_cond::VLAN_DEI => {
                     r.v.vlan_dei = buf.read_u8(cursor)?;
                 }
-                condition::MAC_SOURCE | condition::MAC_DEST => {
+                match_cond::MAC_SOURCE | match_cond::MAC_DEST => {
                     r.v.mac = *buf.read_bytes_fixed(cursor)?;
                 }
-                condition::IPV4_SOURCE | condition::IPV4_DEST => {
+                match_cond::IPV4_SOURCE | match_cond::IPV4_DEST => {
                     r.v.ipv4.ip = *buf.read_bytes_fixed(cursor)?;
                     r.v.ipv4.mask = buf.read_u8(cursor)?;
                 }
-                condition::IPV6_SOURCE | condition::IPV6_DEST => {
+                match_cond::IPV6_SOURCE | match_cond::IPV6_DEST => {
                     r.v.ipv6.ip = *buf.read_bytes_fixed(cursor)?;
                     r.v.ipv6.mask = buf.read_u8(cursor)?;
                 }
-                condition::IP_TOS => {
+                match_cond::IP_TOS => {
                     r.v.ip_tos.mask = buf.read_u8(cursor)?;
                     r.v.ip_tos.value = *buf.read_bytes_fixed(cursor)?;
                 }
-                condition::IP_PROTOCOL => {
+                match_cond::IP_PROTOCOL => {
                     r.v.ip_protocol = buf.read_u8(cursor)?;
                 }
-                condition::ETHERTYPE => {
+                match_cond::ETHERTYPE => {
                     r.v.ethertype = buf.read_u16(cursor)?;
                 }
-                condition::ICMP => {
+                match_cond::ICMP => {
                     r.v.icmp._type = buf.read_u8(cursor)?;
                     r.v.icmp.code = buf.read_u8(cursor)?;
                     r.v.icmp.flags = buf.read_u8(cursor)?;
                 }
-                condition::IP_SOURCE_PORT_RANGE | condition::IP_DEST_PORT_RANGE => {
+                match_cond::IP_SOURCE_PORT_RANGE | match_cond::IP_DEST_PORT_RANGE => {
                     r.v.port_range[0] = buf.read_u16(cursor)?;
                     r.v.port_range[1] = buf.read_u16(cursor)?;
                 }
-                condition::CHARACTERISTICS => {
+                match_cond::CHARACTERISTICS => {
                     r.v.characteristics = buf.read_u64(cursor)?;
                 }
-                condition::FRAME_SIZE_RANGE => {
+                match_cond::FRAME_SIZE_RANGE => {
                     r.v.frame_size_range[0] = buf.read_u16(cursor)?;
                     r.v.frame_size_range[1] = buf.read_u16(cursor)?;
                 }
-                condition::RANDOM => {
+                match_cond::RANDOM => {
                     r.v.random_probability = buf.read_u32(cursor)?;
                 }
-                condition::TAGS_DIFFERENCE
-                | condition::TAGS_BITWISE_AND
-                | condition::TAGS_BITWISE_OR
-                | condition::TAGS_BITWISE_XOR
-                | condition::TAGS_EQUAL
-                | condition::TAG_SENDER
-                | condition::TAG_RECEIVER => {
+                match_cond::TAGS_DIFFERENCE
+                | match_cond::TAGS_BITWISE_AND
+                | match_cond::TAGS_BITWISE_OR
+                | match_cond::TAGS_BITWISE_XOR
+                | match_cond::TAGS_EQUAL
+                | match_cond::TAG_SENDER
+                | match_cond::TAG_RECEIVER => {
                     r.v.tag.id = buf.read_u32(cursor)?;
                     r.v.tag.value = buf.read_u32(cursor)?;
                 }
-                condition::INTEGER_RANGE => {
+                match_cond::INTEGER_RANGE => {
                     r.v.int_range.start = buf.read_u64(cursor)?;
-                    r.v.int_range.end = buf.read_u64(cursor)?.wrapping_sub(r.v.int_range.start) as u32;
+                    r.v.int_range.end = buf.read_u64(cursor)?;
                     r.v.int_range.idx = buf.read_u16(cursor)?;
                     r.v.int_range.format = buf.read_u8(cursor)?;
                 }
@@ -640,6 +639,45 @@ impl<'de> Deserialize<'de> for Rule {
     }
 }
 
+// Compilte time generated perfect hash O(1) lookup of types from human readable names.
+static HR_NAME_TO_RULE_TYPE: phf::Map<&'static str, u8> = phf_map! {
+    "ACTION_DROP" => action::DROP,
+    "ACTION_ACCEPT" => action::ACCEPT,
+    "ACTION_TEE" => action::TEE,
+    "ACTION_WATCH" => action::WATCH,
+    "ACTION_REDIRECT" => action::REDIRECT,
+    "ACTION_BREAK" => action::BREAK,
+    "ACTION_PRIORITY" => action::PRIORITY,
+    "MATCH_SOURCE_ZEROTIER_ADDRESS" => match_cond::SOURCE_ZEROTIER_ADDRESS,
+    "MATCH_DEST_ZEROTIER_ADDRESS" => match_cond::DEST_ZEROTIER_ADDRESS,
+    "MATCH_VLAN_ID" => match_cond::VLAN_ID,
+    "MATCH_VLAN_PCP" => match_cond::VLAN_PCP,
+    "MATCH_VLAN_DEI" => match_cond::VLAN_DEI,
+    "MATCH_MAC_SOURCE" => match_cond::MAC_SOURCE,
+    "MATCH_MAC_DEST" => match_cond::MAC_DEST,
+    "MATCH_IPV4_SOURCE" => match_cond::IPV4_SOURCE,
+    "MATCH_IPV4_DEST" => match_cond::IPV4_DEST,
+    "MATCH_IPV6_SOURCE" => match_cond::IPV6_SOURCE,
+    "MATCH_IPV6_DEST" => match_cond::IPV6_DEST,
+    "MATCH_IP_TOS" => match_cond::IP_TOS,
+    "MATCH_IP_PROTOCOL" => match_cond::IP_PROTOCOL,
+    "MATCH_ETHERTYPE" => match_cond::ETHERTYPE,
+    "MATCH_ICMP" => match_cond::ICMP,
+    "MATCH_IP_SOURCE_PORT_RANGE" => match_cond::IP_SOURCE_PORT_RANGE,
+    "MATCH_IP_DEST_PORT_RANGE" => match_cond::IP_DEST_PORT_RANGE,
+    "MATCH_CHARACTERISTICS" => match_cond::CHARACTERISTICS,
+    "MATCH_FRAME_SIZE_RANGE" => match_cond::FRAME_SIZE_RANGE,
+    "MATCH_RANDOM" => match_cond::RANDOM,
+    "MATCH_TAGS_DIFFERENCE" => match_cond::TAGS_DIFFERENCE,
+    "MATCH_TAGS_BITWISE_AND" => match_cond::TAGS_BITWISE_AND,
+    "MATCH_TAGS_BITWISE_OR" => match_cond::TAGS_BITWISE_OR,
+    "MATCH_TAGS_BITWISE_XOR" => match_cond::TAGS_BITWISE_XOR,
+    "MATCH_TAGS_EQUAL" => match_cond::TAGS_EQUAL,
+    "MATCH_TAG_SENDER" => match_cond::TAG_SENDER,
+    "MATCH_TAG_RECEIVER" => match_cond::TAG_RECEIVER,
+    "INTEGER_RANGE" => match_cond::INTEGER_RANGE,
+};
+
 /// A "bag of fields" used to serialize/deserialize rules in human readable form e.g. JSON.
 /// Fields not populated should be omitted.
 #[allow(non_snake_case)]
@@ -701,11 +739,126 @@ struct HumanReadableRule<'a> {
 }
 
 impl<'a> HumanReadableRule<'a> {
-    pub fn to_rule(&self) -> Option<Rule> {
-        todo!()
+    fn to_rule(&self) -> Option<Rule> {
+        if let Some(t) = HR_NAME_TO_RULE_TYPE.get(self._type) {
+            let mut r = Rule::default();
+            r.t =
+                *t | if self.not.unwrap_or(false) {
+                    0x80
+                } else {
+                    0
+                } | if self.or.unwrap_or(false) {
+                    0x40
+                } else {
+                    0
+                };
+            unsafe {
+                match *t {
+                    action::TEE | action::WATCH | action::REDIRECT => {
+                        r.v.forward.address = self.address?.into();
+                        r.v.forward.flags = self.flags?;
+                        r.v.forward.length = self.length?;
+                    }
+                    action::PRIORITY => {
+                        r.v.qos_bucket = self.qosBucket?;
+                    }
+                    match_cond::SOURCE_ZEROTIER_ADDRESS | match_cond::DEST_ZEROTIER_ADDRESS => {
+                        r.v.zt = self.address?.into();
+                    }
+                    match_cond::VLAN_ID => {
+                        r.v.vlan_id = self.vlanId?;
+                    }
+                    match_cond::VLAN_PCP => {
+                        r.v.vlan_pcp = self.vlanPcp?;
+                    }
+                    match_cond::VLAN_DEI => {
+                        r.v.vlan_dei = self.vlanDei?;
+                    }
+                    match_cond::MAC_SOURCE | match_cond::MAC_DEST => {
+                        r.v.mac = self.mac?.to_bytes();
+                    }
+                    match_cond::IPV4_SOURCE | match_cond::IPV4_DEST => {
+                        if let Some(ip) = self.ip.as_ref() {
+                            if ip.is_ipv4() {
+                                r.v.ipv4.ip = ip.ip_bytes().try_into().unwrap();
+                                r.v.ipv4.mask = self.mask? as u8;
+                            } else {
+                                return None;
+                            }
+                        } else {
+                            return None;
+                        }
+                    }
+                    match_cond::IPV6_SOURCE | match_cond::IPV6_DEST => {
+                        if let Some(ip) = self.ip.as_ref() {
+                            if ip.is_ipv6() {
+                                r.v.ipv4.ip = ip.ip_bytes().try_into().unwrap();
+                                r.v.ipv4.mask = self.mask? as u8;
+                            } else {
+                                return None;
+                            }
+                        } else {
+                            return None;
+                        }
+                    }
+                    match_cond::IP_TOS => {
+                        r.v.ip_tos.mask = self.mask? as u8;
+                        r.v.ip_tos.value[0] = self.start? as u8;
+                        r.v.ip_tos.value[1] = self.end? as u8;
+                    }
+                    match_cond::IP_PROTOCOL => {
+                        r.v.ip_protocol = self.ipProtocol?;
+                    }
+                    match_cond::ETHERTYPE => {
+                        r.v.ethertype = self.etherType?;
+                    }
+                    match_cond::ICMP => {
+                        r.v.icmp._type = self.icmpType?;
+                        r.v.icmp.code = self.icmpCode.unwrap_or(0);
+                    }
+                    match_cond::IP_SOURCE_PORT_RANGE | match_cond::IP_DEST_PORT_RANGE => {
+                        r.v.port_range[0] = self.start? as u16;
+                        r.v.port_range[1] = self.end? as u16;
+                    }
+                    match_cond::CHARACTERISTICS => {
+                        r.v.characteristics = self.mask?;
+                    }
+                    match_cond::FRAME_SIZE_RANGE => {
+                        r.v.frame_size_range[0] = self.start? as u16;
+                        r.v.frame_size_range[1] = self.end? as u16;
+                    }
+                    match_cond::RANDOM => {
+                        r.v.random_probability = self.probability?;
+                    }
+                    match_cond::TAGS_DIFFERENCE
+                    | match_cond::TAGS_BITWISE_AND
+                    | match_cond::TAGS_BITWISE_OR
+                    | match_cond::TAGS_BITWISE_XOR
+                    | match_cond::TAGS_EQUAL
+                    | match_cond::TAG_SENDER
+                    | match_cond::TAG_RECEIVER => {
+                        r.v.tag.id = self.id?;
+                        r.v.tag.value = self.value?;
+                    }
+                    match_cond::INTEGER_RANGE => {
+                        r.v.int_range.start = self.start?;
+                        r.v.int_range.end = self.end?;
+                        r.v.int_range.idx = self.idx?;
+                        r.v.int_range.format = if self.little.unwrap_or(false) {
+                            0x80
+                        } else {
+                            0
+                        } | ((self.bits.unwrap_or(1) - 1) & 63);
+                    }
+                    _ => {}
+                }
+            }
+            todo!()
+        }
+        return None;
     }
 
-    pub fn from_rule(r: &Rule) -> Self {
+    fn from_rule(r: &Rule) -> Self {
         let mut hr = HumanReadableRule::default();
         r.visit(MakeHumanReadable(&mut hr));
         hr
@@ -791,73 +944,73 @@ impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     }
 
     #[inline(always)]
-    fn condition_source_zerotier_address(self, not: bool, or: bool, address: Address) {
+    fn match_source_zerotier_address(self, not: bool, or: bool, address: Address) {
         let _ = self.0.zt.insert(address);
         self.do_cond("MATCH_SOURCE_ZEROTIER_ADDRESS", not, or);
     }
 
     #[inline(always)]
-    fn condition_dest_zerotier_address(self, not: bool, or: bool, address: Address) {
+    fn match_dest_zerotier_address(self, not: bool, or: bool, address: Address) {
         let _ = self.0.zt.insert(address);
         self.do_cond("MATCH_DEST_ZEROTIER_ADDRESS", not, or);
     }
 
     #[inline(always)]
-    fn condition_vlan_id(self, not: bool, or: bool, id: u16) {
+    fn match_vlan_id(self, not: bool, or: bool, id: u16) {
         let _ = self.0.vlanId.insert(id);
         self.do_cond("MATCH_VLAN_ID", not, or);
     }
 
     #[inline(always)]
-    fn condition_vlan_pcp(self, not: bool, or: bool, pcp: u8) {
+    fn match_vlan_pcp(self, not: bool, or: bool, pcp: u8) {
         let _ = self.0.vlanPcp.insert(pcp);
         self.do_cond("MATCH_VLAN_PCP", not, or);
     }
 
     #[inline(always)]
-    fn condition_vlan_dei(self, not: bool, or: bool, dei: u8) {
+    fn match_vlan_dei(self, not: bool, or: bool, dei: u8) {
         let _ = self.0.vlanDei.insert(dei);
         self.do_cond("MATCH_VLAN_DEI", not, or);
     }
 
     #[inline(always)]
-    fn condition_mac_source(self, not: bool, or: bool, mac: MAC) {
+    fn match_mac_source(self, not: bool, or: bool, mac: MAC) {
         let _ = self.0.mac.insert(mac);
         self.do_cond("MATCH_MAC_SOURCE", not, or);
     }
 
     #[inline(always)]
-    fn condition_mac_dest(self, not: bool, or: bool, mac: MAC) {
+    fn match_mac_dest(self, not: bool, or: bool, mac: MAC) {
         let _ = self.0.mac.insert(mac);
         self.do_cond("MATCH_MAC_DEST", not, or);
     }
 
     #[inline(always)]
-    fn condition_ipv4_source(self, not: bool, or: bool, ip: &[u8; 4], mask: u8) {
+    fn match_ipv4_source(self, not: bool, or: bool, ip: &[u8; 4], mask: u8) {
         let _ = self.0.ip.insert(InetAddress::from_ip_port(ip, mask as u16));
         self.do_cond("MATCH_IPV4_SOURCE", not, or);
     }
 
     #[inline(always)]
-    fn condition_ipv4_dest(self, not: bool, or: bool, ip: &[u8; 4], mask: u8) {
+    fn match_ipv4_dest(self, not: bool, or: bool, ip: &[u8; 4], mask: u8) {
         let _ = self.0.ip.insert(InetAddress::from_ip_port(ip, mask as u16));
         self.do_cond("MATCH_IPV4_DEST", not, or);
     }
 
     #[inline(always)]
-    fn condition_ipv6_source(self, not: bool, or: bool, ip: &[u8; 16], mask: u8) {
+    fn match_ipv6_source(self, not: bool, or: bool, ip: &[u8; 16], mask: u8) {
         let _ = self.0.ip.insert(InetAddress::from_ip_port(ip, mask as u16));
         self.do_cond("MATCH_IPV6_SOURCE", not, or);
     }
 
     #[inline(always)]
-    fn condition_ipv6_dest(self, not: bool, or: bool, ip: &[u8; 16], mask: u8) {
+    fn match_ipv6_dest(self, not: bool, or: bool, ip: &[u8; 16], mask: u8) {
         let _ = self.0.ip.insert(InetAddress::from_ip_port(ip, mask as u16));
         self.do_cond("MATCH_IPV6_DEST", not, or);
     }
 
     #[inline(always)]
-    fn condition_ip_tos(self, not: bool, or: bool, mask: u8, start: u8, end: u8) {
+    fn match_ip_tos(self, not: bool, or: bool, mask: u8, start: u8, end: u8) {
         let _ = self.0.mask.insert(mask as u64);
         let _ = self.0.start.insert(start as u64);
         let _ = self.0.end.insert(end as u64);
@@ -865,19 +1018,19 @@ impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     }
 
     #[inline(always)]
-    fn condition_ip_protocol(self, not: bool, or: bool, protocol: u8) {
+    fn match_ip_protocol(self, not: bool, or: bool, protocol: u8) {
         let _ = self.0.ipProtocol.insert(protocol);
         self.do_cond("MATCH_IP_PROTOCOL", not, or);
     }
 
     #[inline(always)]
-    fn condition_ethertype(self, not: bool, or: bool, ethertype: u16) {
+    fn match_ethertype(self, not: bool, or: bool, ethertype: u16) {
         let _ = self.0.etherType.insert(ethertype);
         self.do_cond("MATCH_ETHERTYPE", not, or);
     }
 
     #[inline(always)]
-    fn condition_icmp(self, not: bool, or: bool, _type: u8, code: u8, flags: u8) {
+    fn match_icmp(self, not: bool, or: bool, _type: u8, code: u8, flags: u8) {
         let _ = self.0.icmpType.insert(_type);
         if (flags & 0x01) != 0 {
             let _ = self.0.icmpCode.insert(code);
@@ -886,75 +1039,75 @@ impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     }
 
     #[inline(always)]
-    fn condition_ip_source_port_range(self, not: bool, or: bool, start: u16, end: u16) {
+    fn match_ip_source_port_range(self, not: bool, or: bool, start: u16, end: u16) {
         let _ = self.0.start.insert(start as u64);
         let _ = self.0.end.insert(end as u64);
         self.do_cond("MATCH_IP_SOURCE_PORT_RANGE", not, or);
     }
 
     #[inline(always)]
-    fn condition_ip_dest_port_range(self, not: bool, or: bool, start: u16, end: u16) {
+    fn match_ip_dest_port_range(self, not: bool, or: bool, start: u16, end: u16) {
         let _ = self.0.start.insert(start as u64);
         let _ = self.0.end.insert(end as u64);
         self.do_cond("MATCH_IP_DEST_PORT_RANGE", not, or);
     }
 
     #[inline(always)]
-    fn condition_characteristics(self, not: bool, or: bool, characteristics: u64) {
+    fn match_characteristics(self, not: bool, or: bool, characteristics: u64) {
         let _ = self.0.mask.insert(characteristics);
         self.do_cond("MATCH_CHARACTERISTICS", not, or);
     }
 
     #[inline(always)]
-    fn condition_frame_size_range(self, not: bool, or: bool, start: u16, end: u16) {
+    fn match_frame_size_range(self, not: bool, or: bool, start: u16, end: u16) {
         let _ = self.0.start.insert(start as u64);
         let _ = self.0.end.insert(end as u64);
         self.do_cond("MATCH_FRAME_SIZE_RANGE", not, or);
     }
 
     #[inline(always)]
-    fn condition_random(self, not: bool, or: bool, probability: u32) {
+    fn match_random(self, not: bool, or: bool, probability: u32) {
         let _ = self.0.probability.insert(probability);
         self.do_cond("MATCH_RANDOM", not, or);
     }
 
     #[inline(always)]
-    fn condition_tags_difference(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tags_difference(self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAGS_DIFFERENCE", not, or, id, value);
     }
 
     #[inline(always)]
-    fn condition_tags_bitwise_and(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tags_bitwise_and(self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAGS_BITWISE_AND", not, or, id, value);
     }
 
     #[inline(always)]
-    fn condition_tags_bitwise_or(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tags_bitwise_or(self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAGS_BITWISE_OR", not, or, id, value);
     }
 
     #[inline(always)]
-    fn condition_tags_bitwise_xor(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tags_bitwise_xor(self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAGS_BITWISE_XOR", not, or, id, value);
     }
 
     #[inline(always)]
-    fn condition_tags_equal(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tags_equal(self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAGS_EQUAL", not, or, id, value);
     }
 
     #[inline(always)]
-    fn condition_tag_sender(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tag_sender(self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAG_SENDER", not, or, id, value);
     }
 
     #[inline(always)]
-    fn condition_tag_receiver(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tag_receiver(self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAG_RECEIVER", not, or, id, value);
     }
 
     #[inline(always)]
-    fn condition_integer_range(self, not: bool, or: bool, start: u64, end: u64, idx: u16, format: u8) {
+    fn match_integer_range(self, not: bool, or: bool, start: u64, end: u64, idx: u16, format: u8) {
         let _ = self.0.start.insert(start);
         let _ = self.0.end.insert(end);
         let _ = self.0.idx.insert(idx);
