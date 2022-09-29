@@ -358,7 +358,7 @@ impl Rule {
                     not,
                     or,
                     self.v.int_range.start,
-                    self.v.int_range.start.wrapping_add(self.v.int_range.end as u64),
+                    self.v.int_range.end,
                     self.v.int_range.idx,
                     self.v.int_range.format,
                 ),
@@ -458,7 +458,7 @@ impl Marshalable for Rule {
                 match_cond::INTEGER_RANGE => {
                     buf.append_u8(19)?;
                     buf.append_u64(self.v.int_range.start)?;
-                    buf.append_u64(self.v.int_range.start.wrapping_add(self.v.int_range.end as u64))?;
+                    buf.append_u64(self.v.int_range.end)?;
                     buf.append_u16(self.v.int_range.idx)?;
                     buf.append_u8(self.v.int_range.format)?;
                 }
