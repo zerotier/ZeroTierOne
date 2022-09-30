@@ -639,7 +639,7 @@ impl<'de> Deserialize<'de> for Rule {
     }
 }
 
-// Compilte time generated perfect hash O(1) lookup of types from human readable names.
+// Compile time generated perfect hash for O(1) lookup of types from human readable names.
 static HR_NAME_TO_RULE_TYPE: phf::Map<&'static str, u8> = phf_map! {
     "ACTION_DROP" => action::DROP,
     "ACTION_ACCEPT" => action::ACCEPT,

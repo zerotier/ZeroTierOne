@@ -2,6 +2,7 @@
 
 use std::error::Error;
 use std::fmt::{Debug, Display};
+use std::io::Write;
 
 use crate::buffer::Buffer;
 
@@ -46,6 +47,7 @@ pub trait Marshalable: Sized {
     /// Marshal and convert to a Rust vector.
     #[inline]
     fn to_bytes(&self) -> Vec<u8> {
+        assert!(Self::MAX_MARSHAL_SIZE <= TEMP_BUF_SIZE);
         let mut tmp = Buffer::<TEMP_BUF_SIZE>::new();
         assert!(self.marshal(&mut tmp).is_ok()); // panics if TEMP_BUF_SIZE is too small
         tmp.as_bytes().to_vec()
@@ -62,6 +64,52 @@ pub trait Marshalable: Sized {
         } else {
             Err(UnmarshalError::OutOfBounds)
         }
+    }
+
+    /// Marshal a slice of marshalable objects to a concatenated byte vector.
+    #[inline]
+    fn marshal_multiple_to_bytes(objects: &[Self]) -> Result<Vec<u8>, UnmarshalError> {
+        assert!(Self::MAX_MARSHAL_SIZE <= TEMP_BUF_SIZE);
+        let mut tmp: Buffer<{ TEMP_BUF_SIZE }> = Buffer::new();
+        let mut v: Vec<u8> = Vec::with_capacity(objects.len() * Self::MAX_MARSHAL_SIZE);
+        for i in objects.iter() {
+            i.marshal(&mut tmp)?;
+            let _ = v.write_all(tmp.as_bytes());
+            tmp.clear();
+        }
+        Ok(v)
+    }
+
+    /// Unmarshal a concatenated byte slice of marshalable objects.
+    #[inline]
+    fn unmarshal_multiple_from_bytes(mut bytes: &[u8]) -> Result<Vec<Self>, UnmarshalError> {
+        assert!(Self::MAX_MARSHAL_SIZE <= TEMP_BUF_SIZE);
+        let mut tmp: Buffer<{ TEMP_BUF_SIZE }> = Buffer::new();
+        let mut v: Vec<Self> = Vec::new();
+        while bytes.len() > 0 {
+            let chunk_size = bytes.len().min(Self::MAX_MARSHAL_SIZE);
+            if tmp.append_bytes(&bytes[..chunk_size]).is_err() {
+                return Err(UnmarshalError::OutOfBounds);
+            }
+            let mut cursor = 0;
+            v.push(Self::unmarshal(&mut tmp, &mut cursor)?);
+            if cursor == 0 {
+                return Err(UnmarshalError::InvalidData);
+            }
+            let _ = tmp.erase_first_n(cursor);
+            bytes = &bytes[chunk_size..];
+        }
+        Ok(v)
+    }
+
+    /// Unmarshal a buffer with a byte slice of marshalable objects.
+    #[inline]
+    fn unmarshal_multiple<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize, eof: usize) -> Result<Vec<Self>, UnmarshalError> {
+        let mut v: Vec<Self> = Vec::new();
+        while *cursor < eof {
+            v.push(Self::unmarshal(buf, cursor)?);
+        }
+        Ok(v)
     }
 }
 

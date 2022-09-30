@@ -285,7 +285,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
 
         let max_fragment_size = path.endpoint.max_fragment_size();
 
-        if self.remote_node_info.read().unwrap().remote_protocol_version >= 12 {
+        if self.remote_node_info.read().unwrap().remote_protocol_version >= 11 {
             let flags_cipher_hops = if packet.len() > max_fragment_size {
                 v1::HEADER_FLAG_FRAGMENTED | v1::CIPHER_AES_GMAC_SIV
             } else {

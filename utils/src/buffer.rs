@@ -204,6 +204,19 @@ impl<const L: usize> Buffer<L> {
         *self.1.get_unchecked(i)
     }
 
+    /// Erase the first N bytes of this buffer, copying remaining bytes to the front.
+    pub fn erase_first_n(&mut self, i: usize) -> Result<(), OutOfBoundsError> {
+        if i < self.0 {
+            let l = self.0;
+            self.1.copy_within(i..l, 0);
+            self.0 = l - i;
+            Ok(())
+        } else {
+            unlikely_branch();
+            Err(OutOfBoundsError)
+        }
+    }
+
     /// Append a structure and return a mutable reference to its memory.
     #[inline(always)]
     pub fn append_struct_get_mut<T: Copy>(&mut self) -> Result<&mut T, OutOfBoundsError> {
