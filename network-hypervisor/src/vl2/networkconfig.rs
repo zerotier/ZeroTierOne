@@ -16,7 +16,7 @@ use zerotier_utils::dictionary::Dictionary;
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
 #[allow(unused)]
-pub mod field_name {
+mod proto_v1_field_name {
     pub mod network_config {
         pub const VERSION: &'static str = "v";
         pub const NETWORK_ID: &'static str = "nwid";
@@ -106,53 +106,53 @@ pub struct NetworkConfig {
 impl NetworkConfig {
     pub fn v1_proto_to_dictionary(&self) -> Option<Dictionary> {
         let mut d = Dictionary::new();
-        d.set_u64(field_name::network_config::NETWORK_ID, self.id);
+        d.set_u64(proto_v1_field_name::network_config::NETWORK_ID, self.id);
         if !self.name.is_empty() {
-            d.set_str(field_name::network_config::NAME, self.name.as_str());
+            d.set_str(proto_v1_field_name::network_config::NAME, self.name.as_str());
         }
         if !self.motd.is_empty() {
-            d.set_str(field_name::network_config::MOTD, self.motd.as_str());
+            d.set_str(proto_v1_field_name::network_config::MOTD, self.motd.as_str());
         }
-        d.set_str(field_name::network_config::ISSUED_TO, self.issued_to.to_string().as_str());
+        d.set_str(proto_v1_field_name::network_config::ISSUED_TO, self.issued_to.to_string().as_str());
         d.set_str(
-            field_name::network_config::TYPE,
+            proto_v1_field_name::network_config::TYPE,
             if self.private {
                 "0"
             } else {
                 "1"
             },
         );
-        d.set_u64(field_name::network_config::TIMESTAMP, self.timestamp as u64);
-        d.set_u64(field_name::network_config::MAX_DELTA, self.max_delta as u64);
-        d.set_u64(field_name::network_config::REVISION, self.revision);
-        d.set_u64(field_name::network_config::MTU, self.mtu as u64);
-        d.set_u64(field_name::network_config::MULTICAST_LIMIT, self.multicast_limit as u64);
+        d.set_u64(proto_v1_field_name::network_config::TIMESTAMP, self.timestamp as u64);
+        d.set_u64(proto_v1_field_name::network_config::MAX_DELTA, self.max_delta as u64);
+        d.set_u64(proto_v1_field_name::network_config::REVISION, self.revision);
+        d.set_u64(proto_v1_field_name::network_config::MTU, self.mtu as u64);
+        d.set_u64(proto_v1_field_name::network_config::MULTICAST_LIMIT, self.multicast_limit as u64);
         if !self.routes.is_empty() {
             d.set_bytes(
-                field_name::network_config::ROUTES,
+                proto_v1_field_name::network_config::ROUTES,
                 IpRoute::marshal_multiple_to_bytes(self.routes.as_slice()).unwrap(),
             );
         }
         if !self.static_ips.is_empty() {
             d.set_bytes(
-                field_name::network_config::STATIC_IPS,
+                proto_v1_field_name::network_config::STATIC_IPS,
                 InetAddress::marshal_multiple_to_bytes(self.static_ips.as_slice()).unwrap(),
             );
         }
         if !self.rules.is_empty() {
             d.set_bytes(
-                field_name::network_config::RULES,
+                proto_v1_field_name::network_config::RULES,
                 Rule::marshal_multiple_to_bytes(self.rules.as_slice()).unwrap(),
             );
         }
         if !self.dns.is_empty() {
             d.set_bytes(
-                field_name::network_config::DNS,
+                proto_v1_field_name::network_config::DNS,
                 Nameserver::marshal_multiple_to_bytes(self.dns.as_slice()).unwrap(),
             );
         }
         d.set_bytes(
-            field_name::network_config::CERTIFICATE_OF_MEMBERSHIP,
+            proto_v1_field_name::network_config::CERTIFICATE_OF_MEMBERSHIP,
             self.certificate_of_membership.v1_proto_to_bytes()?,
         );
         if !self.certificates_of_ownership.is_empty() {
@@ -160,33 +160,36 @@ impl NetworkConfig {
             for c in self.certificates_of_ownership.iter() {
                 let _ = certs.write_all(c.v1_proto_to_bytes()?.as_slice());
             }
-            d.set_bytes(field_name::network_config::CERTIFICATES_OF_OWNERSHIP, certs);
+            d.set_bytes(proto_v1_field_name::network_config::CERTIFICATES_OF_OWNERSHIP, certs);
         }
         if !self.tags.is_empty() {
             let mut certs = Vec::with_capacity(self.certificates_of_ownership.len() * 256);
             for t in self.tags.iter() {
                 let _ = certs.write_all(t.v1_proto_to_bytes()?.as_slice());
             }
-            d.set_bytes(field_name::network_config::TAGS, certs);
+            d.set_bytes(proto_v1_field_name::network_config::TAGS, certs);
         }
         // node_info is not supported by V1 nodes
         if !self.central_url.is_empty() {
-            d.set_str(field_name::network_config::CENTRAL_URL, self.central_url.as_str());
+            d.set_str(proto_v1_field_name::network_config::CENTRAL_URL, self.central_url.as_str());
         }
         if let Some(sso) = self.sso.as_ref() {
-            d.set_bool(field_name::network_config::SSO_ENABLED, true);
-            d.set_u64(field_name::network_config::SSO_VERSION, sso.version as u64);
-            d.set_str(field_name::network_config::SSO_AUTHENTICATION_URL, sso.authentication_url.as_str());
+            d.set_bool(proto_v1_field_name::network_config::SSO_ENABLED, true);
+            d.set_u64(proto_v1_field_name::network_config::SSO_VERSION, sso.version as u64);
+            d.set_str(
+                proto_v1_field_name::network_config::SSO_AUTHENTICATION_URL,
+                sso.authentication_url.as_str(),
+            );
             d.set_u64(
-                field_name::network_config::SSO_AUTHENTICATION_EXPIRY_TIME,
+                proto_v1_field_name::network_config::SSO_AUTHENTICATION_EXPIRY_TIME,
                 sso.authentication_expiry_time as u64,
             );
-            d.set_str(field_name::network_config::SSO_ISSUER_URL, sso.issuer_url.as_str());
-            d.set_str(field_name::network_config::SSO_NONCE, sso.nonce.as_str());
-            d.set_str(field_name::network_config::SSO_STATE, sso.state.as_str());
-            d.set_str(field_name::network_config::SSO_CLIENT_ID, sso.client_id.as_str());
+            d.set_str(proto_v1_field_name::network_config::SSO_ISSUER_URL, sso.issuer_url.as_str());
+            d.set_str(proto_v1_field_name::network_config::SSO_NONCE, sso.nonce.as_str());
+            d.set_str(proto_v1_field_name::network_config::SSO_STATE, sso.state.as_str());
+            d.set_str(proto_v1_field_name::network_config::SSO_CLIENT_ID, sso.client_id.as_str());
         } else {
-            d.set_bool(field_name::network_config::SSO_ENABLED, false);
+            d.set_bool(proto_v1_field_name::network_config::SSO_ENABLED, false);
         }
         Some(d)
     }
