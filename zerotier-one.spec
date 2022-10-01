@@ -59,6 +59,12 @@ Requires:       systemd openssl
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
+%if "%{?dist}" == ".amzn2022"
+BuildRequires:  systemd openssl-devel
+Requires:       systemd openssl
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+%endif
+
 %description
 ZeroTier is a software defined networking layer for Earth.
 
