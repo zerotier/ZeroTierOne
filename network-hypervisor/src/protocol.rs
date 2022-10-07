@@ -111,6 +111,12 @@ pub mod verbs {
 /// two fragments.
 pub const UDP_DEFAULT_MTU: usize = 1432;
 
+/// Default MTU inside VL2 virtual networks.
+pub const ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU: usize = 2800;
+
+/// Default multicast limit if not set in the network.
+pub const DEFAULT_MULTICAST_LIMIT: usize = 32;
+
 /// Length of an address in bytes.
 pub const ADDRESS_SIZE: usize = 5;
 

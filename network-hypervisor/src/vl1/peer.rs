@@ -293,7 +293,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
             };
 
             let mut aes_gmac_siv = self.v1_proto_static_secret.aes_gmac_siv.get();
-            aes_gmac_siv.encrypt_init(&self.v1_proto_next_message_id().to_ne_bytes());
+            aes_gmac_siv.encrypt_init(&self.v1_proto_next_message_id().to_be_bytes());
             aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(
                 self.identity.address,
                 node.identity.address,
@@ -326,7 +326,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 &self.v1_proto_static_secret,
                 {
                     let header = packet.struct_mut_at::<v1::PacketHeader>(0).unwrap();
-                    header.id = self.v1_proto_next_message_id().to_ne_bytes();
+                    header.id = self.v1_proto_next_message_id().to_be_bytes();
                     header.dest = self.identity.address.to_bytes();
                     header.src = node.identity.address.to_bytes();
                     header.flags_cipher_hops = flags_cipher_hops;
@@ -531,13 +531,14 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                         packet_header.hops(),
                         &payload,
                     ),
-                    verbs::VL1_ERROR => self.handle_incoming_error(host_system, inner, node, time_ticks, source_path, &payload),
+                    verbs::VL1_ERROR => self.handle_incoming_error(host_system, inner, node, time_ticks, source_path, message_id, &payload),
                     verbs::VL1_OK => self.handle_incoming_ok(
                         host_system,
                         inner,
                         node,
                         time_ticks,
                         source_path,
+                        message_id,
                         packet_header.hops(),
                         path_is_known,
                         &payload,
@@ -551,7 +552,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                         self.handle_incoming_push_direct_paths(host_system, node, time_ticks, source_path, &payload)
                     }
                     verbs::VL1_USER_MESSAGE => self.handle_incoming_user_message(host_system, node, time_ticks, source_path, &payload),
-                    _ => inner.handle_packet(self, &source_path, verb, &payload),
+                    _ => inner.handle_packet(node, self, &source_path, message_id, verb, &payload),
                 };
             }
         }
@@ -623,20 +624,23 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         self: &Arc<Self>,
         _: &HostSystemImpl,
         inner: &InnerProtocolImpl,
-        _: &Node<HostSystemImpl>,
+        node: &Node<HostSystemImpl>,
         _: i64,
         source_path: &Arc<Path<HostSystemImpl>>,
+        message_id: u64,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         let mut cursor = 0;
         if let Ok(error_header) = payload.read_struct::<v1::message_component_structs::ErrorHeader>(&mut cursor) {
-            let in_re_message_id: MessageId = u64::from_ne_bytes(error_header.in_re_message_id);
+            let in_re_message_id: MessageId = u64::from_be_bytes(error_header.in_re_message_id);
             if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match error_header.in_re_verb {
                     _ => {
                         return inner.handle_error(
+                            node,
                             self,
                             &source_path,
+                            message_id,
                             error_header.in_re_verb,
                             in_re_message_id,
                             error_header.error_code,
@@ -657,6 +661,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         node: &Node<HostSystemImpl>,
         time_ticks: i64,
         source_path: &Arc<Path<HostSystemImpl>>,
+        message_id: u64,
         hops: u8,
         path_is_known: bool,
         payload: &PacketBuffer,
@@ -730,7 +735,16 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                     }
 
                     _ => {
-                        return inner.handle_ok(self, &source_path, ok_header.in_re_verb, in_re_message_id, payload, &mut cursor);
+                        return inner.handle_ok(
+                            node,
+                            self,
+                            &source_path,
+                            message_id,
+                            ok_header.in_re_verb,
+                            in_re_message_id,
+                            payload,
+                            &mut cursor,
+                        );
                     }
                 }
             }
@@ -890,7 +904,7 @@ fn v1_proto_try_aead_decrypt(
             let (mut salsa, poly1305_key) = v1_proto_salsa_poly_create(secret, packet_header, payload.len() + v1::HEADER_SIZE);
             let mac = poly1305::compute(&poly1305_key, &payload.as_bytes());
             if mac[0..8].eq(&packet_header.mac) {
-                let message_id = u64::from_ne_bytes(packet_header.id);
+                let message_id = u64::from_be_bytes(packet_header.id);
                 if cipher == v1::CIPHER_SALSA2012_POLY1305 {
                     salsa.crypt_in_place(payload.as_bytes_mut());
                     Some(message_id)
@@ -941,7 +955,7 @@ fn v1_proto_try_aead_decrypt(
                 // AES-GMAC-SIV encrypts the packet ID too as part of its computation of a single
                 // opaque 128-bit tag, so to get the original packet ID we have to grab it from the
                 // decrypted tag.
-                Some(u64::from_ne_bytes(*array_range::<u8, 16, 0, 8>(tag)))
+                Some(u64::from_be_bytes(*array_range::<u8, 16, 0, 8>(tag)))
             } else {
                 None
             }

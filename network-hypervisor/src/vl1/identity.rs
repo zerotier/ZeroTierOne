@@ -156,6 +156,8 @@ impl Identity {
         + P384_ECDSA_SIGNATURE_SIZE
         + P384_ECDSA_SIGNATURE_SIZE;
 
+    pub const FINGERPRINT_SIZE: usize = IDENTITY_FINGERPRINT_SIZE;
+
     const ALGORITHM_X25519: u8 = 0x01;
     const ALGORITHM_EC_NIST_P384: u8 = 0x02;
     const FLAG_INCLUDES_SECRETS: u8 = 0x80;

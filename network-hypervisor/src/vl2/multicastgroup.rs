@@ -25,7 +25,6 @@ impl From<MAC> for MulticastGroup {
 }
 
 impl Ord for MulticastGroup {
-    #[inline(always)]
     fn cmp(&self, other: &Self) -> Ordering {
         let o = self.mac.cmp(&other.mac);
         match o {

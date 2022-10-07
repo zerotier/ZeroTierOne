@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::io::Write;
 
 use crate::vl1::{Address, Identity, InetAddress, MAC};
@@ -6,27 +7,71 @@ use crate::vl2::NetworkId;
 use serde::{Deserialize, Serialize};
 
 use zerotier_utils::arrayvec::ArrayVec;
+use zerotier_utils::blob::Blob;
+use zerotier_utils::error::InvalidParameterError;
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Thing {
-    Ip(InetAddress),
+    Ipv4([u8; 4]),
+    Ipv6([u8; 16]),
     Mac(MAC),
+}
+
+impl Thing {
+    /// Get the type ID for this "thing."
+    pub fn type_id(&self) -> u8 {
+        match self {
+            Self::Mac(_) => 1,
+            Self::Ipv4(_) => 2,
+            Self::Ipv6(_) => 3,
+        }
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateOfOwnership {
     pub network_id: NetworkId,
     pub timestamp: i64,
-    pub flags: u64,
-    pub id: u32,
-    pub things: Vec<Thing>,
+    pub things: HashSet<Thing>,
     pub issued_to: Address,
-    pub signed_by: Address,
+    pub issued_to_fingerprint: Blob<{ Identity::FINGERPRINT_SIZE }>,
     pub signature: ArrayVec<u8, { crate::vl1::identity::IDENTITY_MAX_SIGNATURE_SIZE }>,
+    pub version: u8,
 }
 
 impl CertificateOfOwnership {
-    fn internal_v1_proto_to_bytes(&self, for_sign: bool) -> Option<Vec<u8>> {
+    /// Create a new empty and unsigned certificate.
+    pub fn new(network_id: NetworkId, timestamp: i64, issued_to: Address, legacy_v1: bool) -> Self {
+        Self {
+            network_id,
+            timestamp,
+            things: HashSet::with_capacity(4),
+            issued_to,
+            issued_to_fingerprint: Blob::default(),
+            signature: ArrayVec::new(),
+            version: if legacy_v1 {
+                1
+            } else {
+                2
+            },
+        }
+    }
+
+    /// Add an IP address to this certificate.
+    pub fn add_ip(&mut self, ip: &InetAddress) {
+        if ip.is_ipv4() {
+            let _ = self.things.insert(Thing::Ipv4(ip.ip_bytes().try_into().unwrap()));
+        } else if ip.is_ipv6() {
+            let _ = self.things.insert(Thing::Ipv6(ip.ip_bytes().try_into().unwrap()));
+        }
+    }
+
+    /// Add a MAC address to this certificate.
+    pub fn add_mac(&mut self, mac: MAC) {
+        let _ = self.things.insert(Thing::Mac(mac));
+    }
+
+    fn internal_v1_proto_to_bytes(&self, for_sign: bool, signed_by: Address) -> Option<Vec<u8>> {
         if self.things.len() > 0xffff || self.signature.len() != 96 {
             return None;
         }
@@ -36,23 +81,18 @@ impl CertificateOfOwnership {
         }
         let _ = v.write_all(&self.network_id.to_bytes());
         let _ = v.write_all(&self.timestamp.to_be_bytes());
-        let _ = v.write_all(&self.flags.to_be_bytes());
-        let _ = v.write_all(&self.id.to_be_bytes());
+        let _ = v.write_all(&[0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]); // obsolete flags and ID fields
         let _ = v.write_all(&(self.things.len() as u16).to_be_bytes());
         for t in self.things.iter() {
             match t {
-                Thing::Ip(ip) => {
-                    if ip.is_ipv4() {
-                        v.push(2);
-                        let mut tmp = [0u8; 16];
-                        tmp[..4].copy_from_slice(&ip.ip_bytes());
-                        let _ = v.write_all(&tmp);
-                    } else if ip.is_ipv6() {
-                        v.push(3);
-                        let _ = v.write_all(ip.ip_bytes());
-                    } else {
-                        return None;
-                    }
+                Thing::Ipv4(ip) => {
+                    v.push(2);
+                    let _ = v.write_all(ip);
+                    let _ = v.write_all(&[0u8; 12]);
+                }
+                Thing::Ipv6(ip) => {
+                    v.push(3);
+                    let _ = v.write_all(ip);
                 }
                 Thing::Mac(m) => {
                     v.push(1);
@@ -63,7 +103,7 @@ impl CertificateOfOwnership {
             }
         }
         let _ = v.write_all(&self.issued_to.to_bytes());
-        let _ = v.write_all(&self.signed_by.to_bytes());
+        let _ = v.write_all(&signed_by.to_bytes());
         if for_sign {
             v.push(0);
             v.push(0);
@@ -80,18 +120,75 @@ impl CertificateOfOwnership {
     }
 
     #[inline(always)]
-    pub fn v1_proto_to_bytes(&self) -> Option<Vec<u8>> {
-        self.internal_v1_proto_to_bytes(false)
+    pub fn v1_proto_to_bytes(&self, signed_by: Address) -> Option<Vec<u8>> {
+        self.internal_v1_proto_to_bytes(false, signed_by)
     }
 
-    pub fn v1_proto_sign(&mut self, issuer: &Identity, issued_to: &Identity) -> bool {
-        self.issued_to = issued_to.address;
-        self.signed_by = issuer.address;
-        if let Some(to_sign) = self.internal_v1_proto_to_bytes(true) {
-            if let Some(signature) = issuer.sign(&to_sign.as_slice(), true) {
-                self.signature = signature;
-                return true;
+    /// Decode a V1 legacy format certificate of ownership in byte format.
+    /// The certificate and the current position slice are returned so multiple certs can be easily read from a buffer.
+    pub fn v1_proto_from_bytes(mut b: &[u8]) -> Result<(Self, &[u8]), InvalidParameterError> {
+        if b.len() < 30 {
+            return Err(InvalidParameterError("incomplete"));
+        }
+        let network_id = u64::from_be_bytes(b[0..8].try_into().unwrap());
+        let timestamp = i64::from_be_bytes(b[8..16].try_into().unwrap());
+        let thing_count = u16::from_be_bytes(b[28..30].try_into().unwrap());
+        let mut things: HashSet<Thing> = HashSet::with_capacity(thing_count as usize);
+        b = &b[30..];
+        for _ in 0..thing_count {
+            if b.len() < 17 {
+                return Err(InvalidParameterError("incomplete"));
             }
+            match b[0] {
+                1 => {
+                    let _ = things.insert(Thing::Mac(MAC::from_bytes(&b[1..7]).ok_or(InvalidParameterError("invalid MAC"))?));
+                }
+                2 => {
+                    let _ = things.insert(Thing::Ipv4(b[1..5].try_into().unwrap()));
+                }
+                3 => {
+                    let _ = things.insert(Thing::Ipv6(b[1..17].try_into().unwrap()));
+                }
+                _ => {
+                    return Err(InvalidParameterError("unknown thing type"));
+                }
+            }
+            b = &b[17..];
+        }
+        const END_LEN: usize = 5 + 5 + 3 + 96 + 2;
+        if b.len() < END_LEN {
+            return Err(InvalidParameterError("incomplete"));
+        }
+        Ok((
+            Self {
+                network_id: NetworkId::from_u64(network_id).ok_or(InvalidParameterError("invalid network ID"))?,
+                timestamp,
+                things,
+                issued_to: Address::from_bytes(&b[..5]).ok_or(InvalidParameterError("invalid address"))?,
+                issued_to_fingerprint: Blob::default(),
+                signature: {
+                    let mut s = ArrayVec::new();
+                    s.push_slice(&b[13..109]);
+                    s
+                },
+                version: 1,
+            },
+            &b[END_LEN..],
+        ))
+    }
+
+    /// Sign certificate of ownership for use by V1 nodes.
+    pub fn sign(&mut self, issuer: &Identity, issued_to: &Identity) -> bool {
+        if self.version == 1 {
+            self.issued_to = issued_to.address;
+            if let Some(to_sign) = self.internal_v1_proto_to_bytes(true, issuer.address) {
+                if let Some(signature) = issuer.sign(&to_sign.as_slice(), true) {
+                    self.signature = signature;
+                    return true;
+                }
+            }
+        } else if self.version == 2 {
+            todo!()
         }
         return false;
     }

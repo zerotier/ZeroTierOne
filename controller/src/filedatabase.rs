@@ -169,15 +169,15 @@ impl Database for FileDatabase {
         }
     }
 
-    async fn save_member(&self, obj: &Member) -> Result<(), Box<dyn Error>> {
+    async fn save_member(&self, obj: Member) -> Result<(), Box<dyn Error>> {
         let base_member_path = member_path(&self.base_path, obj.network_id, obj.node_id);
         if !fs::metadata(&base_member_path).await.is_ok() {
-            fs::write(base_member_path, to_json_pretty(obj).as_bytes()).await?;
+            fs::write(base_member_path, to_json_pretty(&obj).as_bytes()).await?;
         }
 
         fs::write(
             member_path(&self.cache_path, obj.network_id, obj.node_id),
-            serde_json::to_vec(obj)?.as_slice(),
+            serde_json::to_vec(&obj)?.as_slice(),
         )
         .await?;
         Ok(())

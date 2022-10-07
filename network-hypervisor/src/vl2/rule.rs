@@ -740,7 +740,7 @@ struct HumanReadableRule<'a> {
 
 impl<'a> HumanReadableRule<'a> {
     fn to_rule(&self) -> Option<Rule> {
-        if let Some(t) = HR_NAME_TO_RULE_TYPE.get(self._type) {
+        if let Some(t) = HR_NAME_TO_RULE_TYPE.get(self._type.to_uppercase().as_str()) {
             let mut r = Rule::default();
             r.t =
                 *t | if self.not.unwrap_or(false) {

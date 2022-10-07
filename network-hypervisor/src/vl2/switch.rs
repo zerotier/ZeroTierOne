@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use crate::protocol::PacketBuffer;
-use crate::vl1::node::{HostSystem, InnerProtocol, PacketHandlerResult};
+use crate::vl1::node::{HostSystem, InnerProtocol, Node, PacketHandlerResult};
 use crate::vl1::{Identity, Path, Peer};
 
 pub trait SwitchInterface: Sync + Send {}
@@ -13,8 +13,10 @@ pub struct Switch {}
 impl InnerProtocol for Switch {
     fn handle_packet<HostSystemImpl: HostSystem>(
         &self,
+        node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
         source_path: &Arc<Path<HostSystemImpl>>,
+        message_id: u64,
         verb: u8,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
@@ -23,8 +25,10 @@ impl InnerProtocol for Switch {
 
     fn handle_error<HostSystemImpl: HostSystem>(
         &self,
+        node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
         source_path: &Arc<Path<HostSystemImpl>>,
+        message_id: u64,
         in_re_verb: u8,
         in_re_message_id: u64,
         error_code: u8,
@@ -36,8 +40,10 @@ impl InnerProtocol for Switch {
 
     fn handle_ok<HostSystemImpl: HostSystem>(
         &self,
+        node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
         source_path: &Arc<Path<HostSystemImpl>>,
+        message_id: u64,
         in_re_verb: u8,
         in_re_message_id: u64,
         payload: &PacketBuffer,

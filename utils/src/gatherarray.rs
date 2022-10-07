@@ -64,7 +64,7 @@ impl<T, const C: usize> GatherArray<T, C> {
 }
 
 impl<T, const C: usize> Drop for GatherArray<T, C> {
-    #[inline(always)]
+    #[inline]
     fn drop(&mut self) {
         let have = self.have_bits;
         for i in 0..self.goal {

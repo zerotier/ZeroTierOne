@@ -3,11 +3,12 @@
 mod certificateofmembership;
 mod certificateofownership;
 mod multicastgroup;
-mod networkconfig;
 mod networkid;
 mod rule;
 mod switch;
 mod tag;
+
+pub mod networkconfig;
 
 pub use certificateofmembership::CertificateOfMembership;
 pub use certificateofownership::CertificateOfOwnership;
