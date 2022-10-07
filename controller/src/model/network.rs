@@ -1,6 +1,7 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 use std::collections::{HashMap, HashSet};
+use std::error::Error;
 use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};
@@ -124,7 +125,11 @@ fn troo() -> bool {
 
 impl Network {
     /// Check member IP assignments and return 'true' if IP assignments were created or modified.
-    pub async fn check_zt_ip_assignments<DatabaseImpl: Database>(&self, database: &DatabaseImpl, member: &mut Member) -> bool {
+    pub async fn check_zt_ip_assignments<DatabaseImpl: Database>(
+        &self,
+        database: &DatabaseImpl,
+        member: &mut Member,
+    ) -> Result<bool, Box<dyn Error>> {
         let mut modified = false;
 
         if self.v4_assign_mode.zt {
@@ -137,7 +142,7 @@ impl Network {
                             for route in self.ip_routes.iter() {
                                 let ip = InetAddress::from_ip_port(&ip_ptr.to_be_bytes(), route.target.port()); // IP/bits
                                 if ip.is_within(&route.target) {
-                                    if !database.is_ip_assigned(self.id, &ip).await.unwrap_or(true) {
+                                    if !database.is_ip_assigned(self.id, &ip).await? {
                                         modified = true;
                                         let _ = member.ip_assignments.insert(ip);
                                         break 'ip_search;
@@ -161,7 +166,7 @@ impl Network {
                             for route in self.ip_routes.iter() {
                                 let ip = InetAddress::from_ip_port(&ip_ptr.to_be_bytes(), route.target.port()); // IP/bits
                                 if ip.is_within(&route.target) {
-                                    if !database.is_ip_assigned(self.id, &ip).await.unwrap_or(true) {
+                                    if !database.is_ip_assigned(self.id, &ip).await? {
                                         modified = true;
                                         let _ = member.ip_assignments.insert(ip);
                                         break 'ip_search;
@@ -175,6 +180,6 @@ impl Network {
             }
         }
 
-        modified
+        Ok(modified)
     }
 }

@@ -43,7 +43,8 @@ pub struct NetworkConfig {
     pub certificates_of_ownership: Vec<CertificateOfOwnership>,
     pub tags: HashMap<u32, Tag>,
 
-    pub node_info: HashMap<Address, NodeInfo>,
+    pub banned: HashSet<Address>,              // v2 only
+    pub node_info: HashMap<Address, NodeInfo>, // v2 only
 
     pub central_url: String,
     pub sso: Option<SSOAuthConfiguration>,
@@ -69,6 +70,7 @@ impl NetworkConfig {
             certificate_of_membership: None,
             certificates_of_ownership: Vec::new(),
             tags: HashMap::new(),
+            banned: HashSet::new(),
             node_info: HashMap::new(),
             central_url: String::new(),
             sso: None,

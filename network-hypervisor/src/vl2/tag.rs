@@ -8,7 +8,6 @@ use crate::vl2::NetworkId;
 use serde::{Deserialize, Serialize};
 
 use zerotier_utils::arrayvec::ArrayVec;
-use zerotier_utils::blob::Blob;
 use zerotier_utils::error::InvalidParameterError;
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -18,7 +17,6 @@ pub struct Tag {
     pub network_id: NetworkId,
     pub timestamp: i64,
     pub issued_to: Address,
-    pub issued_to_fingerprint: Blob<{ Identity::FINGERPRINT_SIZE }>,
     pub signature: ArrayVec<u8, { identity::IDENTITY_MAX_SIGNATURE_SIZE }>,
     pub version: u8,
 }
@@ -39,7 +37,6 @@ impl Tag {
             network_id,
             timestamp,
             issued_to: issued_to.address,
-            issued_to_fingerprint: Blob::from(issued_to.fingerprint),
             signature: ArrayVec::new(),
             version: if legacy_v1 {
                 1
@@ -115,7 +112,6 @@ impl Tag {
                 network_id: NetworkId::from_bytes(&b[0..8]).ok_or(InvalidParameterError("invalid network ID"))?,
                 timestamp: i64::from_be_bytes(b[8..16].try_into().unwrap()),
                 issued_to: Address::from_bytes(&b[24..29]).ok_or(InvalidParameterError("invalid address"))?,
-                issued_to_fingerprint: Blob::default(),
                 signature: {
                     let mut s = ArrayVec::new();
                     s.push_slice(&b[37..133]);

@@ -778,13 +778,13 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
                 if addresses.len() >= ADDRESS_SIZE {
                     if let Some(zt_address) = Address::from_bytes(&addresses[..ADDRESS_SIZE]) {
                         if let Some(peer) = node.peer(zt_address) {
-                            if let Ok(id_bytes) = peer.identity.to_public_bytes(self.identity.p384.is_none()) {
-                                if (packet.capacity() - packet.len()) < id_bytes.len() {
-                                    self.send(host_system, None, node, time_ticks, packet);
-                                    packet = host_system.get_buffer();
-                                    init_packet(&mut packet);
-                                }
-                                let _ = packet.append_bytes(id_bytes.as_bytes());
+                            if (packet.capacity() - packet.len()) < Identity::MAX_MARSHAL_SIZE {
+                                self.send(host_system, None, node, time_ticks, packet);
+                                packet = host_system.get_buffer();
+                                init_packet(&mut packet);
+                            }
+                            if !peer.identity.write_public(packet.as_mut(), self.identity.p384.is_none()).is_ok() {
+                                break;
                             }
                         }
                     }

@@ -247,7 +247,7 @@ impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
             let deauthed_members_still_in_window = self.database.list_members_deauthorized_after(network.id, now - max_delta).await;
 
             // Check and if necessary auto-assign static IPs for this member.
-            member_changed |= network.check_zt_ip_assignments(self.database.as_ref(), &mut member).await;
+            member_changed |= network.check_zt_ip_assignments(self.database.as_ref(), &mut member).await?;
 
             let mut nc = NetworkConfig::new(network_id, source.identity.address);
 

@@ -415,21 +415,21 @@ impl Identity {
 
     pub fn write_secret<W: Write>(&self, w: &mut W, legacy_v0: bool) -> std::io::Result<()> {
         if let Some(s) = self.secret.as_ref() {
-            w.write_all(&self.address.to_bytes());
+            w.write_all(&self.address.to_bytes())?;
             if !legacy_v0 && self.p384.is_some() && s.p384.is_some() {
                 let p384 = self.p384.as_ref().unwrap();
                 let p384s = s.p384.as_ref().unwrap();
-                w.write_all(&[Self::ALGORITHM_X25519 | Self::ALGORITHM_EC_NIST_P384 | Self::FLAG_INCLUDES_SECRETS]);
-                w.write_all(&self.x25519);
-                w.write_all(&self.ed25519);
-                w.write_all(s.x25519.secret_bytes().as_bytes());
-                w.write_all(s.ed25519.secret_bytes().as_bytes());
-                w.write_all(p384.ecdh.as_bytes());
-                w.write_all(p384.ecdsa.as_bytes());
-                w.write_all(p384s.ecdh.secret_key_bytes().as_bytes());
-                w.write_all(p384s.ecdsa.secret_key_bytes().as_bytes());
-                w.write_all(&p384.ecdsa_self_signature);
-                w.write_all(&p384.ed25519_self_signature);
+                w.write_all(&[Self::ALGORITHM_X25519 | Self::ALGORITHM_EC_NIST_P384 | Self::FLAG_INCLUDES_SECRETS])?;
+                w.write_all(&self.x25519)?;
+                w.write_all(&self.ed25519)?;
+                w.write_all(s.x25519.secret_bytes().as_bytes())?;
+                w.write_all(s.ed25519.secret_bytes().as_bytes())?;
+                w.write_all(p384.ecdh.as_bytes())?;
+                w.write_all(p384.ecdsa.as_bytes())?;
+                w.write_all(p384s.ecdh.secret_key_bytes().as_bytes())?;
+                w.write_all(p384s.ecdsa.secret_key_bytes().as_bytes())?;
+                w.write_all(&p384.ecdsa_self_signature)?;
+                w.write_all(&p384.ed25519_self_signature)?;
             } else {
                 w.write_all(&[0])?;
                 w.write_all(&self.x25519)?;
@@ -444,13 +444,13 @@ impl Identity {
         }
     }
 
-    pub fn to_public_bytes(&self, legacy_v8: bool) -> std::io::Result<Buffer<{ Self::BYTE_LENGTH_MAX }>> {
+    pub fn to_public_bytes(&self) -> std::io::Result<Buffer<{ Self::BYTE_LENGTH_MAX }>> {
         let mut buf = Buffer::<{ Self::BYTE_LENGTH_MAX }>::new();
         self.write_public(&mut buf, false)?;
         Ok(buf)
     }
 
-    pub fn to_secret_bytes(&self, legacy_v8: bool) -> std::io::Result<Buffer<{ Self::BYTE_LENGTH_MAX }>> {
+    pub fn to_secret_bytes(&self) -> std::io::Result<Buffer<{ Self::BYTE_LENGTH_MAX }>> {
         let mut buf = Buffer::<{ Self::BYTE_LENGTH_MAX }>::new();
         self.write_secret(&mut buf, false)?;
         Ok(buf)
@@ -502,7 +502,7 @@ impl Identity {
 
     fn fill_in_fingerprint(&mut self) {
         let mut h = SHA384::new();
-        self.write_public(&mut h, false);
+        assert!(self.write_public(&mut h, false).is_ok());
         self.fingerprint = h.finish();
     }
 
@@ -904,7 +904,7 @@ mod tests {
         let gen = Identity::generate();
         assert!(gen.agree(&gen).is_some());
         assert!(gen.validate_identity());
-        let bytes = gen.to_secret_bytes(false).unwrap();
+        let bytes = gen.to_secret_bytes().unwrap();
         let string = gen.to_secret_string();
         assert!(Identity::from_str(string.as_str()).unwrap().eq(&gen));
 
@@ -931,7 +931,7 @@ mod tests {
             assert!(id.validate_identity());
             assert!(id.p384.is_none());
 
-            let idb = id.to_secret_bytes(false).unwrap();
+            let idb = id.to_secret_bytes().unwrap();
             let id_unmarshal = Identity::from_bytes(idb.as_bytes()).unwrap();
             assert!(id == id_unmarshal);
             assert!(id_unmarshal.secret.is_some());
@@ -961,7 +961,7 @@ mod tests {
             assert!(id.p384.is_some());
             assert!(id.secret.as_ref().unwrap().p384.is_some());
 
-            let idb = id.to_secret_bytes(false).unwrap();
+            let idb = id.to_secret_bytes().unwrap();
             let id_unmarshal = Identity::from_bytes(idb.as_bytes()).unwrap();
             assert!(id == id_unmarshal);
 
