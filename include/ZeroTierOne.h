@@ -1328,9 +1328,9 @@ typedef struct
 	uint8_t scope;
 
 	/**
-	 * Percentage of traffic allocated to this path (0-255)
+	 * Relative quality value
 	 */
-	uint8_t allocation;
+	float relativeQuality;
 
 	/**
 	 * Name of physical interface this path resides on
@@ -1355,7 +1355,7 @@ typedef struct
 	uint8_t eligible;
 
 	/**
-	 * The speed of this link (as given to bonding layer)
+	 * The capacity of this link (as given to bonding layer)
 	 */
 	uint32_t linkSpeed;
 
