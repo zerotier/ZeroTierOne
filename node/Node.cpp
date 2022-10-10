@@ -510,7 +510,7 @@ ZT_PeerList *Node::peers() const
 					p->paths[p->pathCount].latencyVariance = (*path)->latencyVariance();
 					p->paths[p->pathCount].packetLossRatio = (*path)->packetLossRatio();
 					p->paths[p->pathCount].packetErrorRatio = (*path)->packetErrorRatio();
-					p->paths[p->pathCount].allocation = (*path)->allocation();
+					p->paths[p->pathCount].relativeQuality = (*path)->relativeQuality();
 					p->paths[p->pathCount].linkSpeed = (*path)->givenLinkSpeed();
 					p->paths[p->pathCount].bonded = (*path)->bonded();
 					p->paths[p->pathCount].eligible = (*path)->eligible();

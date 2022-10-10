@@ -707,7 +707,7 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,void *tPtr,const Shar
 {
 	int32_t _flowId = ZT_QOS_NO_FLOW;
 	SharedPtr<Bond> bond = peer->bond();
-	if (bond && bond->flowHashingEnabled()) {
+	if (bond && bond->flowHashingSupported()) {
 		if (size() > ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD) {
 			const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
 			const unsigned int frameLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;

@@ -577,7 +577,7 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer, SharedPtr<Bond> 
 			j["bonded"] = peer->paths[i].bonded;
 			j["eligible"] = peer->paths[i].eligible;
 			j["givenLinkSpeed"] = peer->paths[i].linkSpeed;
-			j["allocation"] = std::round(((float)(peer->paths[i].allocation) / 255.0) * 1000.0) / 1000.0;
+			j["relativeQuality"] = peer->paths[i].relativeQuality;
 		}
 		pa.push_back(j);
 	}
@@ -1484,7 +1484,6 @@ public:
 													_peerToJson(res,&(pl->peers[i]),bond);
 													scode = 200;
 												} else {
-													fprintf(stderr, "unable to find bond to peer %llx\n", (unsigned long long)wantp);
 													scode = 400;
 												}
 											}
@@ -2023,23 +2022,20 @@ public:
 				}
 				// New bond, used as a copy template for new instances
 				SharedPtr<Bond> newTemplateBond = new Bond(NULL, basePolicyStr, customPolicyStr, SharedPtr<Peer>());
-				// Acceptable ranges
 				newTemplateBond->setPolicy(basePolicyCode);
-				newTemplateBond->setMaxAcceptableLatency(OSUtils::jsonInt(customPolicy["maxAcceptableLatency"],-1));
-				newTemplateBond->setMaxAcceptableMeanLatency(OSUtils::jsonInt(customPolicy["maxAcceptableMeanLatency"],-1));
-				newTemplateBond->setMaxAcceptablePacketDelayVariance(OSUtils::jsonInt(customPolicy["maxAcceptablePacketDelayVariance"],-1));
-				newTemplateBond->setMaxAcceptablePacketLossRatio((float)OSUtils::jsonDouble(customPolicy["maxAcceptablePacketLossRatio"],-1));
-				newTemplateBond->setMaxAcceptablePacketErrorRatio((float)OSUtils::jsonDouble(customPolicy["maxAcceptablePacketErrorRatio"],-1));
-				// Quality weights
-				json &qualityWeights = customPolicy["qualityWeights"];
-				if (qualityWeights.size() == ZT_QOS_WEIGHT_SIZE) {
-					float weights[ZT_QOS_WEIGHT_SIZE];
-					weights[ZT_QOS_LAT_IDX] = (float)OSUtils::jsonDouble(qualityWeights["lat"],0.0);
-					weights[ZT_QOS_LTM_IDX] = (float)OSUtils::jsonDouble(qualityWeights["ltm"],0.0);
-					weights[ZT_QOS_PDV_IDX] = (float)OSUtils::jsonDouble(qualityWeights["pdv"],0.0);
-					weights[ZT_QOS_PLR_IDX] = (float)OSUtils::jsonDouble(qualityWeights["plr"],0.0);
-					weights[ZT_QOS_PER_IDX] = (float)OSUtils::jsonDouble(qualityWeights["per"],0.0);
-					newTemplateBond->setUserQualityWeights(weights,ZT_QOS_WEIGHT_SIZE);
+				// Custom link quality spec
+				json &linkQualitySpec = customPolicy["linkQuality"];
+				if (linkQualitySpec.size() == ZT_QOS_PARAMETER_SIZE) {
+					float weights[ZT_QOS_PARAMETER_SIZE] = {};
+					weights[ZT_QOS_LAT_MAX_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["lat_max"],0.0);
+					weights[ZT_QOS_PDV_MAX_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["pdv_max"],0.0);
+					weights[ZT_QOS_PLR_MAX_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["plr_max"],0.0);
+					weights[ZT_QOS_PER_MAX_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["per_max"],0.0);
+					weights[ZT_QOS_LAT_WEIGHT_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["lat_weight"],0.0);
+					weights[ZT_QOS_PDV_WEIGHT_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["pdv_weight"],0.0);
+					weights[ZT_QOS_PLR_WEIGHT_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["plr_weight"],0.0);
+					weights[ZT_QOS_PER_WEIGHT_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["per_weight"],0.0);
+					newTemplateBond->setUserLinkQualitySpec(weights,ZT_QOS_PARAMETER_SIZE);
 				}
 				// Bond-specific properties
 				newTemplateBond->setUpDelay(OSUtils::jsonInt(customPolicy["upDelay"],-1));
@@ -2053,7 +2049,7 @@ public:
 					std::string linkNameStr(linkItr.key());
 					json &link = linkItr.value();
 					bool enabled = OSUtils::jsonInt(link["enabled"],true);
-					uint32_t speed = OSUtils::jsonInt(link["speed"],0);
+					uint32_t capacity = OSUtils::jsonInt(link["capacity"],0);
 					uint8_t ipvPref = OSUtils::jsonInt(link["ipvPref"],0);
 					std::string failoverToStr(OSUtils::jsonString(link["failoverTo"],""));
 					// Mode
@@ -2071,7 +2067,7 @@ public:
 						failoverToStr = "";
 						enabled = false;
 					}
-					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,speed,enabled,linkMode,failoverToStr));
+					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,capacity,enabled,linkMode,failoverToStr));
 				}
 				std::string linkSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"optimize"));
 				if (linkSelectMethodStr == "always") {

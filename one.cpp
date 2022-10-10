@@ -637,20 +637,20 @@ static int cli(int argc,char **argv)
 									);
 							}
 							printf("\nidx     lat      pdv     "
-							"plr     per    speed  alloc      "
+							"plr     per    capacity    qual      "
 							"rx_age      tx_age  eligible  bonded\n");
 							for(int i=0; i<100; i++) { printf("-"); }
 							printf("\n");
 							for (int i=0; i<p.size(); i++)
 							{
-								printf("%2d: %8.2f %8.2f %7.4f %7.4f %7d %6.2f %11d %11d %9d %7d\n",
+								printf("%2d: %8.2f %8.2f %7.4f %7.4f %10d %7.4f %11d %11d %9d %7d\n",
 									i,
 									OSUtils::jsonDouble(p[i]["latencyMean"], 0),
 									OSUtils::jsonDouble(p[i]["latencyVariance"], 0),
 									OSUtils::jsonDouble(p[i]["packetLossRatio"], 0),
 									OSUtils::jsonDouble(p[i]["packetErrorRatio"], 0),
 									(int)OSUtils::jsonInt(p[i]["givenLinkSpeed"], 0),
-									OSUtils::jsonDouble(p[i]["allocation"], 0),
+									OSUtils::jsonDouble(p[i]["relativeQuality"], 0),
 									(int)OSUtils::jsonInt(p[i]["lastInAge"], 0),
 									(int)OSUtils::jsonInt(p[i]["lastOutAge"], 0),
 									(int)OSUtils::jsonInt(p[i]["eligible"],0),

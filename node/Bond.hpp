@@ -29,7 +29,7 @@
 /**
  * Indices for the path quality weight vector
  */
-enum ZT_BondQualityWeightIndex { ZT_QOS_LAT_IDX, ZT_QOS_LTM_IDX, ZT_QOS_PDV_IDX, ZT_QOS_PLR_IDX, ZT_QOS_PER_IDX, ZT_QOS_WEIGHT_SIZE };
+enum ZT_BondQualityWeightIndex { ZT_QOS_LAT_MAX_IDX, ZT_QOS_PDV_MAX_IDX, ZT_QOS_PLR_MAX_IDX, ZT_QOS_PER_MAX_IDX, ZT_QOS_LAT_WEIGHT_IDX, ZT_QOS_PDV_WEIGHT_IDX, ZT_QOS_PLR_WEIGHT_IDX, ZT_QOS_PER_WEIGHT_IDX, ZT_QOS_PARAMETER_SIZE };
 
 /**
  *  Multipath bonding policy
@@ -117,17 +117,16 @@ class Link {
 	 *
 	 * @param ifnameStr
 	 * @param ipvPref
-	 * @param speed
+	 * @param capacity
 	 * @param enabled
 	 * @param mode
 	 * @param failoverToLinkStr
-	 * @param userSpecifiedAlloc
 	 */
-	Link(std::string ifnameStr, uint8_t ipvPref, uint32_t speed, bool enabled, uint8_t mode, std::string failoverToLinkStr)
+	Link(std::string ifnameStr, uint8_t ipvPref, uint32_t capacity, bool enabled, uint8_t mode, std::string failoverToLinkStr)
 		: _ifnameStr(ifnameStr)
 		, _ipvPref(ipvPref)
-		, _speed(speed)
-		, _relativeSpeed(0)
+		, _capacity(capacity)
+		, _relativeCapacity(0.0)
 		, _enabled(enabled)
 		, _mode(mode)
 		, _failoverToLinkStr(failoverToLinkStr)
@@ -194,29 +193,29 @@ class Link {
 	}
 
 	/**
-	 * @return The speed of the link relative to others in the bond.
+	 * @return The capacity of the link relative to others in the bond.
 	 */
-	inline uint8_t relativeSpeed()
+	inline float relativeCapacity()
 	{
-		return _relativeSpeed;
+		return _relativeCapacity;
 	}
 
 	/**
-	 * Sets the speed of the link relative to others in the bond.
+	 * Sets the capacity of the link relative to others in the bond.
 	 *
-	 * @param relativeSpeed The speed relative to the rest of the link.
+	 * @param relativeCapacity The capacity relative to the rest of the link.
 	 */
-	inline void setRelativeSpeed(uint8_t relativeSpeed)
+	inline void setRelativeCapacity(float relativeCapacity)
 	{
-		_relativeSpeed = relativeSpeed;
+		_relativeCapacity = relativeCapacity;
 	}
 
 	/**
-	 * @return The absolute speed of the link (as specified by the user.)
+	 * @return The absolute capacity of the link (as specified by the user.)
 	 */
-	inline uint32_t speed()
+	inline uint32_t capacity()
 	{
-		return _speed;
+		return _capacity;
 	}
 
 	/**
@@ -262,14 +261,14 @@ class Link {
 	uint8_t _ipvPref;
 
 	/**
-	 * User-specified speed of this link
+	 * User-specified capacity of this link
 	 */
-	uint32_t _speed;
+	uint32_t _capacity;
 
 	/**
 	 * Speed relative to other specified links (computed by Bond)
 	 */
-	uint8_t _relativeSpeed;
+	float _relativeCapacity;
 
 	/**
 	 * Whether this link is enabled, or (disabled (possibly bad config))
@@ -302,6 +301,17 @@ class Peer;
 
 class Bond {
   public:
+
+	/**
+	 * Stop bond's internal functions (can be resumed)
+	 */
+	void stopBond();
+
+	/**
+	 * Start or resume a bond's internal functions
+	 */
+	void startBond();
+
 	/**
 	 * @return Whether this link is permitted to become a member of a bond.
 	 */
@@ -577,6 +587,14 @@ class Bond {
 	}
 
 	/**
+	 * Return whether this bond is able to properly process traffic
+	 */
+	bool isReady()
+	{
+		return _numBondedPaths;
+	}
+
+	/**
 	 * Inform the bond about the path that its peer (owning object) just learned about.
 	 * If the path is allowed to be used, it will be inducted into the bond on a trial
 	 * period where link statistics will be collected to judge its quality.
@@ -706,8 +724,9 @@ class Bond {
 	 *
 	 * @param flow Flow to be assigned
 	 * @param now Current time
+	 * @param reassign Whether this flow is being re-assigned to another path
 	 */
-	bool assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now);
+	bool assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now, bool reassign);
 
 	/**
 	 * Determine whether a path change should occur given the remote peer's reported utility and our
@@ -796,52 +815,12 @@ class Bond {
 	void setBondParameters(int policy, SharedPtr<Bond> templateBond, bool useTemplate);
 
 	/**
-	 * Check and assign user-specified quality weights to this bond.
+	 * Check and assign user-specified link quality parameters to this bond.
 	 *
-	 * @param weights Set of user-specified weights
-	 * @param len Length of weight vector
+	 * @param weights Set of user-specified parameters
+	 * @param len Length of parameter vector
 	 */
-	void setUserQualityWeights(float weights[], int len);
-
-	/**
-	 * @param latencyInMilliseconds Maximum acceptable latency.
-	 */
-	void setMaxAcceptableLatency(int16_t latencyInMilliseconds)
-	{
-		_maxAcceptableLatency = latencyInMilliseconds;
-	}
-
-	/**
-	 * @param latencyInMilliseconds Maximum acceptable (mean) latency.
-	 */
-	void setMaxAcceptableMeanLatency(int16_t latencyInMilliseconds)
-	{
-		_maxAcceptableMeanLatency = latencyInMilliseconds;
-	}
-
-	/**
-	 * @param latencyVarianceInMilliseconds Maximum acceptable packet delay variance (jitter).
-	 */
-	void setMaxAcceptablePacketDelayVariance(int16_t latencyVarianceInMilliseconds)
-	{
-		_maxAcceptablePacketDelayVariance = latencyVarianceInMilliseconds;
-	}
-
-	/**
-	 * @param lossRatio Maximum acceptable packet loss ratio (PLR).
-	 */
-	void setMaxAcceptablePacketLossRatio(float lossRatio)
-	{
-		_maxAcceptablePacketLossRatio = lossRatio;
-	}
-
-	/**
-	 * @param errorRatio Maximum acceptable packet error ratio (PER).
-	 */
-	void setMaxAcceptablePacketErrorRatio(float errorRatio)
-	{
-		_maxAcceptablePacketErrorRatio = errorRatio;
-	}
+	void setUserLinkQualitySpec(float weights[], int len);
 
 	/**
 	 * @return Whether the user has defined links for use on this bond
@@ -868,11 +847,11 @@ class Bond {
 	}
 
 	/**
-	 * @return Whether the user has specified link speeds
+	 * @return Whether the user has specified link capacities
 	 */
-	inline bool userHasSpecifiedLinkSpeeds()
+	inline bool userHasSpecifiedLinkCapacities()
 	{
-		return _userHasSpecifiedLinkSpeeds;
+		return _userHasSpecifiedLinkCapacities;
 	}
 
 	/**
@@ -911,10 +890,9 @@ class Bond {
 	 */
 	inline bool rateGateQoS(int64_t now, SharedPtr<Path>& path)
 	{
-		// TODO: Verify before production
 		char pathStr[64] = { 0 };
 		path->address().toString(pathStr);
-		int diff = now - _lastQoSRateCheck;
+		uint64_t diff = now - _lastQoSRateCheck;
 		if ((diff) <= (_qosSendInterval / ZT_MAX_PEER_NETWORK_PATHS)) {
 			++_qosCutoffCount;
 		}
@@ -922,7 +900,6 @@ class Bond {
 			_qosCutoffCount = 0;
 		}
 		_lastQoSRateCheck = now;
-		// fprintf(stderr, "rateGateQoS (count=%d, send_interval=%d, diff=%d, path=%s)\n", _qosCutoffCount, _qosSendInterval, diff, pathStr);
 		return (_qosCutoffCount < (ZT_MAX_PEER_NETWORK_PATHS * 2));
 	}
 
@@ -934,7 +911,6 @@ class Bond {
 	 */
 	inline bool rateGatePathNegotiation(int64_t now, SharedPtr<Path>& path)
 	{
-		// TODO: Verify before production
 		char pathStr[64] = { 0 };
 		path->address().toString(pathStr);
 		int diff = now - _lastPathNegotiationReceived;
@@ -945,7 +921,6 @@ class Bond {
 			_pathNegotiationCutoffCount = 0;
 		}
 		_lastPathNegotiationReceived = now;
-		// fprintf(stderr, "rateGateNeg (count=%d, send_interval=%d, diff=%d, path=%s)\n", _pathNegotiationCutoffCount, (ZT_PATH_NEGOTIATION_CUTOFF_TIME / ZT_MAX_PEER_NETWORK_PATHS), diff, pathStr);
 		return (_pathNegotiationCutoffCount < (ZT_MAX_PEER_NETWORK_PATHS * 2));
 	}
 
@@ -1061,20 +1036,11 @@ class Bond {
 	}
 
 	/**
-	 *
-	 * @param allowFlowHashing
+	 * @return Whether flow-hashing is currently supported for this bond.
 	 */
-	inline void setFlowHashing(bool allowFlowHashing)
+	bool flowHashingSupported()
 	{
-		_allowFlowHashing = allowFlowHashing;
-	}
-
-	/**
-	 * @return Whether flow-hashing is currently enabled for this bond.
-	 */
-	bool flowHashingEnabled()
-	{
-		return _allowFlowHashing;
+		return _policy == ZT_BOND_POLICY_BALANCE_XOR || _policy == ZT_BOND_POLICY_BALANCE_AWARE;
 	}
 
 	/**
@@ -1221,16 +1187,14 @@ class Bond {
 			, onlyPathOnLink(false)
 			, bonded(false)
 			, negotiated(false)
-			, shouldReallocateFlows(false)
+			, shouldAvoid(false)
 			, assignedFlowCount(0)
-			, latencyMean(0)
+			, latency(0)
 			, latencyVariance(0)
 			, packetLossRatio(0)
 			, packetErrorRatio(0)
-			, allocation(0)
-			, byteLoad(0)
-			, relativeByteLoad(0)
-			, affinity(0)
+			, relativeQuality(0)
+			, relativeLinkCapacity(0)
 			, failoverScore(0)
 			, packetsReceivedSinceLastQoS(0)
 			, packetsIn(0)
@@ -1298,7 +1262,7 @@ class Bond {
 		 * @param now Current time
 		 * @return Whether a QoS (VERB_QOS_MEASUREMENT) packet needs to be emitted at this time
 		 */
-		inline bool needsToSendQoS(int64_t now, int qosSendInterval)
+		inline bool needsToSendQoS(int64_t now, uint64_t qosSendInterval)
 		{
 			// fprintf(stderr, "QOS table (%d / %d)\n", packetsReceivedSinceLastQoS, ZT_QOS_TABLE_SIZE);
 			return ((packetsReceivedSinceLastQoS >= ZT_QOS_TABLE_SIZE) || ((now - lastQoSMeasurement) > qosSendInterval)) && packetsReceivedSinceLastQoS;
@@ -1308,7 +1272,7 @@ class Bond {
 		 * @param now Current time
 		 * @return Whether an ACK (VERB_ACK) packet needs to be emitted at this time
 		 */
-		inline bool needsToSendAck(int64_t now, int ackSendInterval)
+		inline bool needsToSendAck(int64_t now, uint64_t ackSendInterval)
 		{
 			return ((now - lastAckSent) >= ackSendInterval || (packetsReceivedSinceLastAck == ZT_QOS_TABLE_SIZE)) && packetsReceivedSinceLastAck;
 		}
@@ -1344,26 +1308,25 @@ class Bond {
 		uint64_t lastRefractoryUpdate;		 // The last time that the refractory period was updated.
 		uint64_t lastAliveToggle;			 // The last time that the path was marked as "alive".
 		bool alive;
-		bool eligible;						   // State of eligibility at last check. Used for determining state changes.
-		uint64_t lastEligibility;			   // The last time that this path was eligible
-		uint64_t whenNominated;				   // Timestamp indicating when this path's trial period began.
-		uint32_t refractoryPeriod;			   // Amount of time that this path will be prevented from becoming a member of a bond.
-		uint8_t ipvPref;					   // IP version preference inherited from the physical link.
-		uint8_t mode;						   // Mode inherited from the physical link.
-		bool onlyPathOnLink;				   // IP version preference inherited from the physical link.
-		bool enabled;						   // Enabled state inherited from the physical link.
-		bool bonded;						   // Whether this path is currently part of a bond.
-		bool negotiated;					   // Whether this path was intentionally negotiated by either peer.
-		bool shouldReallocateFlows;			   // Whether flows should be moved from this path. Current traffic flows will be re-allocated immediately.
-		uint16_t assignedFlowCount;			   // The number of flows currently assigned to this path.
-		float latencyMean;					   // The mean latency (computed from a sliding window.)
-		float latencyVariance;				   // Packet delay variance (computed from a sliding window.)
-		float packetLossRatio;				   // The ratio of lost packets to received packets.
-		float packetErrorRatio;				   // The ratio of packets that failed their MAC/CRC checks to those that did not.
-		uint8_t allocation;					   // The relative quality of this path to all others in the bond, [0-255].
-		uint64_t byteLoad;					   // How much load this path is under.
-		uint8_t relativeByteLoad;			   // How much load this path is under (relative to other paths in the bond.)
-		uint8_t affinity;					   // Relative value expressing how "deserving" this path is of new traffic.
+		bool eligible;				  // State of eligibility at last check. Used for determining state changes.
+		uint64_t lastEligibility;	  // The last time that this path was eligible
+		uint64_t whenNominated;		  // Timestamp indicating when this path's trial period began.
+		uint32_t refractoryPeriod;	  // Amount of time that this path will be prevented from becoming a member of a bond.
+		uint8_t ipvPref;			  // IP version preference inherited from the physical link.
+		uint8_t mode;				  // Mode inherited from the physical link.
+		bool onlyPathOnLink;		  // IP version preference inherited from the physical link.
+		bool enabled;				  // Enabled state inherited from the physical link.
+		bool bonded;				  // Whether this path is currently part of a bond.
+		bool negotiated;			  // Whether this path was intentionally negotiated by either peer.
+		bool shouldAvoid;			  // Whether flows should be moved from this path. Current traffic flows will be re-allocated immediately.
+		uint16_t assignedFlowCount;	  // The number of flows currently assigned to this path.
+		float latency;				  // The mean latency (computed from a sliding window.)
+		float latencyVariance;		  // Packet delay variance (computed from a sliding window.)
+		float packetLossRatio;		  // The ratio of lost packets to received packets.
+		float packetErrorRatio;		  // The ratio of packets that failed their MAC/CRC checks to those that did not.
+		float relativeQuality;		  // The relative quality of the link.
+		float relativeLinkCapacity;	  // The relative capacity of the link.
+
 		uint32_t failoverScore;				   // Score that indicates to what degree this path is preferred over others that are available to the bonding policy. (specifically for active-backup)
 		int32_t packetsReceivedSinceLastQoS;   // Number of packets received since the last VERB_QOS_MEASUREMENT was sent to the remote peer.
 
@@ -1461,10 +1424,12 @@ class Bond {
 	 * may only be updated during a call to curateBond(). The reason for this is so that
 	 * we can simplify the high frequency packet egress logic.
 	 */
-	int _bondIdxMap[ZT_MAX_PEER_NETWORK_PATHS];
-	int _numBondedPaths;						  // Number of paths currently included in the _bondIdxMap set.
-	std::map<int32_t, SharedPtr<Flow> > _flows;	  // Flows hashed according to port and protocol
-	float _qw[ZT_QOS_WEIGHT_SIZE];				  // How much each factor contributes to the "quality" score of a path.
+	int _realIdxMap[ZT_MAX_PEER_NETWORK_PATHS] = { ZT_MAX_PEER_NETWORK_PATHS };
+	int _numBondedPaths;						  // Number of paths currently included in the _realIdxMap set.
+	std::map<int16_t, SharedPtr<Flow> > _flows;	  // Flows hashed according to port and protocol
+	float _qw[ZT_QOS_PARAMETER_SIZE];			  // Link quality specification (can be customized by user)
+
+	bool _run;
 
 	uint8_t _policy;
 	uint32_t _upDelay;
@@ -1500,20 +1465,11 @@ class Bond {
 	/**
 	 * Timers and intervals
 	 */
-	uint32_t _failoverInterval;
-	uint32_t _qosSendInterval;
-	uint32_t _ackSendInterval;
-	uint32_t throughputMeasurementInterval;
-	uint32_t _qualityEstimationInterval;
-
-	/**
-	 * Acceptable quality thresholds
-	 */
-	float _maxAcceptablePacketLossRatio;
-	float _maxAcceptablePacketErrorRatio;
-	uint16_t _maxAcceptableLatency;
-	uint16_t _maxAcceptableMeanLatency;
-	uint16_t _maxAcceptablePacketDelayVariance;
+	uint64_t _failoverInterval;
+	uint64_t _qosSendInterval;
+	uint64_t _ackSendInterval;
+	uint64_t throughputMeasurementInterval;
+	uint64_t _qualityEstimationInterval;
 
 	/**
 	 * Link state reporting
@@ -1563,7 +1519,7 @@ class Bond {
 	bool _userHasSpecifiedLinks;				  // Whether the user has specified links for this bond.
 	bool _userHasSpecifiedPrimaryLink;			  // Whether the user has specified a primary link for this bond.
 	bool _userHasSpecifiedFailoverInstructions;	  // Whether the user has specified failover instructions for this bond.
-	bool _userHasSpecifiedLinkSpeeds;			  // Whether the user has specified links speeds for this bond.
+	bool _userHasSpecifiedLinkCapacities;		  // Whether the user has specified links capacities for this bond.
 	/**
 	 * How frequently (in ms) a VERB_ECHO is sent to a peer to verify that a
 	 * path is still active. A value of zero (0) will disable active path

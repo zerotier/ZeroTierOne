@@ -93,7 +93,7 @@ public:
 		_eligible(false),
 		_bonded(false),
 		_givenLinkSpeed(0),
-		_allocation(0),
+		_relativeQuality(0),
 		_latency(0xffff),
 		_addr(),
 		_ipScope(InetAddress::IP_SCOPE_NONE)
@@ -113,7 +113,7 @@ public:
 		_eligible(false),
 		_bonded(false),
 		_givenLinkSpeed(0),
-		_allocation(0),
+		_relativeQuality(0),
 		_latency(0xffff),
 		_addr(addr),
 		_ipScope(addr.ipScope())
@@ -335,14 +335,14 @@ public:
 	inline unsigned int bonded() const { return _bonded; }
 
 	/**
-	 * @return Given link speed as reported by the bonding layer
+	 * @return Given link capacity as reported by the bonding layer
 	 */
 	inline unsigned int givenLinkSpeed() const { return _givenLinkSpeed; }
 
 	/**
-	 * @return Traffic allocation as reported by the bonding layer
+	 * @return Path's quality as reported by the bonding layer
 	 */
-	inline unsigned char allocation() const { return _allocation; }
+	inline float relativeQuality() const { return _relativeQuality; }
 
 	/**
 	 * @return Physical interface name that this path lives on
@@ -371,7 +371,7 @@ private:
 	volatile bool _eligible;
 	volatile bool _bonded;
 	volatile uint32_t _givenLinkSpeed;
-	volatile uint8_t _allocation;
+	volatile float _relativeQuality;
 
 	volatile unsigned int _latency;
 	InetAddress _addr;

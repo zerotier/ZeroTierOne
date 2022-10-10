@@ -390,7 +390,7 @@
 /**
  * Number of samples to consider when processing real-time path statistics
  */
-#define ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE 32
+#define ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE 64
 
 /**
  * Max allowable time spent in any queue (in ms)
