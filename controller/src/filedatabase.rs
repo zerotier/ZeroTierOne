@@ -39,7 +39,7 @@ fn member_path(base: &PathBuf, network_id: NetworkId, member_id: Address) -> Pat
 impl FileDatabase {
     pub async fn new<P: AsRef<Path>>(base_path: P) -> Result<Self, Box<dyn Error>> {
         let base: PathBuf = base_path.as_ref().into();
-        let changelog = base.join("_old");
+        let changelog = base.join("_history");
         let _ = fs::create_dir_all(&base).await?;
         Ok(Self {
             base_path: base,
