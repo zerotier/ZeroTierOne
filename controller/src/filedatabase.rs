@@ -10,6 +10,8 @@ use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::io::{fs_restrict_permissions, read_limit};
 use zerotier_utils::json::to_json_pretty;
 use zerotier_utils::tokio::fs;
+use zerotier_utils::tokio::io::AsyncWriteExt;
+use zerotier_utils::tokio::sync::Mutex;
 
 use crate::database::Database;
 use crate::model::*;
@@ -23,6 +25,7 @@ const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
 /// the cache. The cache will also contain any ephemeral data, generated data, etc.
 pub struct FileDatabase {
     base_path: PathBuf,
+    old_log: Mutex<fs::File>,
 }
 
 fn network_path(base: &PathBuf, network_id: NetworkId) -> PathBuf {
@@ -36,8 +39,12 @@ fn member_path(base: &PathBuf, network_id: NetworkId, member_id: Address) -> Pat
 impl FileDatabase {
     pub async fn new<P: AsRef<Path>>(base_path: P) -> Result<Self, Box<dyn Error>> {
         let base: PathBuf = base_path.as_ref().into();
+        let changelog = base.join("_old");
         let _ = fs::create_dir_all(&base).await?;
-        Ok(Self { base_path: base })
+        Ok(Self {
+            base_path: base,
+            old_log: Mutex::new(fs::OpenOptions::new().append(true).create(true).open(changelog).await?),
+        })
     }
 }
 
@@ -77,8 +84,19 @@ impl Database for FileDatabase {
     async fn save_network(&self, obj: Network) -> Result<(), Box<dyn Error>> {
         let base_network_path = network_path(&self.base_path, obj.id);
         let _ = fs::create_dir_all(base_network_path.parent().unwrap()).await;
+
+        let prev = self.get_network(obj.id).await?;
+        if let Some(prev) = prev {
+            if obj == prev {
+                return Ok(());
+            }
+            let mut j = zerotier_utils::json::to_json(&prev);
+            j.push('\n');
+            let _ = self.old_log.lock().await.write_all(j.as_bytes()).await?;
+        }
+
         let _ = fs::write(base_network_path, to_json_pretty(&obj).as_bytes()).await?;
-        Ok(())
+        return Ok(());
     }
 
     async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Box<dyn Error>> {
@@ -113,6 +131,17 @@ impl Database for FileDatabase {
     async fn save_member(&self, obj: Member) -> Result<(), Box<dyn Error>> {
         let base_member_path = member_path(&self.base_path, obj.network_id, obj.node_id);
         let _ = fs::create_dir_all(base_member_path.parent().unwrap()).await;
+
+        let prev = self.get_member(obj.network_id, obj.node_id).await?;
+        if let Some(prev) = prev {
+            if obj == prev {
+                return Ok(());
+            }
+            let mut j = zerotier_utils::json::to_json(&prev);
+            j.push('\n');
+            let _ = self.old_log.lock().await.write_all(j.as_bytes()).await?;
+        }
+
         let _ = fs::write(base_member_path, to_json_pretty(&obj).as_bytes()).await?;
         Ok(())
     }
