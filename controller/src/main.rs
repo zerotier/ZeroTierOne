@@ -82,7 +82,7 @@ fn main() {
     if let Ok(tokio_runtime) = zerotier_utils::tokio::runtime::Builder::new_multi_thread().enable_all().build() {
         tokio_runtime.block_on(async {
             if let Some(filedb_base_path) = global_args.value_of("filedb") {
-                std::process::exit(run(Arc::new(FileDatabase::new(filedb_base_path).await), &tokio_runtime).await);
+                std::process::exit(run(Arc::new(FileDatabase::new(filedb_base_path).await.unwrap()), &tokio_runtime).await);
             } else {
                 eprintln!("FATAL: no database type selected.");
                 std::process::exit(exitcode::ERR_USAGE);

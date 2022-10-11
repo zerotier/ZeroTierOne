@@ -4,16 +4,12 @@ use std::str::FromStr;
 
 use async_trait::async_trait;
 
-use serde::de::DeserializeOwned;
-use serde::Serialize;
-
 use zerotier_network_hypervisor::vl1::{Address, Identity, NodeStorage};
 use zerotier_network_hypervisor::vl2::NetworkId;
 
 use zerotier_utils::io::{fs_restrict_permissions, read_limit};
-use zerotier_utils::json::{json_patch, to_json_pretty};
+use zerotier_utils::json::to_json_pretty;
 use zerotier_utils::tokio::fs;
-use zerotier_utils::tokio::io::ErrorKind;
 
 use crate::database::Database;
 use crate::model::*;
@@ -27,7 +23,6 @@ const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
 /// the cache. The cache will also contain any ephemeral data, generated data, etc.
 pub struct FileDatabase {
     base_path: PathBuf,
-    cache_path: PathBuf,
 }
 
 fn network_path(base: &PathBuf, network_id: NetworkId) -> PathBuf {
@@ -39,32 +34,10 @@ fn member_path(base: &PathBuf, network_id: NetworkId, member_id: Address) -> Pat
 }
 
 impl FileDatabase {
-    pub async fn new<P: AsRef<Path>>(base_path: P) -> Self {
+    pub async fn new<P: AsRef<Path>>(base_path: P) -> Result<Self, Box<dyn Error>> {
         let base: PathBuf = base_path.as_ref().into();
-        let cache: PathBuf = base_path.as_ref().join("cache");
-        let _ = fs::create_dir_all(&cache).await;
-        Self { base_path: base, cache_path: cache }
-    }
-
-    /// Merge an object with its cached instance and save the result to the 'cache' path.
-    async fn merge_with_cache<O: Serialize + DeserializeOwned>(
-        &self,
-        object_path_in_cache: PathBuf,
-        changes: O,
-    ) -> Result<O, Box<dyn Error>> {
-        let changes = serde_json::to_value(&changes)?;
-        let cached_json = fs::read(&object_path_in_cache).await?;
-
-        let mut patched = serde_json::from_slice::<serde_json::Value>(cached_json.as_slice())?;
-        json_patch(&mut patched, &changes, 64);
-        let patched = serde_json::from_value::<O>(patched)?;
-
-        let patched_json = serde_json::to_vec(&patched)?;
-        if !cached_json.as_slice().eq(patched_json.as_slice()) {
-            let _ = fs::write(object_path_in_cache, patched_json.as_slice()).await;
-        }
-
-        return Ok(patched);
+        let _ = fs::create_dir_all(&base).await?;
+        Ok(Self { base_path: base })
     }
 }
 
@@ -95,34 +68,16 @@ impl Database for FileDatabase {
     async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error>> {
         let r = fs::read(network_path(&self.base_path, id)).await;
         if let Ok(raw) = r {
-            let r = serde_json::from_slice::<Network>(raw.as_slice());
-            if let Ok(network) = r {
-                return Ok(Some(self.merge_with_cache(network_path(&self.cache_path, id), network).await?));
-            } else {
-                return Err(Box::new(r.err().unwrap()));
-            }
+            Ok(Some(serde_json::from_slice::<Network>(raw.as_slice())?))
         } else {
-            let e = r.unwrap_err();
-            if matches!(e.kind(), ErrorKind::NotFound) {
-                let _ = fs::remove_dir_all(self.cache_path.join(id.to_string())).await;
-                return Ok(None);
-            } else {
-                return Err(Box::new(e));
-            }
+            Ok(None)
         }
     }
 
-    async fn save_network(&self, obj: &Network) -> Result<(), Box<dyn Error>> {
-        let _ = fs::create_dir_all(self.base_path.join(obj.id.to_string())).await;
-        let _ = fs::create_dir_all(self.cache_path.join(obj.id.to_string())).await;
-
+    async fn save_network(&self, obj: Network) -> Result<(), Box<dyn Error>> {
         let base_network_path = network_path(&self.base_path, obj.id);
-        if !fs::metadata(&base_network_path).await.is_ok() {
-            fs::write(base_network_path, to_json_pretty(obj).as_bytes()).await?;
-        }
-
-        fs::write(network_path(&self.cache_path, obj.id), serde_json::to_vec(obj)?.as_slice()).await?;
-
+        let _ = fs::create_dir_all(base_network_path.parent().unwrap()).await;
+        let _ = fs::write(base_network_path, to_json_pretty(&obj).as_bytes()).await?;
         Ok(())
     }
 
@@ -149,37 +104,16 @@ impl Database for FileDatabase {
     async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Box<dyn Error>> {
         let r = fs::read(member_path(&self.base_path, network_id, node_id)).await;
         if let Ok(raw) = r {
-            let r = serde_json::from_slice::<Member>(raw.as_slice());
-            if let Ok(member) = r {
-                return Ok(Some(
-                    self.merge_with_cache(member_path(&self.cache_path, network_id, node_id), member)
-                        .await?,
-                ));
-            } else {
-                return Err(Box::new(r.err().unwrap()));
-            }
+            Ok(Some(serde_json::from_slice::<Member>(raw.as_slice())?))
         } else {
-            let e = r.unwrap_err();
-            if matches!(e.kind(), ErrorKind::NotFound) {
-                let _ = fs::remove_file(member_path(&self.cache_path, network_id, node_id)).await;
-                return Ok(None);
-            } else {
-                return Err(Box::new(e));
-            }
+            Ok(None)
         }
     }
 
     async fn save_member(&self, obj: Member) -> Result<(), Box<dyn Error>> {
         let base_member_path = member_path(&self.base_path, obj.network_id, obj.node_id);
-        if !fs::metadata(&base_member_path).await.is_ok() {
-            fs::write(base_member_path, to_json_pretty(&obj).as_bytes()).await?;
-        }
-
-        fs::write(
-            member_path(&self.cache_path, obj.network_id, obj.node_id),
-            serde_json::to_vec(&obj)?.as_slice(),
-        )
-        .await?;
+        let _ = fs::create_dir_all(base_member_path.parent().unwrap()).await;
+        let _ = fs::write(base_member_path, to_json_pretty(&obj).as_bytes()).await?;
         Ok(())
     }
 
@@ -195,5 +129,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_db() {}
+    fn test_db() {
+        if let Ok(tokio_runtime) = zerotier_utils::tokio::runtime::Builder::new_current_thread().enable_all().build() {
+            let _ = tokio_runtime.block_on(async {
+                let node_id = Address::from_u64(0xdeadbeefu64).unwrap();
+                let network_id = NetworkId::from_u64(0xfeedbeefcafebabeu64).unwrap();
+
+                let test_dir = std::env::temp_dir().join("zt_filedatabase_test");
+                println!("test filedatabase is in: {}", test_dir.as_os_str().to_str().unwrap());
+
+                let _ = std::fs::remove_dir_all(&test_dir);
+
+                let db = FileDatabase::new(test_dir).await.expect("new db");
+                let mut test_member = Member::new_without_identity(node_id, network_id);
+
+                for x in 0..3 {
+                    test_member.name = x.to_string();
+                    db.save_member(test_member.clone()).await.expect("member save ok");
+
+                    let test_member2 = db.get_member(network_id, node_id).await.unwrap().unwrap();
+                    //println!("{}", test_member.to_string());
+                    //println!("{}", test_member2.to_string());
+                    assert!(test_member == test_member2);
+                }
+            });
+        }
+    }
 }

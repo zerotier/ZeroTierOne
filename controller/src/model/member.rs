@@ -68,11 +68,11 @@ pub struct Member {
 }
 
 impl Member {
-    pub fn new_with_identity(identity: Identity, network_id: NetworkId) -> Self {
+    pub fn new_without_identity(node_id: Address, network_id: NetworkId) -> Self {
         Self {
-            node_id: identity.address,
+            node_id,
             network_id,
-            identity: Some(identity),
+            identity: None,
             name: String::new(),
             last_authorized_time: None,
             last_deauthorized_time: None,
@@ -84,6 +84,12 @@ impl Member {
             advertised: false,
             objtype: ObjectType::Member,
         }
+    }
+
+    pub fn new_with_identity(identity: Identity, network_id: NetworkId) -> Self {
+        let mut tmp = Self::new_without_identity(identity.address, network_id);
+        tmp.identity = Some(identity);
+        tmp
     }
 
     /// Check whether this member is authorized, which is true if the last authorized time is after last deauthorized time.
@@ -98,6 +104,13 @@ impl Hash for Member {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.node_id.hash(state);
         self.network_id.hash(state);
+    }
+}
+
+impl ToString for Member {
+    #[inline(always)]
+    fn to_string(&self) -> String {
+        zerotier_utils::json::to_json_pretty(self)
     }
 }
 

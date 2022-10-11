@@ -118,6 +118,13 @@ impl Hash for Network {
     }
 }
 
+impl ToString for Network {
+    #[inline(always)]
+    fn to_string(&self) -> String {
+        zerotier_utils::json::to_json_pretty(self)
+    }
+}
+
 #[inline(always)]
 fn troo() -> bool {
     true
