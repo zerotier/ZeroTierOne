@@ -126,6 +126,9 @@ pub const ADDRESS_SIZE_STRING: usize = 10;
 /// Prefix indicating reserved addresses (that can't actually be addresses).
 pub const ADDRESS_RESERVED_PREFIX: u8 = 0xff;
 
+/// Bit mask for address bits in a u64.
+pub const ADDRESS_MASK: u64 = 0xffffffffff;
+
 pub(crate) mod v1 {
     use super::*;
 

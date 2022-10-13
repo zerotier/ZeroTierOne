@@ -9,30 +9,69 @@ use zerotier_network_hypervisor::protocol::{verbs, PacketBuffer, DEFAULT_MULTICA
 use zerotier_network_hypervisor::vl1::{HostSystem, Identity, InnerProtocol, Node, PacketHandlerResult, Path, PathFilter, Peer};
 use zerotier_network_hypervisor::vl2::{CertificateOfMembership, CertificateOfOwnership, NetworkConfig, NetworkId, Tag};
 use zerotier_utils::dictionary::Dictionary;
-use zerotier_utils::error::UnexpectedError;
+use zerotier_utils::error::{InvalidParameterError, UnexpectedError};
 use zerotier_utils::ms_since_epoch;
 use zerotier_utils::reaper::Reaper;
 use zerotier_utils::tokio;
 
-use crate::database::Database;
+use crate::database::*;
 use crate::model::{AuthorizationResult, Member, CREDENTIAL_WINDOW_SIZE_DEFAULT};
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub struct Handler<DatabaseImpl: Database> {
+    inner: Arc<Inner<DatabaseImpl>>,
+    change_watcher: Option<tokio::task::JoinHandle<()>>,
+}
+
+struct Inner<DatabaseImpl: Database> {
     reaper: Reaper,
     runtime: tokio::runtime::Handle,
-    inner: Arc<Inner<DatabaseImpl>>,
+    database: Arc<DatabaseImpl>,
+    local_identity: Identity,
 }
 
 impl<DatabaseImpl: Database> Handler<DatabaseImpl> {
-    pub fn new(database: Arc<DatabaseImpl>, runtime: tokio::runtime::Handle, local_identity: Identity) -> Arc<Self> {
-        assert!(local_identity.secret.is_some());
-        Arc::new(Self {
-            reaper: Reaper::new(&runtime),
-            runtime,
-            inner: Arc::new(Inner::<DatabaseImpl> { database, local_identity }),
-        })
+    pub async fn new(database: Arc<DatabaseImpl>, runtime: tokio::runtime::Handle) -> Result<Arc<Self>, Box<dyn Error>> {
+        if let Some(local_identity) = database.load_node_identity() {
+            assert!(local_identity.secret.is_some());
+
+            let inner = Arc::new(Inner::<DatabaseImpl> {
+                reaper: Reaper::new(&runtime),
+                runtime,
+                database: database.clone(),
+                local_identity,
+            });
+
+            let h = Arc::new(Self {
+                inner: inner.clone(),
+                change_watcher: database.changes().await.map(|mut ch| {
+                    let inner2 = inner.clone();
+                    inner.runtime.spawn(async move {
+                        loop {
+                            if let Ok(change) = ch.recv().await {
+                                inner2.reaper.add(
+                                    inner2.runtime.spawn(inner2.clone().handle_change_notification(change)),
+                                    Instant::now().checked_add(REQUEST_TIMEOUT).unwrap(),
+                                );
+                            }
+                        }
+                    })
+                }),
+            });
+
+            Ok(h)
+        } else {
+            Err(Box::new(InvalidParameterError(
+                "local controller's identity not readable by database",
+            )))
+        }
+    }
+}
+
+impl<DatabaseImpl: Database> Drop for Handler<DatabaseImpl> {
+    fn drop(&mut self) {
+        let _ = self.change_watcher.take().map(|w| w.abort());
     }
 }
 
@@ -116,10 +155,10 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
 
                 // Launch handler as an async background task.
                 let (inner, source2, source_path2) = (self.inner.clone(), source.clone(), source_path.clone());
-                self.reaper.add(
-                    self.runtime.spawn(async move {
+                self.inner.reaper.add(
+                    self.inner.runtime.spawn(async move {
                         // TODO: log errors
-                        let _ = inner.handle_network_config_request(
+                        let result = inner.handle_network_config_request(
                             source2,
                             source_path2,
                             message_id,
@@ -172,12 +211,11 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
     }
 }
 
-struct Inner<DatabaseImpl: Database> {
-    database: Arc<DatabaseImpl>,
-    local_identity: Identity,
-}
-
 impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
+    async fn handle_change_notification(self: Arc<Self>, _change: Change) {
+        todo!()
+    }
+
     async fn handle_network_config_request<HostSystemImpl: HostSystem>(
         self: Arc<Self>,
         source: Arc<Peer<HostSystemImpl>>,
@@ -214,7 +252,7 @@ impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
         let mut authorized = member.as_ref().map_or(false, |m| m.authorized());
         if !authorized {
             if member.is_none() {
-                if network.learn_members {
+                if network.learn_members.unwrap_or(true) {
                     let _ = member.insert(Member::new_with_identity(source.identity.clone(), network_id));
                     member_changed = true;
                 } else {

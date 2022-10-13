@@ -15,6 +15,7 @@ zerotier-vl1-service = { path = "../vl1-service" }
 async-trait = "^0"
 serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = ["std"], default-features = false }
+serde_yaml = "^0"
 clap = { version = "^3", features = ["std", "suggestions"], default-features = false }
 
 [target."cfg(not(windows))".dependencies]

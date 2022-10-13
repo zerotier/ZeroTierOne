@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use async_trait::async_trait;
 
@@ -8,10 +9,7 @@ use zerotier_network_hypervisor::vl1::{Address, Identity, NodeStorage};
 use zerotier_network_hypervisor::vl2::NetworkId;
 
 use zerotier_utils::io::{fs_restrict_permissions, read_limit};
-use zerotier_utils::json::to_json_pretty;
 use zerotier_utils::tokio::fs;
-use zerotier_utils::tokio::io::AsyncWriteExt;
-use zerotier_utils::tokio::sync::Mutex;
 
 use crate::database::Database;
 use crate::model::*;
@@ -25,32 +23,46 @@ const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
 /// the cache. The cache will also contain any ephemeral data, generated data, etc.
 pub struct FileDatabase {
     base_path: PathBuf,
-    old_log: Mutex<fs::File>,
+    controller_address: AtomicU64,
 }
 
-fn network_path(base: &PathBuf, network_id: NetworkId) -> PathBuf {
-    base.join(network_id.to_string()).join(format!("n{}.json", network_id.to_string()))
-}
-
-fn member_path(base: &PathBuf, network_id: NetworkId, member_id: Address) -> PathBuf {
-    base.join(network_id.to_string()).join(format!("m{}.json", member_id.to_string()))
-}
+// TODO: should cache at least hashes and detect changes in the filesystem live.
 
 impl FileDatabase {
     pub async fn new<P: AsRef<Path>>(base_path: P) -> Result<Self, Box<dyn Error>> {
         let base: PathBuf = base_path.as_ref().into();
-        let changelog = base.join("_history");
         let _ = fs::create_dir_all(&base).await?;
-        Ok(Self {
-            base_path: base,
-            old_log: Mutex::new(fs::OpenOptions::new().append(true).create(true).open(changelog).await?),
-        })
+        Ok(Self { base_path: base, controller_address: AtomicU64::new(0) })
+    }
+
+    fn get_controller_address(&self) -> Option<Address> {
+        let a = self.controller_address.load(Ordering::Relaxed);
+        if a == 0 {
+            if let Some(id) = self.load_node_identity() {
+                self.controller_address.store(id.address.into(), Ordering::Relaxed);
+                Some(id.address)
+            } else {
+                None
+            }
+        } else {
+            Address::from_u64(a)
+        }
+    }
+
+    fn network_path(&self, network_id: NetworkId) -> PathBuf {
+        self.base_path.join(format!("n{:06x}", network_id.network_no())).join("config.yaml")
+    }
+
+    fn member_path(&self, network_id: NetworkId, member_id: Address) -> PathBuf {
+        self.base_path
+            .join(format!("n{:06x}", network_id.network_no()))
+            .join(format!("m{}.yaml", member_id.to_string()))
     }
 }
 
 impl NodeStorage for FileDatabase {
     fn load_node_identity(&self) -> Option<Identity> {
-        let id_data = read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 4096);
+        let id_data = read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 16384);
         if id_data.is_err() {
             return None;
         }
@@ -73,29 +85,23 @@ impl NodeStorage for FileDatabase {
 #[async_trait]
 impl Database for FileDatabase {
     async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error>> {
-        let r = fs::read(network_path(&self.base_path, id)).await;
+        let r = fs::read(self.network_path(id)).await;
         if let Ok(raw) = r {
-            Ok(Some(serde_json::from_slice::<Network>(raw.as_slice())?))
+            let mut network = serde_yaml::from_slice::<Network>(raw.as_slice())?;
+            self.get_controller_address()
+                .map(|a| network.id = network.id.change_network_controller(a));
+            Ok(Some(network))
+            //Ok(Some(serde_json::from_slice::<Network>(raw.as_slice())?))
         } else {
             Ok(None)
         }
     }
 
     async fn save_network(&self, obj: Network) -> Result<(), Box<dyn Error>> {
-        let base_network_path = network_path(&self.base_path, obj.id);
+        let base_network_path = self.network_path(obj.id);
         let _ = fs::create_dir_all(base_network_path.parent().unwrap()).await;
-
-        let prev = self.get_network(obj.id).await?;
-        if let Some(prev) = prev {
-            if obj == prev {
-                return Ok(());
-            }
-            let mut j = zerotier_utils::json::to_json(&prev);
-            j.push('\n');
-            let _ = self.old_log.lock().await.write_all(j.as_bytes()).await?;
-        }
-
-        let _ = fs::write(base_network_path, to_json_pretty(&obj).as_bytes()).await?;
+        //let _ = fs::write(base_network_path, to_json_pretty(&obj).as_bytes()).await?;
+        let _ = fs::write(base_network_path, serde_yaml::to_string(&obj)?.as_bytes()).await?;
         return Ok(());
     }
 
@@ -107,7 +113,7 @@ impl Database for FileDatabase {
             let name = osname.to_string_lossy();
             if name.len() == (zerotier_network_hypervisor::protocol::ADDRESS_SIZE_STRING + 6)
                 && name.starts_with("m")
-                && name.ends_with(".json")
+                && name.ends_with(".yaml")
             {
                 if let Ok(member_address) = u64::from_str_radix(&name[1..11], 16) {
                     if let Some(member_address) = Address::from_u64(member_address) {
@@ -120,29 +126,23 @@ impl Database for FileDatabase {
     }
 
     async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Box<dyn Error>> {
-        let r = fs::read(member_path(&self.base_path, network_id, node_id)).await;
+        let r = fs::read(self.member_path(network_id, node_id)).await;
         if let Ok(raw) = r {
-            Ok(Some(serde_json::from_slice::<Member>(raw.as_slice())?))
+            let mut member = serde_yaml::from_slice::<Member>(raw.as_slice())?;
+            self.get_controller_address()
+                .map(|a| member.network_id = member.network_id.change_network_controller(a));
+            Ok(Some(member))
+            //Ok(Some(serde_json::from_slice::<Member>(raw.as_slice())?))
         } else {
             Ok(None)
         }
     }
 
     async fn save_member(&self, obj: Member) -> Result<(), Box<dyn Error>> {
-        let base_member_path = member_path(&self.base_path, obj.network_id, obj.node_id);
+        let base_member_path = self.member_path(obj.network_id, obj.node_id);
         let _ = fs::create_dir_all(base_member_path.parent().unwrap()).await;
-
-        let prev = self.get_member(obj.network_id, obj.node_id).await?;
-        if let Some(prev) = prev {
-            if obj == prev {
-                return Ok(());
-            }
-            let mut j = zerotier_utils::json::to_json(&prev);
-            j.push('\n');
-            let _ = self.old_log.lock().await.write_all(j.as_bytes()).await?;
-        }
-
-        let _ = fs::write(base_member_path, to_json_pretty(&obj).as_bytes()).await?;
+        //let _ = fs::write(base_member_path, to_json_pretty(&obj).as_bytes()).await?;
+        let _ = fs::write(base_member_path, serde_yaml::to_string(&obj)?.as_bytes()).await?;
         Ok(())
     }
 

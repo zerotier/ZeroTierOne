@@ -5,7 +5,19 @@ use async_trait::async_trait;
 use zerotier_network_hypervisor::vl1::{Address, InetAddress, NodeStorage};
 use zerotier_network_hypervisor::vl2::NetworkId;
 
+use zerotier_utils::tokio::sync::broadcast::Receiver;
+
 use crate::model::*;
+
+#[derive(Clone)]
+pub enum Change {
+    NetworkCreated(Network),
+    NetworkDeleted(Network),
+    NetworkChanged(Network, Network),
+    MemberCreated(Member),
+    MemberDeleted(Member),
+    MemberChanged(Member, Member),
+}
 
 #[async_trait]
 pub trait Database: Sync + Send + NodeStorage + 'static {
@@ -15,6 +27,21 @@ pub trait Database: Sync + Send + NodeStorage + 'static {
     async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Box<dyn Error>>;
     async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Box<dyn Error>>;
     async fn save_member(&self, obj: Member) -> Result<(), Box<dyn Error>>;
+
+    /// Get a receiver that can be used to receive changes made to networks and members, if supported.
+    ///
+    /// The receiver returned is a broadcast receiver. This can be called more than once if there are
+    /// multiple parts of the controller that listen.
+    ///
+    /// Changes should NOT be broadcast on call to save_network() or save_member(). They should only
+    /// be broadcast when externally generated changes occur.
+    ///
+    /// The default implementation returns None indicating that change following is not supported.
+    /// Change following is required for instant deauthorization with revocations and other instant
+    /// changes in response to modifications to network and member configuration.
+    async fn changes(&self) -> Option<Receiver<Change>> {
+        None
+    }
 
     /// List members deauthorized after a given time (milliseconds since epoch).
     ///

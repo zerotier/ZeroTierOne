@@ -16,35 +16,40 @@ use zerotier_utils::tokio::runtime::Runtime;
 use zerotier_vl1_service::VL1Service;
 
 async fn run<DatabaseImpl: Database>(database: Arc<DatabaseImpl>, runtime: &Runtime) -> i32 {
-    let handler = Handler::new(database.clone(), runtime.handle().clone(), todo!());
-
-    let svc = VL1Service::new(
-        database.clone(),
-        handler.clone(),
-        handler.clone(),
-        zerotier_vl1_service::VL1Settings::default(),
-    );
-    if svc.is_ok() {
-        let svc = svc.unwrap();
-        svc.node().init_default_roots();
-
-        // Wait for kill signal on Unix-like platforms.
-        #[cfg(unix)]
-        {
-            let term = Arc::new(AtomicBool::new(false));
-            let _ = signal_hook::flag::register(libc::SIGINT, term.clone());
-            let _ = signal_hook::flag::register(libc::SIGTERM, term.clone());
-            let _ = signal_hook::flag::register(libc::SIGQUIT, term.clone());
-            while !term.load(Ordering::Relaxed) {
-                std::thread::sleep(Duration::from_secs(1));
-            }
-        }
-
-        println!("Terminate signal received, shutting down...");
-        exitcode::OK
+    let handler = Handler::new(database.clone(), runtime.handle().clone()).await;
+    if handler.is_err() {
+        eprintln!("FATAL: error initializing handler: {}", handler.err().unwrap().to_string());
+        exitcode::ERR_CONFIG
     } else {
-        eprintln!("FATAL: error launching service: {}", svc.err().unwrap().to_string());
-        exitcode::ERR_IOERR
+        let handler = handler.unwrap();
+        let svc = VL1Service::new(
+            database.clone(),
+            handler.clone(),
+            handler.clone(),
+            zerotier_vl1_service::VL1Settings::default(),
+        );
+        if svc.is_ok() {
+            let svc = svc.unwrap();
+            svc.node().init_default_roots();
+
+            // Wait for kill signal on Unix-like platforms.
+            #[cfg(unix)]
+            {
+                let term = Arc::new(AtomicBool::new(false));
+                let _ = signal_hook::flag::register(libc::SIGINT, term.clone());
+                let _ = signal_hook::flag::register(libc::SIGTERM, term.clone());
+                let _ = signal_hook::flag::register(libc::SIGQUIT, term.clone());
+                while !term.load(Ordering::Relaxed) {
+                    std::thread::sleep(Duration::from_secs(1));
+                }
+            }
+
+            println!("Terminate signal received, shutting down...");
+            exitcode::OK
+        } else {
+            eprintln!("FATAL: error launching service: {}", svc.err().unwrap().to_string());
+            exitcode::ERR_IOERR
+        }
     }
 }
 
@@ -82,14 +87,23 @@ fn main() {
     if let Ok(tokio_runtime) = zerotier_utils::tokio::runtime::Builder::new_multi_thread().enable_all().build() {
         tokio_runtime.block_on(async {
             if let Some(filedb_base_path) = global_args.value_of("filedb") {
-                std::process::exit(run(Arc::new(FileDatabase::new(filedb_base_path).await.unwrap()), &tokio_runtime).await);
+                let file_db = FileDatabase::new(filedb_base_path).await;
+                if file_db.is_err() {
+                    eprintln!(
+                        "FATAL: unable to open filesystem database at {}: {}",
+                        filedb_base_path,
+                        file_db.as_ref().err().unwrap().to_string()
+                    );
+                    std::process::exit(exitcode::ERR_IOERR)
+                }
+                std::process::exit(run(Arc::new(file_db.unwrap()), &tokio_runtime).await);
             } else {
                 eprintln!("FATAL: no database type selected.");
                 std::process::exit(exitcode::ERR_USAGE);
             };
         });
     } else {
-        eprintln!("FATAL: error launching service: can't start async runtime");
+        eprintln!("FATAL: can't start async runtime");
         std::process::exit(exitcode::ERR_IOERR)
     }
 }

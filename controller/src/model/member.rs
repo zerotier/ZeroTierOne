@@ -18,51 +18,61 @@ pub struct Member {
     pub network_id: NetworkId,
 
     /// Pinned full member identity, if known.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub identity: Option<Identity>,
 
     /// A short name that can also be used for DNS, etc.
+    #[serde(skip_serializing_if = "String::is_empty")]
     #[serde(default)]
     pub name: String,
 
     /// Time member was most recently authorized, None for 'never'.
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "lastAuthorizedTime")]
     pub last_authorized_time: Option<i64>,
 
     /// Time member was most recently deauthorized, None for 'never'.
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "lastDeauthorizedTime")]
     pub last_deauthorized_time: Option<i64>,
 
     /// ZeroTier-managed IP assignments.
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
     #[serde(rename = "ipAssignments")]
     #[serde(default)]
     pub ip_assignments: HashSet<InetAddress>,
 
     /// If true, do not auto-assign IPs in the controller.
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "noAutoAssignIps")]
     #[serde(default)]
-    pub no_auto_assign_ips: bool,
+    pub no_auto_assign_ips: Option<bool>,
 
     /// If true this member is a full Ethernet bridge.
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "activeBridge")]
     #[serde(default)]
-    pub bridge: bool,
+    pub bridge: Option<bool>,
 
     /// Tags that can be used in rule evaluation for ACL-like behavior.
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
     #[serde(default)]
     pub tags: HashMap<u32, u32>,
 
     /// Member is exempt from SSO, authorization managed conventionally.
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "ssoExempt")]
     #[serde(default)]
-    pub sso_exempt: bool,
+    pub sso_exempt: Option<bool>,
 
     /// If true this node is explicitly listed in every member's network configuration.
     /// This is only supported for V2 nodes.
-    #[serde(rename = "advertised")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    pub advertised: bool,
+    pub advertised: Option<bool>,
 
     /// API object type documentation field, not actually edited/used.
+    #[serde(skip_deserializing)]
     #[serde(default = "ObjectType::member")]
     pub objtype: ObjectType,
 }
@@ -77,11 +87,11 @@ impl Member {
             last_authorized_time: None,
             last_deauthorized_time: None,
             ip_assignments: HashSet::new(),
-            no_auto_assign_ips: false,
-            bridge: false,
+            no_auto_assign_ips: None,
+            bridge: None,
             tags: HashMap::new(),
-            sso_exempt: false,
-            advertised: false,
+            sso_exempt: None,
+            advertised: None,
             objtype: ObjectType::Member,
         }
     }

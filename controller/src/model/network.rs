@@ -45,18 +45,21 @@ pub struct Network {
     pub id: NetworkId,
 
     /// Network name that's sent to network members
+    #[serde(skip_serializing_if = "String::is_empty")]
     #[serde(default)]
     pub name: String,
 
     /// Guideline for the maximum number of multicast recipients on a network (not a hard limit).
     /// Setting to zero disables multicast entirely. The default is used if this is not set.
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "multicastLimit")]
     pub multicast_limit: Option<u32>,
 
     /// If true, this network supports ff:ff:ff:ff:ff:ff Ethernet broadcast.
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "enableBroadcast")]
-    #[serde(default = "troo")]
-    pub enable_broadcast: bool,
+    #[serde(default)]
+    pub enable_broadcast: Option<bool>,
 
     /// Auto IP assignment mode(s) for IPv4 addresses.
     #[serde(rename = "v4AssignMode")]
@@ -69,18 +72,22 @@ pub struct Network {
     pub v6_assign_mode: Ipv6AssignMode,
 
     /// IPv4 or IPv6 auto-assignment pools available, must be present to use 'zt' mode.
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
     #[serde(rename = "ipAssignmentPools")]
     #[serde(default)]
     pub ip_assignment_pools: HashSet<IpAssignmentPool>,
 
     /// IPv4 or IPv6 routes to advertise.
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
     #[serde(default)]
     pub ip_routes: HashSet<IpRoute>,
 
     /// DNS records to push to members.
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub dns: HashMap<String, HashSet<InetAddress>>,
 
     /// Network rule set.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     #[serde(default)]
     pub rules: Vec<Rule>,
 
@@ -92,6 +99,7 @@ pub struct Network {
     /// promptly, so nodes will still deauthorize quickly even if the window is long.
     ///
     /// Usually this does not need to be changed.
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "credentialWindowSize")]
     pub credential_window_size: Option<i64>,
 
@@ -103,10 +111,12 @@ pub struct Network {
     pub private: bool,
 
     /// If true this network will add not-authorized members for anyone who requests a config.
-    #[serde(default = "troo")]
-    pub learn_members: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub learn_members: Option<bool>,
 
     /// Static object type field for use with API.
+    #[serde(skip_deserializing)]
     #[serde(default = "ObjectType::network")]
     pub objtype: ObjectType,
 }
