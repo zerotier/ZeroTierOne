@@ -22,7 +22,7 @@ use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = 10000;
 
-pub struct Peer<HostSystemImpl: HostSystem> {
+pub struct Peer<HostSystemImpl: HostSystem + ?Sized> {
     pub identity: Identity,
 
     v1_proto_static_secret: v1::SymmetricSecret,
@@ -39,7 +39,7 @@ pub struct Peer<HostSystemImpl: HostSystem> {
     remote_node_info: RwLock<RemoteNodeInfo>,
 }
 
-struct PeerPath<HostSystemImpl: HostSystem> {
+struct PeerPath<HostSystemImpl: HostSystem + ?Sized> {
     path: Weak<Path<HostSystemImpl>>,
     last_receive_time_ticks: i64,
 }
@@ -51,11 +51,11 @@ struct RemoteNodeInfo {
 }
 
 /// Sort a list of paths by quality or priority, with best paths first.
-fn prioritize_paths<HostSystemImpl: HostSystem>(paths: &mut Vec<PeerPath<HostSystemImpl>>) {
+fn prioritize_paths<HostSystemImpl: HostSystem + ?Sized>(paths: &mut Vec<PeerPath<HostSystemImpl>>) {
     paths.sort_unstable_by(|a, b| a.last_receive_time_ticks.cmp(&b.last_receive_time_ticks).reverse());
 }
 
-impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
+impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
     /// Create a new peer.
     ///
     /// This only returns None if this_node_identity does not have its secrets or if some
@@ -451,7 +451,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
     /// those fragments after the main packet header and first chunk.
     ///
     /// This returns true if the packet decrypted and passed authentication.
-    pub(crate) fn v1_proto_receive<InnerProtocolImpl: InnerProtocol>(
+    pub(crate) fn v1_proto_receive<InnerProtocolImpl: InnerProtocol + ?Sized>(
         self: &Arc<Self>,
         node: &Node<HostSystemImpl>,
         host_system: &HostSystemImpl,
@@ -560,7 +560,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_hello<InnerProtocolImpl: InnerProtocol>(
+    fn handle_incoming_hello<InnerProtocolImpl: InnerProtocol + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -620,7 +620,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_error<InnerProtocolImpl: InnerProtocol>(
+    fn handle_incoming_error<InnerProtocolImpl: InnerProtocol + ?Sized>(
         self: &Arc<Self>,
         _: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -654,7 +654,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_ok<InnerProtocolImpl: InnerProtocol>(
+    fn handle_incoming_ok<InnerProtocolImpl: InnerProtocol + ?Sized>(
         self: &Arc<Self>,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -752,7 +752,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_whois<InnerProtocolImpl: InnerProtocol>(
+    fn handle_incoming_whois<InnerProtocolImpl: InnerProtocol + ?Sized>(
         self: &Arc<Self>,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -812,7 +812,7 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
         return PacketHandlerResult::Ok;
     }
 
-    fn handle_incoming_echo<InnerProtocolImpl: InnerProtocol>(
+    fn handle_incoming_echo<InnerProtocolImpl: InnerProtocol + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -866,21 +866,21 @@ impl<HostSystemImpl: HostSystem> Peer<HostSystemImpl> {
     }
 }
 
-impl<HostSystemImpl: HostSystem> Hash for Peer<HostSystemImpl> {
+impl<HostSystemImpl: HostSystem + ?Sized> Hash for Peer<HostSystemImpl> {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         state.write_u64(self.identity.address.into());
     }
 }
 
-impl<HostSystemImpl: HostSystem> PartialEq for Peer<HostSystemImpl> {
+impl<HostSystemImpl: HostSystem + ?Sized> PartialEq for Peer<HostSystemImpl> {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         self.identity.fingerprint.eq(&other.identity.fingerprint)
     }
 }
 
-impl<HostSystemImpl: HostSystem> Eq for Peer<HostSystemImpl> {}
+impl<HostSystemImpl: HostSystem + ?Sized> Eq for Peer<HostSystemImpl> {}
 
 fn v1_proto_try_aead_decrypt(
     secret: &v1::SymmetricSecret,

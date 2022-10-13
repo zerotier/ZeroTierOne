@@ -31,10 +31,10 @@ use zerotier_utils::ringbuffer::RingBuffer;
 /// during calls to things like wire_recieve() and do_background_tasks().
 pub trait HostSystem: Sync + Send + 'static {
     /// Type for local system sockets.
-    type LocalSocket: Sync + Send + Hash + PartialEq + Eq + Clone + ToString + 'static;
+    type LocalSocket: Sync + Send + Hash + PartialEq + Eq + Clone + ToString + Sized + 'static;
 
     /// Type for local system interfaces.    
-    type LocalInterface: Sync + Send + Hash + PartialEq + Eq + Clone + ToString;
+    type LocalInterface: Sync + Send + Hash + PartialEq + Eq + Clone + ToString + Sized;
 
     /// A VL1 level event occurred.
     fn event(&self, event: Event);
@@ -91,7 +91,7 @@ pub trait NodeStorage: Sync + Send + 'static {
 /// Trait to be implemented to provide path hints and a filter to approve physical paths.
 pub trait PathFilter: Sync + Send + 'static {
     /// Called to check and see if a physical address should be used for ZeroTier traffic to a node.
-    fn should_use_physical_path<HostSystemImpl: HostSystem>(
+    fn should_use_physical_path<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         id: &Identity,
         endpoint: &Endpoint,
@@ -100,7 +100,7 @@ pub trait PathFilter: Sync + Send + 'static {
     ) -> bool;
 
     /// Called to look up any statically defined or memorized paths to known nodes.
-    fn get_path_hints<HostSystemImpl: HostSystem>(
+    fn get_path_hints<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         id: &Identity,
     ) -> Option<
@@ -132,7 +132,7 @@ pub trait InnerProtocol: Sync + Send + 'static {
     /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
-    fn handle_packet<HostSystemImpl: HostSystem>(
+    fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
@@ -143,7 +143,7 @@ pub trait InnerProtocol: Sync + Send + 'static {
     ) -> PacketHandlerResult;
 
     /// Handle errors, returning true if the error was recognized.
-    fn handle_error<HostSystemImpl: HostSystem>(
+    fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
@@ -157,7 +157,7 @@ pub trait InnerProtocol: Sync + Send + 'static {
     ) -> PacketHandlerResult;
 
     /// Handle an OK, returing true if the OK was recognized.
-    fn handle_ok<HostSystemImpl: HostSystem>(
+    fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
@@ -176,7 +176,7 @@ pub trait InnerProtocol: Sync + Send + 'static {
 /// How often to check the root cluster definitions against the root list and update.
 const ROOT_SYNC_INTERVAL_MS: i64 = 1000;
 
-struct RootInfo<HostSystemImpl: HostSystem> {
+struct RootInfo<HostSystemImpl: HostSystem + ?Sized> {
     /// Root sets to which we are a member.
     sets: HashMap<String, Verified<RootSet>>,
 
@@ -206,14 +206,14 @@ struct BackgroundTaskIntervals {
 }
 
 /// WHOIS requests and any packets that are waiting on them to be decrypted and authenticated.
-struct WhoisQueueItem<HostSystemImpl: HostSystem> {
+struct WhoisQueueItem<HostSystemImpl: HostSystem + ?Sized> {
     v1_proto_waiting_packets: RingBuffer<(Weak<Path<HostSystemImpl>>, PooledPacketBuffer), WHOIS_MAX_WAITING_PACKETS>,
     last_retry_time: i64,
     retry_count: u16,
 }
 
 /// A ZeroTier VL1 node that can communicate securely with the ZeroTier peer-to-peer network.
-pub struct Node<HostSystemImpl: HostSystem> {
+pub struct Node<HostSystemImpl: HostSystem + ?Sized> {
     /// A random ID generated to identify this particular running instance.
     ///
     /// This can be used to implement multi-homing by allowing remote nodes to distinguish instances
@@ -242,8 +242,8 @@ pub struct Node<HostSystemImpl: HostSystem> {
     whois_queue: Mutex<HashMap<Address, WhoisQueueItem<HostSystemImpl>>>,
 }
 
-impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
-    pub fn new<NodeStorageImpl: NodeStorage>(
+impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
+    pub fn new<NodeStorageImpl: NodeStorage + ?Sized>(
         host_system: &HostSystemImpl,
         storage: &NodeStorageImpl,
         auto_generate_identity: bool,
@@ -299,6 +299,58 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
 
     pub fn is_online(&self) -> bool {
         self.roots.read().unwrap().online
+    }
+
+    /// Get the current "best" root from among this node's trusted roots.
+    pub fn best_root(&self) -> Option<Arc<Peer<HostSystemImpl>>> {
+        self.best_root.read().unwrap().clone()
+    }
+
+    /// Check whether a peer is a root according to any root set trusted by this node.
+    pub fn is_peer_root(&self, peer: &Peer<HostSystemImpl>) -> bool {
+        self.roots.read().unwrap().roots.keys().any(|p| p.identity.eq(&peer.identity))
+    }
+
+    /// Returns true if this node is a member of a root set (that it knows about).
+    pub fn this_node_is_root(&self) -> bool {
+        self.roots.read().unwrap().this_root_sets.is_some()
+    }
+
+    /// Add a new root set or update the existing root set if the new root set is newer and otherwise matches.
+    pub fn add_update_root_set(&self, rs: Verified<RootSet>) -> bool {
+        let mut roots = self.roots.write().unwrap();
+        if let Some(entry) = roots.sets.get_mut(&rs.name) {
+            if rs.should_replace(entry) {
+                *entry = rs;
+                roots.sets_modified = true;
+                true
+            } else {
+                false
+            }
+        } else {
+            let _ = roots.sets.insert(rs.name.clone(), rs);
+            roots.sets_modified = true;
+            true
+        }
+    }
+
+    /// Returns whether or not this node has any root sets defined.
+    pub fn has_roots_defined(&self) -> bool {
+        self.roots.read().unwrap().sets.iter().any(|rs| !rs.1.members.is_empty())
+    }
+
+    /// Initialize with default roots if there are no roots defined, otherwise do nothing.
+    pub fn init_default_roots(&self) -> bool {
+        if !self.has_roots_defined() {
+            self.add_update_root_set(RootSet::zerotier_default())
+        } else {
+            false
+        }
+    }
+
+    /// Get the root sets that this node trusts.
+    pub fn root_sets(&self) -> Vec<RootSet> {
+        self.roots.read().unwrap().sets.values().cloned().map(|s| s.unwrap()).collect()
     }
 
     pub fn do_background_tasks(&self, host_system: &HostSystemImpl) -> Duration {
@@ -624,7 +676,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         INTERVAL
     }
 
-    pub fn handle_incoming_physical_packet<InnerProtocolImpl: InnerProtocol>(
+    pub fn handle_incoming_physical_packet<InnerProtocolImpl: InnerProtocol + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -864,7 +916,7 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
     }
 
     /// Called by Peer when an identity is received from another node, e.g. via OK(WHOIS).
-    pub(crate) fn handle_incoming_identity<InnerProtocolImpl: InnerProtocol>(
+    pub(crate) fn handle_incoming_identity<InnerProtocolImpl: InnerProtocol + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -900,26 +952,11 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
         }
     }
 
-    /// Get the current "best" root from among this node's trusted roots.
-    pub fn best_root(&self) -> Option<Arc<Peer<HostSystemImpl>>> {
-        self.best_root.read().unwrap().clone()
-    }
-
-    /// Check whether a peer is a root according to any root set trusted by this node.
-    pub fn is_peer_root(&self, peer: &Peer<HostSystemImpl>) -> bool {
-        self.roots.read().unwrap().roots.keys().any(|p| p.identity.eq(&peer.identity))
-    }
-
-    /// Returns true if this node is a member of a root set (that it knows about).
-    pub fn this_node_is_root(&self) -> bool {
-        self.roots.read().unwrap().this_root_sets.is_some()
-    }
-
     /// Called when a remote node sends us a root set update, applying the update if it is valid and applicable.
     ///
     /// This will only replace an existing root set with a newer one. It won't add a new root set, which must be
     /// done by an authorized user or administrator not just by a root.
-    pub(crate) fn remote_update_root_set(&self, received_from: &Identity, rs: Verified<RootSet>) {
+    pub(crate) fn on_remote_update_root_set(&self, received_from: &Identity, rs: Verified<RootSet>) {
         let mut roots = self.roots.write().unwrap();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
             if entry.members.iter().any(|m| m.identity.eq(received_from)) && rs.should_replace(entry) {
@@ -927,43 +964,6 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
                 roots.sets_modified = true;
             }
         }
-    }
-
-    /// Add a new root set or update the existing root set if the new root set is newer and otherwise matches.
-    pub fn add_update_root_set(&self, rs: Verified<RootSet>) -> bool {
-        let mut roots = self.roots.write().unwrap();
-        if let Some(entry) = roots.sets.get_mut(&rs.name) {
-            if rs.should_replace(entry) {
-                *entry = rs;
-                roots.sets_modified = true;
-                true
-            } else {
-                false
-            }
-        } else {
-            let _ = roots.sets.insert(rs.name.clone(), rs);
-            roots.sets_modified = true;
-            true
-        }
-    }
-
-    /// Returns whether or not this node has any root sets defined.
-    pub fn has_roots_defined(&self) -> bool {
-        self.roots.read().unwrap().sets.iter().any(|rs| !rs.1.members.is_empty())
-    }
-
-    /// Initialize with default roots if there are no roots defined, otherwise do nothing.
-    pub fn init_default_roots(&self) -> bool {
-        if !self.has_roots_defined() {
-            self.add_update_root_set(RootSet::zerotier_default())
-        } else {
-            false
-        }
-    }
-
-    /// Get the root sets that this node trusts.
-    pub fn root_sets(&self) -> Vec<RootSet> {
-        self.roots.read().unwrap().sets.values().cloned().map(|s| s.unwrap()).collect()
     }
 
     /// Get the canonical Path object corresponding to an endpoint.
@@ -991,12 +991,12 @@ impl<HostSystemImpl: HostSystem> Node<HostSystemImpl> {
 
 /// Key used to look up paths in a hash map
 /// This supports copied keys for storing and refs for fast lookup without having to copy anything.
-enum PathKey<'a, 'b, HostSystemImpl: HostSystem> {
+enum PathKey<'a, 'b, HostSystemImpl: HostSystem + ?Sized> {
     Copied(Endpoint, HostSystemImpl::LocalSocket),
     Ref(&'a Endpoint, &'b HostSystemImpl::LocalSocket),
 }
 
-impl<'a, 'b, HostSystemImpl: HostSystem> Hash for PathKey<'a, 'b, HostSystemImpl> {
+impl<'a, 'b, HostSystemImpl: HostSystem + ?Sized> Hash for PathKey<'a, 'b, HostSystemImpl> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
             Self::Copied(ep, ls) => {
@@ -1011,7 +1011,7 @@ impl<'a, 'b, HostSystemImpl: HostSystem> Hash for PathKey<'a, 'b, HostSystemImpl
     }
 }
 
-impl<HostSystemImpl: HostSystem> PartialEq for PathKey<'_, '_, HostSystemImpl> {
+impl<HostSystemImpl: HostSystem + ?Sized> PartialEq for PathKey<'_, '_, HostSystemImpl> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Copied(ep1, ls1), Self::Copied(ep2, ls2)) => ep1.eq(ep2) && ls1.eq(ls2),
@@ -1022,9 +1022,9 @@ impl<HostSystemImpl: HostSystem> PartialEq for PathKey<'_, '_, HostSystemImpl> {
     }
 }
 
-impl<HostSystemImpl: HostSystem> Eq for PathKey<'_, '_, HostSystemImpl> {}
+impl<HostSystemImpl: HostSystem + ?Sized> Eq for PathKey<'_, '_, HostSystemImpl> {}
 
-impl<'a, 'b, HostSystemImpl: HostSystem> PathKey<'a, 'b, HostSystemImpl> {
+impl<'a, 'b, HostSystemImpl: HostSystem + ?Sized> PathKey<'a, 'b, HostSystemImpl> {
     #[inline(always)]
     fn local_socket(&self) -> &HostSystemImpl::LocalSocket {
         match self {
@@ -1048,7 +1048,7 @@ pub struct DummyInnerProtocol;
 
 impl InnerProtocol for DummyInnerProtocol {
     #[inline(always)]
-    fn handle_packet<HostSystemImpl: HostSystem>(
+    fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _node: &Node<HostSystemImpl>,
         _source: &Arc<Peer<HostSystemImpl>>,
@@ -1061,7 +1061,7 @@ impl InnerProtocol for DummyInnerProtocol {
     }
 
     #[inline(always)]
-    fn handle_error<HostSystemImpl: HostSystem>(
+    fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _node: &Node<HostSystemImpl>,
         _source: &Arc<Peer<HostSystemImpl>>,
@@ -1077,7 +1077,7 @@ impl InnerProtocol for DummyInnerProtocol {
     }
 
     #[inline(always)]
-    fn handle_ok<HostSystemImpl: HostSystem>(
+    fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _node: &Node<HostSystemImpl>,
         _source: &Arc<Peer<HostSystemImpl>>,
@@ -1103,7 +1103,7 @@ pub struct DummyPathFilter;
 
 impl PathFilter for DummyPathFilter {
     #[inline(always)]
-    fn should_use_physical_path<HostSystemImpl: HostSystem>(
+    fn should_use_physical_path<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _id: &Identity,
         _endpoint: &Endpoint,
@@ -1114,7 +1114,7 @@ impl PathFilter for DummyPathFilter {
     }
 
     #[inline(always)]
-    fn get_path_hints<HostSystemImpl: HostSystem>(
+    fn get_path_hints<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _id: &Identity,
     ) -> Option<

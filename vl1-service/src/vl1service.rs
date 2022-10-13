@@ -36,7 +36,7 @@ pub struct VL1Service<
     inner: Arc<InnerProtocolImpl>,
     path_filter: Arc<PathFilterImpl>,
     buffer_pool: Arc<PacketBufferPool>,
-    node_container: Option<Node<Self>>,
+    node_container: Option<Node<Self>>, // never None, set in new()
 }
 
 struct VL1ServiceMutableState {
@@ -71,6 +71,7 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
             )),
             node_container: None,
         };
+
         service.node_container.replace(Node::new(&service, &*service.storage, true, false)?);
         let service = Arc::new(service);
 

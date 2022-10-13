@@ -11,7 +11,7 @@ pub trait SwitchInterface: Sync + Send {}
 pub struct Switch {}
 
 impl InnerProtocol for Switch {
-    fn handle_packet<HostSystemImpl: HostSystem>(
+    fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
@@ -23,7 +23,7 @@ impl InnerProtocol for Switch {
         PacketHandlerResult::NotHandled
     }
 
-    fn handle_error<HostSystemImpl: HostSystem>(
+    fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
@@ -38,7 +38,7 @@ impl InnerProtocol for Switch {
         PacketHandlerResult::NotHandled
     }
 
-    fn handle_ok<HostSystemImpl: HostSystem>(
+    fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,

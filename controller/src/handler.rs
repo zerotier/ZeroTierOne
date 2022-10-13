@@ -1,7 +1,7 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 use std::error::Error;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use tokio::time::{Duration, Instant};
 
@@ -13,52 +13,42 @@ use zerotier_utils::error::{InvalidParameterError, UnexpectedError};
 use zerotier_utils::ms_since_epoch;
 use zerotier_utils::reaper::Reaper;
 use zerotier_utils::tokio;
+use zerotier_vl1_service::VL1Service;
 
 use crate::database::*;
 use crate::model::{AuthorizationResult, Member, CREDENTIAL_WINDOW_SIZE_DEFAULT};
 
+// A netconf per-query task timeout, just a sanity limit.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// ZeroTier VL2 network controller packet handler, answers VL2 netconf queries.
 pub struct Handler<DatabaseImpl: Database> {
     inner: Arc<Inner<DatabaseImpl>>,
-    change_watcher: Option<tokio::task::JoinHandle<()>>,
 }
 
 struct Inner<DatabaseImpl: Database> {
     reaper: Reaper,
+    daemons: Mutex<Vec<tokio::task::JoinHandle<()>>>, // drop() aborts these
     runtime: tokio::runtime::Handle,
     database: Arc<DatabaseImpl>,
     local_identity: Identity,
 }
 
 impl<DatabaseImpl: Database> Handler<DatabaseImpl> {
+    /// Start an inner protocol handler answer ZeroTier VL2 network controller queries.
     pub async fn new(database: Arc<DatabaseImpl>, runtime: tokio::runtime::Handle) -> Result<Arc<Self>, Box<dyn Error>> {
         if let Some(local_identity) = database.load_node_identity() {
             assert!(local_identity.secret.is_some());
 
             let inner = Arc::new(Inner::<DatabaseImpl> {
                 reaper: Reaper::new(&runtime),
+                daemons: Mutex::new(Vec::with_capacity(1)),
                 runtime,
                 database: database.clone(),
                 local_identity,
             });
 
-            let h = Arc::new(Self {
-                inner: inner.clone(),
-                change_watcher: database.changes().await.map(|mut ch| {
-                    let inner2 = inner.clone();
-                    inner.runtime.spawn(async move {
-                        loop {
-                            if let Ok(change) = ch.recv().await {
-                                inner2.reaper.add(
-                                    inner2.runtime.spawn(inner2.clone().handle_change_notification(change)),
-                                    Instant::now().checked_add(REQUEST_TIMEOUT).unwrap(),
-                                );
-                            }
-                        }
-                    })
-                }),
-            });
+            let h = Arc::new(Self { inner: inner.clone() });
 
             Ok(h)
         } else {
@@ -67,16 +57,33 @@ impl<DatabaseImpl: Database> Handler<DatabaseImpl> {
             )))
         }
     }
-}
 
-impl<DatabaseImpl: Database> Drop for Handler<DatabaseImpl> {
-    fn drop(&mut self) {
-        let _ = self.change_watcher.take().map(|w| w.abort());
+    /// Start a change watcher to respond to changes detected by the database.
+    /// This should only be called once, though multiple calls won't do anything but create unnecessary async tasks.
+    pub async fn start_change_watcher(&self, service: &Arc<VL1Service<DatabaseImpl, Self, Self>>) {
+        if let Some(cw) = self.inner.database.changes().await.map(|mut ch| {
+            let inner = self.inner.clone();
+            let service = service.clone();
+            self.inner.runtime.spawn(async move {
+                loop {
+                    if let Ok(change) = ch.recv().await {
+                        inner.reaper.add(
+                            inner
+                                .runtime
+                                .spawn(inner.clone().handle_change_notification(service.clone(), change)),
+                            Instant::now().checked_add(REQUEST_TIMEOUT).unwrap(),
+                        );
+                    }
+                }
+            })
+        }) {
+            self.inner.daemons.lock().unwrap().push(cw);
+        }
     }
 }
 
 impl<DatabaseImpl: Database> PathFilter for Handler<DatabaseImpl> {
-    fn should_use_physical_path<HostSystemImpl: HostSystem>(
+    fn should_use_physical_path<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _id: &Identity,
         _endpoint: &zerotier_network_hypervisor::vl1::Endpoint,
@@ -86,7 +93,7 @@ impl<DatabaseImpl: Database> PathFilter for Handler<DatabaseImpl> {
         true
     }
 
-    fn get_path_hints<HostSystemImpl: HostSystem>(
+    fn get_path_hints<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _id: &Identity,
     ) -> Option<
@@ -101,7 +108,7 @@ impl<DatabaseImpl: Database> PathFilter for Handler<DatabaseImpl> {
 }
 
 impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
-    fn handle_packet<HostSystemImpl: HostSystem>(
+    fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
@@ -177,7 +184,7 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
         }
     }
 
-    fn handle_error<HostSystemImpl: HostSystem>(
+    fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _node: &Node<HostSystemImpl>,
         _source: &Arc<Peer<HostSystemImpl>>,
@@ -192,7 +199,7 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
         PacketHandlerResult::NotHandled
     }
 
-    fn handle_ok<HostSystemImpl: HostSystem>(
+    fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _node: &Node<HostSystemImpl>,
         _source: &Arc<Peer<HostSystemImpl>>,
@@ -212,11 +219,15 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
 }
 
 impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
-    async fn handle_change_notification(self: Arc<Self>, _change: Change) {
+    async fn handle_change_notification(
+        self: Arc<Self>,
+        service: Arc<VL1Service<DatabaseImpl, Handler<DatabaseImpl>, Handler<DatabaseImpl>>>,
+        _change: Change,
+    ) {
         todo!()
     }
 
-    async fn handle_network_config_request<HostSystemImpl: HostSystem>(
+    async fn handle_network_config_request<HostSystemImpl: HostSystem + ?Sized>(
         self: Arc<Self>,
         source: Arc<Peer<HostSystemImpl>>,
         _source_path: Arc<Path<HostSystemImpl>>,
@@ -337,5 +348,13 @@ impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
         }
 
         Ok((authorization_result, nc))
+    }
+}
+
+impl<DatabaseImpl: Database> Drop for Inner<DatabaseImpl> {
+    fn drop(&mut self) {
+        for h in self.daemons.lock().unwrap().drain(..) {
+            h.abort();
+        }
     }
 }

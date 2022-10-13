@@ -22,15 +22,18 @@ async fn run<DatabaseImpl: Database>(database: Arc<DatabaseImpl>, runtime: &Runt
         exitcode::ERR_CONFIG
     } else {
         let handler = handler.unwrap();
+
         let svc = VL1Service::new(
             database.clone(),
             handler.clone(),
             handler.clone(),
             zerotier_vl1_service::VL1Settings::default(),
         );
+
         if svc.is_ok() {
             let svc = svc.unwrap();
             svc.node().init_default_roots();
+            handler.start_change_watcher(&svc).await;
 
             // Wait for kill signal on Unix-like platforms.
             #[cfg(unix)]
