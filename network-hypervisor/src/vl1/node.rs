@@ -80,7 +80,7 @@ pub trait HostSystem: Sync + Send + 'static {
 }
 
 /// Trait to be implemented by outside code to provide object storage to VL1
-pub trait NodeStorage: Sync + Send + 'static {
+pub trait NodeStorage: Sync + Send {
     /// Load this node's identity from the data store.
     fn load_node_identity(&self) -> Option<Identity>;
 
@@ -89,7 +89,7 @@ pub trait NodeStorage: Sync + Send + 'static {
 }
 
 /// Trait to be implemented to provide path hints and a filter to approve physical paths.
-pub trait PathFilter: Sync + Send + 'static {
+pub trait PathFilter: Sync + Send {
     /// Called to check and see if a physical address should be used for ZeroTier traffic to a node.
     fn should_use_physical_path<HostSystemImpl: HostSystem + ?Sized>(
         &self,
@@ -128,7 +128,7 @@ pub enum PacketHandlerResult {
 ///
 /// This is implemented by Switch in VL2. It's usually not used outside of VL2 in the core but
 /// it could also be implemented for testing or "off label" use of VL1 to carry different protocols.
-pub trait InnerProtocol: Sync + Send + 'static {
+pub trait InnerProtocol: Sync + Send {
     /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
@@ -996,7 +996,7 @@ enum PathKey<'a, 'b, HostSystemImpl: HostSystem + ?Sized> {
     Ref(&'a Endpoint, &'b HostSystemImpl::LocalSocket),
 }
 
-impl<'a, 'b, HostSystemImpl: HostSystem + ?Sized> Hash for PathKey<'a, 'b, HostSystemImpl> {
+impl<HostSystemImpl: HostSystem + ?Sized> Hash for PathKey<'_, '_, HostSystemImpl> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
             Self::Copied(ep, ls) => {
@@ -1024,7 +1024,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> PartialEq for PathKey<'_, '_, HostSyst
 
 impl<HostSystemImpl: HostSystem + ?Sized> Eq for PathKey<'_, '_, HostSystemImpl> {}
 
-impl<'a, 'b, HostSystemImpl: HostSystem + ?Sized> PathKey<'a, 'b, HostSystemImpl> {
+impl<HostSystemImpl: HostSystem + ?Sized> PathKey<'_, '_, HostSystemImpl> {
     #[inline(always)]
     fn local_socket(&self) -> &HostSystemImpl::LocalSocket {
         match self {
