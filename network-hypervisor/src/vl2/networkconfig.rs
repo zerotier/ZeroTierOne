@@ -24,7 +24,11 @@ pub struct NetworkConfig {
     pub network_id: NetworkId,
     pub issued_to: Address,
 
+    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default)]
     pub name: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default)]
     pub motd: String,
     pub private: bool,
 
@@ -34,19 +38,39 @@ pub struct NetworkConfig {
 
     pub mtu: u16,
     pub multicast_limit: u32,
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default)]
     pub routes: HashSet<IpRoute>,
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default)]
     pub static_ips: HashSet<InetAddress>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
     pub rules: Vec<Rule>,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default)]
     pub dns: HashMap<String, HashSet<InetAddress>>,
 
     pub certificate_of_membership: Option<CertificateOfMembership>, // considered invalid if None
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
     pub certificates_of_ownership: Vec<CertificateOfOwnership>,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default)]
     pub tags: HashMap<u32, Tag>,
 
-    pub banned: HashSet<Address>,              // v2 only
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default)]
+    pub banned: HashSet<Address>, // v2 only
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default)]
     pub node_info: HashMap<Address, NodeInfo>, // v2 only
 
+    #[serde(skip_serializing_if = "String::is_empty")]
+    #[serde(default)]
     pub central_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub sso: Option<SSOAuthConfiguration>,
 }
 
@@ -387,8 +411,14 @@ pub struct SSOAuthConfiguration {
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct NodeInfo {
     pub flags: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub ip: Option<InetAddress>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default)]
     pub services: HashMap<String, Option<String>>,
 }
 
@@ -396,6 +426,8 @@ pub struct NodeInfo {
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct IpRoute {
     pub target: InetAddress,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub via: Option<InetAddress>,
     pub flags: u16,
     pub metric: u16,

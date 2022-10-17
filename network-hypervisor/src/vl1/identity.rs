@@ -831,7 +831,7 @@ impl<'de> serde::de::Visitor<'de> for IdentityVisitor {
     where
         E: serde::de::Error,
     {
-        todo!()
+        Identity::from_bytes(v).map_err(|e| serde::de::Error::custom(e.to_string()))
     }
 
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>

@@ -12,11 +12,11 @@ use zerotier_utils::error::InvalidParameterError;
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Tag {
-    pub id: u32,
-    pub value: u32,
     pub network_id: NetworkId,
     pub timestamp: i64,
     pub issued_to: Address,
+    pub id: u32,
+    pub value: u32,
     pub signature: ArrayVec<u8, { identity::IDENTITY_MAX_SIGNATURE_SIZE }>,
     pub version: u8,
 }
@@ -32,11 +32,11 @@ impl Tag {
         legacy_v1: bool,
     ) -> Option<Self> {
         let mut tag = Self {
-            id,
-            value,
             network_id,
             timestamp,
             issued_to: issued_to.address,
+            id,
+            value,
             signature: ArrayVec::new(),
             version: if legacy_v1 {
                 1
@@ -107,11 +107,11 @@ impl Tag {
         }
         Ok((
             Self {
-                id: u32::from_be_bytes(b[16..20].try_into().unwrap()),
-                value: u32::from_be_bytes(b[20..24].try_into().unwrap()),
                 network_id: NetworkId::from_bytes(&b[0..8]).ok_or(InvalidParameterError("invalid network ID"))?,
                 timestamp: i64::from_be_bytes(b[8..16].try_into().unwrap()),
                 issued_to: Address::from_bytes(&b[24..29]).ok_or(InvalidParameterError("invalid address"))?,
+                id: u32::from_be_bytes(b[16..20].try_into().unwrap()),
+                value: u32::from_be_bytes(b[20..24].try_into().unwrap()),
                 signature: {
                     let mut s = ArrayVec::new();
                     s.push_slice(&b[37..133]);

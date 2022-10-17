@@ -239,7 +239,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
             };
 
             let mut chunk_size = (packet_size - pos).min(UDP_DEFAULT_MTU - v1::HEADER_SIZE);
-            let mut tmp_buf: [u8; v1::SIZE_MAX] = unsafe { std::mem::MaybeUninit::uninit().assume_init() };
+            let mut tmp_buf = [0u8; v1::SIZE_MAX];
             loop {
                 header.total_and_fragment_no += 1;
                 let next_pos = pos + chunk_size;

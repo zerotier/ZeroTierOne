@@ -7,7 +7,6 @@ use crate::vl2::NetworkId;
 use serde::{Deserialize, Serialize};
 
 use zerotier_utils::arrayvec::ArrayVec;
-use zerotier_utils::blob::Blob;
 use zerotier_utils::error::InvalidParameterError;
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -34,7 +33,6 @@ pub struct CertificateOfOwnership {
     pub timestamp: i64,
     pub things: HashSet<Thing>,
     pub issued_to: Address,
-    pub issued_to_fingerprint: Blob<{ Identity::FINGERPRINT_SIZE }>,
     pub signature: ArrayVec<u8, { crate::vl1::identity::IDENTITY_MAX_SIGNATURE_SIZE }>,
     pub version: u8,
 }
@@ -47,7 +45,6 @@ impl CertificateOfOwnership {
             timestamp,
             things: HashSet::with_capacity(4),
             issued_to,
-            issued_to_fingerprint: Blob::default(),
             signature: ArrayVec::new(),
             version: if legacy_v1 {
                 1
@@ -165,7 +162,6 @@ impl CertificateOfOwnership {
                 timestamp,
                 things,
                 issued_to: Address::from_bytes(&b[..5]).ok_or(InvalidParameterError("invalid address"))?,
-                issued_to_fingerprint: Blob::default(),
                 signature: {
                     let mut s = ArrayVec::new();
                     s.push_slice(&b[13..109]);
