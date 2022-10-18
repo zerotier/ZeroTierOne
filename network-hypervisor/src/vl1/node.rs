@@ -1,6 +1,7 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 use std::collections::HashMap;
+use std::convert::Infallible;
 use std::hash::Hash;
 use std::io::Write;
 use std::sync::atomic::Ordering;
@@ -892,24 +893,22 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
     }
 
     /// Send a WHOIS query to the current best root.
-    fn send_whois(&self, host_system: &HostSystemImpl, addresses: &[Address], time_ticks: i64) {
+    fn send_whois(&self, host_system: &HostSystemImpl, mut addresses: &[Address], time_ticks: i64) {
         debug_assert!(!addresses.is_empty());
-        if !addresses.is_empty() {
-            if let Some(root) = self.best_root() {
-                let mut packet = host_system.get_buffer();
-                packet.set_size(v1::HEADER_SIZE);
-                let _ = packet.append_u8(verbs::VL1_WHOIS);
-                for a in addresses.iter() {
-                    if (packet.len() + ADDRESS_SIZE) > UDP_DEFAULT_MTU {
-                        root.send(host_system, None, self, time_ticks, packet);
-                        packet = host_system.get_buffer();
-                        packet.set_size(v1::HEADER_SIZE);
-                        let _ = packet.append_u8(verbs::VL1_WHOIS);
-                    }
-                    let _ = packet.append_bytes_fixed(&a.to_bytes());
-                }
-                if packet.len() > (v1::HEADER_SIZE + 1) {
-                    root.send(host_system, None, self, time_ticks, packet);
+        if let Some(root) = self.best_root() {
+            while !addresses.is_empty() {
+                if !root
+                    .send(host_system, self, None, time_ticks, |packet| -> Result<(), Infallible> {
+                        assert!(packet.append_u8(verbs::VL1_WHOIS).is_ok());
+                        while !addresses.is_empty() && (packet.len() + ADDRESS_SIZE) <= UDP_DEFAULT_MTU {
+                            assert!(packet.append_bytes_fixed(&addresses[0].to_bytes()).is_ok());
+                            addresses = &addresses[1..];
+                        }
+                        Ok(())
+                    })
+                    .is_some()
+                {
+                    break;
                 }
             }
         }
