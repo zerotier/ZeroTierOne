@@ -142,11 +142,7 @@ fn troo() -> bool {
 
 impl Network {
     /// Check member IP assignments and return 'true' if IP assignments were created or modified.
-    pub async fn check_zt_ip_assignments<DatabaseImpl: Database>(
-        &self,
-        database: &DatabaseImpl,
-        member: &mut Member,
-    ) -> Result<bool, Box<dyn Error>> {
+    pub async fn check_zt_ip_assignments<DatabaseImpl: Database>(&self, database: &DatabaseImpl, member: &mut Member) -> bool {
         let mut modified = false;
 
         if self.v4_assign_mode.zt {
@@ -159,10 +155,14 @@ impl Network {
                             for route in self.ip_routes.iter() {
                                 let ip = InetAddress::from_ip_port(&ip_ptr.to_be_bytes(), route.target.port()); // IP/bits
                                 if ip.is_within(&route.target) {
-                                    if !database.is_ip_assigned(self.id, &ip).await? {
-                                        modified = true;
-                                        let _ = member.ip_assignments.insert(ip);
-                                        break 'ip_search;
+                                    if let Ok(is_ip_assigned) = database.is_ip_assigned(self.id, &ip).await {
+                                        if !is_ip_assigned {
+                                            modified = true;
+                                            let _ = member.ip_assignments.insert(ip);
+                                            break 'ip_search;
+                                        }
+                                    } else {
+                                        return false;
                                     }
                                 }
                             }
@@ -183,10 +183,14 @@ impl Network {
                             for route in self.ip_routes.iter() {
                                 let ip = InetAddress::from_ip_port(&ip_ptr.to_be_bytes(), route.target.port()); // IP/bits
                                 if ip.is_within(&route.target) {
-                                    if !database.is_ip_assigned(self.id, &ip).await? {
-                                        modified = true;
-                                        let _ = member.ip_assignments.insert(ip);
-                                        break 'ip_search;
+                                    if let Ok(is_ip_assigned) = database.is_ip_assigned(self.id, &ip).await {
+                                        if !is_ip_assigned {
+                                            modified = true;
+                                            let _ = member.ip_assignments.insert(ip);
+                                            break 'ip_search;
+                                        }
+                                    } else {
+                                        return false;
                                     }
                                 }
                             }
@@ -197,6 +201,6 @@ impl Network {
             }
         }
 
-        Ok(modified)
+        return modified;
     }
 }

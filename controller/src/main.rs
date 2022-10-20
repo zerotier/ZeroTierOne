@@ -33,7 +33,9 @@ async fn run<DatabaseImpl: Database>(database: Arc<DatabaseImpl>, runtime: &Runt
         if svc.is_ok() {
             let svc = svc.unwrap();
             svc.node().init_default_roots();
-            handler.start_change_watcher(&svc).await;
+
+            handler.set_service(&svc);
+            handler.start_change_watcher().await;
 
             // Wait for kill signal on Unix-like platforms.
             #[cfg(unix)]

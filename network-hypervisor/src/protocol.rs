@@ -129,7 +129,7 @@ pub const ADDRESS_RESERVED_PREFIX: u8 = 0xff;
 /// Bit mask for address bits in a u64.
 pub const ADDRESS_MASK: u64 = 0xffffffffff;
 
-pub(crate) mod v1 {
+pub mod v1 {
     use super::*;
 
     /// Size of packet header that lies outside the encryption envelope.
@@ -266,7 +266,7 @@ pub(crate) mod v1 {
     ///
     /// This will panic if the buffer provided doesn't contain a proper header.
     #[inline(always)]
-    pub fn set_packet_fragment_flag<const S: usize>(pkt: &mut Buffer<S>) {
+    pub(crate) fn set_packet_fragment_flag<const S: usize>(pkt: &mut Buffer<S>) {
         pkt.as_bytes_mut()[FLAGS_FIELD_INDEX] |= HEADER_FLAG_FRAGMENTED;
     }
 
@@ -393,27 +393,10 @@ pub(crate) mod v1 {
     }
 
     /// Flat packed structs for fixed length header blocks in messages.
-    pub(crate) mod message_component_structs {
+    pub mod message_component_structs {
         #[derive(Clone, Copy)]
         #[repr(C, packed)]
-        pub struct OkHeader {
-            pub verb: u8,
-            pub in_re_verb: u8,
-            pub in_re_message_id: [u8; 8],
-        }
-
-        #[derive(Clone, Copy)]
-        #[repr(C, packed)]
-        pub struct ErrorHeader {
-            pub verb: u8,
-            pub in_re_verb: u8,
-            pub in_re_message_id: [u8; 8],
-            pub error_code: u8,
-        }
-
-        #[derive(Clone, Copy)]
-        #[repr(C, packed)]
-        pub struct HelloFixedHeaderFields {
+        pub(crate) struct HelloFixedHeaderFields {
             pub verb: u8,
             pub version_proto: u8,
             pub version_major: u8,
@@ -424,7 +407,7 @@ pub(crate) mod v1 {
 
         #[derive(Clone, Copy)]
         #[repr(C, packed)]
-        pub struct OkHelloFixedHeaderFields {
+        pub(crate) struct OkHelloFixedHeaderFields {
             pub timestamp_echo: [u8; 8], // u64
             pub version_proto: u8,
             pub version_major: u8,
@@ -532,6 +515,23 @@ pub(crate) mod v1 {
     }
 }
 
+#[derive(Clone, Copy)]
+#[repr(C, packed)]
+pub struct OkHeader {
+    pub verb: u8,
+    pub in_re_verb: u8,
+    pub in_re_message_id: [u8; 8],
+}
+
+#[derive(Clone, Copy)]
+#[repr(C, packed)]
+pub struct ErrorHeader {
+    pub verb: u8,
+    pub in_re_verb: u8,
+    pub in_re_message_id: [u8; 8],
+    pub error_code: u8,
+}
+
 /// Maximum delta between the message ID of a sent packet and its response.
 pub(crate) const PACKET_RESPONSE_COUNTER_DELTA_MAX: u64 = 256;
 
@@ -573,8 +573,8 @@ mod tests {
 
     #[test]
     fn representation() {
-        assert_eq!(size_of::<v1::message_component_structs::OkHeader>(), 10);
-        assert_eq!(size_of::<v1::message_component_structs::ErrorHeader>(), 11);
+        assert_eq!(size_of::<OkHeader>(), 10);
+        assert_eq!(size_of::<ErrorHeader>(), 11);
         assert_eq!(size_of::<v1::PacketHeader>(), v1::HEADER_SIZE);
         assert_eq!(size_of::<v1::FragmentHeader>(), v1::FRAGMENT_HEADER_SIZE);
 

@@ -83,6 +83,12 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         })
     }
 
+    /// Returns true if this peer supports the ZeroTier V2 protocol stack and features.
+    #[inline(always)]
+    pub fn is_v2(&self) -> bool {
+        self.identity.p384.is_some()
+    }
+
     /// Get the remote version of this peer: major, minor, revision.
     /// Returns None if it's not yet known.
     pub fn version(&self) -> Option<(u8, u8, u16)> {
@@ -105,6 +111,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
     }
 
     /// Get current best path or None if there are no direct paths to this peer.
+    #[inline]
     pub fn direct_path(&self) -> Option<Arc<Path<HostSystemImpl>>> {
         for p in self.paths.lock().unwrap().iter() {
             let pp = p.path.upgrade();
@@ -116,6 +123,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
     }
 
     /// Get either the current best direct path or an indirect path via e.g. a root.
+    #[inline]
     pub fn path(&self, node: &Node<HostSystemImpl>) -> Option<Arc<Path<HostSystemImpl>>> {
         let direct_path = self.direct_path();
         if direct_path.is_some() {
@@ -184,6 +192,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         prioritize_paths(&mut paths);
     }
 
+    /// Get the next sequential message ID for use with the V1 transport protocol.
     #[inline(always)]
     pub(crate) fn v1_proto_next_message_id(&self) -> MessageId {
         self.message_id_counter.fetch_add(1, Ordering::SeqCst)
@@ -292,7 +301,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         let max_fragment_size = path.endpoint.max_fragment_size();
 
         let mut packet = host_system.get_buffer();
-        if !self.identity.p384.is_some() {
+        if !self.is_v2() {
             // For the V1 protocol, leave room for for the header in the buffer.
             packet.set_size(v1::HEADER_SIZE);
         }
@@ -300,7 +309,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         let r = builder_function(packet.as_mut());
 
         if r.is_ok() {
-            if self.identity.p384.is_some() {
+            if self.is_v2() {
                 todo!() // TODO: ZSSP / V2 protocol
             } else {
                 if self.remote_node_info.read().unwrap().remote_protocol_version >= 11 {
@@ -422,7 +431,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
             }
 
             debug_assert_eq!(packet.len(), 41);
-            assert!(node.identity.write_public(packet.as_mut(), self.identity.p384.is_none()).is_ok());
+            assert!(node.identity.write_public(packet.as_mut(), !self.is_v2()).is_ok());
 
             let (_, poly1305_key) = v1_proto_salsa_poly_create(
                 &self.v1_proto_static_secret,
@@ -536,25 +545,25 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
 
                 return match verb {
                     verbs::VL1_NOP => PacketHandlerResult::Ok,
-                    verbs::VL1_HELLO => self.handle_incoming_hello(
+                    verbs::VL1_HELLO => self.handle_incoming_hello(host_system, inner, node, time_ticks, message_id, source_path, &payload),
+                    verbs::VL1_ERROR => self.handle_incoming_error(
                         host_system,
                         inner,
                         node,
                         time_ticks,
-                        message_id,
                         source_path,
                         packet_header.hops(),
+                        message_id,
                         &payload,
                     ),
-                    verbs::VL1_ERROR => self.handle_incoming_error(host_system, inner, node, time_ticks, source_path, message_id, &payload),
                     verbs::VL1_OK => self.handle_incoming_ok(
                         host_system,
                         inner,
                         node,
                         time_ticks,
                         source_path,
-                        message_id,
                         packet_header.hops(),
+                        message_id,
                         path_is_known,
                         &payload,
                     ),
@@ -567,7 +576,16 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
                         self.handle_incoming_push_direct_paths(host_system, node, time_ticks, source_path, &payload)
                     }
                     verbs::VL1_USER_MESSAGE => self.handle_incoming_user_message(host_system, node, time_ticks, source_path, &payload),
-                    _ => inner.handle_packet(node, self, &source_path, message_id, verb, &payload),
+                    _ => inner.handle_packet(
+                        host_system,
+                        node,
+                        self,
+                        &source_path,
+                        packet_header.hops(),
+                        message_id,
+                        verb,
+                        &payload,
+                    ),
                 };
             }
         }
@@ -583,7 +601,6 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         time_ticks: i64,
         message_id: MessageId,
         source_path: &Arc<Path<HostSystemImpl>>,
-        _hops: u8,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         if !(inner.should_communicate_with(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
@@ -615,10 +632,8 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
                         Some(source_path),
                         time_ticks,
                         |packet| -> Result<(), Infallible> {
-                            let f: &mut (
-                                v1::message_component_structs::OkHeader,
-                                v1::message_component_structs::OkHelloFixedHeaderFields,
-                            ) = packet.append_struct_get_mut().unwrap();
+                            let f: &mut (OkHeader, v1::message_component_structs::OkHelloFixedHeaderFields) =
+                                packet.append_struct_get_mut().unwrap();
                             f.0.verb = verbs::VL1_OK;
                             f.0.in_re_verb = verbs::VL1_HELLO;
                             f.0.in_re_message_id = message_id.to_ne_bytes();
@@ -641,24 +656,27 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
 
     fn handle_incoming_error<InnerProtocolImpl: InnerProtocol + ?Sized>(
         self: &Arc<Self>,
-        _: &HostSystemImpl,
+        host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
         node: &Node<HostSystemImpl>,
         _: i64,
         source_path: &Arc<Path<HostSystemImpl>>,
+        source_hops: u8,
         message_id: u64,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         let mut cursor = 0;
-        if let Ok(error_header) = payload.read_struct::<v1::message_component_structs::ErrorHeader>(&mut cursor) {
+        if let Ok(error_header) = payload.read_struct::<ErrorHeader>(&mut cursor) {
             let in_re_message_id: MessageId = u64::from_be_bytes(error_header.in_re_message_id);
             if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match error_header.in_re_verb {
                     _ => {
                         return inner.handle_error(
+                            host_system,
                             node,
                             self,
                             &source_path,
+                            source_hops,
                             message_id,
                             error_header.in_re_verb,
                             in_re_message_id,
@@ -680,13 +698,13 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         node: &Node<HostSystemImpl>,
         time_ticks: i64,
         source_path: &Arc<Path<HostSystemImpl>>,
+        source_hops: u8,
         message_id: u64,
-        hops: u8,
         path_is_known: bool,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         let mut cursor = 0;
-        if let Ok(ok_header) = payload.read_struct::<v1::message_component_structs::OkHeader>(&mut cursor) {
+        if let Ok(ok_header) = payload.read_struct::<OkHeader>(&mut cursor) {
             let in_re_message_id: MessageId = u64::from_ne_bytes(ok_header.in_re_message_id);
             if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
                 match ok_header.in_re_verb {
@@ -694,7 +712,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
                         if let Ok(_ok_hello_fixed_header_fields) =
                             payload.read_struct::<v1::message_component_structs::OkHelloFixedHeaderFields>(&mut cursor)
                         {
-                            if hops == 0 {
+                            if source_hops == 0 {
                                 debug_event!(host_system, "[vl1] {} OK(HELLO)", self.identity.address.to_string(),);
                                 if let Ok(reported_endpoint) = Endpoint::unmarshal(&payload, &mut cursor) {
                                     #[cfg(debug_assertions)]
@@ -718,7 +736,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
                                 }
                             }
 
-                            if hops == 0 && !path_is_known {
+                            if source_hops == 0 && !path_is_known {
                                 self.learn_path(host_system, source_path, time_ticks);
                             }
 
@@ -755,9 +773,11 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
 
                     _ => {
                         return inner.handle_ok(
+                            host_system,
                             node,
                             self,
                             &source_path,
+                            source_hops,
                             message_id,
                             ok_header.in_re_verb,
                             in_re_message_id,
@@ -788,7 +808,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
                         while addresses.len() >= ADDRESS_SIZE && (packet.len() + Identity::MAX_MARSHAL_SIZE) <= UDP_DEFAULT_MTU {
                             if let Some(zt_address) = Address::from_bytes(&addresses[..ADDRESS_SIZE]) {
                                 if let Some(peer) = node.peer(zt_address) {
-                                    peer.identity.write_public(packet, self.identity.p384.is_none())?;
+                                    peer.identity.write_public(packet, !self.is_v2())?;
                                 }
                             }
                             addresses = &addresses[ADDRESS_SIZE..];
@@ -828,7 +848,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
     ) -> PacketHandlerResult {
         if inner.should_communicate_with(&self.identity) || node.is_peer_root(self) {
             self.send(host_system, node, None, time_ticks, |packet| {
-                let mut f: &mut v1::message_component_structs::OkHeader = packet.append_struct_get_mut().unwrap();
+                let mut f: &mut OkHeader = packet.append_struct_get_mut().unwrap();
                 f.verb = verbs::VL1_OK;
                 f.in_re_verb = verbs::VL1_ECHO;
                 f.in_re_message_id = message_id.to_ne_bytes();

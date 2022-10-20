@@ -13,9 +13,11 @@ pub struct Switch {}
 impl InnerProtocol for Switch {
     fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
+        host_system: &HostSystemImpl,
         node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
         source_path: &Arc<Path<HostSystemImpl>>,
+        source_hops: u8,
         message_id: u64,
         verb: u8,
         payload: &PacketBuffer,
@@ -25,9 +27,11 @@ impl InnerProtocol for Switch {
 
     fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
         &self,
+        host_system: &HostSystemImpl,
         node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
         source_path: &Arc<Path<HostSystemImpl>>,
+        source_hops: u8,
         message_id: u64,
         in_re_verb: u8,
         in_re_message_id: u64,
@@ -40,9 +44,11 @@ impl InnerProtocol for Switch {
 
     fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
         &self,
+        host_system: &HostSystemImpl,
         node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
         source_path: &Arc<Path<HostSystemImpl>>,
+        source_hops: u8,
         message_id: u64,
         in_re_verb: u8,
         in_re_message_id: u64,

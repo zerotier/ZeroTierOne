@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::{Address, Endpoint};
 use zerotier_network_hypervisor::vl2::NetworkId;
+use zerotier_utils::blob::Blob;
 
 /// A complete network with all member configuration information for import/export or blob storage.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -94,14 +95,16 @@ pub struct RequestLogItem {
     pub network_id: NetworkId,
     #[serde(rename = "nid")]
     pub node_id: Address,
+    #[serde(rename = "nf")]
+    pub node_fingerprint: Blob<48>,
     #[serde(rename = "cid")]
     pub controller_node_id: Address,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
     #[serde(rename = "md")]
     pub metadata: Vec<u8>,
     #[serde(rename = "ts")]
     pub timestamp: i64,
-    #[serde(rename = "v")]
-    pub version: (u16, u16, u16, u16),
     #[serde(rename = "s")]
     pub source_remote_endpoint: Endpoint,
     #[serde(rename = "sh")]
@@ -113,15 +116,11 @@ pub struct RequestLogItem {
 impl ToString for RequestLogItem {
     fn to_string(&self) -> String {
         format!(
-            "{} {} {} ts={} v={}.{}.{},{} s={},{} {}",
+            "{} {} {} ts={} s={},{} {}",
             self.controller_node_id.to_string(),
             self.network_id.to_string(),
             self.node_id.to_string(),
             self.timestamp,
-            self.version.0,
-            self.version.1,
-            self.version.2,
-            self.version.3,
             self.source_remote_endpoint.to_string(),
             self.source_hops,
             self.result.to_string()

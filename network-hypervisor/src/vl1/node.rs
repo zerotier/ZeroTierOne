@@ -135,9 +135,11 @@ pub trait InnerProtocol: Sync + Send {
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
     fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
+        host_system: &HostSystemImpl,
         node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
         source_path: &Arc<Path<HostSystemImpl>>,
+        source_hops: u8,
         message_id: u64,
         verb: u8,
         payload: &PacketBuffer,
@@ -146,9 +148,11 @@ pub trait InnerProtocol: Sync + Send {
     /// Handle errors, returning true if the error was recognized.
     fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
         &self,
+        host_system: &HostSystemImpl,
         node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
         source_path: &Arc<Path<HostSystemImpl>>,
+        source_hops: u8,
         message_id: u64,
         in_re_verb: u8,
         in_re_message_id: u64,
@@ -160,9 +164,11 @@ pub trait InnerProtocol: Sync + Send {
     /// Handle an OK, returing true if the OK was recognized.
     fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
         &self,
+        host_system: &HostSystemImpl,
         node: &Node<HostSystemImpl>,
         source: &Arc<Peer<HostSystemImpl>>,
         source_path: &Arc<Path<HostSystemImpl>>,
+        source_hops: u8,
         message_id: u64,
         in_re_verb: u8,
         in_re_message_id: u64,
@@ -1049,9 +1055,11 @@ impl InnerProtocol for DummyInnerProtocol {
     #[inline(always)]
     fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
+        _host_system: &HostSystemImpl,
         _node: &Node<HostSystemImpl>,
         _source: &Arc<Peer<HostSystemImpl>>,
         _source_path: &Arc<Path<HostSystemImpl>>,
+        _source_hops: u8,
         _message_id: u64,
         _verb: u8,
         _payload: &PacketBuffer,
@@ -1062,9 +1070,11 @@ impl InnerProtocol for DummyInnerProtocol {
     #[inline(always)]
     fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
         &self,
+        _host_system: &HostSystemImpl,
         _node: &Node<HostSystemImpl>,
         _source: &Arc<Peer<HostSystemImpl>>,
         _source_path: &Arc<Path<HostSystemImpl>>,
+        _source_hops: u8,
         _message_id: u64,
         _in_re_verb: u8,
         _in_re_message_id: u64,
@@ -1078,9 +1088,11 @@ impl InnerProtocol for DummyInnerProtocol {
     #[inline(always)]
     fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
         &self,
+        _host_system: &HostSystemImpl,
         _node: &Node<HostSystemImpl>,
         _source: &Arc<Peer<HostSystemImpl>>,
         _source_path: &Arc<Path<HostSystemImpl>>,
+        _source_hops: u8,
         _message_id: u64,
         _in_re_verb: u8,
         _in_re_message_id: u64,

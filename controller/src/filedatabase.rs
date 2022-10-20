@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::fmt::Display;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -15,6 +16,35 @@ use crate::database::Database;
 use crate::model::*;
 
 const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
+
+#[derive(Debug)]
+pub enum FileDatabaseError {
+    InvalidYaml(String),
+    IoError(String),
+}
+
+impl Display for FileDatabaseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidYaml(e) => f.write_str(format!("invalid YAML ({})", e).as_str()),
+            Self::IoError(e) => f.write_str(format!("I/O error ({})", e).as_str()),
+        }
+    }
+}
+
+impl Error for FileDatabaseError {}
+
+impl From<serde_yaml::Error> for FileDatabaseError {
+    fn from(e: serde_yaml::Error) -> Self {
+        Self::InvalidYaml(e.to_string())
+    }
+}
+
+impl From<zerotier_utils::tokio::io::Error> for FileDatabaseError {
+    fn from(e: zerotier_utils::tokio::io::Error) -> Self {
+        Self::IoError(e.to_string())
+    }
+}
 
 /// An in-filesystem database that permits live editing.
 ///
@@ -84,7 +114,9 @@ impl NodeStorage for FileDatabase {
 
 #[async_trait]
 impl Database for FileDatabase {
-    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error>> {
+    type Error = FileDatabaseError;
+
+    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Self::Error> {
         let r = fs::read(self.network_path(id)).await;
         if let Ok(raw) = r {
             let mut network = serde_yaml::from_slice::<Network>(raw.as_slice())?;
@@ -97,7 +129,7 @@ impl Database for FileDatabase {
         }
     }
 
-    async fn save_network(&self, obj: Network) -> Result<(), Box<dyn Error>> {
+    async fn save_network(&self, obj: Network) -> Result<(), Self::Error> {
         let base_network_path = self.network_path(obj.id);
         let _ = fs::create_dir_all(base_network_path.parent().unwrap()).await;
         //let _ = fs::write(base_network_path, to_json_pretty(&obj).as_bytes()).await?;
@@ -105,7 +137,7 @@ impl Database for FileDatabase {
         return Ok(());
     }
 
-    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Box<dyn Error>> {
+    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Self::Error> {
         let mut members = Vec::new();
         let mut dir = fs::read_dir(self.base_path.join(network_id.to_string())).await?;
         while let Ok(Some(ent)) = dir.next_entry().await {
@@ -125,7 +157,7 @@ impl Database for FileDatabase {
         Ok(members)
     }
 
-    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Box<dyn Error>> {
+    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Self::Error> {
         let r = fs::read(self.member_path(network_id, node_id)).await;
         if let Ok(raw) = r {
             let mut member = serde_yaml::from_slice::<Member>(raw.as_slice())?;
@@ -138,7 +170,7 @@ impl Database for FileDatabase {
         }
     }
 
-    async fn save_member(&self, obj: Member) -> Result<(), Box<dyn Error>> {
+    async fn save_member(&self, obj: Member) -> Result<(), Self::Error> {
         let base_member_path = self.member_path(obj.network_id, obj.node_id);
         let _ = fs::create_dir_all(base_member_path.parent().unwrap()).await;
         //let _ = fs::write(base_member_path, to_json_pretty(&obj).as_bytes()).await?;
@@ -146,7 +178,7 @@ impl Database for FileDatabase {
         Ok(())
     }
 
-    async fn log_request(&self, obj: &RequestLogItem) -> Result<(), Box<dyn Error>> {
+    async fn log_request(&self, obj: RequestLogItem) -> Result<(), Self::Error> {
         println!("{}", obj.to_string());
         Ok(())
     }

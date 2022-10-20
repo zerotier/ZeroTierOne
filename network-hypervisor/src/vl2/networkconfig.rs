@@ -410,13 +410,15 @@ pub struct SSOAuthConfiguration {
 /// Information about nodes on the network that can be included in a network config.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct NodeInfo {
-    pub flags: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub flags: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub ip: Option<InetAddress>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "String::is_empty")]
     #[serde(default)]
-    pub name: Option<String>,
+    pub name: String,
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     #[serde(default)]
     pub services: HashMap<String, Option<String>>,
@@ -429,8 +431,12 @@ pub struct IpRoute {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub via: Option<InetAddress>,
-    pub flags: u16,
-    pub metric: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub flags: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub metric: Option<u16>,
 }
 
 impl Marshalable for IpRoute {
@@ -446,8 +452,8 @@ impl Marshalable for IpRoute {
         } else {
             buf.append_u8(0)?; // "nil" InetAddress
         }
-        buf.append_u16(self.flags)?;
-        buf.append_u16(self.metric)?;
+        buf.append_u16(self.flags.unwrap_or(0))?;
+        buf.append_u16(self.metric.unwrap_or(0))?;
         Ok(())
     }
 
@@ -465,8 +471,20 @@ impl Marshalable for IpRoute {
                     Some(via)
                 }
             },
-            flags: buf.read_u16(cursor)?,
-            metric: buf.read_u16(cursor)?,
+            flags: buf.read_u16(cursor).map(|f| {
+                if f == 0 {
+                    None
+                } else {
+                    Some(f)
+                }
+            })?,
+            metric: buf.read_u16(cursor).map(|f| {
+                if f == 0 {
+                    None
+                } else {
+                    Some(f)
+                }
+            })?,
         })
     }
 }
