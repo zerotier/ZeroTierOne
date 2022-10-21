@@ -23,11 +23,11 @@ use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = 10000;
 
-pub struct Peer<HostSystemImpl: HostSystem + ?Sized> {
+pub struct Peer {
     pub identity: Identity,
 
     v1_proto_static_secret: v1::SymmetricSecret,
-    paths: Mutex<Vec<PeerPath<HostSystemImpl>>>,
+    paths: Mutex<Vec<PeerPath>>,
 
     pub(crate) last_send_time_ticks: AtomicI64,
     pub(crate) last_receive_time_ticks: AtomicI64,
@@ -40,8 +40,8 @@ pub struct Peer<HostSystemImpl: HostSystem + ?Sized> {
     remote_node_info: RwLock<RemoteNodeInfo>,
 }
 
-struct PeerPath<HostSystemImpl: HostSystem + ?Sized> {
-    path: Weak<Path<HostSystemImpl>>,
+struct PeerPath {
+    path: Weak<Path>,
     last_receive_time_ticks: i64,
 }
 
@@ -52,11 +52,11 @@ struct RemoteNodeInfo {
 }
 
 /// Sort a list of paths by quality or priority, with best paths first.
-fn prioritize_paths<HostSystemImpl: HostSystem + ?Sized>(paths: &mut Vec<PeerPath<HostSystemImpl>>) {
+fn prioritize_paths<HostSystemImpl: HostSystem + ?Sized>(paths: &mut Vec<PeerPath>) {
     paths.sort_unstable_by(|a, b| a.last_receive_time_ticks.cmp(&b.last_receive_time_ticks).reverse());
 }
 
-impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
+impl Peer {
     /// Create a new peer.
     ///
     /// This only returns None if this_node_identity does not have its secrets or if some
@@ -112,7 +112,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
 
     /// Get current best path or None if there are no direct paths to this peer.
     #[inline]
-    pub fn direct_path(&self) -> Option<Arc<Path<HostSystemImpl>>> {
+    pub fn direct_path(&self) -> Option<Arc<Path>> {
         for p in self.paths.lock().unwrap().iter() {
             let pp = p.path.upgrade();
             if pp.is_some() {
@@ -124,7 +124,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
 
     /// Get either the current best direct path or an indirect path via e.g. a root.
     #[inline]
-    pub fn path(&self, node: &Node<HostSystemImpl>) -> Option<Arc<Path<HostSystemImpl>>> {
+    pub fn path(&self, node: &Node) -> Option<Arc<Path>> {
         let direct_path = self.direct_path();
         if direct_path.is_some() {
             return direct_path;
@@ -135,7 +135,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         return None;
     }
 
-    fn learn_path(&self, host_system: &HostSystemImpl, new_path: &Arc<Path<HostSystemImpl>>, time_ticks: i64) {
+    fn learn_path<HostSystemImpl: HostSystem + ?Sized>(&self, host_system: &HostSystemImpl, new_path: &Arc<Path>, time_ticks: i64) {
         let mut paths = self.paths.lock().unwrap();
 
         match &new_path.endpoint {
@@ -160,7 +160,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
                                     );
                                     pi.path = Arc::downgrade(new_path);
                                     pi.last_receive_time_ticks = time_ticks;
-                                    prioritize_paths(&mut paths);
+                                    prioritize_paths::<HostSystemImpl>(&mut paths);
                                     return;
                                 }
                             }
@@ -185,11 +185,11 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
             self.identity.address.to_string(),
             new_path.endpoint.to_string()
         );
-        paths.push(PeerPath::<HostSystemImpl> {
+        paths.push(PeerPath {
             path: Arc::downgrade(new_path),
             last_receive_time_ticks: time_ticks,
         });
-        prioritize_paths(&mut paths);
+        prioritize_paths::<HostSystemImpl>(&mut paths);
     }
 
     /// Get the next sequential message ID for use with the V1 transport protocol.
@@ -199,7 +199,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
     }
 
     /// Called every SERVICE_INTERVAL_MS by the background service loop in Node.
-    pub(crate) fn service(&self, _: &HostSystemImpl, _: &Node<HostSystemImpl>, time_ticks: i64) -> bool {
+    pub(crate) fn service<HostSystemImpl: HostSystem + ?Sized>(&self, _: &HostSystemImpl, _: &Node, time_ticks: i64) -> bool {
         // Prune dead paths and sort in descending order of quality.
         {
             let mut paths = self.paths.lock().unwrap();
@@ -207,7 +207,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
             if paths.capacity() > 16 {
                 paths.shrink_to_fit();
             }
-            prioritize_paths(&mut paths);
+            prioritize_paths::<HostSystemImpl>(&mut paths);
         }
 
         // Prune dead entries from the map of reported local endpoints (e.g. externally visible IPs).
@@ -220,7 +220,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
     }
 
     /// Send a prepared and encrypted packet using the V1 protocol with fragmentation if needed.
-    fn v1_proto_internal_send(
+    fn v1_proto_internal_send<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
         endpoint: &Endpoint,
@@ -278,11 +278,11 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
     /// The builder function must append the verb (with any verb flags) and packet payload. If it returns
     /// an error, the error is returned immediately and the send is aborted. None is returned if the send
     /// function itself fails for some reason such as no paths being available.
-    pub fn send<R, E, BuilderFunction: FnOnce(&mut PacketBuffer) -> Result<R, E>>(
+    pub fn send<HostSystemImpl: HostSystem + ?Sized, R, E, BuilderFunction: FnOnce(&mut PacketBuffer) -> Result<R, E>>(
         &self,
         host_system: &HostSystemImpl,
-        node: &Node<HostSystemImpl>,
-        path: Option<&Arc<Path<HostSystemImpl>>>,
+        node: &Node,
+        path: Option<&Arc<Path>>,
         time_ticks: i64,
         builder_function: BuilderFunction,
     ) -> Option<Result<R, E>> {
@@ -370,8 +370,8 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
             self.v1_proto_internal_send(
                 host_system,
                 &path.endpoint,
-                Some(&path.local_socket),
-                Some(&path.local_interface),
+                Some(path.local_socket::<HostSystemImpl>()),
+                Some(path.local_interface::<HostSystemImpl>()),
                 max_fragment_size,
                 packet,
             );
@@ -390,10 +390,10 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
     /// Unlike other messages HELLO is sent partially in the clear and always with the long-lived
     /// static identity key. Authentication in old versions is via Poly1305 and in new versions
     /// via HMAC-SHA512.
-    pub(crate) fn send_hello(
+    pub(crate) fn send_hello<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
-        node: &Node<HostSystemImpl>,
+        node: &Node,
         explicit_endpoint: Option<&Endpoint>,
     ) -> bool {
         let mut path = None;
@@ -456,8 +456,8 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
             self.v1_proto_internal_send(
                 host_system,
                 destination,
-                Some(&p.local_socket),
-                Some(&p.local_interface),
+                Some(p.local_socket::<HostSystemImpl>()),
+                Some(p.local_interface::<HostSystemImpl>()),
                 max_fragment_size,
                 packet,
             );
@@ -475,13 +475,13 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
     /// those fragments after the main packet header and first chunk.
     ///
     /// This returns true if the packet decrypted and passed authentication.
-    pub(crate) fn v1_proto_receive<InnerProtocolImpl: InnerProtocol + ?Sized>(
+    pub(crate) fn v1_proto_receive<HostSystemImpl: HostSystem + ?Sized, InnerProtocolImpl: InnerProtocol + ?Sized>(
         self: &Arc<Self>,
-        node: &Node<HostSystemImpl>,
+        node: &Node,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
         time_ticks: i64,
-        source_path: &Arc<Path<HostSystemImpl>>,
+        source_path: &Arc<Path>,
         packet_header: &v1::PacketHeader,
         frag0: &PacketBuffer,
         fragments: &[Option<PooledPacketBuffer>],
@@ -593,14 +593,14 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_hello<InnerProtocolImpl: InnerProtocol + ?Sized>(
+    fn handle_incoming_hello<HostSystemImpl: HostSystem + ?Sized, InnerProtocolImpl: InnerProtocol + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
-        node: &Node<HostSystemImpl>,
+        node: &Node,
         time_ticks: i64,
         message_id: MessageId,
-        source_path: &Arc<Path<HostSystemImpl>>,
+        source_path: &Arc<Path>,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         if !(inner.should_communicate_with(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
@@ -654,13 +654,13 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_error<InnerProtocolImpl: InnerProtocol + ?Sized>(
+    fn handle_incoming_error<HostSystemImpl: HostSystem + ?Sized, InnerProtocolImpl: InnerProtocol + ?Sized>(
         self: &Arc<Self>,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
-        node: &Node<HostSystemImpl>,
-        _: i64,
-        source_path: &Arc<Path<HostSystemImpl>>,
+        node: &Node,
+        _time_ticks: i64,
+        source_path: &Arc<Path>,
         source_hops: u8,
         message_id: u64,
         payload: &PacketBuffer,
@@ -691,13 +691,13 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_ok<InnerProtocolImpl: InnerProtocol + ?Sized>(
+    fn handle_incoming_ok<HostSystemImpl: HostSystem + ?Sized, InnerProtocolImpl: InnerProtocol + ?Sized>(
         self: &Arc<Self>,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
-        node: &Node<HostSystemImpl>,
+        node: &Node,
         time_ticks: i64,
-        source_path: &Arc<Path<HostSystemImpl>>,
+        source_path: &Arc<Path>,
         source_hops: u8,
         message_id: u64,
         path_is_known: bool,
@@ -791,11 +791,11 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_whois<InnerProtocolImpl: InnerProtocol + ?Sized>(
+    fn handle_incoming_whois<HostSystemImpl: HostSystem + ?Sized, InnerProtocolImpl: InnerProtocol + ?Sized>(
         self: &Arc<Self>,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
-        node: &Node<HostSystemImpl>,
+        node: &Node,
         time_ticks: i64,
         message_id: MessageId,
         payload: &PacketBuffer,
@@ -824,24 +824,24 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         return PacketHandlerResult::Ok;
     }
 
-    fn handle_incoming_rendezvous(
+    fn handle_incoming_rendezvous<HostSystemImpl: HostSystem + ?Sized>(
         self: &Arc<Self>,
         host_system: &HostSystemImpl,
-        node: &Node<HostSystemImpl>,
+        node: &Node,
         time_ticks: i64,
         message_id: MessageId,
-        source_path: &Arc<Path<HostSystemImpl>>,
+        source_path: &Arc<Path>,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         if node.is_peer_root(self) {}
         return PacketHandlerResult::Ok;
     }
 
-    fn handle_incoming_echo<InnerProtocolImpl: InnerProtocol + ?Sized>(
+    fn handle_incoming_echo<HostSystemImpl: HostSystem + ?Sized, InnerProtocolImpl: InnerProtocol + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
-        node: &Node<HostSystemImpl>,
+        node: &Node,
         time_ticks: i64,
         message_id: MessageId,
         payload: &PacketBuffer,
@@ -864,44 +864,44 @@ impl<HostSystemImpl: HostSystem + ?Sized> Peer<HostSystemImpl> {
         return PacketHandlerResult::Ok;
     }
 
-    fn handle_incoming_push_direct_paths(
+    fn handle_incoming_push_direct_paths<HostSystemImpl: HostSystem + ?Sized>(
         self: &Arc<Self>,
         host_system: &HostSystemImpl,
-        node: &Node<HostSystemImpl>,
+        node: &Node,
         time_ticks: i64,
-        source_path: &Arc<Path<HostSystemImpl>>,
+        source_path: &Arc<Path>,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         PacketHandlerResult::Ok
     }
 
-    fn handle_incoming_user_message(
+    fn handle_incoming_user_message<HostSystemImpl: HostSystem + ?Sized>(
         self: &Arc<Self>,
         host_system: &HostSystemImpl,
-        node: &Node<HostSystemImpl>,
+        node: &Node,
         time_ticks: i64,
-        source_path: &Arc<Path<HostSystemImpl>>,
+        source_path: &Arc<Path>,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         PacketHandlerResult::Ok
     }
 }
 
-impl<HostSystemImpl: HostSystem + ?Sized> Hash for Peer<HostSystemImpl> {
+impl Hash for Peer {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         state.write_u64(self.identity.address.into());
     }
 }
 
-impl<HostSystemImpl: HostSystem + ?Sized> PartialEq for Peer<HostSystemImpl> {
+impl PartialEq for Peer {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         self.identity.fingerprint.eq(&other.identity.fingerprint)
     }
 }
 
-impl<HostSystemImpl: HostSystem + ?Sized> Eq for Peer<HostSystemImpl> {}
+impl Eq for Peer {}
 
 fn v1_proto_try_aead_decrypt(
     secret: &v1::SymmetricSecret,

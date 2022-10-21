@@ -24,6 +24,7 @@ use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::gate::IntervalGate;
 use zerotier_utils::hex;
 use zerotier_utils::marshalable::Marshalable;
+use zerotier_utils::pocket::Pocket;
 use zerotier_utils::ringbuffer::RingBuffer;
 
 /// Trait implemented by external code to handle events and provide an interface to the system or application.
@@ -35,7 +36,7 @@ pub trait HostSystem: Sync + Send + 'static {
     type LocalSocket: Sync + Send + Hash + PartialEq + Eq + Clone + ToString + Sized + 'static;
 
     /// Type for local system interfaces.    
-    type LocalInterface: Sync + Send + Hash + PartialEq + Eq + Clone + ToString + Sized;
+    type LocalInterface: Sync + Send + Hash + PartialEq + Eq + Clone + ToString + Sized + 'static;
 
     /// A VL1 level event occurred.
     fn event(&self, event: Event);
@@ -136,9 +137,9 @@ pub trait InnerProtocol: Sync + Send {
     fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
-        node: &Node<HostSystemImpl>,
-        source: &Arc<Peer<HostSystemImpl>>,
-        source_path: &Arc<Path<HostSystemImpl>>,
+        node: &Node,
+        source: &Arc<Peer>,
+        source_path: &Arc<Path>,
         source_hops: u8,
         message_id: u64,
         verb: u8,
@@ -149,9 +150,9 @@ pub trait InnerProtocol: Sync + Send {
     fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
-        node: &Node<HostSystemImpl>,
-        source: &Arc<Peer<HostSystemImpl>>,
-        source_path: &Arc<Path<HostSystemImpl>>,
+        node: &Node,
+        source: &Arc<Peer>,
+        source_path: &Arc<Path>,
         source_hops: u8,
         message_id: u64,
         in_re_verb: u8,
@@ -165,9 +166,9 @@ pub trait InnerProtocol: Sync + Send {
     fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
-        node: &Node<HostSystemImpl>,
-        source: &Arc<Peer<HostSystemImpl>>,
-        source_path: &Arc<Path<HostSystemImpl>>,
+        node: &Node,
+        source: &Arc<Peer>,
+        source_path: &Arc<Path>,
         source_hops: u8,
         message_id: u64,
         in_re_verb: u8,
@@ -183,12 +184,12 @@ pub trait InnerProtocol: Sync + Send {
 /// How often to check the root cluster definitions against the root list and update.
 const ROOT_SYNC_INTERVAL_MS: i64 = 1000;
 
-struct RootInfo<HostSystemImpl: HostSystem + ?Sized> {
+struct RootInfo {
     /// Root sets to which we are a member.
     sets: HashMap<String, Verified<RootSet>>,
 
     /// Root peers and their statically defined endpoints (from root sets).
-    roots: HashMap<Arc<Peer<HostSystemImpl>>, Vec<Endpoint>>,
+    roots: HashMap<Arc<Peer>, Vec<Endpoint>>,
 
     /// If this node is a root, these are the root sets to which it's a member in binary serialized form.
     /// Set to None if this node is not a root, meaning it doesn't appear in any of its root sets.
@@ -213,14 +214,17 @@ struct BackgroundTaskIntervals {
 }
 
 /// WHOIS requests and any packets that are waiting on them to be decrypted and authenticated.
-struct WhoisQueueItem<HostSystemImpl: HostSystem + ?Sized> {
-    v1_proto_waiting_packets: RingBuffer<(Weak<Path<HostSystemImpl>>, PooledPacketBuffer), WHOIS_MAX_WAITING_PACKETS>,
+struct WhoisQueueItem {
+    v1_proto_waiting_packets: RingBuffer<(Weak<Path>, PooledPacketBuffer), WHOIS_MAX_WAITING_PACKETS>,
     last_retry_time: i64,
     retry_count: u16,
 }
 
+const PATH_MAP_SIZE: usize = std::mem::size_of::<HashMap<[u8; std::mem::size_of::<Endpoint>() + 128], Arc<Path>>>();
+type PathMap<HostSystemImpl> = HashMap<PathKey<'static, 'static, HostSystemImpl>, Arc<Path>>;
+
 /// A ZeroTier VL1 node that can communicate securely with the ZeroTier peer-to-peer network.
-pub struct Node<HostSystemImpl: HostSystem + ?Sized> {
+pub struct Node {
     /// A random ID generated to identify this particular running instance.
     ///
     /// This can be used to implement multi-homing by allowing remote nodes to distinguish instances
@@ -234,23 +238,23 @@ pub struct Node<HostSystemImpl: HostSystem + ?Sized> {
     intervals: Mutex<BackgroundTaskIntervals>,
 
     /// Canonicalized network paths, held as Weak<> to be automatically cleaned when no longer in use.
-    paths: RwLock<HashMap<PathKey<'static, 'static, HostSystemImpl>, Arc<Path<HostSystemImpl>>>>,
+    paths: RwLock<Pocket<PATH_MAP_SIZE>>,
 
     /// Peers with which we are currently communicating.
-    peers: RwLock<HashMap<Address, Arc<Peer<HostSystemImpl>>>>,
+    peers: RwLock<HashMap<Address, Arc<Peer>>>,
 
     /// This node's trusted roots, sorted in ascending order of quality/preference, and cluster definitions.
-    roots: RwLock<RootInfo<HostSystemImpl>>,
+    roots: RwLock<RootInfo>,
 
     /// Current best root.
-    best_root: RwLock<Option<Arc<Peer<HostSystemImpl>>>>,
+    best_root: RwLock<Option<Arc<Peer>>>,
 
     /// Queue of identities being looked up.
-    whois_queue: Mutex<HashMap<Address, WhoisQueueItem<HostSystemImpl>>>,
+    whois_queue: Mutex<HashMap<Address, WhoisQueueItem>>,
 }
 
-impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
-    pub fn new<NodeStorageImpl: NodeStorage + ?Sized>(
+impl Node {
+    pub fn new<HostSystemImpl: HostSystem + ?Sized, NodeStorageImpl: NodeStorage + ?Sized>(
         host_system: &HostSystemImpl,
         storage: &NodeStorageImpl,
         auto_generate_identity: bool,
@@ -286,7 +290,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
             instance_id: random::get_bytes_secure(),
             identity: id,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
-            paths: RwLock::new(HashMap::new()),
+            paths: RwLock::new(Pocket::new(PathMap::<HostSystemImpl>::new())),
             peers: RwLock::new(HashMap::new()),
             roots: RwLock::new(RootInfo {
                 sets: HashMap::new(),
@@ -300,7 +304,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
         })
     }
 
-    pub fn peer(&self, a: Address) -> Option<Arc<Peer<HostSystemImpl>>> {
+    pub fn peer(&self, a: Address) -> Option<Arc<Peer>> {
         self.peers.read().unwrap().get(&a).cloned()
     }
 
@@ -309,12 +313,12 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
     }
 
     /// Get the current "best" root from among this node's trusted roots.
-    pub fn best_root(&self) -> Option<Arc<Peer<HostSystemImpl>>> {
+    pub fn best_root(&self) -> Option<Arc<Peer>> {
         self.best_root.read().unwrap().clone()
     }
 
     /// Check whether a peer is a root according to any root set trusted by this node.
-    pub fn is_peer_root(&self, peer: &Peer<HostSystemImpl>) -> bool {
+    pub fn is_peer_root(&self, peer: &Peer) -> bool {
         self.roots.read().unwrap().roots.keys().any(|p| p.identity.eq(&peer.identity))
     }
 
@@ -360,7 +364,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
         self.roots.read().unwrap().sets.values().cloned().map(|s| s.unwrap()).collect()
     }
 
-    pub fn do_background_tasks(&self, host_system: &HostSystemImpl) -> Duration {
+    pub fn do_background_tasks<HostSystemImpl: HostSystem + ?Sized>(&self, host_system: &HostSystemImpl) -> Duration {
         const INTERVAL_MS: i64 = 1000;
         const INTERVAL: Duration = Duration::from_millis(INTERVAL_MS as u64);
         let time_ticks = host_system.time_ticks();
@@ -477,7 +481,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
                                 if let Some(peer) = peers.get(&m.identity.address) {
                                     new_roots.insert(peer.clone(), m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                 } else {
-                                    if let Some(peer) = Peer::<HostSystemImpl>::new(&self.identity, m.identity.clone(), time_ticks) {
+                                    if let Some(peer) = Peer::new(&self.identity, m.identity.clone(), time_ticks) {
                                         drop(peers);
                                         new_roots.insert(
                                             self.peers
@@ -636,7 +640,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
             let mut need_keepalive = Vec::new();
 
             // First check all paths in read mode to avoid blocking the entire node.
-            for (k, path) in self.paths.read().unwrap().iter() {
+            for (k, path) in self.paths.read().unwrap().get::<PathMap<HostSystemImpl>>().iter() {
                 if host_system.local_socket_is_valid(k.local_socket()) {
                     match path.service(time_ticks) {
                         PathServiceResult::Ok => {}
@@ -650,13 +654,19 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
 
             // Lock in write mode and remove dead paths, doing so piecemeal to again avoid blocking.
             for dp in dead_paths.iter() {
-                self.paths.write().unwrap().remove(dp);
+                self.paths.write().unwrap().get_mut::<PathMap<HostSystemImpl>>().remove(dp);
             }
 
             // Finally run keepalive sends as a batch.
             let keepalive_buf = [time_ticks as u8]; // just an arbitrary byte, no significance
             for p in need_keepalive.iter() {
-                host_system.wire_send(&p.endpoint, Some(&p.local_socket), Some(&p.local_interface), &keepalive_buf, 0);
+                host_system.wire_send(
+                    &p.endpoint,
+                    Some(p.local_socket::<HostSystemImpl>()),
+                    Some(p.local_interface::<HostSystemImpl>()),
+                    &keepalive_buf,
+                    0,
+                );
             }
         }
 
@@ -683,7 +693,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
         INTERVAL
     }
 
-    pub fn handle_incoming_physical_packet<InnerProtocolImpl: InnerProtocol + ?Sized>(
+    pub fn handle_incoming_physical_packet<HostSystemImpl: HostSystem + ?Sized, InnerProtocolImpl: InnerProtocol + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -727,7 +737,8 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
 
                 if dest == self.identity.address {
                     let fragment_header = &*fragment_header; // discard mut
-                    let path = self.canonical_path(source_endpoint, source_local_socket, source_local_interface, time_ticks);
+                    let path =
+                        self.canonical_path::<HostSystemImpl>(source_endpoint, source_local_socket, source_local_interface, time_ticks);
                     path.log_receive_anything(time_ticks);
 
                     if fragment_header.is_fragment() {
@@ -852,8 +863,8 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
                         if let Some(forward_path) = peer.direct_path() {
                             host_system.wire_send(
                                 &forward_path.endpoint,
-                                Some(&forward_path.local_socket),
-                                Some(&forward_path.local_interface),
+                                Some(forward_path.local_socket::<HostSystemImpl>()),
+                                Some(forward_path.local_interface::<HostSystemImpl>()),
                                 packet.as_bytes(),
                                 0,
                             );
@@ -870,17 +881,17 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
     }
 
     /// Enqueue and send a WHOIS query for a given address, adding the supplied packet (if any) to the list to be processed on reply.
-    fn whois(
+    fn whois<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
         address: Address,
-        waiting_packet: Option<(Weak<Path<HostSystemImpl>>, PooledPacketBuffer)>,
+        waiting_packet: Option<(Weak<Path>, PooledPacketBuffer)>,
         time_ticks: i64,
     ) {
         debug_event!(host_system, "[vl1] [v1] WHOIS {}", address.to_string());
         {
             let mut whois_queue = self.whois_queue.lock().unwrap();
-            let qi = whois_queue.entry(address).or_insert_with(|| WhoisQueueItem::<HostSystemImpl> {
+            let qi = whois_queue.entry(address).or_insert_with(|| WhoisQueueItem {
                 v1_proto_waiting_packets: RingBuffer::new(),
                 last_retry_time: 0,
                 retry_count: 0,
@@ -899,7 +910,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
     }
 
     /// Send a WHOIS query to the current best root.
-    fn send_whois(&self, host_system: &HostSystemImpl, mut addresses: &[Address], time_ticks: i64) {
+    fn send_whois<HostSystemImpl: HostSystem + ?Sized>(&self, host_system: &HostSystemImpl, mut addresses: &[Address], time_ticks: i64) {
         debug_assert!(!addresses.is_empty());
         if let Some(root) = self.best_root() {
             while !addresses.is_empty() {
@@ -921,7 +932,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
     }
 
     /// Called by Peer when an identity is received from another node, e.g. via OK(WHOIS).
-    pub(crate) fn handle_incoming_identity<InnerProtocolImpl: InnerProtocol + ?Sized>(
+    pub(crate) fn handle_incoming_identity<HostSystemImpl: HostSystem + ?Sized, InnerProtocolImpl: InnerProtocol + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
         inner: &InnerProtocolImpl,
@@ -972,23 +983,31 @@ impl<HostSystemImpl: HostSystem + ?Sized> Node<HostSystemImpl> {
     }
 
     /// Get the canonical Path object corresponding to an endpoint.
-    pub(crate) fn canonical_path(
+    pub(crate) fn canonical_path<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         ep: &Endpoint,
         local_socket: &HostSystemImpl::LocalSocket,
         local_interface: &HostSystemImpl::LocalInterface,
         time_ticks: i64,
-    ) -> Arc<Path<HostSystemImpl>> {
+    ) -> Arc<Path> {
         let paths = self.paths.read().unwrap();
-        if let Some(path) = paths.get(&PathKey::Ref(ep, local_socket)) {
+        if let Some(path) = paths.get::<PathMap<HostSystemImpl>>().get(&PathKey::Ref(ep, local_socket)) {
             path.clone()
         } else {
             drop(paths);
             self.paths
                 .write()
                 .unwrap()
+                .get_mut::<PathMap<HostSystemImpl>>()
                 .entry(PathKey::Copied(ep.clone(), local_socket.clone()))
-                .or_insert_with(|| Arc::new(Path::new(ep.clone(), local_socket.clone(), local_interface.clone(), time_ticks)))
+                .or_insert_with(|| {
+                    Arc::new(Path::new::<HostSystemImpl>(
+                        ep.clone(),
+                        local_socket.clone(),
+                        local_interface.clone(),
+                        time_ticks,
+                    ))
+                })
                 .clone()
         }
     }
@@ -1056,9 +1075,9 @@ impl InnerProtocol for DummyInnerProtocol {
     fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _host_system: &HostSystemImpl,
-        _node: &Node<HostSystemImpl>,
-        _source: &Arc<Peer<HostSystemImpl>>,
-        _source_path: &Arc<Path<HostSystemImpl>>,
+        _node: &Node,
+        _source: &Arc<Peer>,
+        _source_path: &Arc<Path>,
         _source_hops: u8,
         _message_id: u64,
         _verb: u8,
@@ -1071,9 +1090,9 @@ impl InnerProtocol for DummyInnerProtocol {
     fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _host_system: &HostSystemImpl,
-        _node: &Node<HostSystemImpl>,
-        _source: &Arc<Peer<HostSystemImpl>>,
-        _source_path: &Arc<Path<HostSystemImpl>>,
+        _node: &Node,
+        _source: &Arc<Peer>,
+        _source_path: &Arc<Path>,
         _source_hops: u8,
         _message_id: u64,
         _in_re_verb: u8,
@@ -1089,9 +1108,9 @@ impl InnerProtocol for DummyInnerProtocol {
     fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _host_system: &HostSystemImpl,
-        _node: &Node<HostSystemImpl>,
-        _source: &Arc<Peer<HostSystemImpl>>,
-        _source_path: &Arc<Path<HostSystemImpl>>,
+        _node: &Node,
+        _source: &Arc<Peer>,
+        _source_path: &Arc<Path>,
         _source_hops: u8,
         _message_id: u64,
         _in_re_verb: u8,

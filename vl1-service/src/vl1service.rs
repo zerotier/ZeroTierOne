@@ -36,7 +36,7 @@ pub struct VL1Service<
     inner: Arc<InnerProtocolImpl>,
     path_filter: Arc<PathFilterImpl>,
     buffer_pool: Arc<PacketBufferPool>,
-    node_container: Option<Node<Self>>, // never None, set in new()
+    node_container: Option<Node>, // never None, set in new()
 }
 
 struct VL1ServiceMutableState {
@@ -86,7 +86,7 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
     }
 
     #[inline(always)]
-    pub fn node(&self) -> &Node<Self> {
+    pub fn node(&self) -> &Node {
         debug_assert!(self.node_container.is_some());
         unsafe { self.node_container.as_ref().unwrap_unchecked() }
     }
@@ -198,8 +198,8 @@ impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl
         packet: zerotier_network_hypervisor::protocol::PooledPacketBuffer,
     ) {
         self.node().handle_incoming_physical_packet(
-            &*self,
-            &*self.inner,
+            self.as_ref(),
+            self.inner.as_ref(),
             &Endpoint::IpUdp(source_address.clone()),
             &LocalSocket::new(socket),
             &socket.interface,

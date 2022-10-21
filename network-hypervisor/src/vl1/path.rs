@@ -10,6 +10,7 @@ use crate::vl1::endpoint::Endpoint;
 use crate::vl1::node::*;
 
 use zerotier_crypto::random;
+use zerotier_utils::pocket::Pocket;
 use zerotier_utils::NEVER_HAPPENED_TICKS;
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = PATH_KEEPALIVE_INTERVAL;
@@ -24,19 +25,18 @@ pub(crate) enum PathServiceResult {
 /// These are maintained in Node and canonicalized so that all unique paths have
 /// one and only one unique path object. That enables statistics to be tracked
 /// for them and uniform application of things like keepalives.
-pub struct Path<HostSystemImpl: HostSystem + ?Sized> {
+pub struct Path {
     pub endpoint: Endpoint,
-    pub local_socket: HostSystemImpl::LocalSocket,
-    pub local_interface: HostSystemImpl::LocalInterface,
+    local_socket: Pocket<64>,
+    local_interface: Pocket<64>,
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     create_time_ticks: i64,
     fragmented_packets: Mutex<HashMap<u64, v1::FragmentedPacket, PacketIdHasher>>,
 }
 
-impl<HostSystemImpl: HostSystem + ?Sized> Path<HostSystemImpl> {
-    #[inline]
-    pub fn new(
+impl Path {
+    pub(crate) fn new<HostSystemImpl: HostSystem + ?Sized>(
         endpoint: Endpoint,
         local_socket: HostSystemImpl::LocalSocket,
         local_interface: HostSystemImpl::LocalInterface,
@@ -44,8 +44,8 @@ impl<HostSystemImpl: HostSystem + ?Sized> Path<HostSystemImpl> {
     ) -> Self {
         Self {
             endpoint,
-            local_socket,
-            local_interface,
+            local_socket: Pocket::new(local_socket),
+            local_interface: Pocket::new(local_interface),
             last_send_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             last_receive_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             create_time_ticks: time_ticks,
@@ -53,9 +53,18 @@ impl<HostSystemImpl: HostSystem + ?Sized> Path<HostSystemImpl> {
         }
     }
 
+    #[inline(always)]
+    pub(crate) fn local_socket<HostSystemImpl: HostSystem + ?Sized>(&self) -> &HostSystemImpl::LocalSocket {
+        self.local_socket.get()
+    }
+
+    #[inline(always)]
+    pub(crate) fn local_interface<HostSystemImpl: HostSystem + ?Sized>(&self) -> &HostSystemImpl::LocalInterface {
+        self.local_socket.get()
+    }
+
     /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.
     /// This returns None if more fragments are needed to assemble the packet.
-    #[inline]
     pub(crate) fn receive_fragment(
         &self,
         packet_id: u64,
@@ -102,7 +111,6 @@ impl<HostSystemImpl: HostSystem + ?Sized> Path<HostSystemImpl> {
         self.last_send_time_ticks.store(time_ticks, Ordering::Relaxed);
     }
 
-    #[inline]
     pub(crate) fn service(&self, time_ticks: i64) -> PathServiceResult {
         self.fragmented_packets
             .lock()

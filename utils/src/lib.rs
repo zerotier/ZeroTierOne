@@ -14,6 +14,7 @@ pub mod io;
 pub mod json;
 pub mod marshalable;
 pub mod memory;
+pub mod pocket;
 pub mod pool;
 pub mod ringbuffer;
 pub mod ringbuffermap;

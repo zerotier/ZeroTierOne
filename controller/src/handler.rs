@@ -1,6 +1,5 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use std::any::Any;
 use std::error::Error;
 use std::sync::{Arc, Mutex, RwLock, Weak};
 
@@ -127,9 +126,9 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
     fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _host_system: &HostSystemImpl,
-        _node: &Node<HostSystemImpl>,
-        source: &Arc<Peer<HostSystemImpl>>,
-        source_path: &Arc<Path<HostSystemImpl>>,
+        _node: &Node,
+        source: &Arc<Peer>,
+        source_path: &Arc<Path>,
         source_hops: u8,
         message_id: u64,
         verb: u8,
@@ -193,7 +192,7 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
                             .await
                         {
                             Result::Ok((result, Some(config))) => {
-                                inner.send_network_config(peer, &config, Some(message_id));
+                                inner.send_network_config(peer.as_ref(), &config, Some(message_id));
                                 result
                             }
                             Result::Ok((result, None)) => result,
@@ -234,9 +233,9 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
     fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _host_system: &HostSystemImpl,
-        _node: &Node<HostSystemImpl>,
-        _source: &Arc<Peer<HostSystemImpl>>,
-        _source_path: &Arc<Path<HostSystemImpl>>,
+        _node: &Node,
+        _source: &Arc<Peer>,
+        _source_path: &Arc<Path>,
         _source_hops: u8,
         _message_id: u64,
         _in_re_verb: u8,
@@ -251,9 +250,9 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
     fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _host_system: &HostSystemImpl,
-        _node: &Node<HostSystemImpl>,
-        _source: &Arc<Peer<HostSystemImpl>>,
-        _source_path: &Arc<Path<HostSystemImpl>>,
+        _node: &Node,
+        _source: &Arc<Peer>,
+        _source_path: &Arc<Path>,
         _source_hops: u8,
         _message_id: u64,
         _in_re_verb: u8,
@@ -272,57 +271,53 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
 impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
     fn send_network_config(
         &self,
-        peer: Arc<dyn Any>, // hack can go away when Rust has specialization
+        peer: &Peer,
         config: &NetworkConfig,
         in_re_message_id: Option<u64>, // None for unsolicited push
     ) {
         if let Some(host_system) = self.service.read().unwrap().upgrade() {
-            if let Some(peer) = peer.downcast_ref::<Peer<VL1Service<DatabaseImpl, Handler<DatabaseImpl>, Handler<DatabaseImpl>>>>() {
-                peer.send(
-                    host_system.as_ref(),
-                    host_system.node(),
-                    None,
-                    ms_monotonic(),
-                    |packet| -> Result<(), OutOfBoundsError> {
-                        if let Some(in_re_message_id) = in_re_message_id {
-                            let ok_header = packet.append_struct_get_mut::<protocol::OkHeader>()?;
-                            ok_header.verb = protocol::verbs::VL1_OK;
-                            ok_header.in_re_verb = protocol::verbs::VL2_VERB_NETWORK_CONFIG_REQUEST;
-                            ok_header.in_re_message_id = in_re_message_id.to_be_bytes();
+            peer.send(
+                host_system.as_ref(),
+                host_system.node(),
+                None,
+                ms_monotonic(),
+                |packet| -> Result<(), OutOfBoundsError> {
+                    if let Some(in_re_message_id) = in_re_message_id {
+                        let ok_header = packet.append_struct_get_mut::<protocol::OkHeader>()?;
+                        ok_header.verb = protocol::verbs::VL1_OK;
+                        ok_header.in_re_verb = protocol::verbs::VL2_VERB_NETWORK_CONFIG_REQUEST;
+                        ok_header.in_re_message_id = in_re_message_id.to_be_bytes();
+                    } else {
+                        packet.append_u8(protocol::verbs::VL2_VERB_NETWORK_CONFIG)?;
+                    }
+
+                    if peer.is_v2() {
+                        todo!()
+                    } else {
+                        let config_data = if let Some(config_dict) = config.v1_proto_to_dictionary(&self.local_identity) {
+                            config_dict.to_bytes()
                         } else {
-                            packet.append_u8(protocol::verbs::VL2_VERB_NETWORK_CONFIG)?;
+                            eprintln!("WARNING: unexpected error serializing network config into V1 format dictionary");
+                            return Err(OutOfBoundsError); // abort
+                        };
+                        if config_data.len() > (u16::MAX as usize) {
+                            eprintln!("WARNING: network config is larger than 65536 bytes!");
+                            return Err(OutOfBoundsError); // abort
                         }
 
-                        if peer.is_v2() {
-                            todo!()
-                        } else {
-                            let config_data = if let Some(config_dict) = config.v1_proto_to_dictionary(&self.local_identity) {
-                                config_dict.to_bytes()
-                            } else {
-                                eprintln!("WARNING: unexpected error serializing network config into V1 format dictionary");
-                                return Err(OutOfBoundsError); // abort
-                            };
-                            if config_data.len() > (u16::MAX as usize) {
-                                eprintln!("WARNING: network config is larger than 65536 bytes!");
-                                return Err(OutOfBoundsError); // abort
-                            }
+                        packet.append_u64(config.network_id.into())?;
+                        packet.append_u16(config_data.len() as u16)?;
+                        packet.append_bytes(config_data.as_slice())?;
 
-                            packet.append_u64(config.network_id.into())?;
-                            packet.append_u16(config_data.len() as u16)?;
-                            packet.append_bytes(config_data.as_slice())?;
+                        // TODO: compress
 
-                            // TODO: compress
+                        // NOTE: V1 supports a bunch of other things like chunking but it was never truly used and is optional.
+                        // Omit it here as it adds overhead.
+                    }
 
-                            // NOTE: V1 supports a bunch of other things like chunking but it was never truly used and is optional.
-                            // Omit it here as it adds overhead.
-                        }
-
-                        Ok(())
-                    },
-                );
-            } else {
-                panic!("HostSystem implementation mismatch with service to which controller is harnessed");
-            }
+                    Ok(())
+                },
+            );
         }
     }
 
