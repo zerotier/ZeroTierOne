@@ -44,8 +44,8 @@ impl Path {
     ) -> Self {
         Self {
             endpoint,
-            local_socket: Pocket::new(local_socket),
-            local_interface: Pocket::new(local_interface),
+            local_socket: Pocket::new(local_socket),       // enlarge Pocket<> if this panics
+            local_interface: Pocket::new(local_interface), // enlarge Pocket<> if this panics
             last_send_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             last_receive_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             create_time_ticks: time_ticks,
@@ -60,7 +60,7 @@ impl Path {
 
     #[inline(always)]
     pub(crate) fn local_interface<HostSystemImpl: HostSystem + ?Sized>(&self) -> &HostSystemImpl::LocalInterface {
-        self.local_socket.get()
+        self.local_interface.get()
     }
 
     /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.
