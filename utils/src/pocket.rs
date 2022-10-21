@@ -4,15 +4,15 @@ use std::any::TypeId;
 use std::mem::{forget, size_of, MaybeUninit};
 use std::ptr::{drop_in_place, read, write};
 
-/// A statically sized container that acts a bit like Box<dyn Any>.
+/// A statically sized container that acts a bit like Box<dyn Any> but with less overhead.
 ///
 /// This is used in a few places to avoid cascades of templates by allowing templated
-/// objects to be held generically and accessed only within templated functions. It does so
-/// with very low to zero runtime overhead or memory overhead and panics if misused.
+/// objects to be held generically and accessed only within templated functions. There's a
+/// bit of unsafe here but externally it's safe and panics if misused.
 ///
 /// This will panic if the capacity is too small. If that occurs, it must be enlarged. It will
 /// also panic if any of the accessors (other than the try_ versions) are used to try to get
-/// a type other than the one it was
+/// a type other than the one it was constructed with.
 pub struct Pocket<const CAPACITY: usize> {
     storage: [u8; CAPACITY],
     dropper: fn(*mut u8),
