@@ -154,6 +154,7 @@ pub trait InnerProtocol: Sync + Send {
         message_id: u64,
         verb: u8,
         payload: &PacketBuffer,
+        cursor: usize,
     ) -> PacketHandlerResult;
 
     /// Handle errors, returning true if the error was recognized.
@@ -169,7 +170,7 @@ pub trait InnerProtocol: Sync + Send {
         in_re_message_id: u64,
         error_code: u8,
         payload: &PacketBuffer,
-        cursor: &mut usize,
+        cursor: usize,
     ) -> PacketHandlerResult;
 
     /// Handle an OK, returing true if the OK was recognized.
@@ -184,7 +185,7 @@ pub trait InnerProtocol: Sync + Send {
         in_re_verb: u8,
         in_re_message_id: u64,
         payload: &PacketBuffer,
-        cursor: &mut usize,
+        cursor: usize,
     ) -> PacketHandlerResult;
 
     /// Check if this node should respond to messages from a given peer.
@@ -1092,6 +1093,7 @@ impl InnerProtocol for DummyInnerProtocol {
         _message_id: u64,
         _verb: u8,
         _payload: &PacketBuffer,
+        _cursor: usize,
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
     }
@@ -1109,7 +1111,7 @@ impl InnerProtocol for DummyInnerProtocol {
         _in_re_message_id: u64,
         _error_code: u8,
         _payload: &PacketBuffer,
-        _cursor: &mut usize,
+        _cursor: usize,
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
     }
@@ -1126,7 +1128,7 @@ impl InnerProtocol for DummyInnerProtocol {
         _in_re_verb: u8,
         _in_re_message_id: u64,
         _payload: &PacketBuffer,
-        _cursor: &mut usize,
+        _cursor: usize,
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
     }

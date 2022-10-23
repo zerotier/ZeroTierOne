@@ -585,6 +585,7 @@ impl Peer {
                         message_id,
                         verb,
                         &payload,
+                        1,
                     ),
                 };
             }
@@ -682,7 +683,7 @@ impl Peer {
                             in_re_message_id,
                             error_header.error_code,
                             payload,
-                            &mut cursor,
+                            cursor,
                         );
                     }
                 }
@@ -782,7 +783,7 @@ impl Peer {
                             ok_header.in_re_verb,
                             in_re_message_id,
                             payload,
-                            &mut cursor,
+                            cursor,
                         );
                     }
                 }

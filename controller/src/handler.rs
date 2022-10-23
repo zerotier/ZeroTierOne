@@ -97,30 +97,8 @@ impl<DatabaseImpl: Database> Handler<DatabaseImpl> {
     }
 }
 
-impl<DatabaseImpl: Database> PathFilter for Handler<DatabaseImpl> {
-    fn should_use_physical_path<HostSystemImpl: HostSystem + ?Sized>(
-        &self,
-        _id: &Identity,
-        _endpoint: &zerotier_network_hypervisor::vl1::Endpoint,
-        _local_socket: Option<&HostSystemImpl::LocalSocket>,
-        _local_interface: Option<&HostSystemImpl::LocalInterface>,
-    ) -> bool {
-        true
-    }
-
-    fn get_path_hints<HostSystemImpl: HostSystem + ?Sized>(
-        &self,
-        _id: &Identity,
-    ) -> Option<
-        Vec<(
-            zerotier_network_hypervisor::vl1::Endpoint,
-            Option<HostSystemImpl::LocalSocket>,
-            Option<HostSystemImpl::LocalInterface>,
-        )>,
-    > {
-        None
-    }
-}
+// Default PathFilter implementations permit anything.
+impl<DatabaseImpl: Database> PathFilter for Handler<DatabaseImpl> {}
 
 impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
     fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
@@ -133,11 +111,10 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
         message_id: u64,
         verb: u8,
         payload: &PacketBuffer,
+        mut cursor: usize,
     ) -> PacketHandlerResult {
         match verb {
             protocol::verbs::VL2_VERB_NETWORK_CONFIG_REQUEST => {
-                let mut cursor = 1;
-
                 let network_id = payload.read_u64(&mut cursor);
                 if network_id.is_err() {
                     return PacketHandlerResult::Error;
@@ -242,7 +219,7 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
         _in_re_message_id: u64,
         _error_code: u8,
         _payload: &PacketBuffer,
-        _cursor: &mut usize,
+        _cursor: usize,
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
     }
@@ -258,7 +235,7 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
         _in_re_verb: u8,
         _in_re_message_id: u64,
         _payload: &PacketBuffer,
-        _cursor: &mut usize,
+        _cursor: usize,
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
     }

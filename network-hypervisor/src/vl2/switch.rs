@@ -10,6 +10,7 @@ pub trait SwitchInterface: Sync + Send {}
 
 pub struct Switch {}
 
+#[allow(unused_variables)]
 impl InnerProtocol for Switch {
     fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
@@ -21,6 +22,7 @@ impl InnerProtocol for Switch {
         message_id: u64,
         verb: u8,
         payload: &PacketBuffer,
+        cursor: usize,
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
     }
@@ -37,7 +39,7 @@ impl InnerProtocol for Switch {
         in_re_message_id: u64,
         error_code: u8,
         payload: &PacketBuffer,
-        cursor: &mut usize,
+        cursor: usize,
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
     }
@@ -53,7 +55,7 @@ impl InnerProtocol for Switch {
         in_re_verb: u8,
         in_re_message_id: u64,
         payload: &PacketBuffer,
-        cursor: &mut usize,
+        cursor: usize,
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
     }
