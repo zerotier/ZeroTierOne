@@ -248,7 +248,7 @@ pub struct Node {
     intervals: Mutex<BackgroundTaskIntervals>,
 
     /// Canonicalized network paths, held as Weak<> to be automatically cleaned when no longer in use.
-    paths: RwLock<Thing<PATH_MAP_SIZE>>,
+    paths: RwLock<Thing<PATH_MAP_SIZE>>, // holds a PathMap<> but as a Thing<> to hide HostSystemImpl template parameter
 
     /// Peers with which we are currently communicating.
     peers: RwLock<HashMap<Address, Arc<Peer>>>,
