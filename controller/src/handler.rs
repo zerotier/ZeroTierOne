@@ -263,7 +263,7 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
         PacketHandlerResult::NotHandled
     }
 
-    fn should_communicate_with(&self, _: &Identity) -> bool {
+    fn should_respond_to(&self, _: &Identity) -> bool {
         true
     }
 }

@@ -93,15 +93,23 @@ pub trait NodeStorage: Sync + Send {
 /// Trait to be implemented to provide path hints and a filter to approve physical paths.
 pub trait PathFilter: Sync + Send {
     /// Called to check and see if a physical address should be used for ZeroTier traffic to a node.
+    ///
+    /// The default implementation always returns true.
+    #[allow(unused_variables)]
     fn should_use_physical_path<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         id: &Identity,
         endpoint: &Endpoint,
         local_socket: Option<&HostSystemImpl::LocalSocket>,
         local_interface: Option<&HostSystemImpl::LocalInterface>,
-    ) -> bool;
+    ) -> bool {
+        true
+    }
 
     /// Called to look up any statically defined or memorized paths to known nodes.
+    ///
+    /// The default implementation always returns None.
+    #[allow(unused_variables)]
     fn get_path_hints<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         id: &Identity,
@@ -111,7 +119,9 @@ pub trait PathFilter: Sync + Send {
             Option<HostSystemImpl::LocalSocket>,
             Option<HostSystemImpl::LocalInterface>,
         )>,
-    >;
+    > {
+        None
+    }
 }
 
 /// Result of a packet handler.
@@ -177,8 +187,8 @@ pub trait InnerProtocol: Sync + Send {
         cursor: &mut usize,
     ) -> PacketHandlerResult;
 
-    /// Check if this peer should communicate with another at all.
-    fn should_communicate_with(&self, id: &Identity) -> bool;
+    /// Check if this node should respond to messages from a given peer.
+    fn should_respond_to(&self, id: &Identity) -> bool;
 }
 
 /// How often to check the root cluster definitions against the root list and update.
@@ -945,7 +955,7 @@ impl Node {
                 let mut whois_queue = self.whois_queue.lock().unwrap();
                 if let Some(qi) = whois_queue.get_mut(&received_identity.address) {
                     let address = received_identity.address;
-                    if inner.should_communicate_with(&received_identity) {
+                    if inner.should_respond_to(&received_identity) {
                         let mut peers = self.peers.write().unwrap();
                         if let Some(peer) = peers.get(&address).cloned().or_else(|| {
                             Peer::new(&self.identity, received_identity, time_ticks)
@@ -1122,7 +1132,7 @@ impl InnerProtocol for DummyInnerProtocol {
     }
 
     #[inline(always)]
-    fn should_communicate_with(&self, _id: &Identity) -> bool {
+    fn should_respond_to(&self, _id: &Identity) -> bool {
         true
     }
 }
@@ -1131,29 +1141,4 @@ impl InnerProtocol for DummyInnerProtocol {
 #[derive(Default)]
 pub struct DummyPathFilter;
 
-impl PathFilter for DummyPathFilter {
-    #[inline(always)]
-    fn should_use_physical_path<HostSystemImpl: HostSystem + ?Sized>(
-        &self,
-        _id: &Identity,
-        _endpoint: &Endpoint,
-        _local_socket: Option<&<HostSystemImpl as HostSystem>::LocalSocket>,
-        _local_interface: Option<&<HostSystemImpl as HostSystem>::LocalInterface>,
-    ) -> bool {
-        true
-    }
-
-    #[inline(always)]
-    fn get_path_hints<HostSystemImpl: HostSystem + ?Sized>(
-        &self,
-        _id: &Identity,
-    ) -> Option<
-        Vec<(
-            Endpoint,
-            Option<<HostSystemImpl as HostSystem>::LocalSocket>,
-            Option<<HostSystemImpl as HostSystem>::LocalInterface>,
-        )>,
-    > {
-        None
-    }
-}
+impl PathFilter for DummyPathFilter {}

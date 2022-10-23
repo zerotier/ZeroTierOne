@@ -58,7 +58,7 @@ impl InnerProtocol for Switch {
         PacketHandlerResult::NotHandled
     }
 
-    fn should_communicate_with(&self, id: &Identity) -> bool {
+    fn should_respond_to(&self, id: &Identity) -> bool {
         true
     }
 }
