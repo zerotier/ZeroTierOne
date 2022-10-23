@@ -1,7 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};

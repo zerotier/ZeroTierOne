@@ -3,16 +3,20 @@ use std::fmt::Display;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
+use notify::{RecursiveMode, Watcher};
 
 use zerotier_network_hypervisor::vl1::{Address, Identity, NodeStorage};
 use zerotier_network_hypervisor::vl2::NetworkId;
 
 use zerotier_utils::io::{fs_restrict_permissions, read_limit};
-use zerotier_utils::tokio::fs;
 
-use crate::database::Database;
+use zerotier_utils::tokio::fs;
+use zerotier_utils::tokio::sync::broadcast::{channel, Receiver, Sender};
+
+use crate::database::{Change, Database};
 use crate::model::*;
 
 const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
@@ -54,15 +58,42 @@ impl From<zerotier_utils::tokio::io::Error> for FileDatabaseError {
 pub struct FileDatabase {
     base_path: PathBuf,
     controller_address: AtomicU64,
+    change_sender: Arc<Sender<Change>>,
+    watcher: Mutex<Box<dyn Watcher + Send>>,
 }
 
 // TODO: should cache at least hashes and detect changes in the filesystem live.
 
 impl FileDatabase {
     pub async fn new<P: AsRef<Path>>(base_path: P) -> Result<Self, Box<dyn Error>> {
-        let base: PathBuf = base_path.as_ref().into();
-        let _ = fs::create_dir_all(&base).await?;
-        Ok(Self { base_path: base, controller_address: AtomicU64::new(0) })
+        let base_path: PathBuf = base_path.as_ref().into();
+        let _ = fs::create_dir_all(&base_path).await?;
+
+        let (change_sender, _) = channel(256);
+        let change_sender = Arc::new(change_sender);
+
+        let sender = Arc::downgrade(&change_sender);
+        let mut watcher: Box<dyn Watcher + Send> =
+            Box::new(notify::recommended_watcher(move |event: notify::Result<notify::event::Event>| {
+                if let Ok(event) = event {
+                    if let Some(_sender) = sender.upgrade() {
+                        // TODO
+                        match event.kind {
+                            notify::EventKind::Modify(_) => {}
+                            notify::EventKind::Remove(_) => {}
+                            _ => {}
+                        }
+                    }
+                }
+            })?);
+        watcher.watch(&base_path, RecursiveMode::Recursive)?;
+
+        Ok(Self {
+            base_path: base_path.clone(),
+            controller_address: AtomicU64::new(0),
+            change_sender,
+            watcher: Mutex::new(watcher),
+        })
     }
 
     fn get_controller_address(&self) -> Option<Address> {
@@ -87,6 +118,12 @@ impl FileDatabase {
         self.base_path
             .join(format!("n{:06x}", network_id.network_no()))
             .join(format!("m{}.yaml", member_id.to_string()))
+    }
+}
+
+impl Drop for FileDatabase {
+    fn drop(&mut self) {
+        let _ = self.watcher.lock().unwrap().unwatch(&self.base_path);
     }
 }
 
@@ -176,6 +213,10 @@ impl Database for FileDatabase {
         //let _ = fs::write(base_member_path, to_json_pretty(&obj).as_bytes()).await?;
         let _ = fs::write(base_member_path, serde_yaml::to_string(&obj)?.as_bytes()).await?;
         Ok(())
+    }
+
+    async fn changes(&self) -> Option<Receiver<Change>> {
+        Some(self.change_sender.subscribe())
     }
 
     async fn log_request(&self, obj: RequestLogItem) -> Result<(), Self::Error> {

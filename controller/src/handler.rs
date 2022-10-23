@@ -295,12 +295,11 @@ impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
                     Ok(())
                 },
             );
+            // TODO: log errors
         }
     }
 
-    async fn handle_change_notification(self: Arc<Self>, _change: Change) {
-        todo!()
-    }
+    async fn handle_change_notification(self: Arc<Self>, change: Change) {}
 
     async fn handle_network_config_request<HostSystemImpl: HostSystem + ?Sized>(
         self: &Arc<Self>,

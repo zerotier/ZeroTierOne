@@ -7,14 +7,12 @@ use zerotier_utils::tokio::sync::broadcast::Receiver;
 
 use crate::model::*;
 
+/// Database change relevant to the controller and that was NOT initiated by the controller.
 #[derive(Clone)]
 pub enum Change {
-    NetworkCreated(Network),
-    NetworkDeleted(Network),
-    NetworkChanged(Network, Network),
-    MemberCreated(Member),
-    MemberDeleted(Member),
-    MemberChanged(Member, Member),
+    NetworkDeleted(NetworkId),
+    MemberAuthorized(NetworkId, Address),
+    MemberDeauthorized(NetworkId, Address),
 }
 
 #[async_trait]
