@@ -33,7 +33,7 @@ pub struct NetworkConfig {
     pub private: bool,
 
     pub timestamp: i64,
-    pub max_delta: i64,
+    pub credential_ttl: i64,
     pub revision: u64,
 
     pub mtu: u16,
@@ -83,7 +83,7 @@ impl NetworkConfig {
             motd: String::new(),
             private: true,
             timestamp: 0,
-            max_delta: 0,
+            credential_ttl: 0,
             revision: 0,
             mtu: 0,
             multicast_limit: 0,
@@ -122,7 +122,7 @@ impl NetworkConfig {
             },
         );
         d.set_u64(proto_v1_field_name::network_config::TIMESTAMP, self.timestamp as u64);
-        d.set_u64(proto_v1_field_name::network_config::MAX_DELTA, self.max_delta as u64);
+        d.set_u64(proto_v1_field_name::network_config::MAX_DELTA, self.credential_ttl as u64);
         d.set_u64(proto_v1_field_name::network_config::REVISION, self.revision);
         d.set_u64(proto_v1_field_name::network_config::MTU, self.mtu as u64);
         d.set_u64(proto_v1_field_name::network_config::MULTICAST_LIMIT, self.multicast_limit as u64);
@@ -241,7 +241,7 @@ impl NetworkConfig {
         nc.timestamp = d
             .get_i64(proto_v1_field_name::network_config::TIMESTAMP)
             .ok_or(InvalidParameterError("missing timestamp"))?;
-        nc.max_delta = d.get_i64(proto_v1_field_name::network_config::MAX_DELTA).unwrap_or(0);
+        nc.credential_ttl = d.get_i64(proto_v1_field_name::network_config::MAX_DELTA).unwrap_or(0);
         nc.revision = d.get_u64(proto_v1_field_name::network_config::REVISION).unwrap_or(0);
         nc.mtu = d
             .get_u64(proto_v1_field_name::network_config::MTU)

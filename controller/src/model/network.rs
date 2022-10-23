@@ -91,7 +91,7 @@ pub struct Network {
     #[serde(default)]
     pub rules: Vec<Rule>,
 
-    /// If set this overrides the default "agreement" window for certificates and credentials.
+    /// If set this overrides the default TTL for certificates and credentials.
     ///
     /// Making it smaller causes deauthorized nodes to fall out of the window more rapidly but can
     /// come at the expense of reliability if it's too short for everyone to update their certs
@@ -100,8 +100,8 @@ pub struct Network {
     ///
     /// Usually this does not need to be changed.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "credentialWindowSize")]
-    pub credential_window_size: Option<i64>,
+    #[serde(rename = "credentialTtl")]
+    pub credential_ttl: Option<i64>,
 
     /// MTU inside the virtual network, default of 2800 is used if not set.
     pub mtu: Option<u16>,

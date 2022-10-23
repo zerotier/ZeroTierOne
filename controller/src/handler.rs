@@ -165,7 +165,7 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
                         let now = ms_since_epoch();
 
                         let result = match inner
-                            .handle_network_config_request::<HostSystemImpl>(&peer.identity, network_id, &meta_data, now)
+                            .handle_network_config_request::<HostSystemImpl>(&peer.identity, network_id, now)
                             .await
                         {
                             Result::Ok((result, Some(config))) => {
@@ -306,7 +306,6 @@ impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
         self: &Arc<Self>,
         source_identity: &Identity,
         network_id: NetworkId,
-        _meta_data: &Dictionary,
         now: i64,
     ) -> Result<(AuthorizationResult, Option<NetworkConfig>), DatabaseImpl::Error> {
         let network = self.database.get_network(network_id).await?;
@@ -359,11 +358,14 @@ impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
             // TODO: check SSO
 
             // Figure out time bounds for the certificate to generate.
-            let max_delta = network.credential_window_size.unwrap_or(CREDENTIAL_WINDOW_SIZE_DEFAULT);
+            let credential_ttl = network.credential_ttl.unwrap_or(CREDENTIAL_WINDOW_SIZE_DEFAULT);
 
             // Get a list of all network members that were deauthorized but are still within the time window.
             // These will be issued revocations to remind the node not to speak to them until they fall off.
-            let deauthed_members_still_in_window = self.database.list_members_deauthorized_after(network.id, now - max_delta).await;
+            let deauthed_members_still_in_window = self
+                .database
+                .list_members_deauthorized_after(network.id, now - credential_ttl)
+                .await;
 
             // Check and if necessary auto-assign static IPs for this member.
             member_changed |= network.check_zt_ip_assignments(self.database.as_ref(), &mut member).await;
@@ -373,7 +375,7 @@ impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
             nc.name = member.name.clone();
             nc.private = network.private;
             nc.timestamp = now;
-            nc.max_delta = max_delta;
+            nc.credential_ttl = credential_ttl;
             nc.revision = now as u64;
             nc.mtu = network.mtu.unwrap_or(ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU as u16);
             nc.multicast_limit = network.multicast_limit.unwrap_or(DEFAULT_MULTICAST_LIMIT as u32);
@@ -383,7 +385,7 @@ impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
             nc.dns = network.dns;
 
             nc.certificate_of_membership =
-                CertificateOfMembership::new(&self.local_identity, network_id, &source_identity, now, max_delta, legacy_v1);
+                CertificateOfMembership::new(&self.local_identity, network_id, &source_identity, now, credential_ttl, legacy_v1);
             if nc.certificate_of_membership.is_none() {
                 return Ok((AuthorizationResult::RejectedDueToError, None));
             }
