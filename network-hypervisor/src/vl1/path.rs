@@ -10,7 +10,7 @@ use crate::vl1::endpoint::Endpoint;
 use crate::vl1::node::*;
 
 use zerotier_crypto::random;
-use zerotier_utils::pocket::Pocket;
+use zerotier_utils::thing::Thing;
 use zerotier_utils::NEVER_HAPPENED_TICKS;
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = protocol::PATH_KEEPALIVE_INTERVAL;
@@ -27,8 +27,8 @@ pub(crate) enum PathServiceResult {
 /// for them and uniform application of things like keepalives.
 pub struct Path {
     pub endpoint: Endpoint,
-    local_socket: Pocket<64>,
-    local_interface: Pocket<64>,
+    local_socket: Thing<64>,
+    local_interface: Thing<64>,
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     create_time_ticks: i64,
@@ -44,8 +44,8 @@ impl Path {
     ) -> Self {
         Self {
             endpoint,
-            local_socket: Pocket::new(local_socket),       // enlarge Pocket<> if this panics
-            local_interface: Pocket::new(local_interface), // enlarge Pocket<> if this panics
+            local_socket: Thing::new(local_socket),       // enlarge Thing<> if this panics
+            local_interface: Thing::new(local_interface), // enlarge Thing<> if this panics
             last_send_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             last_receive_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             create_time_ticks: time_ticks,

@@ -4,22 +4,22 @@ use std::any::TypeId;
 use std::mem::{forget, size_of, MaybeUninit};
 use std::ptr::{drop_in_place, read, write};
 
-/// A statically sized container that acts a bit like Box<dyn Any> but with less overhead.
+/// A statically sized container that acts like Box<dyn Any> but without heap overhead.
 ///
-/// This is used in a few places to avoid cascades of templates by allowing templated
-/// objects to be held generically and accessed only within templated functions. There's a
-/// bit of unsafe here but externally it's safe and panics if misused.
+/// This is used in a couple places to avoid what would otherwise be an explosion of cascading
+/// template parameters to support externally defined small objects. It does so with virtually
+/// no overhead, unlike Box<>, and could be no_std compatible.
 ///
 /// This will panic if the capacity is too small. If that occurs, it must be enlarged. It will
 /// also panic if any of the accessors (other than the try_ versions) are used to try to get
 /// a type other than the one it was constructed with.
-pub struct Pocket<const CAPACITY: usize> {
+pub struct Thing<const CAPACITY: usize> {
     storage: [u8; CAPACITY],
     dropper: fn(*mut u8),
     data_type: TypeId,
 }
 
-impl<const CAPACITY: usize> Pocket<CAPACITY> {
+impl<const CAPACITY: usize> Thing<CAPACITY> {
     #[inline(always)]
     pub fn new<T: Sized + 'static>(x: T) -> Self {
         assert!(size_of::<T>() <= CAPACITY);
@@ -73,7 +73,7 @@ impl<const CAPACITY: usize> Pocket<CAPACITY> {
     }
 }
 
-impl<T: Sized + 'static, const CAPACITY: usize> AsRef<T> for Pocket<CAPACITY> {
+impl<T: Sized + 'static, const CAPACITY: usize> AsRef<T> for Thing<CAPACITY> {
     #[inline(always)]
     fn as_ref(&self) -> &T {
         assert_eq!(TypeId::of::<T>(), self.data_type);
@@ -81,7 +81,7 @@ impl<T: Sized + 'static, const CAPACITY: usize> AsRef<T> for Pocket<CAPACITY> {
     }
 }
 
-impl<T: Sized + 'static, const CAPACITY: usize> AsMut<T> for Pocket<CAPACITY> {
+impl<T: Sized + 'static, const CAPACITY: usize> AsMut<T> for Thing<CAPACITY> {
     #[inline(always)]
     fn as_mut(&mut self) -> &mut T {
         assert_eq!(TypeId::of::<T>(), self.data_type);
@@ -89,7 +89,7 @@ impl<T: Sized + 'static, const CAPACITY: usize> AsMut<T> for Pocket<CAPACITY> {
     }
 }
 
-impl<const CAPACITY: usize> Drop for Pocket<CAPACITY> {
+impl<const CAPACITY: usize> Drop for Thing<CAPACITY> {
     #[inline(always)]
     fn drop(&mut self) {
         (self.dropper)((self as *mut Self).cast());
@@ -105,9 +105,9 @@ mod tests {
     fn typing_and_life_cycle() {
         let test_obj = Rc::new(1i32);
         assert_eq!(Rc::strong_count(&test_obj), 1);
-        let a = Pocket::<32>::new(test_obj.clone());
-        let b = Pocket::<32>::new(test_obj.clone());
-        let c = Pocket::<32>::new(test_obj.clone());
+        let a = Thing::<32>::new(test_obj.clone());
+        let b = Thing::<32>::new(test_obj.clone());
+        let c = Thing::<32>::new(test_obj.clone());
         assert!(a.get::<Rc<i32>>().eq(b.get()));
         assert!(a.try_get::<Rc<i32>>().is_some());
         assert!(a.try_get::<Rc<usize>>().is_none());

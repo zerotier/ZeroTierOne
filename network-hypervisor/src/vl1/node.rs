@@ -24,8 +24,8 @@ use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::gate::IntervalGate;
 use zerotier_utils::hex;
 use zerotier_utils::marshalable::Marshalable;
-use zerotier_utils::pocket::Pocket;
 use zerotier_utils::ringbuffer::RingBuffer;
+use zerotier_utils::thing::Thing;
 
 /// Trait implemented by external code to handle events and provide an interface to the system or application.
 ///
@@ -248,7 +248,7 @@ pub struct Node {
     intervals: Mutex<BackgroundTaskIntervals>,
 
     /// Canonicalized network paths, held as Weak<> to be automatically cleaned when no longer in use.
-    paths: RwLock<Pocket<PATH_MAP_SIZE>>,
+    paths: RwLock<Thing<PATH_MAP_SIZE>>,
 
     /// Peers with which we are currently communicating.
     peers: RwLock<HashMap<Address, Arc<Peer>>>,
@@ -300,7 +300,7 @@ impl Node {
             instance_id: random::get_bytes_secure(),
             identity: id,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
-            paths: RwLock::new(Pocket::new(PathMap::<HostSystemImpl>::new())),
+            paths: RwLock::new(Thing::new(PathMap::<HostSystemImpl>::new())),
             peers: RwLock::new(HashMap::new()),
             roots: RwLock::new(RootInfo {
                 sets: HashMap::new(),
