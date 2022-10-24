@@ -27,9 +27,9 @@ const UPDATE_UDP_BINDINGS_EVERY_SECS: usize = 10;
 /// whatever inner protocol implementation is using it. This would typically be VL2 but could be
 /// a test harness or just the controller for a controller that runs stand-alone.
 pub struct VL1Service<
-    NodeStorageImpl: NodeStorage + 'static,
-    PathFilterImpl: PathFilter + 'static,
-    InnerProtocolImpl: InnerProtocol + 'static,
+    NodeStorageImpl: NodeStorage + ?Sized + 'static,
+    PathFilterImpl: PathFilter + ?Sized + 'static,
+    InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
 > {
     state: RwLock<VL1ServiceMutableState>,
     storage: Arc<NodeStorageImpl>,
@@ -46,8 +46,11 @@ struct VL1ServiceMutableState {
     running: bool,
 }
 
-impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'static, InnerProtocolImpl: InnerProtocol + 'static>
-    VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
+impl<
+        NodeStorageImpl: NodeStorage + ?Sized + 'static,
+        PathFilterImpl: PathFilter + ?Sized + 'static,
+        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
+    > VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
 {
     pub fn new(
         storage: Arc<NodeStorageImpl>,
@@ -55,7 +58,7 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
         path_filter: Arc<PathFilterImpl>,
         settings: VL1Settings,
     ) -> Result<Arc<Self>, Box<dyn Error>> {
-        let mut service = VL1Service {
+        let mut service = Self {
             state: RwLock::new(VL1ServiceMutableState {
                 daemons: Vec::with_capacity(2),
                 udp_sockets: HashMap::with_capacity(8),
@@ -72,7 +75,7 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
             node_container: None,
         };
 
-        service.node_container.replace(Node::new(&service, &*service.storage, true, false)?);
+        service.node_container.replace(Node::new(&service, true, false)?);
         let service = Arc::new(service);
 
         let mut daemons = Vec::new();
@@ -186,8 +189,11 @@ impl<NodeStorageImpl: NodeStorage + 'static, PathFilterImpl: PathFilter + 'stati
     }
 }
 
-impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> UdpPacketHandler
-    for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
+impl<
+        NodeStorageImpl: NodeStorage + ?Sized + 'static,
+        PathFilterImpl: PathFilter + ?Sized + 'static,
+        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
+    > UdpPacketHandler for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
 {
     #[inline(always)]
     fn incoming_udp_packet(
@@ -209,9 +215,14 @@ impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl
     }
 }
 
-impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> HostSystem
-    for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
+impl<
+        NodeStorageImpl: NodeStorage + ?Sized + 'static,
+        PathFilterImpl: PathFilter + ?Sized + 'static,
+        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
+    > HostSystem for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
 {
+    type Storage = NodeStorageImpl;
+    type PathFilter = PathFilterImpl;
     type LocalSocket = crate::LocalSocket;
     type LocalInterface = crate::LocalInterface;
 
@@ -225,6 +236,16 @@ impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl
     #[inline]
     fn local_socket_is_valid(&self, socket: &Self::LocalSocket) -> bool {
         socket.is_valid()
+    }
+
+    #[inline(always)]
+    fn storage(&self) -> &Self::Storage {
+        self.storage.as_ref()
+    }
+
+    #[inline(always)]
+    fn path_filter(&self) -> &Self::PathFilter {
+        self.path_filter.as_ref()
     }
 
     #[inline]
@@ -306,8 +327,11 @@ impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl
     }
 }
 
-impl<NodeStorageImpl: NodeStorage, PathFilterImpl: PathFilter, InnerProtocolImpl: InnerProtocol> Drop
-    for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
+impl<
+        NodeStorageImpl: NodeStorage + ?Sized + 'static,
+        PathFilterImpl: PathFilter + ?Sized + 'static,
+        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
+    > Drop for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
 {
     fn drop(&mut self) {
         let mut state = self.state.write().unwrap();

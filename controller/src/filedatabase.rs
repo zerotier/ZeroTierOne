@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::fmt::Display;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -21,35 +20,6 @@ use crate::model::*;
 
 const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
 
-#[derive(Debug)]
-pub enum FileDatabaseError {
-    InvalidYaml(String),
-    IoError(String),
-}
-
-impl Display for FileDatabaseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidYaml(e) => f.write_str(format!("invalid YAML ({})", e).as_str()),
-            Self::IoError(e) => f.write_str(format!("I/O error ({})", e).as_str()),
-        }
-    }
-}
-
-impl Error for FileDatabaseError {}
-
-impl From<serde_yaml::Error> for FileDatabaseError {
-    fn from(e: serde_yaml::Error) -> Self {
-        Self::InvalidYaml(e.to_string())
-    }
-}
-
-impl From<zerotier_utils::tokio::io::Error> for FileDatabaseError {
-    fn from(e: zerotier_utils::tokio::io::Error) -> Self {
-        Self::IoError(e.to_string())
-    }
-}
-
 /// An in-filesystem database that permits live editing.
 ///
 /// A cache is maintained that contains the actual objects. When an object is live edited,
@@ -65,7 +35,7 @@ pub struct FileDatabase {
 // TODO: should cache at least hashes and detect changes in the filesystem live.
 
 impl FileDatabase {
-    pub async fn new<P: AsRef<Path>>(base_path: P) -> Result<Self, Box<dyn Error>> {
+    pub async fn new<P: AsRef<Path>>(base_path: P) -> Result<Self, Box<dyn Error + Send + Sync>> {
         let base_path: PathBuf = base_path.as_ref().into();
         let _ = fs::create_dir_all(&base_path).await?;
 
@@ -86,6 +56,11 @@ impl FileDatabase {
                     }
                 }
             })?);
+        let _ = watcher.configure(
+            notify::Config::default()
+                .with_compare_contents(true)
+                .with_poll_interval(std::time::Duration::from_secs(2)),
+        );
         watcher.watch(&base_path, RecursiveMode::Recursive)?;
 
         Ok(Self {
@@ -151,9 +126,7 @@ impl NodeStorage for FileDatabase {
 
 #[async_trait]
 impl Database for FileDatabase {
-    type Error = FileDatabaseError;
-
-    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Self::Error> {
+    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error + Send + Sync>> {
         let r = fs::read(self.network_path(id)).await;
         if let Ok(raw) = r {
             let mut network = serde_yaml::from_slice::<Network>(raw.as_slice())?;
@@ -166,7 +139,7 @@ impl Database for FileDatabase {
         }
     }
 
-    async fn save_network(&self, obj: Network) -> Result<(), Self::Error> {
+    async fn save_network(&self, obj: Network) -> Result<(), Box<dyn Error + Send + Sync>> {
         let base_network_path = self.network_path(obj.id);
         let _ = fs::create_dir_all(base_network_path.parent().unwrap()).await;
         //let _ = fs::write(base_network_path, to_json_pretty(&obj).as_bytes()).await?;
@@ -174,7 +147,7 @@ impl Database for FileDatabase {
         return Ok(());
     }
 
-    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Self::Error> {
+    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Box<dyn Error + Send + Sync>> {
         let mut members = Vec::new();
         let mut dir = fs::read_dir(self.base_path.join(network_id.to_string())).await?;
         while let Ok(Some(ent)) = dir.next_entry().await {
@@ -194,7 +167,7 @@ impl Database for FileDatabase {
         Ok(members)
     }
 
-    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Self::Error> {
+    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Box<dyn Error + Send + Sync>> {
         let r = fs::read(self.member_path(network_id, node_id)).await;
         if let Ok(raw) = r {
             let mut member = serde_yaml::from_slice::<Member>(raw.as_slice())?;
@@ -207,7 +180,7 @@ impl Database for FileDatabase {
         }
     }
 
-    async fn save_member(&self, obj: Member) -> Result<(), Self::Error> {
+    async fn save_member(&self, obj: Member) -> Result<(), Box<dyn Error + Send + Sync>> {
         let base_member_path = self.member_path(obj.network_id, obj.node_id);
         let _ = fs::create_dir_all(base_member_path.parent().unwrap()).await;
         //let _ = fs::write(base_member_path, to_json_pretty(&obj).as_bytes()).await?;
@@ -219,7 +192,7 @@ impl Database for FileDatabase {
         Some(self.change_sender.subscribe())
     }
 
-    async fn log_request(&self, obj: RequestLogItem) -> Result<(), Self::Error> {
+    async fn log_request(&self, obj: RequestLogItem) -> Result<(), Box<dyn Error + Send + Sync>> {
         println!("{}", obj.to_string());
         Ok(())
     }

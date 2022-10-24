@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use std::error::Error;
 
 use zerotier_network_hypervisor::vl1::{Address, InetAddress, NodeStorage};
 use zerotier_network_hypervisor::vl2::NetworkId;
@@ -17,14 +18,12 @@ pub enum Change {
 
 #[async_trait]
 pub trait Database: Sync + Send + NodeStorage + 'static {
-    type Error: std::error::Error + Send + 'static;
+    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error + Send + Sync>>;
+    async fn save_network(&self, obj: Network) -> Result<(), Box<dyn Error + Send + Sync>>;
 
-    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Self::Error>;
-    async fn save_network(&self, obj: Network) -> Result<(), Self::Error>;
-
-    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Self::Error>;
-    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Self::Error>;
-    async fn save_member(&self, obj: Member) -> Result<(), Self::Error>;
+    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Box<dyn Error + Send + Sync>>;
+    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Box<dyn Error + Send + Sync>>;
+    async fn save_member(&self, obj: Member) -> Result<(), Box<dyn Error + Send + Sync>>;
 
     /// Get a receiver that can be used to receive changes made to networks and members, if supported.
     ///
@@ -45,7 +44,11 @@ pub trait Database: Sync + Send + NodeStorage + 'static {
     ///
     /// The default trait implementation uses a brute force method. This should be reimplemented if a
     /// more efficient way is available.
-    async fn list_members_deauthorized_after(&self, network_id: NetworkId, cutoff: i64) -> Result<Vec<Address>, Self::Error> {
+    async fn list_members_deauthorized_after(
+        &self,
+        network_id: NetworkId,
+        cutoff: i64,
+    ) -> Result<Vec<Address>, Box<dyn Error + Send + Sync>> {
         let mut v = Vec::new();
         let members = self.list_members(network_id).await?;
         for a in members.iter() {
@@ -62,7 +65,7 @@ pub trait Database: Sync + Send + NodeStorage + 'static {
     ///
     /// The default trait implementation uses a brute force method. This should be reimplemented if a
     /// more efficient way is available.
-    async fn is_ip_assigned(&self, network_id: NetworkId, ip: &InetAddress) -> Result<bool, Self::Error> {
+    async fn is_ip_assigned(&self, network_id: NetworkId, ip: &InetAddress) -> Result<bool, Box<dyn Error + Send + Sync>> {
         let members = self.list_members(network_id).await?;
         for a in members.iter() {
             if let Some(m) = self.get_member(network_id, *a).await? {
@@ -74,5 +77,5 @@ pub trait Database: Sync + Send + NodeStorage + 'static {
         return Ok(false);
     }
 
-    async fn log_request(&self, obj: RequestLogItem) -> Result<(), Self::Error>;
+    async fn log_request(&self, obj: RequestLogItem) -> Result<(), Box<dyn Error + Send + Sync>>;
 }

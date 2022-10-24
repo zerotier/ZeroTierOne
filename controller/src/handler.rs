@@ -25,26 +25,26 @@ use crate::model::{AuthorizationResult, Member, RequestLogItem, CREDENTIAL_WINDO
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// ZeroTier VL2 network controller packet handler, answers VL2 netconf queries.
-pub struct Handler<DatabaseImpl: Database> {
-    inner: Arc<Inner<DatabaseImpl>>,
+pub struct Handler {
+    inner: Arc<Inner>,
 }
 
-struct Inner<DatabaseImpl: Database> {
-    service: RwLock<Weak<VL1Service<DatabaseImpl, Handler<DatabaseImpl>, Handler<DatabaseImpl>>>>,
+struct Inner {
+    service: RwLock<Weak<VL1Service<dyn Database, Handler, Handler>>>,
     reaper: Reaper,
     daemons: Mutex<Vec<tokio::task::JoinHandle<()>>>, // drop() aborts these
     runtime: tokio::runtime::Handle,
-    database: Arc<DatabaseImpl>,
+    database: Arc<dyn Database>,
     local_identity: Identity,
 }
 
-impl<DatabaseImpl: Database> Handler<DatabaseImpl> {
+impl Handler {
     /// Start an inner protocol handler answer ZeroTier VL2 network controller queries.
-    pub async fn new(database: Arc<DatabaseImpl>, runtime: tokio::runtime::Handle) -> Result<Arc<Self>, Box<dyn Error>> {
+    pub async fn new(database: Arc<dyn Database>, runtime: tokio::runtime::Handle) -> Result<Arc<Self>, Box<dyn Error>> {
         if let Some(local_identity) = database.load_node_identity() {
             assert!(local_identity.secret.is_some());
 
-            let inner = Arc::new(Inner::<DatabaseImpl> {
+            let inner = Arc::new(Inner {
                 service: RwLock::new(Weak::default()),
                 reaper: Reaper::new(&runtime),
                 daemons: Mutex::new(Vec::with_capacity(1)),
@@ -69,7 +69,7 @@ impl<DatabaseImpl: Database> Handler<DatabaseImpl> {
     /// won't actually do anything. The reference the handler holds is weak to prevent
     /// a circular reference, so if the VL1Service is dropped this must be called again to
     /// tell the controller handler about a new instance.
-    pub fn set_service(&self, service: &Arc<VL1Service<DatabaseImpl, Self, Self>>) {
+    pub fn set_service(&self, service: &Arc<VL1Service<dyn Database, Handler, Handler>>) {
         *self.inner.service.write().unwrap() = Arc::downgrade(service);
     }
 
@@ -98,9 +98,9 @@ impl<DatabaseImpl: Database> Handler<DatabaseImpl> {
 }
 
 // Default PathFilter implementations permit anything.
-impl<DatabaseImpl: Database> PathFilter for Handler<DatabaseImpl> {}
+impl PathFilter for Handler {}
 
-impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
+impl InnerProtocol for Handler {
     fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         _host_system: &HostSystemImpl,
@@ -245,7 +245,7 @@ impl<DatabaseImpl: Database> InnerProtocol for Handler<DatabaseImpl> {
     }
 }
 
-impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
+impl Inner {
     fn send_network_config(
         &self,
         peer: &Peer,
@@ -299,14 +299,14 @@ impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
         }
     }
 
-    async fn handle_change_notification(self: Arc<Self>, change: Change) {}
+    async fn handle_change_notification(self: Arc<Self>, _change: Change) {}
 
     async fn handle_network_config_request<HostSystemImpl: HostSystem + ?Sized>(
         self: &Arc<Self>,
         source_identity: &Identity,
         network_id: NetworkId,
         now: i64,
-    ) -> Result<(AuthorizationResult, Option<NetworkConfig>), DatabaseImpl::Error> {
+    ) -> Result<(AuthorizationResult, Option<NetworkConfig>), Box<dyn Error + Send + Sync>> {
         let network = self.database.get_network(network_id).await?;
         if network.is_none() {
             // TODO: send error
@@ -424,7 +424,7 @@ impl<DatabaseImpl: Database> Inner<DatabaseImpl> {
     }
 }
 
-impl<DatabaseImpl: Database> Drop for Inner<DatabaseImpl> {
+impl Drop for Inner {
     fn drop(&mut self) {
         for h in self.daemons.lock().unwrap().drain(..) {
             h.abort();

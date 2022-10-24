@@ -138,6 +138,8 @@ impl Peer {
     fn learn_path<HostSystemImpl: HostSystem + ?Sized>(&self, host_system: &HostSystemImpl, new_path: &Arc<Path>, time_ticks: i64) {
         let mut paths = self.paths.lock().unwrap();
 
+        // TODO: check path filter
+
         match &new_path.endpoint {
             Endpoint::IpUdp(new_ip) => {
                 // If this is an IpUdp endpoint, scan the existing paths and replace any that come from

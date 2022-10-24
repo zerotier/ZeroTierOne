@@ -141,7 +141,7 @@ fn troo() -> bool {
 
 impl Network {
     /// Check member IP assignments and return 'true' if IP assignments were created or modified.
-    pub async fn check_zt_ip_assignments<DatabaseImpl: Database>(&self, database: &DatabaseImpl, member: &mut Member) -> bool {
+    pub async fn check_zt_ip_assignments<DatabaseImpl: Database + ?Sized>(&self, database: &DatabaseImpl, member: &mut Member) -> bool {
         let mut modified = false;
 
         if self.v4_assign_mode.zt {
