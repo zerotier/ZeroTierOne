@@ -35,6 +35,7 @@
 #include "NetworkController.hpp"
 #include "Hashtable.hpp"
 #include "Bond.hpp"
+#include "SelfAwareness.hpp"
 
 // Bit mask for "expecting reply" hash
 #define ZT_EXPECTING_REPLIES_BUCKET_MASK1 255
@@ -186,6 +187,8 @@ public:
 	std::vector<World> moons() const;
 
 	inline const Identity &identity() const { return _RR.identity; }
+
+	inline const std::vector<InetAddress> SurfaceAddresses() const { return _RR.sa->whoami(); }
 
 	inline Bond *bondController() const { return _RR.bc; }
 
