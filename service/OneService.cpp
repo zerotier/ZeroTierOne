@@ -1560,6 +1560,15 @@ public:
 					}
 					settings["listeningOn"] = boundAddrArray;
 
+					std::vector<InetAddress> surfaceAddrs = _node-> SurfaceAddresses();
+					auto surfaceAddrArray = json::array();
+					for (int i = 0; i < surfaceAddrs.size(); i++) {
+						char ipBuf[64] = { 0 };
+						surfaceAddrs[i].toString(ipBuf);
+						surfaceAddrArray.push_back(ipBuf);
+					}
+					settings["surfaceAddresses"] = surfaceAddrArray;
+
 #ifdef ZT_USE_MINIUPNPC
 					settings["portMappingEnabled"] = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 #else
