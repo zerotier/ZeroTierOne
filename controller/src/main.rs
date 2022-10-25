@@ -34,8 +34,7 @@ async fn run(database: Arc<dyn Database>, runtime: &Runtime) -> i32 {
             let svc = svc.unwrap();
             svc.node().init_default_roots();
 
-            handler.set_service(&svc);
-            handler.start_change_watcher().await;
+            handler.set_service(&svc).await;
 
             // Wait for kill signal on Unix-like platforms.
             #[cfg(unix)]
@@ -47,6 +46,13 @@ async fn run(database: Arc<dyn Database>, runtime: &Runtime) -> i32 {
                 while !term.load(Ordering::Relaxed) {
                     std::thread::sleep(Duration::from_secs(1));
                 }
+            }
+
+            #[cfg(windows)]
+            {
+                // TODO: if anyone wants to use this on Windows you'll need to make it a service or wait
+                // for a stop signal or soemthing here.
+                todo!();
             }
 
             println!("Terminate signal received, shutting down...");

@@ -62,16 +62,9 @@ impl Controller {
     /// won't actually do anything. The reference the handler holds is weak to prevent
     /// a circular reference, so if the VL1Service is dropped this must be called again to
     /// tell the controller handler about a new instance.
-    pub fn set_service(&self, service: &Arc<VL1Service<dyn Database, Self, Self>>) {
+    pub async fn set_service(&self, service: &Arc<VL1Service<dyn Database, Self, Self>>) {
         *self.service.write().unwrap() = Arc::downgrade(service);
-    }
 
-    /// Start a change watcher to respond to changes detected by the database.
-    ///
-    /// This should only be called once, though multiple calls won't do anything but create
-    /// unnecessary async tasks. If the database being used does not support changes, this
-    /// does nothing.
-    pub async fn start_change_watcher(&self) {
         if let Some(cw) = self.database.changes().await.map(|mut ch| {
             let self2 = self.self_ref.upgrade().unwrap();
             self.runtime.spawn(async move {
@@ -89,6 +82,7 @@ impl Controller {
         }
     }
 
+    /// Compose and send network configuration packet.
     fn send_network_config(
         &self,
         peer: &Peer,
@@ -142,9 +136,14 @@ impl Controller {
         }
     }
 
+    /// Called when the DB informs us of a change.
     async fn handle_change_notification(self: Arc<Self>, _change: Change) {}
 
-    async fn handle_network_config_request(
+    /// Attempt to create a network configuration and return the result.
+    ///
+    /// An error is only returned if a database or other unusual error occurs. Otherwise a rejection
+    /// reason is returned with None or an acceptance reason with a network configuration is returned.
+    async fn get_network_config(
         self: &Arc<Self>,
         source_identity: &Identity,
         network_id: NetworkId,
@@ -335,12 +334,12 @@ impl InnerProtocol for Controller {
                         let node_fingerprint = Blob::from(peer.identity.fingerprint);
                         let now = ms_since_epoch();
 
-                        let result = match self2.handle_network_config_request(&peer.identity, network_id, now).await {
+                        let (result, config) = match self2.get_network_config(&peer.identity, network_id, now).await {
                             Result::Ok((result, Some(config))) => {
                                 self2.send_network_config(peer.as_ref(), &config, Some(message_id));
-                                result
+                                (result, Some(config))
                             }
-                            Result::Ok((result, None)) => result,
+                            Result::Ok((result, None)) => (result, None),
                             Result::Err(_) => {
                                 // TODO: log invalid request or internal error
                                 return;
@@ -363,6 +362,7 @@ impl InnerProtocol for Controller {
                                 source_remote_endpoint,
                                 source_hops,
                                 result,
+                                config,
                             })
                             .await;
                     }),

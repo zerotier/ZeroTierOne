@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::{Address, Endpoint};
-use zerotier_network_hypervisor::vl2::NetworkId;
+use zerotier_network_hypervisor::vl2::{NetworkConfig, NetworkId};
 use zerotier_utils::blob::Blob;
 
 /// A complete network with all member configuration information for import/export or blob storage.
@@ -111,6 +111,8 @@ pub struct RequestLogItem {
     pub source_hops: u8,
     #[serde(rename = "r")]
     pub result: AuthorizationResult,
+    #[serde(rename = "nc")]
+    pub config: Option<NetworkConfig>,
 }
 
 impl ToString for RequestLogItem {
