@@ -8,7 +8,7 @@ use clap::{Arg, Command};
 
 use zerotier_network_controller::database::Database;
 use zerotier_network_controller::filedatabase::FileDatabase;
-use zerotier_network_controller::handler::Handler;
+use zerotier_network_controller::Controller;
 
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 use zerotier_utils::exitcode;
@@ -16,7 +16,7 @@ use zerotier_utils::tokio::runtime::Runtime;
 use zerotier_vl1_service::VL1Service;
 
 async fn run(database: Arc<dyn Database>, runtime: &Runtime) -> i32 {
-    let handler = Handler::new(database.clone(), runtime.handle().clone()).await;
+    let handler = Controller::new(database.clone(), runtime.handle().clone()).await;
     if handler.is_err() {
         eprintln!("FATAL: error initializing handler: {}", handler.err().unwrap().to_string());
         exitcode::ERR_CONFIG

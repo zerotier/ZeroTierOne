@@ -25,7 +25,7 @@ use crate::model::{AuthorizationResult, Member, RequestLogItem, CREDENTIAL_WINDO
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// ZeroTier VL2 network controller packet handler, answers VL2 netconf queries.
-pub struct Handler {
+pub struct Controller {
     self_ref: Weak<Self>,
     service: RwLock<Weak<VL1Service<dyn Database, Self, Self>>>,
     reaper: Reaper,
@@ -35,7 +35,7 @@ pub struct Handler {
     local_identity: Identity,
 }
 
-impl Handler {
+impl Controller {
     /// Start an inner protocol handler answer ZeroTier VL2 network controller queries.
     pub async fn new(database: Arc<dyn Database>, runtime: tokio::runtime::Handle) -> Result<Arc<Self>, Box<dyn Error>> {
         if let Some(local_identity) = database.load_node_identity() {
@@ -88,155 +88,7 @@ impl Handler {
             self.daemons.lock().unwrap().push(cw);
         }
     }
-}
 
-// Default PathFilter implementations permit anything.
-impl PathFilter for Handler {}
-
-impl InnerProtocol for Handler {
-    fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
-        &self,
-        _: &HostSystemImpl,
-        _: &Node,
-        source: &Arc<Peer>,
-        source_path: &Arc<Path>,
-        source_hops: u8,
-        message_id: u64,
-        verb: u8,
-        payload: &PacketBuffer,
-        mut cursor: usize,
-    ) -> PacketHandlerResult {
-        match verb {
-            protocol::verbs::VL2_VERB_NETWORK_CONFIG_REQUEST => {
-                let network_id = payload.read_u64(&mut cursor);
-                if network_id.is_err() {
-                    return PacketHandlerResult::Error;
-                }
-                let network_id = NetworkId::from_u64(network_id.unwrap());
-                if network_id.is_none() {
-                    return PacketHandlerResult::Error;
-                }
-                let network_id = network_id.unwrap();
-
-                let meta_data = if (cursor + 2) < payload.len() {
-                    let meta_data_len = payload.read_u16(&mut cursor);
-                    if meta_data_len.is_err() {
-                        return PacketHandlerResult::Error;
-                    }
-                    if let Ok(d) = payload.read_bytes(meta_data_len.unwrap() as usize, &mut cursor) {
-                        let d = Dictionary::from_bytes(d);
-                        if d.is_none() {
-                            return PacketHandlerResult::Error;
-                        }
-                        d.unwrap()
-                    } else {
-                        return PacketHandlerResult::Error;
-                    }
-                } else {
-                    Dictionary::new()
-                };
-
-                /*
-                let (have_revision, have_timestamp) = if (cursor + 16) <= payload.len() {
-                    let r = payload.read_u64(&mut cursor);
-                    let t = payload.read_u64(&mut cursor);
-                    if r.is_err() || t.is_err() {
-                        return PacketHandlerResult::Error;
-                    }
-                    (Some(r.unwrap()), Some(t.unwrap()))
-                } else {
-                    (None, None)
-                };
-                */
-
-                // Launch handler as an async background task.
-                let (self2, peer, source_remote_endpoint) =
-                    (self.self_ref.upgrade().unwrap(), source.clone(), source_path.endpoint.clone());
-                self.reaper.add(
-                    self.runtime.spawn(async move {
-                        let node_id = peer.identity.address;
-                        let node_fingerprint = Blob::from(peer.identity.fingerprint);
-                        let now = ms_since_epoch();
-
-                        let result = match self2.handle_network_config_request(&peer.identity, network_id, now).await {
-                            Result::Ok((result, Some(config))) => {
-                                self2.send_network_config(peer.as_ref(), &config, Some(message_id));
-                                result
-                            }
-                            Result::Ok((result, None)) => result,
-                            Result::Err(_) => {
-                                // TODO: log invalid request or internal error
-                                return;
-                            }
-                        };
-
-                        let _ = self2
-                            .database
-                            .log_request(RequestLogItem {
-                                network_id,
-                                node_id,
-                                node_fingerprint,
-                                controller_node_id: self2.local_identity.address,
-                                metadata: if meta_data.is_empty() {
-                                    Vec::new()
-                                } else {
-                                    meta_data.to_bytes()
-                                },
-                                timestamp: now,
-                                source_remote_endpoint,
-                                source_hops,
-                                result,
-                            })
-                            .await;
-                    }),
-                    Instant::now().checked_add(REQUEST_TIMEOUT).unwrap(),
-                );
-
-                PacketHandlerResult::Ok
-            }
-            _ => PacketHandlerResult::NotHandled,
-        }
-    }
-
-    fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
-        &self,
-        _host_system: &HostSystemImpl,
-        _node: &Node,
-        _source: &Arc<Peer>,
-        _source_path: &Arc<Path>,
-        _source_hops: u8,
-        _message_id: u64,
-        _in_re_verb: u8,
-        _in_re_message_id: u64,
-        _error_code: u8,
-        _payload: &PacketBuffer,
-        _cursor: usize,
-    ) -> PacketHandlerResult {
-        PacketHandlerResult::NotHandled
-    }
-
-    fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
-        &self,
-        _host_system: &HostSystemImpl,
-        _node: &Node,
-        _source: &Arc<Peer>,
-        _source_path: &Arc<Path>,
-        _source_hops: u8,
-        _message_id: u64,
-        _in_re_verb: u8,
-        _in_re_message_id: u64,
-        _payload: &PacketBuffer,
-        _cursor: usize,
-    ) -> PacketHandlerResult {
-        PacketHandlerResult::NotHandled
-    }
-
-    fn should_respond_to(&self, _: &Identity) -> bool {
-        true
-    }
-}
-
-impl Handler {
     fn send_network_config(
         &self,
         peer: &Peer,
@@ -415,7 +267,153 @@ impl Handler {
     }
 }
 
-impl Drop for Handler {
+// Default PathFilter implementations permit anything.
+impl PathFilter for Controller {}
+
+impl InnerProtocol for Controller {
+    fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
+        &self,
+        _: &HostSystemImpl,
+        _: &Node,
+        source: &Arc<Peer>,
+        source_path: &Arc<Path>,
+        source_hops: u8,
+        message_id: u64,
+        verb: u8,
+        payload: &PacketBuffer,
+        mut cursor: usize,
+    ) -> PacketHandlerResult {
+        match verb {
+            protocol::verbs::VL2_VERB_NETWORK_CONFIG_REQUEST => {
+                let network_id = payload.read_u64(&mut cursor);
+                if network_id.is_err() {
+                    return PacketHandlerResult::Error;
+                }
+                let network_id = NetworkId::from_u64(network_id.unwrap());
+                if network_id.is_none() {
+                    return PacketHandlerResult::Error;
+                }
+                let network_id = network_id.unwrap();
+
+                let meta_data = if (cursor + 2) < payload.len() {
+                    let meta_data_len = payload.read_u16(&mut cursor);
+                    if meta_data_len.is_err() {
+                        return PacketHandlerResult::Error;
+                    }
+                    if let Ok(d) = payload.read_bytes(meta_data_len.unwrap() as usize, &mut cursor) {
+                        let d = Dictionary::from_bytes(d);
+                        if d.is_none() {
+                            return PacketHandlerResult::Error;
+                        }
+                        d.unwrap()
+                    } else {
+                        return PacketHandlerResult::Error;
+                    }
+                } else {
+                    Dictionary::new()
+                };
+
+                /*
+                let (have_revision, have_timestamp) = if (cursor + 16) <= payload.len() {
+                    let r = payload.read_u64(&mut cursor);
+                    let t = payload.read_u64(&mut cursor);
+                    if r.is_err() || t.is_err() {
+                        return PacketHandlerResult::Error;
+                    }
+                    (Some(r.unwrap()), Some(t.unwrap()))
+                } else {
+                    (None, None)
+                };
+                */
+
+                // Launch handler as an async background task.
+                let (self2, peer, source_remote_endpoint) =
+                    (self.self_ref.upgrade().unwrap(), source.clone(), source_path.endpoint.clone());
+                self.reaper.add(
+                    self.runtime.spawn(async move {
+                        let node_id = peer.identity.address;
+                        let node_fingerprint = Blob::from(peer.identity.fingerprint);
+                        let now = ms_since_epoch();
+
+                        let result = match self2.handle_network_config_request(&peer.identity, network_id, now).await {
+                            Result::Ok((result, Some(config))) => {
+                                self2.send_network_config(peer.as_ref(), &config, Some(message_id));
+                                result
+                            }
+                            Result::Ok((result, None)) => result,
+                            Result::Err(_) => {
+                                // TODO: log invalid request or internal error
+                                return;
+                            }
+                        };
+
+                        let _ = self2
+                            .database
+                            .log_request(RequestLogItem {
+                                network_id,
+                                node_id,
+                                node_fingerprint,
+                                controller_node_id: self2.local_identity.address,
+                                metadata: if meta_data.is_empty() {
+                                    Vec::new()
+                                } else {
+                                    meta_data.to_bytes()
+                                },
+                                timestamp: now,
+                                source_remote_endpoint,
+                                source_hops,
+                                result,
+                            })
+                            .await;
+                    }),
+                    Instant::now().checked_add(REQUEST_TIMEOUT).unwrap(),
+                );
+
+                PacketHandlerResult::Ok
+            }
+            _ => PacketHandlerResult::NotHandled,
+        }
+    }
+
+    fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
+        &self,
+        _host_system: &HostSystemImpl,
+        _node: &Node,
+        _source: &Arc<Peer>,
+        _source_path: &Arc<Path>,
+        _source_hops: u8,
+        _message_id: u64,
+        _in_re_verb: u8,
+        _in_re_message_id: u64,
+        _error_code: u8,
+        _payload: &PacketBuffer,
+        _cursor: usize,
+    ) -> PacketHandlerResult {
+        PacketHandlerResult::NotHandled
+    }
+
+    fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
+        &self,
+        _host_system: &HostSystemImpl,
+        _node: &Node,
+        _source: &Arc<Peer>,
+        _source_path: &Arc<Path>,
+        _source_hops: u8,
+        _message_id: u64,
+        _in_re_verb: u8,
+        _in_re_message_id: u64,
+        _payload: &PacketBuffer,
+        _cursor: usize,
+    ) -> PacketHandlerResult {
+        PacketHandlerResult::NotHandled
+    }
+
+    fn should_respond_to(&self, _: &Identity) -> bool {
+        true
+    }
+}
+
+impl Drop for Controller {
     fn drop(&mut self) {
         for h in self.daemons.lock().unwrap().drain(..) {
             h.abort();

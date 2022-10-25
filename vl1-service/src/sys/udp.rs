@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 #[allow(unused_imports)]
 use std::mem::{size_of, transmute, MaybeUninit};
 #[allow(unused_imports)]
@@ -174,10 +174,10 @@ impl BoundUdpPort {
     /// The caller can check the 'sockets' member variable after calling to determine which if any bindings were
     /// successful. Any errors that occurred are returned as tuples of (interface, address, error). The second vector
     /// returned contains newly bound sockets.
-    pub fn update_bindings<UdpPacketHandlerImpl: UdpPacketHandler>(
+    pub fn update_bindings<UdpPacketHandlerImpl: UdpPacketHandler + ?Sized>(
         &mut self,
-        interface_prefix_blacklist: &Vec<String>,
-        cidr_blacklist: &Vec<InetAddress>,
+        interface_prefix_blacklist: &HashSet<String>,
+        cidr_blacklist: &HashSet<InetAddress>,
         buffer_pool: &Arc<PacketBufferPool>,
         handler: &Arc<UdpPacketHandlerImpl>,
     ) -> Vec<(LocalInterface, InetAddress, std::io::Error)> {
@@ -200,7 +200,7 @@ impl BoundUdpPort {
                     address.scope(),
                     IpScope::Global | IpScope::PseudoPrivate | IpScope::Private | IpScope::Shared
                 )
-                && !interface_prefix_blacklist.iter().any(|pfx| interface_str.starts_with(pfx.as_str()))
+                && !interface_prefix_blacklist.iter().any(|pfx| interface_str.starts_with(pfx))
                 && !cidr_blacklist.iter().any(|r| address.is_within(r))
                 && !ipv6::is_ipv6_temporary(interface_str.as_str(), address)
             {

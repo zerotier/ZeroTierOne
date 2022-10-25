@@ -1,5 +1,7 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::InetAddress;
@@ -8,7 +10,7 @@ use zerotier_network_hypervisor::vl1::InetAddress;
 #[serde(default)]
 pub struct VL1Settings {
     /// Primary ZeroTier port that is always bound, default is 9993.
-    pub fixed_ports: Vec<u16>,
+    pub fixed_ports: HashSet<u16>,
 
     /// Number of additional random ports to bind.
     pub random_port_count: usize,
@@ -17,10 +19,10 @@ pub struct VL1Settings {
     pub port_mapping: bool,
 
     /// Interface name prefix blacklist for local bindings (not remote IPs).
-    pub interface_prefix_blacklist: Vec<String>,
+    pub interface_prefix_blacklist: HashSet<String>,
 
     /// IP/bits CIDR blacklist for local bindings (not remote IPs).
-    pub cidr_blacklist: Vec<InetAddress>,
+    pub cidr_blacklist: HashSet<InetAddress>,
 }
 
 impl VL1Settings {
@@ -38,11 +40,11 @@ impl VL1Settings {
 impl Default for VL1Settings {
     fn default() -> Self {
         Self {
-            fixed_ports: vec![9993],
+            fixed_ports: HashSet::from([9993u16]),
             random_port_count: 5,
             port_mapping: true,
             interface_prefix_blacklist: Self::DEFAULT_PREFIX_BLACKLIST.iter().map(|s| s.to_string()).collect(),
-            cidr_blacklist: Vec::new(),
+            cidr_blacklist: HashSet::new(),
         }
     }
 }
