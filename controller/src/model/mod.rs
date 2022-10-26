@@ -11,7 +11,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::{Address, Endpoint};
-use zerotier_network_hypervisor::vl2::{NetworkConfig, NetworkId};
+use zerotier_network_hypervisor::vl2::networkconfig::NetworkConfig;
+use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::blob::Blob;
 
 /// A complete network with all member configuration information for import/export or blob storage.
@@ -78,6 +79,14 @@ impl AuthorizationResult {
             Self::ApprovedViaSSO => "as",
             Self::ApprovedViaToken => "at",
             Self::ApprovedOnPublicNetwork => "ap",
+        }
+    }
+
+    /// Returns true if this result is one of the 'approved' result types.
+    pub fn approved(&self) -> bool {
+        match self {
+            Self::Approved | Self::ApprovedViaSSO | Self::ApprovedViaToken | Self::ApprovedOnPublicNetwork => true,
+            _ => false,
         }
     }
 }

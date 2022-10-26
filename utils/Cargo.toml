@@ -19,3 +19,4 @@ winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
 
 [target."cfg(not(windows))".dependencies]
 libc = "^0"
+signal-hook = "^0"

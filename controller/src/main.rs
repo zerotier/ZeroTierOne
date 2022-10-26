@@ -1,8 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
 
 use clap::{Arg, Command};
 
@@ -34,27 +32,9 @@ async fn run(database: Arc<dyn Database>, runtime: &Runtime) -> i32 {
             let svc = svc.unwrap();
             svc.node().init_default_roots();
 
-            handler.set_service(&svc).await;
+            handler.start(&svc).await;
 
-            // Wait for kill signal on Unix-like platforms.
-            #[cfg(unix)]
-            {
-                let term = Arc::new(AtomicBool::new(false));
-                let _ = signal_hook::flag::register(libc::SIGINT, term.clone());
-                let _ = signal_hook::flag::register(libc::SIGTERM, term.clone());
-                let _ = signal_hook::flag::register(libc::SIGQUIT, term.clone());
-                while !term.load(Ordering::Relaxed) {
-                    std::thread::sleep(Duration::from_secs(1));
-                }
-            }
-
-            #[cfg(windows)]
-            {
-                // TODO: if anyone wants to use this on Windows you'll need to make it a service or wait
-                // for a stop signal or soemthing here.
-                todo!();
-            }
-
+            zerotier_utils::wait_for_process_abort();
             println!("Terminate signal received, shutting down...");
             exitcode::OK
         } else {
@@ -84,7 +64,7 @@ fn main() {
                 .takes_value(true)
                 .forbid_empty_values(true)
                 .value_name("path")
-                .help(Some("Connect to postgres with parameters in JSON file"))
+                .help(Some("Connect to postgres with parameters in YAML file"))
                 .required_unless_present_any(&REQUIRE_ONE_OF_ARGS),
         )
         .version(format!("{}.{}.{}", VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION).as_str())

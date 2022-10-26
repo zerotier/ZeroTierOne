@@ -1,6 +1,5 @@
 use std::io::Write;
 
-use crate::vl1::identity;
 use crate::vl1::identity::Identity;
 use crate::vl1::Address;
 use crate::vl2::NetworkId;
@@ -20,22 +19,14 @@ pub struct CertificateOfMembership {
     pub timestamp: i64,
     pub max_delta: i64,
     pub issued_to: Address,
-    pub issued_to_fingerprint: Blob<{ identity::IDENTITY_FINGERPRINT_SIZE }>,
-    pub signature: ArrayVec<u8, { identity::IDENTITY_MAX_SIGNATURE_SIZE }>,
-    pub version: u8,
+    pub issued_to_fingerprint: Blob<{ Identity::FINGERPRINT_SIZE }>,
+    pub signature: ArrayVec<u8, { Identity::MAX_SIGNATURE_SIZE }>,
 }
 
 impl CertificateOfMembership {
     /// Create a new signed certificate of membership.
     /// None is returned if an error occurs, such as the issuer missing its secrets.
-    pub fn new(
-        issuer: &Identity,
-        network_id: NetworkId,
-        issued_to: &Identity,
-        timestamp: i64,
-        max_delta: i64,
-        legacy_v1: bool,
-    ) -> Option<Self> {
+    pub fn new(issuer: &Identity, network_id: NetworkId, issued_to: &Identity, timestamp: i64, max_delta: i64) -> Option<Self> {
         let mut com = CertificateOfMembership {
             network_id,
             timestamp,
@@ -43,26 +34,18 @@ impl CertificateOfMembership {
             issued_to: issued_to.address,
             issued_to_fingerprint: Blob::default(),
             signature: ArrayVec::new(),
-            version: 0,
         };
-        if legacy_v1 {
-            com.issued_to_fingerprint = Blob::from(Self::v1_proto_issued_to_fingerprint(issued_to, Some(issuer.address)));
-            com.version = 1;
-            if let Some(signature) = issuer.sign(&com.v1_proto_get_qualifier_bytes(), true) {
-                com.signature = signature;
-                Some(com)
-            } else {
-                None
-            }
+
+        com.issued_to_fingerprint = Blob::from(Self::v1_proto_issued_to_fingerprint(issued_to, Some(issuer.address)));
+        if let Some(signature) = issuer.sign(&com.v1_proto_get_qualifier_bytes(), true) {
+            com.signature = signature;
+            Some(com)
         } else {
-            com.issued_to_fingerprint = Blob::from(issued_to.fingerprint);
-            com.version = 2;
-            todo!()
+            None
         }
     }
 
     fn v1_proto_get_qualifier_bytes(&self) -> [u8; 168] {
-        assert_eq!(self.version, 1);
         let mut q = [0u64; 21];
 
         q[0] = 0;
@@ -109,25 +92,21 @@ impl CertificateOfMembership {
 
     /// Get this certificate of membership in byte encoded format.
     pub fn to_bytes(&self) -> Option<Vec<u8>> {
-        if self.version == 1 {
-            if self.signature.len() == 96 {
-                let mut v: Vec<u8> = Vec::with_capacity(3 + 168 + 5 + 96);
-                v.push(1); // version byte from v1 protocol
-                v.push(0);
-                v.push(7); // 7 qualifiers, big-endian 16-bit
-                let _ = v.write_all(&self.v1_proto_get_qualifier_bytes());
-                let _ = v.write_all(&self.issued_to_fingerprint.as_bytes()[32..38]); // issuer address
-                let _ = v.write_all(self.signature.as_bytes());
-                return Some(v);
-            }
-        } else if self.version == 2 {
-            todo!()
+        if self.signature.len() == 96 {
+            let mut v: Vec<u8> = Vec::with_capacity(3 + 168 + 5 + 96);
+            v.push(1); // version byte from v1 protocol
+            v.push(0);
+            v.push(7); // 7 qualifiers, big-endian 16-bit
+            let _ = v.write_all(&self.v1_proto_get_qualifier_bytes());
+            let _ = v.write_all(&self.issued_to_fingerprint.as_bytes()[32..38]); // issuer address
+            let _ = v.write_all(self.signature.as_bytes());
+            return Some(v);
         }
         return None;
     }
 
     /// Decode a V1 legacy format certificate of membership in byte format.
-    pub fn v1_proto_from_bytes(mut b: &[u8]) -> Result<Self, InvalidParameterError> {
+    pub fn from_bytes(mut b: &[u8]) -> Result<Self, InvalidParameterError> {
         if b.len() <= 3 || b[0] != 1 {
             return Err(InvalidParameterError("version mismatch"));
         }
@@ -185,20 +164,15 @@ impl CertificateOfMembership {
                 s.push_slice(&b[..96]);
                 s
             },
-            version: 1,
         })
     }
 
     /// Verify this certificate of membership.
     pub fn verify(self, issuer: &Identity, expect_issued_to: &Identity) -> Option<Verified<Self>> {
-        if self.version == 1 {
-            if Self::v1_proto_issued_to_fingerprint(expect_issued_to, None).eq(&self.issued_to_fingerprint.as_bytes()[..32]) {
-                if issuer.verify(&self.v1_proto_get_qualifier_bytes(), self.signature.as_bytes()) {
-                    return Some(Verified(self));
-                }
+        if Self::v1_proto_issued_to_fingerprint(expect_issued_to, None).eq(&self.issued_to_fingerprint.as_bytes()[..32]) {
+            if issuer.verify(&self.v1_proto_get_qualifier_bytes(), self.signature.as_bytes()) {
+                return Some(Verified(self));
             }
-        } else if self.version == 2 {
-            todo!()
         }
         return None;
     }

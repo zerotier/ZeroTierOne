@@ -157,6 +157,7 @@ impl Identity {
         + P384_ECDSA_SIGNATURE_SIZE;
 
     pub const FINGERPRINT_SIZE: usize = IDENTITY_FINGERPRINT_SIZE;
+    pub const MAX_SIGNATURE_SIZE: usize = IDENTITY_MAX_SIGNATURE_SIZE;
 
     const ALGORITHM_X25519: u8 = 0x01;
     const ALGORITHM_EC_NIST_P384: u8 = 0x02;
@@ -318,6 +319,15 @@ impl Identity {
         zt_address_derivation_work_function(&mut digest);
 
         return digest[0] < IDENTITY_POW_THRESHOLD && Address::from_bytes(&digest[59..64]).map_or(false, |a| a == self.address);
+    }
+
+    /// Returns true if this identity was upgraded from another older version.
+    pub fn is_upgraded_from(&self, other: &Identity) -> bool {
+        self.address == other.address
+            && self.x25519 == other.x25519
+            && self.ed25519 == other.ed25519
+            && self.p384.is_some()
+            && other.p384.is_none()
     }
 
     /// Perform ECDH key agreement, returning a shared secret or None on error.

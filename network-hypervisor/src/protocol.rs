@@ -50,6 +50,9 @@ pub const PROTOCOL_VERSION: u8 = 20;
 /// We could probably push it back to 8 or 9 with some added support for sending Salsa/Poly packets.
 pub const PROTOCOL_VERSION_MIN: u8 = 11;
 
+/// V2 is this protocol version or higher.
+pub const PROTOCOL_VERSION_V2: u8 = 20;
+
 /// Size of a pooled packet buffer.
 pub const PACKET_BUFFER_SIZE: usize = 16384;
 
@@ -564,6 +567,10 @@ pub(crate) const PEER_EXPIRATION_TIME: i64 = (PEER_HELLO_INTERVAL_MAX * 2) + 100
 
 /// Proof of work difficulty (threshold) for identity generation.
 pub(crate) const IDENTITY_POW_THRESHOLD: u8 = 17;
+
+/// Maximum number of key/value pairs in a single Tag credential.
+/// (This is for V2 only. In V1 tag credentials can have only one pair.)
+pub(crate) const MAX_TAG_KEY_VALUE_PAIRS: usize = 128;
 
 #[cfg(test)]
 mod tests {

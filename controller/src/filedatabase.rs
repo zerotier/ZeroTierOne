@@ -86,13 +86,13 @@ impl FileDatabase {
     }
 
     fn network_path(&self, network_id: NetworkId) -> PathBuf {
-        self.base_path.join(format!("n{:06x}", network_id.network_no())).join("config.yaml")
+        self.base_path.join(format!("N{:06x}", network_id.network_no())).join("config.yaml")
     }
 
     fn member_path(&self, network_id: NetworkId, member_id: Address) -> PathBuf {
         self.base_path
-            .join(format!("n{:06x}", network_id.network_no()))
-            .join(format!("m{}.yaml", member_id.to_string()))
+            .join(format!("N{:06x}", network_id.network_no()))
+            .join(format!("M{}.yaml", member_id.to_string()))
     }
 }
 
@@ -154,7 +154,7 @@ impl Database for FileDatabase {
             let osname = ent.file_name();
             let name = osname.to_string_lossy();
             if name.len() == (zerotier_network_hypervisor::protocol::ADDRESS_SIZE_STRING + 6)
-                && name.starts_with("m")
+                && name.starts_with("M")
                 && name.ends_with(".yaml")
             {
                 if let Ok(member_address) = u64::from_str_radix(&name[1..11], 16) {

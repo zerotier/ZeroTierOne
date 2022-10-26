@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::InetAddress;
 use zerotier_network_hypervisor::vl2::networkconfig::IpRoute;
-use zerotier_network_hypervisor::vl2::{NetworkId, Rule};
+use zerotier_network_hypervisor::vl2::rule::Rule;
+use zerotier_network_hypervisor::vl2::NetworkId;
 
 use crate::database::Database;
 use crate::model::{Member, ObjectType};
@@ -101,6 +102,11 @@ pub struct Network {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "credentialTtl")]
     pub credential_ttl: Option<i64>,
+
+    /// Minimum supported ZeroTier protocol version for this network (default: undefined, up to members)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "minSupportedVersion")]
+    pub min_supported_version: Option<u32>,
 
     /// MTU inside the virtual network, default of 2800 is used if not set.
     pub mtu: Option<u16>,

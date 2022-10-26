@@ -11,7 +11,6 @@ use crate::model::*;
 /// Database change relevant to the controller and that was NOT initiated by the controller.
 #[derive(Clone)]
 pub enum Change {
-    NetworkDeleted(NetworkId),
     MemberAuthorized(NetworkId, Address),
     MemberDeauthorized(NetworkId, Address),
 }

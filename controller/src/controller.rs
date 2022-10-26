@@ -1,5 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::collections::HashMap;
 use std::error::Error;
 use std::sync::{Arc, Mutex, RwLock, Weak};
 
@@ -8,7 +9,9 @@ use tokio::time::{Duration, Instant};
 use zerotier_network_hypervisor::protocol;
 use zerotier_network_hypervisor::protocol::{PacketBuffer, DEFAULT_MULTICAST_LIMIT, ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU};
 use zerotier_network_hypervisor::vl1::{HostSystem, Identity, InnerProtocol, Node, PacketHandlerResult, Path, PathFilter, Peer};
-use zerotier_network_hypervisor::vl2::{CertificateOfMembership, CertificateOfOwnership, NetworkConfig, NetworkId, Tag};
+use zerotier_network_hypervisor::vl2;
+use zerotier_network_hypervisor::vl2::networkconfig::*;
+use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::blob::Blob;
 use zerotier_utils::buffer::OutOfBoundsError;
 use zerotier_utils::dictionary::Dictionary;
@@ -37,6 +40,8 @@ pub struct Controller {
 
 impl Controller {
     /// Start an inner protocol handler answer ZeroTier VL2 network controller queries.
+    ///
+    /// The start() method must be called once the service this will run within is also created.
     pub async fn new(database: Arc<dyn Database>, runtime: tokio::runtime::Handle) -> Result<Arc<Self>, Box<dyn Error>> {
         if let Some(local_identity) = database.load_node_identity() {
             assert!(local_identity.secret.is_some());
@@ -56,13 +61,13 @@ impl Controller {
         }
     }
 
-    /// Set the service and HostSystem implementation for this controller.
+    /// Set the service and HostSystem implementation for this controller and start daemons.
     ///
     /// This must be called once the service that uses this handler is up or the controller
     /// won't actually do anything. The reference the handler holds is weak to prevent
     /// a circular reference, so if the VL1Service is dropped this must be called again to
     /// tell the controller handler about a new instance.
-    pub async fn set_service(&self, service: &Arc<VL1Service<dyn Database, Self, Self>>) {
+    pub async fn start(&self, service: &Arc<VL1Service<dyn Database, Self, Self>>) {
         *self.service.write().unwrap() = Arc::downgrade(service);
 
         if let Some(cw) = self.database.changes().await.map(|mut ch| {
@@ -137,9 +142,23 @@ impl Controller {
     }
 
     /// Called when the DB informs us of a change.
-    async fn handle_change_notification(self: Arc<Self>, _change: Change) {}
+    async fn handle_change_notification(self: Arc<Self>, change: Change) {
+        match change {
+            Change::MemberAuthorized(_, _) => {}
+            Change::MemberDeauthorized(network_id, node_id) => {
+                if let Ok(Some(member)) = self.database.get_member(network_id, node_id).await {
+                    if !member.authorized() {
+                        // TODO
+                    }
+                }
+            }
+        }
+    }
 
     /// Attempt to create a network configuration and return the result.
+    ///
+    /// This is the central function of the controller that looks up members, checks their
+    /// permissions, and generates a network config and other credentials (or not).
     ///
     /// An error is only returned if a database or other unusual error occurs. Otherwise a rejection
     /// reason is returned with None or an acceptance reason with a network configuration is returned.
@@ -151,27 +170,37 @@ impl Controller {
     ) -> Result<(AuthorizationResult, Option<NetworkConfig>), Box<dyn Error + Send + Sync>> {
         let network = self.database.get_network(network_id).await?;
         if network.is_none() {
-            // TODO: send error
             return Ok((AuthorizationResult::Rejected, None));
         }
         let network = network.unwrap();
 
         let mut member = self.database.get_member(network_id, source_identity.address).await?;
         let mut member_changed = false;
-        let legacy_v1 = source_identity.p384.is_none();
 
-        // If we have a member object and a pinned identity, check to make sure it matches.
-        if let Some(member) = member.as_ref() {
+        // If we have a member object and a pinned identity, check to make sure it matches. Also accept
+        // upgraded identities to replace old versions if they are properly formed and inherit.
+        if let Some(member) = member.as_mut() {
             if let Some(pinned_identity) = member.identity.as_ref() {
                 if !pinned_identity.eq(&source_identity) {
                     return Ok((AuthorizationResult::RejectedIdentityMismatch, None));
+                } else if source_identity.is_upgraded_from(pinned_identity) {
+                    let _ = member.identity.replace(source_identity.clone_without_secret());
+                    member_changed = true;
                 }
             }
         }
 
+        // This is the final verdict after everything has been checked.
         let mut authorization_result = AuthorizationResult::Rejected;
-        let mut authorized = member.as_ref().map_or(false, |m| m.authorized());
-        if !authorized {
+
+        // This is the main "authorized" flag on the member record. If it is true then
+        // the member is allowed, but with the caveat that SSO must be checked if it's
+        // enabled on the network. If this is false then the member is rejected unless
+        // authorized by a token or unless it's a public network.
+        let mut member_authorized = member.as_ref().map_or(false, |m| m.authorized());
+
+        // If the member isn't authorized, check to see if it should be auto-authorized.
+        if !member_authorized {
             if member.is_none() {
                 if network.learn_members.unwrap_or(true) {
                     let _ = member.insert(Member::new_with_identity(source_identity.clone(), network_id));
@@ -181,32 +210,37 @@ impl Controller {
                 }
             }
 
-            if !network.private {
+            if network.private {
+                // TODO: check token authorization
+            } else {
                 authorization_result = AuthorizationResult::ApprovedOnPublicNetwork;
-                authorized = true;
                 member.as_mut().unwrap().last_authorized_time = Some(now);
+                member_authorized = true;
                 member_changed = true;
             }
         }
 
         let mut member = member.unwrap();
 
-        let nc: Option<NetworkConfig> = if authorized {
-            // ====================================================================================
-            // Authorized requests are handled here
-            // ====================================================================================
+        // If the member is authorized set the final verdict to reflect this unless SSO (third party auth)
+        // is enabled on the network and disagrees. Skip if the verdict is already one of the approved
+        // values, which would indicate auth-authorization above.
+        if member_authorized {
+            if !authorization_result.approved() {
+                // TODO: check SSO if enabled on network!
+                authorization_result = AuthorizationResult::Approved;
+            }
+        } else {
+            // This should not be able to be in approved state if member_authorized is still false.
+            assert!(!authorization_result.approved());
+        }
 
-            // TODO: check SSO
+        let nc: Option<NetworkConfig> = if authorization_result.approved() {
+            // We should not be able to make it here if this is still false.
+            assert!(member_authorized);
 
-            // Figure out time bounds for the certificate to generate.
+            // Figure out TTL for credentials (time window in V1).
             let credential_ttl = network.credential_ttl.unwrap_or(CREDENTIAL_WINDOW_SIZE_DEFAULT);
-
-            // Get a list of all network members that were deauthorized but are still within the time window.
-            // These will be issued revocations to remind the node not to speak to them until they fall off.
-            let deauthed_members_still_in_window = self
-                .database
-                .list_members_deauthorized_after(network.id, now - credential_ttl)
-                .await;
 
             // Check and if necessary auto-assign static IPs for this member.
             member_changed |= network.check_zt_ip_assignments(self.database.as_ref(), &mut member).await;
@@ -225,35 +259,52 @@ impl Controller {
             nc.rules = network.rules;
             nc.dns = network.dns;
 
-            nc.certificate_of_membership =
-                CertificateOfMembership::new(&self.local_identity, network_id, &source_identity, now, credential_ttl, legacy_v1);
-            if nc.certificate_of_membership.is_none() {
-                return Ok((AuthorizationResult::RejectedDueToError, None));
-            }
+            if network.min_supported_version.unwrap_or(0) < (protocol::PROTOCOL_VERSION_V2 as u32) {
+                // Get a list of all network members that were deauthorized but are still within the time window.
+                // These will be issued revocations to remind the node not to speak to them until they fall off.
+                let deauthed_members_still_in_window = self
+                    .database
+                    .list_members_deauthorized_after(network.id, now - credential_ttl)
+                    .await;
 
-            let mut coo = CertificateOfOwnership::new(network_id, now, source_identity.address, legacy_v1);
-            for ip in nc.static_ips.iter() {
-                coo.add_ip(ip);
-            }
-            if !coo.sign(&self.local_identity, &source_identity) {
-                return Ok((AuthorizationResult::RejectedDueToError, None));
-            }
-            nc.certificates_of_ownership.push(coo);
+                if let Some(com) =
+                    vl2::v1::CertificateOfMembership::new(&self.local_identity, network_id, &source_identity, now, credential_ttl)
+                {
+                    let mut v1cred = V1Credentials {
+                        certificate_of_membership: com,
+                        certificates_of_ownership: Vec::new(),
+                        tags: HashMap::new(),
+                    };
 
-            for (id, value) in member.tags.iter() {
-                let tag = Tag::new(*id, *value, &self.local_identity, network_id, &source_identity, now, legacy_v1);
-                if tag.is_none() {
+                    let mut coo = vl2::v1::CertificateOfOwnership::new(network_id, now, source_identity.address);
+                    for ip in nc.static_ips.iter() {
+                        coo.add_ip(ip);
+                    }
+                    if !coo.sign(&self.local_identity, &source_identity) {
+                        return Ok((AuthorizationResult::RejectedDueToError, None));
+                    }
+                    v1cred.certificates_of_ownership.push(coo);
+
+                    for (id, value) in member.tags.iter() {
+                        let tag = vl2::v1::Tag::new(*id, *value, &self.local_identity, network_id, &source_identity, now);
+                        if tag.is_none() {
+                            return Ok((AuthorizationResult::RejectedDueToError, None));
+                        }
+                        let _ = v1cred.tags.insert(*id, tag.unwrap());
+                    }
+
+                    nc.v1_credentials = Some(v1cred);
+                } else {
                     return Ok((AuthorizationResult::RejectedDueToError, None));
                 }
-                let _ = nc.tags.insert(*id, tag.unwrap());
+            } else {
+                // TODO: create V2 type credential for V2-only networks
+                // TODO: populate node info for V2 networks
             }
-
-            // TODO: node info, which isn't supported in v1 so not needed yet
 
             // TODO: revocations!
 
             Some(nc)
-            // ====================================================================================
         } else {
             None
         };
@@ -409,6 +460,7 @@ impl InnerProtocol for Controller {
     }
 
     fn should_respond_to(&self, _: &Identity) -> bool {
+        // Controllers respond to anyone.
         true
     }
 }

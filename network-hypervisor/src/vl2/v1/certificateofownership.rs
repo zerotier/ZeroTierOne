@@ -34,23 +34,17 @@ pub struct CertificateOfOwnership {
     pub things: HashSet<Thing>,
     pub issued_to: Address,
     pub signature: ArrayVec<u8, { crate::vl1::identity::IDENTITY_MAX_SIGNATURE_SIZE }>,
-    pub version: u8,
 }
 
 impl CertificateOfOwnership {
     /// Create a new empty and unsigned certificate.
-    pub fn new(network_id: NetworkId, timestamp: i64, issued_to: Address, legacy_v1: bool) -> Self {
+    pub fn new(network_id: NetworkId, timestamp: i64, issued_to: Address) -> Self {
         Self {
             network_id,
             timestamp,
             things: HashSet::with_capacity(4),
             issued_to,
             signature: ArrayVec::new(),
-            version: if legacy_v1 {
-                1
-            } else {
-                2
-            },
         }
     }
 
@@ -117,13 +111,13 @@ impl CertificateOfOwnership {
     }
 
     #[inline(always)]
-    pub fn v1_proto_to_bytes(&self, signed_by: Address) -> Option<Vec<u8>> {
+    pub fn to_bytes(&self, signed_by: Address) -> Option<Vec<u8>> {
         self.internal_v1_proto_to_bytes(false, signed_by)
     }
 
     /// Decode a V1 legacy format certificate of ownership in byte format.
     /// The certificate and the current position slice are returned so multiple certs can be easily read from a buffer.
-    pub fn v1_proto_from_bytes(mut b: &[u8]) -> Result<(Self, &[u8]), InvalidParameterError> {
+    pub fn from_bytes(mut b: &[u8]) -> Result<(Self, &[u8]), InvalidParameterError> {
         if b.len() < 30 {
             return Err(InvalidParameterError("incomplete"));
         }
@@ -167,7 +161,6 @@ impl CertificateOfOwnership {
                     s.push_slice(&b[13..109]);
                     s
                 },
-                version: 1,
             },
             &b[END_LEN..],
         ))
@@ -175,16 +168,12 @@ impl CertificateOfOwnership {
 
     /// Sign certificate of ownership for use by V1 nodes.
     pub fn sign(&mut self, issuer: &Identity, issued_to: &Identity) -> bool {
-        if self.version == 1 {
-            self.issued_to = issued_to.address;
-            if let Some(to_sign) = self.internal_v1_proto_to_bytes(true, issuer.address) {
-                if let Some(signature) = issuer.sign(&to_sign.as_slice(), true) {
-                    self.signature = signature;
-                    return true;
-                }
+        self.issued_to = issued_to.address;
+        if let Some(to_sign) = self.internal_v1_proto_to_bytes(true, issuer.address) {
+            if let Some(signature) = issuer.sign(&to_sign.as_slice(), true) {
+                self.signature = signature;
+                return true;
             }
-        } else if self.version == 2 {
-            todo!()
         }
         return false;
     }

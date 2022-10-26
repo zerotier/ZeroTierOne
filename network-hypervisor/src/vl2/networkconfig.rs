@@ -7,16 +7,27 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 use crate::vl1::{Address, Identity, InetAddress};
-use crate::vl2::certificateofmembership::CertificateOfMembership;
-use crate::vl2::certificateofownership::CertificateOfOwnership;
 use crate::vl2::rule::Rule;
-use crate::vl2::tag::Tag;
+use crate::vl2::v1::{CertificateOfMembership, CertificateOfOwnership, Tag};
 use crate::vl2::NetworkId;
 
 use zerotier_utils::buffer::Buffer;
 use zerotier_utils::dictionary::Dictionary;
 use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::marshalable::Marshalable;
+
+/// Credentials that must be sent to V1 nodes to allow access.
+///
+/// These are also handed out to V2 nodes to use when communicating with V1 nodes on
+/// networks that support older protocol versions.
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct V1Credentials {
+    pub certificate_of_membership: CertificateOfMembership,
+    pub certificates_of_ownership: Vec<CertificateOfOwnership>,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default)]
+    pub tags: HashMap<u32, Tag>,
+}
 
 /// Network configuration object sent to nodes by network controllers.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -51,13 +62,9 @@ pub struct NetworkConfig {
     #[serde(default)]
     pub dns: HashMap<String, HashSet<InetAddress>>,
 
-    pub certificate_of_membership: Option<CertificateOfMembership>, // considered invalid if None
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    pub certificates_of_ownership: Vec<CertificateOfOwnership>,
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
-    #[serde(default)]
-    pub tags: HashMap<u32, Tag>,
+    pub v1_credentials: Option<V1Credentials>,
 
     #[serde(skip_serializing_if = "HashSet::is_empty")]
     #[serde(default)]
@@ -91,9 +98,7 @@ impl NetworkConfig {
             static_ips: HashSet::new(),
             rules: Vec::new(),
             dns: HashMap::new(),
-            certificate_of_membership: None,
-            certificates_of_ownership: Vec::new(),
-            tags: HashMap::new(),
+            v1_credentials: None,
             banned: HashSet::new(),
             node_info: HashMap::new(),
             central_url: String::new(),
@@ -171,25 +176,27 @@ impl NetworkConfig {
             d.set_bytes(proto_v1_field_name::network_config::DNS, dns_bin);
         }
 
-        d.set_bytes(
-            proto_v1_field_name::network_config::CERTIFICATE_OF_MEMBERSHIP,
-            self.certificate_of_membership.as_ref()?.to_bytes()?,
-        );
+        if let Some(v1cred) = self.v1_credentials.as_ref() {
+            d.set_bytes(
+                proto_v1_field_name::network_config::CERTIFICATE_OF_MEMBERSHIP,
+                v1cred.certificate_of_membership.to_bytes()?,
+            );
 
-        if !self.certificates_of_ownership.is_empty() {
-            let mut certs = Vec::with_capacity(self.certificates_of_ownership.len() * 256);
-            for c in self.certificates_of_ownership.iter() {
-                let _ = certs.write_all(c.v1_proto_to_bytes(controller_identity.address)?.as_slice());
+            if !v1cred.certificates_of_ownership.is_empty() {
+                let mut certs = Vec::with_capacity(v1cred.certificates_of_ownership.len() * 256);
+                for c in v1cred.certificates_of_ownership.iter() {
+                    let _ = certs.write_all(c.to_bytes(controller_identity.address)?.as_slice());
+                }
+                d.set_bytes(proto_v1_field_name::network_config::CERTIFICATES_OF_OWNERSHIP, certs);
             }
-            d.set_bytes(proto_v1_field_name::network_config::CERTIFICATES_OF_OWNERSHIP, certs);
-        }
 
-        if !self.tags.is_empty() {
-            let mut certs = Vec::with_capacity(self.tags.len() * 256);
-            for (_, t) in self.tags.iter() {
-                let _ = certs.write_all(t.v1_proto_to_bytes(controller_identity.address)?.as_slice());
+            if !v1cred.tags.is_empty() {
+                let mut certs = Vec::with_capacity(v1cred.tags.len() * 256);
+                for (_, t) in v1cred.tags.iter() {
+                    let _ = certs.write_all(t.to_bytes(controller_identity.address)?.as_slice());
+                }
+                d.set_bytes(proto_v1_field_name::network_config::TAGS, certs);
             }
-            d.set_bytes(proto_v1_field_name::network_config::TAGS, certs);
         }
 
         // node_info is not supported by V1 nodes
@@ -299,26 +306,32 @@ impl NetworkConfig {
             }
         }
 
-        nc.certificate_of_membership = Some(CertificateOfMembership::v1_proto_from_bytes(
-            d.get_bytes(proto_v1_field_name::network_config::CERTIFICATE_OF_MEMBERSHIP)
-                .ok_or(InvalidParameterError("missing certificate of membership"))?,
-        )?);
+        let mut v1cred = V1Credentials {
+            certificate_of_membership: CertificateOfMembership::from_bytes(
+                d.get_bytes(proto_v1_field_name::network_config::CERTIFICATE_OF_MEMBERSHIP)
+                    .ok_or(InvalidParameterError("missing certificate of membership"))?,
+            )?,
+            certificates_of_ownership: Vec::new(),
+            tags: HashMap::new(),
+        };
 
         if let Some(mut coo_bin) = d.get_bytes(proto_v1_field_name::network_config::CERTIFICATES_OF_OWNERSHIP) {
             while !coo_bin.is_empty() {
-                let c = CertificateOfOwnership::v1_proto_from_bytes(coo_bin)?;
-                nc.certificates_of_ownership.push(c.0);
+                let c = CertificateOfOwnership::from_bytes(coo_bin)?;
+                v1cred.certificates_of_ownership.push(c.0);
                 coo_bin = c.1;
             }
         }
 
         if let Some(mut tag_bin) = d.get_bytes(proto_v1_field_name::network_config::TAGS) {
             while !tag_bin.is_empty() {
-                let t = Tag::v1_proto_from_bytes(tag_bin)?;
-                let _ = nc.tags.insert(t.0.id, t.0);
+                let t = Tag::from_bytes(tag_bin)?;
+                let _ = v1cred.tags.insert(t.0.id, t.0);
                 tag_bin = t.1;
             }
         }
+
+        nc.v1_credentials = Some(v1cred);
 
         if let Some(central_url) = d.get_str(proto_v1_field_name::network_config::CENTRAL_URL) {
             nc.central_url = central_url.to_string();

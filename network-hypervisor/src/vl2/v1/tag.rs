@@ -1,6 +1,5 @@
 use std::io::Write;
 
-use crate::vl1::identity;
 use crate::vl1::identity::Identity;
 use crate::vl1::Address;
 use crate::vl2::NetworkId;
@@ -17,20 +16,11 @@ pub struct Tag {
     pub issued_to: Address,
     pub id: u32,
     pub value: u32,
-    pub signature: ArrayVec<u8, { identity::IDENTITY_MAX_SIGNATURE_SIZE }>,
-    pub version: u8,
+    pub signature: ArrayVec<u8, { Identity::MAX_SIGNATURE_SIZE }>,
 }
 
 impl Tag {
-    pub fn new(
-        id: u32,
-        value: u32,
-        issuer: &Identity,
-        network_id: NetworkId,
-        issued_to: &Identity,
-        timestamp: i64,
-        legacy_v1: bool,
-    ) -> Option<Self> {
+    pub fn new(id: u32, value: u32, issuer: &Identity, network_id: NetworkId, issued_to: &Identity, timestamp: i64) -> Option<Self> {
         let mut tag = Self {
             network_id,
             timestamp,
@@ -38,26 +28,17 @@ impl Tag {
             id,
             value,
             signature: ArrayVec::new(),
-            version: if legacy_v1 {
-                1
-            } else {
-                2
-            },
         };
-        if legacy_v1 {
-            let to_sign = tag.internal_v1_proto_to_bytes(true, issuer.address)?;
-            if let Some(signature) = issuer.sign(to_sign.as_slice(), true) {
-                tag.signature = signature;
-                return Some(tag);
-            }
-        } else {
-            todo!()
+        let to_sign = tag.internal_v1_proto_to_bytes(true, issuer.address)?;
+        if let Some(signature) = issuer.sign(to_sign.as_slice(), true) {
+            tag.signature = signature;
+            return Some(tag);
         }
         return None;
     }
 
     fn internal_v1_proto_to_bytes(&self, for_sign: bool, signed_by: Address) -> Option<Vec<u8>> {
-        if self.version == 1 && self.signature.len() == 96 {
+        if self.signature.len() == 96 {
             let mut v = Vec::with_capacity(256);
             if for_sign {
                 let _ = v.write_all(&[0x7f; 8]);
@@ -85,11 +66,11 @@ impl Tag {
     }
 
     #[inline(always)]
-    pub fn v1_proto_to_bytes(&self, signed_by: Address) -> Option<Vec<u8>> {
+    pub fn to_bytes(&self, signed_by: Address) -> Option<Vec<u8>> {
         self.internal_v1_proto_to_bytes(false, signed_by)
     }
 
-    pub fn v1_proto_sign(&mut self, issuer: &Identity, issued_to: &Identity) -> bool {
+    pub fn sign(&mut self, issuer: &Identity, issued_to: &Identity) -> bool {
         self.issued_to = issued_to.address;
         if let Some(to_sign) = self.internal_v1_proto_to_bytes(true, issuer.address) {
             if let Some(signature) = issuer.sign(&to_sign.as_slice(), true) {
@@ -100,7 +81,7 @@ impl Tag {
         return false;
     }
 
-    pub fn v1_proto_from_bytes(b: &[u8]) -> Result<(Self, &[u8]), InvalidParameterError> {
+    pub fn from_bytes(b: &[u8]) -> Result<(Self, &[u8]), InvalidParameterError> {
         const LEN: usize = 8 + 8 + 4 + 4 + 5 + 5 + 3 + 96 + 2;
         if b.len() < LEN {
             return Err(InvalidParameterError("incomplete"));
@@ -117,7 +98,6 @@ impl Tag {
                     s.push_slice(&b[37..133]);
                     s
                 },
-                version: 1,
             },
             &b[LEN..],
         ))

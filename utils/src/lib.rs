@@ -51,6 +51,26 @@ pub fn ms_monotonic() -> i64 {
     std::time::Instant::now().duration_since(instant_zero).as_millis() as i64
 }
 
+/// Wait for a kill signal (e.g. SIGINT or OS-equivalent) and return when received.
+#[cfg(unix)]
+pub fn wait_for_process_abort() {
+    if let Ok(mut signals) = signal_hook::iterator::Signals::new(&[libc::SIGINT, libc::SIGTERM, libc::SIGQUIT]) {
+        'wait_for_exit: loop {
+            for signal in signals.wait() {
+                match signal as libc::c_int {
+                    libc::SIGINT | libc::SIGTERM | libc::SIGQUIT => {
+                        break 'wait_for_exit;
+                    }
+                    _ => {}
+                }
+            }
+            std::thread::sleep(std::time::Duration::from_millis(500));
+        }
+    } else {
+        panic!("unable to listen to OS signals");
+    }
+}
+
 #[cold]
 #[inline(never)]
 pub extern "C" fn unlikely_branch() {}
