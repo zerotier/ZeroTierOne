@@ -56,8 +56,7 @@ impl NetworkId {
 
     /// Consume this network ID and return one with the same network number but a different controller ID.
     pub fn change_network_controller(self, new_controller: Address) -> NetworkId {
-        let new_controller: u64 = new_controller.into();
-        Self(NonZeroU64::new((self.network_no() as u64) | new_controller.wrapping_shr(24)).unwrap())
+        Self(NonZeroU64::new((self.network_no() as u64) | u64::from(new_controller).wrapping_shl(24)).unwrap())
     }
 
     /// Get the 24-bit local network identifier minus the 40-bit controller address portion.

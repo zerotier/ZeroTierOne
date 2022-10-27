@@ -63,7 +63,7 @@ impl CertificateOfOwnership {
     }
 
     fn internal_to_bytes(&self, for_sign: bool, signed_by: Address) -> Option<Vec<u8>> {
-        if self.things.len() > 0xffff || self.signature.len() != 96 {
+        if self.things.len() > 0xffff {
             return None;
         }
         let mut v = Vec::with_capacity(256);

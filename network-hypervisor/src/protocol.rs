@@ -535,9 +535,6 @@ pub struct ErrorHeader {
     pub error_code: u8,
 }
 
-/// Maximum delta between the message ID of a sent packet and its response.
-pub(crate) const PACKET_RESPONSE_COUNTER_DELTA_MAX: u64 = 256;
-
 /// Frequency for WHOIS retries in milliseconds.
 pub(crate) const WHOIS_RETRY_INTERVAL: i64 = 2000;
 

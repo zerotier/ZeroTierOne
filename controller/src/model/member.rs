@@ -8,8 +8,6 @@ use serde::{Deserialize, Serialize};
 use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress};
 use zerotier_network_hypervisor::vl2::NetworkId;
 
-use crate::model::ObjectType;
-
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Member {
     #[serde(rename = "address")]
@@ -70,11 +68,6 @@ pub struct Member {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub advertised: Option<bool>,
-
-    /// API object type documentation field, not actually edited/used.
-    #[serde(skip_deserializing)]
-    #[serde(default = "ObjectType::member")]
-    pub objtype: ObjectType,
 }
 
 impl Member {
@@ -92,7 +85,6 @@ impl Member {
             tags: HashMap::new(),
             sso_exempt: None,
             advertised: None,
-            objtype: ObjectType::Member,
         }
     }
 

@@ -86,7 +86,7 @@ impl FileDatabase {
     }
 
     fn network_path(&self, network_id: NetworkId) -> PathBuf {
-        self.base_path.join(format!("N{:06x}", network_id.network_no())).join("config.yaml")
+        self.base_path.join(format!("N{:06x}.yaml", network_id.network_no()))
     }
 
     fn member_path(&self, network_id: NetworkId, member_id: Address) -> PathBuf {
@@ -130,12 +130,24 @@ impl Database for FileDatabase {
         let r = fs::read(self.network_path(id)).await;
         if let Ok(raw) = r {
             let mut network = serde_yaml::from_slice::<Network>(raw.as_slice())?;
-            self.get_controller_address()
-                .map(|a| network.id = network.id.change_network_controller(a));
-            Ok(Some(network))
-            //Ok(Some(serde_json::from_slice::<Network>(raw.as_slice())?))
+
+            // FileDatabase stores networks by their "network number" and automatically adapts their IDs
+            // if the controller's identity changes. This is done to make it easy to just clone networks,
+            // including storing them in "git."
+            if let Some(controller_address) = self.get_controller_address() {
+                let network_id_should_be = network.id.change_network_controller(controller_address);
+                if id != network_id_should_be {
+                    return Ok(None);
+                }
+                if network.id != network_id_should_be {
+                    network.id = network_id_should_be;
+                    let _ = self.save_network(network.clone()).await;
+                }
+            }
+
+            return Ok(Some(network));
         } else {
-            Ok(None)
+            return Ok(None);
         }
     }
 

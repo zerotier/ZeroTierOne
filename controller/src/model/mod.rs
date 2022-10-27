@@ -22,24 +22,6 @@ pub struct NetworkExport {
     pub members: HashMap<Address, Member>,
 }
 
-/// Static string included in JSON-serializable objects to indicate their object type through the API.
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ObjectType {
-    #[serde(rename = "network")]
-    Network,
-    #[serde(rename = "member")]
-    Member,
-}
-
-impl ObjectType {
-    fn network() -> ObjectType {
-        Self::Network
-    }
-    fn member() -> ObjectType {
-        Self::Member
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum AuthorizationResult {

@@ -26,17 +26,20 @@ pub use rootset::{Root, RootSet};
 
 #[cfg(feature = "debug_events")]
 #[allow(unused_macros)]
+#[macro_export]
 macro_rules! debug_event {
     ($si:expr, $fmt:expr $(, $($arg:tt)*)?) => {
-        $si.event(crate::vl1::Event::Debug(file!(), line!(), format!($fmt, $($($arg)*)?)));
+        use $crate::vl1::Event;
+        $si.event(Event::Debug(file!(), line!(), format!($fmt, $($($arg)*)?)));
     }
 }
 
 #[cfg(not(feature = "debug_events"))]
 #[allow(unused_macros)]
+#[macro_export]
 macro_rules! debug_event {
     ($si:expr, $fmt:expr $(, $($arg:tt)*)?) => {};
 }
 
 #[allow(unused_imports)]
-pub(crate) use debug_event;
+pub use debug_event;

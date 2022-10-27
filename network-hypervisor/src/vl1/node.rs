@@ -408,6 +408,7 @@ impl Node {
             root_spam_hello = !self.is_online();
         }
 
+        /*
         debug_event!(
             host_system,
             "[vl1] do_background_tasks:{}{}{}{}{}{} ----",
@@ -442,6 +443,7 @@ impl Node {
                 ""
             }
         );
+        */
 
         if root_sync {
             if {
@@ -711,7 +713,7 @@ impl Node {
             }
         }
 
-        debug_event!(host_system, "[vl1] do_background_tasks DONE ----");
+        //debug_event!(host_system, "[vl1] do_background_tasks DONE ----");
         INTERVAL
     }
 
@@ -910,7 +912,6 @@ impl Node {
         waiting_packet: Option<(Weak<Path>, PooledPacketBuffer)>,
         time_ticks: i64,
     ) {
-        debug_event!(host_system, "[vl1] [v1] WHOIS {}", address.to_string());
         {
             let mut whois_queue = self.whois_queue.lock().unwrap();
             let qi = whois_queue.entry(address).or_insert_with(|| WhoisQueueItem {
@@ -934,6 +935,16 @@ impl Node {
     /// Send a WHOIS query to the current best root.
     fn send_whois<HostSystemImpl: HostSystem + ?Sized>(&self, host_system: &HostSystemImpl, mut addresses: &[Address], time_ticks: i64) {
         debug_assert!(!addresses.is_empty());
+        debug_event!(host_system, "[vl1] [v1] sending WHOIS for {}", {
+            let mut tmp = String::new();
+            for a in addresses.iter() {
+                if !tmp.is_empty() {
+                    tmp.push(',');
+                }
+                tmp.push_str(a.to_string().as_str());
+            }
+            tmp
+        });
         if let Some(root) = self.best_root() {
             while !addresses.is_empty() {
                 if !root

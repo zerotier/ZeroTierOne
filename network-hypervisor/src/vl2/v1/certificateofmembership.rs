@@ -85,7 +85,7 @@ impl CertificateOfMembership {
         let mut fp = v1_signee_hasher.finish();
         fp[32..].fill(0);
         if let Some(signed_by) = signed_by {
-            fp[32..38].copy_from_slice(&signed_by.to_bytes());
+            fp[32..37].copy_from_slice(&signed_by.to_bytes());
         }
         fp
     }

@@ -671,23 +671,24 @@ impl Peer {
         let mut cursor = 0;
         if let Ok(error_header) = payload.read_struct::<ErrorHeader>(&mut cursor) {
             let in_re_message_id: MessageId = u64::from_be_bytes(error_header.in_re_message_id);
-            if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
-                match error_header.in_re_verb {
-                    _ => {
-                        return inner.handle_error(
-                            host_system,
-                            node,
-                            self,
-                            &source_path,
-                            source_hops,
-                            message_id,
-                            error_header.in_re_verb,
-                            in_re_message_id,
-                            error_header.error_code,
-                            payload,
-                            cursor,
-                        );
-                    }
+
+            // TODO: replay attack prevention filter
+
+            match error_header.in_re_verb {
+                _ => {
+                    return inner.handle_error(
+                        host_system,
+                        node,
+                        self,
+                        &source_path,
+                        source_hops,
+                        message_id,
+                        error_header.in_re_verb,
+                        in_re_message_id,
+                        error_header.error_code,
+                        payload,
+                        cursor,
+                    );
                 }
             }
         }
@@ -709,85 +710,87 @@ impl Peer {
         let mut cursor = 0;
         if let Ok(ok_header) = payload.read_struct::<OkHeader>(&mut cursor) {
             let in_re_message_id: MessageId = u64::from_ne_bytes(ok_header.in_re_message_id);
-            if self.message_id_counter.load(Ordering::Relaxed).wrapping_sub(in_re_message_id) <= PACKET_RESPONSE_COUNTER_DELTA_MAX {
-                match ok_header.in_re_verb {
-                    verbs::VL1_HELLO => {
-                        if let Ok(_ok_hello_fixed_header_fields) =
-                            payload.read_struct::<v1::message_component_structs::OkHelloFixedHeaderFields>(&mut cursor)
-                        {
-                            if source_hops == 0 {
-                                debug_event!(host_system, "[vl1] {} OK(HELLO)", self.identity.address.to_string(),);
-                                if let Ok(reported_endpoint) = Endpoint::unmarshal(&payload, &mut cursor) {
+
+            // TODO: replay attack prevention filter
+
+            match ok_header.in_re_verb {
+                verbs::VL1_HELLO => {
+                    if let Ok(_ok_hello_fixed_header_fields) =
+                        payload.read_struct::<v1::message_component_structs::OkHelloFixedHeaderFields>(&mut cursor)
+                    {
+                        if source_hops == 0 {
+                            debug_event!(host_system, "[vl1] {} OK(HELLO)", self.identity.address.to_string(),);
+                            if let Ok(reported_endpoint) = Endpoint::unmarshal(&payload, &mut cursor) {
+                                #[cfg(debug_assertions)]
+                                let reported_endpoint2 = reported_endpoint.clone();
+                                if self
+                                    .remote_node_info
+                                    .write()
+                                    .unwrap()
+                                    .reported_local_endpoints
+                                    .insert(reported_endpoint, time_ticks)
+                                    .is_none()
+                                {
                                     #[cfg(debug_assertions)]
-                                    let reported_endpoint2 = reported_endpoint.clone();
-                                    if self
-                                        .remote_node_info
-                                        .write()
-                                        .unwrap()
-                                        .reported_local_endpoints
-                                        .insert(reported_endpoint, time_ticks)
-                                        .is_none()
-                                    {
-                                        #[cfg(debug_assertions)]
-                                        debug_event!(
-                                            host_system,
-                                            "[vl1] {} reported new remote perspective, local endpoint: {}",
-                                            self.identity.address.to_string(),
-                                            reported_endpoint2.to_string()
-                                        );
-                                    }
-                                }
-                            }
-
-                            if source_hops == 0 && !path_is_known {
-                                self.learn_path(host_system, source_path, time_ticks);
-                            }
-
-                            self.last_hello_reply_time_ticks.store(time_ticks, Ordering::Relaxed);
-                        }
-                    }
-
-                    verbs::VL1_WHOIS => {
-                        if node.is_peer_root(self) {
-                            while cursor < payload.len() {
-                                let r = Identity::unmarshal(payload, &mut cursor);
-                                if let Ok(received_identity) = r {
                                     debug_event!(
                                         host_system,
-                                        "[vl1] {} OK(WHOIS): new identity: {}",
+                                        "[vl1] {} reported new remote perspective, local endpoint: {}",
                                         self.identity.address.to_string(),
-                                        received_identity.to_string()
+                                        reported_endpoint2.to_string()
                                     );
-                                    node.handle_incoming_identity(host_system, inner, received_identity, time_ticks, true);
-                                } else {
-                                    debug_event!(
-                                        host_system,
-                                        "[vl1] {} OK(WHOIS): bad identity: {}",
-                                        self.identity.address.to_string(),
-                                        r.err().unwrap().to_string()
-                                    );
-                                    return PacketHandlerResult::Error;
                                 }
                             }
-                        } else {
-                            return PacketHandlerResult::Ok; // not invalid, just ignored
                         }
-                    }
 
-                    _ => {
-                        return inner.handle_ok(
-                            host_system,
-                            node,
-                            self,
-                            &source_path,
-                            source_hops,
-                            message_id,
-                            ok_header.in_re_verb,
-                            in_re_message_id,
-                            payload,
-                            cursor,
-                        );
+                        if source_hops == 0 && !path_is_known {
+                            self.learn_path(host_system, source_path, time_ticks);
+                        }
+
+                        self.last_hello_reply_time_ticks.store(time_ticks, Ordering::Relaxed);
                     }
+                }
+
+                verbs::VL1_WHOIS => {
+                    debug_event!(host_system, "[vl1] OK(WHOIS)");
+                    if node.is_peer_root(self) {
+                        while cursor < payload.len() {
+                            let r = Identity::unmarshal(payload, &mut cursor);
+                            if let Ok(received_identity) = r {
+                                debug_event!(
+                                    host_system,
+                                    "[vl1] {} OK(WHOIS): received identity: {}",
+                                    self.identity.address.to_string(),
+                                    received_identity.to_string()
+                                );
+                                node.handle_incoming_identity(host_system, inner, received_identity, time_ticks, true);
+                            } else {
+                                debug_event!(
+                                    host_system,
+                                    "[vl1] {} OK(WHOIS): received bad identity: {}",
+                                    self.identity.address.to_string(),
+                                    r.err().unwrap().to_string()
+                                );
+                                return PacketHandlerResult::Error;
+                            }
+                        }
+                    } else {
+                        return PacketHandlerResult::Ok; // not invalid, just ignored
+                    }
+                }
+
+                _ => {
+                    return inner.handle_ok(
+                        host_system,
+                        node,
+                        self,
+                        &source_path,
+                        source_hops,
+                        message_id,
+                        ok_header.in_re_verb,
+                        in_re_message_id,
+                        payload,
+                        cursor,
+                    );
                 }
             }
         }

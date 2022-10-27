@@ -8,7 +8,9 @@ use tokio::time::{Duration, Instant};
 
 use zerotier_network_hypervisor::protocol;
 use zerotier_network_hypervisor::protocol::{PacketBuffer, DEFAULT_MULTICAST_LIMIT, ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU};
-use zerotier_network_hypervisor::vl1::{HostSystem, Identity, InnerProtocol, Node, PacketHandlerResult, Path, PathFilter, Peer};
+use zerotier_network_hypervisor::vl1::{
+    debug_event, HostSystem, Identity, InnerProtocol, Node, PacketHandlerResult, Path, PathFilter, Peer,
+};
 use zerotier_network_hypervisor::vl2;
 use zerotier_network_hypervisor::vl2::networkconfig::*;
 use zerotier_network_hypervisor::vl2::v1::Revocation;
@@ -138,7 +140,6 @@ impl Controller {
                     Ok(())
                 },
             );
-            // TODO: log errors
         }
     }
 
@@ -343,7 +344,7 @@ impl PathFilter for Controller {}
 impl InnerProtocol for Controller {
     fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
-        _: &HostSystemImpl,
+        host_system: &HostSystemImpl,
         _: &Node,
         source: &Arc<Peer>,
         source_path: &Arc<Path>,
@@ -364,6 +365,14 @@ impl InnerProtocol for Controller {
                     return PacketHandlerResult::Error;
                 }
                 let network_id = network_id.unwrap();
+
+                debug_event!(
+                    host_system,
+                    "[vl2] NETWORK_CONFIG_REQUEST from {}({}) for {:0>16x}",
+                    source.identity.address.to_string(),
+                    source_path.endpoint.to_string(),
+                    u64::from(network_id)
+                );
 
                 let meta_data = if (cursor + 2) < payload.len() {
                     let meta_data_len = payload.read_u16(&mut cursor);
@@ -404,6 +413,7 @@ impl InnerProtocol for Controller {
                         let node_id = peer.identity.address;
                         let node_fingerprint = Blob::from(peer.identity.fingerprint);
                         let now = ms_since_epoch();
+                        let _host = self2.service.read().unwrap().clone().upgrade().unwrap();
 
                         let (result, config) = match self2.get_network_config(&peer.identity, network_id, now).await {
                             Result::Ok((result, Some(config), revocations)) => {
@@ -411,8 +421,8 @@ impl InnerProtocol for Controller {
                                 (result, Some(config))
                             }
                             Result::Ok((result, None, _)) => (result, None),
-                            Result::Err(_) => {
-                                // TODO: log invalid request or internal error
+                            Result::Err(e) => {
+                                debug_event!(_host, "[vl2] ERROR getting network config: {}", e.to_string());
                                 return;
                             }
                         };
@@ -491,4 +501,8 @@ impl Drop for Controller {
             h.abort();
         }
     }
+}
+
+fn dump_network_config(nc: &NetworkConfig) {
+    println!("{}", serde_yaml::to_string(nc).unwrap());
 }

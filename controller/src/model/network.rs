@@ -11,7 +11,7 @@ use zerotier_network_hypervisor::vl2::rule::Rule;
 use zerotier_network_hypervisor::vl2::NetworkId;
 
 use crate::database::Database;
-use crate::model::{Member, ObjectType};
+use crate::model::Member;
 
 pub const CREDENTIAL_WINDOW_SIZE_DEFAULT: i64 = 1000 * 60 * 60;
 
@@ -62,14 +62,16 @@ pub struct Network {
     pub enable_broadcast: Option<bool>,
 
     /// Auto IP assignment mode(s) for IPv4 addresses.
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "v4AssignMode")]
     #[serde(default)]
-    pub v4_assign_mode: Ipv4AssignMode,
+    pub v4_assign_mode: Option<Ipv4AssignMode>,
 
     /// Auto IP assignment mode(s) for IPv6 addresses.
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "v6AssignMode")]
     #[serde(default)]
-    pub v6_assign_mode: Ipv6AssignMode,
+    pub v6_assign_mode: Option<Ipv6AssignMode>,
 
     /// IPv4 or IPv6 auto-assignment pools available, must be present to use 'zt' mode.
     #[serde(skip_serializing_if = "HashSet::is_empty")]
@@ -78,11 +80,13 @@ pub struct Network {
     pub ip_assignment_pools: HashSet<IpAssignmentPool>,
 
     /// IPv4 or IPv6 routes to advertise.
+    #[serde(rename = "ipRoutes")]
     #[serde(skip_serializing_if = "HashSet::is_empty")]
     #[serde(default)]
     pub ip_routes: HashSet<IpRoute>,
 
     /// DNS records to push to members.
+    #[serde(default)]
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub dns: HashMap<String, HashSet<InetAddress>>,
 
@@ -116,14 +120,10 @@ pub struct Network {
     pub private: bool,
 
     /// If true this network will add not-authorized members for anyone who requests a config.
+    #[serde(rename = "learnMembers")]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub learn_members: Option<bool>,
-
-    /// Static object type field for use with API.
-    #[serde(skip_deserializing)]
-    #[serde(default = "ObjectType::network")]
-    pub objtype: ObjectType,
 }
 
 impl Hash for Network {
@@ -150,7 +150,7 @@ impl Network {
     pub async fn check_zt_ip_assignments<DatabaseImpl: Database + ?Sized>(&self, database: &DatabaseImpl, member: &mut Member) -> bool {
         let mut modified = false;
 
-        if self.v4_assign_mode.zt {
+        if self.v4_assign_mode.as_ref().map_or(false, |m| m.zt) {
             if !member.ip_assignments.iter().any(|ip| ip.is_ipv4()) {
                 'ip_search: for pool in self.ip_assignment_pools.iter() {
                     if pool.ip_range_start.is_ipv4() && pool.ip_range_end.is_ipv4() {
@@ -178,7 +178,7 @@ impl Network {
             }
         }
 
-        if self.v6_assign_mode.zt {
+        if self.v6_assign_mode.as_ref().map_or(false, |m| m.zt) {
             if !member.ip_assignments.iter().any(|ip| ip.is_ipv6()) {
                 'ip_search: for pool in self.ip_assignment_pools.iter() {
                     if pool.ip_range_start.is_ipv6() && pool.ip_range_end.is_ipv6() {
