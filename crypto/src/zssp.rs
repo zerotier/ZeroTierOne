@@ -24,7 +24,7 @@ use zerotier_utils::varint;
 pub const MIN_PACKET_SIZE: usize = HEADER_SIZE + AES_GCM_TAG_SIZE;
 
 /// Minimum wire MTU for ZSSP to function normally.
-pub const MIN_MTU: usize = 1280;
+pub const MIN_TRANSPORT_MTU: usize = 1280;
 
 /// Minimum recommended interval between calls to service() on each session, in milliseconds.
 pub const SERVICE_INTERVAL: u64 = 10000;
@@ -34,7 +34,7 @@ pub const SERVICE_INTERVAL: u64 = 10000;
 /// Kyber1024 is used for data forward secrecy but not authentication. Authentication would
 /// require Kyber1024 in identities, which would make them huge, and isn't needed for our
 /// threat model which is data warehousing today to decrypt tomorrow. Breaking authentication
-/// is only relevant today, not in some mid-future where a QC that can break 384-bit ECC
+/// is only relevant today, not in some mid to far future where a QC that can break 384-bit ECC
 /// exists.
 ///
 /// This is normally enabled but could be disabled at build time for e.g. very small devices.
@@ -42,9 +42,16 @@ pub const SERVICE_INTERVAL: u64 = 10000;
 /// faster than NIST P-384 ECDH.
 const JEDI: bool = true;
 
+/// Maximum number of fragments for data packets.
+const MAX_FRAGMENTS: usize = 48; // protocol max: 63
+
+/// Maximum number of fragments for key exchange packets (can be smaller to save memory, only a few needed)
+const KEY_EXCHANGE_MAX_FRAGMENTS: usize = 2; // enough room for p384 + ZT identity + kyber1024 + tag/hmac/etc.
+
 /// Start attempting to rekey after a key has been used to send packets this many times.
 ///
 /// This is 1/4 the NIST recommended maximum and 1/8 the absolute limit where u32 wraps.
+/// As such it should leave plenty of margin against nearing key reuse bounds w/AES-GCM.
 const REKEY_AFTER_USES: u64 = 536870912;
 
 /// Maximum random jitter to add to rekey-after usage count.
@@ -52,30 +59,25 @@ const REKEY_AFTER_USES_MAX_JITTER: u32 = 1048576;
 
 /// Hard expiration after this many uses.
 ///
-/// Use of the key beyond this point is prohibited. This is the point where u32 wraps minus
-/// a little bit of margin. We should never get here under ordinary circumstances.
+/// Use of the key beyond this point is prohibited. If we reach this number of key uses
+/// the key will be destroyed in memory and the session will cease to function. A hard
+/// error is also generated.
 const EXPIRE_AFTER_USES: u64 = (u32::MAX - 1024) as u64;
 
 /// Start attempting to rekey after a key has been in use for this many milliseconds.
 const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60; // 1 hour
 
 /// Maximum random jitter to add to rekey-after time.
-const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 10;
+const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 10; // 10 minutes
 
-/// Version 0: NIST P-384 forward secrecy and authentication with optional Kyber1024 forward secrecy (but not authentication)
+/// Version 0: AES-256-GCM + NIST P-384 + optional Kyber1024 PQ forward secrecy
 const SESSION_PROTOCOL_VERSION: u8 = 0x00;
 
-/// No additional keys included for hybrid exchange, just normal Noise_IK with P-384.
+/// Secondary key type: none, use only P-384 for forward secrecy.
 const E1_TYPE_NONE: u8 = 0;
 
-/// Kyber1024 key (alice) or ciphertext (bob) included.
+/// Secondary key type: Kyber1024, PQ forward secrecy enabled.
 const E1_TYPE_KYBER1024: u8 = 1;
-
-/// Maximum number of fragments for data packets.
-const MAX_FRAGMENTS: usize = 48; // protocol max: 63
-
-/// Maximum number of fragments for key exchange packets (can be smaller to save memory, only a few needed)
-const KEY_EXCHANGE_MAX_FRAGMENTS: usize = 2; // enough room for p384 + ZT identity + kyber1024 + tag/hmac/etc.
 
 /// Size of packet header
 const HEADER_SIZE: usize = 16;
@@ -83,13 +85,17 @@ const HEADER_SIZE: usize = 16;
 /// Size of AES-GCM MAC tags
 const AES_GCM_TAG_SIZE: usize = 16;
 
-/// Size of HMAC-SHA384
+/// Size of HMAC-SHA384 MAC tags
 const HMAC_SIZE: usize = 48;
 
-/// Size of a session ID, which is a bit like a TCP port number.
+/// Size of a session ID, which behaves a bit like a TCP port number.
+///
+/// This is large since some ZeroTier nodes handle huge numbers of links, like roots and controllers.
 const SESSION_ID_SIZE: usize = 6;
 
 /// Number of session keys to hold at a given time.
+///
+/// This provides room for a current, previous, and next key.
 const KEY_HISTORY_SIZE: usize = 3;
 
 // Packet types can range from 0 to 15 (4 bits) -- 0-3 are defined and 4-15 are reserved for future use
@@ -98,7 +104,7 @@ const PACKET_TYPE_NOP: u8 = 1;
 const PACKET_TYPE_KEY_OFFER: u8 = 2; // "alice"
 const PACKET_TYPE_KEY_COUNTER_OFFER: u8 = 3; // "bob"
 
-// Key usage labels for sub-key derivation using kbkdf (HMAC).
+// Key usage labels for sub-key derivation using NIST-style KBKDF (basically just HMAC KDF).
 const KBKDF_KEY_USAGE_LABEL_HMAC: u8 = b'M';
 const KBKDF_KEY_USAGE_LABEL_HEADER_CHECK: u8 = b'H';
 const KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB: u8 = b'A';
@@ -109,7 +115,7 @@ const KBKDF_KEY_USAGE_LABEL_RATCHETING: u8 = b'R';
 ///
 /// It doesn't matter very much what this is but it's good for it to be unique. It should
 /// be changed if this code is changed in any cryptographically meaningful way like changing
-/// the primary algorithm from NIST P-384.
+/// the primary algorithm from NIST P-384 or the transport cipher from AES-GCM.
 const INITIAL_KEY: [u8; 64] = [
     // macOS command line to generate:
     // echo -n 'ZSSP_Noise_IKpsk2_NISTP384_?KYBER1024_AESGCM_SHA512' | shasum -a 512  | cut -d ' ' -f 1 | xxd -r -p | xxd -i
@@ -191,6 +197,7 @@ impl std::fmt::Debug for Error {
     }
 }
 
+/// Result generated by the packet receive function, with possible payloads.
 pub enum ReceiveResult<'a, H: Host> {
     /// Packet is valid, no action needs to be taken.
     Ok,
@@ -235,7 +242,7 @@ impl SessionId {
 
     #[inline]
     pub fn new_random() -> Self {
-        Self(random::xorshift64_random() % (Self::NIL.0 - 1))
+        Self(random::next_u64_secure() % (Self::NIL.0 - 1))
     }
 }
 
@@ -246,9 +253,22 @@ impl From<SessionId> for u64 {
     }
 }
 
+/// State information to associate with receiving contexts such as sockets or remote paths/endpoints.
+///
+/// This holds the data structures used to defragment incoming packets that are not associated with an
+/// existing session, which would be new attempts to create sessions. Typically one of these is associated
+/// with a single listen socket or other inbound endpoint.
+pub struct ReceiveContext<H: Host> {
+    initial_offer_defrag: Mutex<RingBufferMap<u32, GatherArray<H::IncomingPacketBuffer, KEY_EXCHANGE_MAX_FRAGMENTS>, 1024, 128>>,
+    incoming_init_header_check_cipher: Aes,
+}
+
 /// Trait to implement to integrate the session into an application.
+///
+/// Templating the session on this trait lets the code here be almost entirely transport, OS,
+/// and use case independent.
 pub trait Host: Sized {
-    /// Arbitrary object that can be associated with sessions.
+    /// Arbitrary opaque object associated with a session, such as a connection state object.
     type AssociatedObject;
 
     /// Arbitrary object that dereferences to the session, such as Arc<Session<Self>>.
@@ -257,29 +277,39 @@ pub trait Host: Sized {
     /// A buffer containing data read from the network that can be cached.
     ///
     /// This can be e.g. a pooled buffer that automatically returns itself to the pool when dropped.
+    /// It can also just be a Vec<u8> or Box<[u8]> or something like that.
     type IncomingPacketBuffer: AsRef<[u8]>;
 
-    /// Remote address to allow it to be passed back to functions like rate_limit_new_session().
+    /// Remote physical address on whatever transport this session is using.
     type RemoteAddress;
 
-    /// Rate limit for attempts to rekey existing sessions.
-    const REKEY_RATE_LIMIT_MS: i64;
+    /// Rate limit for attempts to rekey existing sessions in milliseconds (default: 2000).
+    const REKEY_RATE_LIMIT_MS: i64 = 2000;
 
     /// Get a reference to this host's static public key blob.
     ///
-    /// This must contain a NIST P-384 public key but can contain other information.
+    /// This must contain a NIST P-384 public key but can contain other information. In ZeroTier this
+    /// is a byte serialized identity. It could just be a naked NIST P-384 key if that's all you need.
     fn get_local_s_public(&self) -> &[u8];
 
-    /// Get SHA384(this host's static public key blob), included here so we don't have to calculate it each time.
+    /// Get SHA384(this host's static public key blob).
+    ///
+    /// This allows us to avoid computing SHA384(public key blob) over and over again.
     fn get_local_s_public_hash(&self) -> &[u8; 48];
 
-    /// Get a reference to this hosts' static public key's NIST P-384 secret key pair
+    /// Get a reference to this hosts' static public key's NIST P-384 secret key pair.
+    ///
+    /// This must return the NIST P-384 public key that is contained within the static public key blob.
     fn get_local_s_keypair_p384(&self) -> &P384KeyPair;
 
     /// Extract the NIST P-384 ECC public key component from a static public key blob or return None on failure.
+    ///
+    /// This is called to parse the static public key blob from the other end and extract its NIST P-384 public
+    /// key. SECURITY NOTE: the information supplied here is from the wire so care must be taken to parse it
+    /// safely and fail on any error or corruption.
     fn extract_p384_static(static_public: &[u8]) -> Option<P384PublicKey>;
 
-    /// Look up a local session by local ID.
+    /// Look up a local session by local session ID or return None if not found.
     fn session_lookup(&self, local_session_id: SessionId) -> Option<Self::SessionRef>;
 
     /// Rate limit and check an attempted new session (called before accept_new_session).
@@ -320,15 +350,6 @@ struct SessionMutableState {
     key_ptr: usize,
     offer: Option<Box<EphemeralOffer>>,
     last_remote_offer: i64,
-}
-
-/// State information to associate with receiving contexts such as sockets or remote paths/endpoints.
-///
-/// This holds the data structures used to defragment incoming packets that are not associated with an
-/// existing session, which would be new attempts to create sessions.
-pub struct ReceiveContext<H: Host> {
-    initial_offer_defrag: Mutex<RingBufferMap<u32, GatherArray<H::IncomingPacketBuffer, KEY_EXCHANGE_MAX_FRAGMENTS>, 1024, 128>>,
-    incoming_init_header_check_cipher: Aes,
 }
 
 impl<H: Host> Session<H> {
@@ -408,7 +429,7 @@ impl<H: Host> Session<H> {
         mtu_buffer: &mut [u8],
         mut data: &[u8],
     ) -> Result<(), Error> {
-        debug_assert!(mtu_buffer.len() >= MIN_MTU);
+        debug_assert!(mtu_buffer.len() >= MIN_TRANSPORT_MTU);
         let state = self.state.read().unwrap();
         if let Some(remote_session_id) = state.remote_session_id {
             if let Some(key) = state.keys[state.key_ptr].as_ref() {
@@ -987,7 +1008,7 @@ impl<H: Host> ReceiveContext<H> {
                     };
 
                     // Create reply packet.
-                    const REPLY_BUF_LEN: usize = MIN_MTU * KEY_EXCHANGE_MAX_FRAGMENTS;
+                    const REPLY_BUF_LEN: usize = MIN_TRANSPORT_MTU * KEY_EXCHANGE_MAX_FRAGMENTS;
                     let mut reply_buf = [0_u8; REPLY_BUF_LEN];
                     let reply_counter = session.send_counter.next();
                     let mut reply_len = {
@@ -1296,7 +1317,7 @@ fn create_initial_offer<SendFunction: FnMut(&mut [u8])>(
 
     let id: [u8; 16] = random::get_bytes_secure();
 
-    const PACKET_BUF_SIZE: usize = MIN_MTU * KEY_EXCHANGE_MAX_FRAGMENTS;
+    const PACKET_BUF_SIZE: usize = MIN_TRANSPORT_MTU * KEY_EXCHANGE_MAX_FRAGMENTS;
     let mut packet_buf = [0_u8; PACKET_BUF_SIZE];
     let mut packet_len = {
         let mut p = &mut packet_buf[HEADER_SIZE..];
@@ -1390,7 +1411,7 @@ fn create_packet_header(
     let fragment_count = ((packet_len as f32) / (mtu - HEADER_SIZE) as f32).ceil() as usize;
 
     debug_assert!(header.len() >= HEADER_SIZE);
-    debug_assert!(mtu >= MIN_MTU);
+    debug_assert!(mtu >= MIN_TRANSPORT_MTU);
     debug_assert!(packet_len >= MIN_PACKET_SIZE);
     debug_assert!(fragment_count > 0);
     debug_assert!(packet_type <= 0x0f); // packet type is 4 bits

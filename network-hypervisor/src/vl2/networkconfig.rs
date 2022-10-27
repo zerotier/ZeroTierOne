@@ -16,66 +16,79 @@ use zerotier_utils::dictionary::Dictionary;
 use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::marshalable::Marshalable;
 
-/// Credentials that must be sent to V1 nodes to allow access.
-///
-/// These are also handed out to V2 nodes to use when communicating with V1 nodes on
-/// networks that support older protocol versions.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct V1Credentials {
-    pub certificate_of_membership: CertificateOfMembership,
-    pub certificates_of_ownership: Vec<CertificateOfOwnership>,
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
-    #[serde(default)]
-    pub tags: HashMap<u32, Tag>,
-}
-
 /// Network configuration object sent to nodes by network controllers.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct NetworkConfig {
+    /// Network ID
     pub network_id: NetworkId,
+
+    /// Short address of node to which this config was issued
     pub issued_to: Address,
 
+    /// Human-readable network name
     #[serde(skip_serializing_if = "String::is_empty")]
     #[serde(default)]
     pub name: String,
+
+    /// A human-readable message for members of this network (V2 only)
     #[serde(skip_serializing_if = "String::is_empty")]
     #[serde(default)]
     pub motd: String,
+
+    /// True if network has access control (the default)
     pub private: bool,
 
+    /// Network configuration timestamp
     pub timestamp: i64,
+
+    /// TTL for credentials on this network (or window size for V1 nodes)
     pub credential_ttl: i64,
+
+    /// Network configuration revision number
     pub revision: u64,
 
+    /// L2 Ethernet MTU for this network.
     pub mtu: u16,
+
+    /// Suggested horizon limit for multicast (not a hard limit, but 0 disables multicast)
     pub multicast_limit: u32,
+
+    /// ZeroTier-assigned L3 routes for this node.
     #[serde(skip_serializing_if = "HashSet::is_empty")]
     #[serde(default)]
     pub routes: HashSet<IpRoute>,
+
+    /// ZeroTier-assigned static IP addresses for this node.
     #[serde(skip_serializing_if = "HashSet::is_empty")]
     #[serde(default)]
     pub static_ips: HashSet<InetAddress>,
+
+    /// Network flow rules (low level).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     #[serde(default)]
     pub rules: Vec<Rule>,
+
+    /// DNS resolvers available to be auto-configured on the host.
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     #[serde(default)]
     pub dns: HashMap<String, HashSet<InetAddress>>,
 
+    /// V1 certificate of membership and other exchange-able credentials, may be absent on V2-only networks.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub v1_credentials: Option<V1Credentials>,
 
-    #[serde(skip_serializing_if = "HashSet::is_empty")]
-    #[serde(default)]
-    pub banned: HashSet<Address>, // v2 only
+    /// Information about specific nodes such as names, services, etc. (V2 only)
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     #[serde(default)]
-    pub node_info: HashMap<Address, NodeInfo>, // v2 only
+    pub node_info: HashMap<Address, NodeInfo>,
 
+    /// URL to ZeroTier Central instance that is controlling the controller that issued this (if any).
     #[serde(skip_serializing_if = "String::is_empty")]
     #[serde(default)]
     pub central_url: String,
+
+    /// SSO / third party auth information (if enabled).
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub sso: Option<SSOAuthConfiguration>,
@@ -99,7 +112,6 @@ impl NetworkConfig {
             rules: Vec::new(),
             dns: HashMap::new(),
             v1_credentials: None,
-            banned: HashSet::new(),
             node_info: HashMap::new(),
             central_url: String::new(),
             sso: None,
@@ -179,7 +191,7 @@ impl NetworkConfig {
         if let Some(v1cred) = self.v1_credentials.as_ref() {
             d.set_bytes(
                 proto_v1_field_name::network_config::CERTIFICATE_OF_MEMBERSHIP,
-                v1cred.certificate_of_membership.to_bytes()?,
+                v1cred.certificate_of_membership.to_bytes()?.as_bytes().to_vec(),
             );
 
             if !v1cred.certificates_of_ownership.is_empty() {
@@ -191,11 +203,11 @@ impl NetworkConfig {
             }
 
             if !v1cred.tags.is_empty() {
-                let mut certs = Vec::with_capacity(v1cred.tags.len() * 256);
+                let mut tags = Vec::with_capacity(v1cred.tags.len() * 256);
                 for (_, t) in v1cred.tags.iter() {
-                    let _ = certs.write_all(t.to_bytes(controller_identity.address)?.as_slice());
+                    let _ = tags.write_all(t.to_bytes(controller_identity.address).as_ref());
                 }
-                d.set_bytes(proto_v1_field_name::network_config::TAGS, certs);
+                d.set_bytes(proto_v1_field_name::network_config::TAGS, tags);
             }
         }
 
@@ -418,6 +430,19 @@ pub struct SSOAuthConfiguration {
     pub nonce: String,
     pub state: String,
     pub client_id: String,
+}
+
+/// Credentials that must be sent to V1 nodes to allow access.
+///
+/// These are also handed out to V2 nodes to use when communicating with V1 nodes on
+/// networks that support older protocol versions.
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct V1Credentials {
+    pub certificate_of_membership: CertificateOfMembership,
+    pub certificates_of_ownership: Vec<CertificateOfOwnership>,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default)]
+    pub tags: HashMap<u32, Tag>,
 }
 
 /// Information about nodes on the network that can be included in a network config.

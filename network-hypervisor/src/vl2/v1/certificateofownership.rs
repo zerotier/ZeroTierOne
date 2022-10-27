@@ -62,7 +62,7 @@ impl CertificateOfOwnership {
         let _ = self.things.insert(Thing::Mac(mac));
     }
 
-    fn internal_v1_proto_to_bytes(&self, for_sign: bool, signed_by: Address) -> Option<Vec<u8>> {
+    fn internal_to_bytes(&self, for_sign: bool, signed_by: Address) -> Option<Vec<u8>> {
         if self.things.len() > 0xffff || self.signature.len() != 96 {
             return None;
         }
@@ -112,7 +112,7 @@ impl CertificateOfOwnership {
 
     #[inline(always)]
     pub fn to_bytes(&self, signed_by: Address) -> Option<Vec<u8>> {
-        self.internal_v1_proto_to_bytes(false, signed_by)
+        self.internal_to_bytes(false, signed_by)
     }
 
     /// Decode a V1 legacy format certificate of ownership in byte format.
@@ -169,7 +169,7 @@ impl CertificateOfOwnership {
     /// Sign certificate of ownership for use by V1 nodes.
     pub fn sign(&mut self, issuer: &Identity, issued_to: &Identity) -> bool {
         self.issued_to = issued_to.address;
-        if let Some(to_sign) = self.internal_v1_proto_to_bytes(true, issuer.address) {
+        if let Some(to_sign) = self.internal_to_bytes(true, issuer.address) {
             if let Some(signature) = issuer.sign(&to_sign.as_slice(), true) {
                 self.signature = signature;
                 return true;

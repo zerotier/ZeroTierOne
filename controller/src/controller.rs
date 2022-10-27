@@ -11,6 +11,7 @@ use zerotier_network_hypervisor::protocol::{PacketBuffer, DEFAULT_MULTICAST_LIMI
 use zerotier_network_hypervisor::vl1::{HostSystem, Identity, InnerProtocol, Node, PacketHandlerResult, Path, PathFilter, Peer};
 use zerotier_network_hypervisor::vl2;
 use zerotier_network_hypervisor::vl2::networkconfig::*;
+use zerotier_network_hypervisor::vl2::v1::Revocation;
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::blob::Blob;
 use zerotier_utils::buffer::OutOfBoundsError;
@@ -160,6 +161,9 @@ impl Controller {
     /// This is the central function of the controller that looks up members, checks their
     /// permissions, and generates a network config and other credentials (or not).
     ///
+    /// This may also return revocations. If it does these should be sent along with or right after
+    /// the network config. This is for V1 nodes only, since V2 has another mechanism.
+    ///
     /// An error is only returned if a database or other unusual error occurs. Otherwise a rejection
     /// reason is returned with None or an acceptance reason with a network configuration is returned.
     async fn get_network_config(
@@ -167,10 +171,10 @@ impl Controller {
         source_identity: &Identity,
         network_id: NetworkId,
         now: i64,
-    ) -> Result<(AuthorizationResult, Option<NetworkConfig>), Box<dyn Error + Send + Sync>> {
+    ) -> Result<(AuthorizationResult, Option<NetworkConfig>, Option<Vec<vl2::v1::Revocation>>), Box<dyn Error + Send + Sync>> {
         let network = self.database.get_network(network_id).await?;
         if network.is_none() {
-            return Ok((AuthorizationResult::Rejected, None));
+            return Ok((AuthorizationResult::Rejected, None, None));
         }
         let network = network.unwrap();
 
@@ -182,7 +186,7 @@ impl Controller {
         if let Some(member) = member.as_mut() {
             if let Some(pinned_identity) = member.identity.as_ref() {
                 if !pinned_identity.eq(&source_identity) {
-                    return Ok((AuthorizationResult::RejectedIdentityMismatch, None));
+                    return Ok((AuthorizationResult::RejectedIdentityMismatch, None, None));
                 } else if source_identity.is_upgraded_from(pinned_identity) {
                     let _ = member.identity.replace(source_identity.clone_without_secret());
                     member_changed = true;
@@ -206,7 +210,7 @@ impl Controller {
                     let _ = member.insert(Member::new_with_identity(source_identity.clone(), network_id));
                     member_changed = true;
                 } else {
-                    return Ok((AuthorizationResult::Rejected, None));
+                    return Ok((AuthorizationResult::Rejected, None, None));
                 }
             }
 
@@ -235,7 +239,9 @@ impl Controller {
             assert!(!authorization_result.approved());
         }
 
-        let nc: Option<NetworkConfig> = if authorization_result.approved() {
+        let mut network_config = None;
+        let mut revocations = None;
+        if authorization_result.approved() {
             // We should not be able to make it here if this is still false.
             assert!(member_authorized);
 
@@ -260,13 +266,6 @@ impl Controller {
             nc.dns = network.dns;
 
             if network.min_supported_version.unwrap_or(0) < (protocol::PROTOCOL_VERSION_V2 as u32) {
-                // Get a list of all network members that were deauthorized but are still within the time window.
-                // These will be issued revocations to remind the node not to speak to them until they fall off.
-                let deauthed_members_still_in_window = self
-                    .database
-                    .list_members_deauthorized_after(network.id, now - credential_ttl)
-                    .await;
-
                 if let Some(com) =
                     vl2::v1::CertificateOfMembership::new(&self.local_identity, network_id, &source_identity, now, credential_ttl)
                 {
@@ -281,39 +280,60 @@ impl Controller {
                         coo.add_ip(ip);
                     }
                     if !coo.sign(&self.local_identity, &source_identity) {
-                        return Ok((AuthorizationResult::RejectedDueToError, None));
+                        return Ok((AuthorizationResult::RejectedDueToError, None, None));
                     }
                     v1cred.certificates_of_ownership.push(coo);
 
                     for (id, value) in member.tags.iter() {
                         let tag = vl2::v1::Tag::new(*id, *value, &self.local_identity, network_id, &source_identity, now);
                         if tag.is_none() {
-                            return Ok((AuthorizationResult::RejectedDueToError, None));
+                            return Ok((AuthorizationResult::RejectedDueToError, None, None));
                         }
                         let _ = v1cred.tags.insert(*id, tag.unwrap());
                     }
 
                     nc.v1_credentials = Some(v1cred);
+
+                    // Staple a bunch of revocations for anyone deauthed that still might be in the window.
+                    if let Ok(deauthed_members_still_in_window) = self
+                        .database
+                        .list_members_deauthorized_after(network.id, now - credential_ttl)
+                        .await
+                    {
+                        if !deauthed_members_still_in_window.is_empty() {
+                            let mut revs = Vec::with_capacity(deauthed_members_still_in_window.len());
+                            for dm in deauthed_members_still_in_window.iter() {
+                                if let Some(rev) = Revocation::new(
+                                    network_id,
+                                    now,
+                                    *dm,
+                                    source_identity.address,
+                                    &self.local_identity,
+                                    vl2::v1::CredentialType::CertificateOfMembership,
+                                    false,
+                                ) {
+                                    revs.push(rev);
+                                }
+                            }
+                            revocations = Some(revs);
+                        }
+                    }
                 } else {
-                    return Ok((AuthorizationResult::RejectedDueToError, None));
+                    return Ok((AuthorizationResult::RejectedDueToError, None, None));
                 }
             } else {
                 // TODO: create V2 type credential for V2-only networks
                 // TODO: populate node info for V2 networks
             }
 
-            // TODO: revocations!
-
-            Some(nc)
-        } else {
-            None
-        };
+            network_config = Some(nc);
+        }
 
         if member_changed {
             self.database.save_member(member).await?;
         }
 
-        Ok((authorization_result, nc))
+        Ok((authorization_result, network_config, revocations))
     }
 }
 
@@ -386,11 +406,11 @@ impl InnerProtocol for Controller {
                         let now = ms_since_epoch();
 
                         let (result, config) = match self2.get_network_config(&peer.identity, network_id, now).await {
-                            Result::Ok((result, Some(config))) => {
+                            Result::Ok((result, Some(config), revocations)) => {
                                 self2.send_network_config(peer.as_ref(), &config, Some(message_id));
                                 (result, Some(config))
                             }
-                            Result::Ok((result, None)) => (result, None),
+                            Result::Ok((result, None, _)) => (result, None),
                             Result::Err(_) => {
                                 // TODO: log invalid request or internal error
                                 return;

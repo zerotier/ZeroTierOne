@@ -17,7 +17,6 @@ impl<T> std::fmt::Display for OutOfCapacityError<T> {
 }
 
 impl<T: std::fmt::Debug> ::std::error::Error for OutOfCapacityError<T> {
-    #[inline(always)]
     fn description(self: &Self) -> &str {
         "ArrayVec out of space"
     }
@@ -47,6 +46,7 @@ impl<T: PartialEq, const C: usize> PartialEq for ArrayVec<T, C> {
 impl<T: Eq, const C: usize> Eq for ArrayVec<T, C> {}
 
 impl<T: Clone, const C: usize> Clone for ArrayVec<T, C> {
+    #[inline]
     fn clone(&self) -> Self {
         debug_assert!(self.s <= C);
         Self {
@@ -63,7 +63,7 @@ impl<T: Clone, const C: usize> Clone for ArrayVec<T, C> {
 }
 
 impl<T: Clone, const C: usize, const S: usize> From<[T; S]> for ArrayVec<T, C> {
-    #[inline(always)]
+    #[inline]
     fn from(v: [T; S]) -> Self {
         if S <= C {
             let mut tmp = Self::new();
@@ -78,7 +78,7 @@ impl<T: Clone, const C: usize, const S: usize> From<[T; S]> for ArrayVec<T, C> {
 }
 
 impl<const C: usize> Write for ArrayVec<u8, C> {
-    #[inline(always)]
+    #[inline]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         for i in buf.iter() {
             if self.try_push(*i).is_err() {
@@ -140,7 +140,7 @@ impl<T, const C: usize> ArrayVec<T, C> {
         Self { s: 0, a: unsafe { MaybeUninit::uninit().assume_init() } }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn push(&mut self, v: T) {
         let i = self.s;
         if i < C {
@@ -151,7 +151,7 @@ impl<T, const C: usize> ArrayVec<T, C> {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn try_push(&mut self, v: T) -> Result<(), OutOfCapacityError<T>> {
         if self.s < C {
             let i = self.s;
@@ -178,7 +178,7 @@ impl<T, const C: usize> ArrayVec<T, C> {
         self.s
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn pop(&mut self) -> Option<T> {
         if self.s > 0 {
             let i = self.s - 1;
@@ -235,6 +235,7 @@ impl<T, const C: usize> AsMut<[T]> for ArrayVec<T, C> {
 }
 
 impl<T: Serialize, const L: usize> Serialize for ArrayVec<T, L> {
+    #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -253,10 +254,12 @@ struct ArrayVecVisitor<'de, T: Deserialize<'de>, const L: usize>(std::marker::Ph
 impl<'de, T: Deserialize<'de>, const L: usize> serde::de::Visitor<'de> for ArrayVecVisitor<'de, T, L> {
     type Value = ArrayVec<T, L>;
 
+    #[inline]
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         formatter.write_str(format!("array of up to {} elements", L).as_str())
     }
 
+    #[inline]
     fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
     where
         A: serde::de::SeqAccess<'de>,
@@ -270,6 +273,7 @@ impl<'de, T: Deserialize<'de>, const L: usize> serde::de::Visitor<'de> for Array
 }
 
 impl<'de, T: Deserialize<'de> + 'de, const L: usize> Deserialize<'de> for ArrayVec<T, L> {
+    #[inline]
     fn deserialize<D>(deserializer: D) -> Result<ArrayVec<T, L>, D::Error>
     where
         D: Deserializer<'de>,

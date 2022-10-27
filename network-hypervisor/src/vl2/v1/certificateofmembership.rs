@@ -91,9 +91,9 @@ impl CertificateOfMembership {
     }
 
     /// Get this certificate of membership in byte encoded format.
-    pub fn to_bytes(&self) -> Option<Vec<u8>> {
+    pub fn to_bytes(&self) -> Option<ArrayVec<u8, 384>> {
         if self.signature.len() == 96 {
-            let mut v: Vec<u8> = Vec::with_capacity(3 + 168 + 5 + 96);
+            let mut v = ArrayVec::new();
             v.push(1); // version byte from v1 protocol
             v.push(0);
             v.push(7); // 7 qualifiers, big-endian 16-bit
