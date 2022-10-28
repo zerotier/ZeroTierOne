@@ -122,6 +122,8 @@ impl NetworkConfig {
     pub fn v1_proto_to_dictionary(&self, controller_identity: &Identity) -> Option<Dictionary> {
         let mut d = Dictionary::new();
 
+        d.set_u64(proto_v1_field_name::network_config::VERSION, 6);
+
         d.set_str(
             proto_v1_field_name::network_config::NETWORK_ID,
             self.network_id.to_string().as_str(),
@@ -191,7 +193,11 @@ impl NetworkConfig {
         if let Some(v1cred) = self.v1_credentials.as_ref() {
             d.set_bytes(
                 proto_v1_field_name::network_config::CERTIFICATE_OF_MEMBERSHIP,
-                v1cred.certificate_of_membership.to_bytes()?.as_bytes().to_vec(),
+                v1cred
+                    .certificate_of_membership
+                    .to_bytes(self.network_id.network_controller())
+                    .as_bytes()
+                    .to_vec(),
             );
 
             if !v1cred.certificates_of_ownership.is_empty() {

@@ -19,7 +19,7 @@ pub struct CertificateOfMembership {
     pub timestamp: i64,
     pub max_delta: i64,
     pub issued_to: Address,
-    pub issued_to_fingerprint: Blob<{ Identity::FINGERPRINT_SIZE }>,
+    pub issued_to_fingerprint: Blob<32>,
     pub signature: ArrayVec<u8, { Identity::MAX_SIGNATURE_SIZE }>,
 }
 
@@ -36,7 +36,7 @@ impl CertificateOfMembership {
             signature: ArrayVec::new(),
         };
 
-        com.issued_to_fingerprint = Blob::from(Self::v1_proto_issued_to_fingerprint(issued_to, Some(issuer.address)));
+        com.issued_to_fingerprint = Blob::from(Self::v1_proto_issued_to_fingerprint(issued_to));
         if let Some(signature) = issuer.sign(&com.v1_proto_get_qualifier_bytes(), true) {
             com.signature = signature;
             Some(com)
@@ -77,32 +77,25 @@ impl CertificateOfMembership {
         *memory::as_byte_array(&q)
     }
 
-    fn v1_proto_issued_to_fingerprint(issued_to: &Identity, signed_by: Option<Address>) -> [u8; 48] {
+    /// Get the identity fingerprint used in V1, which only covers the curve25519 keys.
+    fn v1_proto_issued_to_fingerprint(issued_to: &Identity) -> [u8; 32] {
         let mut v1_signee_hasher = SHA384::new();
         v1_signee_hasher.update(&issued_to.address.to_bytes());
         v1_signee_hasher.update(&issued_to.x25519);
         v1_signee_hasher.update(&issued_to.ed25519);
-        let mut fp = v1_signee_hasher.finish();
-        fp[32..].fill(0);
-        if let Some(signed_by) = signed_by {
-            fp[32..37].copy_from_slice(&signed_by.to_bytes());
-        }
-        fp
+        (&v1_signee_hasher.finish()[..32]).try_into().unwrap()
     }
 
     /// Get this certificate of membership in byte encoded format.
-    pub fn to_bytes(&self) -> Option<ArrayVec<u8, 384>> {
-        if self.signature.len() == 96 {
-            let mut v = ArrayVec::new();
-            v.push(1); // version byte from v1 protocol
-            v.push(0);
-            v.push(7); // 7 qualifiers, big-endian 16-bit
-            let _ = v.write_all(&self.v1_proto_get_qualifier_bytes());
-            let _ = v.write_all(&self.issued_to_fingerprint.as_bytes()[32..38]); // issuer address
-            let _ = v.write_all(self.signature.as_bytes());
-            return Some(v);
-        }
-        return None;
+    pub fn to_bytes(&self, controller_address: Address) -> ArrayVec<u8, 384> {
+        let mut v = ArrayVec::new();
+        v.push(1); // version byte from v1 protocol
+        v.push(0);
+        v.push(7); // 7 qualifiers, big-endian 16-bit
+        let _ = v.write_all(&self.v1_proto_get_qualifier_bytes());
+        let _ = v.write_all(&controller_address.to_bytes());
+        let _ = v.write_all(self.signature.as_bytes());
+        v
     }
 
     /// Decode a V1 legacy format certificate of membership in byte format.
@@ -117,7 +110,7 @@ impl CertificateOfMembership {
             return Err(InvalidParameterError("incomplete"));
         }
 
-        let (mut network_id, mut issued_to, mut timestamp, mut max_delta, mut v1_fingerprint) = (0, 0, 0, 0, [0u8; 48]);
+        let (mut network_id, mut issued_to, mut timestamp, mut max_delta, mut v1_fingerprint) = (0, 0, 0, 0, [0u8; 32]);
         for _ in 0..qualifier_count {
             let qt = u64::from_be_bytes(b[..8].try_into().unwrap());
             let q: [u8; 8] = b[8..16].try_into().unwrap();
@@ -150,8 +143,7 @@ impl CertificateOfMembership {
             b = &b[24..];
         }
 
-        v1_fingerprint[32..38].copy_from_slice(&b[..5]); // issuer address
-        b = &b[5..];
+        b = &b[5..]; // skip issuer address which is always the controller
 
         Ok(Self {
             network_id: NetworkId::from_u64(network_id).ok_or(InvalidParameterError("invalid network ID"))?,
@@ -169,7 +161,7 @@ impl CertificateOfMembership {
 
     /// Verify this certificate of membership.
     pub fn verify(self, issuer: &Identity, expect_issued_to: &Identity) -> Option<Verified<Self>> {
-        if Self::v1_proto_issued_to_fingerprint(expect_issued_to, None).eq(&self.issued_to_fingerprint.as_bytes()[..32]) {
+        if Self::v1_proto_issued_to_fingerprint(expect_issued_to).eq(&self.issued_to_fingerprint.as_bytes()[..32]) {
             if issuer.verify(&self.v1_proto_get_qualifier_bytes(), self.signature.as_bytes()) {
                 return Some(Verified(self));
             }

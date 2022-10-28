@@ -65,6 +65,7 @@ impl<const L: usize> ToString for Blob<L> {
 }
 
 impl<const L: usize> Serialize for Blob<L> {
+    #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -82,10 +83,12 @@ struct BlobVisitor<const L: usize>;
 impl<'de, const L: usize> serde::de::Visitor<'de> for BlobVisitor<L> {
     type Value = Blob<L>;
 
+    #[inline]
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         formatter.write_str(format!("array of {} bytes", L).as_str())
     }
 
+    #[inline]
     fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
     where
         A: serde::de::SeqAccess<'de>,
@@ -99,6 +102,7 @@ impl<'de, const L: usize> serde::de::Visitor<'de> for BlobVisitor<L> {
 }
 
 impl<'de, const L: usize> Deserialize<'de> for Blob<L> {
+    #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Blob<L>, D::Error>
     where
         D: Deserializer<'de>,

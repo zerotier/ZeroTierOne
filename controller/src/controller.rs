@@ -276,14 +276,16 @@ impl Controller {
                         tags: HashMap::new(),
                     };
 
-                    let mut coo = vl2::v1::CertificateOfOwnership::new(network_id, now, source_identity.address);
-                    for ip in nc.static_ips.iter() {
-                        coo.add_ip(ip);
+                    if !nc.static_ips.is_empty() {
+                        let mut coo = vl2::v1::CertificateOfOwnership::new(network_id, now, source_identity.address);
+                        for ip in nc.static_ips.iter() {
+                            coo.add_ip(ip);
+                        }
+                        if !coo.sign(&self.local_identity, &source_identity) {
+                            return Ok((AuthorizationResult::RejectedDueToError, None, None));
+                        }
+                        v1cred.certificates_of_ownership.push(coo);
                     }
-                    if !coo.sign(&self.local_identity, &source_identity) {
-                        return Ok((AuthorizationResult::RejectedDueToError, None, None));
-                    }
-                    v1cred.certificates_of_ownership.push(coo);
 
                     for (id, value) in member.tags.iter() {
                         let tag = vl2::v1::Tag::new(*id, *value, &self.local_identity, network_id, &source_identity, now);
@@ -417,6 +419,7 @@ impl InnerProtocol for Controller {
 
                         let (result, config) = match self2.get_network_config(&peer.identity, network_id, now).await {
                             Result::Ok((result, Some(config), revocations)) => {
+                                dump_network_config(&config);
                                 self2.send_network_config(peer.as_ref(), &config, Some(message_id));
                                 (result, Some(config))
                             }

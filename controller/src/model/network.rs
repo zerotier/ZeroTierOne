@@ -113,6 +113,7 @@ pub struct Network {
     pub min_supported_version: Option<u32>,
 
     /// MTU inside the virtual network, default of 2800 is used if not set.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub mtu: Option<u16>,
 
     /// If true the network has access control, which is usually what you want.
