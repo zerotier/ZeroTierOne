@@ -16,12 +16,9 @@ const BOOL_TRUTH: &str = "1tTyY";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Dictionary(pub(crate) BTreeMap<String, Vec<u8>>);
 
-fn write_escaped<W: Write>(b: &[u8], w: &mut W) -> std::io::Result<()> {
-    let mut i = 0_usize;
-    let l = b.len();
-    while i < l {
-        let ii = i + 1;
-        match b[i] {
+fn write_escaped<W: Write>(mut b: &[u8], w: &mut W) -> std::io::Result<()> {
+    while !b.is_empty() {
+        match b[0] {
             0 => {
                 w.write_all(&[b'\\', b'0'])?;
             }
@@ -38,10 +35,10 @@ fn write_escaped<W: Write>(b: &[u8], w: &mut W) -> std::io::Result<()> {
                 w.write_all(&[b'\\', b'\\'])?;
             }
             _ => {
-                w.write_all(&b[i..ii])?;
+                w.write_all(&b[..1])?;
             }
         }
-        i = ii;
+        b = &b[1..];
     }
     Ok(())
 }
@@ -128,7 +125,6 @@ impl Dictionary {
         );
     }
 
-    /// Write a dictionary in transport format to a writer.
     pub fn write_to<W: Write>(&self, w: &mut W) -> std::io::Result<()> {
         for kv in self.0.iter() {
             write_escaped(kv.0.as_bytes(), w)?;
@@ -139,14 +135,12 @@ impl Dictionary {
         Ok(())
     }
 
-    /// Write a dictionary in transport format to a byte vector.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut b: Vec<u8> = Vec::with_capacity(32 * self.0.len());
         let _ = self.write_to(&mut b);
         b
     }
 
-    /// Decode a dictionary in byte format, or return None if the input is invalid.
     pub fn from_bytes(b: &[u8]) -> Option<Dictionary> {
         let mut d = Dictionary::new();
         let mut kv: [Vec<u8>; 2] = [Vec::new(), Vec::new()];

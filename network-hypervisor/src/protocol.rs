@@ -12,6 +12,8 @@ use zerotier_crypto::aes_gmac_siv::AesGmacSiv;
 use zerotier_crypto::hash::hmac_sha384;
 use zerotier_crypto::secret::Secret;
 
+use self::v1::VERB_FLAG_COMPRESSED;
+
 /*
  * Legacy V1 protocol versions:
  *
@@ -516,6 +518,27 @@ pub mod v1 {
             obj.reset();
         }
     }
+}
+
+/// Compress a packet payload, returning the new size of the payload or the same size if unchanged.
+///
+/// This also sets the VERB_FLAG_COMPRESSED flag in the verb, which is assumed to be the first byte.
+/// If compression fails for some reason or does not yield a result that is actually smaller, the
+/// buffer is left unchanged and its size is returned. If compression succeeds the buffer's data after
+/// the first byte (the verb) is rewritten with compressed data and the new size of the payload
+/// (including the verb) is returned.
+pub fn compress(payload: &mut [u8]) -> usize {
+    if payload.len() > 32 {
+        let mut tmp: [u8; 65536] = unsafe { MaybeUninit::uninit().assume_init() };
+        if let Ok(mut compressed_size) = lz4_flex::block::compress_into(&payload[1..], &mut tmp) {
+            if compressed_size < (payload.len() - 1) {
+                payload[0] |= VERB_FLAG_COMPRESSED;
+                payload[1..(1 + compressed_size)].copy_from_slice(&tmp[..compressed_size]);
+                return 1 + compressed_size;
+            }
+        }
+    }
+    return payload.len();
 }
 
 #[derive(Clone, Copy)]

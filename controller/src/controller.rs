@@ -104,6 +104,8 @@ impl Controller {
                 None,
                 ms_monotonic(),
                 |packet| -> Result<(), OutOfBoundsError> {
+                    let payload_start = packet.len();
+
                     if let Some(in_re_message_id) = in_re_message_id {
                         let ok_header = packet.append_struct_get_mut::<protocol::OkHeader>()?;
                         ok_header.verb = protocol::verbs::VL1_OK;
@@ -131,11 +133,15 @@ impl Controller {
                         packet.append_u16(config_data.len() as u16)?;
                         packet.append_bytes(config_data.as_slice())?;
 
-                        // TODO: compress
-
                         // NOTE: V1 supports a bunch of other things like chunking but it was never truly used and is optional.
-                        // Omit it here as it adds overhead.
+                        // Omit it here as it adds overhead and requires an extra signature we don't need since the other side
+                        // knows this packet is coming directly from the controller. This stuff was originally designed to support
+                        // a scatter-gather method of config distribution that was never implemented. V2 will just KISS and do
+                        // controller clustering instead if we need scalability or more fault tolerance.
                     }
+
+                    let new_payload_len = protocol::compress(&mut packet.as_bytes_mut()[payload_start..]);
+                    packet.set_size(payload_start + new_payload_len);
 
                     Ok(())
                 },
@@ -254,7 +260,7 @@ impl Controller {
 
             let mut nc = NetworkConfig::new(network_id, source_identity.address);
 
-            nc.name = member.name.clone();
+            nc.name = network.name.clone();
             nc.private = network.private;
             nc.timestamp = now;
             nc.credential_ttl = credential_ttl;
@@ -419,7 +425,7 @@ impl InnerProtocol for Controller {
 
                         let (result, config) = match self2.get_network_config(&peer.identity, network_id, now).await {
                             Result::Ok((result, Some(config), revocations)) => {
-                                dump_network_config(&config);
+                                //println!("{}", serde_yaml::to_string(&config).unwrap());
                                 self2.send_network_config(peer.as_ref(), &config, Some(message_id));
                                 (result, Some(config))
                             }
@@ -504,8 +510,4 @@ impl Drop for Controller {
             h.abort();
         }
     }
-}
-
-fn dump_network_config(nc: &NetworkConfig) {
-    println!("{}", serde_yaml::to_string(nc).unwrap());
 }
