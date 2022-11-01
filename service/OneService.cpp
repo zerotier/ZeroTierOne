@@ -1526,7 +1526,7 @@ public:
 					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 					settings["secondaryPort"] = OSUtils::jsonInt(settings["secondaryPort"],(uint64_t)_secondaryPort) & 0xffff;
 					settings["tertiaryPort"] = OSUtils::jsonInt(settings["tertiaryPort"],(uint64_t)_tertiaryPort) & 0xffff;
-					// Enumerate all external listening address/port pairs
+					// Enumerate all local address/port pairs that this node is listening on
 					std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());
 					auto boundAddrArray = json::array();
 					for (int i = 0; i < boundAddrs.size(); i++) {
@@ -1535,6 +1535,15 @@ public:
 						boundAddrArray.push_back(ipBuf);
 					}
 					settings["listeningOn"] = boundAddrArray;
+					// Enumerate all external address/port pairs that are reported for this node
+					std::vector<InetAddress> surfaceAddrs = _node->SurfaceAddresses();
+					auto surfaceAddrArray = json::array();
+					for (int i = 0; i < surfaceAddrs.size(); i++) {
+						char ipBuf[64] = { 0 };
+						surfaceAddrs[i].toString(ipBuf);
+						surfaceAddrArray.push_back(ipBuf);
+					}
+					settings["surfaceAddresses"] = surfaceAddrArray;
 
 #ifdef ZT_USE_MINIUPNPC
 					settings["portMappingEnabled"] = OSUtils::jsonBool(settings["portMappingEnabled"],true);
