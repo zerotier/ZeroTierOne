@@ -1374,14 +1374,13 @@ void Bond::processBalanceTasks(int64_t now)
 		Mutex::Lock _l(_flows_m);
 		std::map<int16_t, SharedPtr<Flow> >::iterator flow_it = _flows.begin();
 		while (flow_it != _flows.end()) {
-			if (! _paths[flow_it->second->assignedPath].p) {
-				continue;
-			}
-			int originalPathIdx = flow_it->second->assignedPath;
-			if (! _paths[originalPathIdx].eligible) {
-				log("moving all flows from dead link %s", pathToStr(_paths[originalPathIdx].p).c_str());
-				if (assignFlowToBondedPath(flow_it->second, now, true)) {
-					_paths[originalPathIdx].assignedFlowCount--;
+			if (_paths[flow_it->second->assignedPath].p) {
+				int originalPathIdx = flow_it->second->assignedPath;
+				if (! _paths[originalPathIdx].eligible) {
+					log("moving all flows from dead link %s", pathToStr(_paths[originalPathIdx].p).c_str());
+					if (assignFlowToBondedPath(flow_it->second, now, true)) {
+						_paths[originalPathIdx].assignedFlowCount--;
+					}
 				}
 			}
 			++flow_it;
@@ -1394,14 +1393,13 @@ void Bond::processBalanceTasks(int64_t now)
 		Mutex::Lock _l(_flows_m);
 		std::map<int16_t, SharedPtr<Flow> >::iterator flow_it = _flows.begin();
 		while (flow_it != _flows.end()) {
-			if (! _paths[flow_it->second->assignedPath].p) {
-				continue;
-			}
-			int originalPathIdx = flow_it->second->assignedPath;
-			if (_paths[originalPathIdx].shouldAvoid) {
-				if (assignFlowToBondedPath(flow_it->second, now, true)) {
-					_paths[originalPathIdx].assignedFlowCount--;
-					return;	  // Only move one flow at a time
+			if (_paths[flow_it->second->assignedPath].p) {
+				int originalPathIdx = flow_it->second->assignedPath;
+				if (_paths[originalPathIdx].shouldAvoid) {
+					if (assignFlowToBondedPath(flow_it->second, now, true)) {
+						_paths[originalPathIdx].assignedFlowCount--;
+						return;	  // Only move one flow at a time
+					}
 				}
 			}
 			++flow_it;
