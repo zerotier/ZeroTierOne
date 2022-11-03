@@ -17,6 +17,7 @@ pub mod memory;
 pub mod pool;
 pub mod ringbuffer;
 pub mod ringbuffermap;
+pub mod sync;
 pub mod thing;
 pub mod varint;
 

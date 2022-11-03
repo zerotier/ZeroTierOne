@@ -178,6 +178,11 @@ impl<T, const C: usize> ArrayVec<T, C> {
         self.s
     }
 
+    #[inline(always)]
+    pub fn capacity_remaining(&self) -> usize {
+        C - self.s
+    }
+
     #[inline]
     pub fn pop(&mut self) -> Option<T> {
         if self.s > 0 {

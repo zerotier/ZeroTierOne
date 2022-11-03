@@ -424,7 +424,7 @@ impl Peer {
                 f.0.dest = self.identity.address.to_bytes();
                 f.0.src = node.identity.address.to_bytes();
                 f.0.flags_cipher_hops = v1::CIPHER_NOCRYPT_POLY1305;
-                f.1.verb = verbs::VL1_HELLO | v1::VERB_FLAG_EXTENDED_AUTHENTICATION;
+                f.1.verb = message_type::VL1_HELLO | v1::VERB_FLAG_EXTENDED_AUTHENTICATION;
                 f.1.version_proto = PROTOCOL_VERSION;
                 f.1.version_major = VERSION_MAJOR;
                 f.1.version_minor = VERSION_MINOR;
@@ -541,14 +541,16 @@ impl Peer {
                     host_system,
                     "[vl1] #{:0>16x} decrypted and authenticated, verb: {} ({:0>2x})",
                     u64::from_be_bytes(packet_header.id),
-                    verbs::name(verb),
+                    message_type::name(verb),
                     verb as u32
                 );
 
                 return match verb {
-                    verbs::VL1_NOP => PacketHandlerResult::Ok,
-                    verbs::VL1_HELLO => self.handle_incoming_hello(host_system, inner, node, time_ticks, message_id, source_path, &payload),
-                    verbs::VL1_ERROR => self.handle_incoming_error(
+                    message_type::VL1_NOP => PacketHandlerResult::Ok,
+                    message_type::VL1_HELLO => {
+                        self.handle_incoming_hello(host_system, inner, node, time_ticks, message_id, source_path, &payload)
+                    }
+                    message_type::VL1_ERROR => self.handle_incoming_error(
                         host_system,
                         inner,
                         node,
@@ -558,7 +560,7 @@ impl Peer {
                         message_id,
                         &payload,
                     ),
-                    verbs::VL1_OK => self.handle_incoming_ok(
+                    message_type::VL1_OK => self.handle_incoming_ok(
                         host_system,
                         inner,
                         node,
@@ -569,15 +571,17 @@ impl Peer {
                         path_is_known,
                         &payload,
                     ),
-                    verbs::VL1_WHOIS => self.handle_incoming_whois(host_system, inner, node, time_ticks, message_id, &payload),
-                    verbs::VL1_RENDEZVOUS => {
+                    message_type::VL1_WHOIS => self.handle_incoming_whois(host_system, inner, node, time_ticks, message_id, &payload),
+                    message_type::VL1_RENDEZVOUS => {
                         self.handle_incoming_rendezvous(host_system, node, time_ticks, message_id, source_path, &payload)
                     }
-                    verbs::VL1_ECHO => self.handle_incoming_echo(host_system, inner, node, time_ticks, message_id, &payload),
-                    verbs::VL1_PUSH_DIRECT_PATHS => {
+                    message_type::VL1_ECHO => self.handle_incoming_echo(host_system, inner, node, time_ticks, message_id, &payload),
+                    message_type::VL1_PUSH_DIRECT_PATHS => {
                         self.handle_incoming_push_direct_paths(host_system, node, time_ticks, source_path, &payload)
                     }
-                    verbs::VL1_USER_MESSAGE => self.handle_incoming_user_message(host_system, node, time_ticks, source_path, &payload),
+                    message_type::VL1_USER_MESSAGE => {
+                        self.handle_incoming_user_message(host_system, node, time_ticks, source_path, &payload)
+                    }
                     _ => inner.handle_packet(
                         host_system,
                         node,
@@ -606,7 +610,7 @@ impl Peer {
         source_path: &Arc<Path>,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
-        if !(inner.should_respond_to(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
+        if !(host_system.should_respond_to(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
             debug_event!(
                 host_system,
                 "[vl1] dropping HELLO from {} due to lack of trust relationship",
@@ -637,8 +641,8 @@ impl Peer {
                         |packet| -> Result<(), Infallible> {
                             let f: &mut (OkHeader, v1::message_component_structs::OkHelloFixedHeaderFields) =
                                 packet.append_struct_get_mut().unwrap();
-                            f.0.verb = verbs::VL1_OK;
-                            f.0.in_re_verb = verbs::VL1_HELLO;
+                            f.0.verb = message_type::VL1_OK;
+                            f.0.in_re_verb = message_type::VL1_HELLO;
                             f.0.in_re_message_id = message_id.to_ne_bytes();
                             f.1.timestamp_echo = hello_fixed_headers.timestamp;
                             f.1.version_proto = PROTOCOL_VERSION;
@@ -714,7 +718,7 @@ impl Peer {
             // TODO: replay attack prevention filter
 
             match ok_header.in_re_verb {
-                verbs::VL1_HELLO => {
+                message_type::VL1_HELLO => {
                     if let Ok(_ok_hello_fixed_header_fields) =
                         payload.read_struct::<v1::message_component_structs::OkHelloFixedHeaderFields>(&mut cursor)
                     {
@@ -750,7 +754,7 @@ impl Peer {
                     }
                 }
 
-                verbs::VL1_WHOIS => {
+                message_type::VL1_WHOIS => {
                     debug_event!(host_system, "[vl1] OK(WHOIS)");
                     if node.is_peer_root(self) {
                         while cursor < payload.len() {
@@ -806,7 +810,7 @@ impl Peer {
         message_id: MessageId,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
-        if node.this_node_is_root() || inner.should_respond_to(&self.identity) {
+        if node.this_node_is_root() || host_system.should_respond_to(&self.identity) {
             let mut addresses = payload.as_bytes();
             while addresses.len() >= ADDRESS_SIZE {
                 if !self
@@ -852,11 +856,11 @@ impl Peer {
         message_id: MessageId,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
-        if inner.should_respond_to(&self.identity) || node.is_peer_root(self) {
+        if host_system.should_respond_to(&self.identity) || node.is_peer_root(self) {
             self.send(host_system, node, None, time_ticks, |packet| {
                 let mut f: &mut OkHeader = packet.append_struct_get_mut().unwrap();
-                f.verb = verbs::VL1_OK;
-                f.in_re_verb = verbs::VL1_ECHO;
+                f.verb = message_type::VL1_OK;
+                f.in_re_verb = message_type::VL1_ECHO;
                 f.in_re_message_id = message_id.to_ne_bytes();
                 packet.append_bytes(payload.as_bytes())
             });
@@ -935,7 +939,7 @@ fn v1_proto_try_aead_decrypt(
                 if cipher == v1::CIPHER_SALSA2012_POLY1305 {
                     salsa.crypt_in_place(payload.as_bytes_mut());
                     Some(message_id)
-                } else if (payload.u8_at(0).unwrap_or(0) & v1::VERB_MASK) == verbs::VL1_HELLO {
+                } else if (payload.u8_at(0).unwrap_or(0) & v1::VERB_MASK) == message_type::VL1_HELLO {
                     Some(message_id)
                 } else {
                     // SECURITY: fail if there is no encryption and the message is not HELLO. No other types are allowed

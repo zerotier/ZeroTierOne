@@ -73,7 +73,8 @@ pub type PacketBufferPool = Pool<PacketBuffer, PacketBufferFactory>;
 /// 64-bit message ID (obtained after AEAD decryption).
 pub type MessageId = u64;
 
-pub mod verbs {
+/// ZeroTier VL1 and VL2 wire protocol message types.
+pub mod message_type {
     pub const VL1_NOP: u8 = 0x00;
     pub const VL1_HELLO: u8 = 0x01;
     pub const VL1_ERROR: u8 = 0x02;
@@ -84,10 +85,10 @@ pub mod verbs {
     pub const VL1_PUSH_DIRECT_PATHS: u8 = 0x10;
     pub const VL1_USER_MESSAGE: u8 = 0x14;
 
-    pub const VL2_VERB_MULTICAST_LIKE: u8 = 0x09;
-    pub const VL2_VERB_NETWORK_CONFIG_REQUEST: u8 = 0x0b;
-    pub const VL2_VERB_NETWORK_CONFIG: u8 = 0x0c;
-    pub const VL2_VERB_MULTICAST_GATHER: u8 = 0x0d;
+    pub const VL2_MULTICAST_LIKE: u8 = 0x09;
+    pub const VL2_NETWORK_CONFIG_REQUEST: u8 = 0x0b;
+    pub const VL2_NETWORK_CONFIG: u8 = 0x0c;
+    pub const VL2_MULTICAST_GATHER: u8 = 0x0d;
 
     pub fn name(verb: u8) -> &'static str {
         match verb {
@@ -100,10 +101,10 @@ pub mod verbs {
             VL1_ECHO => "VL1_ECHO",
             VL1_PUSH_DIRECT_PATHS => "VL1_PUSH_DIRECT_PATHS",
             VL1_USER_MESSAGE => "VL1_USER_MESSAGE",
-            VL2_VERB_MULTICAST_LIKE => "VL2_VERB_MULTICAST_LIKE",
-            VL2_VERB_NETWORK_CONFIG_REQUEST => "VL2_VERB_NETWORK_CONFIG_REQUEST",
-            VL2_VERB_NETWORK_CONFIG => "VL2_VERB_NETWORK_CONFIG",
-            VL2_VERB_MULTICAST_GATHER => "VL2_VERB_MULTICAST_GATHER",
+            VL2_MULTICAST_LIKE => "VL2_MULTICAST_LIKE",
+            VL2_NETWORK_CONFIG_REQUEST => "VL2_NETWORK_CONFIG_REQUEST",
+            VL2_NETWORK_CONFIG => "VL2_NETWORK_CONFIG",
+            VL2_MULTICAST_GATHER => "VL2_MULTICAST_GATHER",
             _ => "???",
         }
     }
@@ -588,9 +589,8 @@ pub(crate) const PEER_EXPIRATION_TIME: i64 = (PEER_HELLO_INTERVAL_MAX * 2) + 100
 /// Proof of work difficulty (threshold) for identity generation.
 pub(crate) const IDENTITY_POW_THRESHOLD: u8 = 17;
 
-/// Maximum number of key/value pairs in a single Tag credential.
-/// (This is for V2 only. In V1 tag credentials can have only one pair.)
-pub(crate) const MAX_TAG_KEY_VALUE_PAIRS: usize = 128;
+// Multicast LIKE expire time in milliseconds.
+pub const VL2_DEFAULT_MULTICAST_LIKE_EXPIRE: i64 = 600000;
 
 #[cfg(test)]
 mod tests {

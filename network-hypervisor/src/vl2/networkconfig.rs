@@ -53,6 +53,11 @@ pub struct NetworkConfig {
     /// Suggested horizon limit for multicast (not a hard limit, but 0 disables multicast)
     pub multicast_limit: u32,
 
+    /// Multicast "like" expire time in milliseconds (default if omitted).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub multicast_like_expire: Option<u32>,
+
     /// ZeroTier-assigned L3 routes for this node.
     #[serde(skip_serializing_if = "HashSet::is_empty")]
     #[serde(default)]
@@ -107,6 +112,7 @@ impl NetworkConfig {
             revision: 0,
             mtu: 0,
             multicast_limit: 0,
+            multicast_like_expire: None,
             routes: HashSet::new(),
             static_ips: HashSet::new(),
             rules: Vec::new(),

@@ -8,18 +8,17 @@ use tokio::time::{Duration, Instant};
 
 use zerotier_network_hypervisor::protocol;
 use zerotier_network_hypervisor::protocol::{PacketBuffer, DEFAULT_MULTICAST_LIMIT, ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU};
-use zerotier_network_hypervisor::vl1::{
-    debug_event, HostSystem, Identity, InnerProtocol, Node, PacketHandlerResult, Path, PathFilter, Peer,
-};
-use zerotier_network_hypervisor::vl2;
+use zerotier_network_hypervisor::vl1::*;
 use zerotier_network_hypervisor::vl2::networkconfig::*;
 use zerotier_network_hypervisor::vl2::v1::Revocation;
 use zerotier_network_hypervisor::vl2::NetworkId;
+use zerotier_network_hypervisor::vl2::{self, MulticastGroup};
 use zerotier_utils::blob::Blob;
 use zerotier_utils::buffer::OutOfBoundsError;
 use zerotier_utils::dictionary::Dictionary;
 use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::reaper::Reaper;
+use zerotier_utils::sync::RMaybeWLockGuard;
 use zerotier_utils::tokio;
 use zerotier_utils::{ms_monotonic, ms_since_epoch};
 use zerotier_vl1_service::VL1Service;
@@ -35,10 +34,19 @@ pub struct Controller {
     self_ref: Weak<Self>,
     service: RwLock<Weak<VL1Service<dyn Database, Self, Self>>>,
     reaper: Reaper,
-    daemons: Mutex<Vec<tokio::task::JoinHandle<()>>>, // drop() aborts these
     runtime: tokio::runtime::Handle,
     database: Arc<dyn Database>,
     local_identity: Identity,
+
+    // Async tasks that should be killed when the controller is dropped.
+    daemons: Mutex<Vec<tokio::task::JoinHandle<()>>>, // drop() aborts these
+
+    // Multicast "likes" recently received.
+    multicast_subscriptions: RwLock<HashMap<(NetworkId, MulticastGroup), Mutex<HashMap<Address, i64>>>>,
+
+    // Recently authorized network members and when that authorization expires (in monotonic ticks).
+    // Note that this is not and should not be used for real authentication, just for locking up multicast info.
+    recently_authorized: RwLock<HashMap<(NetworkId, [u8; Identity::FINGERPRINT_SIZE]), i64>>,
 }
 
 impl Controller {
@@ -52,10 +60,12 @@ impl Controller {
                 self_ref: r.clone(),
                 service: RwLock::new(Weak::default()),
                 reaper: Reaper::new(&runtime),
-                daemons: Mutex::new(Vec::with_capacity(1)),
                 runtime,
                 database: database.clone(),
                 local_identity,
+                daemons: Mutex::new(Vec::with_capacity(2)),
+                multicast_subscriptions: RwLock::new(HashMap::new()),
+                recently_authorized: RwLock::new(HashMap::new()),
             }))
         } else {
             Err(Box::new(InvalidParameterError(
@@ -73,21 +83,63 @@ impl Controller {
     pub async fn start(&self, service: &Arc<VL1Service<dyn Database, Self, Self>>) {
         *self.service.write().unwrap() = Arc::downgrade(service);
 
+        // Create database change listener.
         if let Some(cw) = self.database.changes().await.map(|mut ch| {
-            let self2 = self.self_ref.upgrade().unwrap();
+            let self2 = self.self_ref.clone();
             self.runtime.spawn(async move {
                 loop {
                     if let Ok(change) = ch.recv().await {
-                        self2.reaper.add(
-                            self2.runtime.spawn(self2.clone().handle_change_notification(change)),
-                            Instant::now().checked_add(REQUEST_TIMEOUT).unwrap(),
-                        );
+                        if let Some(self2) = self2.upgrade() {
+                            self2.reaper.add(
+                                self2.runtime.spawn(self2.clone().handle_change_notification(change)),
+                                Instant::now().checked_add(REQUEST_TIMEOUT).unwrap(),
+                            );
+                        } else {
+                            break;
+                        }
                     }
                 }
             })
         }) {
             self.daemons.lock().unwrap().push(cw);
         }
+
+        // Create background task to expire multicast subscriptions and recent authorizations.
+        let self2 = self.self_ref.clone();
+        self.daemons.lock().unwrap().push(self.runtime.spawn(async move {
+            loop {
+                tokio::time::sleep(Duration::from_millis((protocol::VL2_DEFAULT_MULTICAST_LIKE_EXPIRE / 2) as u64)).await;
+
+                if let Some(self2) = self2.upgrade() {
+                    let time_ticks = ms_monotonic();
+                    let exp_before = time_ticks - protocol::VL2_DEFAULT_MULTICAST_LIKE_EXPIRE;
+                    let mut empty_subscription_entries = Vec::new();
+
+                    for (network_group, subs) in self2.multicast_subscriptions.read().unwrap().iter() {
+                        let mut subs = subs.lock().unwrap();
+                        subs.retain(|_, t| *t > exp_before);
+                        if subs.is_empty() {
+                            empty_subscription_entries.push(network_group.clone());
+                        }
+                    }
+
+                    if !empty_subscription_entries.is_empty() {
+                        let mut ms = self2.multicast_subscriptions.write().unwrap();
+                        for e in empty_subscription_entries.iter() {
+                            ms.remove(e);
+                        }
+                    }
+
+                    self2
+                        .recently_authorized
+                        .write()
+                        .unwrap()
+                        .retain(|_, timeout| *timeout > time_ticks);
+                } else {
+                    break;
+                }
+            }
+        }));
     }
 
     /// Compose and send network configuration packet.
@@ -108,11 +160,11 @@ impl Controller {
 
                     if let Some(in_re_message_id) = in_re_message_id {
                         let ok_header = packet.append_struct_get_mut::<protocol::OkHeader>()?;
-                        ok_header.verb = protocol::verbs::VL1_OK;
-                        ok_header.in_re_verb = protocol::verbs::VL2_VERB_NETWORK_CONFIG_REQUEST;
+                        ok_header.verb = protocol::message_type::VL1_OK;
+                        ok_header.in_re_verb = protocol::message_type::VL2_NETWORK_CONFIG_REQUEST;
                         ok_header.in_re_message_id = in_re_message_id.to_be_bytes();
                     } else {
-                        packet.append_u8(protocol::verbs::VL2_VERB_NETWORK_CONFIG)?;
+                        packet.append_u8(protocol::message_type::VL2_NETWORK_CONFIG)?;
                     }
 
                     if peer.is_v2() {
@@ -148,6 +200,8 @@ impl Controller {
             );
         }
     }
+
+    fn send_revocations(&self, peer: &Peer, revocations: &Vec<Revocation>) {}
 
     /// Called when the DB informs us of a change.
     async fn handle_change_notification(self: Arc<Self>, change: Change) {
@@ -267,6 +321,7 @@ impl Controller {
             nc.revision = now as u64;
             nc.mtu = network.mtu.unwrap_or(ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU as u16);
             nc.multicast_limit = network.multicast_limit.unwrap_or(DEFAULT_MULTICAST_LIMIT as u32);
+            nc.multicast_like_expire = Some(protocol::VL2_DEFAULT_MULTICAST_LIKE_EXPIRE as u32);
             nc.routes = network.ip_routes;
             nc.static_ips = member.ip_assignments.clone();
             nc.rules = network.rules;
@@ -335,6 +390,12 @@ impl Controller {
                 // TODO: populate node info for V2 networks
             }
 
+            let _ = self
+                .recently_authorized
+                .write()
+                .unwrap()
+                .insert((network_id, source_identity.fingerprint), ms_monotonic() + nc.credential_ttl);
+
             network_config = Some(nc);
         }
 
@@ -345,9 +406,6 @@ impl Controller {
         Ok((authorization_result, network_config, revocations))
     }
 }
-
-// Default PathFilter implementations permit anything.
-impl PathFilter for Controller {}
 
 impl InnerProtocol for Controller {
     fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
@@ -363,7 +421,11 @@ impl InnerProtocol for Controller {
         mut cursor: usize,
     ) -> PacketHandlerResult {
         match verb {
-            protocol::verbs::VL2_VERB_NETWORK_CONFIG_REQUEST => {
+            protocol::message_type::VL2_NETWORK_CONFIG_REQUEST => {
+                if !host_system.should_respond_to(&source.identity) {
+                    return PacketHandlerResult::Ok; // handled and ignored
+                }
+
                 let network_id = payload.read_u64(&mut cursor);
                 if network_id.is_err() {
                     return PacketHandlerResult::Error;
@@ -400,19 +462,6 @@ impl InnerProtocol for Controller {
                     Dictionary::new()
                 };
 
-                /*
-                let (have_revision, have_timestamp) = if (cursor + 16) <= payload.len() {
-                    let r = payload.read_u64(&mut cursor);
-                    let t = payload.read_u64(&mut cursor);
-                    if r.is_err() || t.is_err() {
-                        return PacketHandlerResult::Error;
-                    }
-                    (Some(r.unwrap()), Some(t.unwrap()))
-                } else {
-                    (None, None)
-                };
-                */
-
                 // Launch handler as an async background task.
                 let (self2, peer, source_remote_endpoint) =
                     (self.self_ref.upgrade().unwrap(), source.clone(), source_path.endpoint.clone());
@@ -427,6 +476,9 @@ impl InnerProtocol for Controller {
                             Result::Ok((result, Some(config), revocations)) => {
                                 //println!("{}", serde_yaml::to_string(&config).unwrap());
                                 self2.send_network_config(peer.as_ref(), &config, Some(message_id));
+                                if let Some(revocations) = revocations {
+                                    self2.send_revocations(peer.as_ref(), &revocations);
+                                }
                                 (result, Some(config))
                             }
                             Result::Ok((result, None, _)) => (result, None),
@@ -448,6 +500,8 @@ impl InnerProtocol for Controller {
                                 } else {
                                     meta_data.to_bytes()
                                 },
+                                peer_version: peer.version(),
+                                peer_protocol_version: peer.protocol_version(),
                                 timestamp: now,
                                 source_remote_endpoint,
                                 source_hops,
@@ -461,6 +515,105 @@ impl InnerProtocol for Controller {
 
                 PacketHandlerResult::Ok
             }
+
+            protocol::message_type::VL2_MULTICAST_LIKE => {
+                let mut subscriptions = RMaybeWLockGuard::new_read(&self.multicast_subscriptions);
+                let auth = self.recently_authorized.read().unwrap();
+                let time_ticks = ms_monotonic();
+
+                while payload.len() >= (8 + 6 + 4) {
+                    let network_id = NetworkId::from_bytes_fixed(payload.read_bytes_fixed(&mut cursor).unwrap());
+                    if let Some(network_id) = network_id {
+                        let mac = MAC::from_bytes_fixed(payload.read_bytes_fixed(&mut cursor).unwrap());
+                        if let Some(mac) = mac {
+                            if auth
+                                .get(&(network_id, source.identity.fingerprint))
+                                .map_or(false, |t| *t > time_ticks)
+                            {
+                                let sub_key = (network_id, MulticastGroup { mac, adi: payload.read_u32(&mut cursor).unwrap() });
+                                if let Some(sub) = subscriptions.read().get(&sub_key) {
+                                    let _ = sub.lock().unwrap().insert(source.identity.address, time_ticks);
+                                } else {
+                                    let _ = subscriptions
+                                        .write(&self.multicast_subscriptions)
+                                        .entry(sub_key)
+                                        .or_insert_with(|| Mutex::new(HashMap::new()))
+                                        .lock()
+                                        .unwrap()
+                                        .insert(source.identity.address, time_ticks);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                PacketHandlerResult::Ok
+            }
+
+            protocol::message_type::VL2_MULTICAST_GATHER => {
+                if let Some(service) = self.service.read().unwrap().upgrade() {
+                    if let Some(network_id) = payload
+                        .read_bytes_fixed(&mut cursor)
+                        .map_or(None, |network_id| NetworkId::from_bytes_fixed(network_id))
+                    {
+                        let time_ticks = ms_monotonic();
+                        if self
+                            .recently_authorized
+                            .read()
+                            .unwrap()
+                            .get(&(network_id, source.identity.fingerprint))
+                            .map_or(false, |t| *t > time_ticks)
+                        {
+                            cursor += 1; // skip flags, currently unused
+                            if let Some(mac) = payload.read_bytes_fixed(&mut cursor).map_or(None, |mac| MAC::from_bytes_fixed(mac)) {
+                                let mut gathered = Vec::new();
+                                let adi = payload.read_u32(&mut cursor).unwrap_or(0);
+                                let subscriptions = self.multicast_subscriptions.read().unwrap();
+                                if let Some(sub) = subscriptions.get(&(network_id, MulticastGroup { mac, adi })) {
+                                    let sub = sub.lock().unwrap();
+                                    for a in sub.keys() {
+                                        gathered.push(*a);
+                                    }
+                                }
+
+                                while !gathered.is_empty() {
+                                    source.send(
+                                        service.as_ref(),
+                                        service.node(),
+                                        None,
+                                        time_ticks,
+                                        |packet| -> Result<(), OutOfBoundsError> {
+                                            let ok_header = packet.append_struct_get_mut::<protocol::OkHeader>()?;
+                                            ok_header.verb = protocol::message_type::VL1_OK;
+                                            ok_header.in_re_verb = protocol::message_type::VL2_MULTICAST_GATHER;
+                                            ok_header.in_re_message_id = message_id.to_be_bytes();
+
+                                            packet.append_bytes_fixed(&network_id.to_bytes())?;
+                                            packet.append_bytes_fixed(&mac.to_bytes())?;
+                                            packet.append_u32(adi)?;
+                                            packet.append_u32(gathered.len() as u32)?;
+
+                                            let in_this_packet = gathered
+                                                .len()
+                                                .clamp(1, (packet.capacity() - packet.len()) / protocol::ADDRESS_SIZE)
+                                                .min(u16::MAX as usize);
+
+                                            packet.append_u16(in_this_packet as u16)?;
+                                            for _ in 0..in_this_packet {
+                                                packet.append_bytes_fixed(&gathered.pop().unwrap().to_bytes())?;
+                                            }
+
+                                            Ok(())
+                                        },
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+                PacketHandlerResult::Ok
+            }
+
             _ => PacketHandlerResult::NotHandled,
         }
     }
@@ -497,10 +650,16 @@ impl InnerProtocol for Controller {
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
     }
+}
 
-    fn should_respond_to(&self, _: &Identity) -> bool {
-        // Controllers respond to anyone.
+impl VL1AuthProvider for Controller {
+    #[inline(always)]
+    fn should_respond_to(&self, id: &Identity) -> bool {
         true
+    }
+
+    fn has_trust_relationship(&self, id: &Identity) -> bool {
+        false
     }
 }
 

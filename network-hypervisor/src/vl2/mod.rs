@@ -4,6 +4,7 @@ mod multicastgroup;
 mod networkid;
 mod switch;
 
+pub mod multicastauthority;
 pub mod networkconfig;
 pub mod rule;
 pub mod v1;

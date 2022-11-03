@@ -27,16 +27,41 @@ use zerotier_utils::marshalable::Marshalable;
 use zerotier_utils::ringbuffer::RingBuffer;
 use zerotier_utils::thing::Thing;
 
-/// Trait implemented by external code to handle events and provide an interface to the system or application.
+/// Trait providing VL1 authentication functions to determine which nodes we should talk to.
 ///
-/// These methods are basically callbacks that the core calls to request or transmit things. They are called
-/// during calls to things like wire_recieve() and do_background_tasks().
-pub trait HostSystem: Sync + Send + 'static {
+/// This is included in HostSystem but is provided as a separate trait to make it easy for
+/// implementers of HostSystem to break this out and allow a user to specify it.
+pub trait VL1AuthProvider: Sync + Send {
+    /// Check if this node should respond to messages from a given peer at all.
+    ///
+    /// If this returns false, the node simply drops messages on the floor and refuses
+    /// to init V2 sessions.
+    fn should_respond_to(&self, id: &Identity) -> bool;
+
+    /// Check if this node has any trust relationship with the provided identity.
+    ///
+    /// This should return true if there is any special trust relationship such as mutual
+    /// membership in a network or for controllers the peer's membership in any network
+    /// they control.
+    fn has_trust_relationship(&self, id: &Identity) -> bool;
+}
+
+/// Trait to be implemented by outside code to provide object storage to VL1
+///
+/// This is included in HostSystem but is provided as a separate trait to make it easy for
+/// implementers of HostSystem to break this out and allow a user to specify it.
+pub trait NodeStorage: Sync + Send {
+    /// Load this node's identity from the data store.
+    fn load_node_identity(&self) -> Option<Identity>;
+
+    /// Save this node's identity to the data store.
+    fn save_node_identity(&self, id: &Identity);
+}
+
+/// Trait implemented by external code to handle events and provide an interface to the system or application.
+pub trait HostSystem: VL1AuthProvider + NodeStorage + 'static {
     /// Type for implementation of NodeStorage.
     type Storage: NodeStorage + ?Sized;
-
-    /// Path filter implementation for this host.
-    type PathFilter: PathFilter + ?Sized;
 
     /// Type for local system sockets.
     type LocalSocket: Sync + Send + Hash + PartialEq + Eq + Clone + ToString + Sized + 'static;
@@ -49,9 +74,6 @@ pub trait HostSystem: Sync + Send + 'static {
 
     /// Get a reference to the local storage implementation at this host.
     fn storage(&self) -> &Self::Storage;
-
-    /// Get the path filter implementation for this host.
-    fn path_filter(&self) -> &Self::PathFilter;
 
     /// Get a pooled packet buffer for internal use.
     fn get_buffer(&self) -> PooledPacketBuffer;
@@ -84,26 +106,6 @@ pub trait HostSystem: Sync + Send + 'static {
         packet_ttl: u8,
     );
 
-    /// Called to get the current time in milliseconds from the system monotonically increasing clock.
-    /// This needs to be accurate to about 250 milliseconds resolution or better.
-    fn time_ticks(&self) -> i64;
-
-    /// Called to get the current time in milliseconds since epoch from the real-time clock.
-    /// This needs to be accurate to about one second resolution or better.
-    fn time_clock(&self) -> i64;
-}
-
-/// Trait to be implemented by outside code to provide object storage to VL1
-pub trait NodeStorage: Sync + Send {
-    /// Load this node's identity from the data store.
-    fn load_node_identity(&self) -> Option<Identity>;
-
-    /// Save this node's identity to the data store.
-    fn save_node_identity(&self, id: &Identity);
-}
-
-/// Trait to be implemented to provide path hints and a filter to approve physical paths.
-pub trait PathFilter: Sync + Send {
     /// Called to check and see if a physical address should be used for ZeroTier traffic to a node.
     ///
     /// The default implementation always returns true.
@@ -134,6 +136,14 @@ pub trait PathFilter: Sync + Send {
     > {
         None
     }
+
+    /// Called to get the current time in milliseconds from the system monotonically increasing clock.
+    /// This needs to be accurate to about 250 milliseconds resolution or better.
+    fn time_ticks(&self) -> i64;
+
+    /// Called to get the current time in milliseconds since epoch from the real-time clock.
+    /// This needs to be accurate to about one second resolution or better.
+    fn time_clock(&self) -> i64;
 }
 
 /// Result of a packet handler.
@@ -199,9 +209,6 @@ pub trait InnerProtocol: Sync + Send {
         payload: &PacketBuffer,
         cursor: usize,
     ) -> PacketHandlerResult;
-
-    /// Check if this node should respond to messages from a given peer.
-    fn should_respond_to(&self, id: &Identity) -> bool;
 }
 
 /// How often to check the root cluster definitions against the root list and update.
@@ -949,7 +956,7 @@ impl Node {
             while !addresses.is_empty() {
                 if !root
                     .send(host_system, self, None, time_ticks, |packet| -> Result<(), Infallible> {
-                        assert!(packet.append_u8(verbs::VL1_WHOIS).is_ok());
+                        assert!(packet.append_u8(message_type::VL1_WHOIS).is_ok());
                         while !addresses.is_empty() && (packet.len() + ADDRESS_SIZE) <= UDP_DEFAULT_MTU {
                             assert!(packet.append_bytes_fixed(&addresses[0].to_bytes()).is_ok());
                             addresses = &addresses[1..];
@@ -978,7 +985,7 @@ impl Node {
                 let mut whois_queue = self.whois_queue.lock().unwrap();
                 if let Some(qi) = whois_queue.get_mut(&received_identity.address) {
                     let address = received_identity.address;
-                    if inner.should_respond_to(&received_identity) {
+                    if host_system.should_respond_to(&received_identity) {
                         let mut peers = self.peers.write().unwrap();
                         if let Some(peer) = peers.get(&address).cloned().or_else(|| {
                             Peer::new(&self.identity, received_identity, time_ticks)
@@ -1154,15 +1161,16 @@ impl InnerProtocol for DummyInnerProtocol {
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
     }
+}
+
+impl VL1AuthProvider for DummyInnerProtocol {
+    #[inline(always)]
+    fn should_respond_to(&self, id: &Identity) -> bool {
+        true
+    }
 
     #[inline(always)]
-    fn should_respond_to(&self, _id: &Identity) -> bool {
+    fn has_trust_relationship(&self, id: &Identity) -> bool {
         true
     }
 }
-
-/// Dummy no-op path filter for debugging and testing.
-#[derive(Default)]
-pub struct DummyPathFilter;
-
-impl PathFilter for DummyPathFilter {}

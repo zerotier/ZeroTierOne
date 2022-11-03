@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::protocol::PacketBuffer;
 use crate::vl1::node::{HostSystem, InnerProtocol, Node, PacketHandlerResult};
-use crate::vl1::{Identity, Path, Peer};
+use crate::vl1::{Path, Peer};
 
 pub trait SwitchInterface: Sync + Send {}
 
@@ -58,10 +58,6 @@ impl InnerProtocol for Switch {
         cursor: usize,
     ) -> PacketHandlerResult {
         PacketHandlerResult::NotHandled
-    }
-
-    fn should_respond_to(&self, id: &Identity) -> bool {
-        true
     }
 }
 

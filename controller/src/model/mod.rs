@@ -82,26 +82,40 @@ impl ToString for AuthorizationResult {
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RequestLogItem {
-    #[serde(rename = "nwid")]
+    #[serde(rename = "nw")]
     pub network_id: NetworkId,
-    #[serde(rename = "nid")]
+    #[serde(rename = "n")]
     pub node_id: Address,
     #[serde(rename = "nf")]
     pub node_fingerprint: Blob<48>,
-    #[serde(rename = "cid")]
+    #[serde(rename = "c")]
     pub controller_node_id: Address,
+
     #[serde(skip_serializing_if = "Vec::is_empty")]
     #[serde(default)]
     #[serde(rename = "md")]
     pub metadata: Vec<u8>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    #[serde(rename = "pv")]
+    pub peer_version: Option<(u8, u8, u16)>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    #[serde(rename = "ppv")]
+    pub peer_protocol_version: Option<u8>,
+
     #[serde(rename = "ts")]
     pub timestamp: i64,
+
     #[serde(rename = "s")]
     pub source_remote_endpoint: Endpoint,
     #[serde(rename = "sh")]
     pub source_hops: u8,
+
     #[serde(rename = "r")]
     pub result: AuthorizationResult,
+
     #[serde(rename = "nc")]
     pub config: Option<NetworkConfig>,
 }

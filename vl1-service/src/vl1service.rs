@@ -28,13 +28,13 @@ const UPDATE_UDP_BINDINGS_EVERY_SECS: usize = 10;
 /// a test harness or just the controller for a controller that runs stand-alone.
 pub struct VL1Service<
     NodeStorageImpl: NodeStorage + ?Sized + 'static,
-    PathFilterImpl: PathFilter + ?Sized + 'static,
+    VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
     InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
 > {
     state: RwLock<VL1ServiceMutableState>,
     storage: Arc<NodeStorageImpl>,
+    vl1_auth_provider: Arc<VL1AuthProviderImpl>,
     inner: Arc<InnerProtocolImpl>,
-    path_filter: Arc<PathFilterImpl>,
     buffer_pool: Arc<PacketBufferPool>,
     node_container: Option<Node>, // never None, set in new()
 }
@@ -48,14 +48,14 @@ struct VL1ServiceMutableState {
 
 impl<
         NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        PathFilterImpl: PathFilter + ?Sized + 'static,
+        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
         InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
+    > VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
 {
     pub fn new(
         storage: Arc<NodeStorageImpl>,
+        vl1_auth_provider: Arc<VL1AuthProviderImpl>,
         inner: Arc<InnerProtocolImpl>,
-        path_filter: Arc<PathFilterImpl>,
         settings: VL1Settings,
     ) -> Result<Arc<Self>, Box<dyn Error>> {
         let mut service = Self {
@@ -66,8 +66,8 @@ impl<
                 running: true,
             }),
             storage,
+            vl1_auth_provider,
             inner,
-            path_filter,
             buffer_pool: Arc::new(PacketBufferPool::new(
                 std::thread::available_parallelism().map_or(2, |c| c.get() + 2),
                 PacketBufferFactory::new(),
@@ -191,9 +191,9 @@ impl<
 
 impl<
         NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        PathFilterImpl: PathFilter + ?Sized + 'static,
+        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
         InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > UdpPacketHandler for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
+    > UdpPacketHandler for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
 {
     #[inline(always)]
     fn incoming_udp_packet(
@@ -217,12 +217,11 @@ impl<
 
 impl<
         NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        PathFilterImpl: PathFilter + ?Sized + 'static,
+        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
         InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > HostSystem for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
+    > HostSystem for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
 {
     type Storage = NodeStorageImpl;
-    type PathFilter = PathFilterImpl;
     type LocalSocket = crate::LocalSocket;
     type LocalInterface = crate::LocalInterface;
 
@@ -241,11 +240,6 @@ impl<
     #[inline(always)]
     fn storage(&self) -> &Self::Storage {
         self.storage.as_ref()
-    }
-
-    #[inline(always)]
-    fn path_filter(&self) -> &Self::PathFilter {
-        self.path_filter.as_ref()
     }
 
     #[inline]
@@ -329,9 +323,43 @@ impl<
 
 impl<
         NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        PathFilterImpl: PathFilter + ?Sized + 'static,
+        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
         InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > Drop for VL1Service<NodeStorageImpl, PathFilterImpl, InnerProtocolImpl>
+    > NodeStorage for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
+{
+    #[inline(always)]
+    fn load_node_identity(&self) -> Option<Identity> {
+        self.storage.load_node_identity()
+    }
+
+    #[inline(always)]
+    fn save_node_identity(&self, id: &Identity) {
+        self.storage.save_node_identity(id)
+    }
+}
+
+impl<
+        NodeStorageImpl: NodeStorage + ?Sized + 'static,
+        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
+        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
+    > VL1AuthProvider for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
+{
+    #[inline(always)]
+    fn should_respond_to(&self, id: &Identity) -> bool {
+        self.vl1_auth_provider.should_respond_to(id)
+    }
+
+    #[inline(always)]
+    fn has_trust_relationship(&self, id: &Identity) -> bool {
+        self.vl1_auth_provider.has_trust_relationship(id)
+    }
+}
+
+impl<
+        NodeStorageImpl: NodeStorage + ?Sized + 'static,
+        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
+        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
+    > Drop for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
 {
     fn drop(&mut self) {
         let mut state = self.state.write().unwrap();
