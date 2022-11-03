@@ -326,7 +326,7 @@ pub mod v1 {
 
         #[inline(always)]
         pub fn aes_gmac_siv_tag(&self) -> [u8; 16] {
-            let mut id = unsafe { MaybeUninit::<[u8; 16]>::uninit().assume_init() };
+            let mut id = 0u128.to_ne_bytes();
             id[0..8].copy_from_slice(&self.id);
             id[8..16].copy_from_slice(&self.mac);
             id
@@ -335,7 +335,7 @@ pub mod v1 {
 
     #[inline(always)]
     pub fn get_packet_aad_bytes(destination: Address, source: Address, flags_cipher_hops: u8) -> [u8; 11] {
-        let mut id = unsafe { MaybeUninit::<[u8; 11]>::uninit().assume_init() };
+        let mut id = [0u8; 11];
         id[0..5].copy_from_slice(&destination.to_bytes());
         id[5..10].copy_from_slice(&source.to_bytes());
         id[10] = flags_cipher_hops & FLAGS_FIELD_MASK_HIDE_HOPS;
@@ -530,7 +530,7 @@ pub mod v1 {
 /// (including the verb) is returned.
 pub fn compress(payload: &mut [u8]) -> usize {
     if payload.len() > 32 {
-        let mut tmp: [u8; 65536] = unsafe { MaybeUninit::uninit().assume_init() };
+        let mut tmp = [0u8; 65536];
         if let Ok(mut compressed_size) = lz4_flex::block::compress_into(&payload[1..], &mut tmp) {
             if compressed_size < (payload.len() - 1) {
                 payload[0] |= VERB_FLAG_COMPRESSED;

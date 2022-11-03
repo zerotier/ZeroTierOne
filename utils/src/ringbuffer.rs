@@ -11,6 +11,7 @@ pub struct RingBuffer<T, const C: usize> {
 impl<T, const C: usize> RingBuffer<T, C> {
     #[inline]
     pub fn new() -> Self {
+        #[allow(invalid_value)]
         let mut tmp: Self = unsafe { MaybeUninit::uninit().assume_init() };
         tmp.p = 0;
         tmp

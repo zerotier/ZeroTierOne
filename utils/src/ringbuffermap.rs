@@ -114,6 +114,7 @@ impl<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> RingBu
     pub fn new(salt: u32) -> Self {
         debug_assert!(C <= EMPTY as usize);
         debug_assert!(B <= EMPTY as usize);
+        #[allow(invalid_value)]
         let mut tmp: Self = unsafe { MaybeUninit::uninit().assume_init() };
         // EMPTY is the maximum value of the indices, which is all 0xff, so this sets all indices to EMPTY.
         unsafe { std::ptr::write_bytes(&mut tmp, 0xff, 1) };

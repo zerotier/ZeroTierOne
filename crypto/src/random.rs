@@ -1,13 +1,12 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use std::mem::MaybeUninit;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use openssl::rand::rand_bytes;
 
 pub fn next_u32_secure() -> u32 {
     unsafe {
-        let mut tmp: [u32; 1] = MaybeUninit::uninit().assume_init();
+        let mut tmp = [0u32; 1];
         assert!(rand_bytes(&mut *(tmp.as_mut_ptr().cast::<[u8; 4]>())).is_ok());
         tmp[0]
     }
@@ -15,7 +14,7 @@ pub fn next_u32_secure() -> u32 {
 
 pub fn next_u64_secure() -> u64 {
     unsafe {
-        let mut tmp: [u64; 1] = MaybeUninit::uninit().assume_init();
+        let mut tmp = [0u64; 1];
         assert!(rand_bytes(&mut *(tmp.as_mut_ptr().cast::<[u8; 8]>())).is_ok());
         tmp[0]
     }
@@ -23,7 +22,7 @@ pub fn next_u64_secure() -> u64 {
 
 pub fn next_u128_secure() -> u128 {
     unsafe {
-        let mut tmp: [u128; 1] = MaybeUninit::uninit().assume_init();
+        let mut tmp = [0u128; 1];
         assert!(rand_bytes(&mut *(tmp.as_mut_ptr().cast::<[u8; 16]>())).is_ok());
         tmp[0]
     }
@@ -36,7 +35,7 @@ pub fn fill_bytes_secure(dest: &mut [u8]) {
 
 #[inline(always)]
 pub fn get_bytes_secure<const COUNT: usize>() -> [u8; COUNT] {
-    let mut tmp: [u8; COUNT] = unsafe { MaybeUninit::uninit().assume_init() };
+    let mut tmp = [0u8; COUNT];
     assert!(rand_bytes(&mut tmp).is_ok());
     tmp
 }
