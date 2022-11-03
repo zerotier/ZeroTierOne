@@ -2,7 +2,6 @@
 
 use std::ffi::c_void;
 use std::io::Write;
-use std::mem::MaybeUninit;
 use std::os::raw::{c_int, c_uint};
 use std::ptr::null;
 
@@ -151,11 +150,9 @@ impl HMACSHA512 {
 
     #[inline(always)]
     pub fn finish(&mut self) -> [u8; 64] {
-        unsafe {
-            let mut tmp: [u8; 64] = MaybeUninit::uninit().assume_init();
-            self.finish_into(&mut tmp);
-            tmp
-        }
+        let mut tmp = [0u8; 64];
+        self.finish_into(&mut tmp);
+        tmp
     }
 }
 
@@ -210,11 +207,9 @@ impl HMACSHA384 {
 
     #[inline(always)]
     pub fn finish(&mut self) -> [u8; 48] {
-        unsafe {
-            let mut tmp: [u8; 48] = MaybeUninit::uninit().assume_init();
-            self.finish_into(&mut tmp);
-            tmp
-        }
+        let mut tmp = [0u8; 48];
+        self.finish_into(&mut tmp);
+        tmp
     }
 }
 
