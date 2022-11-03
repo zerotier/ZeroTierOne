@@ -162,10 +162,12 @@ pub enum PacketHandlerResult {
 ///
 /// This is implemented by Switch in VL2. It's usually not used outside of VL2 in the core but
 /// it could also be implemented for testing or "off label" use of VL1 to carry different protocols.
+#[allow(unused)]
 pub trait InnerProtocol: Sync + Send {
     /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
+    /// The default version returns NotHandled.
     fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
@@ -177,9 +179,12 @@ pub trait InnerProtocol: Sync + Send {
         verb: u8,
         payload: &PacketBuffer,
         cursor: usize,
-    ) -> PacketHandlerResult;
+    ) -> PacketHandlerResult {
+        PacketHandlerResult::NotHandled
+    }
 
     /// Handle errors, returning true if the error was recognized.
+    /// The default version returns NotHandled.
     fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
@@ -193,9 +198,12 @@ pub trait InnerProtocol: Sync + Send {
         error_code: u8,
         payload: &PacketBuffer,
         cursor: usize,
-    ) -> PacketHandlerResult;
+    ) -> PacketHandlerResult {
+        PacketHandlerResult::NotHandled
+    }
 
     /// Handle an OK, returing true if the OK was recognized.
+    /// The default version returns NotHandled.
     fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
@@ -208,7 +216,9 @@ pub trait InnerProtocol: Sync + Send {
         in_re_message_id: u64,
         payload: &PacketBuffer,
         cursor: usize,
-    ) -> PacketHandlerResult;
+    ) -> PacketHandlerResult {
+        PacketHandlerResult::NotHandled
+    }
 }
 
 /// How often to check the root cluster definitions against the root list and update.
@@ -1110,58 +1120,7 @@ impl<HostSystemImpl: HostSystem + ?Sized> PathKey<'_, '_, HostSystemImpl> {
 #[derive(Default)]
 pub struct DummyInnerProtocol;
 
-impl InnerProtocol for DummyInnerProtocol {
-    #[inline(always)]
-    fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
-        &self,
-        _host_system: &HostSystemImpl,
-        _node: &Node,
-        _source: &Arc<Peer>,
-        _source_path: &Arc<Path>,
-        _source_hops: u8,
-        _message_id: u64,
-        _verb: u8,
-        _payload: &PacketBuffer,
-        _cursor: usize,
-    ) -> PacketHandlerResult {
-        PacketHandlerResult::NotHandled
-    }
-
-    #[inline(always)]
-    fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
-        &self,
-        _host_system: &HostSystemImpl,
-        _node: &Node,
-        _source: &Arc<Peer>,
-        _source_path: &Arc<Path>,
-        _source_hops: u8,
-        _message_id: u64,
-        _in_re_verb: u8,
-        _in_re_message_id: u64,
-        _error_code: u8,
-        _payload: &PacketBuffer,
-        _cursor: usize,
-    ) -> PacketHandlerResult {
-        PacketHandlerResult::NotHandled
-    }
-
-    #[inline(always)]
-    fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
-        &self,
-        _host_system: &HostSystemImpl,
-        _node: &Node,
-        _source: &Arc<Peer>,
-        _source_path: &Arc<Path>,
-        _source_hops: u8,
-        _message_id: u64,
-        _in_re_verb: u8,
-        _in_re_message_id: u64,
-        _payload: &PacketBuffer,
-        _cursor: usize,
-    ) -> PacketHandlerResult {
-        PacketHandlerResult::NotHandled
-    }
-}
+impl InnerProtocol for DummyInnerProtocol {}
 
 impl VL1AuthProvider for DummyInnerProtocol {
     #[inline(always)]

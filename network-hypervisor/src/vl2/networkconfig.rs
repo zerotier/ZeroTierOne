@@ -44,8 +44,10 @@ pub struct NetworkConfig {
     /// TTL for credentials on this network (or window size for V1 nodes)
     pub credential_ttl: i64,
 
-    /// Network configuration revision number
-    pub revision: u64,
+    /// Network configuration revision number (V1)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub revision: Option<u64>,
 
     /// L2 Ethernet MTU for this network.
     pub mtu: u16,
@@ -83,11 +85,6 @@ pub struct NetworkConfig {
     #[serde(default)]
     pub v1_credentials: Option<V1Credentials>,
 
-    /// Information about specific nodes such as names, services, etc. (V2 only)
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
-    #[serde(default)]
-    pub node_info: HashMap<Address, NodeInfo>,
-
     /// URL to ZeroTier Central instance that is controlling the controller that issued this (if any).
     #[serde(skip_serializing_if = "String::is_empty")]
     #[serde(default)]
@@ -109,7 +106,7 @@ impl NetworkConfig {
             private: true,
             timestamp: 0,
             credential_ttl: 0,
-            revision: 0,
+            revision: None,
             mtu: 0,
             multicast_limit: 0,
             multicast_like_expire: None,
@@ -118,7 +115,6 @@ impl NetworkConfig {
             rules: Vec::new(),
             dns: HashMap::new(),
             v1_credentials: None,
-            node_info: HashMap::new(),
             central_url: String::new(),
             sso: None,
         }
@@ -148,7 +144,7 @@ impl NetworkConfig {
         );
         d.set_u64(proto_v1_field_name::network_config::TIMESTAMP, self.timestamp as u64);
         d.set_u64(proto_v1_field_name::network_config::MAX_DELTA, self.credential_ttl as u64);
-        d.set_u64(proto_v1_field_name::network_config::REVISION, self.revision);
+        d.set_u64(proto_v1_field_name::network_config::REVISION, self.revision.unwrap_or(0));
         d.set_u64(proto_v1_field_name::network_config::MTU, self.mtu as u64);
         d.set_u64(proto_v1_field_name::network_config::MULTICAST_LIMIT, self.multicast_limit as u64);
 
@@ -273,7 +269,7 @@ impl NetworkConfig {
             .get_i64(proto_v1_field_name::network_config::TIMESTAMP)
             .ok_or(InvalidParameterError("missing timestamp"))?;
         nc.credential_ttl = d.get_i64(proto_v1_field_name::network_config::MAX_DELTA).unwrap_or(0);
-        nc.revision = d.get_u64(proto_v1_field_name::network_config::REVISION).unwrap_or(0);
+        nc.revision = Some(d.get_u64(proto_v1_field_name::network_config::REVISION).unwrap_or(0));
         nc.mtu = d
             .get_u64(proto_v1_field_name::network_config::MTU)
             .unwrap_or(crate::protocol::ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU as u64) as u16;
@@ -455,23 +451,6 @@ pub struct V1Credentials {
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     #[serde(default)]
     pub tags: HashMap<u32, Tag>,
-}
-
-/// Information about nodes on the network that can be included in a network config.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct NodeInfo {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default)]
-    pub flags: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default)]
-    pub ip: Option<InetAddress>,
-    #[serde(skip_serializing_if = "String::is_empty")]
-    #[serde(default)]
-    pub name: String,
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
-    #[serde(default)]
-    pub services: HashMap<String, Option<String>>,
 }
 
 /// Statically pushed L3 IP routes included with a network configuration.
