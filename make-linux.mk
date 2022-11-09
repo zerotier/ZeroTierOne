@@ -498,7 +498,7 @@ snap-uninstall: FORCE
 	snap remove zerotier
 
 snap-build-remote: FORCE
-	cd pkg && snapcraft remote-build --build-on=amd64,arm64,s390x,ppc64el,armhf,i386
+	cd pkg && snapcraft remote-build --build-for=amd64,arm64,s390x,ppc64el,armhf,i386
 
 snap-upload-beta: FORCE
 	snapcraft login --with-file=snapcraft-login-data
