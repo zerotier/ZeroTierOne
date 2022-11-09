@@ -500,13 +500,10 @@ snap-uninstall: FORCE
 snap-build-remote: FORCE
 	cd pkg && snapcraft remote-build --build-for=amd64,arm64,s390x,ppc64el,armhf,i386
 
-snap-upload-beta: FORCE
-	snapcraft login --with-file=snapcraft-login-data
-	pushd pkg
-	for SNAPFILE in ./*.snap; do\
-		snapcraft upload --release=stable,beta,edge,candidate $${SNAPFILE};\
+snap-upload: ./pkg/*.snap
+	for file in $^ ; do \
+		snapcraft upload --release=beta,edge,candidate $${file} ; \
 	done
-	popd
 
 synology-pkg: FORCE
 	cd pkg/synology ; ./build.sh build
