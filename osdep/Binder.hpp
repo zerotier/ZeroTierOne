@@ -311,7 +311,7 @@ class Binder {
 #else
 			const bool gotViaProc = false;
 #endif
-#if ! defined(ZT_SDK) || ! defined(__ANDROID__)	  // getifaddrs() freeifaddrs() not available on Android
+#if ! (defined(ZT_SDK) || defined(__ANDROID__))	  // getifaddrs() freeifaddrs() not available on Android
 			if (! gotViaProc) {
 				struct ifaddrs* ifatbl = (struct ifaddrs*)0;
 				struct ifaddrs* ifa;
