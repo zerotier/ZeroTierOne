@@ -11,12 +11,17 @@ use crate::model::*;
 /// Database change relevant to the controller and that was NOT initiated by the controller.
 #[derive(Clone)]
 pub enum Change {
-    MemberAuthorized(NetworkId, Address),
-    MemberDeauthorized(NetworkId, Address),
+    NetworkCreated(Network),
+    NetworkChanged(Network, Network),
+    NetworkDeleted(Network),
+    MemberCreated(Member),
+    MemberChanged(Member, Member),
+    MemberDeleted(Member),
 }
 
 #[async_trait]
 pub trait Database: Sync + Send + NodeStorage + 'static {
+    async fn list_networks(&self) -> Result<Vec<NetworkId>, Box<dyn Error + Send + Sync>>;
     async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error + Send + Sync>>;
     async fn save_network(&self, obj: Network) -> Result<(), Box<dyn Error + Send + Sync>>;
 

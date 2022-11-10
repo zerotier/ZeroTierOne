@@ -514,6 +514,13 @@ impl Identity {
         let mut h = SHA384::new();
         assert!(self.write_public(&mut h, false).is_ok());
         self.fingerprint = h.finish();
+
+        // NIST guidelines specify that the left-most N bits of a hash should be taken if it's truncated.
+        // We want to start the fingerprint with the address, so move the hash over and discard 40 bits.
+        // We're not even really losing security here since the address is a hash, but NIST would not
+        // consider it such since it's not a NIST-approved algorithm.
+        self.fingerprint.copy_within(ADDRESS_SIZE..48, ADDRESS_SIZE);
+        self.fingerprint[..ADDRESS_SIZE].copy_from_slice(&self.address.to_bytes());
     }
 
     #[inline(always)]

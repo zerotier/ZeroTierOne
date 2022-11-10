@@ -66,6 +66,14 @@ pub fn as_byte_array<T: Copy, const S: usize>(o: &T) -> &[u8; S] {
     unsafe { &*(o as *const T).cast() }
 }
 
+/// Transmute an object to a byte array.
+/// The template parameter S must equal the size of the object in bytes or this will panic.
+#[inline(always)]
+pub fn to_byte_array<T: Copy, const S: usize>(o: T) -> [u8; S] {
+    assert_eq!(S, size_of::<T>());
+    unsafe { *(&o as *const T).cast() }
+}
+
 /// Get a byte array as a flat object.
 ///
 /// WARNING: while this is technically safe, care must be taken if the object requires aligned access.

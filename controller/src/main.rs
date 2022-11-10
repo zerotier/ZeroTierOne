@@ -78,7 +78,7 @@ fn main() {
     if let Ok(tokio_runtime) = zerotier_utils::tokio::runtime::Builder::new_multi_thread().enable_all().build() {
         tokio_runtime.block_on(async {
             if let Some(filedb_base_path) = global_args.value_of("filedb") {
-                let file_db = FileDatabase::new(filedb_base_path).await;
+                let file_db = FileDatabase::new(tokio_runtime.handle().clone(), filedb_base_path).await;
                 if file_db.is_err() {
                     eprintln!(
                         "FATAL: unable to open filesystem database at {}: {}",
@@ -87,7 +87,7 @@ fn main() {
                     );
                     std::process::exit(exitcode::ERR_IOERR)
                 }
-                std::process::exit(run(Arc::new(file_db.unwrap()), &tokio_runtime).await);
+                std::process::exit(run(file_db.unwrap(), &tokio_runtime).await);
             } else {
                 eprintln!("FATAL: no database type selected.");
                 std::process::exit(exitcode::ERR_USAGE);

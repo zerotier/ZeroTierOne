@@ -86,6 +86,7 @@ pub mod message_type {
     pub const VL1_USER_MESSAGE: u8 = 0x14;
 
     pub const VL2_MULTICAST_LIKE: u8 = 0x09;
+    pub const VL2_NETWORK_CREDENTIALS: u8 = 0x0a;
     pub const VL2_NETWORK_CONFIG_REQUEST: u8 = 0x0b;
     pub const VL2_NETWORK_CONFIG: u8 = 0x0c;
     pub const VL2_MULTICAST_GATHER: u8 = 0x0d;

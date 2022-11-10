@@ -15,6 +15,13 @@ use zerotier_network_hypervisor::vl2::networkconfig::NetworkConfig;
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::blob::Blob;
 
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RecordType {
+    Network,
+    Member,
+    RequestLogItem,
+}
+
 /// A complete network with all member configuration information for import/export or blob storage.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NetworkExport {

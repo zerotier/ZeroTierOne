@@ -116,7 +116,7 @@ pub struct Network {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mtu: Option<u16>,
 
-    /// If true the network has access control, which is usually what you want.
+    /// If true the network has access control, which is usually what you want and is the default if not specified.
     #[serde(default = "troo")]
     pub private: bool,
 
@@ -135,7 +135,6 @@ impl Hash for Network {
 }
 
 impl ToString for Network {
-    #[inline(always)]
     fn to_string(&self) -> String {
         zerotier_utils::json::to_json_pretty(self)
     }
@@ -148,7 +147,7 @@ fn troo() -> bool {
 
 impl Network {
     /// Check member IP assignments and return 'true' if IP assignments were created or modified.
-    pub async fn check_zt_ip_assignments<DatabaseImpl: Database + ?Sized>(&self, database: &DatabaseImpl, member: &mut Member) -> bool {
+    pub async fn assign_ip_addresses<DatabaseImpl: Database + ?Sized>(&self, database: &DatabaseImpl, member: &mut Member) -> bool {
         let mut modified = false;
 
         if self.v4_assign_mode.as_ref().map_or(false, |m| m.zt) {

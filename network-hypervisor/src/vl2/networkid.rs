@@ -18,7 +18,7 @@ use crate::vl1::Address;
 pub struct NetworkId(NonZeroU64);
 
 impl NetworkId {
-    #[inline(always)]
+    #[inline]
     pub fn from_u64(i: u64) -> Option<NetworkId> {
         // Note that we check both that 'i' is non-zero and that the address of the controller is valid.
         if let Some(ii) = NonZeroU64::new(i) {
@@ -29,7 +29,12 @@ impl NetworkId {
         return None;
     }
 
-    #[inline(always)]
+    #[inline]
+    pub fn from_controller_and_network_no(controller: Address, network_no: u64) -> Option<NetworkId> {
+        Self::from_u64(u64::from(controller).wrapping_shl(24) | (network_no & 0xffffff))
+    }
+
+    #[inline]
     pub fn from_bytes(b: &[u8]) -> Option<NetworkId> {
         if b.len() >= 8 {
             Self::from_bytes_fixed(b[0..8].try_into().unwrap())
@@ -38,12 +43,12 @@ impl NetworkId {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn from_bytes_fixed(b: &[u8; 8]) -> Option<NetworkId> {
         Self::from_u64(u64::from_be_bytes(*b))
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn to_bytes(&self) -> [u8; 8] {
         self.0.get().to_be_bytes()
     }

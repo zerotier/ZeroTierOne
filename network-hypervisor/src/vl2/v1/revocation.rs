@@ -76,4 +76,9 @@ impl Revocation {
 
         v
     }
+
+    #[inline(always)]
+    pub fn to_bytes(&self, controller_address: Address) -> ArrayVec<u8, 256> {
+        self.internal_to_bytes(false, controller_address)
+    }
 }

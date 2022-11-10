@@ -2,7 +2,7 @@ use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 
 use async_trait::async_trait;
 use notify::{RecursiveMode, Watcher};
@@ -12,13 +12,19 @@ use zerotier_network_hypervisor::vl2::NetworkId;
 
 use zerotier_utils::io::{fs_restrict_permissions, read_limit};
 
+use zerotier_utils::reaper::Reaper;
 use zerotier_utils::tokio::fs;
+use zerotier_utils::tokio::runtime::Handle;
 use zerotier_utils::tokio::sync::broadcast::{channel, Receiver, Sender};
+use zerotier_utils::tokio::task::JoinHandle;
+use zerotier_utils::tokio::time::{sleep, Duration, Instant};
 
+use crate::cache::Cache;
 use crate::database::{Change, Database};
 use crate::model::*;
 
 const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
+const EVENT_HANDLER_TASK_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// An in-filesystem database that permits live editing.
 ///
@@ -28,47 +34,174 @@ const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
 pub struct FileDatabase {
     base_path: PathBuf,
     controller_address: AtomicU64,
-    change_sender: Arc<Sender<Change>>,
-    watcher: Mutex<Box<dyn Watcher + Send>>,
+    change_sender: Sender<Change>,
+    tasks: Reaper,
+    cache: Cache,
+    daemon: JoinHandle<()>,
 }
 
 // TODO: should cache at least hashes and detect changes in the filesystem live.
 
 impl FileDatabase {
-    pub async fn new<P: AsRef<Path>>(base_path: P) -> Result<Self, Box<dyn Error + Send + Sync>> {
+    pub async fn new<P: AsRef<Path>>(runtime: Handle, base_path: P) -> Result<Arc<Self>, Box<dyn Error + Send + Sync>> {
         let base_path: PathBuf = base_path.as_ref().into();
         let _ = fs::create_dir_all(&base_path).await?;
 
         let (change_sender, _) = channel(256);
-        let change_sender = Arc::new(change_sender);
+        let db_weak_tmp: Arc<Mutex<Weak<Self>>> = Arc::new(Mutex::new(Weak::default()));
+        let db_weak = db_weak_tmp.clone();
+        let runtime2 = runtime.clone();
 
-        let sender = Arc::downgrade(&change_sender);
-        let mut watcher: Box<dyn Watcher + Send> =
-            Box::new(notify::recommended_watcher(move |event: notify::Result<notify::event::Event>| {
-                if let Ok(event) = event {
-                    if let Some(_sender) = sender.upgrade() {
-                        // TODO
-                        match event.kind {
-                            notify::EventKind::Modify(_) => {}
-                            notify::EventKind::Remove(_) => {}
-                            _ => {}
-                        }
-                    }
-                }
-            })?);
-        let _ = watcher.configure(
-            notify::Config::default()
-                .with_compare_contents(true)
-                .with_poll_interval(std::time::Duration::from_secs(2)),
-        );
-        watcher.watch(&base_path, RecursiveMode::Recursive)?;
-
-        Ok(Self {
+        let db = Arc::new(Self {
             base_path: base_path.clone(),
             controller_address: AtomicU64::new(0),
             change_sender,
-            watcher: Mutex::new(watcher),
-        })
+            tasks: Reaper::new(&runtime2),
+            cache: Cache::new(),
+            daemon: runtime2.spawn(async move {
+                while db_weak.lock().unwrap().upgrade().is_none() {
+                    // Wait for parent to finish constructing and start up, then create watcher.
+                    sleep(Duration::from_millis(10)).await;
+                }
+
+                let mut watcher = notify::recommended_watcher(move |event: notify::Result<notify::event::Event>| {
+                    if let Ok(event) = event {
+                        if let Some(db) = db_weak.lock().unwrap().upgrade() {
+                            if let Some(controller_address) = db.get_controller_address() {
+                                db.clone().tasks.add(
+                                    runtime.spawn(async move {
+                                        if let Some(path0) = event.paths.first() {
+                                            if let Some((record_type, network_id, node_id)) =
+                                                Self::record_type_from_path(controller_address, path0.as_path())
+                                            {
+                                                let mut deleted = None;
+                                                let mut changed = None;
+
+                                                match event.kind {
+                                                    notify::EventKind::Create(create_kind) => match create_kind {
+                                                        notify::event::CreateKind::File => {
+                                                            changed = Some(path0.as_path());
+                                                        }
+                                                        _ => {}
+                                                    },
+                                                    notify::EventKind::Modify(modify_kind) => match modify_kind {
+                                                        notify::event::ModifyKind::Data(_) => {
+                                                            changed = Some(path0.as_path());
+                                                        }
+                                                        notify::event::ModifyKind::Name(rename_mode) => match rename_mode {
+                                                            notify::event::RenameMode::Both => {
+                                                                if event.paths.len() >= 2 {
+                                                                    if let Some(path1) = event.paths.last() {
+                                                                        deleted = Some(path0.as_path());
+                                                                        changed = Some(path1.as_path());
+                                                                    }
+                                                                }
+                                                            }
+                                                            notify::event::RenameMode::From => {
+                                                                deleted = Some(path0.as_path());
+                                                            }
+                                                            notify::event::RenameMode::To => {
+                                                                changed = Some(path0.as_path());
+                                                            }
+                                                            _ => {}
+                                                        },
+                                                        _ => {}
+                                                    },
+                                                    notify::EventKind::Remove(remove_kind) => match remove_kind {
+                                                        notify::event::RemoveKind::File => {
+                                                            deleted = Some(path0.as_path());
+                                                        }
+                                                        _ => {}
+                                                    },
+                                                    _ => {}
+                                                }
+
+                                                if deleted.is_some() {
+                                                    match record_type {
+                                                        RecordType::Network => {
+                                                            if let Some((network, mut members)) = db.cache.on_network_deleted(network_id) {
+                                                                for m in members.drain(..) {
+                                                                    let _ = db.change_sender.send(Change::MemberDeleted(m));
+                                                                }
+                                                                let _ = db.change_sender.send(Change::NetworkDeleted(network));
+                                                            }
+                                                        }
+                                                        RecordType::Member => {
+                                                            if let Some(node_id) = node_id {
+                                                                if let Some(member) = db.cache.on_member_deleted(network_id, node_id) {
+                                                                    let _ = db.change_sender.send(Change::MemberDeleted(member));
+                                                                }
+                                                            }
+                                                        }
+                                                        _ => {}
+                                                    }
+                                                }
+
+                                                if let Some(changed) = changed {
+                                                    match record_type {
+                                                        RecordType::Network => {
+                                                            if let Ok(Some(new_network)) = Self::get_network_internal(changed).await {
+                                                                match db.cache.on_network_updated(new_network.clone()) {
+                                                                    (true, Some(old_network)) => {
+                                                                        let _ = db
+                                                                            .change_sender
+                                                                            .send(Change::NetworkChanged(old_network, new_network));
+                                                                    }
+                                                                    (true, None) => {
+                                                                        let _ = db.change_sender.send(Change::NetworkCreated(new_network));
+                                                                    }
+                                                                    _ => {}
+                                                                }
+                                                            }
+                                                        }
+                                                        RecordType::Member => {
+                                                            if let Ok(Some(new_member)) = Self::get_member_internal(changed).await {
+                                                                match db.cache.on_member_updated(new_member.clone()) {
+                                                                    (true, Some(old_member)) => {
+                                                                        let _ = db
+                                                                            .change_sender
+                                                                            .send(Change::MemberChanged(old_member, new_member));
+                                                                    }
+                                                                    (true, None) => {
+                                                                        let _ = db.change_sender.send(Change::MemberCreated(new_member));
+                                                                    }
+                                                                    _ => {}
+                                                                }
+                                                            }
+                                                        }
+                                                        _ => {}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }),
+                                    Instant::now().checked_add(EVENT_HANDLER_TASK_TIMEOUT).unwrap(),
+                                );
+                            }
+                        }
+                    }
+                })
+                .expect("FATAL: unable to start filesystem change listener");
+                let _ = watcher.configure(
+                    notify::Config::default()
+                        .with_compare_contents(true)
+                        .with_poll_interval(std::time::Duration::from_secs(2)),
+                );
+                watcher
+                    .watch(&base_path, RecursiveMode::Recursive)
+                    .expect("FATAL: unable to watch base path");
+
+                loop {
+                    // Any periodic background stuff can be put here. Adjust timing as needed.
+                    sleep(Duration::from_secs(10)).await;
+                }
+            }),
+        });
+
+        db.cache.load_all(db.as_ref()).await?;
+        *db_weak_tmp.lock().unwrap() = Arc::downgrade(&db); // this kicks off watcher task too
+
+        Ok(db)
     }
 
     fn get_controller_address(&self) -> Option<Address> {
@@ -86,7 +219,7 @@ impl FileDatabase {
     }
 
     fn network_path(&self, network_id: NetworkId) -> PathBuf {
-        self.base_path.join(format!("N{:06x}.yaml", network_id.network_no()))
+        self.base_path.join(format!("N{:06x}", network_id.network_no())).join("config.yaml")
     }
 
     fn member_path(&self, network_id: NetworkId, member_id: Address) -> PathBuf {
@@ -94,11 +227,52 @@ impl FileDatabase {
             .join(format!("N{:06x}", network_id.network_no()))
             .join(format!("M{}.yaml", member_id.to_string()))
     }
+
+    async fn get_network_internal<P: AsRef<Path>>(path: P) -> Result<Option<Network>, Box<dyn Error + Send + Sync>> {
+        let r = fs::read(path).await;
+        if let Ok(raw) = r {
+            return Ok(Some(serde_yaml::from_slice::<Network>(raw.as_slice())?));
+        } else {
+            return Ok(None);
+        }
+    }
+
+    async fn get_member_internal<P: AsRef<Path>>(path: P) -> Result<Option<Member>, Box<dyn Error + Send + Sync>> {
+        let r = fs::read(path).await;
+        if let Ok(raw) = r {
+            Ok(Some(serde_yaml::from_slice::<Member>(raw.as_slice())?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Get record type and also the number after it: network number or address.
+    fn record_type_from_path<P: AsRef<Path>>(controller_address: Address, pp: P) -> Option<(RecordType, NetworkId, Option<Address>)> {
+        let p: &Path = pp.as_ref();
+        if p.parent().map_or(false, |p| p.starts_with("N") && p.as_os_str().len() == 7) {
+            let network_id = NetworkId::from_controller_and_network_no(
+                controller_address,
+                u64::from_str_radix(&p.parent().unwrap().to_str().unwrap()[1..], 16).unwrap_or(0),
+            )?;
+            if let Some(file_name) = p.file_name().map(|p| p.to_string_lossy().to_lowercase()) {
+                if file_name.eq("config.yaml") {
+                    return Some((RecordType::Network, network_id, None));
+                } else if file_name.len() == 16 && file_name.starts_with("m") {
+                    return Some((
+                        RecordType::Member,
+                        network_id,
+                        Some(Address::from_u64(u64::from_str_radix(&file_name.as_str()[1..], 16).unwrap_or(0))?),
+                    ));
+                }
+            }
+        }
+        return None;
+    }
 }
 
 impl Drop for FileDatabase {
     fn drop(&mut self) {
-        let _ = self.watcher.lock().unwrap().unwatch(&self.base_path);
+        self.daemon.abort();
     }
 }
 
@@ -126,35 +300,51 @@ impl NodeStorage for FileDatabase {
 
 #[async_trait]
 impl Database for FileDatabase {
-    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error + Send + Sync>> {
-        let r = fs::read(self.network_path(id)).await;
-        if let Ok(raw) = r {
-            let mut network = serde_yaml::from_slice::<Network>(raw.as_slice())?;
+    async fn list_networks(&self) -> Result<Vec<NetworkId>, Box<dyn Error + Send + Sync>> {
+        let mut networks = Vec::new();
+        if let Some(controller_address) = self.get_controller_address() {
+            let controller_address_shift24 = u64::from(controller_address).wrapping_shl(24);
+            let mut dir = fs::read_dir(&self.base_path).await?;
+            while let Ok(Some(ent)) = dir.next_entry().await {
+                if ent.file_type().await.map_or(false, |t| t.is_dir()) {
+                    let osname = ent.file_name();
+                    let name = osname.to_string_lossy();
+                    if name.len() == 7 && name.starts_with("N") {
+                        if fs::metadata(ent.path().join("config.yaml")).await.is_ok() {
+                            if let Ok(nwid_last24bits) = u64::from_str_radix(&name[1..], 16) {
+                                if let Some(nwid) = NetworkId::from_u64(controller_address_shift24 | nwid_last24bits) {
+                                    networks.push(nwid);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(networks)
+    }
 
+    #[inline]
+    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error + Send + Sync>> {
+        let mut network = Self::get_network_internal(&self.network_path(id)).await?;
+        if let Some(network) = network.as_mut() {
             // FileDatabase stores networks by their "network number" and automatically adapts their IDs
             // if the controller's identity changes. This is done to make it easy to just clone networks,
             // including storing them in "git."
             if let Some(controller_address) = self.get_controller_address() {
                 let network_id_should_be = network.id.change_network_controller(controller_address);
-                if id != network_id_should_be {
-                    return Ok(None);
-                }
                 if network.id != network_id_should_be {
                     network.id = network_id_should_be;
-                    let _ = self.save_network(network.clone()).await;
+                    let _ = self.save_network(network.clone()).await?;
                 }
             }
-
-            return Ok(Some(network));
-        } else {
-            return Ok(None);
         }
+        Ok(network)
     }
 
     async fn save_network(&self, obj: Network) -> Result<(), Box<dyn Error + Send + Sync>> {
         let base_network_path = self.network_path(obj.id);
         let _ = fs::create_dir_all(base_network_path.parent().unwrap()).await;
-        //let _ = fs::write(base_network_path, to_json_pretty(&obj).as_bytes()).await?;
         let _ = fs::write(base_network_path, serde_yaml::to_string(&obj)?.as_bytes()).await?;
         return Ok(());
     }
@@ -163,15 +353,17 @@ impl Database for FileDatabase {
         let mut members = Vec::new();
         let mut dir = fs::read_dir(self.base_path.join(network_id.to_string())).await?;
         while let Ok(Some(ent)) = dir.next_entry().await {
-            let osname = ent.file_name();
-            let name = osname.to_string_lossy();
-            if name.len() == (zerotier_network_hypervisor::protocol::ADDRESS_SIZE_STRING + 6)
-                && name.starts_with("M")
-                && name.ends_with(".yaml")
-            {
-                if let Ok(member_address) = u64::from_str_radix(&name[1..11], 16) {
-                    if let Some(member_address) = Address::from_u64(member_address) {
-                        members.push(member_address);
+            if ent.file_type().await.map_or(false, |t| t.is_file() || t.is_symlink()) {
+                let osname = ent.file_name();
+                let name = osname.to_string_lossy();
+                if name.len() == (zerotier_network_hypervisor::protocol::ADDRESS_SIZE_STRING + 6)
+                    && name.starts_with("M")
+                    && name.ends_with(".yaml")
+                {
+                    if let Ok(member_address) = u64::from_str_radix(&name[1..11], 16) {
+                        if let Some(member_address) = Address::from_u64(member_address) {
+                            members.push(member_address);
+                        }
                     }
                 }
             }
@@ -180,16 +372,14 @@ impl Database for FileDatabase {
     }
 
     async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Box<dyn Error + Send + Sync>> {
-        let r = fs::read(self.member_path(network_id, node_id)).await;
-        if let Ok(raw) = r {
-            let mut member = serde_yaml::from_slice::<Member>(raw.as_slice())?;
-            self.get_controller_address()
-                .map(|a| member.network_id = member.network_id.change_network_controller(a));
-            Ok(Some(member))
-            //Ok(Some(serde_json::from_slice::<Member>(raw.as_slice())?))
-        } else {
-            Ok(None)
+        let mut member = Self::get_member_internal(&self.member_path(network_id, node_id)).await?;
+        if let Some(member) = member.as_mut() {
+            if member.network_id != network_id {
+                member.network_id = network_id;
+                self.save_member(member.clone()).await?;
+            }
         }
+        Ok(member)
     }
 
     async fn save_member(&self, obj: Member) -> Result<(), Box<dyn Error + Send + Sync>> {
@@ -227,7 +417,7 @@ mod tests {
 
                 let _ = std::fs::remove_dir_all(&test_dir);
 
-                let db = FileDatabase::new(test_dir).await.expect("new db");
+                let db = FileDatabase::new(tokio_runtime.handle().clone(), test_dir).await.expect("new db");
                 let mut test_member = Member::new_without_identity(node_id, network_id);
 
                 for x in 0..3 {

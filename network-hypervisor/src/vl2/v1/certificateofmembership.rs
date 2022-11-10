@@ -13,6 +13,14 @@ use zerotier_utils::blob::Blob;
 use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::memory;
 
+/// ZeroTier V1 certificate of membership.
+///
+/// The somewhat odd encoding of this is an artifact of an old V1 design choice: certificates are
+/// tuples of arbitrary values coupled by how different they are permitted to be (max delta).
+///
+/// This was done to permit some things such as geo-fencing that were never implemented, so it's
+/// a bit of a case of YAGNI. In V2 this is deprecated in favor of a more standard sort of
+/// certificate.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateOfMembership {
     pub network_id: NetworkId,
@@ -50,31 +58,33 @@ impl CertificateOfMembership {
 
         q[0] = 0;
         q[1] = self.timestamp.to_be() as u64;
-        q[2] = self.max_delta.to_be() as u64;
+        q[2] = self.max_delta.to_be() as u64; // TTL / "window" in V1
         q[3] = 1u64.to_be();
-        let nwid: u64 = self.network_id.into();
-        q[4] = nwid.to_be();
-        q[5] = 0;
+        q[4] = u64::from(self.network_id).to_be();
+        q[5] = 0; // no disagreement permitted
         q[6] = 2u64.to_be();
-        let a: u64 = self.issued_to.into();
-        q[7] = a.to_be();
-        q[8] = 0xffffffffffffffffu64; // no to_be needed
+        q[7] = u64::from(self.issued_to).to_be();
+        q[8] = u64::MAX; // no to_be needed for all-1s
 
+        // This is a fix for a security issue in V1 in which an attacker could (with much CPU use)
+        // duplciate an identity and insert themselves in place of one after 30-60 days when local
+        // identity caches expire. The full hash should have been included from the beginning, and
+        // V2 only ever uses the full hash of the identity to verify credentials.
         let fp = self.issued_to_fingerprint.as_bytes();
         q[9] = 3;
         q[10] = u64::from_ne_bytes(fp[0..8].try_into().unwrap());
-        q[11] = 0xffffffffffffffffu64;
+        q[11] = u64::MAX; // these will never agree; they're explicitly checked in V1
         q[12] = 4;
         q[13] = u64::from_ne_bytes(fp[8..16].try_into().unwrap());
-        q[14] = 0xffffffffffffffffu64;
+        q[14] = u64::MAX;
         q[15] = 5;
         q[16] = u64::from_ne_bytes(fp[16..24].try_into().unwrap());
-        q[17] = 0xffffffffffffffffu64;
+        q[17] = u64::MAX;
         q[18] = 6;
         q[19] = u64::from_ne_bytes(fp[24..32].try_into().unwrap());
-        q[20] = 0xffffffffffffffffu64;
+        q[20] = u64::MAX;
 
-        *memory::as_byte_array(&q)
+        memory::to_byte_array(q)
     }
 
     /// Get the identity fingerprint used in V1, which only covers the curve25519 keys.

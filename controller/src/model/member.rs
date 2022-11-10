@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress};
 use zerotier_network_hypervisor::vl2::NetworkId;
+use zerotier_utils::blob::Blob;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Member {
@@ -14,6 +15,13 @@ pub struct Member {
     pub node_id: Address,
     #[serde(rename = "networkId")]
     pub network_id: NetworkId,
+
+    /// Pinned full member identity fingerprint, if known.
+    /// If this is set but 'identity' is not, the 'identity' field will be set on first request
+    /// but an identity not matching this fingerprint will not be accepted. This allows a member
+    /// to be created with an address and a fingerprint for full SHA384 identity specification.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub identity_fingerprint: Option<Blob<{ Identity::FINGERPRINT_SIZE }>>,
 
     /// Pinned full member identity, if known.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -71,11 +79,13 @@ pub struct Member {
 }
 
 impl Member {
+    /// Create a new network member without specifying a "pinned" identity.
     pub fn new_without_identity(node_id: Address, network_id: NetworkId) -> Self {
         Self {
             node_id,
             network_id,
             identity: None,
+            identity_fingerprint: None,
             name: String::new(),
             last_authorized_time: None,
             last_deauthorized_time: None,
@@ -90,6 +100,7 @@ impl Member {
 
     pub fn new_with_identity(identity: Identity, network_id: NetworkId) -> Self {
         let mut tmp = Self::new_without_identity(identity.address, network_id);
+        tmp.identity_fingerprint = Some(Blob::from(identity.fingerprint));
         tmp.identity = Some(identity);
         tmp
     }
@@ -110,14 +121,7 @@ impl Hash for Member {
 }
 
 impl ToString for Member {
-    #[inline(always)]
     fn to_string(&self) -> String {
         zerotier_utils::json::to_json_pretty(self)
     }
-}
-
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Tag {
-    pub id: u32,
-    pub value: u32,
 }

@@ -16,7 +16,6 @@ use zerotier_network_hypervisor::vl2::v1::Revocation;
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::blob::Blob;
 use zerotier_utils::buffer::OutOfBoundsError;
-use zerotier_utils::dictionary::Dictionary;
 use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::reaper::Reaper;
 use zerotier_utils::tokio;
@@ -125,7 +124,7 @@ impl Controller {
         }));
     }
 
-    /// Compose and send network configuration packet.
+    /// Compose and send network configuration packet (either V1 or V2)
     fn send_network_config(
         &self,
         peer: &Peer,
@@ -184,24 +183,44 @@ impl Controller {
         }
     }
 
-    /// Send one or more revocation object(s) to a peer.
-    fn send_revocations(&self, peer: &Peer, revocations: Vec<Revocation>) {
-        if let Some(host_system) = self.service.read().unwrap().upgrade() {}
-    }
+    /// Send one or more revocation object(s) to a peer (V1 protocol only).
+    fn v1_proto_send_revocations(&self, peer: &Peer, mut revocations: Vec<Revocation>) {
+        if let Some(host_system) = self.service.read().unwrap().upgrade() {
+            let time_ticks = ms_monotonic();
+            while !revocations.is_empty() {
+                let send_count = revocations.len().min(protocol::UDP_DEFAULT_MTU / 256);
+                debug_assert!(send_count <= (u16::MAX as usize));
+                peer.send(
+                    host_system.as_ref(),
+                    host_system.node(),
+                    None,
+                    time_ticks,
+                    |packet| -> Result<(), OutOfBoundsError> {
+                        let payload_start = packet.len();
 
-    /// Called when the DB informs us of a change.
-    async fn handle_change_notification(self: Arc<Self>, change: Change) {
-        match change {
-            Change::MemberAuthorized(_, _) => {}
-            Change::MemberDeauthorized(network_id, node_id) => {
-                if let Ok(Some(member)) = self.database.get_member(network_id, node_id).await {
-                    if !member.authorized() {
-                        // TODO
-                    }
-                }
+                        packet.append_u8(protocol::message_type::VL2_NETWORK_CREDENTIALS)?;
+                        packet.append_u8(0)?;
+                        packet.append_u16(0)?;
+                        packet.append_u16(0)?;
+                        packet.append_u16(send_count as u16)?;
+                        for _ in 0..send_count {
+                            let r = revocations.pop().unwrap();
+                            packet.append_bytes(r.to_bytes(self.local_identity.address).as_bytes())?;
+                        }
+                        packet.append_u16(0)?;
+
+                        let new_payload_len = protocol::compress(&mut packet.as_bytes_mut()[payload_start..]);
+                        packet.set_size(payload_start + new_payload_len);
+
+                        Ok(())
+                    },
+                );
             }
         }
     }
+
+    /// Called when the DB informs us of a change.
+    async fn handle_change_notification(self: Arc<Self>, change: Change) {}
 
     /// Attempt to create a network configuration and return the result.
     ///
@@ -228,20 +247,34 @@ impl Controller {
         let mut member = self.database.get_member(network_id, source_identity.address).await?;
         let mut member_changed = false;
 
+        // WARNING: this is where members are verified before they get admitted to a network. Read and edit
+        // very carefully!
+
         // If we have a member object and a pinned identity, check to make sure it matches. Also accept
         // upgraded identities to replace old versions if they are properly formed and inherit.
         if let Some(member) = member.as_mut() {
             if let Some(pinned_identity) = member.identity.as_ref() {
                 if !pinned_identity.eq(&source_identity) {
-                    return Ok((AuthorizationResult::RejectedIdentityMismatch, None, None));
-                } else if source_identity.is_upgraded_from(pinned_identity) {
+                    if source_identity.is_upgraded_from(pinned_identity) {
+                        // Upgrade identity types if we have a V2 identity upgraded from a V1 identity.
+                        let _ = member.identity.replace(source_identity.clone_without_secret());
+                        member_changed = true;
+                    } else {
+                        return Ok((AuthorizationResult::RejectedIdentityMismatch, None, None));
+                    }
+                }
+            } else if let Some(pinned_fingerprint) = member.identity_fingerprint.as_ref() {
+                if pinned_fingerprint.as_bytes().eq(&source_identity.fingerprint) {
+                    // Learn the FULL identity if the fingerprint is pinned and they match.
                     let _ = member.identity.replace(source_identity.clone_without_secret());
                     member_changed = true;
+                } else {
+                    return Ok((AuthorizationResult::RejectedIdentityMismatch, None, None));
                 }
             }
         }
 
-        // This is the final verdict after everything has been checked.
+        // This will be the final verdict after everything has been checked.
         let mut authorization_result = AuthorizationResult::Rejected;
 
         // This is the main "authorized" flag on the member record. If it is true then
@@ -296,7 +329,7 @@ impl Controller {
             let credential_ttl = network.credential_ttl.unwrap_or(CREDENTIAL_WINDOW_SIZE_DEFAULT);
 
             // Check and if necessary auto-assign static IPs for this member.
-            member_changed |= network.check_zt_ip_assignments(self.database.as_ref(), &mut member).await;
+            member_changed |= network.assign_ip_addresses(self.database.as_ref(), &mut member).await;
 
             let mut nc = NetworkConfig::new(network_id, source_identity.address);
 
@@ -314,6 +347,9 @@ impl Controller {
             nc.dns = network.dns;
 
             if network.min_supported_version.unwrap_or(0) < (protocol::PROTOCOL_VERSION_V2 as u32) {
+                // If this network supports V1 nodes we have to include V1 credentials. Otherwise we can skip
+                // the overhead (bandwidth and CPU) of generating these.
+
                 if let Some(com) =
                     vl2::v1::CertificateOfMembership::new(&self.local_identity, network_id, &source_identity, now, credential_ttl)
                 {
@@ -344,7 +380,7 @@ impl Controller {
 
                     nc.v1_credentials = Some(v1cred);
 
-                    // Staple a bunch of revocations for anyone deauthed that still might be in the window.
+                    // For anyone who has been deauthorized but is still in the window, send revocations.
                     if let Ok(deauthed_members_still_in_window) = self
                         .database
                         .list_members_deauthorized_after(network.id, now - credential_ttl)
@@ -373,9 +409,10 @@ impl Controller {
                 }
             } else {
                 // TODO: create V2 type credential for V2-only networks
-                // TODO: populate node info for V2 networks
             }
 
+            // Log this member in the recently authorized cache, which is currently just used to filter whether we should
+            // handle multicast subscription traffic.
             let _ = self
                 .recently_authorized
                 .write()
@@ -432,22 +469,18 @@ impl InnerProtocol for Controller {
                     u64::from(network_id)
                 );
 
-                let meta_data = if (cursor + 2) < payload.len() {
+                let metadata = if (cursor + 2) < payload.len() {
                     let meta_data_len = payload.read_u16(&mut cursor);
                     if meta_data_len.is_err() {
                         return PacketHandlerResult::Error;
                     }
                     if let Ok(d) = payload.read_bytes(meta_data_len.unwrap() as usize, &mut cursor) {
-                        let d = Dictionary::from_bytes(d);
-                        if d.is_none() {
-                            return PacketHandlerResult::Error;
-                        }
-                        d.unwrap()
+                        d.to_vec()
                     } else {
                         return PacketHandlerResult::Error;
                     }
                 } else {
-                    Dictionary::new()
+                    Vec::new()
                 };
 
                 // Launch handler as an async background task.
@@ -464,7 +497,7 @@ impl InnerProtocol for Controller {
                                 //println!("{}", serde_yaml::to_string(&config).unwrap());
                                 self2.send_network_config(source.as_ref(), &config, Some(message_id));
                                 if let Some(revocations) = revocations {
-                                    self2.send_revocations(source.as_ref(), revocations);
+                                    self2.v1_proto_send_revocations(source.as_ref(), revocations);
                                 }
                                 (result, Some(config))
                             }
@@ -484,11 +517,7 @@ impl InnerProtocol for Controller {
                                 node_id,
                                 node_fingerprint,
                                 controller_node_id: self2.local_identity.address,
-                                metadata: if meta_data.is_empty() {
-                                    Vec::new()
-                                } else {
-                                    meta_data.to_bytes()
-                                },
+                                metadata,
                                 peer_version: source.version(),
                                 peer_protocol_version: source.protocol_version(),
                                 timestamp: now,
@@ -550,16 +579,18 @@ impl InnerProtocol for Controller {
 impl VL1AuthProvider for Controller {
     #[inline(always)]
     fn should_respond_to(&self, _: &Identity) -> bool {
+        // Controllers always have to establish sessions to process requests. We don't really know if
+        // a member is relevant until we have looked up both the network and the member, since whether
+        // or not to "learn" unknown members is a network level option.
         true
     }
 
     fn has_trust_relationship(&self, id: &Identity) -> bool {
-        let time_ticks = ms_monotonic();
         self.recently_authorized
             .read()
             .unwrap()
             .get(&id.fingerprint)
-            .map_or(false, |by_network| by_network.values().any(|t| *t > time_ticks))
+            .map_or(false, |by_network| by_network.values().any(|t| *t > ms_monotonic()))
     }
 }
 
