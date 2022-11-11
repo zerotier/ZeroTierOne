@@ -43,10 +43,6 @@ impl Cache {
         Ok(())
     }
 
-    pub fn list_cached_networks(&self) -> Vec<NetworkId> {
-        self.by_nwid.read().unwrap().keys().cloned().collect()
-    }
-
     /// Update a network if changed, returning whether or not any update was made and the old version if any.
     /// A value of (true, None) indicates that there was no network by that ID in which case it is added.
     pub fn on_network_updated(&self, network: Network) -> (bool, Option<Network>) {

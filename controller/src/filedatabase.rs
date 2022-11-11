@@ -74,6 +74,7 @@ impl FileDatabase {
                                             if let Some((record_type, network_id, node_id)) =
                                                 Self::record_type_from_path(controller_address, path0.as_path())
                                             {
+                                                // Paths to objects that were deleted or changed. Changed includes adding new objects.
                                                 let mut deleted = None;
                                                 let mut changed = None;
 
@@ -117,6 +118,7 @@ impl FileDatabase {
                                                 }
 
                                                 if deleted.is_some() {
+                                                    println!("DELETED: {}", deleted.unwrap().as_os_str().to_string_lossy());
                                                     match record_type {
                                                         RecordType::Network => {
                                                             if let Some((network, mut members)) = db.cache.on_network_deleted(network_id) {
@@ -138,6 +140,7 @@ impl FileDatabase {
                                                 }
 
                                                 if let Some(changed) = changed {
+                                                    println!("CHANGED: {}", changed.as_os_str().to_string_lossy());
                                                     match record_type {
                                                         RecordType::Network => {
                                                             if let Ok(Some(new_network)) = Self::get_network_internal(changed).await {
@@ -375,6 +378,7 @@ impl Database for FileDatabase {
         let mut member = Self::get_member_internal(&self.member_path(network_id, node_id)).await?;
         if let Some(member) = member.as_mut() {
             if member.network_id != network_id {
+                // Also auto-update member network IDs, see get_network().
                 member.network_id = network_id;
                 self.save_member(member.clone()).await?;
             }
@@ -385,7 +389,6 @@ impl Database for FileDatabase {
     async fn save_member(&self, obj: Member) -> Result<(), Box<dyn Error + Send + Sync>> {
         let base_member_path = self.member_path(obj.network_id, obj.node_id);
         let _ = fs::create_dir_all(base_member_path.parent().unwrap()).await;
-        //let _ = fs::write(base_member_path, to_json_pretty(&obj).as_bytes()).await?;
         let _ = fs::write(base_member_path, serde_yaml::to_string(&obj)?.as_bytes()).await?;
         Ok(())
     }

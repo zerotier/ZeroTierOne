@@ -28,7 +28,7 @@ pub mod reaper;
 pub use tokio;
 
 /// A monotonic ticks value for "never happened" that should be lower than any initial value.
-pub const NEVER_HAPPENED_TICKS: i64 = i64::MIN / 2;
+pub const NEVER_HAPPENED_TICKS: i64 = i64::MIN;
 
 /// Get milliseconds since unix epoch.
 #[inline]
@@ -44,15 +44,19 @@ pub fn ms_since_epoch() -> i64 {
 pub fn ms_monotonic() -> i64 {
     static STARTUP_INSTANT: std::sync::RwLock<Option<std::time::Instant>> = std::sync::RwLock::new(None);
     let si = *STARTUP_INSTANT.read().unwrap();
-    let instant_zero = if let Some(si) = si {
-        si
+    if let Some(si) = si {
+        si.elapsed().as_millis() as i64
     } else {
-        *STARTUP_INSTANT.write().unwrap().get_or_insert(std::time::Instant::now())
-    };
-    std::time::Instant::now().duration_since(instant_zero).as_millis() as i64
+        STARTUP_INSTANT
+            .write()
+            .unwrap()
+            .get_or_insert(std::time::Instant::now())
+            .elapsed()
+            .as_millis() as i64
+    }
 }
 
-/// Wait for a kill signal (e.g. SIGINT or OS-equivalent) and return when received.
+/// Wait for a kill signal (e.g. SIGINT or OS-equivalent) sent to this process and return when received.
 #[cfg(unix)]
 pub fn wait_for_process_abort() {
     if let Ok(mut signals) = signal_hook::iterator::Signals::new(&[libc::SIGINT, libc::SIGTERM, libc::SIGQUIT]) {
@@ -65,10 +69,10 @@ pub fn wait_for_process_abort() {
                     _ => {}
                 }
             }
-            std::thread::sleep(std::time::Duration::from_millis(500));
+            std::thread::sleep(std::time::Duration::from_millis(100));
         }
     } else {
-        panic!("unable to listen to OS signals");
+        panic!("unable to listen for OS signals");
     }
 }
 

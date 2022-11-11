@@ -41,17 +41,6 @@ pub struct NetworkConfig {
     /// Network configuration timestamp
     pub timestamp: i64,
 
-    /// TTL for credentials on this network (or window size for V1 nodes)
-    pub credential_ttl: i64,
-
-    /// Network configuration revision number (V1)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default)]
-    pub revision: Option<u64>,
-
-    /// L2 Ethernet MTU for this network.
-    pub mtu: u16,
-
     /// Suggested horizon limit for multicast (not a hard limit, but 0 disables multicast)
     pub multicast_limit: u32,
 
@@ -59,6 +48,9 @@ pub struct NetworkConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub multicast_like_expire: Option<u32>,
+
+    /// L2 Ethernet MTU for this network.
+    pub mtu: u16,
 
     /// ZeroTier-assigned L3 routes for this node.
     #[serde(skip_serializing_if = "HashSet::is_empty")]
@@ -105,8 +97,6 @@ impl NetworkConfig {
             motd: String::new(),
             private: true,
             timestamp: 0,
-            credential_ttl: 0,
-            revision: None,
             mtu: 0,
             multicast_limit: 0,
             multicast_like_expire: None,
@@ -143,8 +133,6 @@ impl NetworkConfig {
             },
         );
         d.set_u64(proto_v1_field_name::network_config::TIMESTAMP, self.timestamp as u64);
-        d.set_u64(proto_v1_field_name::network_config::MAX_DELTA, self.credential_ttl as u64);
-        d.set_u64(proto_v1_field_name::network_config::REVISION, self.revision.unwrap_or(0));
         d.set_u64(proto_v1_field_name::network_config::MTU, self.mtu as u64);
         d.set_u64(proto_v1_field_name::network_config::MULTICAST_LIMIT, self.multicast_limit as u64);
 
@@ -193,6 +181,9 @@ impl NetworkConfig {
         }
 
         if let Some(v1cred) = self.v1_credentials.as_ref() {
+            d.set_u64(proto_v1_field_name::network_config::REVISION, v1cred.revision);
+            d.set_u64(proto_v1_field_name::network_config::MAX_DELTA, v1cred.max_delta);
+
             d.set_bytes(
                 proto_v1_field_name::network_config::CERTIFICATE_OF_MEMBERSHIP,
                 v1cred
@@ -268,8 +259,6 @@ impl NetworkConfig {
         nc.timestamp = d
             .get_i64(proto_v1_field_name::network_config::TIMESTAMP)
             .ok_or(InvalidParameterError("missing timestamp"))?;
-        nc.credential_ttl = d.get_i64(proto_v1_field_name::network_config::MAX_DELTA).unwrap_or(0);
-        nc.revision = Some(d.get_u64(proto_v1_field_name::network_config::REVISION).unwrap_or(0));
         nc.mtu = d
             .get_u64(proto_v1_field_name::network_config::MTU)
             .unwrap_or(crate::protocol::ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU as u64) as u16;
@@ -327,6 +316,8 @@ impl NetworkConfig {
         }
 
         let mut v1cred = V1Credentials {
+            revision: d.get_u64(proto_v1_field_name::network_config::REVISION).unwrap_or(0),
+            max_delta: d.get_u64(proto_v1_field_name::network_config::MAX_DELTA).unwrap_or(0),
             certificate_of_membership: CertificateOfMembership::from_bytes(
                 d.get_bytes(proto_v1_field_name::network_config::CERTIFICATE_OF_MEMBERSHIP)
                     .ok_or(InvalidParameterError("missing certificate of membership"))?,
@@ -446,6 +437,8 @@ pub struct SSOAuthConfiguration {
 /// networks that support older protocol versions.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct V1Credentials {
+    pub revision: u64,
+    pub max_delta: u64,
     pub certificate_of_membership: CertificateOfMembership,
     pub certificates_of_ownership: Vec<CertificateOfOwnership>,
     #[serde(skip_serializing_if = "HashMap::is_empty")]

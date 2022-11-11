@@ -183,8 +183,8 @@ impl Controller {
         }
     }
 
-    /// Send one or more revocation object(s) to a peer (V1 protocol only).
-    fn v1_proto_send_revocations(&self, peer: &Peer, mut revocations: Vec<Revocation>) {
+    /// Send one or more revocation object(s) to a peer.
+    fn send_revocations(&self, peer: &Peer, mut revocations: Vec<Revocation>) {
         if let Some(host_system) = self.service.read().unwrap().upgrade() {
             let time_ticks = ms_monotonic();
             while !revocations.is_empty() {
@@ -336,11 +336,9 @@ impl Controller {
             nc.name = network.name.clone();
             nc.private = network.private;
             nc.timestamp = now;
-            nc.credential_ttl = credential_ttl;
-            nc.revision = Some(now as u64);
-            nc.mtu = network.mtu.unwrap_or(ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU as u16);
             nc.multicast_limit = network.multicast_limit.unwrap_or(DEFAULT_MULTICAST_LIMIT as u32);
             nc.multicast_like_expire = Some(protocol::VL2_DEFAULT_MULTICAST_LIKE_EXPIRE as u32);
+            nc.mtu = network.mtu.unwrap_or(ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU as u16);
             nc.routes = network.ip_routes;
             nc.static_ips = member.ip_assignments.clone();
             nc.rules = network.rules;
@@ -354,6 +352,8 @@ impl Controller {
                     vl2::v1::CertificateOfMembership::new(&self.local_identity, network_id, &source_identity, now, credential_ttl)
                 {
                     let mut v1cred = V1Credentials {
+                        revision: now as u64,
+                        max_delta: credential_ttl,
                         certificate_of_membership: com,
                         certificates_of_ownership: Vec::new(),
                         tags: HashMap::new(),
@@ -383,7 +383,7 @@ impl Controller {
                     // For anyone who has been deauthorized but is still in the window, send revocations.
                     if let Ok(deauthed_members_still_in_window) = self
                         .database
-                        .list_members_deauthorized_after(network.id, now - credential_ttl)
+                        .list_members_deauthorized_after(network.id, now - (credential_ttl as i64))
                         .await
                     {
                         if !deauthed_members_still_in_window.is_empty() {
@@ -419,7 +419,7 @@ impl Controller {
                 .unwrap()
                 .entry(source_identity.fingerprint)
                 .or_default()
-                .insert(network_id, ms_monotonic() + nc.credential_ttl);
+                .insert(network_id, ms_monotonic() + (credential_ttl as i64));
 
             network_config = Some(nc);
         }
@@ -497,7 +497,7 @@ impl InnerProtocol for Controller {
                                 //println!("{}", serde_yaml::to_string(&config).unwrap());
                                 self2.send_network_config(source.as_ref(), &config, Some(message_id));
                                 if let Some(revocations) = revocations {
-                                    self2.v1_proto_send_revocations(source.as_ref(), revocations);
+                                    self2.send_revocations(source.as_ref(), revocations);
                                 }
                                 (result, Some(config))
                             }

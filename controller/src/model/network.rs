@@ -13,7 +13,7 @@ use zerotier_network_hypervisor::vl2::NetworkId;
 use crate::database::Database;
 use crate::model::Member;
 
-pub const CREDENTIAL_WINDOW_SIZE_DEFAULT: i64 = 1000 * 60 * 60;
+pub const CREDENTIAL_WINDOW_SIZE_DEFAULT: u64 = 1000 * 60 * 60;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct Ipv4AssignMode {
@@ -105,7 +105,7 @@ pub struct Network {
     /// Usually this does not need to be changed.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "credentialTtl")]
-    pub credential_ttl: Option<i64>,
+    pub credential_ttl: Option<u64>,
 
     /// Minimum supported ZeroTier protocol version for this network (default: undefined, up to members)
     #[serde(skip_serializing_if = "Option::is_none")]

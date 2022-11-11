@@ -13,6 +13,7 @@ use std::ptr::{drop_in_place, read, write};
 /// This will panic if the capacity is too small. If that occurs, it must be enlarged. It will
 /// also panic if any of the accessors (other than the try_ versions) are used to try to get
 /// a type other than the one it was constructed with.
+#[repr(C)]
 pub struct Thing<const CAPACITY: usize> {
     storage: [u8; CAPACITY],
     dropper: fn(*mut u8),

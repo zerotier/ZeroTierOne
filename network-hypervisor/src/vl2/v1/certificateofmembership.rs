@@ -25,7 +25,7 @@ use zerotier_utils::memory;
 pub struct CertificateOfMembership {
     pub network_id: NetworkId,
     pub timestamp: i64,
-    pub max_delta: i64,
+    pub max_delta: u64,
     pub issued_to: Address,
     pub issued_to_fingerprint: Blob<32>,
     pub signature: ArrayVec<u8, { Identity::MAX_SIGNATURE_SIZE }>,
@@ -34,7 +34,7 @@ pub struct CertificateOfMembership {
 impl CertificateOfMembership {
     /// Create a new signed certificate of membership.
     /// None is returned if an error occurs, such as the issuer missing its secrets.
-    pub fn new(issuer: &Identity, network_id: NetworkId, issued_to: &Identity, timestamp: i64, max_delta: i64) -> Option<Self> {
+    pub fn new(issuer: &Identity, network_id: NetworkId, issued_to: &Identity, timestamp: i64, max_delta: u64) -> Option<Self> {
         let mut com = CertificateOfMembership {
             network_id,
             timestamp,
@@ -128,7 +128,7 @@ impl CertificateOfMembership {
             match qt {
                 0 => {
                     timestamp = i64::from_be_bytes(q);
-                    max_delta = qd as i64;
+                    max_delta = qd;
                 }
                 1 => {
                     network_id = u64::from_be_bytes(q);
