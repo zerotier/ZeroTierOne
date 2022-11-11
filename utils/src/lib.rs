@@ -27,8 +27,8 @@ pub mod reaper;
 #[cfg(feature = "tokio")]
 pub use tokio;
 
-/// A monotonic ticks value for "never happened" that should be lower than any initial value.
-pub const NEVER_HAPPENED_TICKS: i64 = i64::MIN;
+/// Initial value that should be used for monotonic tick time variables.
+pub const NEVER_HAPPENED_TICKS: i64 = 0;
 
 /// Get milliseconds since unix epoch.
 #[inline]
