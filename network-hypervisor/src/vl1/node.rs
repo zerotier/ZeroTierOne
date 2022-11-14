@@ -66,7 +66,7 @@ pub trait HostSystem: VL1AuthProvider + NodeStorage + 'static {
     /// Type for local system sockets.
     type LocalSocket: Sync + Send + Hash + PartialEq + Eq + Clone + ToString + Sized + 'static;
 
-    /// Type for local system interfaces.    
+    /// Type for local system interfaces.
     type LocalInterface: Sync + Send + Hash + PartialEq + Eq + Clone + ToString + Sized + 'static;
 
     /// A VL1 level event occurred.

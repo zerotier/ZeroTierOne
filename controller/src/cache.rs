@@ -84,22 +84,16 @@ impl Cache {
     /// Delete a network, returning it if it existed.
     pub fn on_network_deleted(&self, network_id: NetworkId) -> Option<(Network, Vec<Member>)> {
         let mut by_nwid = self.by_nwid.write().unwrap();
-        if let Some(network) = by_nwid.remove(&network_id) {
-            let mut members = network.1.lock().unwrap();
-            Some((network.0, members.drain().map(|(_, v)| v).collect()))
-        } else {
-            None
-        }
+        let network = by_nwid.remove(&network_id)?;
+        let mut members = network.1.lock().unwrap();
+        Some((network.0, members.drain().map(|(_, v)| v).collect()))
     }
 
     /// Delete a member, returning it if it existed.
     pub fn on_member_deleted(&self, network_id: NetworkId, node_id: Address) -> Option<Member> {
         let by_nwid = self.by_nwid.read().unwrap();
-        if let Some(network) = by_nwid.get(&network_id) {
-            let mut members = network.1.lock().unwrap();
-            members.remove(&node_id)
-        } else {
-            None
-        }
+        let network = by_nwid.get(&network_id)?;
+        let mut members = network.1.lock().unwrap();
+        members.remove(&node_id)
     }
 }
