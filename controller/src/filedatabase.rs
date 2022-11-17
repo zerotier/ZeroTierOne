@@ -402,6 +402,7 @@ mod tests {
     #[allow(unused_imports)]
     use super::*;
 
+    #[allow(unused)]
     #[test]
     fn test_db() {
         if let Ok(tokio_runtime) = zerotier_utils::tokio::runtime::Builder::new_current_thread().enable_all().build() {
