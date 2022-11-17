@@ -4,11 +4,10 @@ mod address;
 mod endpoint;
 mod event;
 mod mac;
+mod node;
 mod path;
 mod peer;
 mod rootset;
-
-pub(crate) mod node;
 
 pub mod identity;
 pub mod inetaddress;

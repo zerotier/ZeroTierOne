@@ -3,8 +3,7 @@
 use std::sync::Arc;
 
 use crate::protocol::PacketBuffer;
-use crate::vl1::node::{HostSystem, InnerProtocol, Node, PacketHandlerResult};
-use crate::vl1::{Path, Peer};
+use crate::vl1::{HostSystem, InnerProtocol, Node, PacketHandlerResult, Path, Peer};
 
 pub trait SwitchInterface: Sync + Send {}
 
