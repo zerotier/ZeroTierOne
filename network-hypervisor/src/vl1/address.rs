@@ -1,5 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroU64;
 use std::str::FromStr;
@@ -12,7 +13,7 @@ use zerotier_utils::error::InvalidFormatError;
 use zerotier_utils::hex;
 
 /// A unique address on the global ZeroTier VL1 network.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct Address(NonZeroU64);
 
@@ -89,6 +90,13 @@ impl Hash for Address {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write_u64(self.0.get());
+    }
+}
+
+impl Debug for Address {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.to_string().as_str())
     }
 }
 

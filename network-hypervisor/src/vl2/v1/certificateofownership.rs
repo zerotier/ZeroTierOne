@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use zerotier_utils::arrayvec::ArrayVec;
 use zerotier_utils::error::InvalidParameterError;
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Thing {
     Ipv4([u8; 4]),
     Ipv6([u8; 16]),
@@ -27,7 +27,7 @@ impl Thing {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateOfOwnership {
     pub network_id: NetworkId,
     pub timestamp: i64,

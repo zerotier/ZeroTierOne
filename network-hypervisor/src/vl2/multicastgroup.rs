@@ -1,5 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
@@ -34,6 +35,20 @@ impl Hash for MulticastGroup {
         state.write_u32(self.adi);
     }
 }
+
+impl ToString for MulticastGroup {
+    fn to_string(&self) -> String {
+        format!("{}/{}", self.mac.to_string(), self.adi.to_string())
+    }
+}
+
+impl Debug for MulticastGroup {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.to_string().as_str())
+    }
+}
+
 impl Serialize for MulticastGroup {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

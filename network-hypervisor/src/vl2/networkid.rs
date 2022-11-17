@@ -1,5 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroU64;
 use std::str::FromStr;
@@ -94,6 +95,13 @@ impl ToString for NetworkId {
             v <<= 4;
         }
         s
+    }
+}
+
+impl Debug for NetworkId {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.to_string().as_str())
     }
 }
 

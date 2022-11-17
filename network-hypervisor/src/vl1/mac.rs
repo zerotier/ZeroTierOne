@@ -17,12 +17,6 @@ use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 #[repr(transparent)]
 pub struct MAC(NonZeroU64);
 
-impl Debug for MAC {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.to_string())
-    }
-}
-
 impl MAC {
     #[inline(always)]
     pub fn from_u64(i: u64) -> Option<MAC> {
@@ -119,6 +113,12 @@ impl Hash for MAC {
     #[inline(always)]
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write_u64(self.0.get());
+    }
+}
+
+impl Debug for MAC {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.to_string())
     }
 }
 

@@ -119,7 +119,7 @@ impl RootSet {
             }
         }
 
-        return Some(Verified(self));
+        return Some(Verified::assume_verified(self));
     }
 
     /// Add a member to this definition, replacing any current entry with this address.

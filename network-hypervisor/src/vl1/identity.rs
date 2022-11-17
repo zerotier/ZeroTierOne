@@ -2,6 +2,7 @@
 
 use std::cmp::Ordering;
 use std::convert::TryInto;
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::str::FromStr;
@@ -22,6 +23,7 @@ use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
 use crate::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_POW_THRESHOLD};
 use crate::vl1::Address;
+use crate::vl1::Verified;
 
 /// Current maximum size for an identity signature.
 pub const IDENTITY_MAX_SIGNATURE_SIZE: usize = P384_ECDSA_SIGNATURE_SIZE + 1;
@@ -164,7 +166,7 @@ impl Identity {
     const FLAG_INCLUDES_SECRETS: u8 = 0x80;
 
     /// Generate a new identity.
-    pub fn generate() -> Self {
+    pub fn generate() -> Verified<Self> {
         // First generate an identity with just x25519 keys and derive its address.
         let mut sha = SHA512::new();
         let ed25519 = Ed25519KeyPair::generate();
@@ -204,7 +206,7 @@ impl Identity {
         assert!(id.upgrade().is_ok());
         assert!(id.p384.is_some() && id.secret.as_ref().unwrap().p384.is_some());
 
-        id
+        Verified::assume_verified(id)
     }
 
     /// Upgrade older x25519-only identities to hybrid identities with both x25519 and NIST P-384 curves.
@@ -288,7 +290,7 @@ impl Identity {
     /// Locally check the validity of this identity.
     ///
     /// This is somewhat time consuming due to the memory-intensive work algorithm.
-    pub fn validate_identity(&self) -> bool {
+    pub fn validate(self) -> Option<Verified<Self>> {
         if let Some(p384) = self.p384.as_ref() {
             let mut self_sign_buf: Vec<u8> = Vec::with_capacity(
                 ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE,
@@ -301,12 +303,12 @@ impl Identity {
             let _ = self_sign_buf.write_all(p384.ecdsa.as_bytes());
 
             if !p384.ecdsa.verify(self_sign_buf.as_slice(), &p384.ecdsa_self_signature) {
-                return false;
+                return None;
             }
 
             let _ = self_sign_buf.write_all(&p384.ecdsa_self_signature);
             if !ed25519_verify(&self.ed25519, &p384.ed25519_self_signature, self_sign_buf.as_slice()) {
-                return false;
+                return None;
             }
         }
 
@@ -318,7 +320,11 @@ impl Identity {
         let mut digest = sha.finish();
         zt_address_derivation_work_function(&mut digest);
 
-        return digest[0] < IDENTITY_POW_THRESHOLD && Address::from_bytes(&digest[59..64]).map_or(false, |a| a == self.address);
+        return if digest[0] < IDENTITY_POW_THRESHOLD && Address::from_bytes(&digest[59..64]).map_or(false, |a| a == self.address) {
+            Some(Verified::assume_verified(self))
+        } else {
+            None
+        };
     }
 
     /// Returns true if this identity was upgraded from another older version.
@@ -337,7 +343,7 @@ impl Identity {
     /// For new identities with P-384 keys a hybrid agreement is performed using both X25519 and NIST P-384 ECDH.
     /// The final key is derived as HMAC(x25519 secret, p-384 secret) to yield a FIPS-compliant key agreement with
     /// the X25519 secret being used as a "salt" as far as FIPS is concerned.
-    pub fn agree(&self, other: &Identity) -> Option<Secret<64>> {
+    pub fn agree(&self, other: &Verified<Identity>) -> Option<Secret<64>> {
         if let Some(secret) = self.secret.as_ref() {
             let c25519_secret: Secret<64> = Secret(SHA512::hash(&secret.x25519.agree(&other.x25519).0));
 
@@ -822,6 +828,13 @@ impl Hash for Identity {
     }
 }
 
+impl Debug for Identity {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.to_string().as_str())
+    }
+}
+
 impl Serialize for Identity {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -887,8 +900,7 @@ mod tests {
         let id = Identity::from_str(
             "728efdb79d:0:3077ed0084d8d48a3ac628af6b45d9351e823bff34bc4376cddfc77a3d73a966c7d347bdcc1244d0e99e1b9c961ff5e963092e90ca43b47ff58c114d2d699664:2afaefcd1dca336ed59957eb61919b55009850b0b7088af3ee142672b637d1d49cc882b30a006f9eee42f2211ef8fe1cbe99a16a4436737fc158ce2243c15f12",
         )
-        .unwrap();
-        assert!(id.validate_identity());
+        .unwrap().validate().unwrap();
         let self_agree = id.agree(&id).unwrap();
         assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));
 
@@ -920,7 +932,6 @@ mod tests {
     fn marshal_unmarshal_sign_verify_agree() {
         let gen = Identity::generate();
         assert!(gen.agree(&gen).is_some());
-        assert!(gen.validate_identity());
         let bytes = gen.to_secret_bytes().unwrap();
         let string = gen.to_secret_string();
         assert!(Identity::from_str(string.as_str()).unwrap().eq(&gen));
@@ -938,57 +949,53 @@ mod tests {
         assert!(Identity::from_str(string.as_str()).unwrap().secret.is_some());
 
         let gen2 = Identity::generate();
-        assert!(gen2.validate_identity());
         assert!(gen2.agree(&gen).unwrap().eq(&gen.agree(&gen2).unwrap()));
 
         for id_str in GOOD_V0_IDENTITIES {
-            let mut id = Identity::from_str(id_str).unwrap();
+            let mut id = Identity::from_str(id_str).unwrap().validate().unwrap();
             assert_eq!(id.to_secret_string().as_str(), id_str);
 
-            assert!(id.validate_identity());
             assert!(id.p384.is_none());
 
             let idb = id.to_secret_bytes().unwrap();
-            let id_unmarshal = Identity::from_bytes(idb.as_bytes()).unwrap();
+            let id_unmarshal = Identity::from_bytes(idb.as_bytes()).unwrap().validate().unwrap();
             assert!(id == id_unmarshal);
             assert!(id_unmarshal.secret.is_some());
 
             let idb2 = id_unmarshal.to_bytes();
-            let id_unmarshal2 = Identity::from_bytes(&idb2).unwrap();
+            let id_unmarshal2 = Identity::from_bytes(&idb2).unwrap().validate().unwrap();
             assert!(id_unmarshal2 == id_unmarshal);
             assert!(id_unmarshal2 == id);
             assert!(id_unmarshal2.secret.is_none());
 
             let ids = id.to_string();
-            assert!(Identity::from_str(ids.as_str()).unwrap() == id);
+            assert!(Identity::from_str(ids.as_str()).unwrap() == *id);
 
             assert!(id.upgrade().is_ok());
-            assert!(id.validate_identity());
             assert!(id.p384.is_some());
             assert!(id.secret.as_ref().unwrap().p384.is_some());
 
             let ids = id.to_string();
-            assert!(Identity::from_str(ids.as_str()).unwrap() == id);
+            assert!(Identity::from_str(ids.as_str()).unwrap() == *id);
         }
         for id_str in GOOD_V1_IDENTITIES {
-            let id = Identity::from_str(id_str).unwrap();
+            let id = Identity::from_str(id_str).unwrap().validate().unwrap();
             assert_eq!(id.to_secret_string().as_str(), id_str);
 
-            assert!(id.validate_identity());
             assert!(id.p384.is_some());
             assert!(id.secret.as_ref().unwrap().p384.is_some());
 
             let idb = id.to_secret_bytes().unwrap();
-            let id_unmarshal = Identity::from_bytes(idb.as_bytes()).unwrap();
+            let id_unmarshal = Identity::from_bytes(idb.as_bytes()).unwrap().validate().unwrap();
             assert!(id == id_unmarshal);
 
             let idb2 = id_unmarshal.to_bytes();
-            let id_unmarshal2 = Identity::from_bytes(&idb2).unwrap();
+            let id_unmarshal2 = Identity::from_bytes(&idb2).unwrap().validate().unwrap();
             assert!(id_unmarshal2 == id_unmarshal);
             assert!(id_unmarshal2 == id);
 
             let ids = id.to_string();
-            assert!(Identity::from_str(ids.as_str()).unwrap() == id);
+            assert!(Identity::from_str(ids.as_str()).unwrap() == *id);
         }
     }
 }

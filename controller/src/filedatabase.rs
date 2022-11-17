@@ -8,11 +8,9 @@ use async_trait::async_trait;
 use notify::{RecursiveMode, Watcher};
 use serde::de::DeserializeOwned;
 
-use zerotier_network_hypervisor::vl1::{Address, Identity, NodeStorage};
+use zerotier_network_hypervisor::vl1::{Address, Identity, NodeStorage, Verified};
 use zerotier_network_hypervisor::vl2::NetworkId;
-
 use zerotier_utils::io::{fs_restrict_permissions, read_limit};
-
 use zerotier_utils::reaper::Reaper;
 use zerotier_utils::tokio::fs;
 use zerotier_utils::tokio::runtime::Handle;
@@ -60,11 +58,6 @@ impl FileDatabase {
             tasks: Reaper::new(&runtime2),
             cache: Cache::new(),
             daemon: runtime2.spawn(async move {
-                while db_weak.lock().unwrap().upgrade().is_none() {
-                    // Wait for parent to finish constructing and start up, then create watcher.
-                    sleep(Duration::from_millis(10)).await;
-                }
-
                 let mut watcher = notify::recommended_watcher(move |event: notify::Result<notify::event::Event>| {
                     if let Ok(event) = event {
                         match event.kind {
@@ -121,7 +114,6 @@ impl FileDatabase {
                                                         }
 
                                                         if deleted.is_some() {
-                                                            println!("DELETED: {}", deleted.unwrap().as_os_str().to_string_lossy());
                                                             match record_type {
                                                                 RecordType::Network => {
                                                                     if let Some((network, mut members)) =
@@ -147,7 +139,6 @@ impl FileDatabase {
                                                         }
 
                                                         if let Some(changed) = changed {
-                                                            println!("CHANGED: {}", changed.as_os_str().to_string_lossy());
                                                             match record_type {
                                                                 RecordType::Network => {
                                                                     if let Ok(Some(new_network)) =
@@ -258,7 +249,7 @@ impl FileDatabase {
 
     /// Get record type and also the number after it: network number or address.
     fn record_type_from_path(controller_address: Address, p: &Path) -> Option<(RecordType, NetworkId, Option<Address>)> {
-        let parent = p.parent()?.to_string_lossy();
+        let parent = p.parent()?.file_name()?.to_string_lossy();
         if parent.len() == 7 && (parent.starts_with("N") || parent.starts_with('n')) {
             let network_id = NetworkId::from_controller_and_network_no(controller_address, u64::from_str_radix(&parent[1..], 16).ok()?)?;
             if let Some(file_name) = p.file_name().map(|p| p.to_string_lossy().to_lowercase()) {
@@ -284,7 +275,7 @@ impl Drop for FileDatabase {
 }
 
 impl NodeStorage for FileDatabase {
-    fn load_node_identity(&self) -> Option<Identity> {
+    fn load_node_identity(&self) -> Option<Verified<Identity>> {
         let id_data = read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 16384);
         if id_data.is_err() {
             return None;
@@ -293,10 +284,10 @@ impl NodeStorage for FileDatabase {
         if id_data.is_err() {
             return None;
         }
-        Some(id_data.unwrap())
+        Some(Verified::assume_verified(id_data.unwrap()))
     }
 
-    fn save_node_identity(&self, id: &Identity) {
+    fn save_node_identity(&self, id: &Verified<Identity>) {
         assert!(id.secret.is_some());
         let id_secret_str = id.to_secret_string();
         let secret_path = self.base_path.join(IDENTITY_SECRET_FILENAME);
@@ -422,17 +413,35 @@ mod tests {
                 println!("test filedatabase is in: {}", test_dir.as_os_str().to_str().unwrap());
 
                 let _ = std::fs::remove_dir_all(&test_dir);
+                let controller_id = Identity::generate();
 
-                let db = FileDatabase::new(tokio_runtime.handle().clone(), test_dir).await.expect("new db");
+                let db = Arc::new(FileDatabase::new(tokio_runtime.handle().clone(), test_dir).await.expect("new db"));
+                db.save_node_identity(&controller_id);
+                assert!(db.load_node_identity().is_some());
+
+                let db2 = db.clone();
+                tokio_runtime.spawn(async move {
+                    let mut change_receiver = db2.changes().await.unwrap();
+                    loop {
+                        if let Ok(change) = change_receiver.recv().await {
+                            //println!("[FileDatabase] {:#?}", change);
+                        } else {
+                            break;
+                        }
+                    }
+                });
+
+                let mut test_network = Network::new(network_id);
+                db.save_network(test_network.clone()).await.expect("network save error");
+
                 let mut test_member = Member::new_without_identity(node_id, network_id);
-
                 for x in 0..3 {
                     test_member.name = x.to_string();
-                    db.save_member(test_member.clone()).await.expect("member save ok");
+                    db.save_member(test_member.clone()).await.expect("member save error");
+
+                    sleep(Duration::from_millis(100)).await;
 
                     let test_member2 = db.get_member(network_id, node_id).await.unwrap().unwrap();
-                    //println!("{}", test_member.to_string());
-                    //println!("{}", test_member2.to_string());
                     assert!(test_member == test_member2);
                 }
             });

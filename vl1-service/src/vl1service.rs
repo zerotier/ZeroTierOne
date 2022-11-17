@@ -328,12 +328,12 @@ impl<
     > NodeStorage for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
 {
     #[inline(always)]
-    fn load_node_identity(&self) -> Option<Identity> {
+    fn load_node_identity(&self) -> Option<Verified<Identity>> {
         self.storage.load_node_identity()
     }
 
     #[inline(always)]
-    fn save_node_identity(&self, id: &Identity) {
+    fn save_node_identity(&self, id: &Verified<Identity>) {
         self.storage.save_node_identity(id)
     }
 }
@@ -345,12 +345,12 @@ impl<
     > VL1AuthProvider for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
 {
     #[inline(always)]
-    fn should_respond_to(&self, id: &Identity) -> bool {
+    fn should_respond_to(&self, id: &Verified<Identity>) -> bool {
         self.vl1_auth_provider.should_respond_to(id)
     }
 
     #[inline(always)]
-    fn has_trust_relationship(&self, id: &Identity) -> bool {
+    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool {
         self.vl1_auth_provider.has_trust_relationship(id)
     }
 }

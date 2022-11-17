@@ -15,7 +15,7 @@ use zerotier_network_hypervisor::vl2::networkconfig::NetworkConfig;
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::blob::Blob;
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecordType {
     Network,
     Member,
@@ -23,13 +23,13 @@ pub enum RecordType {
 }
 
 /// A complete network with all member configuration information for import/export or blob storage.
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NetworkExport {
     pub network: Network,
     pub members: HashMap<Address, Member>,
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum AuthorizationResult {
     #[serde(rename = "r")]
@@ -87,7 +87,7 @@ impl ToString for AuthorizationResult {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RequestLogItem {
     #[serde(rename = "nw")]
     pub network_id: NetworkId,

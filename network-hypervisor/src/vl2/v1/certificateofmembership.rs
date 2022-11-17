@@ -21,7 +21,7 @@ use zerotier_utils::memory;
 /// This was done to permit some things such as geo-fencing that were never implemented, so it's
 /// a bit of a case of YAGNI. In V2 this is deprecated in favor of a more standard sort of
 /// certificate.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateOfMembership {
     pub network_id: NetworkId,
     pub timestamp: i64,
@@ -173,7 +173,7 @@ impl CertificateOfMembership {
     pub fn verify(self, issuer: &Identity, expect_issued_to: &Identity) -> Option<Verified<Self>> {
         if Self::v1_proto_issued_to_fingerprint(expect_issued_to).eq(&self.issued_to_fingerprint.as_bytes()[..32]) {
             if issuer.verify(&self.v1_proto_get_qualifier_bytes(), self.signature.as_bytes()) {
-                return Some(Verified(self));
+                return Some(Verified::assume_verified(self));
             }
         }
         return None;

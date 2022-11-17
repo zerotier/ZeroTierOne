@@ -1,5 +1,7 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::fmt::Debug;
+
 use serde::ser::SerializeTuple;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -61,6 +63,13 @@ impl<const L: usize> ToString for Blob<L> {
     #[inline(always)]
     fn to_string(&self) -> String {
         hex::to_string(&self.0)
+    }
+}
+
+impl<const L: usize> Debug for Blob<L> {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.to_string().as_str())
     }
 }
 

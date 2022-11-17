@@ -15,12 +15,12 @@ use crate::model::Member;
 
 pub const CREDENTIAL_WINDOW_SIZE_DEFAULT: u64 = 1000 * 60 * 60;
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default, Debug)]
 pub struct Ipv4AssignMode {
     pub zt: bool,
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default, Debug)]
 pub struct Ipv6AssignMode {
     pub zt: bool,
     pub rfc4193: bool,
@@ -28,7 +28,7 @@ pub struct Ipv6AssignMode {
     pub _6plane: bool,
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Hash, Debug)]
 pub struct IpAssignmentPool {
     #[serde(rename = "ipRangeStart")]
     ip_range_start: InetAddress,
@@ -40,7 +40,7 @@ pub struct IpAssignmentPool {
 ///
 /// This contains only fields of relevance to the controller. Other fields can be tracked by various
 /// database implementations such as row last modified, creation time, ownership in an admin panel, etc.
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
 pub struct Network {
     pub id: NetworkId,
 
@@ -134,18 +134,32 @@ impl Hash for Network {
     }
 }
 
-impl ToString for Network {
-    fn to_string(&self) -> String {
-        zerotier_utils::json::to_json_pretty(self)
-    }
-}
-
 #[inline(always)]
 fn troo() -> bool {
     true
 }
 
 impl Network {
+    pub fn new(id: NetworkId) -> Self {
+        Network {
+            id,
+            name: String::new(),
+            multicast_limit: None,
+            enable_broadcast: None,
+            v4_assign_mode: None,
+            v6_assign_mode: None,
+            ip_assignment_pools: HashSet::new(),
+            ip_routes: HashSet::new(),
+            dns: HashMap::new(),
+            rules: Vec::new(),
+            credential_ttl: None,
+            min_supported_version: None,
+            mtu: None,
+            private: true,
+            learn_members: None,
+        }
+    }
+
     /// Check member IP assignments and return 'true' if IP assignments were created or modified.
     pub async fn assign_ip_addresses<DatabaseImpl: Database + ?Sized>(&self, database: &DatabaseImpl, member: &mut Member) -> bool {
         let mut modified = false;

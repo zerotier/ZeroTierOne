@@ -9,7 +9,7 @@ use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress};
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::blob::Blob;
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
 pub struct Member {
     #[serde(rename = "address")]
     pub node_id: Address,
@@ -117,11 +117,5 @@ impl Hash for Member {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.node_id.hash(state);
         self.network_id.hash(state);
-    }
-}
-
-impl ToString for Member {
-    fn to_string(&self) -> String {
-        zerotier_utils::json::to_json_pretty(self)
     }
 }

@@ -10,7 +10,7 @@ use zerotier_utils::arrayvec::ArrayVec;
 use zerotier_utils::blob::Blob;
 use zerotier_utils::error::InvalidParameterError;
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Tag {
     pub network_id: NetworkId,
     pub timestamp: i64,

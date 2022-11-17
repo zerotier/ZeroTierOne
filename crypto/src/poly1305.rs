@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
-use poly1305::universal_hash::NewUniversalHash;
+use poly1305::universal_hash::KeyInit;
 
 /// The poly1305 message authentication function.
 pub struct Poly1305(poly1305::Poly1305, [u8; 16], usize);
@@ -12,7 +12,6 @@ pub const POLY1305_MAC_SIZE: usize = 16;
 pub fn compute(one_time_key: &[u8], message: &[u8]) -> [u8; POLY1305_MAC_SIZE] {
     poly1305::Poly1305::new(poly1305::Key::from_slice(one_time_key))
         .compute_unpadded(message)
-        .into_bytes()
         .into()
 }
 

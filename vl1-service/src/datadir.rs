@@ -8,7 +8,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use zerotier_crypto::random::next_u32_secure;
-use zerotier_network_hypervisor::vl1::{Identity, NodeStorage};
+use zerotier_network_hypervisor::vl1::{Identity, NodeStorage, Verified};
 use zerotier_utils::io::{fs_restrict_permissions, read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 use zerotier_utils::json::to_json_pretty;
 
@@ -27,7 +27,7 @@ pub struct DataDir<Config: PartialEq + Eq + Clone + Send + Sync + Default + Seri
 }
 
 impl<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + DeserializeOwned + 'static> NodeStorage for DataDir<Config> {
-    fn load_node_identity(&self) -> Option<Identity> {
+    fn load_node_identity(&self) -> Option<Verified<Identity>> {
         let id_data = read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 4096);
         if id_data.is_err() {
             return None;
@@ -36,10 +36,10 @@ impl<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + Deseri
         if id_data.is_err() {
             return None;
         }
-        Some(id_data.unwrap())
+        Some(Verified::assume_verified(id_data.unwrap()))
     }
 
-    fn save_node_identity(&self, id: &Identity) {
+    fn save_node_identity(&self, id: &Verified<Identity>) {
         assert!(id.secret.is_some());
         let id_secret_str = id.to_secret_string();
         let id_public_str = id.to_string();

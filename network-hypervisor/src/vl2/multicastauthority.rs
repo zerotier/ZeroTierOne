@@ -21,7 +21,6 @@ pub struct MulticastAuthority {
 }
 
 impl MulticastAuthority {
-    #[inline]
     pub fn new() -> Self {
         Self { subscriptions: RwLock::new(HashMap::new()) }
     }

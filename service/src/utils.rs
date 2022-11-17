@@ -42,8 +42,10 @@ pub fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity, Strin
         Identity::from_str(s).map_or_else(
             |e| Err(format!("invalid identity: {}", e.to_string())),
             |id| {
-                if !validate || id.validate_identity() {
+                if !validate {
                     Ok(id)
+                } else if let Some(id) = id.validate() {
+                    Ok(id.unwrap())
                 } else {
                     Err(String::from("invalid identity: local validation failed"))
                 }

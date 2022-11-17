@@ -222,7 +222,7 @@ impl TryInto<SocketAddrV6> for InetAddress {
 impl TryInto<SocketAddrV6> for &InetAddress {
     type Error = InvalidParameterError;
 
-    #[inline(always)]
+    #[inline]
     fn try_into(self) -> Result<SocketAddrV6, Self::Error> {
         unsafe {
             match self.sa.sa_family {
@@ -239,7 +239,7 @@ impl TryInto<SocketAddrV6> for &InetAddress {
 }
 
 impl From<&IpAddr> for InetAddress {
-    #[inline(always)]
+    #[inline]
     fn from(ip: &IpAddr) -> Self {
         match ip {
             IpAddr::V4(ip4) => Self::from(ip4),
@@ -284,7 +284,7 @@ impl From<Ipv6Addr> for InetAddress {
 }
 
 impl From<&SocketAddr> for InetAddress {
-    #[inline(always)]
+    #[inline]
     fn from(sa: &SocketAddr) -> Self {
         match sa {
             SocketAddr::V4(sa4) => Self::from(sa4),
@@ -353,6 +353,7 @@ impl std::fmt::Debug for InetAddress {
 const TEMP_SERIALIZE_BUFFER_SIZE: usize = 24;
 
 impl Serialize for InetAddress {
+    #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -372,10 +373,12 @@ struct InetAddressVisitor;
 impl<'de> serde::de::Visitor<'de> for InetAddressVisitor {
     type Value = InetAddress;
 
+    #[inline]
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         formatter.write_str("an InetAddress")
     }
 
+    #[inline]
     fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
     where
         E: serde::de::Error,
@@ -390,6 +393,7 @@ impl<'de> serde::de::Visitor<'de> for InetAddressVisitor {
         }
     }
 
+    #[inline]
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: serde::de::Error,
@@ -399,6 +403,7 @@ impl<'de> serde::de::Visitor<'de> for InetAddressVisitor {
 }
 
 impl<'de> Deserialize<'de> for InetAddress {
+    #[inline]
     fn deserialize<D>(deserializer: D) -> Result<InetAddress, D::Error>
     where
         D: Deserializer<'de>,
@@ -420,7 +425,7 @@ impl InetAddress {
 
     /// Construct from IP and port.
     /// If the IP is not either 4 or 16 bytes in length, a nil/0 InetAddress is returned.
-    #[inline(always)]
+    #[inline]
     pub fn from_ip_port(ip: &[u8], port: u16) -> InetAddress {
         unsafe {
             let mut c = MaybeUninit::<InetAddress>::uninit().assume_init(); // gets zeroed in set()
@@ -570,6 +575,7 @@ impl InetAddress {
     }
 
     /// Get the IP port for this InetAddress.
+    #[inline]
     pub fn port(&self) -> u16 {
         unsafe {
             u16::from_be(match self.sa.sa_family as AddressFamilyType {

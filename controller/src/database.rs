@@ -9,7 +9,7 @@ use zerotier_utils::tokio::sync::broadcast::Receiver;
 use crate::model::*;
 
 /// Database change relevant to the controller and that was NOT initiated by the controller.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Change {
     NetworkCreated(Network),
     NetworkChanged(Network, Network),

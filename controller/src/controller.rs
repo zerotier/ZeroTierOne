@@ -35,7 +35,7 @@ pub struct Controller {
     reaper: Reaper,
     runtime: tokio::runtime::Handle,
     database: Arc<dyn Database>,
-    local_identity: Identity,
+    local_identity: Verified<Identity>,
 
     /// Handler for MULTICAST_LIKE and MULTICAST_GATHER messages.
     multicast_authority: MulticastAuthority,
@@ -61,7 +61,7 @@ impl Controller {
                 reaper: Reaper::new(&runtime),
                 runtime,
                 database: database.clone(),
-                local_identity,
+                local_identity: local_identity,
                 multicast_authority: MulticastAuthority::new(),
                 daemons: Mutex::new(Vec::with_capacity(2)),
                 recently_authorized: RwLock::new(HashMap::new()),
@@ -76,9 +76,8 @@ impl Controller {
     /// Set the service and HostSystem implementation for this controller and start daemons.
     ///
     /// This must be called once the service that uses this handler is up or the controller
-    /// won't actually do anything. The reference the handler holds is weak to prevent
-    /// a circular reference, so if the VL1Service is dropped this must be called again to
-    /// tell the controller handler about a new instance.
+    /// won't actually do anything. The controller holds a weak reference to VL1Service so
+    /// be sure it's not dropped.
     pub async fn start(&self, service: &Arc<VL1Service<dyn Database, Self, Self>>) {
         *self.service.write().unwrap() = Arc::downgrade(service);
 
@@ -106,7 +105,7 @@ impl Controller {
         // Create background task to expire multicast subscriptions and recent authorizations.
         let self2 = self.self_ref.clone();
         self.daemons.lock().unwrap().push(self.runtime.spawn(async move {
-            let sleep_duration = Duration::from_millis((protocol::VL2_DEFAULT_MULTICAST_LIKE_EXPIRE / 2).min(5000) as u64);
+            let sleep_duration = Duration::from_millis((protocol::VL2_DEFAULT_MULTICAST_LIKE_EXPIRE / 2).min(2500) as u64);
             loop {
                 tokio::time::sleep(sleep_duration).await;
 
@@ -234,7 +233,7 @@ impl Controller {
     /// reason is returned with None or an acceptance reason with a network configuration is returned.
     async fn get_network_config(
         self: &Arc<Self>,
-        source_identity: &Identity,
+        source_identity: &Verified<Identity>,
         network_id: NetworkId,
         now: i64,
     ) -> Result<(AuthorizationResult, Option<NetworkConfig>, Option<Vec<vl2::v1::Revocation>>), Box<dyn Error + Send + Sync>> {
@@ -287,7 +286,7 @@ impl Controller {
         if !member_authorized {
             if member.is_none() {
                 if network.learn_members.unwrap_or(true) {
-                    let _ = member.insert(Member::new_with_identity(source_identity.clone(), network_id));
+                    let _ = member.insert(Member::new_with_identity(source_identity.as_ref().clone(), network_id));
                     member_changed = true;
                 } else {
                     return Ok((AuthorizationResult::Rejected, None, None));
@@ -407,8 +406,10 @@ impl Controller {
                 } else {
                     return Ok((AuthorizationResult::RejectedDueToError, None, None));
                 }
-            } else {
-                // TODO: create V2 type credential for V2-only networks
+            }
+
+            if source_identity.p384.is_some() {
+                // TODO: create V2 type credential for V2 nodes
             }
 
             // Log this member in the recently authorized cache, which is currently just used to filter whether we should
@@ -578,14 +579,14 @@ impl InnerProtocol for Controller {
 
 impl VL1AuthProvider for Controller {
     #[inline(always)]
-    fn should_respond_to(&self, _: &Identity) -> bool {
+    fn should_respond_to(&self, _: &Verified<Identity>) -> bool {
         // Controllers always have to establish sessions to process requests. We don't really know if
         // a member is relevant until we have looked up both the network and the member, since whether
         // or not to "learn" unknown members is a network level option.
         true
     }
 
-    fn has_trust_relationship(&self, id: &Identity) -> bool {
+    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool {
         self.recently_authorized
             .read()
             .unwrap()

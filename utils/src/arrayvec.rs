@@ -1,5 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
 
+use std::fmt::Debug;
 use std::io::Write;
 use std::mem::{size_of, MaybeUninit};
 use std::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
@@ -74,6 +75,20 @@ impl<T: Clone, const C: usize, const S: usize> From<[T; S]> for ArrayVec<T, C> {
         } else {
             panic!();
         }
+    }
+}
+
+impl<const C: usize> ToString for ArrayVec<u8, C> {
+    #[inline]
+    fn to_string(&self) -> String {
+        crate::hex::to_string(self.as_bytes())
+    }
+}
+
+impl<const C: usize> Debug for ArrayVec<u8, C> {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.to_string().as_str())
     }
 }
 

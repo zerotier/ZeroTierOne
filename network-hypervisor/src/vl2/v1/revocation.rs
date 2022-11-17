@@ -10,7 +10,7 @@ use crate::vl1::{Address, Identity};
 use crate::vl2::v1::CredentialType;
 use crate::vl2::NetworkId;
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Revocation {
     pub id: u32,
     pub network_id: NetworkId,

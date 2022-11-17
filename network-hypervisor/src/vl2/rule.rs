@@ -1,4 +1,6 @@
+use std::fmt::Debug;
 use std::mem::{size_of, zeroed};
+use std::net::Ipv6Addr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -159,44 +161,44 @@ union RuleValue {
 
 /// Trait to implement in order to evaluate rules.
 pub trait RuleVisitor {
-    fn action_drop(self) -> bool;
-    fn action_accept(self) -> bool;
-    fn action_tee(self, address: Address, flags: u32, length: u16) -> bool;
-    fn action_watch(self, address: Address, flags: u32, length: u16) -> bool;
-    fn action_redirect(self, address: Address, flags: u32, length: u16) -> bool;
-    fn action_break(self) -> bool;
-    fn action_priority(self, qos_bucket: u8) -> bool;
+    fn action_drop(&mut self) -> bool;
+    fn action_accept(&mut self) -> bool;
+    fn action_tee(&mut self, address: Address, flags: u32, length: u16) -> bool;
+    fn action_watch(&mut self, address: Address, flags: u32, length: u16) -> bool;
+    fn action_redirect(&mut self, address: Address, flags: u32, length: u16) -> bool;
+    fn action_break(&mut self) -> bool;
+    fn action_priority(&mut self, qos_bucket: u8) -> bool;
 
-    fn invalid_rule(self) -> bool;
+    fn invalid_rule(&mut self) -> bool;
 
-    fn match_source_zerotier_address(self, not: bool, or: bool, address: Address);
-    fn match_dest_zerotier_address(self, not: bool, or: bool, address: Address);
-    fn match_vlan_id(self, not: bool, or: bool, id: u16);
-    fn match_vlan_pcp(self, not: bool, or: bool, pcp: u8);
-    fn match_vlan_dei(self, not: bool, or: bool, dei: u8);
-    fn match_mac_source(self, not: bool, or: bool, mac: MAC);
-    fn match_mac_dest(self, not: bool, or: bool, mac: MAC);
-    fn match_ipv4_source(self, not: bool, or: bool, ip: &[u8; 4], mask: u8);
-    fn match_ipv4_dest(self, not: bool, or: bool, ip: &[u8; 4], mask: u8);
-    fn match_ipv6_source(self, not: bool, or: bool, ip: &[u8; 16], mask: u8);
-    fn match_ipv6_dest(self, not: bool, or: bool, ip: &[u8; 16], mask: u8);
-    fn match_ip_tos(self, not: bool, or: bool, mask: u8, start: u8, end: u8);
-    fn match_ip_protocol(self, not: bool, or: bool, protocol: u8);
-    fn match_ethertype(self, not: bool, or: bool, ethertype: u16);
-    fn match_icmp(self, not: bool, or: bool, _type: u8, code: u8, flags: u8);
-    fn match_ip_source_port_range(self, not: bool, or: bool, start: u16, end: u16);
-    fn match_ip_dest_port_range(self, not: bool, or: bool, start: u16, end: u16);
-    fn match_characteristics(self, not: bool, or: bool, characteristics: u64);
-    fn match_frame_size_range(self, not: bool, or: bool, start: u16, end: u16);
-    fn match_random(self, not: bool, or: bool, probability: u32);
-    fn match_tags_difference(self, not: bool, or: bool, id: u32, value: u32);
-    fn match_tags_bitwise_and(self, not: bool, or: bool, id: u32, value: u32);
-    fn match_tags_bitwise_or(self, not: bool, or: bool, id: u32, value: u32);
-    fn match_tags_bitwise_xor(self, not: bool, or: bool, id: u32, value: u32);
-    fn match_tags_equal(self, not: bool, or: bool, id: u32, value: u32);
-    fn match_tag_sender(self, not: bool, or: bool, id: u32, value: u32);
-    fn match_tag_receiver(self, not: bool, or: bool, id: u32, value: u32);
-    fn match_integer_range(self, not: bool, or: bool, start: u64, end: u64, idx: u16, format: u8);
+    fn match_source_zerotier_address(&mut self, not: bool, or: bool, address: Address);
+    fn match_dest_zerotier_address(&mut self, not: bool, or: bool, address: Address);
+    fn match_vlan_id(&mut self, not: bool, or: bool, id: u16);
+    fn match_vlan_pcp(&mut self, not: bool, or: bool, pcp: u8);
+    fn match_vlan_dei(&mut self, not: bool, or: bool, dei: u8);
+    fn match_mac_source(&mut self, not: bool, or: bool, mac: MAC);
+    fn match_mac_dest(&mut self, not: bool, or: bool, mac: MAC);
+    fn match_ipv4_source(&mut self, not: bool, or: bool, ip: &[u8; 4], mask: u8);
+    fn match_ipv4_dest(&mut self, not: bool, or: bool, ip: &[u8; 4], mask: u8);
+    fn match_ipv6_source(&mut self, not: bool, or: bool, ip: &[u8; 16], mask: u8);
+    fn match_ipv6_dest(&mut self, not: bool, or: bool, ip: &[u8; 16], mask: u8);
+    fn match_ip_tos(&mut self, not: bool, or: bool, mask: u8, start: u8, end: u8);
+    fn match_ip_protocol(&mut self, not: bool, or: bool, protocol: u8);
+    fn match_ethertype(&mut self, not: bool, or: bool, ethertype: u16);
+    fn match_icmp(&mut self, not: bool, or: bool, _type: u8, code: u8, flags: u8);
+    fn match_ip_source_port_range(&mut self, not: bool, or: bool, start: u16, end: u16);
+    fn match_ip_dest_port_range(&mut self, not: bool, or: bool, start: u16, end: u16);
+    fn match_characteristics(&mut self, not: bool, or: bool, characteristics: u64);
+    fn match_frame_size_range(&mut self, not: bool, or: bool, start: u16, end: u16);
+    fn match_random(&mut self, not: bool, or: bool, probability: u32);
+    fn match_tags_difference(&mut self, not: bool, or: bool, id: u32, value: u32);
+    fn match_tags_bitwise_and(&mut self, not: bool, or: bool, id: u32, value: u32);
+    fn match_tags_bitwise_or(&mut self, not: bool, or: bool, id: u32, value: u32);
+    fn match_tags_bitwise_xor(&mut self, not: bool, or: bool, id: u32, value: u32);
+    fn match_tags_equal(&mut self, not: bool, or: bool, id: u32, value: u32);
+    fn match_tag_sender(&mut self, not: bool, or: bool, id: u32, value: u32);
+    fn match_tag_receiver(&mut self, not: bool, or: bool, id: u32, value: u32);
+    fn match_integer_range(&mut self, not: bool, or: bool, start: u64, end: u64, idx: u16, format: u8);
 }
 
 #[repr(C, packed)]
@@ -220,8 +222,8 @@ impl Rule {
     }
 
     /// Execute the visitor, returning the result of action methods and true for condition methods.
-    #[inline(always)]
-    pub fn visit<V: RuleVisitor>(&self, v: V) -> bool {
+    #[inline]
+    pub fn visit<V: RuleVisitor>(&self, v: &mut V) -> bool {
         unsafe {
             let t = self.t;
             let not = (t & 0x80) != 0;
@@ -576,12 +578,28 @@ impl Marshalable for Rule {
 }
 
 impl PartialEq for Rule {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         unsafe { (*(self as *const Self).cast::<[u8; size_of::<Self>()]>()).eq(&*(other as *const Self).cast::<[u8; size_of::<Self>()]>()) }
     }
 }
 
 impl Eq for Rule {}
+
+impl ToString for Rule {
+    fn to_string(&self) -> String {
+        let mut s = RuleStringer(String::with_capacity(32));
+        self.visit(&mut s);
+        s.0
+    }
+}
+
+impl Debug for Rule {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.to_string().as_str())
+    }
+}
 
 impl Serialize for Rule {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -675,7 +693,7 @@ static HR_NAME_TO_RULE_TYPE: phf::Map<&'static str, u8> = phf_map! {
     "MATCH_TAGS_EQUAL" => match_cond::TAGS_EQUAL,
     "MATCH_TAG_SENDER" => match_cond::TAG_SENDER,
     "MATCH_TAG_RECEIVER" => match_cond::TAG_RECEIVER,
-    "INTEGER_RANGE" => match_cond::INTEGER_RANGE,
+    "MATCH_INTEGER_RANGE" => match_cond::INTEGER_RANGE,
 };
 
 /// A "bag of fields" used to serialize/deserialize rules in human readable form e.g. JSON.
@@ -860,21 +878,22 @@ impl<'a> HumanReadableRule<'a> {
 
     fn from_rule(r: &Rule) -> Self {
         let mut hr = HumanReadableRule::default();
-        r.visit(MakeHumanReadable(&mut hr));
+        r.visit(&mut MakeHumanReadable(&mut hr));
         hr
     }
 }
 
+#[repr(transparent)]
 struct MakeHumanReadable<'a>(&'a mut HumanReadableRule<'static>);
 
 impl<'a> MakeHumanReadable<'a> {
-    fn do_tag(self, t: &'static str, not: bool, or: bool, id: u32, value: u32) {
+    fn do_tag(&mut self, t: &'static str, not: bool, or: bool, id: u32, value: u32) {
         let _ = self.0.id.insert(id);
         let _ = self.0.value.insert(value);
         self.do_cond(t, not, or);
     }
 
-    fn do_cond(self, t: &'static str, not: bool, or: bool) {
+    fn do_cond(&mut self, t: &'static str, not: bool, or: bool) {
         self.0._type = t;
         if not {
             let _ = self.0.not.insert(not);
@@ -887,19 +906,19 @@ impl<'a> MakeHumanReadable<'a> {
 
 impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     #[inline(always)]
-    fn action_drop(self) -> bool {
+    fn action_drop(&mut self) -> bool {
         self.0._type = "ACTION_DROP";
         true
     }
 
     #[inline(always)]
-    fn action_accept(self) -> bool {
+    fn action_accept(&mut self) -> bool {
         self.0._type = "ACTION_ACCEPT";
         true
     }
 
     #[inline(always)]
-    fn action_tee(self, address: Address, flags: u32, length: u16) -> bool {
+    fn action_tee(&mut self, address: Address, flags: u32, length: u16) -> bool {
         self.0._type = "ACTION_TEE";
         let _ = self.0.address.insert(address);
         let _ = self.0.flags.insert(flags);
@@ -908,7 +927,7 @@ impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     }
 
     #[inline(always)]
-    fn action_watch(self, address: Address, flags: u32, length: u16) -> bool {
+    fn action_watch(&mut self, address: Address, flags: u32, length: u16) -> bool {
         self.0._type = "ACTION_WATCH";
         let _ = self.0.address.insert(address);
         let _ = self.0.flags.insert(flags);
@@ -917,7 +936,7 @@ impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     }
 
     #[inline(always)]
-    fn action_redirect(self, address: Address, flags: u32, length: u16) -> bool {
+    fn action_redirect(&mut self, address: Address, flags: u32, length: u16) -> bool {
         self.0._type = "ACTION_REDIRECT";
         let _ = self.0.address.insert(address);
         let _ = self.0.flags.insert(flags);
@@ -926,91 +945,91 @@ impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     }
 
     #[inline(always)]
-    fn action_break(self) -> bool {
+    fn action_break(&mut self) -> bool {
         self.0._type = "ACTION_BREAK";
         true
     }
 
     #[inline(always)]
-    fn action_priority(self, qos_bucket: u8) -> bool {
+    fn action_priority(&mut self, qos_bucket: u8) -> bool {
         self.0._type = "ACTION_PRIORITY";
         let _ = self.0.qosBucket.insert(qos_bucket);
         true
     }
 
     #[inline(always)]
-    fn invalid_rule(self) -> bool {
+    fn invalid_rule(&mut self) -> bool {
         false
     }
 
     #[inline(always)]
-    fn match_source_zerotier_address(self, not: bool, or: bool, address: Address) {
+    fn match_source_zerotier_address(&mut self, not: bool, or: bool, address: Address) {
         let _ = self.0.zt.insert(address);
         self.do_cond("MATCH_SOURCE_ZEROTIER_ADDRESS", not, or);
     }
 
     #[inline(always)]
-    fn match_dest_zerotier_address(self, not: bool, or: bool, address: Address) {
+    fn match_dest_zerotier_address(&mut self, not: bool, or: bool, address: Address) {
         let _ = self.0.zt.insert(address);
         self.do_cond("MATCH_DEST_ZEROTIER_ADDRESS", not, or);
     }
 
     #[inline(always)]
-    fn match_vlan_id(self, not: bool, or: bool, id: u16) {
+    fn match_vlan_id(&mut self, not: bool, or: bool, id: u16) {
         let _ = self.0.vlanId.insert(id);
         self.do_cond("MATCH_VLAN_ID", not, or);
     }
 
     #[inline(always)]
-    fn match_vlan_pcp(self, not: bool, or: bool, pcp: u8) {
+    fn match_vlan_pcp(&mut self, not: bool, or: bool, pcp: u8) {
         let _ = self.0.vlanPcp.insert(pcp);
         self.do_cond("MATCH_VLAN_PCP", not, or);
     }
 
     #[inline(always)]
-    fn match_vlan_dei(self, not: bool, or: bool, dei: u8) {
+    fn match_vlan_dei(&mut self, not: bool, or: bool, dei: u8) {
         let _ = self.0.vlanDei.insert(dei);
         self.do_cond("MATCH_VLAN_DEI", not, or);
     }
 
     #[inline(always)]
-    fn match_mac_source(self, not: bool, or: bool, mac: MAC) {
+    fn match_mac_source(&mut self, not: bool, or: bool, mac: MAC) {
         let _ = self.0.mac.insert(mac);
         self.do_cond("MATCH_MAC_SOURCE", not, or);
     }
 
     #[inline(always)]
-    fn match_mac_dest(self, not: bool, or: bool, mac: MAC) {
+    fn match_mac_dest(&mut self, not: bool, or: bool, mac: MAC) {
         let _ = self.0.mac.insert(mac);
         self.do_cond("MATCH_MAC_DEST", not, or);
     }
 
     #[inline(always)]
-    fn match_ipv4_source(self, not: bool, or: bool, ip: &[u8; 4], mask: u8) {
+    fn match_ipv4_source(&mut self, not: bool, or: bool, ip: &[u8; 4], mask: u8) {
         let _ = self.0.ip.insert(InetAddress::from_ip_port(ip, mask as u16));
         self.do_cond("MATCH_IPV4_SOURCE", not, or);
     }
 
     #[inline(always)]
-    fn match_ipv4_dest(self, not: bool, or: bool, ip: &[u8; 4], mask: u8) {
+    fn match_ipv4_dest(&mut self, not: bool, or: bool, ip: &[u8; 4], mask: u8) {
         let _ = self.0.ip.insert(InetAddress::from_ip_port(ip, mask as u16));
         self.do_cond("MATCH_IPV4_DEST", not, or);
     }
 
     #[inline(always)]
-    fn match_ipv6_source(self, not: bool, or: bool, ip: &[u8; 16], mask: u8) {
+    fn match_ipv6_source(&mut self, not: bool, or: bool, ip: &[u8; 16], mask: u8) {
         let _ = self.0.ip.insert(InetAddress::from_ip_port(ip, mask as u16));
         self.do_cond("MATCH_IPV6_SOURCE", not, or);
     }
 
     #[inline(always)]
-    fn match_ipv6_dest(self, not: bool, or: bool, ip: &[u8; 16], mask: u8) {
+    fn match_ipv6_dest(&mut self, not: bool, or: bool, ip: &[u8; 16], mask: u8) {
         let _ = self.0.ip.insert(InetAddress::from_ip_port(ip, mask as u16));
         self.do_cond("MATCH_IPV6_DEST", not, or);
     }
 
     #[inline(always)]
-    fn match_ip_tos(self, not: bool, or: bool, mask: u8, start: u8, end: u8) {
+    fn match_ip_tos(&mut self, not: bool, or: bool, mask: u8, start: u8, end: u8) {
         let _ = self.0.mask.insert(mask as u64);
         let _ = self.0.start.insert(start as u64);
         let _ = self.0.end.insert(end as u64);
@@ -1018,19 +1037,19 @@ impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     }
 
     #[inline(always)]
-    fn match_ip_protocol(self, not: bool, or: bool, protocol: u8) {
+    fn match_ip_protocol(&mut self, not: bool, or: bool, protocol: u8) {
         let _ = self.0.ipProtocol.insert(protocol);
         self.do_cond("MATCH_IP_PROTOCOL", not, or);
     }
 
     #[inline(always)]
-    fn match_ethertype(self, not: bool, or: bool, ethertype: u16) {
+    fn match_ethertype(&mut self, not: bool, or: bool, ethertype: u16) {
         let _ = self.0.etherType.insert(ethertype);
         self.do_cond("MATCH_ETHERTYPE", not, or);
     }
 
     #[inline(always)]
-    fn match_icmp(self, not: bool, or: bool, _type: u8, code: u8, flags: u8) {
+    fn match_icmp(&mut self, not: bool, or: bool, _type: u8, code: u8, flags: u8) {
         let _ = self.0.icmpType.insert(_type);
         if (flags & 0x01) != 0 {
             let _ = self.0.icmpCode.insert(code);
@@ -1039,80 +1058,662 @@ impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     }
 
     #[inline(always)]
-    fn match_ip_source_port_range(self, not: bool, or: bool, start: u16, end: u16) {
+    fn match_ip_source_port_range(&mut self, not: bool, or: bool, start: u16, end: u16) {
         let _ = self.0.start.insert(start as u64);
         let _ = self.0.end.insert(end as u64);
         self.do_cond("MATCH_IP_SOURCE_PORT_RANGE", not, or);
     }
 
     #[inline(always)]
-    fn match_ip_dest_port_range(self, not: bool, or: bool, start: u16, end: u16) {
+    fn match_ip_dest_port_range(&mut self, not: bool, or: bool, start: u16, end: u16) {
         let _ = self.0.start.insert(start as u64);
         let _ = self.0.end.insert(end as u64);
         self.do_cond("MATCH_IP_DEST_PORT_RANGE", not, or);
     }
 
     #[inline(always)]
-    fn match_characteristics(self, not: bool, or: bool, characteristics: u64) {
+    fn match_characteristics(&mut self, not: bool, or: bool, characteristics: u64) {
         let _ = self.0.mask.insert(characteristics);
         self.do_cond("MATCH_CHARACTERISTICS", not, or);
     }
 
     #[inline(always)]
-    fn match_frame_size_range(self, not: bool, or: bool, start: u16, end: u16) {
+    fn match_frame_size_range(&mut self, not: bool, or: bool, start: u16, end: u16) {
         let _ = self.0.start.insert(start as u64);
         let _ = self.0.end.insert(end as u64);
         self.do_cond("MATCH_FRAME_SIZE_RANGE", not, or);
     }
 
     #[inline(always)]
-    fn match_random(self, not: bool, or: bool, probability: u32) {
+    fn match_random(&mut self, not: bool, or: bool, probability: u32) {
         let _ = self.0.probability.insert(probability);
         self.do_cond("MATCH_RANDOM", not, or);
     }
 
     #[inline(always)]
-    fn match_tags_difference(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tags_difference(&mut self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAGS_DIFFERENCE", not, or, id, value);
     }
 
     #[inline(always)]
-    fn match_tags_bitwise_and(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tags_bitwise_and(&mut self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAGS_BITWISE_AND", not, or, id, value);
     }
 
     #[inline(always)]
-    fn match_tags_bitwise_or(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tags_bitwise_or(&mut self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAGS_BITWISE_OR", not, or, id, value);
     }
 
     #[inline(always)]
-    fn match_tags_bitwise_xor(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tags_bitwise_xor(&mut self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAGS_BITWISE_XOR", not, or, id, value);
     }
 
     #[inline(always)]
-    fn match_tags_equal(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tags_equal(&mut self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAGS_EQUAL", not, or, id, value);
     }
 
     #[inline(always)]
-    fn match_tag_sender(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tag_sender(&mut self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAG_SENDER", not, or, id, value);
     }
 
     #[inline(always)]
-    fn match_tag_receiver(self, not: bool, or: bool, id: u32, value: u32) {
+    fn match_tag_receiver(&mut self, not: bool, or: bool, id: u32, value: u32) {
         self.do_tag("MATCH_TAG_RECEIVER", not, or, id, value);
     }
 
     #[inline(always)]
-    fn match_integer_range(self, not: bool, or: bool, start: u64, end: u64, idx: u16, format: u8) {
+    fn match_integer_range(&mut self, not: bool, or: bool, start: u64, end: u64, idx: u16, format: u8) {
         let _ = self.0.start.insert(start);
         let _ = self.0.end.insert(end);
         let _ = self.0.idx.insert(idx);
         let _ = self.0.little.insert((format & 0x80) != 0);
         let _ = self.0.bits.insert((format & 63) + 1);
-        self.do_cond("INTEGER_RANGE", not, or);
+        self.do_cond("MATCH_INTEGER_RANGE", not, or);
+    }
+}
+
+#[repr(transparent)]
+struct RuleStringer(String);
+
+impl RuleVisitor for RuleStringer {
+    #[inline(always)]
+    fn action_drop(&mut self) -> bool {
+        self.0.push_str("ACTION_DROP");
+        true
+    }
+
+    #[inline(always)]
+    fn action_accept(&mut self) -> bool {
+        self.0.push_str("ACTION_ACCEPT");
+        true
+    }
+
+    #[inline(always)]
+    fn action_tee(&mut self, address: Address, flags: u32, length: u16) -> bool {
+        self.0 = format!("ACTION_TEE({}, {}, {})", address.to_string(), flags, length);
+        true
+    }
+
+    #[inline(always)]
+    fn action_watch(&mut self, address: Address, flags: u32, length: u16) -> bool {
+        self.0 = format!("ACTION_WATCH({}, {}, {})", address.to_string(), flags, length);
+        true
+    }
+
+    #[inline(always)]
+    fn action_redirect(&mut self, address: Address, flags: u32, length: u16) -> bool {
+        self.0 = format!("ACTION_REDIRECT({}, {}, {})", address.to_string(), flags, length);
+        true
+    }
+
+    #[inline(always)]
+    fn action_break(&mut self) -> bool {
+        self.0.push_str("ACTION_BREAK");
+        true
+    }
+
+    #[inline(always)]
+    fn action_priority(&mut self, qos_bucket: u8) -> bool {
+        self.0 = format!("ACTION_PRIORITY({})", qos_bucket);
+        true
+    }
+
+    #[inline(always)]
+    fn invalid_rule(&mut self) -> bool {
+        self.0.push_str("(INVALID RULE)");
+        false
+    }
+
+    #[inline(always)]
+    fn match_source_zerotier_address(&mut self, not: bool, or: bool, address: Address) {
+        self.0 = format!(
+            "MATCH_SOURCE_ZEROTIER_ADDRESS({}{}{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            address.to_string()
+        );
+    }
+
+    #[inline(always)]
+    fn match_dest_zerotier_address(&mut self, not: bool, or: bool, address: Address) {
+        self.0 = format!(
+            "MATCH_DEST_ZEROTIER_ADDRESS({}{}{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            address.to_string()
+        );
+    }
+
+    #[inline(always)]
+    fn match_vlan_id(&mut self, not: bool, or: bool, id: u16) {
+        self.0 = format!(
+            "MATCH_VLAN_ID({}{}{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            id
+        );
+    }
+
+    #[inline(always)]
+    fn match_vlan_pcp(&mut self, not: bool, or: bool, pcp: u8) {
+        self.0 = format!(
+            "MATCH_VLAN_PCP({}{}{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            pcp
+        );
+    }
+
+    #[inline(always)]
+    fn match_vlan_dei(&mut self, not: bool, or: bool, dei: u8) {
+        self.0 = format!(
+            "MATCH_VLAN_DEI({}{}{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            dei
+        );
+    }
+
+    #[inline(always)]
+    fn match_mac_source(&mut self, not: bool, or: bool, mac: MAC) {
+        self.0 = format!(
+            "MATCH_MAC_SOURCE({}{}{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            mac.to_string()
+        );
+    }
+
+    #[inline(always)]
+    fn match_mac_dest(&mut self, not: bool, or: bool, mac: MAC) {
+        self.0 = format!(
+            "MATCH_MAC_DEST({}{}{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            mac.to_string()
+        );
+    }
+
+    #[inline(always)]
+    fn match_ipv4_source(&mut self, not: bool, or: bool, ip: &[u8; 4], mask: u8) {
+        self.0 = format!(
+            "MATCH_IPV4_SOURCE({}{}{}.{}.{}.{}/{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            ip[0],
+            ip[1],
+            ip[2],
+            ip[3],
+            mask
+        );
+    }
+
+    #[inline(always)]
+    fn match_ipv4_dest(&mut self, not: bool, or: bool, ip: &[u8; 4], mask: u8) {
+        self.0 = format!(
+            "MATCH_IPV4_DEST({}{}{}.{}.{}.{}/{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            ip[0],
+            ip[1],
+            ip[2],
+            ip[3],
+            mask
+        );
+    }
+
+    fn match_ipv6_source(&mut self, not: bool, or: bool, ip: &[u8; 16], mask: u8) {
+        self.0 = format!(
+            "MATCH_IPV6_SOURCE({}{}{}/{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            Ipv6Addr::from(*ip).to_string(),
+            mask
+        );
+    }
+
+    fn match_ipv6_dest(&mut self, not: bool, or: bool, ip: &[u8; 16], mask: u8) {
+        self.0 = format!(
+            "MATCH_IPV6_DEST({}{}{}/{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            Ipv6Addr::from(*ip).to_string(),
+            mask
+        );
+    }
+
+    #[inline(always)]
+    fn match_ip_tos(&mut self, not: bool, or: bool, mask: u8, start: u8, end: u8) {
+        self.0 = format!(
+            "MATCH_IP_TOS({}{}{}&{}-{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            mask,
+            start,
+            end
+        );
+    }
+
+    #[inline(always)]
+    fn match_ip_protocol(&mut self, not: bool, or: bool, protocol: u8) {
+        self.0 = format!(
+            "MATCH_IP_PROTOCOL({}{}{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            protocol
+        );
+    }
+
+    #[inline(always)]
+    fn match_ethertype(&mut self, not: bool, or: bool, ethertype: u16) {
+        self.0 = format!(
+            "MATCH_ETHERTYPE({}{}{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            ethertype
+        );
+    }
+
+    #[inline(always)]
+    fn match_icmp(&mut self, not: bool, or: bool, _type: u8, code: u8, flags: u8) {
+        self.0 = format!(
+            "MATCH_ICMP({}{} {}, {}, {})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            _type,
+            code,
+            flags
+        );
+    }
+
+    #[inline(always)]
+    fn match_ip_source_port_range(&mut self, not: bool, or: bool, start: u16, end: u16) {
+        self.0 = format!(
+            "MATCH_IP_SOURCE_PORT_RANGE({}{}{}-{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            start,
+            end
+        );
+    }
+
+    #[inline(always)]
+    fn match_ip_dest_port_range(&mut self, not: bool, or: bool, start: u16, end: u16) {
+        self.0 = format!(
+            "MATCH_IP_DEST_PORT_RANGE({}{}{}-{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            start,
+            end
+        );
+    }
+
+    #[inline(always)]
+    fn match_characteristics(&mut self, not: bool, or: bool, characteristics: u64) {
+        self.0 = format!(
+            "MATCH_IP_CHARACTERISTICS({}{}{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            zerotier_utils::hex::to_string_u64(characteristics, false)
+        );
+    }
+
+    #[inline(always)]
+    fn match_frame_size_range(&mut self, not: bool, or: bool, start: u16, end: u16) {
+        self.0 = format!(
+            "MATCH_FRAME_SIZE_RANGE({}{}{}-{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            start,
+            end
+        );
+    }
+
+    #[inline(always)]
+    fn match_random(&mut self, not: bool, or: bool, probability: u32) {
+        self.0 = format!(
+            "MATCH_RANDOM({}{}{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            probability
+        );
+    }
+
+    #[inline(always)]
+    fn match_tags_difference(&mut self, not: bool, or: bool, id: u32, value: u32) {
+        self.0 = format!(
+            "MATCH_TAGS_DIFFERENCE({}{}{}<>{})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            id,
+            value
+        );
+    }
+
+    #[inline(always)]
+    fn match_tags_bitwise_and(&mut self, not: bool, or: bool, id: u32, value: u32) {
+        self.0 = format!(
+            "MATCH_TAGS_BITWISE_AND({}{}{}&{}!=0)",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            id,
+            value
+        );
+    }
+
+    #[inline(always)]
+    fn match_tags_bitwise_or(&mut self, not: bool, or: bool, id: u32, value: u32) {
+        self.0 = format!(
+            "MATCH_TAGS_BITWISE_OR({}{}{}|{}!=0)",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            id,
+            value
+        );
+    }
+
+    #[inline(always)]
+    fn match_tags_bitwise_xor(&mut self, not: bool, or: bool, id: u32, value: u32) {
+        self.0 = format!(
+            "MATCH_TAGS_BITWISE_XOR({}{}{}^{}!=0)",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            id,
+            value
+        );
+    }
+
+    #[inline(always)]
+    fn match_tags_equal(&mut self, not: bool, or: bool, id: u32, value: u32) {
+        self.0 = format!(
+            "MATCH_TAGS_EQUAL({}{}{}=={})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            id,
+            value
+        );
+    }
+
+    #[inline(always)]
+    fn match_tag_sender(&mut self, not: bool, or: bool, id: u32, value: u32) {
+        self.0 = format!(
+            "MATCH_TAG_SENDER({}{}{}=={})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            id,
+            value
+        );
+    }
+
+    #[inline(always)]
+    fn match_tag_receiver(&mut self, not: bool, or: bool, id: u32, value: u32) {
+        self.0 = format!(
+            "MATCH_TAG_RECEIVER({}{}{}=={})",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            id,
+            value
+        );
+    }
+
+    #[inline(always)]
+    fn match_integer_range(&mut self, not: bool, or: bool, start: u64, end: u64, idx: u16, format: u8) {
+        self.0 = format!(
+            "MATCH_INTEGER_RANGE({}{}({}, {}, {}, {}))",
+            if or {
+                "|"
+            } else {
+                ""
+            },
+            if not {
+                "!"
+            } else {
+                ""
+            },
+            start,
+            end,
+            idx,
+            format
+        );
     }
 }

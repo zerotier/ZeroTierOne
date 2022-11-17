@@ -17,7 +17,7 @@ use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::marshalable::Marshalable;
 
 /// Network configuration object sent to nodes by network controllers.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct NetworkConfig {
     /// Network ID
     pub network_id: NetworkId,
@@ -420,7 +420,7 @@ mod proto_v1_field_name {
 }
 
 /// SSO authentication configuration object.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SSOAuthConfiguration {
     pub version: u32,
     pub authentication_url: String,
@@ -435,7 +435,7 @@ pub struct SSOAuthConfiguration {
 ///
 /// These are also handed out to V2 nodes to use when communicating with V1 nodes on
 /// networks that support older protocol versions.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct V1Credentials {
     pub revision: u64,
     pub max_delta: u64,
@@ -447,7 +447,7 @@ pub struct V1Credentials {
 }
 
 /// Statically pushed L3 IP routes included with a network configuration.
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct IpRoute {
     pub target: InetAddress,
     #[serde(skip_serializing_if = "Option::is_none")]
