@@ -426,7 +426,7 @@ impl Controller {
         }
 
         if member_changed {
-            self.database.save_member(member).await?;
+            self.database.save_member(member, false).await?;
         }
 
         Ok((authorization_result, network_config, revocations))

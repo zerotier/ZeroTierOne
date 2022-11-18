@@ -30,6 +30,9 @@ const EVENT_HANDLER_TASK_TIMEOUT: Duration = Duration::from_secs(5);
 /// A cache is maintained that contains the actual objects. When an object is live edited,
 /// once it successfully reads and loads it is merged with the cached object and saved to
 /// the cache. The cache will also contain any ephemeral data, generated data, etc.
+///
+/// The file format is YAML instead of JSON for better human friendliness and the layout
+/// is different from V1 so it'll need a converter to use with V1 FileDb controller data.
 pub struct FileDatabase {
     base_path: PathBuf,
     controller_address: AtomicU64,
@@ -332,14 +335,17 @@ impl Database for FileDatabase {
                 let network_id_should_be = network.id.change_network_controller(controller_address);
                 if network.id != network_id_should_be {
                     network.id = network_id_should_be;
-                    let _ = self.save_network(network.clone()).await?;
+                    let _ = self.save_network(network.clone(), false).await?;
                 }
             }
         }
         Ok(network)
     }
 
-    async fn save_network(&self, obj: Network) -> Result<(), Box<dyn Error + Send + Sync>> {
+    async fn save_network(&self, obj: Network, generate_change_notification: bool) -> Result<(), Box<dyn Error + Send + Sync>> {
+        if !generate_change_notification {
+            let _ = self.cache.on_network_updated(obj.clone());
+        }
         let base_network_path = self.network_path(obj.id);
         let _ = fs::create_dir_all(base_network_path.parent().unwrap()).await;
         let _ = fs::write(base_network_path, serde_yaml::to_string(&obj)?.as_bytes()).await?;
@@ -374,13 +380,16 @@ impl Database for FileDatabase {
             if member.network_id != network_id {
                 // Also auto-update member network IDs, see get_network().
                 member.network_id = network_id;
-                self.save_member(member.clone()).await?;
+                self.save_member(member.clone(), false).await?;
             }
         }
         Ok(member)
     }
 
-    async fn save_member(&self, obj: Member) -> Result<(), Box<dyn Error + Send + Sync>> {
+    async fn save_member(&self, obj: Member, generate_change_notification: bool) -> Result<(), Box<dyn Error + Send + Sync>> {
+        if !generate_change_notification {
+            let _ = self.cache.on_member_updated(obj.clone());
+        }
         let base_member_path = self.member_path(obj.network_id, obj.node_id);
         let _ = fs::create_dir_all(base_member_path.parent().unwrap()).await;
         let _ = fs::write(base_member_path, serde_yaml::to_string(&obj)?.as_bytes()).await?;
@@ -401,6 +410,7 @@ impl Database for FileDatabase {
 mod tests {
     #[allow(unused_imports)]
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[allow(unused)]
     #[test]
@@ -420,11 +430,15 @@ mod tests {
                 db.save_node_identity(&controller_id);
                 assert!(db.load_node_identity().is_some());
 
+                let change_count = Arc::new(AtomicUsize::new(0));
+
                 let db2 = db.clone();
+                let change_count2 = change_count.clone();
                 tokio_runtime.spawn(async move {
                     let mut change_receiver = db2.changes().await.unwrap();
                     loop {
                         if let Ok(change) = change_receiver.recv().await {
+                            change_count2.fetch_add(1, Ordering::SeqCst);
                             //println!("[FileDatabase] {:#?}", change);
                         } else {
                             break;
@@ -433,14 +447,16 @@ mod tests {
                 });
 
                 let mut test_network = Network::new(network_id);
-                db.save_network(test_network.clone()).await.expect("network save error");
+                db.save_network(test_network.clone(), true).await.expect("network save error");
 
                 let mut test_member = Member::new_without_identity(node_id, network_id);
                 for x in 0..3 {
                     test_member.name = x.to_string();
-                    db.save_member(test_member.clone()).await.expect("member save error");
+                    db.save_member(test_member.clone(), true).await.expect("member save error");
 
+                    zerotier_utils::tokio::task::yield_now().await;
                     sleep(Duration::from_millis(100)).await;
+                    zerotier_utils::tokio::task::yield_now().await;
 
                     let test_member2 = db.get_member(network_id, node_id).await.unwrap().unwrap();
                     assert!(test_member == test_member2);

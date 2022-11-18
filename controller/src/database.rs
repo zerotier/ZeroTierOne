@@ -23,11 +23,11 @@ pub enum Change {
 pub trait Database: Sync + Send + NodeStorage + 'static {
     async fn list_networks(&self) -> Result<Vec<NetworkId>, Box<dyn Error + Send + Sync>>;
     async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error + Send + Sync>>;
-    async fn save_network(&self, obj: Network) -> Result<(), Box<dyn Error + Send + Sync>>;
+    async fn save_network(&self, obj: Network, generate_change_notification: bool) -> Result<(), Box<dyn Error + Send + Sync>>;
 
     async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Box<dyn Error + Send + Sync>>;
     async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Box<dyn Error + Send + Sync>>;
-    async fn save_member(&self, obj: Member) -> Result<(), Box<dyn Error + Send + Sync>>;
+    async fn save_member(&self, obj: Member, generate_change_notification: bool) -> Result<(), Box<dyn Error + Send + Sync>>;
 
     /// Get a receiver that can be used to receive changes made to networks and members, if supported.
     ///
