@@ -198,6 +198,11 @@ ifeq ($(CC_MACH),armv6kz)
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
 endif
+ifeq ($(CC_MACH),armv6k)
+	ZT_ARCHITECTURE=3
+	override DEFS+=-DZT_NO_TYPE_PUNNING
+	ZT_USE_ARM32_NEON_ASM_CRYPTO=1
+endif
 ifeq ($(CC_MACH),armv7)
 	ZT_ARCHITECTURE=3
 	override DEFS+=-DZT_NO_TYPE_PUNNING
@@ -257,7 +262,7 @@ endif
 
 # Fail if system architecture could not be determined
 ifeq ($(ZT_ARCHITECTURE),999)
-ERR=$(error FATAL: architecture could not be determined from $(CC) -dumpmachine: $CC_MACH)
+ERR=$(error FATAL: architecture could not be determined from $(CC) -dumpmachine: $(CC_MACH))
 .PHONY: err
 err: ; $(ERR)
 endif
