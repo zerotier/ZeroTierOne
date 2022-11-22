@@ -1,0 +1,158 @@
+---
+clone:
+  depth: 1
+kind: pipeline
+name: sid 386 build
+pull: always
+steps:
+- commands:
+  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
+    084037375216.dkr.ecr.us-east-2.amazonaws.com
+  - ./ci/scripts/build.sh sid 386 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: build
+trigger:
+  event:
+  - push
+  - tag
+  - custom
+type: docker
+---
+clone:
+  depth: 1
+kind: pipeline
+name: sid armv7 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
+    084037375216.dkr.ecr.us-east-2.amazonaws.com
+  - ./ci/scripts/build.sh sid armv7 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: build
+trigger:
+  event:
+  - push
+  - tag
+  - custom
+type: docker
+---
+clone:
+  depth: 1
+kind: pipeline
+name: sid amd64 build
+pull: always
+steps:
+- commands:
+  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
+    084037375216.dkr.ecr.us-east-2.amazonaws.com
+  - ./ci/scripts/build.sh sid amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: build
+trigger:
+  event:
+  - push
+  - tag
+  - custom
+type: docker
+---
+clone:
+  depth: 1
+kind: pipeline
+name: sid arm64 build
+platform:
+  arch: arm64
+  os: linux
+pull: always
+steps:
+- commands:
+  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
+    084037375216.dkr.ecr.us-east-2.amazonaws.com
+  - ./ci/scripts/build.sh sid arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: build
+trigger:
+  event:
+  - push
+  - tag
+  - custom
+type: docker
+---
+clone:
+  depth: 1
+kind: pipeline
+name: sid mips64le build
+pull: always
+steps:
+- commands:
+  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
+    084037375216.dkr.ecr.us-east-2.amazonaws.com
+  - ./ci/scripts/build.sh sid mips64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: build
+trigger:
+  event:
+  - push
+  - tag
+  - custom
+type: docker
+---
+clone:
+  depth: 1
+kind: pipeline
+name: sid ppc64le build
+pull: always
+steps:
+- commands:
+  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
+    084037375216.dkr.ecr.us-east-2.amazonaws.com
+  - ./ci/scripts/build.sh sid ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: build
+trigger:
+  event:
+  - push
+  - tag
+  - custom
+type: docker
+---
+clone:
+  depth: 1
+kind: pipeline
+name: sid s390x build
+pull: always
+steps:
+- commands:
+  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
+    084037375216.dkr.ecr.us-east-2.amazonaws.com
+  - ./ci/scripts/build.sh sid s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: build
+trigger:
+  event:
+  - push
+  - tag
+  - custom
+type: docker
+---
+clone:
+  depth: 1
+kind: pipeline
+name: sid riscv64 build
+pull: always
+steps:
+- commands:
+  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
+    084037375216.dkr.ecr.us-east-2.amazonaws.com
+  - ./ci/scripts/build.sh sid riscv64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: build
+trigger:
+  event:
+  - push
+  - tag
+  - custom
+type: docker

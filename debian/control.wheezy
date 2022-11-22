@@ -1,0 +1,19 @@
+Source: zerotier-one
+Maintainer: Adam Ierymenko <adam.ierymenko@zerotier.com>
+Section: net
+Priority: optional
+Standards-Version: 3.9.4
+Build-Depends: debhelper
+Vcs-Git: git://github.com/zerotier/ZeroTierOne
+Vcs-Browser: https://github.com/zerotier/ZeroTierOne
+Homepage: https://www.zerotier.com/
+
+Package: zerotier-one
+Architecture: any
+Depends:  ${shlibs:Depends}, ${misc:Depends}, iproute, libstdc++6
+Homepage: https://www.zerotier.com/
+Description: ZeroTier network virtualization service
+ ZeroTier One lets you join ZeroTier virtual networks and
+ have them appear as tun/tap ports on your system. See
+ https://www.zerotier.com/ for instructions and
+ documentation.
