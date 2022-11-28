@@ -158,15 +158,15 @@ pub enum Error {
     /// Data object is too large to send, even fragmented.
     DataTooLarge,
 
-    /// An unexpected error occurred elsewhere in the code (may indicate a bug).
-    OtherError(Box<dyn std::error::Error>),
+    /// An unexpected I/O error such as a buffer overrun occurred.
+    IoError(std::io::Error),
 }
 
 impl From<std::io::Error> for Error {
     #[cold]
     #[inline(never)]
     fn from(e: std::io::Error) -> Self {
-        Self::OtherError(Box::new(e))
+        Self::IoError(e)
     }
 }
 
@@ -184,7 +184,7 @@ impl std::fmt::Display for Error {
             Self::UnknownProtocolVersion => f.write_str("UnknownProtocolVersion"),
             Self::DataBufferTooSmall => f.write_str("DataBufferTooSmall"),
             Self::DataTooLarge => f.write_str("DataTooLarge"),
-            Self::OtherError(e) => f.write_str(format!("OtherError({})", e.to_string()).as_str()),
+            Self::IoError(e) => f.write_str(format!("OtherError({})", e.to_string()).as_str()),
         }
     }
 }
@@ -261,7 +261,7 @@ impl From<SessionId> for u64 {
 ///
 /// This holds the data structures used to defragment incoming packets that are not associated with an
 /// existing session, which would be new attempts to create sessions. Typically one of these is associated
-/// with a single listen socket or other inbound endpoint.
+/// with a single listen socket, local bound port, or other inbound endpoint.
 pub struct ReceiveContext<H: Host> {
     initial_offer_defrag: Mutex<RingBufferMap<u32, GatherArray<H::IncomingPacketBuffer, KEY_EXCHANGE_MAX_FRAGMENTS>, 1024, 128>>,
     incoming_init_header_check_cipher: Aes,
@@ -348,6 +348,7 @@ pub struct Session<H: Host> {
     state: RwLock<SessionMutableState>,               // Mutable parts of state (other than defrag buffers)
     remote_s_public_hash: [u8; 48],                   // SHA384(remote static public key blob)
     remote_s_public_p384: [u8; P384_PUBLIC_KEY_SIZE], // Remote NIST P-384 static public key
+
     defrag: Mutex<RingBufferMap<u32, GatherArray<H::IncomingPacketBuffer, MAX_FRAGMENTS>, 16, 4>>,
 }
 

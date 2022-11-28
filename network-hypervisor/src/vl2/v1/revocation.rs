@@ -1,8 +1,8 @@
 use std::io::Write;
 
 use zerotier_crypto::random;
+use zerotier_crypto::verified::Verified;
 use zerotier_utils::arrayvec::ArrayVec;
-use zerotier_utils::blob::Blob;
 
 use serde::{Deserialize, Serialize};
 
@@ -17,8 +17,7 @@ pub struct Revocation {
     pub threshold: i64,
     pub target: Address,
     pub issued_to: Address,
-    pub signature: Blob<96>,
-    pub type_being_revoked: u8,
+    pub signature: ArrayVec<u8, 96>,
     pub fast_propagate: bool,
 }
 
@@ -28,8 +27,7 @@ impl Revocation {
         threshold: i64,
         target: Address,
         issued_to: Address,
-        signer: &Identity,
-        type_being_revoked: CredentialType,
+        signer: &Verified<Identity>,
         fast_propagate: bool,
     ) -> Option<Self> {
         let mut r = Self {
@@ -38,8 +36,7 @@ impl Revocation {
             threshold,
             target,
             issued_to,
-            signature: Blob::default(),
-            type_being_revoked: type_being_revoked as u8,
+            signature: ArrayVec::new(),
             fast_propagate,
         };
         if let Some(sig) = signer.sign(r.internal_to_bytes(true, signer.address).as_bytes(), true) {
@@ -64,14 +61,15 @@ impl Revocation {
         let _ = v.write_all(&(self.fast_propagate as u64).to_be_bytes()); // 0x1 is the flag for this
         let _ = v.write_all(&self.target.to_bytes());
         let _ = v.write_all(&signed_by.to_bytes());
-        v.push(self.type_being_revoked);
+        v.push(CredentialType::CertificateOfMembership as u8);
 
         if for_sign {
             let _ = v.write_all(&[0x7f; 8]);
         } else {
             v.push(1); // ed25519 signature
-            let _ = v.write_all(&[0u8, 96u8]);
-            let _ = v.write_all(self.signature.as_bytes());
+            assert!(self.signature.len() <= 255);
+            let _ = v.write_all(&[0u8, self.signature.len() as u8]);
+            let _ = v.write_all(self.signature.as_ref());
         }
 
         v

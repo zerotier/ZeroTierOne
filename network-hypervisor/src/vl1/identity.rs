@@ -328,6 +328,8 @@ impl Identity {
     }
 
     /// Returns true if this identity was upgraded from another older version.
+    ///
+    /// This does NOT validate either identity. Ensure that validation has been performed.
     pub fn is_upgraded_from(&self, other: &Identity) -> bool {
         self.address == other.address
             && self.x25519 == other.x25519

@@ -119,13 +119,11 @@ impl FileDatabase {
                                                         if deleted.is_some() {
                                                             match record_type {
                                                                 RecordType::Network => {
-                                                                    if let Some((network, mut members)) =
+                                                                    if let Some((network, members)) =
                                                                         db.cache.on_network_deleted(network_id)
                                                                     {
-                                                                        for m in members.drain(..) {
-                                                                            let _ = db.change_sender.send(Change::MemberDeleted(m));
-                                                                        }
-                                                                        let _ = db.change_sender.send(Change::NetworkDeleted(network));
+                                                                        let _ =
+                                                                            db.change_sender.send(Change::NetworkDeleted(network, members));
                                                                     }
                                                                 }
                                                                 RecordType::Member => {

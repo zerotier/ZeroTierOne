@@ -13,7 +13,7 @@ use crate::model::*;
 pub enum Change {
     NetworkCreated(Network),
     NetworkChanged(Network, Network),
-    NetworkDeleted(Network),
+    NetworkDeleted(Network, Vec<Member>),
     MemberCreated(Member),
     MemberChanged(Member, Member),
     MemberDeleted(Member),
