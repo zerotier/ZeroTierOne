@@ -38,7 +38,7 @@ public final class NodeStatus {
 	/**
 	 * 40-bit ZeroTier address of this node
 	 */
-	public final long getAddres() {
+	public final long getAddress() {
 		return address;
 	}
 
