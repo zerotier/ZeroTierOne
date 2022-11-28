@@ -84,7 +84,7 @@ public class Node {
      *
      * @param now Current clock in milliseconds
      * @param getListener User written instance of the {@link DataStoreGetListener} interface called to get objects from persistent storage.  This instance must be unique per Node object.
-     * @param putListener User written intstance of the {@link DataStorePutListener} interface called to put objects in persistent storage.  This instance must be unique per Node object.
+     * @param putListener User written instance of the {@link DataStorePutListener} interface called to put objects in persistent storage.  This instance must be unique per Node object.
      * @param sender
      * @param eventListener User written instance of the {@link EventListener} interface to receive status updates and non-fatal error notices.  This instance must be unique per Node object.
      * @param frameListener 
@@ -197,7 +197,7 @@ public class Node {
      * Join a network
      *
      * <p>This may generate calls to the port config callback before it returns,
-     * or these may be deffered if a netconf is not available yet.</p>
+     * or these may be deferred if a netconf is not available yet.</p>
      *
      * <p>If we are already a member of the network, nothing is done and OK is
      * returned.</p>

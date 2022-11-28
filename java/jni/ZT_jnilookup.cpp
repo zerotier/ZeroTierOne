@@ -62,7 +62,7 @@ jclass JniLookup::findClass(const std::string &name)
     JNIEnv *env = NULL;
     if(m_jvm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
     {
-        LOGE("Error retreiving JNI Environment");
+        LOGE("Error retrieving JNI Environment");
         return NULL;
     }
     const char *c = name.c_str();
