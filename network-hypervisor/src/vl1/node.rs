@@ -1,4 +1,4 @@
-// (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
+// (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -764,7 +764,7 @@ impl Node {
         );
 
         // An 0xff value at byte [8] means this is a ZSSP packet. This is accomplished via the
-        // backward compatibilty hack of always having 0xff at byte [4] of 6-byte session IDs
+        // backward compatibility hack of always having 0xff at byte [4] of 6-byte session IDs
         // and by having 0xffffffffffff be the "nil" session ID for session init packets. ZSSP
         // is the new V2 Noise-based forward-secure transport protocol. What follows below this
         // is legacy handling of the old v1 protocol.

@@ -67,7 +67,7 @@ impl CertificateOfMembership {
         q[8] = u64::MAX; // no to_be needed for all-1s
 
         // This is a fix for a security issue in V1 in which an attacker could (with much CPU use)
-        // duplciate an identity and insert themselves in place of one after 30-60 days when local
+        // duplicate an identity and insert themselves in place of one after 30-60 days when local
         // identity caches expire. The full hash should have been included from the beginning, and
         // V2 only ever uses the full hash of the identity to verify credentials.
         let fp = self.issued_to_fingerprint.as_bytes();
