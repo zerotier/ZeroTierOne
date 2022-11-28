@@ -131,7 +131,7 @@ pub enum Error {
     /// Packet was not well formed
     InvalidPacket,
 
-    /// An invalid paramter was supplied to the function
+    /// An invalid parameter was supplied to the function
     InvalidParameter,
 
     /// Packet failed one or more authentication (MAC) checks
@@ -212,7 +212,7 @@ pub enum ReceiveResult<'a, H: Host> {
     /// The session will have already been gated by the accept_new_session() method in the Host trait.
     OkNewSession(Session<H>),
 
-    /// Packet apperas valid but was ignored e.g. as a duplicate.
+    /// Packet appears valid but was ignored e.g. as a duplicate.
     Ignored,
 }
 
