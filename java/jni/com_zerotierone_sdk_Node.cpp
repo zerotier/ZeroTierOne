@@ -107,7 +107,7 @@ namespace {
         enum ZT_VirtualNetworkConfigOperation operation,
         const ZT_VirtualNetworkConfig *config)
     {
-        LOGV("VritualNetworkConfigFunctionCallback");
+        LOGV("VirtualNetworkConfigFunctionCallback");
         JniRef *ref = (JniRef*)userData;
         JNIEnv *env = NULL;
         ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
@@ -1025,7 +1025,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         inetAddressClass, "getAddress", "()[B");
     if(getAddressMethod == NULL)
     {
-        // cant find InetAddress.getAddres()
+        // cant find InetAddress.getAddress()
         return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
     }
 

@@ -24,7 +24,7 @@
 namespace ZeroTier {
 
 /**
- * DNS data serealization methods
+ * DNS data serialization methods
  */
 class DNS {
 public:

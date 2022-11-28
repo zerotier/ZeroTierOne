@@ -428,7 +428,7 @@ void Bond::recordOutgoingPacket(const SharedPtr<Path>& path, uint64_t packetId, 
 		}
 		if (shouldRecord) {
 			//_paths[pathIdx].expectingAckAsOf = now;
-			//_paths[pathIdx].totalBytesSentSinceLastAckRecieved += payloadLength;
+			//_paths[pathIdx].totalBytesSentSinceLastAckReceived += payloadLength;
 			//_paths[pathIdx].unackedBytes += payloadLength;
 			if (_paths[pathIdx].qosStatsOut.size() < ZT_QOS_MAX_PENDING_RECORDS) {
 				_paths[pathIdx].qosStatsOut[packetId] = now;
