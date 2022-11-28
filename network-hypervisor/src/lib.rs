@@ -1,4 +1,4 @@
-// (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
+// (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
 pub const VERSION_MAJOR: u8 = 1;
 pub const VERSION_MINOR: u8 = 99;
