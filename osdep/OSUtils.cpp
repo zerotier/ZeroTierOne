@@ -101,15 +101,12 @@ std::vector<std::string> OSUtils::listDirectory(const char *path,bool includeDir
 		FindClose(hFind);
 	}
 #else
-	struct dirent de;
 	struct dirent *dptr;
 	DIR *d = opendir(path);
 	if (!d)
 		return r;
-	dptr = (struct dirent *)0;
 	for(;;) {
-		if (readdir_r(d,&de,&dptr))
-			break;
+		dptr = readdir(d);
 		if (dptr) {
 			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))&&((dptr->d_type != DT_DIR)||(includeDirectories)))
 				r.push_back(std::string(dptr->d_name));
@@ -149,17 +146,14 @@ long OSUtils::cleanDirectory(const char *path,const int64_t olderThan)
 		FindClose(hFind);
 	}
 #else
-	struct dirent de;
 	struct dirent *dptr;
 	struct stat st;
 	char tmp[4096];
 	DIR *d = opendir(path);
 	if (!d)
 		return -1;
-	dptr = (struct dirent *)0;
 	for(;;) {
-		if (readdir_r(d,&de,&dptr))
-			break;
+		dptr = readdir(d);
 		if (dptr) {
 			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))&&(dptr->d_type == DT_REG)) {
 				ztsnprintf(tmp,sizeof(tmp),"%s/%s",path,dptr->d_name);
@@ -200,15 +194,12 @@ bool OSUtils::rmDashRf(const char *path)
 	}
 	return (RemoveDirectoryA(path) != FALSE);
 #else
-	struct dirent de;
 	struct dirent *dptr;
 	DIR *d = opendir(path);
 	if (!d)
 		return true;
-	dptr = (struct dirent *)0;
 	for(;;) {
-		if (readdir_r(d,&de,&dptr) != 0)
-			break;
+		dptr = readdir(d);
 		if (!dptr)
 			break;
 		if ((strcmp(dptr->d_name,".") != 0)&&(strcmp(dptr->d_name,"..") != 0)&&(strlen(dptr->d_name) > 0)) {
