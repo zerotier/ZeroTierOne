@@ -12,6 +12,11 @@ use zerotier_network_hypervisor::vl1::Address;
 use zerotier_network_hypervisor::vl2::NetworkId;
 
 /// Network and member cache used by database implementations to implement change detection.
+///
+/// Note: the database must ensure that calls to on_X_updated() methods are only performed
+/// when a potentially newer version is committed. No-op calls when nothing has changed are
+/// okay but calls out of order will result in extra updated events being generated for
+/// movements forward and backward in time. Calls must be temporally ordered.
 pub struct Cache {
     by_nwid: RwLock<HashMap<NetworkId, (Network, Mutex<HashMap<Address, Member>>)>>,
 }

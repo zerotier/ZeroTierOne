@@ -224,17 +224,10 @@ mod fruit_flavored {
 
         #[inline(always)]
         pub fn init(&mut self, iv: &[u8]) {
+            assert_eq!(iv.len(), 12);
             unsafe {
                 assert_eq!(CCCryptorGCMReset(self.0), 0);
-                if iv.len() == 16 {
-                    assert_eq!(CCCryptorGCMSetIV(self.0, iv.as_ptr().cast(), 16), 0);
-                } else if iv.len() < 16 {
-                    let mut tmp = [0_u8; 16];
-                    tmp[..iv.len()].copy_from_slice(iv);
-                    assert_eq!(CCCryptorGCMSetIV(self.0, tmp.as_ptr().cast(), 16), 0);
-                } else {
-                    panic!();
-                }
+                assert_eq!(CCCryptorGCMSetIV(self.0, iv.as_ptr().cast(), 12), 0);
             }
         }
 
@@ -408,7 +401,9 @@ mod openssl_aes {
 
         /// Initialize AES-CTR for encryption or decryption with the given IV.
         /// If it's already been used, this also resets the cipher. There is no separate reset.
+        #[inline]
         pub fn init(&mut self, iv: &[u8]) {
+            assert_eq!(iv.len(), 12);
             let mut c = Crypter::new(
                 aes_gcm_by_key_size(self.1),
                 if self.3 {

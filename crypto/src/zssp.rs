@@ -20,7 +20,7 @@ use zerotier_utils::ringbuffermap::RingBufferMap;
 use zerotier_utils::unlikely_branch;
 use zerotier_utils::varint;
 
-/// Minimum size of a valid physical packet.
+/// Minimum size of a valid physical ZSSP packet or packet fragment.
 pub const MIN_PACKET_SIZE: usize = HEADER_SIZE + AES_GCM_TAG_SIZE;
 
 /// Minimum physical MTU for ZSSP to function.
@@ -43,7 +43,7 @@ pub const SERVICE_INTERVAL: u64 = 10000;
 const JEDI: bool = true;
 
 /// Maximum number of fragments for data packets.
-const MAX_FRAGMENTS: usize = 48; // protocol max: 63
+const MAX_FRAGMENTS: usize = 48; // hard protocol max: 63
 
 /// Maximum number of fragments for key exchange packets (can be smaller to save memory, only a few needed)
 const KEY_EXCHANGE_MAX_FRAGMENTS: usize = 2; // enough room for p384 + ZT identity + kyber1024 + tag/hmac/etc.
@@ -93,9 +93,7 @@ const HMAC_SIZE: usize = 48;
 /// This is large since some ZeroTier nodes handle huge numbers of links, like roots and controllers.
 const SESSION_ID_SIZE: usize = 6;
 
-/// Number of session keys to hold at a given time.
-///
-/// This provides room for a current, previous, and next key.
+/// Number of session keys to hold at a given time (current, previous, next).
 const KEY_HISTORY_SIZE: usize = 3;
 
 // Packet types can range from 0 to 15 (4 bits) -- 0-3 are defined and 4-15 are reserved for future use
@@ -105,11 +103,11 @@ const PACKET_TYPE_KEY_OFFER: u8 = 2; // "alice"
 const PACKET_TYPE_KEY_COUNTER_OFFER: u8 = 3; // "bob"
 
 // Key usage labels for sub-key derivation using NIST-style KBKDF (basically just HMAC KDF).
-const KBKDF_KEY_USAGE_LABEL_HMAC: u8 = b'M';
-const KBKDF_KEY_USAGE_LABEL_HEADER_CHECK: u8 = b'H';
-const KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB: u8 = b'A';
-const KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE: u8 = b'B';
-const KBKDF_KEY_USAGE_LABEL_RATCHETING: u8 = b'R';
+const KBKDF_KEY_USAGE_LABEL_HMAC: u8 = b'M'; // HMAC-SHA384 authentication for key exchanges
+const KBKDF_KEY_USAGE_LABEL_HEADER_CHECK: u8 = b'H'; // AES-based header check code generation
+const KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB: u8 = b'A'; // AES-GCM in A->B direction
+const KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE: u8 = b'B'; // AES-GCM in B->A direction
+const KBKDF_KEY_USAGE_LABEL_RATCHETING: u8 = b'R'; // Key input for next ephemeral ratcheting
 
 /// Aribitrary starting value for master key derivation.
 ///
@@ -125,7 +123,7 @@ const INITIAL_KEY: [u8; 64] = [
 ];
 
 pub enum Error {
-    /// The packet was addressed to an unrecognized local session
+    /// The packet was addressed to an unrecognized local session (should usually be ignored)
     UnknownLocalSessionId(SessionId),
 
     /// Packet was not well formed
@@ -137,36 +135,36 @@ pub enum Error {
     /// Packet failed one or more authentication (MAC) checks
     FailedAuthentication,
 
-    /// New session was rejected by caller's supplied authentication check function
+    /// New session was rejected via Host::check_new_session_attempt or Host::accept_new_session.
     NewSessionRejected,
 
-    /// Rekeying failed and session secret has reached its maximum usage count
+    /// Rekeying failed and session secret has reached its hard usage count limit
     MaxKeyLifetimeExceeded,
 
-    /// Attempt to send using session without established key.
+    /// Attempt to send using session without established key
     SessionNotEstablished,
 
     /// Packet ignored by rate limiter.
     RateLimited,
 
-    /// Other end sent a protocol version we don't support.
+    /// The other peer specified an unrecognized protocol version
     UnknownProtocolVersion,
 
-    /// Supplied data buffer is too small to receive data.
+    /// Caller supplied data buffer is too small to receive data
     DataBufferTooSmall,
 
-    /// Data object is too large to send, even fragmented.
+    /// Data object is too large to send, even with fragmentation
     DataTooLarge,
 
-    /// An unexpected I/O error such as a buffer overrun occurred.
-    IoError(std::io::Error),
+    /// An unexpected I/O error such as a buffer overrun occurred (possible bug)
+    UnexpectedIoError(std::io::Error),
 }
 
 impl From<std::io::Error> for Error {
     #[cold]
     #[inline(never)]
     fn from(e: std::io::Error) -> Self {
-        Self::IoError(e)
+        Self::UnexpectedIoError(e)
     }
 }
 
@@ -184,7 +182,7 @@ impl std::fmt::Display for Error {
             Self::UnknownProtocolVersion => f.write_str("UnknownProtocolVersion"),
             Self::DataBufferTooSmall => f.write_str("DataBufferTooSmall"),
             Self::DataTooLarge => f.write_str("DataTooLarge"),
-            Self::IoError(e) => f.write_str(format!("OtherError({})", e.to_string()).as_str()),
+            Self::UnexpectedIoError(e) => f.write_str(format!("UnexpectedIoError({})", e.to_string()).as_str()),
         }
     }
 }
@@ -239,7 +237,7 @@ impl SessionId {
 
     #[inline]
     pub fn new_from_reader<R: Read>(r: &mut R) -> std::io::Result<Option<SessionId>> {
-        let mut tmp = [0_u8; 8];
+        let mut tmp = 0_u64.to_ne_bytes();
         r.read_exact(&mut tmp[..SESSION_ID_SIZE])?;
         Ok(Self::new_from_u64(u64::from_le_bytes(tmp)))
     }
