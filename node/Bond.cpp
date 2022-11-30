@@ -18,6 +18,7 @@
 #include <cmath>
 #include <cstdio>
 #include <string>
+#include <cinttypes> // for PRId64, etc. macros
 
 namespace ZeroTier {
 
@@ -546,7 +547,7 @@ int32_t Bond::generateQoSPacket(int pathIdx, int64_t now, char* qosBuffer)
 	std::map<uint64_t, uint64_t>::iterator it = _paths[pathIdx].qosStatsIn.begin();
 	int i = 0;
 	int numRecords = std::min(_paths[pathIdx].packetsReceivedSinceLastQoS, ZT_QOS_TABLE_SIZE);
-	// debug("numRecords=%3d, packetsReceivedSinceLastQoS=%3d, _paths[pathIdx].qosStatsIn.size()=%3lu", numRecords, _paths[pathIdx].packetsReceivedSinceLastQoS, _paths[pathIdx].qosStatsIn.size());
+	// debug("numRecords=%3d, packetsReceivedSinceLastQoS=%3d, _paths[pathIdx].qosStatsIn.size()=%3zu", numRecords, _paths[pathIdx].packetsReceivedSinceLastQoS, _paths[pathIdx].qosStatsIn.size());
 	while (i < numRecords && it != _paths[pathIdx].qosStatsIn.end()) {
 		uint64_t id = it->first;
 		memcpy(qosBuffer, &id, sizeof(uint64_t));
@@ -582,7 +583,7 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now, bool reass
 		int nextBestQualIdx = ZT_MAX_PEER_NETWORK_PATHS;
 
 		if (reassign) {
-			log("attempting to re-assign out-flow %04x previously on idx %d (%u / %lu flows)", flow->id, flow->assignedPath, _paths[_realIdxMap[flow->assignedPath]].assignedFlowCount, _flows.size());
+			log("attempting to re-assign out-flow %04x previously on idx %d (%u / %zu flows)", flow->id, flow->assignedPath, _paths[_realIdxMap[flow->assignedPath]].assignedFlowCount, _flows.size());
 		}
 		else {
 			debug("attempting to assign flow for the first time");
@@ -607,7 +608,7 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now, bool reass
 				continue;
 			}
 			if (! _paths[_realIdxMap[bondedIdx]].shouldAvoid && randomLinkCapacity <= _paths[_realIdxMap[bondedIdx]].relativeLinkCapacity) {
-				// debug("  assign out-flow %04x to link %s (%u / %lu flows)", flow->id, pathToStr(_paths[_realIdxMap[bondedIdx]].p).c_str(), _paths[_realIdxMap[bondedIdx]].assignedFlowCount, _flows.size());
+				// debug("  assign out-flow %04x to link %s (%u / %zu flows)", flow->id, pathToStr(_paths[_realIdxMap[bondedIdx]].p).c_str(), _paths[_realIdxMap[bondedIdx]].assignedFlowCount, _flows.size());
 				break;	 // Acceptable -- No violation of quality spec
 			}
 			if (_paths[_realIdxMap[bondedIdx]].relativeQuality > bestQuality) {
@@ -636,7 +637,7 @@ bool Bond::assignFlowToBondedPath(SharedPtr<Flow>& flow, int64_t now, bool reass
 		}
 		flow->assignPath(_abPathIdx, now);
 	}
-	log("assign out-flow %04x to link %s (%u / %lu flows)", flow->id, pathToStr(_paths[flow->assignedPath].p).c_str(), _paths[flow->assignedPath].assignedFlowCount, _flows.size());
+	log("assign out-flow %04x to link %s (%u / %zu flows)", flow->id, pathToStr(_paths[flow->assignedPath].p).c_str(), _paths[flow->assignedPath].assignedFlowCount, _flows.size());
 	return true;
 }
 
@@ -660,7 +661,7 @@ SharedPtr<Bond::Flow> Bond::createFlow(int pathIdx, int32_t flowId, unsigned cha
 	if (pathIdx != ZT_MAX_PEER_NETWORK_PATHS) {
 		flow->assignPath(pathIdx, now);
 		_paths[pathIdx].assignedFlowCount++;
-		debug("assign in-flow %04x to link %s (%u / %lu)", flow->id, pathToStr(_paths[pathIdx].p).c_str(), _paths[pathIdx].assignedFlowCount, _flows.size());
+		debug("assign in-flow %04x to link %s (%u / %zu)", flow->id, pathToStr(_paths[pathIdx].p).c_str(), _paths[pathIdx].assignedFlowCount, _flows.size());
 	}
 	/**
 	 * Add a flow when no path was provided. This means that it is an outgoing packet
@@ -680,7 +681,7 @@ void Bond::forgetFlowsWhenNecessary(uint64_t age, bool oldest, int64_t now)
 	if (age) {	 // Remove by specific age
 		while (it != _flows.end()) {
 			if (it->second->age(now) > age) {
-				debug("forget flow %04x (age %llu) (%u / %lu)", it->first, (unsigned long long)it->second->age(now), _paths[it->second->assignedPath].assignedFlowCount, (_flows.size() - 1));
+				debug("forget flow %04x (age %" PRId64 ") (%u / %zu)", it->first, it->second->age(now), _paths[it->second->assignedPath].assignedFlowCount, (_flows.size() - 1));
 				_paths[it->second->assignedPath].assignedFlowCount--;
 				it = _flows.erase(it);
 			}
@@ -699,7 +700,7 @@ void Bond::forgetFlowsWhenNecessary(uint64_t age, bool oldest, int64_t now)
 			++it;
 		}
 		if (oldestFlow != _flows.end()) {
-			debug("forget oldest flow %04x (age %llu) (total flows: %lu)", oldestFlow->first, (unsigned long long)oldestFlow->second->age(now), (unsigned long)(_flows.size() - 1));
+			debug("forget oldest flow %04x (age %" PRId64 ") (total flows: %zu)", oldestFlow->first, oldestFlow->second->age(now), _flows.size() - 1);
 			_paths[oldestFlow->second->assignedPath].assignedFlowCount--;
 			_flows.erase(oldestFlow);
 		}
@@ -824,7 +825,7 @@ void Bond::sendACK(void* tPtr, int pathIdx, int64_t localSocket, const InetAddre
 		bytesToAck += it->second;
 		++it;
 	}
-	debug("sending ACK of %d bytes on path %s (table size = %d)", bytesToAck, pathToStr(_paths[pathIdx].p).c_str(), _paths[pathIdx].ackStatsIn.size());
+	debug("sending ACK of %d bytes on path %s (table size = %zu)", bytesToAck, pathToStr(_paths[pathIdx].p).c_str(), _paths[pathIdx].ackStatsIn.size());
 	outp.append<uint32_t>(bytesToAck);
 	if (atAddress) {
 		outp.armor(_peer->key(), false, _peer->aesKeysIfSupported());
@@ -1919,7 +1920,7 @@ std::string Bond::pathToStr(const SharedPtr<Path>& path)
 		SharedPtr<Link> link = getLink(path);
 		if (link) {
 			std::string ifnameStr = std::string(link->ifname());
-			snprintf(fullPathStr, 384, "%.16llx-%s/%s", (unsigned long long)(path->localSocket()), ifnameStr.c_str(), pathStr);
+			snprintf(fullPathStr, 384, "%.16" PRIx64 "-%s/%s", path->localSocket(), ifnameStr.c_str(), pathStr);
 			return std::string(fullPathStr);
 		}
 	}
@@ -1935,11 +1936,11 @@ void Bond::dumpPathStatus(int64_t now, int pathIdx)
 	std::string aliveOrDead = _paths[pathIdx].alive ? std::string("alive") : std::string("dead");
 	std::string eligibleOrNot = _paths[pathIdx].eligible ? std::string("eligible") : std::string("ineligible");
 	std::string bondedOrNot = _paths[pathIdx].bonded ? std::string("bonded") : std::string("unbonded");
-	log("path[%2u] --- %5s (in %7lld, out: %7lld), %10s, %8s, flows=%-6u lat=%-8.3f pdv=%-7.3f err=%-6.4f loss=%-6.4f qual=%-6.4f --- (%s) spare=%d",
+	log("path[%2u] --- %5s (in %7" PRId64 ", out: %7" PRId64 "), %10s, %8s, flows=%-6u lat=%-8.3f pdv=%-7.3f err=%-6.4f loss=%-6.4f qual=%-6.4f --- (%s) spare=%d",
 		pathIdx,
 		aliveOrDead.c_str(),
-		static_cast<long long int>(_paths[pathIdx].p->age(now)),
-		static_cast<long long int>(_paths[pathIdx].p->_lastOut == 0 ? 0 : now - _paths[pathIdx].p->_lastOut),
+		_paths[pathIdx].p->age(now),
+		_paths[pathIdx].p->_lastOut == 0 ? static_cast<int64_t>(0) : now - _paths[pathIdx].p->_lastOut,
 		eligibleOrNot.c_str(),
 		bondedOrNot.c_str(),
 		_paths[pathIdx].assignedFlowCount,
@@ -1963,13 +1964,13 @@ void Bond::dumpInfo(int64_t now, bool force)
 	_lastSummaryDump = now;
 	float overhead = (_overheadBytes / (timeSinceLastDump / 1000.0f) / 1000.0f);
 	_overheadBytes = 0;
-	log("bond: bp=%d, fi=%d, mi=%d, ud=%d, dd=%d, flows=%lu, leaf=%d, overhead=%f KB/s, links=(%d/%d)",
+	log("bond: bp=%d, fi=%" PRIu64 ", mi=%d, ud=%d, dd=%d, flows=%zu, leaf=%d, overhead=%f KB/s, links=(%d/%d)",
 		_policy,
 		_failoverInterval,
 		_monitorInterval,
 		_upDelay,
 		_downDelay,
-		(unsigned long)_flows.size(),
+		_flows.size(),
 		_isLeaf,
 		overhead,
 		_numAliveLinks,
