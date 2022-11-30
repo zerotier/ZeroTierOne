@@ -1,0 +1,5 @@
+ARG PLATFORM
+FROM 084037375216.dkr.ecr.us-east-2.amazonaws.com/${PLATFORM}-builder as stage
+WORKDIR /work
+COPY . .
+RUN make

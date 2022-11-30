@@ -8,6 +8,9 @@ export VERSION=$3
 export EVENT=$4
 
 case $PLATFORM in
+    sid)
+        export PKGFMT=none
+        ;;
     el*|fc*|amzn*)
         export PKGFMT=rpm
         ;;
@@ -15,22 +18,21 @@ case $PLATFORM in
         export PKGFMT=deb
 esac
 
-# OSX
-# x86_64-apple-darwin
-# aarch64-apple-darwin
+#
+# Allow user to drop in custom Dockerfile for PLATFORM
+#
 
-# Windows
-# x86_64-pc-windows-msvc
-# i686-pc-windows-msvc
-# aarch64-pc-windows-msvc
+if [ -f "ci/Dockerfile.${PLATFORM}" ]; then
+    export DOCKERFILE="ci/Dockerfile.${PLATFORM}"
+else
+    export DOCKERFILE="ci/Dockerfile.${PKGFMT}"
+fi
 
-# Linux
-# i686-unknown-linux-gnu
-# x86_64-unknown-linux-gnu
-# arm-unknown-linux-gnueabi       ?
-# arm-unknown-linux-gnueabihf     ?
-# armv7-unknown-linux-gnueabihf
-# 
+#
+# Rust sometimes gets confused about where it's running.
+# Normally, the build images will have Rust pre-baked.
+# Pass RUST_TRIPLET for convenience when using a custom Dockerfile
+#
 
 case $ZT_ISA in
     386)
@@ -41,13 +43,9 @@ case $ZT_ISA in
         export DOCKER_ARCH=amd64
         export RUST_TRIPLET=x86_64-unknown-linux-gnu
         ;;
-    armv6)
-        export DOCKER_ARCH=arm/v6
-        export RUST_TRIPLET=arm-unknown-linux-gnueabi
-        ;;
-    armv7)        
+    armv7)
         export DOCKER_ARCH=arm/v7
-        export RUST_TRIPLET=arm-unknown-linux-gnueabihf
+        export RUST_TRIPLET=armv7-unknown-linux-gnueabihf
         ;;
     arm64)
         export DOCKER_ARCH=arm64/v8
@@ -60,7 +58,7 @@ case $ZT_ISA in
     ppc64le)
         export DOCKER_ARCH=ppc64le
         export RUST_TRIPLET=powerpc64le-unknown-linux-gnu
-        ;;    
+        ;;
     mips64le)
         export DOCKER_ARCH=mips64le
         export RUST_TRIPLET=mips64el-unknown-linux-gnuabi64
@@ -69,17 +67,15 @@ case $ZT_ISA in
         export DOCKER_ARCH=s390x
         export RUST_TRIPLET=s390x-unknown-linux-gnu
         ;;
-    *)        
+    *)
         echo "ERROR: could not determine architecture settings. PLEASE FIX ME"
         exit 1
         ;;
 esac
 
-if [ -f "ci/Dockerfile.${PLATFORM}" ]; then
-    export DOCKERFILE="ci/Dockerfile.${PLATFORM}"
-else
-    export DOCKERFILE="ci/Dockerfile.${PKGFMT}"
-fi
+#
+# Print debug info
+#
 
 echo "#~~~~~~~~~~~~~~~~~~~~"
 echo "$0 variables:"
@@ -94,23 +90,37 @@ echo "PWD: ${PWD}"
 echo "DOCKERFILE: ${DOCKERFILE}"
 echo "#~~~~~~~~~~~~~~~~~~~~"
 
-if [ ${EVENT} == "push" ]; then
-make munge_rpm zerotier-one.spec VERSION=${VERSION}
-make munge_deb debian/changelog VERSION=${VERSION}
+#
+# Munge RPM and Deb
+#
+
+if [ ${PKGFMT} != "none" ] && [ ${EVENT} != "tag" ]; then
+    make munge_rpm zerotier-one.spec VERSION=${VERSION}
+    make munge_deb debian/changelog VERSION=${VERSION}
 fi
 
-export DOCKER_BUILDKIT=1
-docker run --privileged --rm tonistiigi/binfmt --install all
+#
+# Assemble buildx arguments
+#
 
-# docker pull --platform linux/${DOCKER_ARCH} registry.sean.farm/${PLATFORM}-builder
+build_args=(
+    --no-cache
+    --build-arg PLATFORM=${PLATFORM}
+    --build-arg RUST_TRIPLET=${RUST_TRIPLET}
+    --build-arg DOCKER_ARCH=${DOCKER_ARCH}
+    --platform linux/${DOCKER_ARCH}
+    -f ${DOCKERFILE}
+    -t build
+    .
+)
 
-docker buildx build \
-       --build-arg PLATFORM="${PLATFORM}" \
-       --build-arg RUST_TRIPLET="${RUST_TRIPLET}" \
-       --build-arg DOCKER_ARCH="${DOCKER_ARCH}" \
-       --platform linux/${DOCKER_ARCH} \
-       -f ${DOCKERFILE} \
-       -t build \
-       . \
-       --output type=local,dest=. \
-       --target export
+if [ ${PKGFMT} != "none" ]; then
+    build_args+=("--output type=local,dest=.")
+    build_args+=("--target export")
+fi
+
+#
+# Do build
+#
+
+docker buildx build ${build_args[@]}
