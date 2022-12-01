@@ -145,7 +145,7 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
             j9 = j9.wrapping_add((j8 == 0) as u32);
 
             if plaintext.len() >= 64 {
-                #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
+                #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64"))]
                 {
                     // Slightly faster keystream XOR for little-endian platforms with unaligned load/store.
                     unsafe {
