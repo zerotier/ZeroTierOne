@@ -374,7 +374,7 @@ impl Controller {
             nc.multicast_like_expire = Some(protocol::VL2_DEFAULT_MULTICAST_LIKE_EXPIRE as u32);
             nc.mtu = network.mtu.unwrap_or(ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU as u16);
             nc.routes = network.ip_routes;
-            nc.static_ips = member.ip_assignments.clone();
+            nc.static_ips = member.ip_assignments.iter().cloned().collect();
             nc.rules = network.rules;
             nc.dns = network.dns;
 

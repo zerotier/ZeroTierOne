@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};
@@ -43,10 +43,10 @@ pub struct Member {
     pub last_deauthorized_time: Option<i64>,
 
     /// ZeroTier-managed IP assignments.
-    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(skip_serializing_if = "BTreeSet::is_empty")]
     #[serde(rename = "ipAssignments")]
     #[serde(default)]
-    pub ip_assignments: HashSet<InetAddress>,
+    pub ip_assignments: BTreeSet<InetAddress>,
 
     /// If true, do not auto-assign IPs in the controller.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -61,9 +61,9 @@ pub struct Member {
     pub bridge: Option<bool>,
 
     /// Tags that can be used in rule evaluation for ACL-like behavior.
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     #[serde(default)]
-    pub tags: HashMap<u32, u32>,
+    pub tags: BTreeMap<u32, u32>,
 
     /// Member is exempt from SSO, authorization managed conventionally.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -89,10 +89,10 @@ impl Member {
             name: String::new(),
             last_authorized_time: None,
             last_deauthorized_time: None,
-            ip_assignments: HashSet::new(),
+            ip_assignments: BTreeSet::new(),
             no_auto_assign_ips: None,
             bridge: None,
-            tags: HashMap::new(),
+            tags: BTreeMap::new(),
             sso_exempt: None,
             advertised: None,
         }

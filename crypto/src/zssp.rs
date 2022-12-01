@@ -875,7 +875,7 @@ impl<H: Host> ReceiveContext<H> {
                         canonical_header_bytes,
                         &kex_packet[HEADER_SIZE..hmac1_end],
                     )
-                    .eq(&kex_packet[hmac1_end..])
+                    .eq(&kex_packet[hmac1_end..kex_packet_len])
                     {
                         return Err(Error::FailedAuthentication);
                     }
@@ -913,7 +913,7 @@ impl<H: Host> ReceiveContext<H> {
 
                     // Parse payload and get alice's session ID, alice's public blob, metadata, and (if present) Alice's Kyber1024 public.
                     let (offer_id, alice_session_id, alice_s_public, alice_metadata, alice_e1_public, alice_ratchet_key_fingerprint) =
-                        parse_key_offer_after_header(&kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..], packet_type)?;
+                        parse_key_offer_after_header(&kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..kex_packet_len], packet_type)?;
 
                     // We either have a session, in which case they should have supplied a ratchet key fingerprint, or
                     // we don't and they should not have supplied one.
@@ -1179,8 +1179,10 @@ impl<H: Host> ReceiveContext<H> {
 
                             // Alice has now completed Noise_IK with NIST P-384 and verified with GCM auth, but now for hybrid...
 
-                            let (offer_id, bob_session_id, _, _, bob_e1_public, bob_ratchet_key_id) =
-                                parse_key_offer_after_header(&kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..], packet_type)?;
+                            let (offer_id, bob_session_id, _, _, bob_e1_public, bob_ratchet_key_id) = parse_key_offer_after_header(
+                                &kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..kex_packet_len],
+                                packet_type,
+                            )?;
 
                             if !offer.id.eq(&offer_id) {
                                 return Ok(ReceiveResult::Ignored);
@@ -1210,7 +1212,7 @@ impl<H: Host> ReceiveContext<H> {
                                 canonical_header_bytes,
                                 &kex_packet_saved_ciphertext[HEADER_SIZE..aes_gcm_tag_end],
                             )
-                            .eq(&kex_packet[aes_gcm_tag_end..kex_packet.len()])
+                            .eq(&kex_packet[aes_gcm_tag_end..kex_packet_len])
                             {
                                 return Err(Error::FailedAuthentication);
                             }
