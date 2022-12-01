@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+CFLAGS=-O3 -fstack-protector-strong
+CXXFLAGS=-O3 -fstack-protector-strong
+
+%:
+	dh $@ --with systemd
+
+override_dh_auto_build:
+#	make -j 2
+
+override_dh_systemd_start:
+	dh_systemd_start --restart-after-upgrade
+
+override_dh_installinit:
+	dh_installinit --name=zerotier-one -- defaults

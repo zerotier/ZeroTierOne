@@ -1,0 +1,258 @@
+zerotier-one (1.10.2) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Thu, 13 Oct 2022 01:00:00 -0700
+
+zerotier-one (1.10.1) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 27 Jun 2022 01:00:00 -0700
+
+zerotier-one (1.10.0) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 03 Jun 2022 01:00:00 -0700
+
+zerotier-one (1.8.10) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 10 May 2022 01:00:00 -0700
+
+zerotier-one (1.8.9) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 25 Apr 2022 01:00:00 -0700
+
+zerotier-one (1.8.8) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 11 Apr 2022 01:00:00 -0700
+
+zerotier-one (1.8.7) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 21 Mar 2022 01:00:00 -0700
+
+zerotier-one (1.8.6) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 07 Mar 2022 01:00:00 -0700
+
+zerotier-one (1.8.5) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 17 Dec 2021 01:00:00 -0700
+
+zerotier-one (1.8.4) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 23 Nov 2021 01:00:00 -0700
+
+zerotier-one (1.8.3) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 15 Nov 2021 01:00:00 -0700
+
+zerotier-one (1.8.2) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 08 Nov 2021 01:00:00 -0700
+
+zerotier-one (1.8.1) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Wed, 20 Oct 2021 01:00:00 -0700
+
+zerotier-one (1.8.0) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Wed, 15 Sep 2021 01:00:00 -0700
+
+zerotier-one (1.6.6) unstable; urgency=medium
+
+  * Backport endpoint mitigation against address collision attack.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 21 Sep 2021 01:00:00 -0700
+
+zerotier-one (1.6.5) unstable; urgency=medium
+
+  * Fix path filtering bug that could cause "software laser" effect.
+  * Fix printf overflow in CLI (not exploitable or security related)
+  * Fix Windows device enumeration issue.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 13 Apr 2021 01:00:00 -0700
+
+zerotier-one (1.6.4) unstable; urgency=medium
+
+  * REALLY fix a problem causing nodes to go into a "coma" with some network configurations.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 15 Feb 2021 01:00:00 -0700
+
+zerotier-one (1.6.3-1) unstable; urgency=medium
+
+  * Fix a problem causing nodes to go into a "coma" with some network configurations.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 02 Feb 2021 01:00:00 -0700
+
+zerotier-one (1.6.2-2) unstable; urgency=medium
+
+  * This is a minor update to the 1.6.2 package to address issues with
+    running on ARMv6 CPUs like the Raspberry Pi Zero and original v1 Pi.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 31 Nov 2020 01:00:00 -0700
+
+zerotier-one (1.6.2) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 30 Nov 2020 01:00:00 -0700
+
+zerotier-one (1.6.1) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 24 Nov 2020 01:00:00 -0700
+
+zerotier-one (1.6.0) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Thu, 19 Nov 2020 01:00:00 -0700
+
+zerotier-one (1.5.0) unstable; urgency=medium
+
+  * Version 1.5.0 is actually 1.6.0-beta1
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 05 Aug 2020 01:00:00 -0700
+
+zerotier-one (1.4.6) unstable; urgency=medium
+
+  * Update default root server list
+  * Fix build flags on "armhf" (32-bit ARM) platforms for better
+    compatibility with Pi Zero and other devices.
+  * Fix license text in one.cpp.
+  * Add a clarification to LICENSE.txt.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 30 Aug 2019 01:00:00 -0700
+
+zerotier-one (1.4.4) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+  * License changed to BSL 1.1
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 23 Aug 2019 01:00:00 -0700
+
+zerotier-one (1.4.2-2) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+  * This is a new build that fixes a binary build issue with containers and SELinux
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Thu, 04 Aug 2019 01:00:00 -0700
+
+zerotier-one (1.4.2) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Thu, 04 Aug 2019 01:00:00 -0700
+
+zerotier-one (1.4.0) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Thu, 29 Jul 2019 01:00:00 -0700
+
+zerotier-one (1.2.12) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 25 Jul 2018 01:00:00 -0700
+
+zerotier-one (1.2.10) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 08 May 2018 01:00:00 -0700
+
+zerotier-one (1.2.8) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 27 Apr 2018 01:00:00 -0700
+
+zerotier-one (1.2.6) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 17 Apr 2018 01:00:00 -0700
+
+zerotier-one (1.2.4) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Mon, 24 Mar 2017 01:00:00 -0700
+
+zerotier-one (1.2.2) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 17 Mar 2017 01:00:00 -0700
+
+zerotier-one (1.2.0) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 14 Mar 2017 09:08:00 -0700
+
+zerotier-one (1.1.14) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 21 Jul 2016 07:14:12 -0700
+
+zerotier-one (1.1.12) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 12 Jul 2016 03:02:22 -0700
+
+zerotier-one (1.1.10) unstable; urgency=medium
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+  * ZeroTier Debian packages no longer depend on http-parser since its ABI is too unstable.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 12 Jul 2016 12:29:00 -0700
+
+zerotier-one (1.1.8) unstable; urgency=low
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 08 Jul 2016 01:56:00 -0700
+
+zerotier-one (1.1.6) unstable; urgency=medium
+
+  * First Debian release on ZeroTier, Inc. private apt repository.
+
+  * See https://github.com/zerotier/ZeroTierOne for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 24 Jun 2016 10:00:00 -0700
+
+zerotier-one (1.1.5) UNRELEASED; urgency=medium
+
+  * Development package -- first clean Debian packaging test.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Wed, 08 Jun 2016 10:05:01 -0700
