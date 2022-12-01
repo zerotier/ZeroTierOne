@@ -43,6 +43,10 @@
 
 #include "OSUtils.hpp"
 
+#ifdef __GCC__
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 namespace ZeroTier {
 
 unsigned int OSUtils::ztsnprintf(char *buf,unsigned int len,const char *fmt,...)
