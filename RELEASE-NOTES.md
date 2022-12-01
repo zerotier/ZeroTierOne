@@ -32,7 +32,7 @@ Note that releases are coming few and far between because most of our dev effort
 
 # 2022-04-25 -- Version 1.8.9
 
- * Fixed a long-standing and strange bug that was causing sporadic "phantom" packet authentication failures. Not a security problem but could be behind spordaic reports of link failures under some conditions.
+ * Fixed a long-standing and strange bug that was causing sporadic "phantom" packet authentication failures. Not a security problem but could be behind sporadic reports of link failures under some conditions.
  * Fized a memory leak in SSO/OIDC support.
  * Fixed SSO/OIDC display error on CLI.
  * Fixed a bug causing nodes to sometimes fail to push certs to each other (primarily affects SSO/OIDC use cases).

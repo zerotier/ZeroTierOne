@@ -1208,7 +1208,7 @@ typedef struct
 	bool ssoEnabled;
 
 	/**
-	 * SSO verison
+	 * SSO version
 	 */
 	uint64_t ssoVersion;
 
@@ -2066,7 +2066,7 @@ ZT_SDK_API int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,ui
  * NetworkConfigMaster base class in node/. No type checking is performed,
  * so a pointer to anything else will result in a crash.
  *
- * @param node ZertTier One node
+ * @param node ZeroTier One node
  * @param networkConfigMasterInstance Instance of NetworkConfigMaster C++ class or NULL to disable
  * @return OK (0) or error code if a fatal error condition has occurred
  */
