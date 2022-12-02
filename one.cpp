@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <errno.h>
+#include <sys/cdefs.h>
 
 #include "node/Constants.hpp"
 
@@ -2062,7 +2063,7 @@ int __cdecl _tmain(int argc, _TCHAR* argv[])
 int main(int argc,char **argv)
 #endif
 {
-#if defined(__LINUX__) && ( (!defined(__GLIBC__)) || ((__GLIBC__ >= 2) && (__GLIBC_MINOR__ >= 18)) )
+#if defined(__LINUX__) && !defined(__TERMUX__) && ( (!defined(__GLIBC__)) || ((__GLIBC__ >= 2) && (__GLIBC_MINOR__ >= 18)) )
 	// This corrects for systems with abnormally small defaults (musl) and also
 	// shrinks the stack on systems with large defaults to save a bit of memory.
 	pthread_attr_t tattr;

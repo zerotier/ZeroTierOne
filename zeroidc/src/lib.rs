@@ -43,6 +43,7 @@ use url::Url;
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]
@@ -54,6 +55,7 @@ pub struct ZeroIDC {
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]
@@ -107,6 +109,7 @@ where
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]

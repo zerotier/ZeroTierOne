@@ -20,6 +20,7 @@ use crate::ZeroIDC;
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]
@@ -66,6 +67,7 @@ pub extern "C" fn zeroidc_new(
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]
@@ -89,6 +91,7 @@ pub extern "C" fn zeroidc_delete(ptr: *mut ZeroIDC) {
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]
@@ -105,6 +108,7 @@ pub extern "C" fn zeroidc_start(ptr: *mut ZeroIDC) {
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]
@@ -121,6 +125,7 @@ pub extern "C" fn zeroidc_stop(ptr: *mut ZeroIDC) {
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]
@@ -148,6 +153,7 @@ pub extern "C" fn zeroidc_get_exp_time(ptr: *mut ZeroIDC) -> u64 {
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]
@@ -188,6 +194,7 @@ pub extern "C" fn zeroidc_set_nonce_and_csrf(
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]
@@ -207,6 +214,7 @@ pub extern "C" fn free_cstr(s: *mut c_char) {
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]
@@ -226,6 +234,7 @@ pub extern "C" fn zeroidc_get_auth_url(ptr: *mut ZeroIDC) -> *mut c_char {
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]
@@ -319,6 +328,7 @@ pub extern "C" fn zeroidc_network_id_from_state(state: *const c_char) -> *mut c_
     all(target_os = "linux", target_arch = "x86"),
     all(target_os = "linux", target_arch = "x86_64"),
     all(target_os = "linux", target_arch = "aarch64"),
+    all(target_os = "android", target_arch = "aarch64"),
     target_os = "windows",
     target_os = "macos",
 ))]

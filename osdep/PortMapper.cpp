@@ -16,6 +16,11 @@
 // Uncomment to dump debug messages
 //#define ZT_PORTMAPPER_TRACE 1
 
+#include <sys/cdefs.h>
+#ifdef __TERMUX__
+#undef __ANDROID__
+#endif
+
 #ifdef __ANDROID__
 #include <android/log.h>
 #define PM_TRACE(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, "PortMapper", __VA_ARGS__))

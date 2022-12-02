@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <sys/stat.h>
+#include <sys/cdefs.h>
 #include <stdlib.h>
 
 #include "../node/Constants.hpp"
@@ -416,10 +417,14 @@ std::string OSUtils::platformDefaultHomePath()
 	// BSD likes /var/db instead of /var/lib
 	return std::string("/var/db/zerotier-one");
 #else
+	// Include $PREFIX for termux build
+#ifdef __TERMUX__
+	return std::getenv("PREFIX") + std::string("/../usr/var/lib/zerotier-one");
 	// Use /var/lib for Linux and other *nix
+#else
 	return std::string("/var/lib/zerotier-one");
 #endif
-
+#endif
 #endif
 
 #else // not __UNIX_LIKE__
