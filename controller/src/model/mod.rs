@@ -31,7 +31,7 @@ pub struct NetworkExport {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(u8)]
-pub enum AuthorizationResult {
+pub enum AuthenticationResult {
     #[serde(rename = "r")]
     Rejected = 0,
     #[serde(rename = "rs")]
@@ -51,10 +51,10 @@ pub enum AuthorizationResult {
     #[serde(rename = "at")]
     ApprovedViaToken = 130,
     #[serde(rename = "ap")]
-    ApprovedOnPublicNetwork = 131,
+    ApprovedIsPublicNetwork = 131,
 }
 
-impl AuthorizationResult {
+impl AuthenticationResult {
     pub fn as_str(&self) -> &'static str {
         // These short codes should match the serde enum names above.
         match self {
@@ -67,20 +67,20 @@ impl AuthorizationResult {
             Self::Approved => "a",
             Self::ApprovedViaSSO => "as",
             Self::ApprovedViaToken => "at",
-            Self::ApprovedOnPublicNetwork => "ap",
+            Self::ApprovedIsPublicNetwork => "ap",
         }
     }
 
     /// Returns true if this result is one of the 'approved' result types.
     pub fn approved(&self) -> bool {
         match self {
-            Self::Approved | Self::ApprovedViaSSO | Self::ApprovedViaToken | Self::ApprovedOnPublicNetwork => true,
+            Self::Approved | Self::ApprovedViaSSO | Self::ApprovedViaToken | Self::ApprovedIsPublicNetwork => true,
             _ => false,
         }
     }
 }
 
-impl ToString for AuthorizationResult {
+impl ToString for AuthenticationResult {
     fn to_string(&self) -> String {
         self.as_str().to_string()
     }
@@ -120,7 +120,7 @@ pub struct RequestLogItem {
     pub source_hops: u8,
 
     #[serde(rename = "r")]
-    pub result: AuthorizationResult,
+    pub result: AuthenticationResult,
 
     #[serde(rename = "nc")]
     pub config: Option<NetworkConfig>,

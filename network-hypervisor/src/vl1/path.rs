@@ -22,6 +22,7 @@ pub(crate) enum PathServiceResult {
 }
 
 /// A remote endpoint paired with a local socket and a local interface.
+///
 /// These are maintained in Node and canonicalized so that all unique paths have
 /// one and only one unique path object. That enables statistics to be tracked
 /// for them and uniform application of things like keepalives.

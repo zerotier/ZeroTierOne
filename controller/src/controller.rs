@@ -23,7 +23,7 @@ use zerotier_utils::{ms_monotonic, ms_since_epoch};
 use zerotier_vl1_service::VL1Service;
 
 use crate::database::*;
-use crate::model::{AuthorizationResult, Member, RequestLogItem, CREDENTIAL_WINDOW_SIZE_DEFAULT};
+use crate::model::{AuthenticationResult, Member, RequestLogItem, CREDENTIAL_WINDOW_SIZE_DEFAULT};
 
 // A netconf per-query task timeout, just a sanity limit.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
@@ -270,10 +270,10 @@ impl Controller {
         source_identity: &Verified<Identity>,
         network_id: NetworkId,
         time_clock: i64,
-    ) -> Result<(AuthorizationResult, Option<NetworkConfig>, Option<Vec<vl2::v1::Revocation>>), Box<dyn Error + Send + Sync>> {
+    ) -> Result<(AuthenticationResult, Option<NetworkConfig>, Option<Vec<vl2::v1::Revocation>>), Box<dyn Error + Send + Sync>> {
         let network = self.database.get_network(network_id).await?;
         if network.is_none() {
-            return Ok((AuthorizationResult::Rejected, None, None));
+            return Ok((AuthenticationResult::Rejected, None, None));
         }
         let network = network.unwrap();
 
@@ -284,37 +284,45 @@ impl Controller {
         // Read and modify with extreme care.
 
         // If we have a member object and a pinned identity, check to make sure it matches. Also accept
-        // upgraded identities to replace old versions if they are properly formed and inherit.
+        // upgraded identities to replace old versions if they are properly formed and their signatures
+        // all check out (see Identity::is_upgraded_from()). Note that we do not pin the identity here
+        // if it is unspecified. That's not done until we fully authorize this member, since we don't
+        // want to have a way to somehow pin the wrong person's identity (if someone manages to somehow
+        // create a colliding identity and get it to us).
         if let Some(member) = member.as_mut() {
             if let Some(pinned_identity) = member.identity.as_ref() {
                 if !pinned_identity.eq(&source_identity) {
                     if source_identity.is_upgraded_from(pinned_identity) {
                         // Upgrade identity types if we have a V2 identity upgraded from a V1 identity.
                         let _ = member.identity.replace(source_identity.clone_without_secret());
+                        let _ = member.identity_fingerprint.replace(Blob::from(source_identity.fingerprint));
                         member_changed = true;
                     } else {
-                        return Ok((AuthorizationResult::RejectedIdentityMismatch, None, None));
+                        return Ok((AuthenticationResult::RejectedIdentityMismatch, None, None));
                     }
                 }
-            } else if let Some(pinned_fingerprint) = member.identity_fingerprint.as_ref() {
+            }
+
+            if let Some(pinned_fingerprint) = member.identity_fingerprint.as_ref() {
                 if pinned_fingerprint.as_bytes().eq(&source_identity.fingerprint) {
-                    // Learn the FULL identity if the fingerprint is pinned and they match. This
-                    // lets us add membrers by address/fingerprint with full SHA384 identity
-                    // verification instead of just the address.
-                    let _ = member.identity.replace(source_identity.clone_without_secret());
-                    member_changed = true;
+                    if member.identity.is_none() {
+                        // Learn the FULL identity if the fingerprint is pinned and they match. This
+                        // lets us add members by address/fingerprint with full SHA384 identity
+                        // verification instead of just by short address.
+                        let _ = member.identity.replace(source_identity.clone_without_secret());
+                        member_changed = true;
+                    }
                 } else {
-                    return Ok((AuthorizationResult::RejectedIdentityMismatch, None, None));
+                    return Ok((AuthenticationResult::RejectedIdentityMismatch, None, None));
                 }
             }
         }
 
-        let mut authorization_result = AuthorizationResult::Rejected;
+        let mut authentication_result = AuthenticationResult::Rejected;
 
-        // This is the main "authorized" flag on the member record. If it is true then
-        // the member is allowed, but with the caveat that SSO must be checked if it's
-        // enabled on the network. If this is false then the member is rejected unless
-        // authorized by a token or unless it's a public network.
+        // This is the main "authorized" state of the member record. If it is true then the member is allowed,
+        // but with the caveat that SSO must be checked if it's enabled on the network. If this is false then
+        // the member is rejected unless auto-authorized via a mechanism like public networks below.
         let mut member_authorized = member.as_ref().map_or(false, |m| m.authorized());
 
         // If the member isn't authorized, check to see if it should be auto-authorized.
@@ -324,14 +332,14 @@ impl Controller {
                     let _ = member.insert(Member::new_with_identity(source_identity.as_ref().clone(), network_id));
                     member_changed = true;
                 } else {
-                    return Ok((AuthorizationResult::Rejected, None, None));
+                    return Ok((AuthenticationResult::Rejected, None, None));
                 }
             }
 
             if network.private {
                 // TODO: check token authorization
             } else {
-                authorization_result = AuthorizationResult::ApprovedOnPublicNetwork;
+                authentication_result = AuthenticationResult::ApprovedIsPublicNetwork;
                 member.as_mut().unwrap().last_authorized_time = Some(time_clock);
                 member_authorized = true;
                 member_changed = true;
@@ -344,20 +352,47 @@ impl Controller {
         // is enabled on the network and disagrees. Skip if the verdict is already one of the approved
         // values, which would indicate auth-authorization above.
         if member_authorized {
-            if !authorization_result.approved() {
+            if !authentication_result.approved() {
                 // TODO: check SSO if enabled on network!
-                authorization_result = AuthorizationResult::Approved;
+                authentication_result = AuthenticationResult::Approved;
             }
         } else {
             // This should not be able to be in approved state if member_authorized is still false.
-            assert!(!authorization_result.approved());
+            assert!(!authentication_result.approved());
         }
+
+        // drop 'mut' from these
+        let member_authorized = member_authorized;
+        let authentication_result = authentication_result;
 
         let mut network_config = None;
         let mut revocations = None;
-        if authorization_result.approved() {
+        if authentication_result.approved() {
             // We should not be able to make it here if this is still false.
             assert!(member_authorized);
+
+            // Pin member identity if not pinned already. This is analogous to SSH "trust on first use" except
+            // that the ZeroTier address is akin to the host name. Once we've seen the full identity once then
+            // it becomes truly "impossible" to collide the address. (Unless you can break ECC and SHA384.)
+            if member.identity.is_none() {
+                let _ = member.identity.replace(source_identity.clone_without_secret());
+                debug_assert!(member.identity_fingerprint.is_none());
+                let _ = member.identity_fingerprint.replace(Blob::from(source_identity.fingerprint));
+                member_changed = true;
+            }
+
+            // Make sure these agree. It should be impossible to end up with a member that's authorized and
+            // whose identity and identity fingerprint don't match.
+            if !member
+                .identity
+                .as_ref()
+                .unwrap()
+                .fingerprint
+                .eq(member.identity_fingerprint.as_ref().unwrap().as_bytes())
+            {
+                debug_assert!(false);
+                return Ok((AuthenticationResult::RejectedDueToError, None, None));
+            }
 
             // Figure out TTL for credentials (time window in V1).
             let credential_ttl = network.credential_ttl.unwrap_or(CREDENTIAL_WINDOW_SIZE_DEFAULT);
@@ -373,10 +408,10 @@ impl Controller {
             nc.multicast_limit = network.multicast_limit.unwrap_or(DEFAULT_MULTICAST_LIMIT as u32);
             nc.multicast_like_expire = Some(protocol::VL2_DEFAULT_MULTICAST_LIKE_EXPIRE as u32);
             nc.mtu = network.mtu.unwrap_or(ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU as u16);
-            nc.routes = network.ip_routes;
+            nc.routes = network.ip_routes.iter().cloned().collect();
             nc.static_ips = member.ip_assignments.iter().cloned().collect();
             nc.rules = network.rules;
-            nc.dns = network.dns;
+            nc.dns = network.dns.iter().map(|(k, v)| (k.clone(), v.iter().cloned().collect())).collect();
 
             if network.min_supported_version.unwrap_or(0) < (protocol::PROTOCOL_VERSION_V2 as u32) {
                 // If this network supports V1 nodes we have to include V1 credentials. Otherwise we can skip
@@ -399,7 +434,7 @@ impl Controller {
                             coo.add_ip(ip);
                         }
                         if !coo.sign(&self.local_identity, &source_identity) {
-                            return Ok((AuthorizationResult::RejectedDueToError, None, None));
+                            return Ok((AuthenticationResult::RejectedDueToError, None, None));
                         }
                         v1cred.certificates_of_ownership.push(coo);
                     }
@@ -407,7 +442,7 @@ impl Controller {
                     for (id, value) in member.tags.iter() {
                         let tag = vl2::v1::Tag::new(*id, *value, &self.local_identity, network_id, &source_identity, time_clock);
                         if tag.is_none() {
-                            return Ok((AuthorizationResult::RejectedDueToError, None, None));
+                            return Ok((AuthenticationResult::RejectedDueToError, None, None));
                         }
                         let _ = v1cred.tags.insert(*id, tag.unwrap());
                     }
@@ -433,7 +468,7 @@ impl Controller {
 
                     nc.v1_credentials = Some(v1cred);
                 } else {
-                    return Ok((AuthorizationResult::RejectedDueToError, None, None));
+                    return Ok((AuthenticationResult::RejectedDueToError, None, None));
                 }
             }
 
@@ -458,7 +493,7 @@ impl Controller {
             self.database.save_member(member, false).await?;
         }
 
-        Ok((authorization_result, network_config, revocations))
+        Ok((authentication_result, network_config, revocations))
     }
 }
 

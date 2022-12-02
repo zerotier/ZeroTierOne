@@ -447,7 +447,7 @@ pub struct V1Credentials {
 }
 
 /// Statically pushed L3 IP routes included with a network configuration.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct IpRoute {
     pub target: InetAddress,
     #[serde(skip_serializing_if = "Option::is_none")]

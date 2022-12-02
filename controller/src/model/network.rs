@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ pub struct Ipv6AssignMode {
     pub _6plane: bool,
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Hash, Debug)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Hash, Debug)]
 pub struct IpAssignmentPool {
     #[serde(rename = "ipRangeStart")]
     ip_range_start: InetAddress,
@@ -74,21 +74,21 @@ pub struct Network {
     pub v6_assign_mode: Option<Ipv6AssignMode>,
 
     /// IPv4 or IPv6 auto-assignment pools available, must be present to use 'zt' mode.
-    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(skip_serializing_if = "BTreeSet::is_empty")]
     #[serde(rename = "ipAssignmentPools")]
     #[serde(default)]
-    pub ip_assignment_pools: HashSet<IpAssignmentPool>,
+    pub ip_assignment_pools: BTreeSet<IpAssignmentPool>,
 
     /// IPv4 or IPv6 routes to advertise.
     #[serde(rename = "ipRoutes")]
-    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(skip_serializing_if = "BTreeSet::is_empty")]
     #[serde(default)]
-    pub ip_routes: HashSet<IpRoute>,
+    pub ip_routes: BTreeSet<IpRoute>,
 
     /// DNS records to push to members.
     #[serde(default)]
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
-    pub dns: HashMap<String, HashSet<InetAddress>>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub dns: BTreeMap<String, BTreeSet<InetAddress>>,
 
     /// Network rule set.
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -148,9 +148,9 @@ impl Network {
             enable_broadcast: None,
             v4_assign_mode: None,
             v6_assign_mode: None,
-            ip_assignment_pools: HashSet::new(),
-            ip_routes: HashSet::new(),
-            dns: HashMap::new(),
+            ip_assignment_pools: BTreeSet::new(),
+            ip_routes: BTreeSet::new(),
+            dns: BTreeMap::new(),
             rules: Vec::new(),
             credential_ttl: None,
             min_supported_version: None,
