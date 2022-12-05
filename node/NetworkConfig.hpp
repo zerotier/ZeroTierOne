@@ -177,7 +177,7 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATES_OF_OWNERSHIP "COO"
 // dns (binary blobs)
 #define ZT_NETWORKCONFIG_DICT_KEY_DNS "DNS"
-// sso enabld
+// sso enabled
 #define ZT_NETWORKCONFIG_DICT_KEY_SSO_ENABLED "ssoe"
 // so version
 #define ZT_NETWORKCONFIG_DICT_KEY_SSO_VERSION "ssov"
@@ -200,7 +200,7 @@ namespace ZeroTier {
 
 // AuthInfo Version
 #define ZT_AUTHINFO_DICT_KEY_VERSION "aV"
-// authenticaiton URL
+// authentication URL
 #define ZT_AUTHINFO_DICT_KEY_AUTHENTICATION_URL "aU"
 // issuer URL
 #define ZT_AUTHINFO_DICT_KEY_ISSUER_URL "iU"
@@ -659,7 +659,7 @@ public:
 	bool ssoEnabled;
 
 	/**
-	 * SSO verison
+	 * SSO version
 	 */
 	uint64_t ssoVersion;
 
