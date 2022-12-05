@@ -16,8 +16,7 @@ ifeq ($(TARGET_ARCH_ABI),x86_64)
     LOCAL_CXXFLAGS := -maes -mpclmul -msse3 -msse4.1
 endif
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
-    LOCAL_ARM_NEON := true
-    LOCAL_CXXFLAGS := -march=armv8-a+crypto -mfloat-abi=softfp -mfpu=neon -maes
+    LOCAL_CXXFLAGS := -march=armv8-a+crypto
 endif
 
 # ZeroTierOne SDK source files
