@@ -87,6 +87,9 @@ pub fn for_each_address<F: FnMut(&InetAddress, &LocalInterface)>(mut f: F) {
     }
 }
 
+#[cfg(windows)]
+pub fn for_each_address<F: FnMut(&InetAddress, &LocalInterface)>(mut f: F) {}
+
 #[cfg(test)]
 mod tests {
     use super::*;

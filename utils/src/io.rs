@@ -34,3 +34,9 @@ pub fn fs_restrict_permissions<P: AsRef<Path>>(path: P) -> bool {
         ) == 0
     }
 }
+
+/// Set permissions on a file or directory to be most restrictive (visible only to the service's user).
+#[cfg(windows)]
+pub fn fs_restrict_permissions<P: AsRef<Path>>(path: P) -> bool {
+    todo!()
+}

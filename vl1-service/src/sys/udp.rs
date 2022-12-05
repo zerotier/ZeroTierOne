@@ -145,6 +145,21 @@ impl BoundUdpSocket {
             libc::close(self.fd.as_());
         }
     }
+
+    #[cfg(windows)]
+    fn set_ttl(&self, packet_ttl: u8) {
+        todo!()
+    }
+
+    #[cfg(windows)]
+    pub fn send(&self, dest: &InetAddress, data: &[u8], packet_ttl: u8) -> bool {
+        todo!()
+    }
+
+    #[cfg(windows)]
+    fn close(&self) {
+        todo!()
+    }
 }
 
 impl BoundUdpPort {
@@ -235,15 +250,22 @@ impl BoundUdpPort {
                                     let mut from = InetAddress::new();
                                     while ss.open.load(Ordering::Relaxed) {
                                         let mut b = bp.get();
-                                        let mut addrlen = std::mem::size_of::<InetAddress>().as_();
-                                        let s = libc::recvfrom(
-                                            ss.fd.as_(),
-                                            b.entire_buffer_mut().as_mut_ptr().cast(),
-                                            b.capacity().as_(),
-                                            0,
-                                            (&mut from as *mut InetAddress).cast(),
-                                            &mut addrlen,
-                                        );
+                                        let mut addrlen: usize = std::mem::size_of::<InetAddress>().as_();
+                                        let s;
+                                        #[cfg(windows)] {
+                                            s = 0;
+                                            todo!();
+                                        }
+                                        #[cfg(not(windows))] {
+                                            s = libc::recvfrom(
+                                                ss.fd.as_(),
+                                                b.entire_buffer_mut().as_mut_ptr().cast(),
+                                                b.capacity().as_(),
+                                                0,
+                                                (&mut from as *mut InetAddress).cast(),
+                                                &mut addrlen,
+                                            );
+                                        }
                                         if s > 0 {
                                             b.set_size_unchecked(s as usize);
                                             let time_ticks = ms_monotonic();
@@ -302,6 +324,11 @@ pub fn udp_test_bind(port: u16) -> bool {
         ][..],
     )
     .is_ok()
+}
+
+#[cfg(windows)]
+unsafe fn bind_udp_to_device(device_name: &str, address: &InetAddress) -> Result<i32, &'static str> {
+    todo!()
 }
 
 #[allow(unused_variables)]

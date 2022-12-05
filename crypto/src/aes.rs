@@ -339,6 +339,7 @@ mod openssl_aes {
 
         #[inline(always)]
         pub fn encrypt_block(&self, plaintext: &[u8], ciphertext: &mut [u8]) {
+            #[allow(invalid_value)]
             let mut tmp: [u8; 32] = unsafe { MaybeUninit::uninit().assume_init() };
             let c: &mut Crypter = unsafe { &mut *self.0.get() };
             if c.update(plaintext, &mut tmp).unwrap() != 16 {
@@ -349,6 +350,7 @@ mod openssl_aes {
 
         #[inline(always)]
         pub fn encrypt_block_in_place(&self, data: &mut [u8]) {
+            #[allow(invalid_value)]
             let mut tmp: [u8; 32] = unsafe { MaybeUninit::uninit().assume_init() };
             let c: &mut Crypter = unsafe { &mut *self.0.get() };
             if c.update(data, &mut tmp).unwrap() != 16 {
@@ -359,6 +361,7 @@ mod openssl_aes {
 
         #[inline(always)]
         pub fn decrypt_block(&self, ciphertext: &[u8], plaintext: &mut [u8]) {
+            #[allow(invalid_value)]
             let mut tmp: [u8; 32] = unsafe { MaybeUninit::uninit().assume_init() };
             let c: &mut Crypter = unsafe { &mut *self.1.get() };
             if c.update(ciphertext, &mut tmp).unwrap() != 16 {
@@ -369,6 +372,7 @@ mod openssl_aes {
 
         #[inline(always)]
         pub fn decrypt_block_in_place(&self, data: &mut [u8]) {
+            #[allow(invalid_value)]
             let mut tmp: [u8; 32] = unsafe { MaybeUninit::uninit().assume_init() };
             let c: &mut Crypter = unsafe { &mut *self.1.get() };
             if c.update(data, &mut tmp).unwrap() != 16 {

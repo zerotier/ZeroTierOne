@@ -7,14 +7,34 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV
 use std::ptr::{copy_nonoverlapping, null, slice_from_raw_parts, write_bytes};
 use std::str::FromStr;
 
+#[allow(unused_imports)]
+use num_traits::AsPrimitive;
+
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use zerotier_utils::buffer::Buffer;
 use zerotier_utils::error::{InvalidFormatError, InvalidParameterError};
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
+#[allow(non_camel_case_types)]
 #[cfg(windows)]
-use winapi::um::winsock2;
+type sockaddr = winapi::shared::ws2def::SOCKADDR;
+
+#[allow(non_camel_case_types)]
+#[cfg(windows)]
+type sockaddr_in = winapi::shared::ws2def::SOCKADDR_IN;
+
+#[allow(non_camel_case_types)]
+#[cfg(windows)]
+type sockaddr_in6 = winapi::shared::ws2ipdef::SOCKADDR_IN6;
+
+#[allow(non_camel_case_types)]
+#[cfg(windows)]
+type sockaddr_storage = winapi::shared::ws2def::SOCKADDR_STORAGE;
+
+#[allow(non_camel_case_types)]
+#[cfg(windows)]
+type in6_addr = winapi::shared::in6addr::in6_addr;
 
 #[allow(non_camel_case_types)]
 #[cfg(not(windows))]
@@ -42,7 +62,19 @@ pub type AddressFamilyType = u8;
 #[cfg(target_os = "linux")]
 pub type AddressFamilyType = u16;
 
+#[cfg(windows)]
+pub type AddressFamilyType = winapi::ctypes::c_int;
+
+#[cfg(windows)]
+pub const AF_INET: AddressFamilyType = winapi::shared::ws2def::AF_INET as AddressFamilyType;
+
+#[cfg(windows)]
+pub const AF_INET6: AddressFamilyType = winapi::shared::ws2def::AF_INET6 as AddressFamilyType;
+
+#[cfg(not(windows))]
 pub const AF_INET: AddressFamilyType = libc::AF_INET as AddressFamilyType;
+
+#[cfg(not(windows))]
 pub const AF_INET6: AddressFamilyType = libc::AF_INET6 as AddressFamilyType;
 
 #[repr(u8)]
@@ -55,6 +87,29 @@ pub enum IpScope {
     LinkLocal = 5,
     Shared = 6,
     Private = 7,
+}
+
+#[cfg(windows)]
+#[inline(always)]
+fn get_s_addr(sa: &sockaddr_in) -> u32 {
+    unsafe { *sa.sin_addr.S_un.S_addr() }
+}
+
+#[cfg(not(windows))]
+#[inline(always)]
+fn get_s_addr(sa: &sockaddr_in) -> u32 {
+    sa.sin_addr.s_addr as u32
+}
+
+#[cfg(windows)]
+#[inline(always)]
+fn get_s6_addr(&sa: &sockaddr_in6) -> &[u8; 16] {
+    unsafe { &*(sa.sin6_addr.u.Byte() as *const [u8; 16]) }
+}
+
+#[cfg(not(windows))]
+fn get_s6_addr(&sa: &sockaddr_in6) -> &[u8; 16] {
+    &sa.sin6_addr.s6_addr
 }
 
 /// An IPv4 or IPv6 socket address that directly encapsulates C sockaddr types.
@@ -102,10 +157,12 @@ impl TryInto<IpAddr> for &InetAddress {
 
     #[inline(always)]
     fn try_into(self) -> Result<IpAddr, Self::Error> {
-        match unsafe { self.sa.sa_family } {
-            AF_INET => Ok(IpAddr::V4(Ipv4Addr::from(unsafe { self.sin.sin_addr.s_addr.to_ne_bytes() }))),
-            AF_INET6 => Ok(IpAddr::V6(Ipv6Addr::from(unsafe { self.sin6.sin6_addr.s6_addr }))),
-            _ => Err(InvalidParameterError("not an IP address")),
+        unsafe {
+            match self.sa.sa_family as AddressFamilyType {
+                AF_INET => Ok(IpAddr::V4(Ipv4Addr::from(get_s_addr(&self.sin).to_ne_bytes()))),
+                AF_INET6 => Ok(IpAddr::V6(Ipv6Addr::from(*get_s6_addr(&self.sin6)))),
+                _ => Err(InvalidParameterError("not an IP address")),
+            }
         }
     }
 }
@@ -124,8 +181,8 @@ impl TryInto<Ipv4Addr> for &InetAddress {
 
     #[inline(always)]
     fn try_into(self) -> Result<Ipv4Addr, Self::Error> {
-        match unsafe { self.sa.sa_family } {
-            AF_INET => Ok(Ipv4Addr::from(unsafe { self.sin.sin_addr.s_addr.to_ne_bytes() })),
+        match unsafe { self.sa.sa_family } as AddressFamilyType {
+            AF_INET => Ok(Ipv4Addr::from(unsafe { get_s_addr(&self.sin).to_ne_bytes() })),
             _ => Err(InvalidParameterError("not an IPv4 address")),
         }
     }
@@ -145,8 +202,8 @@ impl TryInto<Ipv6Addr> for &InetAddress {
 
     #[inline(always)]
     fn try_into(self) -> Result<Ipv6Addr, Self::Error> {
-        match unsafe { self.sa.sa_family } {
-            AF_INET6 => Ok(Ipv6Addr::from(unsafe { self.sin6.sin6_addr.s6_addr })),
+        match unsafe { self.sa.sa_family } as AddressFamilyType {
+            AF_INET6 => Ok(Ipv6Addr::from(*get_s6_addr(unsafe { &self.sin6 }))),
             _ => Err(InvalidParameterError("not an IPv6 address")),
         }
     }
@@ -167,13 +224,13 @@ impl TryInto<SocketAddr> for &InetAddress {
     #[inline(always)]
     fn try_into(self) -> Result<SocketAddr, Self::Error> {
         unsafe {
-            match self.sa.sa_family {
+            match self.sa.sa_family as AddressFamilyType {
                 AF_INET => Ok(SocketAddr::V4(SocketAddrV4::new(
-                    Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()),
+                    Ipv4Addr::from(get_s_addr(&self.sin).to_ne_bytes()),
                     u16::from_be(self.sin.sin_port as u16),
                 ))),
                 AF_INET6 => Ok(SocketAddr::V6(SocketAddrV6::new(
-                    Ipv6Addr::from(self.sin6.sin6_addr.s6_addr),
+                    Ipv6Addr::from(*get_s6_addr(&self.sin6)),
                     u16::from_be(self.sin6.sin6_port as u16),
                     0,
                     0,
@@ -199,9 +256,9 @@ impl TryInto<SocketAddrV4> for &InetAddress {
     #[inline(always)]
     fn try_into(self) -> Result<SocketAddrV4, Self::Error> {
         unsafe {
-            match self.sa.sa_family {
+            match self.sa.sa_family as AddressFamilyType {
                 AF_INET => Ok(SocketAddrV4::new(
-                    Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()),
+                    Ipv4Addr::from(get_s_addr(&self.sin).to_ne_bytes()),
                     u16::from_be(self.sin.sin_port as u16),
                 )),
                 _ => Err(InvalidParameterError("not an IPv4 address")),
@@ -225,9 +282,9 @@ impl TryInto<SocketAddrV6> for &InetAddress {
     #[inline]
     fn try_into(self) -> Result<SocketAddrV6, Self::Error> {
         unsafe {
-            match self.sa.sa_family {
+            match self.sa.sa_family as AddressFamilyType {
                 AF_INET6 => Ok(SocketAddrV6::new(
-                    Ipv6Addr::from(self.sin6.sin6_addr.s6_addr),
+                    Ipv6Addr::from(*get_s6_addr(&self.sin6)),
                     u16::from_be(self.sin6.sin6_port as u16),
                     0,
                     0,
@@ -443,24 +500,29 @@ impl InetAddress {
     /// Get an instance of 127.0.0.1/port
     pub fn ipv4_loopback(port: u16) -> InetAddress {
         let mut addr = Self::new();
-        addr.sin.sin_family = AF_INET.into();
-        addr.sin.sin_port = port.to_be().into();
-        addr.sin.sin_addr.s_addr = (0x7f000001 as u32).to_be();
+        addr.sin.sin_family = AF_INET.as_();
+        addr.sin.sin_port = port.to_be().as_();
+        #[cfg(not(windows))] {
+            addr.sin.sin_addr.s_addr = (0x7f000001 as u32).to_be();
+        }
+        #[cfg(windows)] unsafe {
+            *addr.sin.sin_addr.S_un.S_addr_mut() = (0x7f000001 as u32).to_be();
+        }
         addr
     }
 
     /// Get an instance of 0.0.0.0/0
     pub fn ipv4_any() -> InetAddress {
         let mut addr = Self::new();
-        addr.sin.sin_family = AF_INET.into();
+        addr.sin.sin_family = AF_INET.as_();
         addr
     }
 
     /// Get an instance of ::1/port
     pub fn ipv6_loopback(port: u16) -> InetAddress {
         let mut addr = Self::new();
-        addr.sin6.sin6_family = AF_INET6.into();
-        addr.sin6.sin6_port = port.to_be().into();
+        addr.sin6.sin6_family = AF_INET6.as_();
+        addr.sin6.sin6_port = port.to_be().as_();
         unsafe {
             *((&mut (addr.sin6.sin6_addr) as *mut in6_addr).cast::<u8>().offset(15)) = 1;
         }
@@ -470,7 +532,7 @@ impl InetAddress {
     /// Get an instance of ::0/0
     pub fn ipv6_any() -> InetAddress {
         let mut addr = Self::new();
-        addr.sin6.sin6_family = AF_INET6.into();
+        addr.sin6.sin6_family = AF_INET6.as_();
         addr
     }
 
@@ -529,13 +591,21 @@ impl InetAddress {
         let ip2 = ip.as_ref();
         unsafe {
             if ip2.len() == 4 {
-                self.sin.sin_family = AF_INET.into();
-                self.sin.sin_port = port.into();
-                copy_nonoverlapping(ip2.as_ptr(), (&mut self.sin.sin_addr.s_addr as *mut u32).cast::<u8>(), 4);
+                self.sin.sin_family = AF_INET.as_();
+                self.sin.sin_port = port.as_();
+                #[cfg(windows)] {
+                    self.sin.sin_addr.S_un.S_un_b_mut().s_b1 = ip2[0];
+                    self.sin.sin_addr.S_un.S_un_b_mut().s_b2 = ip2[1];
+                    self.sin.sin_addr.S_un.S_un_b_mut().s_b3 = ip2[2];
+                    self.sin.sin_addr.S_un.S_un_b_mut().s_b4 = ip2[3];
+                }
+                #[cfg(not(windows))] {
+                    copy_nonoverlapping(ip2.as_ptr(), (&mut self.sin.sin_addr.s_addr as *mut u32).cast::<u8>(), 4);
+                }
                 AF_INET
             } else if ip2.len() == 16 {
-                self.sin6.sin6_family = AF_INET6.into();
-                self.sin6.sin6_port = port.into();
+                self.sin6.sin6_family = AF_INET6.as_();
+                self.sin6.sin6_port = port.as_();
                 copy_nonoverlapping(ip2.as_ptr(), (&mut self.sin6.sin6_addr as *mut in6_addr).cast::<u8>(), 16);
                 AF_INET6
             } else {
@@ -548,7 +618,14 @@ impl InetAddress {
     pub fn ip_bytes(&self) -> &[u8] {
         unsafe {
             match self.sa.sa_family as AddressFamilyType {
-                AF_INET => &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>(),
+                AF_INET => {
+                    #[cfg(windows)] {
+                        &*(self.sin.sin_addr.S_un.S_addr() as *const u32).cast::<[u8; 4]>()
+                    }
+                    #[cfg(not(windows))] {
+                        &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>()
+                    }
+                },
                 AF_INET6 => &*(&self.sin6.sin6_addr as *const in6_addr).cast::<[u8; 16]>(),
                 _ => &[],
             }
@@ -560,11 +637,11 @@ impl InetAddress {
         unsafe {
             match self.sa.sa_family as AddressFamilyType {
                 AF_INET => Some(SocketAddr::V4(SocketAddrV4::new(
-                    Ipv4Addr::from(self.sin.sin_addr.s_addr.to_ne_bytes()),
+                    Ipv4Addr::from(get_s_addr(&self.sin).to_ne_bytes()),
                     u16::from_be(self.sin.sin_port as u16),
                 ))),
                 AF_INET6 => Some(SocketAddr::V6(SocketAddrV6::new(
-                    Ipv6Addr::from(self.sin6.sin6_addr.s6_addr),
+                    Ipv6Addr::from(*get_s6_addr(&self.sin6)),
                     u16::from_be(self.sin6.sin6_port as u16),
                     0,
                     0,
@@ -594,8 +671,8 @@ impl InetAddress {
         let port = port.to_be();
         unsafe {
             match self.sa.sa_family as AddressFamilyType {
-                AF_INET => self.sin.sin_port = port,
-                AF_INET6 => self.sin6.sin6_port = port,
+                AF_INET => self.sin.sin_port = port.as_(),
+                AF_INET6 => self.sin6.sin6_port = port.as_(),
                 _ => {}
             }
         }
@@ -612,8 +689,8 @@ impl InetAddress {
                     AF_INET => {
                         if cidr_bits <= 32 {
                             let discard_bits = 32 - cidr_bits;
-                            if u32::from_be(self.sin.sin_addr.s_addr as u32).wrapping_shr(discard_bits)
-                                == u32::from_be(cidr.sin.sin_addr.s_addr as u32).wrapping_shr(discard_bits)
+                            if u32::from_be(get_s_addr(&self.sin)).wrapping_shr(discard_bits)
+                                == u32::from_be(get_s_addr(&cidr.sin)).wrapping_shr(discard_bits)
                             {
                                 return true;
                             }
@@ -621,8 +698,8 @@ impl InetAddress {
                     }
                     AF_INET6 => {
                         if cidr_bits <= 128 {
-                            let a = &self.sin6.sin6_addr.s6_addr;
-                            let b = &cidr.sin6.sin6_addr.s6_addr;
+                            let a = get_s6_addr(&self.sin6);
+                            let b = get_s6_addr(&cidr.sin6);
                             let mut p = 0;
                             while cidr_bits >= 8 {
                                 cidr_bits -= 8;
@@ -649,7 +726,7 @@ impl InetAddress {
         unsafe {
             match self.sa.sa_family as AddressFamilyType {
                 AF_INET => {
-                    let ip = self.sin.sin_addr.s_addr as u32;
+                    let ip = get_s_addr(&self.sin);
                     let class_a = (ip >> 24) as u8;
                     match class_a {
                         0x00 | 0xff => IpScope::None, // 0.0.0.0/8 and 255.0.0.0/8 are not usable
@@ -774,8 +851,14 @@ impl InetAddress {
         unsafe {
             match self.sa.sa_family as AddressFamilyType {
                 AF_INET => {
-                    let ip = &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>();
-                    format!("{}.{}.{}.{}", ip[0], ip[1], ip[2], ip[3])
+                    #[cfg(not(windows))] {
+                        let ip = &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>();
+                        format!("{}.{}.{}.{}", ip[0], ip[1], ip[2], ip[3])
+                    }
+                    #[cfg(windows)] {
+                        let ip = self.sin.sin_addr.S_un.S_addr().to_ne_bytes();
+                        format!("{}.{}.{}.{}", ip[0], ip[1], ip[2], ip[3])
+                    }
                 }
                 AF_INET6 => Ipv6Addr::from(*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>()).to_string(),
                 _ => String::from("(null)"),
@@ -793,7 +876,7 @@ impl Marshalable for InetAddress {
                 AF_INET => {
                     let b = buf.append_bytes_fixed_get_mut::<7>()?;
                     b[0] = 4;
-                    copy_nonoverlapping((&self.sin.sin_addr.s_addr as *const u32).cast::<u8>(), b.as_mut_ptr().offset(1), 4);
+                    b[1..5].copy_from_slice(&get_s_addr(&self.sin).to_ne_bytes());
                     b[5] = *(&self.sin.sin_port as *const u16).cast::<u8>();
                     b[6] = *(&self.sin.sin_port as *const u16).cast::<u8>().offset(1);
                 }
@@ -875,13 +958,22 @@ impl FromStr for InetAddress {
                     unsafe {
                         match ip {
                             IpAddr::V4(v4) => {
-                                addr.sin.sin_family = AF_INET.into();
-                                addr.sin.sin_port = port.into();
-                                copy_nonoverlapping(v4.octets().as_ptr(), (&mut (addr.sin.sin_addr.s_addr) as *mut u32).cast(), 4);
+                                addr.sin.sin_family = AF_INET.as_();
+                                addr.sin.sin_port = port.as_();
+                                #[cfg(windows)] {
+                                    let oct = v4.octets();
+                                    addr.sin.sin_addr.S_un.S_un_b_mut().s_b1 = oct[0];
+                                    addr.sin.sin_addr.S_un.S_un_b_mut().s_b2 = oct[1];
+                                    addr.sin.sin_addr.S_un.S_un_b_mut().s_b3 = oct[2];
+                                    addr.sin.sin_addr.S_un.S_un_b_mut().s_b4 = oct[3];
+                                }
+                                #[cfg(not(windows))] {
+                                    copy_nonoverlapping(v4.octets().as_ptr(), (&mut (addr.sin.sin_addr.s_addr) as *mut u32).cast(), 4);
+                                }
                             }
                             IpAddr::V6(v6) => {
-                                addr.sin6.sin6_family = AF_INET6.into();
-                                addr.sin6.sin6_port = port.into();
+                                addr.sin6.sin6_family = AF_INET6.as_();
+                                addr.sin6.sin6_port = port.as_();
                                 copy_nonoverlapping(v6.octets().as_ptr(), (&mut (addr.sin6.sin6_addr) as *mut in6_addr).cast(), 16);
                             }
                         }
@@ -900,7 +992,7 @@ impl PartialEq for InetAddress {
         unsafe {
             if self.sa.sa_family == other.sa.sa_family {
                 match self.sa.sa_family as AddressFamilyType {
-                    AF_INET => self.sin.sin_port == other.sin.sin_port && self.sin.sin_addr.s_addr == other.sin.sin_addr.s_addr,
+                    AF_INET => self.sin.sin_port == other.sin.sin_port && get_s_addr(&self.sin) == get_s_addr(&other.sin),
                     AF_INET6 => {
                         if self.sin6.sin6_port == other.sin6.sin6_port {
                             (*(&(self.sin6.sin6_addr) as *const in6_addr).cast::<[u8; 16]>())
@@ -937,7 +1029,7 @@ impl Ord for InetAddress {
                     0 => Ordering::Equal,
                     AF_INET => {
                         let ip_ordering =
-                            u32::from_be(self.sin.sin_addr.s_addr as u32).cmp(&u32::from_be(other.sin.sin_addr.s_addr as u32));
+                            u32::from_be(get_s_addr(&self.sin)).cmp(&u32::from_be(get_s_addr(&other.sin)));
                         if ip_ordering == Ordering::Equal {
                             u16::from_be(self.sin.sin_port as u16).cmp(&u16::from_be(other.sin.sin_port as u16))
                         } else {
@@ -995,7 +1087,7 @@ impl Hash for InetAddress {
             match self.sa.sa_family as AddressFamilyType {
                 AF_INET => {
                     state.write_u16(self.sin.sin_port as u16);
-                    state.write_u32(self.sin.sin_addr.s_addr as u32);
+                    state.write_u32(get_s_addr(&self.sin));
                 }
                 AF_INET6 => {
                     state.write_u16(self.sin6.sin6_port as u16);
