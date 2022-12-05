@@ -1401,7 +1401,7 @@ public:
 
 		/* Note: this is kind of restricted in what it'll take. It does not support
 		 * URL encoding, and /'s in URL args will screw it up. But the only URL args
-		 * it really uses in ?jsonp=funcionName, and otherwise it just takes simple
+		 * it really uses in ?jsonp=functionName, and otherwise it just takes simple
 		 * paths to simply-named resources. */
 		if (!ps.empty()) {
 			std::size_t qpos = ps[ps.size() - 1].find('?');
@@ -2112,7 +2112,7 @@ public:
 		// bondingPolicy cannot be used with allowTcpFallbackRelay
 		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
 #ifdef ZT_TCP_FALLBACK_RELAY
-		_fallbackRelayAddress = InetAddress(OSUtils::jsonString("tcpFallbackRelay", ZT_TCP_FALLBACK_RELAY).c_str());
+		_fallbackRelayAddress = InetAddress(OSUtils::jsonString(settings["tcpFallbackRelay"], ZT_TCP_FALLBACK_RELAY).c_str());
 #endif
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 		_allowSecondaryPort = OSUtils::jsonBool(settings["allowSecondaryPort"],true);
