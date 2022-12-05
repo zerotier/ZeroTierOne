@@ -250,13 +250,16 @@ impl BoundUdpPort {
                                     let mut from = InetAddress::new();
                                     while ss.open.load(Ordering::Relaxed) {
                                         let mut b = bp.get();
-                                        let mut addrlen: usize = std::mem::size_of::<InetAddress>().as_();
                                         let s;
-                                        #[cfg(windows)] {
+                                        #[cfg(windows)]
+                                        {
+                                            let mut addrlen: usize = std::mem::size_of::<InetAddress>().as_();
                                             s = 0;
                                             todo!();
                                         }
-                                        #[cfg(not(windows))] {
+                                        #[cfg(not(windows))]
+                                        {
+                                            let mut addrlen = std::mem::size_of::<InetAddress>().as_();
                                             s = libc::recvfrom(
                                                 ss.fd.as_(),
                                                 b.entire_buffer_mut().as_mut_ptr().cast(),
