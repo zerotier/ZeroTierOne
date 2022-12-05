@@ -194,7 +194,7 @@ public:
 	 */
 	inline unsigned int preferenceRank() const
 	{
-		// This causes us to rank paths in order of IP scope rank (see InetAdddress.hpp) but
+		// This causes us to rank paths in order of IP scope rank (see InetAddress.hpp) but
 		// within each IP scope class to prefer IPv6 over IPv4.
 		return ( ((unsigned int)_ipScope << 1) | (unsigned int)(_addr.ss_family == AF_INET6) );
 	}

@@ -1401,7 +1401,7 @@ public:
 
 		/* Note: this is kind of restricted in what it'll take. It does not support
 		 * URL encoding, and /'s in URL args will screw it up. But the only URL args
-		 * it really uses in ?jsonp=funcionName, and otherwise it just takes simple
+		 * it really uses in ?jsonp=functionName, and otherwise it just takes simple
 		 * paths to simply-named resources. */
 		if (!ps.empty()) {
 			std::size_t qpos = ps[ps.size() - 1].find('?');

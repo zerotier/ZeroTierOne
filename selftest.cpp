@@ -667,7 +667,7 @@ static int testPacket()
 
 	std::cout << "(compressed: " << complen << ", decompressed: " << a.size() << ") ";
 	if (a != b) {
-		std::cout << "FAIL (compresssion)" << std::endl;
+		std::cout << "FAIL (compression)" << std::endl;
 		return -1;
 	}
 
