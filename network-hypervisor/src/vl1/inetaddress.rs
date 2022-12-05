@@ -108,8 +108,9 @@ fn get_s6_addr(&sa: &sockaddr_in6) -> &[u8; 16] {
 }
 
 #[cfg(not(windows))]
+#[inline(always)]
 fn get_s6_addr(&sa: &sockaddr_in6) -> &[u8; 16] {
-    &sa.sin6_addr.s6_addr
+    unsafe { &*(&sa.sin6_addr.s6_addr as *const [u8; 16]) }
 }
 
 /// An IPv4 or IPv6 socket address that directly encapsulates C sockaddr types.
@@ -502,10 +503,12 @@ impl InetAddress {
         let mut addr = Self::new();
         addr.sin.sin_family = AF_INET.as_();
         addr.sin.sin_port = port.to_be().as_();
-        #[cfg(not(windows))] {
+        #[cfg(not(windows))]
+        {
             addr.sin.sin_addr.s_addr = (0x7f000001 as u32).to_be();
         }
-        #[cfg(windows)] unsafe {
+        #[cfg(windows)]
+        unsafe {
             *addr.sin.sin_addr.S_un.S_addr_mut() = (0x7f000001 as u32).to_be();
         }
         addr
@@ -593,13 +596,15 @@ impl InetAddress {
             if ip2.len() == 4 {
                 self.sin.sin_family = AF_INET.as_();
                 self.sin.sin_port = port.as_();
-                #[cfg(windows)] {
+                #[cfg(windows)]
+                {
                     self.sin.sin_addr.S_un.S_un_b_mut().s_b1 = ip2[0];
                     self.sin.sin_addr.S_un.S_un_b_mut().s_b2 = ip2[1];
                     self.sin.sin_addr.S_un.S_un_b_mut().s_b3 = ip2[2];
                     self.sin.sin_addr.S_un.S_un_b_mut().s_b4 = ip2[3];
                 }
-                #[cfg(not(windows))] {
+                #[cfg(not(windows))]
+                {
                     copy_nonoverlapping(ip2.as_ptr(), (&mut self.sin.sin_addr.s_addr as *mut u32).cast::<u8>(), 4);
                 }
                 AF_INET
@@ -619,13 +624,15 @@ impl InetAddress {
         unsafe {
             match self.sa.sa_family as AddressFamilyType {
                 AF_INET => {
-                    #[cfg(windows)] {
+                    #[cfg(windows)]
+                    {
                         &*(self.sin.sin_addr.S_un.S_addr() as *const u32).cast::<[u8; 4]>()
                     }
-                    #[cfg(not(windows))] {
+                    #[cfg(not(windows))]
+                    {
                         &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>()
                     }
-                },
+                }
                 AF_INET6 => &*(&self.sin6.sin6_addr as *const in6_addr).cast::<[u8; 16]>(),
                 _ => &[],
             }
@@ -851,11 +858,13 @@ impl InetAddress {
         unsafe {
             match self.sa.sa_family as AddressFamilyType {
                 AF_INET => {
-                    #[cfg(not(windows))] {
+                    #[cfg(not(windows))]
+                    {
                         let ip = &*(&self.sin.sin_addr.s_addr as *const u32).cast::<[u8; 4]>();
                         format!("{}.{}.{}.{}", ip[0], ip[1], ip[2], ip[3])
                     }
-                    #[cfg(windows)] {
+                    #[cfg(windows)]
+                    {
                         let ip = self.sin.sin_addr.S_un.S_addr().to_ne_bytes();
                         format!("{}.{}.{}.{}", ip[0], ip[1], ip[2], ip[3])
                     }
@@ -960,14 +969,16 @@ impl FromStr for InetAddress {
                             IpAddr::V4(v4) => {
                                 addr.sin.sin_family = AF_INET.as_();
                                 addr.sin.sin_port = port.as_();
-                                #[cfg(windows)] {
+                                #[cfg(windows)]
+                                {
                                     let oct = v4.octets();
                                     addr.sin.sin_addr.S_un.S_un_b_mut().s_b1 = oct[0];
                                     addr.sin.sin_addr.S_un.S_un_b_mut().s_b2 = oct[1];
                                     addr.sin.sin_addr.S_un.S_un_b_mut().s_b3 = oct[2];
                                     addr.sin.sin_addr.S_un.S_un_b_mut().s_b4 = oct[3];
                                 }
-                                #[cfg(not(windows))] {
+                                #[cfg(not(windows))]
+                                {
                                     copy_nonoverlapping(v4.octets().as_ptr(), (&mut (addr.sin.sin_addr.s_addr) as *mut u32).cast(), 4);
                                 }
                             }
@@ -1028,8 +1039,7 @@ impl Ord for InetAddress {
                 match self.sa.sa_family as AddressFamilyType {
                     0 => Ordering::Equal,
                     AF_INET => {
-                        let ip_ordering =
-                            u32::from_be(get_s_addr(&self.sin)).cmp(&u32::from_be(get_s_addr(&other.sin)));
+                        let ip_ordering = u32::from_be(get_s_addr(&self.sin)).cmp(&u32::from_be(get_s_addr(&other.sin)));
                         if ip_ordering == Ordering::Equal {
                             u16::from_be(self.sin.sin_port as u16).cmp(&u16::from_be(other.sin.sin_port as u16))
                         } else {
