@@ -137,3 +137,4 @@ __pycache__
 *.pyc
 *_source.tar.bz2
 snap/.snapcraft
+tcp-proxy/tcp-proxy
