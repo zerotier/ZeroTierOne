@@ -219,11 +219,15 @@ void Peer::received(
 	// is done less frequently.
 	if (this->trustEstablished(now)) {
 		const int64_t sinceLastPush = now - _lastDirectPathPushSent;
-		if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
+		bool lowBandwidth = RR->node->lowBandwidthModeEnabled();
+		int timerScale = lowBandwidth ? 16 : 1;
+		if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH * timerScale : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
 			_lastDirectPathPushSent = now;
 			std::vector<InetAddress> pathsToPush(RR->node->directPaths());
-			std::vector<InetAddress> ma = RR->sa->whoami();
-			pathsToPush.insert(pathsToPush.end(), ma.begin(), ma.end());
+			if (! lowBandwidth) {
+				std::vector<InetAddress> ma = RR->sa->whoami();
+				pathsToPush.insert(pathsToPush.end(), ma.begin(), ma.end());
+			}
 			if (!pathsToPush.empty()) {
 				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
 				while (p != pathsToPush.end()) {
@@ -453,7 +457,7 @@ void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atA
 	if (atAddress) {
 		outp.armor(_key,false,nullptr); // false == don't encrypt full payload, but add MAC
 		RR->node->expectReplyTo(outp.packetId());
-		RR->node->putPacket(tPtr,-1,atAddress,outp.data(),outp.size());
+		RR->node->putPacket(tPtr,RR->node->lowBandwidthModeEnabled() ? localSocket : -1,atAddress,outp.data(),outp.size());
 	} else {
 		RR->node->expectReplyTo(outp.packetId());
 		RR->sw->send(tPtr,outp,false); // false == don't encrypt full payload, but add MAC
@@ -477,8 +481,9 @@ void Peer::tryMemorizedPath(void *tPtr,int64_t now)
 	if ((now - _lastTriedMemorizedPath) >= ZT_TRY_MEMORIZED_PATH_INTERVAL) {
 		_lastTriedMemorizedPath = now;
 		InetAddress mp;
-		if (RR->node->externalPathLookup(tPtr,_id.address(),-1,mp))
+		if (RR->node->externalPathLookup(tPtr,_id.address(),-1,mp)) {
 			attemptToContactAt(tPtr,-1,mp,now,true);
+		}
 	}
 }
 
