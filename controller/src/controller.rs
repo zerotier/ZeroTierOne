@@ -12,8 +12,7 @@ use zerotier_network_hypervisor::vl1::*;
 use zerotier_network_hypervisor::vl2;
 use zerotier_network_hypervisor::vl2::multicastauthority::MulticastAuthority;
 use zerotier_network_hypervisor::vl2::networkconfig::*;
-use zerotier_network_hypervisor::vl2::v1::Revocation;
-use zerotier_network_hypervisor::vl2::NetworkId;
+use zerotier_network_hypervisor::vl2::{NetworkId, Revocation};
 use zerotier_utils::blob::Blob;
 use zerotier_utils::buffer::OutOfBoundsError;
 use zerotier_utils::error::InvalidParameterError;
@@ -199,7 +198,7 @@ impl Controller {
     }
 
     /// Send one or more revocation object(s) to a peer. The provided vector is drained.
-    fn v1_proto_send_revocations(&self, peer: &Peer, revocations: &mut Vec<Revocation>) {
+    fn send_revocations(&self, peer: &Peer, revocations: &mut Vec<Revocation>) {
         if let Some(host_system) = self.service.read().unwrap().upgrade() {
             let time_ticks = ms_monotonic();
             while !revocations.is_empty() {
@@ -220,7 +219,7 @@ impl Controller {
                         packet.append_u16(send_count as u16)?;
                         for _ in 0..send_count {
                             let r = revocations.pop().unwrap();
-                            packet.append_bytes(r.to_bytes(self.local_identity.address).as_bytes())?;
+                            packet.append_bytes(r.v1_proto_to_bytes(self.local_identity.address).as_bytes())?;
                         }
                         packet.append_u16(0)?;
 
@@ -241,14 +240,10 @@ impl Controller {
             for m in all_network_members.iter() {
                 if member.node_id != *m {
                     if let Some(peer) = self.service.read().unwrap().upgrade().and_then(|s| s.node().peer(*m)) {
-                        if peer.is_v2() {
-                            todo!();
-                        } else {
-                            revocations.clear();
-                            Revocation::new(member.network_id, time_clock, member.node_id, *m, &self.local_identity, false)
-                                .map(|r| revocations.push(r));
-                            self.v1_proto_send_revocations(&peer, &mut revocations);
-                        }
+                        revocations.clear();
+                        Revocation::new(member.network_id, time_clock, member.node_id, *m, &self.local_identity, false)
+                            .map(|r| revocations.push(r));
+                        self.send_revocations(&peer, &mut revocations);
                     }
                 }
             }
@@ -260,9 +255,6 @@ impl Controller {
     /// This is the central function of the controller that looks up members, checks their
     /// permissions, and generates a network config and other credentials (or not).
     ///
-    /// This may also return revocations. If it does these should be sent along with or right after
-    /// the network config. This is for V1 nodes only, since V2 has another mechanism.
-    ///
     /// An error is only returned if a database or other unusual error occurs. Otherwise a rejection
     /// reason is returned with None or an acceptance reason with a network configuration is returned.
     async fn authorize(
@@ -270,10 +262,10 @@ impl Controller {
         source_identity: &Verified<Identity>,
         network_id: NetworkId,
         time_clock: i64,
-    ) -> Result<(AuthenticationResult, Option<NetworkConfig>, Option<Vec<vl2::v1::Revocation>>), Box<dyn Error + Send + Sync>> {
+    ) -> Result<(AuthenticationResult, Option<NetworkConfig>), Box<dyn Error + Send + Sync>> {
         let network = self.database.get_network(network_id).await?;
         if network.is_none() {
-            return Ok((AuthenticationResult::Rejected, None, None));
+            return Ok((AuthenticationResult::Rejected, None));
         }
         let network = network.unwrap();
 
@@ -298,7 +290,7 @@ impl Controller {
                         let _ = member.identity_fingerprint.replace(Blob::from(source_identity.fingerprint));
                         member_changed = true;
                     } else {
-                        return Ok((AuthenticationResult::RejectedIdentityMismatch, None, None));
+                        return Ok((AuthenticationResult::RejectedIdentityMismatch, None));
                     }
                 }
             }
@@ -313,7 +305,7 @@ impl Controller {
                         member_changed = true;
                     }
                 } else {
-                    return Ok((AuthenticationResult::RejectedIdentityMismatch, None, None));
+                    return Ok((AuthenticationResult::RejectedIdentityMismatch, None));
                 }
             }
         }
@@ -332,7 +324,7 @@ impl Controller {
                     let _ = member.insert(Member::new_with_identity(source_identity.as_ref().clone(), network_id));
                     member_changed = true;
                 } else {
-                    return Ok((AuthenticationResult::Rejected, None, None));
+                    return Ok((AuthenticationResult::Rejected, None));
                 }
             }
 
@@ -361,13 +353,12 @@ impl Controller {
             assert!(!authentication_result.approved());
         }
 
-        // drop 'mut' from these
+        // drop 'mut' from these since they should no longer change
         let member_authorized = member_authorized;
         let authentication_result = authentication_result;
 
-        let mut network_config = None;
-        let mut revocations = None;
-        if authentication_result.approved() {
+        // Generate network configuration if the member is authorized.
+        let network_config = if authentication_result.approved() {
             // We should not be able to make it here if this is still false.
             assert!(member_authorized);
 
@@ -391,7 +382,7 @@ impl Controller {
                 .eq(member.identity_fingerprint.as_ref().unwrap().as_bytes())
             {
                 debug_assert!(false);
-                return Ok((AuthenticationResult::RejectedDueToError, None, None));
+                return Ok((AuthenticationResult::RejectedDueToError, None));
             }
 
             // Figure out TTL for credentials (time window in V1).
@@ -410,7 +401,38 @@ impl Controller {
             nc.mtu = network.mtu.unwrap_or(ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU as u16);
             nc.routes = network.ip_routes.iter().cloned().collect();
             nc.static_ips = member.ip_assignments.iter().cloned().collect();
-            nc.rules = network.rules;
+
+            // For any members that have been deauthorized but may still be in the cert agreement window,
+            // insert rules to drop packets to/from those members. This lets us ban them without
+            // adjusting the window, which is a simpler approach and has less risk of interrupting
+            // connectivity between valid members.
+            if let Ok(mut deauthed_members_still_in_window) = self
+                .database
+                .list_members_deauthorized_after(network.id, time_clock - (credential_ttl as i64))
+                .await
+            {
+                if !deauthed_members_still_in_window.is_empty() {
+                    deauthed_members_still_in_window.sort_unstable(); // may improve packet compression
+                    nc.rules.reserve(deauthed_members_still_in_window.len() + 1);
+                    let mut or = false;
+                    for dead in deauthed_members_still_in_window.iter() {
+                        nc.rules.push(vl2::rule::Rule::match_source_zerotier_address(false, or, *dead));
+                        or = true;
+                    }
+                    nc.rules.push(vl2::rule::Rule::action_drop());
+                }
+            }
+
+            // Then add the rest of the user-defined rules, or a blanket accept if there are none.
+            if let Some(rules) = network.rules.as_ref() {
+                nc.rules.reserve(rules.len());
+                for r in rules.iter() {
+                    nc.rules.push(r.clone());
+                }
+            } else {
+                nc.rules.push(vl2::rule::Rule::action_accept());
+            }
+
             nc.dns = network.dns.iter().map(|(k, v)| (k.clone(), v.iter().cloned().collect())).collect();
 
             if network.min_supported_version.unwrap_or(0) < (protocol::PROTOCOL_VERSION_V2 as u32) {
@@ -434,7 +456,7 @@ impl Controller {
                             coo.add_ip(ip);
                         }
                         if !coo.sign(&self.local_identity, &source_identity) {
-                            return Ok((AuthenticationResult::RejectedDueToError, None, None));
+                            return Ok((AuthenticationResult::RejectedDueToError, None));
                         }
                         v1cred.certificates_of_ownership.push(coo);
                     }
@@ -442,33 +464,14 @@ impl Controller {
                     for (id, value) in member.tags.iter() {
                         let tag = vl2::v1::Tag::new(*id, *value, &self.local_identity, network_id, &source_identity, time_clock);
                         if tag.is_none() {
-                            return Ok((AuthenticationResult::RejectedDueToError, None, None));
+                            return Ok((AuthenticationResult::RejectedDueToError, None));
                         }
                         let _ = v1cred.tags.insert(*id, tag.unwrap());
                     }
 
-                    // For anyone who has been deauthorized but is still in the window, send revocations.
-                    if let Ok(deauthed_members_still_in_window) = self
-                        .database
-                        .list_members_deauthorized_after(network.id, time_clock - (credential_ttl as i64))
-                        .await
-                    {
-                        if !deauthed_members_still_in_window.is_empty() {
-                            let mut revs = Vec::with_capacity(deauthed_members_still_in_window.len());
-                            for dm in deauthed_members_still_in_window.iter() {
-                                if let Some(rev) =
-                                    Revocation::new(network_id, time_clock, *dm, source_identity.address, &self.local_identity, false)
-                                {
-                                    revs.push(rev);
-                                }
-                            }
-                            revocations = Some(revs);
-                        }
-                    }
-
                     nc.v1_credentials = Some(v1cred);
                 } else {
-                    return Ok((AuthenticationResult::RejectedDueToError, None, None));
+                    return Ok((AuthenticationResult::RejectedDueToError, None));
                 }
             }
 
@@ -486,14 +489,17 @@ impl Controller {
                 .or_default()
                 .insert(network_id, ms_monotonic() + (credential_ttl as i64));
 
-            network_config = Some(nc);
-        }
+            Some(nc)
+        } else {
+            None
+        };
 
+        // Save any changes to member record.
         if member_changed {
             self.database.save_member(member, false).await?;
         }
 
-        Ok((authentication_result, network_config, revocations))
+        Ok((authentication_result, network_config))
     }
 }
 
@@ -558,15 +564,12 @@ impl InnerProtocol for Controller {
                         let now = ms_since_epoch();
 
                         let (result, config) = match self2.authorize(&source.identity, network_id, now).await {
-                            Result::Ok((result, Some(config), revocations)) => {
+                            Result::Ok((result, Some(config))) => {
                                 //println!("{}", serde_yaml::to_string(&config).unwrap());
                                 self2.send_network_config(source.as_ref(), &config, Some(message_id));
-                                if let Some(mut revocations) = revocations {
-                                    self2.v1_proto_send_revocations(source.as_ref(), &mut revocations);
-                                }
                                 (result, Some(config))
                             }
-                            Result::Ok((result, None, _)) => (result, None),
+                            Result::Ok((result, None)) => (result, None),
                             Result::Err(e) => {
                                 #[cfg(debug_assertions)]
                                 let host = self2.service.read().unwrap().clone().upgrade().unwrap();

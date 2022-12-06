@@ -13,7 +13,7 @@ use zerotier_network_hypervisor::vl2::NetworkId;
 use crate::database::Database;
 use crate::model::Member;
 
-pub const CREDENTIAL_WINDOW_SIZE_DEFAULT: u64 = 1000 * 60 * 60;
+pub const CREDENTIAL_WINDOW_SIZE_DEFAULT: u64 = 1000 * 60 * 60; // 1 hour
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default, Debug)]
 pub struct Ipv4AssignMode {
@@ -90,10 +90,10 @@ pub struct Network {
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub dns: BTreeMap<String, BTreeSet<InetAddress>>,
 
-    /// Network rule set.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    /// Network rule set. (Default: one 'accept' rule.)
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    pub rules: Vec<Rule>,
+    pub rules: Option<Vec<Rule>>,
 
     /// If set this overrides the default TTL for certificates and credentials.
     ///
@@ -151,7 +151,7 @@ impl Network {
             ip_assignment_pools: BTreeSet::new(),
             ip_routes: BTreeSet::new(),
             dns: BTreeMap::new(),
-            rules: Vec::new(),
+            rules: None,
             credential_ttl: None,
             min_supported_version: None,
             mtu: None,

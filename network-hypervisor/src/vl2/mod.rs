@@ -2,6 +2,7 @@
 
 mod multicastgroup;
 mod networkid;
+mod revocation;
 mod switch;
 
 pub mod multicastauthority;
@@ -11,4 +12,5 @@ pub mod v1;
 
 pub use multicastgroup::MulticastGroup;
 pub use networkid::NetworkId;
+pub use revocation::Revocation;
 pub use switch::{Switch, SwitchInterface};

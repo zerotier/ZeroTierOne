@@ -135,28 +135,39 @@ mod rule_value {
     }
 }
 
+fn t(not: bool, or: bool, action_or_condition: u8) -> u8 {
+    (not as u8).wrapping_shl(7) | (or as u8).wrapping_shl(4) | action_or_condition
+}
+
 #[repr(C, packed)]
 #[derive(Clone, Copy)]
 union RuleValue {
-    pub ipv6: rule_value::Ipv6,
-    pub ipv4: rule_value::Ipv4,
-    pub int_range: rule_value::IntRange,
-    pub characteristics: u64,
-    pub port_range: [u16; 2],
-    pub zt: u64,
-    pub random_probability: u32,
-    pub mac: [u8; 6],
-    pub vlan_id: u16,
-    pub vlan_pcp: u8,
-    pub vlan_dei: u8,
-    pub ethertype: u16,
-    pub ip_protocol: u8,
-    pub ip_tos: rule_value::IpTos,
-    pub frame_size_range: [u16; 2],
-    pub icmp: rule_value::Icmp,
-    pub tag: rule_value::Tag,
-    pub forward: rule_value::Forward,
-    pub qos_bucket: u8,
+    ipv6: rule_value::Ipv6,
+    ipv4: rule_value::Ipv4,
+    int_range: rule_value::IntRange,
+    characteristics: u64,
+    port_range: [u16; 2],
+    zt: u64,
+    random_probability: u32,
+    mac: [u8; 6],
+    vlan_id: u16,
+    vlan_pcp: u8,
+    vlan_dei: u8,
+    ethertype: u16,
+    ip_protocol: u8,
+    ip_tos: rule_value::IpTos,
+    frame_size_range: [u16; 2],
+    icmp: rule_value::Icmp,
+    tag: rule_value::Tag,
+    forward: rule_value::Forward,
+    qos_bucket: u8,
+}
+
+impl Default for RuleValue {
+    #[inline(always)]
+    fn default() -> Self {
+        unsafe { zeroed() }
+    }
 }
 
 /// Trait to implement in order to evaluate rules.
@@ -216,6 +227,65 @@ impl Default for Rule {
 }
 
 impl Rule {
+    pub fn action_accept() -> Self {
+        Self { t: action::ACCEPT, v: RuleValue::default() }
+    }
+
+    pub fn action_drop() -> Self {
+        Self { t: action::DROP, v: RuleValue::default() }
+    }
+
+    pub fn action_tee(address: Address, flags: u32, length: u16) -> Self {
+        Self {
+            t: action::TEE,
+            v: RuleValue {
+                forward: rule_value::Forward { address: address.into(), flags, length },
+            },
+        }
+    }
+
+    pub fn action_watch(address: Address, flags: u32, length: u16) -> Self {
+        Self {
+            t: action::TEE,
+            v: RuleValue {
+                forward: rule_value::Forward { address: address.into(), flags, length },
+            },
+        }
+    }
+
+    pub fn action_redirect(address: Address, flags: u32, length: u16) -> Self {
+        Self {
+            t: action::TEE,
+            v: RuleValue {
+                forward: rule_value::Forward { address: address.into(), flags, length },
+            },
+        }
+    }
+
+    pub fn action_break() -> Self {
+        Self { t: action::BREAK, v: RuleValue::default() }
+    }
+
+    pub fn action_priority(qos_bucket: u8) -> Self {
+        Self { t: action::PRIORITY, v: RuleValue { qos_bucket } }
+    }
+
+    pub fn match_source_zerotier_address(not: bool, or: bool, address: Address) -> Self {
+        Self {
+            t: t(not, or, match_cond::SOURCE_ZEROTIER_ADDRESS),
+            v: RuleValue { zt: address.into() },
+        }
+    }
+
+    pub fn match_dest_zerotier_address(not: bool, or: bool, address: Address) -> Self {
+        Self {
+            t: t(not, or, match_cond::DEST_ZEROTIER_ADDRESS),
+            v: RuleValue { zt: address.into() },
+        }
+    }
+
+    // TODO: implement the rest of these static constructor methods if/when needed
+
     #[inline(always)]
     pub fn action_or_condition(&self) -> u8 {
         self.t & 0x3f
@@ -229,6 +299,9 @@ impl Rule {
             let not = (t & 0x80) != 0;
             let or = (t & 0x40) != 0;
             match t & 0x3f {
+                action::DROP => {
+                    return v.action_drop();
+                }
                 action::ACCEPT => {
                     return v.action_accept();
                 }
@@ -760,16 +833,7 @@ impl<'a> HumanReadableRule<'a> {
     fn to_rule(&self) -> Option<Rule> {
         if let Some(t) = HR_NAME_TO_RULE_TYPE.get(self._type.to_uppercase().as_str()) {
             let mut r = Rule::default();
-            r.t =
-                *t | if self.not.unwrap_or(false) {
-                    0x80
-                } else {
-                    0
-                } | if self.or.unwrap_or(false) {
-                    0x40
-                } else {
-                    0
-                };
+            r.t = (self.not.unwrap_or(false) as u8).wrapping_shl(7) | (self.or.unwrap_or(false) as u8).wrapping_shl(6);
             unsafe {
                 match *t {
                     action::TEE | action::WATCH | action::REDIRECT => {

@@ -1,6 +1,5 @@
 use std::io::Write;
 
-use zerotier_crypto::random;
 use zerotier_crypto::verified::Verified;
 use zerotier_utils::arrayvec::ArrayVec;
 
@@ -10,9 +9,9 @@ use crate::vl1::{Address, Identity};
 use crate::vl2::v1::CredentialType;
 use crate::vl2::NetworkId;
 
+/// "Anti-credential" revoking a network member's permission to communicate on a network.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Revocation {
-    pub id: u32,
     pub network_id: NetworkId,
     pub threshold: i64,
     pub target: Address,
@@ -31,7 +30,6 @@ impl Revocation {
         fast_propagate: bool,
     ) -> Option<Self> {
         let mut r = Self {
-            id: random::xorshift64_random() as u32, // arbitrary
             network_id,
             threshold,
             target,
@@ -54,7 +52,7 @@ impl Revocation {
         }
 
         let _ = v.write_all(&[0; 4]);
-        let _ = v.write_all(&self.id.to_be_bytes());
+        let _ = v.write_all(&((self.threshold as u32) ^ (u64::from(self.target) as u32)).to_be_bytes()); // ID only used in V1, arbitrary
         let _ = v.write_all(&self.network_id.to_bytes());
         let _ = v.write_all(&[0; 8]);
         let _ = v.write_all(&self.threshold.to_be_bytes());
@@ -76,7 +74,7 @@ impl Revocation {
     }
 
     #[inline(always)]
-    pub fn to_bytes(&self, controller_address: Address) -> ArrayVec<u8, 256> {
+    pub fn v1_proto_to_bytes(&self, controller_address: Address) -> ArrayVec<u8, 256> {
         self.internal_to_bytes(false, controller_address)
     }
 }
