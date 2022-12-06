@@ -59,6 +59,7 @@ pub struct ZeroIDC {
 ))]
 struct Inner {
     running: bool,
+    issuer: String,
     auth_endpoint: String,
     oidc_thread: Option<JoinHandle<()>>,
     oidc_client: Option<openidconnect::core::CoreClient>,
@@ -120,6 +121,7 @@ impl ZeroIDC {
         let idc = ZeroIDC {
             inner: Arc::new(Mutex::new(Inner {
                 running: false,
+                issuer: issuer.to_string(),
                 auth_endpoint: auth_ep.to_string(),
                 oidc_thread: None,
                 oidc_client: None,
@@ -439,20 +441,38 @@ impl ZeroIDC {
                 if need_verifier || csrf_diff || nonce_diff {
                     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
                     let r = i.oidc_client.as_ref().map(|c| {
-                        let (auth_url, csrf_token, nonce) = c
-                            .authorize_url(
-                                AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
-                                csrf_func(csrf_token),
-                                nonce_func(nonce),
-                            )
-                            .add_scope(Scope::new("profile".to_string()))
-                            .add_scope(Scope::new("email".to_string()))
-                            .add_scope(Scope::new("offline_access".to_string()))
-                            .add_scope(Scope::new("openid".to_string()))
-                            .set_pkce_challenge(pkce_challenge)
-                            .url();
+                        if i.issuer.contains("okta") {
+                            let (auth_url, csrf_token, nonce) = c
+                                .authorize_url(
+                                    AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
+                                    csrf_func(csrf_token),
+                                    nonce_func(nonce),
+                                )
+                                .add_scope(Scope::new("profile".to_string()))
+                                .add_scope(Scope::new("email".to_string()))
+                                .add_scope(Scope::new("offline_access".to_string()))
+                                .add_scope(Scope::new("openid".to_string()))
+                                .add_scope(Scope::new("groups".to_string()))
+                                .set_pkce_challenge(pkce_challenge)
+                                .url();
 
-                        (auth_url, csrf_token, nonce)
+                            (auth_url, csrf_token, nonce)
+                        } else {
+                            let (auth_url, csrf_token, nonce) = c
+                                .authorize_url(
+                                    AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
+                                    csrf_func(csrf_token),
+                                    nonce_func(nonce),
+                                )
+                                .add_scope(Scope::new("profile".to_string()))
+                                .add_scope(Scope::new("email".to_string()))
+                                .add_scope(Scope::new("offline_access".to_string()))
+                                .add_scope(Scope::new("openid".to_string()))
+                                .set_pkce_challenge(pkce_challenge)
+                                .url();
+
+                            (auth_url, csrf_token, nonce)
+                        }
                     });
 
                     if let Some(r) = r {
