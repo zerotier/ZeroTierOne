@@ -420,7 +420,7 @@ mod openssl_aes {
             )
             .unwrap();
             c.pad(false);
-            let _ = c.set_tag_len(16);
+            //let _ = c.set_tag_len(16);
             let _ = self.2.replace(c);
         }
 
