@@ -528,9 +528,22 @@ mod tests {
             let mut ciphertext = Vec::new();
             ciphertext.resize(tv.plaintext.len(), 0);
             gcm.crypt(tv.plaintext, ciphertext.as_mut());
-            let tag = gcm.finish_encrypt();
+            let mut tag = gcm.finish_encrypt();
             assert!(tag.eq(tv.tag));
             assert!(ciphertext.as_slice().eq(tv.ciphertext));
+
+            let mut gcm = AesGcm::new(tv.key, false);
+            gcm.init(tv.nonce);
+            gcm.aad(tv.aad);
+            let mut ct_copy = ciphertext.clone();
+            gcm.crypt_in_place(ct_copy.as_mut());
+            assert!(gcm.finish_decrypt(&tag));
+
+            gcm.init(tv.nonce);
+            gcm.aad(tv.aad);
+            gcm.crypt_in_place(ciphertext.as_mut());
+            tag[0] ^= 1;
+            assert!(!gcm.finish_decrypt(&tag));
         }
     }
 
