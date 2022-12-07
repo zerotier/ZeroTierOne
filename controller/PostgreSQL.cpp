@@ -1387,7 +1387,7 @@ void PostgreSQL::commitThread()
 						"sso_enabled = EXCLUDED.sso_enabled",
 						id,
 						_myAddressStr,
-						OSUtils::jsonDump(config["capabilitles"], -1),
+						OSUtils::jsonDump(config["capabilities"], -1),
 						(bool)config["enableBroadcast"],
 						OSUtils::now(),
 						(int)config["mtu"],
