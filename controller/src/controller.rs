@@ -181,11 +181,7 @@ impl Controller {
                         packet.append_u16(config_data.len() as u16)?;
                         packet.append_bytes(config_data.as_slice())?;
 
-                        // NOTE: V1 supports a bunch of other things like chunking but it was never truly used and is optional.
-                        // Omit it here as it adds overhead and requires an extra signature we don't need since the other side
-                        // knows this packet is coming directly from the controller. This stuff was originally designed to support
-                        // a scatter-gather method of config distribution that was never implemented. V2 will just KISS and do
-                        // controller clustering instead if we need scalability or more fault tolerance.
+                        // TODO: for V1 we may need to introduce use of the chunking mechanism for large configs.
                     }
 
                     let new_payload_len = protocol::compress(&mut packet.as_bytes_mut()[payload_start..]);

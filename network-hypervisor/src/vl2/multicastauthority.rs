@@ -57,7 +57,7 @@ impl MulticastAuthority {
     ) -> PacketHandlerResult {
         let mut subscriptions = RMaybeWLockGuard::new_read(&self.subscriptions);
 
-        while payload.len() >= (8 + 6 + 4) {
+        while (cursor + 8 + 6 + 4) <= payload.len() {
             let network_id = NetworkId::from_bytes_fixed(payload.read_bytes_fixed(&mut cursor).unwrap());
             if let Some(network_id) = network_id {
                 let mac = MAC::from_bytes_fixed(payload.read_bytes_fixed(&mut cursor).unwrap());
