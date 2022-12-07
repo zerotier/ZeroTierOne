@@ -1,4 +1,4 @@
-// (c) 2020-2022 ZeroTier, Inc. -- currently propritery pending actual release and licensing. See LICENSE.md.
+// (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
 /// A list of unassigned or obsolete ports under 1024 that could possibly be squatted.
 pub const UNASSIGNED_PRIVILEGED_PORTS: [u16; 299] = [
