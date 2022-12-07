@@ -81,7 +81,7 @@ These are found in the service's working directory.
    If the ZeroTier One service is built with the network controller enabled, it periodically backs up its controller.db database in this file (currently every 5 minutes if there have been changes). Since this file is not a currently in use SQLite3 database it's safer to back up without corruption. On new backups the file is rotated out rather than being rewritten in place.
 
  * `iddb.d/` (directory):
-   Caches the public identity of every peer ZeroTier has spoken with in the last 60 days. This directory and its contents can be deleted, but this may result in slower connection initations since it will require that we go out and re-fetch full identities for peers we're speaking to.
+   Caches the public identity of every peer ZeroTier has spoken with in the last 60 days. This directory and its contents can be deleted, but this may result in slower connection initiations since it will require that we go out and re-fetch full identities for peers we're speaking to.
 
  * `networks.d` (directory):
    This caches network configurations and certificate information for networks you belong to. ZeroTier scans this directory for <network ID>.conf files on startup to recall its networks, so "touch"ing an empty <network ID>.conf file in this directory is a way of pre-configuring ZeroTier to join a specific network on startup without using the API. If the config file is empty ZeroTIer will just fetch it from the network's controller.

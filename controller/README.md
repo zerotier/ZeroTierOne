@@ -246,7 +246,7 @@ This returns a JSON object containing all member IDs as keys and their `memberRe
 | vMajor                | integer       | Most recently known major version                 | no       |
 | vMinor                | integer       | Most recently known minor version                 | no       |
 | vRev                  | integer       | Most recently known revision                      | no       |
-| vProto                | integer       | Most recently known protocl version               | no       |
+| vProto                | integer       | Most recently known protocol version               | no       |
 
 Note that managed IP assignments are only used if they fall within a managed route. Otherwise they are ignored.
 

@@ -113,7 +113,7 @@ MemberNotificationReceiver::MemberNotificationReceiver(PostgreSQL *p, pqxx::conn
 	: pqxx::notification_receiver(c, channel)
 	, _psql(p)
 {
-	fprintf(stderr, "initialize MemberNotificaitonReceiver\n");
+	fprintf(stderr, "initialize MemberNotificationReceiver\n");
 }
 	
 
@@ -140,7 +140,7 @@ NetworkNotificationReceiver::NetworkNotificationReceiver(PostgreSQL *p, pqxx::co
 }
 
 void NetworkNotificationReceiver::operator() (const std::string &payload, int packend_pid) {
-	fprintf(stderr, "Network Notificaiton received: %s\n", payload.c_str());
+	fprintf(stderr, "Network Notification received: %s\n", payload.c_str());
 	json tmp(json::parse(payload));
 	json &ov = tmp["old_val"];
 	json &nv = tmp["new_val"];
@@ -185,7 +185,7 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 	fprintf(stderr, "ZT_SSO_PSK: %s\n", ssoPskHex);
 #endif
 	if (ssoPskHex) {
-		// SECURITY: note that ssoPskHex will always be null-terminated if libc acatually
+		// SECURITY: note that ssoPskHex will always be null-terminated if libc actually
 		// returns something non-NULL. If the hex encodes something shorter than 48 bytes,
 		// it will be padded at the end with zeroes. If longer, it'll be truncated.
 		Utils::unhex(ssoPskHex, _ssoPsk, sizeof(_ssoPsk));
@@ -1387,7 +1387,7 @@ void PostgreSQL::commitThread()
 						"sso_enabled = EXCLUDED.sso_enabled",
 						id,
 						_myAddressStr,
-						OSUtils::jsonDump(config["capabilitles"], -1),
+						OSUtils::jsonDump(config["capabilities"], -1),
 						(bool)config["enableBroadcast"],
 						OSUtils::now(),
 						(int)config["mtu"],
@@ -1586,7 +1586,7 @@ void PostgreSQL::onlineNotificationThread()
 /**
  * ONLY UNCOMMENT FOR TEMPORARY DB MAINTENANCE
  *
- * This define temproarly turns off writing to the member status table
+ * This define temporarily turns off writing to the member status table
  * so it can be reindexed when the indexes get too large.
  */
 
