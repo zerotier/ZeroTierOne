@@ -150,7 +150,7 @@ impl ZeroIDC {
 
         let redirect = RedirectUrl::new(redir_url.to_string())?;
 
-        (*idc.inner.lock().unwrap()).oidc_client = Some(
+        idc.inner.lock().unwrap().oidc_client = Some(
             CoreClient::from_provider_metadata(
                 provider_meta,
                 ClientId::new(client_id.to_string()),
@@ -165,25 +165,25 @@ impl ZeroIDC {
 
     fn kick_refresh_thread(&mut self) {
         let local = Arc::clone(&self.inner);
-        (*local.lock().unwrap()).kick = true;
+        local.lock().unwrap().kick = true;
     }
 
     fn start(&mut self) {
         let local = Arc::clone(&self.inner);
 
-        if !(*local.lock().unwrap()).running {
+        if !local.lock().unwrap().running {
             let inner_local = Arc::clone(&self.inner);
-            (*local.lock().unwrap()).oidc_thread = Some(spawn(move || {
-                (*inner_local.lock().unwrap()).running = true;
+            local.lock().unwrap().oidc_thread = Some(spawn(move || {
+                inner_local.lock().unwrap().running = true;
                 let mut running = true;
 
                 // Keep a copy of the initial nonce used to get the tokens
                 // Will be needed later when verifying the responses from refresh tokens
-                let nonce = (*inner_local.lock().unwrap()).nonce.clone();
+                let nonce = inner_local.lock().unwrap().nonce.clone();
 
                 while running {
                     let exp =
-                        UNIX_EPOCH + Duration::from_secs((*inner_local.lock().unwrap()).exp_time);
+                        UNIX_EPOCH + Duration::from_secs(inner_local.lock().unwrap().exp_time);
                     let now = SystemTime::now();
 
                     #[cfg(debug_assertions)]
@@ -200,17 +200,17 @@ impl ZeroIDC {
                             )
                         );
                     }
-                    let refresh_token = (*inner_local.lock().unwrap()).refresh_token.clone();
+                    let refresh_token = inner_local.lock().unwrap().refresh_token.clone();
 
                     if let Some(refresh_token) = refresh_token {
-                        let should_kick = (*inner_local.lock().unwrap()).kick;
+                        let should_kick = inner_local.lock().unwrap().kick;
                         if now >= (exp - Duration::from_secs(30)) || should_kick {
                             if should_kick {
                                 #[cfg(debug_assertions)]
                                 {
                                     println!("refresh thread kicked");
                                 }
-                                (*inner_local.lock().unwrap()).kick = false;
+                                inner_local.lock().unwrap().kick = false;
                             }
 
                             #[cfg(debug_assertions)]
@@ -218,10 +218,8 @@ impl ZeroIDC {
                                 println!("Refresh Token: {}", refresh_token.secret());
                             }
 
-                            let token_response = (*inner_local.lock().unwrap())
-                                .oidc_client
-                                .as_ref()
-                                .map(|c| {
+                            let token_response =
+                                inner_local.lock().unwrap().oidc_client.as_ref().map(|c| {
                                     let res = c
                                         .exchange_refresh_token(&refresh_token)
                                         .request(http_client);
@@ -254,7 +252,9 @@ impl ZeroIDC {
                                                 let client = reqwest::blocking::Client::new();
                                                 let r = client
                                                     .post(
-                                                        (*inner_local.lock().unwrap())
+                                                        inner_local
+                                                            .lock()
+                                                            .unwrap()
                                                             .auth_endpoint
                                                             .clone(),
                                                     )
@@ -291,10 +291,10 @@ impl ZeroIDC {
                                                                 match claims.expiration {
                                                                     Some(exp) => {
                                                                         println!("exp: {}", exp);
-                                                                        (*inner_local
+                                                                        inner_local
                                                                             .lock()
-                                                                            .unwrap())
-                                                                        .exp_time = exp;
+                                                                            .unwrap()
+                                                                            .exp_time = exp;
                                                                     }
                                                                     None => {
                                                                         panic!("expiration is None.  This shouldn't happen")
@@ -304,12 +304,16 @@ impl ZeroIDC {
                                                                 panic!("error parsing claims");
                                                             }
 
-                                                            (*inner_local.lock().unwrap())
+                                                            inner_local
+                                                                .lock()
+                                                                .unwrap()
                                                                 .access_token =
                                                                 Some(access_token.clone());
                                                             if let Some(t) = res.refresh_token() {
                                                                 // println!("New Refresh Token: {}", t.secret());
-                                                                (*inner_local.lock().unwrap())
+                                                                inner_local
+                                                                    .lock()
+                                                                    .unwrap()
                                                                     .refresh_token =
                                                                     Some(t.clone());
                                                             }
@@ -335,10 +339,10 @@ impl ZeroIDC {
                                                                 }
                                                             }
 
-                                                            (*inner_local.lock().unwrap())
-                                                                .exp_time = 0;
-                                                            (*inner_local.lock().unwrap())
-                                                                .running = false;
+                                                            inner_local.lock().unwrap().exp_time =
+                                                                0;
+                                                            inner_local.lock().unwrap().running =
+                                                                false;
                                                         }
                                                     }
                                                     Err(e) => {
@@ -348,29 +352,28 @@ impl ZeroIDC {
                                                             e.url().unwrap().as_str()
                                                         );
                                                         println!("Status: {}", e.status().unwrap());
-                                                        (*inner_local.lock().unwrap()).exp_time = 0;
-                                                        (*inner_local.lock().unwrap()).running =
-                                                            false;
+                                                        inner_local.lock().unwrap().exp_time = 0;
+                                                        inner_local.lock().unwrap().running = false;
                                                     }
                                                 }
                                             }
                                             None => {
                                                 println!("no id token?!?");
-                                                (*inner_local.lock().unwrap()).exp_time = 0;
-                                                (*inner_local.lock().unwrap()).running = false;
+                                                inner_local.lock().unwrap().exp_time = 0;
+                                                inner_local.lock().unwrap().running = false;
                                             }
                                         }
                                     }
                                     Err(e) => {
                                         println!("token error: {}", e);
-                                        (*inner_local.lock().unwrap()).exp_time = 0;
-                                        (*inner_local.lock().unwrap()).running = false;
+                                        inner_local.lock().unwrap().exp_time = 0;
+                                        inner_local.lock().unwrap().running = false;
                                     }
                                 }
                             } else {
                                 println!("token response??");
-                                (*inner_local.lock().unwrap()).exp_time = 0;
-                                (*inner_local.lock().unwrap()).running = false;
+                                inner_local.lock().unwrap().exp_time = 0;
+                                inner_local.lock().unwrap().running = false;
                             }
                         } else {
                             #[cfg(debug_assertions)]
@@ -378,19 +381,19 @@ impl ZeroIDC {
                         }
                     } else {
                         println!("no refresh token?");
-                        (*inner_local.lock().unwrap()).exp_time = 0;
-                        (*inner_local.lock().unwrap()).running = false;
+                        inner_local.lock().unwrap().exp_time = 0;
+                        inner_local.lock().unwrap().running = false;
                     }
 
                     sleep(Duration::from_secs(1));
                     {
-                        running = (*inner_local.lock().unwrap()).running;
+                        running = inner_local.lock().unwrap().running;
                     }
                 }
                 // end run loop
 
                 println!("thread done!");
-                (*inner_local.lock().unwrap()).running = false;
+                inner_local.lock().unwrap().running = false;
                 println!("set idc thread running flag to false");
             }));
         }
@@ -399,19 +402,19 @@ impl ZeroIDC {
     pub fn stop(&mut self) {
         let local = self.inner.clone();
         if self.is_running() {
-            (*local.lock().unwrap()).running = false;
+            local.lock().unwrap().running = false;
         }
     }
 
     pub fn is_running(&mut self) -> bool {
         let local = Arc::clone(&self.inner);
-        let running = (*local.lock().unwrap()).running;
+        let running = local.lock().unwrap().running;
 
         running
     }
 
     pub fn get_exp_time(&mut self) -> u64 {
-        return (*self.inner.lock().unwrap()).exp_time;
+        return self.inner.lock().unwrap().exp_time;
     }
 
     pub fn set_nonce_and_csrf(&mut self, csrf_token: String, nonce: String) {
@@ -451,7 +454,6 @@ impl ZeroIDC {
                                 .add_scope(Scope::new("profile".to_string()))
                                 .add_scope(Scope::new("email".to_string()))
                                 .add_scope(Scope::new("offline_access".to_string()))
-                                .add_scope(Scope::new("openid".to_string()))
                                 .add_scope(Scope::new("groups".to_string()))
                                 .set_pkce_challenge(pkce_challenge)
                                 .url();
@@ -467,7 +469,6 @@ impl ZeroIDC {
                                 .add_scope(Scope::new("profile".to_string()))
                                 .add_scope(Scope::new("email".to_string()))
                                 .add_scope(Scope::new("offline_access".to_string()))
-                                .add_scope(Scope::new("openid".to_string()))
                                 .set_pkce_challenge(pkce_challenge)
                                 .url();
 
