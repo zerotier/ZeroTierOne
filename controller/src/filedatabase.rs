@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -19,7 +18,7 @@ use zerotier_utils::tokio::task::JoinHandle;
 use zerotier_utils::tokio::time::{sleep, Duration, Instant};
 
 use crate::cache::Cache;
-use crate::database::{Change, Database};
+use crate::database::{Change, Database, Error};
 use crate::model::*;
 
 const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
@@ -45,7 +44,7 @@ pub struct FileDatabase {
 // TODO: should cache at least hashes and detect changes in the filesystem live.
 
 impl FileDatabase {
-    pub async fn new<P: AsRef<Path>>(runtime: Handle, base_path: P) -> Result<Arc<Self>, Box<dyn Error + Send + Sync>> {
+    pub async fn new<P: AsRef<Path>>(runtime: Handle, base_path: P) -> Result<Arc<Self>, Error> {
         let base_path: PathBuf = base_path.as_ref().into();
         let _ = fs::create_dir_all(&base_path).await?;
 
@@ -240,7 +239,7 @@ impl FileDatabase {
             .join(format!("M{}.yaml", member_id.to_string()))
     }
 
-    async fn load_object<O: DeserializeOwned>(path: &Path) -> Result<Option<O>, Box<dyn Error + Send + Sync>> {
+    async fn load_object<O: DeserializeOwned>(path: &Path) -> Result<Option<O>, Error> {
         if let Ok(raw) = fs::read(path).await {
             return Ok(Some(serde_yaml::from_slice::<O>(raw.as_slice())?));
         } else {
@@ -299,7 +298,7 @@ impl NodeStorage for FileDatabase {
 
 #[async_trait]
 impl Database for FileDatabase {
-    async fn list_networks(&self) -> Result<Vec<NetworkId>, Box<dyn Error + Send + Sync>> {
+    async fn list_networks(&self) -> Result<Vec<NetworkId>, Error> {
         let mut networks = Vec::new();
         if let Some(controller_address) = self.get_controller_address() {
             let controller_address_shift24 = u64::from(controller_address).wrapping_shl(24);
@@ -323,7 +322,7 @@ impl Database for FileDatabase {
         Ok(networks)
     }
 
-    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error + Send + Sync>> {
+    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Error> {
         let mut network = Self::load_object::<Network>(self.network_path(id).as_path()).await?;
         if let Some(network) = network.as_mut() {
             // FileDatabase stores networks by their "network number" and automatically adapts their IDs
@@ -340,7 +339,7 @@ impl Database for FileDatabase {
         Ok(network)
     }
 
-    async fn save_network(&self, obj: Network, generate_change_notification: bool) -> Result<(), Box<dyn Error + Send + Sync>> {
+    async fn save_network(&self, obj: Network, generate_change_notification: bool) -> Result<(), Error> {
         if !generate_change_notification {
             let _ = self.cache.on_network_updated(obj.clone());
         }
@@ -350,7 +349,7 @@ impl Database for FileDatabase {
         return Ok(());
     }
 
-    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Box<dyn Error + Send + Sync>> {
+    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Error> {
         let mut members = Vec::new();
         let mut dir = fs::read_dir(self.base_path.join(format!("N{:06x}", network_id.network_no()))).await?;
         while let Ok(Some(ent)) = dir.next_entry().await {
@@ -372,7 +371,7 @@ impl Database for FileDatabase {
         Ok(members)
     }
 
-    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Box<dyn Error + Send + Sync>> {
+    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Error> {
         let mut member = Self::load_object::<Member>(self.member_path(network_id, node_id).as_path()).await?;
         if let Some(member) = member.as_mut() {
             if member.network_id != network_id {
@@ -384,7 +383,7 @@ impl Database for FileDatabase {
         Ok(member)
     }
 
-    async fn save_member(&self, obj: Member, generate_change_notification: bool) -> Result<(), Box<dyn Error + Send + Sync>> {
+    async fn save_member(&self, obj: Member, generate_change_notification: bool) -> Result<(), Error> {
         if !generate_change_notification {
             let _ = self.cache.on_member_updated(obj.clone());
         }
@@ -398,7 +397,7 @@ impl Database for FileDatabase {
         Some(self.change_sender.subscribe())
     }
 
-    async fn log_request(&self, obj: RequestLogItem) -> Result<(), Box<dyn Error + Send + Sync>> {
+    async fn log_request(&self, obj: RequestLogItem) -> Result<(), Error> {
         println!("{}", obj.to_string());
         Ok(())
     }

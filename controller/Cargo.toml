@@ -18,3 +18,5 @@ serde_json = { version = "^1", features = ["std"], default-features = false }
 serde_yaml = "^0"
 clap = { version = "^3", features = ["std", "suggestions"], default-features = false }
 notify = { version = "^5", features = ["macos_fsevent"], default-features = false }
+tokio-postgres = "^0"
+pin-utils = "^0"

@@ -7,12 +7,13 @@ version = "0.1.0"
 
 [features]
 default = []
-tokio = ["dep:tokio"]
+tokio = ["dep:tokio", "dep:futures-util"]
 
 [dependencies]
 serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = ["std"], default-features = false }
 tokio = { version = "^1", default-features = false, features = ["fs", "io-util", "io-std", "net", "process", "rt", "rt-multi-thread", "signal", "sync", "time"], optional = true }
+futures-util = { version = "^0", optional = true }
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }

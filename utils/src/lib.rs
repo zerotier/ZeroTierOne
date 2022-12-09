@@ -3,6 +3,7 @@
 pub mod arrayvec;
 pub mod blob;
 pub mod buffer;
+pub mod defer;
 pub mod dictionary;
 pub mod error;
 #[allow(unused)]
@@ -15,6 +16,8 @@ pub mod json;
 pub mod marshalable;
 pub mod memory;
 pub mod pool;
+#[cfg(feature = "tokio")]
+pub mod reaper;
 pub mod ringbuffer;
 pub mod ringbuffermap;
 pub mod sync;
@@ -22,10 +25,10 @@ pub mod thing;
 pub mod varint;
 
 #[cfg(feature = "tokio")]
-pub mod reaper;
+pub use tokio;
 
 #[cfg(feature = "tokio")]
-pub use tokio;
+pub use futures_util;
 
 /// Initial value that should be used for monotonic tick time variables.
 pub const NEVER_HAPPENED_TICKS: i64 = 0;

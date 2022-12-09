@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use std::error::Error;
 
 use zerotier_network_hypervisor::vl1::{Address, InetAddress, NodeStorage};
 use zerotier_network_hypervisor::vl2::NetworkId;
@@ -7,6 +6,8 @@ use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::tokio::sync::broadcast::Receiver;
 
 use crate::model::*;
+
+pub type Error = Box<dyn std::error::Error + Send + Sync>;
 
 /// Database change relevant to the controller and that was NOT initiated by the controller.
 #[derive(Clone, Debug)]
@@ -21,13 +22,13 @@ pub enum Change {
 
 #[async_trait]
 pub trait Database: Sync + Send + NodeStorage + 'static {
-    async fn list_networks(&self) -> Result<Vec<NetworkId>, Box<dyn Error + Send + Sync>>;
-    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Box<dyn Error + Send + Sync>>;
-    async fn save_network(&self, obj: Network, generate_change_notification: bool) -> Result<(), Box<dyn Error + Send + Sync>>;
+    async fn list_networks(&self) -> Result<Vec<NetworkId>, Error>;
+    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Error>;
+    async fn save_network(&self, obj: Network, generate_change_notification: bool) -> Result<(), Error>;
 
-    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Box<dyn Error + Send + Sync>>;
-    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Box<dyn Error + Send + Sync>>;
-    async fn save_member(&self, obj: Member, generate_change_notification: bool) -> Result<(), Box<dyn Error + Send + Sync>>;
+    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Error>;
+    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Error>;
+    async fn save_member(&self, obj: Member, generate_change_notification: bool) -> Result<(), Error>;
 
     /// Get a receiver that can be used to receive changes made to networks and members, if supported.
     ///
@@ -48,11 +49,7 @@ pub trait Database: Sync + Send + NodeStorage + 'static {
     ///
     /// The default trait implementation uses a brute force method. This should be reimplemented if a
     /// more efficient way is available.
-    async fn list_members_deauthorized_after(
-        &self,
-        network_id: NetworkId,
-        cutoff: i64,
-    ) -> Result<Vec<Address>, Box<dyn Error + Send + Sync>> {
+    async fn list_members_deauthorized_after(&self, network_id: NetworkId, cutoff: i64) -> Result<Vec<Address>, Error> {
         let mut v = Vec::new();
         let members = self.list_members(network_id).await?;
         for a in members.iter() {
@@ -69,7 +66,7 @@ pub trait Database: Sync + Send + NodeStorage + 'static {
     ///
     /// The default trait implementation uses a brute force method. This should be reimplemented if a
     /// more efficient way is available.
-    async fn is_ip_assigned(&self, network_id: NetworkId, ip: &InetAddress) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn is_ip_assigned(&self, network_id: NetworkId, ip: &InetAddress) -> Result<bool, Error> {
         let members = self.list_members(network_id).await?;
         for a in members.iter() {
             if let Some(m) = self.get_member(network_id, *a).await? {
@@ -81,5 +78,5 @@ pub trait Database: Sync + Send + NodeStorage + 'static {
         return Ok(false);
     }
 
-    async fn log_request(&self, obj: RequestLogItem) -> Result<(), Box<dyn Error + Send + Sync>>;
+    async fn log_request(&self, obj: RequestLogItem) -> Result<(), Error>;
 }
