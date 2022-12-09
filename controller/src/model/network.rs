@@ -31,9 +31,9 @@ pub struct Ipv6AssignMode {
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Hash, Debug)]
 pub struct IpAssignmentPool {
     #[serde(rename = "ipRangeStart")]
-    ip_range_start: InetAddress,
+    pub ip_range_start: InetAddress,
     #[serde(rename = "ipRangeEnd")]
-    ip_range_end: InetAddress,
+    pub ip_range_end: InetAddress,
 }
 
 /// Virtual network configuration.

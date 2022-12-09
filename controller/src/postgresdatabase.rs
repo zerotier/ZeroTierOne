@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
@@ -12,6 +12,7 @@ use tokio_postgres::{Client, Statement};
 use zerotier_crypto::verified::Verified;
 
 use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress, NodeStorage};
+use zerotier_network_hypervisor::vl2::networkconfig::IpRoute;
 use zerotier_network_hypervisor::vl2::rule::Rule;
 use zerotier_network_hypervisor::vl2::NetworkId;
 
@@ -22,7 +23,7 @@ use zerotier_utils::tokio::sync::broadcast::{channel, Receiver, Sender};
 use zerotier_utils::tokio::task::JoinHandle;
 
 use crate::database::*;
-use crate::model::{Member, Network, RequestLogItem};
+use crate::model::{IpAssignmentPool, Member, Network, RequestLogItem};
 
 const RECONNECT_RATE_LIMIT: tokio::time::Duration = tokio::time::Duration::from_millis(250);
 
@@ -41,9 +42,9 @@ SELECT
     (CASE WHEN n.sso_enabled THEN o.client_id ELSE NULL END) as client_id,
     (CASE WHEN n.sso_enabled THEN o.authorization_endpoint ELSE NULL END) as authorization_endpoint,
     d.domain,
-    d.servers,
-    ARRAY(SELECT CONCAT(host(ip_range_start),'|', host(ip_range_end)) FROM ztc_network_assignment_pool WHERE network_id = n.id) AS assignment_pool,
-    ARRAY(SELECT CONCAT(host(address),'/',bits::text,'|',COALESCE(host(via), 'NULL')) FROM ztc_network_route WHERE network_id = n.id) AS routes
+    ARRAY_TO_STRING(d.servers, ',', '*'),
+    ARRAY_TO_STRING(ARRAY(SELECT CONCAT(host(ip_range_start),'|', host(ip_range_end)) FROM ztc_network_assignment_pool WHERE network_id = n.id), ',', '*') AS assignment_pool,
+    ARRAY_TO_STRING(ARRAY(SELECT CONCAT(host(address),'/',bits::text,'|',COALESCE(host(via), 'NULL')) FROM ztc_network_route WHERE network_id = n.id), ',', '*') AS routes
 FROM
     ztc_network n
     LEFT OUTER JOIN ztc_org o ON o.owner_id = n.owner_id
@@ -239,90 +240,139 @@ impl Database for PostgresDatabase {
         let mut client_id: Option<&str> = nw.get(10);
         let mut authorization_endpoint: Option<&str> = nw.get(11);
         let mut domain: Option<&str> = nw.get(12);
-        let mut servers: Option<&str> = nw.get(13);
-        let mut assignment_pool: Option<&str> = nw.get(14);
-        let mut routes: Option<&str> = nw.get(15);
+        let mut servers_csv: Option<&str> = nw.get(13);
+        let mut assignment_pool_csv: Option<&str> = nw.get(14);
+        let mut routes_csv: Option<&str> = nw.get(15);
 
         filter_null_string(&mut capabilities);
         filter_null_string(&mut rules);
         filter_null_string(&mut client_id);
         filter_null_string(&mut authorization_endpoint);
         filter_null_string(&mut domain);
-        filter_null_string(&mut servers);
-        filter_null_string(&mut assignment_pool);
-        filter_null_string(&mut routes);
-
-        let mut rules = if let Some(rules) = rules {
-            serde_json::from_str::<Vec<Rule>>(rules)?
-        } else {
-            Vec::new()
-        };
-
-        // Capabilities are being deprecated in V2 as they are complex and rarely used. To handle networks
-        // that have them configured (there aren't many) we translate them into special portions of the
-        // general rule set that match on the capability owner's address.
-        if let Some(capabilities) = capabilities {
-            let capabilities_vec = serde_json::from_str::<Vec<V1Capability>>(capabilities)?;
-            let mut capabilities = HashMap::with_capacity(capabilities_vec.len());
-            for c in capabilities_vec.iter() {
-                capabilities.insert(c.id, c);
-            }
-            let mut members_by_cap = HashMap::with_capacity(with_caps.len());
-            for wc in with_caps.iter() {
-                if let Ok(member_id) = Address::from_str(wc.get(0)) {
-                    if let Ok(cap_ids) = serde_json::from_str::<Vec<u32>>(wc.get(1)) {
-                        for cap_id in cap_ids.iter() {
-                            members_by_cap
-                                .entry(*cap_id)
-                                .or_insert_with(|| Vec::with_capacity(4))
-                                .push(member_id);
-                        }
-                    }
-                }
-            }
-            if !members_by_cap.is_empty() {
-                let mut base_rules = rules.clone();
-                rules.clear();
-
-                for (cap_id, member_ids) in members_by_cap.iter() {
-                    if let Some(cap) = capabilities.get(cap_id) {
-                        let mut or = false;
-                        for m in member_ids.iter() {
-                            rules.push(Rule::match_source_zerotier_address(false, or, *m));
-                            or = true;
-                        }
-                        for r in cap.rules.iter() {
-                            rules.push(r.clone());
-                        }
-                        rules.push(Rule::action_accept());
-                    }
-                }
-
-                if base_rules.is_empty() {
-                    rules.push(Rule::action_accept());
-                } else {
-                    for r in base_rules.drain(..) {
-                        rules.push(r);
-                    }
-                }
-            }
-        }
+        filter_null_string(&mut servers_csv);
+        filter_null_string(&mut assignment_pool_csv);
+        filter_null_string(&mut routes_csv);
 
         Ok(Some(Network {
             id,
             name: name.to_string(),
-            multicast_limit: if multicast_limit < 0 || multicast_limit > (u32::MAX as i64) {
+            multicast_limit: if multicast_limit < 0 {
                 None
             } else {
-                Some(multicast_limit as u32)
+                Some(multicast_limit.min(u32::MAX as i64) as u32)
             },
             enable_broadcast: Some(enable_broadcast),
             v4_assign_mode: Some(serde_json::from_str(v4_assign_mode)?),
             v6_assign_mode: Some(serde_json::from_str(v6_assign_mode)?),
-            ip_assignment_pools: todo!(),
-            ip_routes: todo!(),
-            dns: todo!(),
-            rules: todo!(),
+            ip_assignment_pools: {
+                let mut ip_assignment_pools = BTreeSet::new();
+                if let Some(assignment_pool_csv) = assignment_pool_csv {
+                    for p in assignment_pool_csv.split(',') {
+                        if let Some((start, end)) = p.split_once('|') {
+                            if let Ok(start) = InetAddress::from_str(start) {
+                                if let Ok(end) = InetAddress::from_str(end) {
+                                    ip_assignment_pools.insert(IpAssignmentPool { ip_range_start: start, ip_range_end: end });
+                                }
+                            }
+                        }
+                    }
+                }
+                ip_assignment_pools
+            },
+            ip_routes: {
+                let mut ip_routes = BTreeSet::new();
+                if let Some(routes_csv) = routes_csv {
+                    for r in routes_csv.split(',') {
+                        if let Some((cidr, via)) = r.split_once('|') {
+                            if let Ok(cidr) = InetAddress::from_str(cidr) {
+                                ip_routes.insert(IpRoute {
+                                    target: cidr,
+                                    via: if via == "NULL" {
+                                        None
+                                    } else {
+                                        if let Ok(via) = InetAddress::from_str(via) {
+                                            Some(via)
+                                        } else {
+                                            None
+                                        }
+                                    },
+                                    flags: None,
+                                    metric: None,
+                                });
+                            }
+                        }
+                    }
+                }
+                ip_routes
+            },
+            dns: {
+                let mut dns = BTreeMap::new();
+                if let Some(domain) = domain {
+                    if let Some(servers_csv) = servers_csv {
+                        let mut servers = BTreeSet::new();
+                        for s in servers_csv.split(',') {
+                            if let Ok(s) = InetAddress::from_str(s) {
+                                servers.insert(s);
+                            }
+                        }
+                        dns.insert(domain.trim().to_string(), servers);
+                    }
+                }
+                dns
+            },
+            rules: if let Some(rules) = rules {
+                let mut rules = serde_json::from_str::<Vec<Rule>>(rules)?;
+
+                // Capabilities are being deprecated in V2 as they are complex and rarely used. To handle networks
+                // that have them configured (there aren't many) we translate them into special portions of the
+                // general rule set that match on the capability owner's address.
+                if let Some(capabilities) = capabilities {
+                    let capabilities_vec = serde_json::from_str::<Vec<V1Capability>>(capabilities)?;
+                    let mut capabilities = HashMap::with_capacity(capabilities_vec.len());
+                    for c in capabilities_vec.iter() {
+                        capabilities.insert(c.id, c);
+                    }
+                    let mut members_by_cap = HashMap::with_capacity(with_caps.len());
+                    for wc in with_caps.iter() {
+                        if let Ok(member_id) = Address::from_str(wc.get(0)) {
+                            if let Ok(cap_ids) = serde_json::from_str::<Vec<u32>>(wc.get(1)) {
+                                for cap_id in cap_ids.iter() {
+                                    members_by_cap
+                                        .entry(*cap_id)
+                                        .or_insert_with(|| Vec::with_capacity(4))
+                                        .push(member_id);
+                                }
+                            }
+                        }
+                    }
+                    if !members_by_cap.is_empty() {
+                        let mut base_rules = rules.clone();
+                        rules.clear();
+
+                        for (cap_id, member_ids) in members_by_cap.iter() {
+                            if let Some(cap) = capabilities.get(cap_id) {
+                                let mut or = false;
+                                for m in member_ids.iter() {
+                                    rules.push(Rule::match_source_zerotier_address(false, or, *m));
+                                    or = true;
+                                }
+                                for r in cap.rules.iter() {
+                                    rules.push(r.clone());
+                                }
+                                rules.push(Rule::action_accept());
+                            }
+                        }
+
+                        for r in base_rules.drain(..) {
+                            rules.push(r);
+                        }
+                    }
+                }
+
+                Some(rules)
+            } else {
+                None
+            },
             credential_ttl: None,
             min_supported_version: None,
             mtu: if mtu < 0 || mtu > (u16::MAX as i32) {
