@@ -9,9 +9,6 @@ jobs:
         
     - name: make
       run: make
-      
-    - name: selftest
-      run: make selftest
 
   build_macos:
     runs-on: macos-latest
@@ -20,10 +17,7 @@ jobs:
       uses: actions/checkout@v3
         
     - name: make
-      run: make
-      
-    - name: selftest
-      run: make selftest
+      run: make     
       
   # build_windows:
   #   runs-on: windows-latest
