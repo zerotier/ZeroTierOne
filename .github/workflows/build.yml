@@ -1,6 +1,6 @@
 on: [ push, pull_request ]
     
-jobs:
+jobs:  
   build_ubuntu:
     runs-on: ubuntu-latest
     steps:
@@ -18,6 +18,24 @@ jobs:
         
     - name: make
       run: make     
+
+  test_ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v3
+        
+    - name: cargo test
+      run: cargo test -v
+
+  test_macos:
+    runs-on: macos-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v3
+        
+    - name: cargo test
+      run: cargo test -v
       
   # build_windows:
   #   runs-on: windows-latest
