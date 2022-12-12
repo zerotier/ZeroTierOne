@@ -13,6 +13,7 @@ use crate::vl1::{Address, MAC};
 use zerotier_utils::buffer::Buffer;
 use zerotier_utils::error::InvalidFormatError;
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
+use zerotier_utils::{base64_decode_url_nopad, base64_encode_url_nopad};
 
 pub const TYPE_NIL: u8 = 0;
 pub const TYPE_ZEROTIER: u8 = 1;
@@ -323,7 +324,7 @@ impl ToString for Endpoint {
     fn to_string(&self) -> String {
         match self {
             Endpoint::Nil => format!("nil"),
-            Endpoint::ZeroTier(a, ah) => format!("zt:{}-{}", a.to_string(), base64::encode_config(ah, base64::URL_SAFE_NO_PAD)),
+            Endpoint::ZeroTier(a, ah) => format!("zt:{}-{}", a.to_string(), base64_encode_url_nopad(ah)),
             Endpoint::Ethernet(m) => format!("eth:{}", m.to_string()),
             Endpoint::WifiDirect(m) => format!("wifip2p:{}", m.to_string()),
             Endpoint::Bluetooth(m) => format!("bt:{}", m.to_string()),
@@ -331,8 +332,8 @@ impl ToString for Endpoint {
             Endpoint::IpUdp(ip) => format!("udp:{}", ip.to_string()),
             Endpoint::IpTcp(ip) => format!("tcp:{}", ip.to_string()),
             Endpoint::Http(url) => format!("url:{}", url.clone()), // http or https
-            Endpoint::WebRTC(offer) => format!("webrtc:{}", base64::encode_config(offer.as_slice(), base64::URL_SAFE_NO_PAD)),
-            Endpoint::ZeroTierEncap(a, ah) => format!("zte:{}-{}", a.to_string(), base64::encode_config(ah, base64::URL_SAFE_NO_PAD)),
+            Endpoint::WebRTC(offer) => format!("webrtc:{}", base64_encode_url_nopad(offer.as_slice())),
+            Endpoint::ZeroTierEncap(a, ah) => format!("zte:{}-{}", a.to_string(), base64_encode_url_nopad(ah)),
         }
     }
 }
@@ -355,9 +356,7 @@ impl FromStr for Endpoint {
                 let address_and_hash = endpoint_data.split_once("-");
                 if address_and_hash.is_some() {
                     let (address, hash) = address_and_hash.unwrap();
-                    let hash = base64::decode_config(hash, base64::URL_SAFE_NO_PAD);
-                    if hash.is_ok() {
-                        let hash = hash.unwrap();
+                    if let Some(hash) = base64_decode_url_nopad(hash) {
                         if hash.len() == IDENTITY_FINGERPRINT_SIZE {
                             if endpoint_type == "zt" {
                                 return Ok(Endpoint::ZeroTier(Address::from_str(address)?, hash.as_slice().try_into().unwrap()));
@@ -379,9 +378,8 @@ impl FromStr for Endpoint {
             "tcp" => return Ok(Endpoint::IpTcp(InetAddress::from_str(endpoint_data)?)),
             "url" => return Ok(Endpoint::Http(endpoint_data.into())),
             "webrtc" => {
-                let offer = base64::decode_config(endpoint_data, base64::URL_SAFE_NO_PAD);
-                if offer.is_ok() {
-                    return Ok(Endpoint::WebRTC(offer.unwrap()));
+                if let Some(offer) = base64_decode_url_nopad(endpoint_data) {
+                    return Ok(Endpoint::WebRTC(offer));
                 }
             }
             _ => {}
