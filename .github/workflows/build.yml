@@ -1,0 +1,39 @@
+on: [ push, pull_request ]
+    
+jobs:
+  build_ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v3
+        
+    - name: make
+      run: make
+      
+    - name: selftest
+      run: make selftest
+
+  build_macos:
+    runs-on: macos-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v3
+        
+    - name: make
+      run: make
+      
+    - name: selftest
+      run: make selftest
+      
+  # build_windows:
+  #   runs-on: windows-latest
+  #   steps:
+  #   - name: checkout
+  #     uses: actions/checkout@v3
+        
+  #   - name: setup msbuild
+  #     uses: microsoft/setup-msbuild@v1.1.3
+
+  #   - name: msbuild
+  #     run: |
+  #       msbuild windows\ZeroTierOne.sln /m /p:Configuration=Release  /property:Platform=x64 /t:ZeroTierOne:Rebuild
