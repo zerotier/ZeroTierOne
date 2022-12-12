@@ -1,7 +1,7 @@
 on: [ push, pull_request ]
     
 jobs:
-  build ubuntu:
+  build_ubuntu:
     runs-on: ubuntu-latest
     steps:
     - name: checkout
@@ -13,7 +13,7 @@ jobs:
     - name: selftest
       run: make selftest
 
-  build macos:
+  build_macos:
     runs-on: macos-latest
     steps:
     - name: checkout
@@ -25,7 +25,7 @@ jobs:
     - name: selftest
       run: make selftest
       
-  build windows:
+  build_windows:
     runs-on: windows-latest
     steps:
     - name: checkout
@@ -37,6 +37,4 @@ jobs:
     - name: msbuild
       run: |
         msbuild windows\ZeroTierOne.sln /m /p:Configuration=Release  /property:Platform=x64 /t:ZeroTierOne:Rebuild
-
-
-      
+    
