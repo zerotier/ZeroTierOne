@@ -502,7 +502,7 @@ impl Peer {
                 // Decryption successful with static secret.
                 message_id2
             } else {
-                // Packet failed to decrypt using either ephemeral or permament key, reject.
+                // Packet failed to decrypt using either ephemeral or permanent key, reject.
                 debug_event!(
                     host_system,
                     "[vl1] #{:0>16x} failed authentication",

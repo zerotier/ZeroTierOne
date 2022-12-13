@@ -202,7 +202,7 @@ pub trait InnerProtocol: Sync + Send {
         PacketHandlerResult::NotHandled
     }
 
-    /// Handle an OK, returing true if the OK was recognized.
+    /// Handle an OK, returning true if the OK was recognized.
     /// The default version returns NotHandled.
     fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
         &self,
