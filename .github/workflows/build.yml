@@ -1,36 +1,44 @@
-on: [ push, pull_request ]
-    
+on: [ push ]
+
 jobs:
   build_ubuntu:
     runs-on: ubuntu-latest
     steps:
-    - name: checkout
-      uses: actions/checkout@v3
-        
-    - name: make
-      run: make
-      
-    - name: selftest
-      run: make selftest
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: make
+        run: make
+
+      - name: selftest
+        run: make selftest
 
   build_macos:
     runs-on: macos-latest
     steps:
     - name: checkout
       uses: actions/checkout@v3
-        
+
+    - name: Install Rust Toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: aarch64-apple-darwin
+        override: true
+        components: rustfmt, clippy
+
     - name: make
       run: make
-      
+
     - name: selftest
       run: make selftest
-      
+
   build_windows:
     runs-on: windows-latest
     steps:
     - name: checkout
       uses: actions/checkout@v3
-        
+
     - name: setup msbuild
       uses: microsoft/setup-msbuild@v1.1.3
 
