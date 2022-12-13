@@ -794,7 +794,7 @@ impl Node {
                             fragment_header.total_fragments()
                         );
 
-                        if let Some(assembled_packet) = path.receive_fragment(
+                        if let Some(assembled_packet) = path.v1_proto_receive_fragment(
                             fragment_header.packet_id(),
                             fragment_header.fragment_no(),
                             fragment_header.total_fragments(),

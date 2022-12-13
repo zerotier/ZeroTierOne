@@ -66,7 +66,7 @@ impl Path {
 
     /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.
     /// This returns None if more fragments are needed to assemble the packet.
-    pub(crate) fn receive_fragment(
+    pub(crate) fn v1_proto_receive_fragment(
         &self,
         packet_id: u64,
         fragment_no: u8,

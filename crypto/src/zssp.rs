@@ -466,7 +466,7 @@ impl<H: Host> Session<H> {
                 // Get an initialized AES-GCM cipher and re-initialize with a 96-bit IV built from remote session ID,
                 // packet type, and counter.
                 let mut c = key.get_send_cipher(counter)?;
-                c.init(CanonicalHeader::make(remote_session_id, PACKET_TYPE_DATA, counter.to_u32()).as_bytes());
+                c.reset_init_gcm(CanonicalHeader::make(remote_session_id, PACKET_TYPE_DATA, counter.to_u32()).as_bytes());
 
                 // Send first N-1 fragments of N total fragments.
                 if packet_len > mtu_buffer.len() {
@@ -754,7 +754,7 @@ impl<H: Host> ReceiveContext<H> {
                     let key_ptr = (state.key_ptr + p) % KEY_HISTORY_SIZE;
                     if let Some(key) = state.keys[key_ptr].as_ref() {
                         let mut c = key.get_receive_cipher();
-                        c.init(canonical_header_bytes);
+                        c.reset_init_gcm(canonical_header_bytes);
 
                         let mut data_len = 0;
 
@@ -905,7 +905,7 @@ impl<H: Host> ReceiveContext<H> {
                         kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n::<AES_KEY_SIZE>(),
                         false,
                     );
-                    c.init(canonical_header_bytes);
+                    c.reset_init_gcm(canonical_header_bytes);
                     c.crypt_in_place(&mut kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..payload_end]);
                     if !c.finish_decrypt(&kex_packet[payload_end..aes_gcm_tag_end]) {
                         return Err(Error::FailedAuthentication);
@@ -1093,7 +1093,7 @@ impl<H: Host> ReceiveContext<H> {
                         kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n::<AES_KEY_SIZE>(),
                         true,
                     );
-                    c.init(reply_canonical_header.as_bytes());
+                    c.reset_init_gcm(reply_canonical_header.as_bytes());
                     c.crypt_in_place(&mut reply_buf[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..reply_len]);
                     let c = c.finish_encrypt();
                     reply_buf[reply_len..(reply_len + AES_GCM_TAG_SIZE)].copy_from_slice(&c);
@@ -1171,7 +1171,7 @@ impl<H: Host> ReceiveContext<H> {
                                 kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n::<AES_KEY_SIZE>(),
                                 false,
                             );
-                            c.init(canonical_header_bytes);
+                            c.reset_init_gcm(canonical_header_bytes);
                             c.crypt_in_place(&mut kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..payload_end]);
                             if !c.finish_decrypt(&kex_packet[payload_end..aes_gcm_tag_end]) {
                                 return Err(Error::FailedAuthentication);
@@ -1233,7 +1233,7 @@ impl<H: Host> ReceiveContext<H> {
                             )?;
 
                             let mut c = key.get_send_cipher(counter)?;
-                            c.init(CanonicalHeader::make(bob_session_id.into(), PACKET_TYPE_NOP, counter.to_u32()).as_bytes());
+                            c.reset_init_gcm(CanonicalHeader::make(bob_session_id.into(), PACKET_TYPE_NOP, counter.to_u32()).as_bytes());
                             reply_buf[HEADER_SIZE..].copy_from_slice(&c.finish_encrypt());
                             key.return_send_cipher(c);
 
@@ -1428,7 +1428,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
             kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n::<AES_KEY_SIZE>(),
             true,
         );
-        c.init(canonical_header.as_bytes());
+        c.reset_init_gcm(canonical_header.as_bytes());
         c.crypt_in_place(&mut packet_buf[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..packet_len]);
         c.finish_encrypt()
     };

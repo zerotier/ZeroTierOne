@@ -223,7 +223,7 @@ mod fruit_flavored {
         }
 
         #[inline(always)]
-        pub fn init(&mut self, iv: &[u8]) {
+        pub fn reset_init_gcm(&mut self, iv: &[u8]) {
             assert_eq!(iv.len(), 12);
             unsafe {
                 assert_eq!(CCCryptorGCMReset(self.0), 0);
@@ -406,7 +406,7 @@ mod openssl_aes {
         /// Initialize AES-CTR for encryption or decryption with the given IV.
         /// If it's already been used, this also resets the cipher. There is no separate reset.
         #[inline]
-        pub fn init(&mut self, iv: &[u8]) {
+        pub fn reset_init_gcm(&mut self, iv: &[u8]) {
             assert_eq!(iv.len(), 12);
             let mut c = Crypter::new(
                 aes_gcm_by_key_size(self.1),
@@ -495,7 +495,7 @@ mod tests {
         let benchmark_iterations: usize = 80000;
         let start = SystemTime::now();
         for _ in 0..benchmark_iterations {
-            c.init(&iv);
+            c.reset_init_gcm(&iv);
             c.crypt_in_place(&mut buf);
         }
         let duration = SystemTime::now().duration_since(start).unwrap();
@@ -508,7 +508,7 @@ mod tests {
 
         let start = SystemTime::now();
         for _ in 0..benchmark_iterations {
-            c.init(&iv);
+            c.reset_init_gcm(&iv);
             c.crypt_in_place(&mut buf);
         }
         let duration = SystemTime::now().duration_since(start).unwrap();
@@ -523,7 +523,7 @@ mod tests {
         // Even though we are just wrapping other implementations, it's still good to test thoroughly!
         for tv in NIST_AES_GCM_TEST_VECTORS.iter() {
             let mut gcm = AesGcm::new(tv.key, true);
-            gcm.init(tv.nonce);
+            gcm.reset_init_gcm(tv.nonce);
             gcm.aad(tv.aad);
             let mut ciphertext = Vec::new();
             ciphertext.resize(tv.plaintext.len(), 0);
@@ -533,13 +533,13 @@ mod tests {
             assert!(ciphertext.as_slice().eq(tv.ciphertext));
 
             let mut gcm = AesGcm::new(tv.key, false);
-            gcm.init(tv.nonce);
+            gcm.reset_init_gcm(tv.nonce);
             gcm.aad(tv.aad);
             let mut ct_copy = ciphertext.clone();
             gcm.crypt_in_place(ct_copy.as_mut());
             assert!(gcm.finish_decrypt(&tag));
 
-            gcm.init(tv.nonce);
+            gcm.reset_init_gcm(tv.nonce);
             gcm.aad(tv.aad);
             gcm.crypt_in_place(ciphertext.as_mut());
             tag[0] ^= 1;
