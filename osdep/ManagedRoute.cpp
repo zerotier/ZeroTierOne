@@ -439,6 +439,76 @@ bool ManagedRoute::sync()
 
 #ifdef __BSD__ // ------------------------------------------------------------
 
+	if (_device[0]) {
+		bool haveDevice = false;
+		struct ifaddrs *ifa = (struct ifaddrs *)0;
+		if (!getifaddrs(&ifa)) {
+			struct ifaddrs *p = ifa;
+			while (p) {
+				if ((p->ifa_name)&&(!strcmp(_device, p->ifa_name))) {
+					haveDevice = true;
+					break;
+				}
+				p = p->ifa_next;
+			}
+			freeifaddrs(ifa);
+		}
+		if (!haveDevice)
+			return false;
+	}
+
+	// Find lowest metric system route that this route should override (if any)
+	InetAddress newSystemVia;
+	char newSystemDevice[128];
+	newSystemDevice[0] = (char)0;
+	int systemMetric = 9999999;
+	std::vector<_RTE> rtes(_getRTEs(_target,false));
+	for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
+		if (r->via) {
+			if ( ((!newSystemVia)||(r->metric < systemMetric)) && (strcmp(r->device,_device) != 0) ) {
+				newSystemVia = r->via;
+				Utils::scopy(newSystemDevice,sizeof(newSystemDevice),r->device);
+				systemMetric = r->metric;
+			}
+		}
+	}
+
+	// Get device corresponding to route if we don't have that already
+	if ((newSystemVia)&&(!newSystemDevice[0])) {
+		rtes = _getRTEs(newSystemVia,true);
+		for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
+			if ( (r->device[0]) && (strcmp(r->device,_device) != 0) ) {
+				Utils::scopy(newSystemDevice,sizeof(newSystemDevice),r->device);
+				break;
+			}
+		}
+	}
+	if (!newSystemDevice[0])
+		newSystemVia.zero();
+
+	// Shadow system route if it exists, also delete any obsolete shadows
+	// and replace them with the new state. sync() is called periodically to
+	// allow us to do that if underlying connectivity changes.
+	if ((_systemVia != newSystemVia)||(strcmp(_systemDevice,newSystemDevice) != 0)) {
+		if (_systemVia) {
+			_routeCmd("delete",leftt,_systemVia,_systemDevice,(const char *)0);
+			if (rightt)
+				_routeCmd("delete",rightt,_systemVia,_systemDevice,(const char *)0);
+		}
+
+		_systemVia = newSystemVia;
+		Utils::scopy(_systemDevice,sizeof(_systemDevice),newSystemDevice);
+
+		if (_systemVia) {
+			_routeCmd("add",leftt,_systemVia,_systemDevice,(const char *)0);
+			//_routeCmd("change",leftt,_systemVia,_systemDevice,(const char *)0);
+			if (rightt) {
+				_routeCmd("add",rightt,_systemVia,_systemDevice,(const char *)0);
+				//_routeCmd("change",rightt,_systemVia,_systemDevice,(const char *)0);
+			}
+		}
+	}
+
 	//if (!_applied.count(leftt)) {
 		_applied[leftt] = !_via;
 		//_routeCmd("delete",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
