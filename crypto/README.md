@@ -3,5 +3,3 @@
 ------
 
 Most of this library is just glue to provide a simple safe API around things like OpenSSL or OS-specific crypto APIs.
-
-It also contains [ZSSP](ZSSP.md), the V2 ZeroTier Secure Session Protocol.

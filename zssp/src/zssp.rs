@@ -8,11 +8,11 @@ use std::ops::Deref;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, RwLock};
 
-use crate::aes::{Aes, AesGcm};
-use crate::hash::{hmac_sha512, HMACSHA384, SHA384};
-use crate::p384::{P384KeyPair, P384PublicKey, P384_PUBLIC_KEY_SIZE};
-use crate::random;
-use crate::secret::Secret;
+use zerotier_crypto::aes::{Aes, AesGcm};
+use zerotier_crypto::hash::{hmac_sha512, HMACSHA384, SHA384};
+use zerotier_crypto::p384::{P384KeyPair, P384PublicKey, P384_PUBLIC_KEY_SIZE};
+use zerotier_crypto::random;
+use zerotier_crypto::secret::Secret;
 
 use zerotier_utils::gatherarray::GatherArray;
 use zerotier_utils::memory;
