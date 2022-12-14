@@ -4,8 +4,6 @@
 // FIPS compliant Noise_IK with Jedi powers and built-in attack-resistant large payload (fragmentation) support.
 
 use std::io::{Read, Write};
-use std::ops::Deref;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, RwLock};
 
 use zerotier_crypto::aes::{Aes, AesGcm};
@@ -20,113 +18,14 @@ use zerotier_utils::ringbuffermap::RingBufferMap;
 use zerotier_utils::unlikely_branch;
 use zerotier_utils::varint;
 
-/// Minimum size of a valid physical ZSSP packet or packet fragment.
-pub const MIN_PACKET_SIZE: usize = HEADER_SIZE + AES_GCM_TAG_SIZE;
+use crate::app_layer::ApplicationLayer;
+use crate::ints::*;
+use crate::constants::*;
 
-/// Minimum physical MTU for ZSSP to function.
-pub const MIN_TRANSPORT_MTU: usize = 1280;
 
-/// Minimum recommended interval between calls to service() on each session, in milliseconds.
-pub const SERVICE_INTERVAL: u64 = 10000;
-
-/// Setting this to true enables kyber1024 post-quantum forward secrecy.
-///
-/// Kyber1024 is used for data forward secrecy but not authentication. Authentication would
-/// require Kyber1024 in identities, which would make them huge, and isn't needed for our
-/// threat model which is data warehousing today to decrypt tomorrow. Breaking authentication
-/// is only relevant today, not in some mid to far future where a QC that can break 384-bit ECC
-/// exists.
-///
-/// This is normally enabled but could be disabled at build time for e.g. very small devices.
-/// It might not even be necessary there to disable it since it's not that big and is usually
-/// faster than NIST P-384 ECDH.
-const JEDI: bool = true;
-
-/// Maximum number of fragments for data packets.
-const MAX_FRAGMENTS: usize = 48; // hard protocol max: 63
-
-/// Maximum number of fragments for key exchange packets (can be smaller to save memory, only a few needed)
-const KEY_EXCHANGE_MAX_FRAGMENTS: usize = 2; // enough room for p384 + ZT identity + kyber1024 + tag/hmac/etc.
-
-/// Start attempting to rekey after a key has been used to send packets this many times.
-///
-/// This is 1/4 the NIST recommended maximum and 1/8 the absolute limit where u32 wraps.
-/// As such it should leave plenty of margin against nearing key reuse bounds w/AES-GCM.
-const REKEY_AFTER_USES: u64 = 536870912;
-
-/// Maximum random jitter to add to rekey-after usage count.
-const REKEY_AFTER_USES_MAX_JITTER: u32 = 1048576;
-
-/// Hard expiration after this many uses.
-///
-/// Use of the key beyond this point is prohibited. If we reach this number of key uses
-/// the key will be destroyed in memory and the session will cease to function. A hard
-/// error is also generated.
-const EXPIRE_AFTER_USES: u64 = (u32::MAX - 1024) as u64;
-
-/// Start attempting to rekey after a key has been in use for this many milliseconds.
-const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60; // 1 hour
-
-/// Maximum random jitter to add to rekey-after time.
-const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 10; // 10 minutes
-
-/// Version 0: AES-256-GCM + NIST P-384 + optional Kyber1024 PQ forward secrecy
-const SESSION_PROTOCOL_VERSION: u8 = 0x00;
-
-/// Secondary key type: none, use only P-384 for forward secrecy.
-const E1_TYPE_NONE: u8 = 0;
-
-/// Secondary key type: Kyber1024, PQ forward secrecy enabled.
-const E1_TYPE_KYBER1024: u8 = 1;
-
-/// Size of packet header
-const HEADER_SIZE: usize = 16;
-
-/// Size of AES-GCM keys (256 bits)
-const AES_KEY_SIZE: usize = 32;
-
-/// Size of AES-GCM MAC tags
-const AES_GCM_TAG_SIZE: usize = 16;
-
-/// Size of HMAC-SHA384 MAC tags
-const HMAC_SIZE: usize = 48;
-
-/// Size of a session ID, which behaves a bit like a TCP port number.
-///
-/// This is large since some ZeroTier nodes handle huge numbers of links, like roots and controllers.
-const SESSION_ID_SIZE: usize = 6;
-
-/// Number of session keys to hold at a given time (current, previous, next).
-const KEY_HISTORY_SIZE: usize = 3;
-
-// Packet types can range from 0 to 15 (4 bits) -- 0-3 are defined and 4-15 are reserved for future use
-const PACKET_TYPE_DATA: u8 = 0;
-const PACKET_TYPE_NOP: u8 = 1;
-const PACKET_TYPE_KEY_OFFER: u8 = 2; // "alice"
-const PACKET_TYPE_KEY_COUNTER_OFFER: u8 = 3; // "bob"
-
-// Key usage labels for sub-key derivation using NIST-style KBKDF (basically just HMAC KDF).
-const KBKDF_KEY_USAGE_LABEL_HMAC: u8 = b'M'; // HMAC-SHA384 authentication for key exchanges
-const KBKDF_KEY_USAGE_LABEL_HEADER_CHECK: u8 = b'H'; // AES-based header check code generation
-const KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB: u8 = b'A'; // AES-GCM in A->B direction
-const KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE: u8 = b'B'; // AES-GCM in B->A direction
-const KBKDF_KEY_USAGE_LABEL_RATCHETING: u8 = b'R'; // Key input for next ephemeral ratcheting
-
-// AES key size for header check code generation
-const HEADER_CHECK_AES_KEY_SIZE: usize = 16;
-
-/// Aribitrary starting value for master key derivation.
-///
-/// It doesn't matter very much what this is but it's good for it to be unique. It should
-/// be changed if this code is changed in any cryptographically meaningful way like changing
-/// the primary algorithm from NIST P-384 or the transport cipher from AES-GCM.
-const INITIAL_KEY: [u8; 64] = [
-    // macOS command line to generate:
-    // echo -n 'ZSSP_Noise_IKpsk2_NISTP384_?KYBER1024_AESGCM_SHA512' | shasum -a 512  | cut -d ' ' -f 1 | xxd -r -p | xxd -i
-    0x35, 0x6a, 0x75, 0xc0, 0xbf, 0xbe, 0xc3, 0x59, 0x70, 0x94, 0x50, 0x69, 0x4c, 0xa2, 0x08, 0x40, 0xc7, 0xdf, 0x67, 0xa8, 0x68, 0x52,
-    0x6e, 0xd5, 0xdd, 0x77, 0xec, 0x59, 0x6f, 0x8e, 0xa1, 0x99, 0xb4, 0x32, 0x85, 0xaf, 0x7f, 0x0d, 0xa9, 0x6c, 0x01, 0xfb, 0x72, 0x46,
-    0xc0, 0x09, 0x58, 0xb8, 0xe0, 0xa8, 0xcf, 0xb1, 0x58, 0x04, 0x6e, 0x32, 0xba, 0xa8, 0xb8, 0xf9, 0x0a, 0xa4, 0xbf, 0x36,
-];
+////////////////////////////////////////////////////////////////
+// types
+////////////////////////////////////////////////////////////////
 
 pub enum Error {
     /// The packet was addressed to an unrecognized local session (should usually be ignored)
@@ -166,6 +65,80 @@ pub enum Error {
     UnexpectedIoError(std::io::Error),
 }
 
+/// Result generated by the packet receive function, with possible payloads.
+pub enum ReceiveResult<'a, H: ApplicationLayer> {
+    /// Packet is valid, no action needs to be taken.
+    Ok,
+
+    /// Packet is valid and a data payload was decoded and authenticated.
+    ///
+    /// The returned reference is to the filled parts of the data buffer supplied to receive.
+    OkData(&'a mut [u8]),
+
+    /// Packet is valid and a new session was created.
+    ///
+    /// The session will have already been gated by the accept_new_session() method in the Host trait.
+    OkNewSession(Session<H>),
+
+    /// Packet appears valid but was ignored e.g. as a duplicate.
+    Ignored,
+}
+
+/// State information to associate with receiving contexts such as sockets or remote paths/endpoints.
+///
+/// This holds the data structures used to defragment incoming packets that are not associated with an
+/// existing session, which would be new attempts to create sessions. Typically one of these is associated
+/// with a single listen socket, local bound port, or other inbound endpoint.
+pub struct ReceiveContext<H: ApplicationLayer> {
+    initial_offer_defrag: Mutex<RingBufferMap<u32, GatherArray<H::IncomingPacketBuffer, KEY_EXCHANGE_MAX_FRAGMENTS>, 1024, 128>>,
+    incoming_init_header_check_cipher: Aes,
+}
+
+/// ZSSP bi-directional packet transport channel.
+pub struct Session<Layer: ApplicationLayer> {
+    /// This side's session ID (unique on this side)
+    pub id: SessionId,
+
+    /// An arbitrary object associated with session (type defined in Host trait)
+    pub user_data: Layer::SessionUserData,
+
+    send_counter: Counter,                            // Outgoing packet counter and nonce state
+    psk: Secret<64>,                                  // Arbitrary PSK provided by external code
+    noise_ss: Secret<48>,                             // Static raw shared ECDH NIST P-384 key
+    header_check_cipher: Aes,                         // Cipher used for header MAC (fragmentation)
+    state: RwLock<SessionMutableState>,               // Mutable parts of state (other than defrag buffers)
+    remote_s_public_hash: [u8; 48],                   // SHA384(remote static public key blob)
+    remote_s_public_raw: [u8; P384_PUBLIC_KEY_SIZE],  // Remote NIST P-384 static public key
+
+    defrag: Mutex<RingBufferMap<u32, GatherArray<Layer::IncomingPacketBuffer, MAX_FRAGMENTS>, 8, 8>>,
+}
+
+struct SessionMutableState {
+    remote_session_id: Option<SessionId>,                 // The other side's 48-bit session ID
+    session_keys: [Option<SessionKey>; KEY_HISTORY_SIZE], // Buffers to store current, next, and last active key
+    cur_session_key_idx: usize,                           // Pointer used for keys[] circular buffer
+    offer: Option<Box<EphemeralOffer>>,                   // Most recent ephemeral offer sent to remote
+    last_remote_offer: i64,                               // Time of most recent ephemeral offer (ms)
+}
+
+
+/// Alice's KEY_OFFER, remembered so Noise agreement process can resume on KEY_COUNTER_OFFER.
+struct EphemeralOffer {
+    id: [u8; 16],                                 // Arbitrary random offer ID
+    creation_time: i64,                           // Local time when offer was created
+    ratchet_count: u64,                           // Ratchet count starting at zero for initial offer
+    ratchet_key: Option<Secret<64>>,              // Ratchet key from previous offer
+    ss_key: Secret<64>,                           // Shared secret in-progress, at state after offer sent
+    alice_e_keypair: P384KeyPair,                 // NIST P-384 key pair (Noise ephemeral key for Alice)
+    alice_e1_keypair: Option<pqc_kyber::Keypair>, // Kyber1024 key pair (agreement result mixed post-Noise)
+}
+
+
+
+////////////////////////////////////////////////////////////////
+// functions
+////////////////////////////////////////////////////////////////
+
 impl From<std::io::Error> for Error {
     #[cold]
     #[inline(never)]
@@ -201,168 +174,6 @@ impl std::fmt::Debug for Error {
     }
 }
 
-/// Result generated by the packet receive function, with possible payloads.
-pub enum ReceiveResult<'a, H: ApplicationLayer> {
-    /// Packet is valid, no action needs to be taken.
-    Ok,
-
-    /// Packet is valid and a data payload was decoded and authenticated.
-    ///
-    /// The returned reference is to the filled parts of the data buffer supplied to receive.
-    OkData(&'a mut [u8]),
-
-    /// Packet is valid and a new session was created.
-    ///
-    /// The session will have already been gated by the accept_new_session() method in the Host trait.
-    OkNewSession(Session<H>),
-
-    /// Packet appears valid but was ignored e.g. as a duplicate.
-    Ignored,
-}
-
-/// 48-bit session ID (most significant 16 bits of u64 are unused)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[repr(transparent)]
-pub struct SessionId(u64);
-
-impl SessionId {
-    /// The nil session ID used in messages initiating a new session.
-    ///
-    /// This is all 1's so that ZeroTier can easily tell the difference between ZSSP init packets
-    /// and ZeroTier V1 packets.
-    pub const NIL: SessionId = SessionId(0xffffffffffff);
-
-    #[inline]
-    pub fn new_from_u64(i: u64) -> Option<SessionId> {
-        if i < Self::NIL.0 {
-            Some(Self(i))
-        } else {
-            None
-        }
-    }
-
-    #[inline]
-    pub fn new_from_reader<R: Read>(r: &mut R) -> std::io::Result<Option<SessionId>> {
-        let mut tmp = 0_u64.to_ne_bytes();
-        r.read_exact(&mut tmp[..SESSION_ID_SIZE])?;
-        Ok(Self::new_from_u64(u64::from_le_bytes(tmp)))
-    }
-
-    #[inline]
-    pub fn new_random() -> Self {
-        Self(random::next_u64_secure() % Self::NIL.0)
-    }
-}
-
-impl From<SessionId> for u64 {
-    #[inline(always)]
-    fn from(sid: SessionId) -> Self {
-        sid.0
-    }
-}
-
-/// State information to associate with receiving contexts such as sockets or remote paths/endpoints.
-///
-/// This holds the data structures used to defragment incoming packets that are not associated with an
-/// existing session, which would be new attempts to create sessions. Typically one of these is associated
-/// with a single listen socket, local bound port, or other inbound endpoint.
-pub struct ReceiveContext<H: ApplicationLayer> {
-    initial_offer_defrag: Mutex<RingBufferMap<u32, GatherArray<H::IncomingPacketBuffer, KEY_EXCHANGE_MAX_FRAGMENTS>, 1024, 128>>,
-    incoming_init_header_check_cipher: Aes,
-}
-
-/// Trait to implement to integrate the session into an application.
-///
-/// Templating the session on this trait lets the code here be almost entirely transport, OS,
-/// and use case independent.
-pub trait ApplicationLayer: Sized {
-    /// Arbitrary opaque object associated with a session, such as a connection state object.
-    type SessionUserData;
-
-    /// Arbitrary object that dereferences to the session, such as Arc<Session<Self>>.
-    type SessionRef: Deref<Target = Session<Self>>;
-
-    /// A buffer containing data read from the network that can be cached.
-    ///
-    /// This can be e.g. a pooled buffer that automatically returns itself to the pool when dropped.
-    /// It can also just be a Vec<u8> or Box<[u8]> or something like that.
-    type IncomingPacketBuffer: AsRef<[u8]>;
-
-    /// Remote physical address on whatever transport this session is using.
-    type RemoteAddress;
-
-    /// Rate limit for attempts to rekey existing sessions in milliseconds (default: 2000).
-    const REKEY_RATE_LIMIT_MS: i64 = 2000;
-
-    /// Get a reference to this host's static public key blob.
-    ///
-    /// This must contain a NIST P-384 public key but can contain other information. In ZeroTier this
-    /// is a byte serialized identity. It could just be a naked NIST P-384 key if that's all you need.
-    fn get_local_s_public_raw(&self) -> &[u8];
-
-    /// Get SHA384(this host's static public key blob).
-    ///
-    /// This allows us to avoid computing SHA384(public key blob) over and over again.
-    fn get_local_s_public_hash(&self) -> &[u8; 48];
-
-    /// Get a reference to this hosts' static public key's NIST P-384 secret key pair.
-    ///
-    /// This must return the NIST P-384 public key that is contained within the static public key blob.
-    fn get_local_s_keypair(&self) -> &P384KeyPair;
-
-    /// Extract the NIST P-384 ECC public key component from a static public key blob or return None on failure.
-    ///
-    /// This is called to parse the static public key blob from the other end and extract its NIST P-384 public
-    /// key. SECURITY NOTE: the information supplied here is from the wire so care must be taken to parse it
-    /// safely and fail on any error or corruption.
-    fn extract_s_public_from_raw(static_public: &[u8]) -> Option<P384PublicKey>;
-
-    /// Look up a local session by local session ID or return None if not found.
-    fn lookup_session(&self, local_session_id: SessionId) -> Option<Self::SessionRef>;
-
-    /// Rate limit and check an attempted new session (called before accept_new_session).
-    fn check_new_session(&self, rc: &ReceiveContext<Self>, remote_address: &Self::RemoteAddress) -> bool;
-
-    /// Check whether a new session should be accepted.
-    ///
-    /// On success a tuple of local session ID, static secret, and associated object is returned. The
-    /// static secret is whatever results from agreement between the local and remote static public
-    /// keys.
-    fn accept_new_session(
-        &self,
-        receive_context: &ReceiveContext<Self>,
-        remote_address: &Self::RemoteAddress,
-        remote_static_public: &[u8],
-        remote_metadata: &[u8],
-    ) -> Option<(SessionId, Secret<64>, Self::SessionUserData)>;
-}
-
-/// ZSSP bi-directional packet transport channel.
-pub struct Session<Layer: ApplicationLayer> {
-    /// This side's session ID (unique on this side)
-    pub id: SessionId,
-
-    /// An arbitrary object associated with session (type defined in Host trait)
-    pub user_data: Layer::SessionUserData,
-
-    send_counter: Counter,                            // Outgoing packet counter and nonce state
-    psk: Secret<64>,                                  // Arbitrary PSK provided by external code
-    noise_ss: Secret<48>,                             // Static raw shared ECDH NIST P-384 key
-    header_check_cipher: Aes,                         // Cipher used for header MAC (fragmentation)
-    state: RwLock<SessionMutableState>,               // Mutable parts of state (other than defrag buffers)
-    remote_s_public_hash: [u8; 48],                   // SHA384(remote static public key blob)
-    remote_s_public_raw: [u8; P384_PUBLIC_KEY_SIZE],  // Remote NIST P-384 static public key
-
-    defrag: Mutex<RingBufferMap<u32, GatherArray<Layer::IncomingPacketBuffer, MAX_FRAGMENTS>, 8, 8>>,
-}
-
-struct SessionMutableState {
-    remote_session_id: Option<SessionId>,         // The other side's 48-bit session ID
-    session_keys: [Option<SessionKey>; KEY_HISTORY_SIZE], // Buffers to store current, next, and last active key
-    cur_session_key_idx: usize,                               // Pointer used for keys[] circular buffer
-    offer: Option<Box<EphemeralOffer>>,           // Most recent ephemeral offer sent to remote
-    last_remote_offer: i64,                       // Time of most recent ephemeral offer (ms)
-}
 
 impl<Layer: ApplicationLayer> Session<Layer> {
     /// Create a new session and send an initial key offer message to the other end.
@@ -1267,84 +1078,6 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
     }
 }
 
-/// Outgoing packet counter with strictly ordered atomic semantics.
-#[repr(transparent)]
-struct Counter(AtomicU64);
-
-impl Counter {
-    #[inline(always)]
-    fn new() -> Self {
-        // Using a random value has no security implication. Zero would be fine. This just
-        // helps randomize packet contents a bit.
-        Self(AtomicU64::new(random::next_u32_secure() as u64))
-    }
-
-    /// Get the value most recently used to send a packet.
-    #[inline(always)]
-    fn previous(&self) -> CounterValue {
-        CounterValue(self.0.load(Ordering::SeqCst))
-    }
-
-    /// Get a counter value for the next packet being sent.
-    #[inline(always)]
-    fn next(&self) -> CounterValue {
-        CounterValue(self.0.fetch_add(1, Ordering::SeqCst))
-    }
-}
-
-/// A value of the outgoing packet counter.
-///
-/// The used portion of the packet counter is the least significant 32 bits, but the internal
-/// counter state is kept as a 64-bit integer. This makes it easier to correctly handle
-/// key expiration after usage limits are reached without complicated logic to handle 32-bit
-/// wrapping. Usage limits are below 2^32 so the actual 32-bit counter will not wrap for a
-/// given shared secret key.
-#[repr(transparent)]
-#[derive(Copy, Clone)]
-struct CounterValue(u64);
-
-impl CounterValue {
-    #[inline(always)]
-    pub fn to_u32(&self) -> u32 {
-        self.0 as u32
-    }
-}
-
-/// "Canonical header" for generating 96-bit AES-GCM nonce and for inclusion in HMACs.
-///
-/// This is basically the actual header but with fragment count and fragment total set to zero.
-/// Fragmentation is not considered when authenticating the entire packet. A separate header
-/// check code is used to make fragmentation itself more robust, but that's outside the scope
-/// of AEAD authentication.
-#[derive(Clone, Copy)]
-#[repr(C, packed)]
-struct CanonicalHeader(u64, u32);
-
-impl CanonicalHeader {
-    #[inline(always)]
-    pub fn make(session_id: SessionId, packet_type: u8, counter: u32) -> Self {
-        CanonicalHeader(
-            (u64::from(session_id) | (packet_type as u64).wrapping_shl(48)).to_le(),
-            counter.to_le(),
-        )
-    }
-
-    #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8; 12] {
-        memory::as_byte_array(self)
-    }
-}
-
-/// Alice's KEY_OFFER, remembered so Noise agreement process can resume on KEY_COUNTER_OFFER.
-struct EphemeralOffer {
-    id: [u8; 16],                                 // Arbitrary random offer ID
-    creation_time: i64,                           // Local time when offer was created
-    ratchet_count: u64,                           // Ratchet count starting at zero for initial offer
-    ratchet_key: Option<Secret<64>>,              // Ratchet key from previous offer
-    ss_key: Secret<64>,                           // Shared secret in-progress, at state after offer sent
-    alice_e_keypair: P384KeyPair,                 // NIST P-384 key pair (Noise ephemeral key for Alice)
-    alice_e1_keypair: Option<pqc_kyber::Keypair>, // Kyber1024 key pair (agreement result mixed post-Noise)
-}
 
 /// Create and send an ephemeral offer, returning the EphemeralOffer part that must be saved.
 fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
@@ -1635,13 +1368,6 @@ fn parse_key_offer_after_header(
     ))
 }
 
-/// Was this side the one who sent the first offer (Alice) or countered (Bob).
-/// Note that role is not fixed. Either side can take either role. It's just who
-/// initiated first.
-enum Role {
-    Alice,
-    Bob,
-}
 
 /// Key lifetime manager state and logic (separate to spotlight and keep clean)
 struct KeyLifetime {
@@ -1772,225 +1498,4 @@ fn secret_fingerprint(key: &[u8]) -> [u8; 48] {
     tmp.update("fp".as_bytes());
     tmp.update(key);
     tmp.finish()
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::LinkedList;
-    use std::sync::{Arc, Mutex};
-    use zerotier_utils::hex;
-
-    #[allow(unused_imports)]
-    use super::*;
-
-    struct TestHost {
-        local_s: P384KeyPair,
-        local_s_hash: [u8; 48],
-        psk: Secret<64>,
-        session: Mutex<Option<Arc<Session<Box<TestHost>>>>>,
-        session_id_counter: Mutex<u64>,
-        queue: Mutex<LinkedList<Vec<u8>>>,
-        key_id: Mutex<[u8; 16]>,
-        this_name: &'static str,
-        other_name: &'static str,
-    }
-
-    impl TestHost {
-        fn new(psk: Secret<64>, this_name: &'static str, other_name: &'static str) -> Self {
-            let local_s = P384KeyPair::generate();
-            let local_s_hash = SHA384::hash(local_s.public_key_bytes());
-            Self {
-                local_s,
-                local_s_hash,
-                psk,
-                session: Mutex::new(None),
-                session_id_counter: Mutex::new(1),
-                queue: Mutex::new(LinkedList::new()),
-                key_id: Mutex::new([0; 16]),
-                this_name,
-                other_name,
-            }
-        }
-    }
-
-    impl ApplicationLayer for Box<TestHost> {
-        type SessionUserData = u32;
-        type SessionRef = Arc<Session<Box<TestHost>>>;
-        type IncomingPacketBuffer = Vec<u8>;
-        type RemoteAddress = u32;
-
-        const REKEY_RATE_LIMIT_MS: i64 = 0;
-
-        fn get_local_s_public_raw(&self) -> &[u8] {
-            self.local_s.public_key_bytes()
-        }
-
-        fn get_local_s_public_hash(&self) -> &[u8; 48] {
-            &self.local_s_hash
-        }
-
-        fn get_local_s_keypair(&self) -> &P384KeyPair {
-            &self.local_s
-        }
-
-        fn extract_s_public_from_raw(static_public: &[u8]) -> Option<P384PublicKey> {
-            P384PublicKey::from_bytes(static_public)
-        }
-
-        fn lookup_session(&self, local_session_id: SessionId) -> Option<Self::SessionRef> {
-            self.session.lock().unwrap().as_ref().and_then(|s| {
-                if s.id == local_session_id {
-                    Some(s.clone())
-                } else {
-                    None
-                }
-            })
-        }
-
-        fn check_new_session(&self, _: &ReceiveContext<Self>, _: &Self::RemoteAddress) -> bool {
-            true
-        }
-
-        fn accept_new_session(
-            &self,
-            _: &ReceiveContext<Self>,
-            _: &u32,
-            _: &[u8],
-            _: &[u8],
-        ) -> Option<(SessionId, Secret<64>, Self::SessionUserData)> {
-            loop {
-                let mut new_id = self.session_id_counter.lock().unwrap();
-                *new_id += 1;
-                return Some((SessionId::new_from_u64(*new_id).unwrap(), self.psk.clone(), 0));
-            }
-        }
-    }
-
-    #[allow(unused_variables)]
-    #[test]
-    fn establish_session() {
-        let mut data_buf = [0_u8; (1280 - 32) * MAX_FRAGMENTS];
-        let mut mtu_buffer = [0_u8; 1280];
-        let mut psk: Secret<64> = Secret::default();
-        random::fill_bytes_secure(&mut psk.0);
-
-        let alice_host = Box::new(TestHost::new(psk.clone(), "alice", "bob"));
-        let bob_host = Box::new(TestHost::new(psk.clone(), "bob", "alice"));
-        let alice_rc: Box<ReceiveContext<Box<TestHost>>> = Box::new(ReceiveContext::new(&alice_host));
-        let bob_rc: Box<ReceiveContext<Box<TestHost>>> = Box::new(ReceiveContext::new(&bob_host));
-
-        //println!("zssp: size of session (bytes): {}", std::mem::size_of::<Session<Box<TestHost>>>());
-
-        let _ = alice_host.session.lock().unwrap().insert(Arc::new(
-            Session::start_new(
-                &alice_host,
-                |data| bob_host.queue.lock().unwrap().push_front(data.to_vec()),
-                SessionId::new_random(),
-                bob_host.local_s.public_key_bytes(),
-                &[],
-                &psk,
-                1,
-                mtu_buffer.len(),
-                1,
-            )
-            .unwrap(),
-        ));
-
-        let mut ts = 0;
-        for test_loop in 0..256 {
-            for host in [&alice_host, &bob_host] {
-                let send_to_other = |data: &mut [u8]| {
-                    if std::ptr::eq(host, &alice_host) {
-                        bob_host.queue.lock().unwrap().push_front(data.to_vec());
-                    } else {
-                        alice_host.queue.lock().unwrap().push_front(data.to_vec());
-                    }
-                };
-
-                let rc = if std::ptr::eq(host, &alice_host) {
-                    &alice_rc
-                } else {
-                    &bob_rc
-                };
-
-                loop {
-                    if let Some(qi) = host.queue.lock().unwrap().pop_back() {
-                        let qi_len = qi.len();
-                        ts += 1;
-                        let r = rc.receive(host, &0, send_to_other, &mut data_buf, qi, mtu_buffer.len(), ts);
-                        if r.is_ok() {
-                            let r = r.unwrap();
-                            match r {
-                                ReceiveResult::Ok => {
-                                    //println!("zssp: {} => {} ({}): Ok", host.other_name, host.this_name, qi_len);
-                                }
-                                ReceiveResult::OkData(data) => {
-                                    //println!("zssp: {} => {} ({}): OkData length=={}", host.other_name, host.this_name, qi_len, data.len());
-                                    assert!(!data.iter().any(|x| *x != 0x12));
-                                }
-                                ReceiveResult::OkNewSession(new_session) => {
-                                    println!(
-                                        "zssp: {} => {} ({}): OkNewSession ({})",
-                                        host.other_name,
-                                        host.this_name,
-                                        qi_len,
-                                        u64::from(new_session.id)
-                                    );
-                                    let mut hs = host.session.lock().unwrap();
-                                    assert!(hs.is_none());
-                                    let _ = hs.insert(Arc::new(new_session));
-                                }
-                                ReceiveResult::Ignored => {
-                                    println!("zssp: {} => {} ({}): Ignored", host.other_name, host.this_name, qi_len);
-                                }
-                            }
-                        } else {
-                            println!(
-                                "zssp: {} => {} ({}): error: {}",
-                                host.other_name,
-                                host.this_name,
-                                qi_len,
-                                r.err().unwrap().to_string()
-                            );
-                            panic!();
-                        }
-                    } else {
-                        break;
-                    }
-                }
-
-                data_buf.fill(0x12);
-                if let Some(session) = host.session.lock().unwrap().as_ref().cloned() {
-                    if session.established() {
-                        {
-                            let mut key_id = host.key_id.lock().unwrap();
-                            let security_info = session.status().unwrap();
-                            if !security_info.0.eq(key_id.as_ref()) {
-                                *key_id = security_info.0;
-                                println!(
-                                    "zssp: new key at {}: fingerprint {} ratchet {} kyber {}",
-                                    host.this_name,
-                                    hex::to_string(key_id.as_ref()),
-                                    security_info.2,
-                                    security_info.3
-                                );
-                            }
-                        }
-                        for _ in 0..4 {
-                            assert!(session
-                                .send(
-                                    send_to_other,
-                                    &mut mtu_buffer,
-                                    &data_buf[..((random::xorshift64_random() as usize) % data_buf.len())]
-                                )
-                                .is_ok());
-                        }
-                        if (test_loop % 8) == 0 && test_loop >= 8 && host.this_name.eq("alice") {
-                            session.service(host, send_to_other, &[], mtu_buffer.len(), test_loop as i64, true);
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
