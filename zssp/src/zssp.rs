@@ -375,7 +375,7 @@ impl<Layer: ApplicationLayer> Session<Layer> {
     /// * `user_data` - Arbitrary object to put into session
     /// * `mtu` - Physical wire maximum transmition unit
     /// * `current_time` - Current monotonic time in milliseconds
-    pub fn new<SendFunction: FnMut(&mut [u8])>(
+    pub fn start_new<SendFunction: FnMut(&mut [u8])>(
         host: &Layer,
         mut send: SendFunction,
         local_session_id: SessionId,
@@ -386,10 +386,11 @@ impl<Layer: ApplicationLayer> Session<Layer> {
         mtu: usize,
         current_time: i64,
     ) -> Result<Self, Error> {
-        if let Some(remote_s_public_p384) = Layer::extract_s_public_from_raw(remote_s_public_raw) {
-            if let Some(noise_ss) = host.get_local_s_keypair().agree(&remote_s_public_p384) {
+        let bob_s_public_raw = remote_s_public_raw;
+        if let Some(bob_s_public) = Layer::extract_s_public_from_raw(bob_s_public_raw) {
+            if let Some(noise_ss) = host.get_local_s_keypair().agree(&bob_s_public) {
                 let send_counter = Counter::new();
-                let remote_s_public_hash = SHA384::hash(remote_s_public_raw);
+                let bob_s_public_hash = SHA384::hash(bob_s_public_raw);
                 let header_check_cipher =
                     Aes::new(kbkdf512(noise_ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>());
                 if let Ok(offer) = send_ephemeral_offer(
@@ -399,8 +400,8 @@ impl<Layer: ApplicationLayer> Session<Layer> {
                     None,
                     host.get_local_s_public_raw(),
                     offer_metadata,
-                    &remote_s_public_p384,
-                    &remote_s_public_hash,
+                    &bob_s_public,
+                    &bob_s_public_hash,
                     &noise_ss,
                     None,
                     None,
@@ -421,8 +422,8 @@ impl<Layer: ApplicationLayer> Session<Layer> {
                             offer: Some(offer),
                             last_remote_offer: i64::MIN,
                         }),
-                        remote_s_public_hash,
-                        remote_s_public_raw: remote_s_public_p384.as_bytes().clone(),
+                        remote_s_public_hash: bob_s_public_hash,
+                        remote_s_public_raw: bob_s_public.as_bytes().clone(),
                         defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
                     });
                 }
@@ -1162,7 +1163,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                                 .agree(&bob_e_public)
                                 .ok_or(Error::FailedAuthentication)?;
 
-                            let mut noise_ik_key = Secret(hmac_sha512(
+                            let noise_ik_key = Secret(hmac_sha512(
                                 session.psk.as_bytes(),
                                 &hmac_sha512(
                                     &hmac_sha512(&hmac_sha512(offer.ss_key.as_bytes(), bob_e_public.as_bytes()), noise_ee.as_bytes()),
@@ -1881,7 +1882,7 @@ mod tests {
         //println!("zssp: size of session (bytes): {}", std::mem::size_of::<Session<Box<TestHost>>>());
 
         let _ = alice_host.session.lock().unwrap().insert(Arc::new(
-            Session::new(
+            Session::start_new(
                 &alice_host,
                 |data| bob_host.queue.lock().unwrap().push_front(data.to_vec()),
                 SessionId::new_random(),
