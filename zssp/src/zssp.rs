@@ -227,15 +227,15 @@ impl<Layer: ApplicationLayer> Session<Layer> {
         host: &Layer,
         mut send: SendFunction,
         local_session_id: SessionId,
-        remote_s_public_raw: &[u8],
+        remote_s_public_blob_raw: &[u8],
         offer_metadata: &[u8],
         psk: &Secret<64>,
         user_data: Layer::SessionUserData,
         mtu: usize,
         current_time: i64,
     ) -> Result<Self, Error> {
-        let bob_s_public_raw = remote_s_public_raw;
-        if let Some(bob_s_public) = Layer::extract_s_public_from_raw(bob_s_public_raw) {
+        let bob_s_public_blob_raw = remote_s_public_blob_raw;
+        if let Some(bob_s_public) = Layer::extract_s_public_from_raw(bob_s_public_blob_raw) {
             if let Some(noise_ss) = host.get_local_s_keypair().agree(&bob_s_public) {
                 let send_counter = Counter::new();
                 let bob_s_public_hash = SHA384::hash(bob_s_public_raw);
