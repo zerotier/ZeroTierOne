@@ -3,10 +3,15 @@
 mod tests {
     use std::collections::LinkedList;
     use std::sync::{Arc, Mutex};
+    use zerotier_crypto::hash::SHA384;
+    use zerotier_crypto::p384::{P384KeyPair, P384PublicKey};
+    use zerotier_crypto::random;
+    use zerotier_crypto::secret::Secret;
     use zerotier_utils::hex;
 
     #[allow(unused_imports)]
-    use super::*;
+    use crate::*;
+    use constants::*;
 
     struct TestHost {
         local_s: P384KeyPair,
@@ -46,11 +51,11 @@ mod tests {
 
         const REKEY_RATE_LIMIT_MS: i64 = 0;
 
-        fn get_local_s_public_raw(&self) -> &[u8] {
+        fn get_local_s_public_blob(&self) -> &[u8] {
             self.local_s.public_key_bytes()
         }
 
-        fn get_local_s_public_hash(&self) -> &[u8; 48] {
+        fn get_local_s_public_blob_hash(&self) -> &[u8; 48] {
             &self.local_s_hash
         }
 
