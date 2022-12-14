@@ -8,6 +8,6 @@ Implemented a safer version of write_all for zssp to use. This has 3 benefits: i
 
 Implemented a safer version of read_exact for zssp to use. This has similar benefits to the previous change.
 
-Refactored most buffer logic to use safe_read_exact and safe_write_all, the resulting code is less verbose and easier to analyze and verify. Because of this refactor the buffer overrun below was caught.
+Refactored most buffer logic to use safe_read_exact and safe_write_all, the resulting code is less verbose and easier to analyze: Because of this refactor the buffer overrun below was caught.
 
 Fixed a buffer overrun panic when decoding alice_ratchet_key_fingerprint

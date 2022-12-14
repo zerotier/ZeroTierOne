@@ -106,7 +106,7 @@ pub struct Session<Layer: ApplicationLayer> {
     noise_ss: Secret<48>,                             // Static raw shared ECDH NIST P-384 key
     header_check_cipher: Aes,                         // Cipher used for header MAC (fragmentation)
     state: RwLock<SessionMutableState>,               // Mutable parts of state (other than defrag buffers)
-    remote_s_public_hash: [u8; 48],                   // SHA384(remote static public key blob)
+    remote_s_public_blob_hash: [u8; 48],                   // SHA384(remote static public key blob)
     remote_s_public_raw: [u8; P384_PUBLIC_KEY_SIZE],  // Remote NIST P-384 static public key
 
     defrag: Mutex<RingBufferMap<u32, GatherArray<Layer::IncomingPacketBuffer, MAX_FRAGMENTS>, 8, 8>>,
@@ -238,7 +238,7 @@ impl<Layer: ApplicationLayer> Session<Layer> {
         if let Some(bob_s_public) = Layer::extract_s_public_from_raw(bob_s_public_blob_raw) {
             if let Some(noise_ss) = host.get_local_s_keypair().agree(&bob_s_public) {
                 let send_counter = Counter::new();
-                let bob_s_public_hash = SHA384::hash(bob_s_public_raw);
+                let bob_s_public_blob_hash = SHA384::hash(bob_s_public_blob_raw);
                 let header_check_cipher =
                 Aes::new(kbkdf512(noise_ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>());
                 if let Ok(offer) = send_ephemeral_offer(
@@ -249,7 +249,7 @@ impl<Layer: ApplicationLayer> Session<Layer> {
                     host.get_local_s_public_raw(),
                     offer_metadata,
                     &bob_s_public,
-                    &bob_s_public_hash,
+                    &bob_s_public_blob_hash,
                     &noise_ss,
                     None,
                     None,
@@ -270,7 +270,7 @@ impl<Layer: ApplicationLayer> Session<Layer> {
                             offer: Some(offer),
                             last_remote_offer: i64::MIN,
                         }),
-                        remote_s_public_hash: bob_s_public_hash,
+                        remote_s_public_blob_hash: bob_s_public_blob_hash,
                         remote_s_public_raw: bob_s_public.as_bytes().clone(),
                         defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
                     });
@@ -417,7 +417,7 @@ impl<Layer: ApplicationLayer> Session<Layer> {
                     host.get_local_s_public_raw(),
                     offer_metadata,
                     &remote_s_public,
-                    &self.remote_s_public_hash,
+                    &self.remote_s_public_blob_hash,
                     &self.noise_ss,
                     state.session_keys[state.cur_session_key_idx].as_ref(),
                     if state.remote_session_id.is_some() {
@@ -762,7 +762,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     }
 
                     // Parse payload and get alice's session ID, alice's public blob, metadata, and (if present) Alice's Kyber1024 public.
-                    let (offer_id, alice_session_id, alice_s_public_raw, alice_metadata, alice_hk_public_raw, alice_ratchet_key_fingerprint) =
+                    let (offer_id, alice_session_id, alice_s_public_blob_raw, alice_metadata, alice_hk_public_raw, alice_ratchet_key_fingerprint) =
                     parse_key_offer_after_header(&kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..kex_packet_len], packet_type)?;
 
                     // We either have a session, in which case they should have supplied a ratchet key fingerprint, or
@@ -772,7 +772,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     }
 
                     // Extract alice's static NIST P-384 public key from her public blob.
-                    let alice_s_public = Layer::extract_s_public_from_raw(alice_s_public_raw).ok_or(Error::InvalidPacket)?;
+                    let alice_s_public = Layer::extract_s_public_from_raw(alice_s_public_blob_raw).ok_or(Error::InvalidPacket)?;
 
                     // Key agreement: both sides' static P-384 keys.
                     let noise_ss = host
@@ -802,7 +802,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     // then create new sessions.
                     let (new_session, ratchet_key, ratchet_count) = if let Some(session) = session.as_ref() {
                         // Existing session identity must match the one in this offer.
-                        if !session.remote_s_public_hash.eq(&SHA384::hash(&alice_s_public_raw)) {
+                        if !session.remote_s_public_blob_hash.eq(&SHA384::hash(&alice_s_public_blob_raw)) {
                             return Err(Error::FailedAuthentication);
                         }
 
@@ -827,7 +827,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                         (None, ratchet_key, ratchet_count)
                     } else {
                         if let Some((new_session_id, psk, associated_object)) =
-                        host.accept_new_session(self, remote_address, alice_s_public_raw, alice_metadata)
+                        host.accept_new_session(self, remote_address, alice_s_public_blob_raw, alice_metadata)
                         {
                             let header_check_cipher = Aes::new(
                                 kbkdf512(noise_ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>(),
@@ -847,7 +847,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                                         offer: None,
                                         last_remote_offer: current_time,
                                     }),
-                                    remote_s_public_hash: SHA384::hash(&alice_s_public_raw),
+                                    remote_s_public_blob_hash: SHA384::hash(&alice_s_public_blob_raw),
                                     remote_s_public_raw: alice_s_public.as_bytes().clone(),
                                     defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
                                 }),
@@ -1160,6 +1160,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     let mut idx = HEADER_SIZE;
 
     idx = safe_write_all(&mut packet_buf, idx, &[SESSION_PROTOCOL_VERSION])?;
+    //TODO: check this, the below line is supposed to be the blob, not just the key, right?
     idx = safe_write_all(&mut packet_buf, idx, alice_e_keypair.public_key_bytes())?;
     let end_of_plaintext = idx;
 
@@ -1343,8 +1344,8 @@ fn parse_key_offer_after_header(
     session_id_buf[..SESSION_ID_SIZE].copy_from_slice(safe_read_exact(&mut p, SESSION_ID_SIZE)?);
     let alice_session_id = SessionId::new_from_u64(u64::from_le_bytes(session_id_buf)).ok_or(Error::InvalidPacket)?;
 
-    let alice_s_public_len = varint_safe_read(&mut p)?;
-    let alice_s_public_raw = safe_read_exact(&mut p, alice_s_public_len as usize)?;
+    let alice_s_public_blob_len = varint_safe_read(&mut p)?;
+    let alice_s_public_blob_raw = safe_read_exact(&mut p, alice_s_public_blob_len as usize)?;
 
     let alice_metadata_len = varint_safe_read(&mut p)?;
     let alice_metadata = safe_read_exact(&mut p, alice_metadata_len as usize)?;
@@ -1370,7 +1371,7 @@ fn parse_key_offer_after_header(
     Ok((
         offer_id,//always 16 bytes
         alice_session_id,
-        alice_s_public_raw,
+        alice_s_public_blob_raw,
         alice_metadata,
         alice_hk_public_raw,
         alice_ratchet_key_fingerprint,//always 16 bytes
