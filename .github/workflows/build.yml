@@ -17,6 +17,7 @@ jobs:
         target: aarch64-apple-darwin
         override: true
         components: rustfmt, clippy
+
     - name: Set up cargo cache
       uses: actions/cache@v3
       continue-on-error: false
