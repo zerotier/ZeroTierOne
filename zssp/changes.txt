@@ -5,3 +5,5 @@ zssp has been cut up into several files, only the new zssp.rs file contains the 
 Standardized the naming conventions for security variables throughout zssp.
 
 Implemented a safer version of write_all for zssp to use. This has 3 benefits: it completely prevents unknown io errors, making error handling easier and self-documenting; it completely prevents src from being truncated in dest, putting in an extra barrier to prevent catastrophic key truncation; and it has slightly less performance overhead than a write_all.
+
+Fixed a possible buffer overrun panic when decoding alice_ratchet_key_fingerprint
