@@ -106,7 +106,7 @@ pub struct Session<Layer: ApplicationLayer> {
     noise_ss: Secret<48>,                             // Static raw shared ECDH NIST P-384 key
     header_check_cipher: Aes,                         // Cipher used for header MAC (fragmentation)
     state: RwLock<SessionMutableState>,               // Mutable parts of state (other than defrag buffers)
-    remote_s_public_blob_hash: [u8; 48],                   // SHA384(remote static public key blob)
+    remote_s_public_blob_hash: [u8; 48],              // SHA384(remote static public key blob)
     remote_s_public_raw: [u8; P384_PUBLIC_KEY_SIZE],  // Remote NIST P-384 static public key
 
     defrag: Mutex<RingBufferMap<u32, GatherArray<Layer::IncomingPacketBuffer, MAX_FRAGMENTS>, 8, 8>>,
@@ -181,6 +181,7 @@ fn safe_write_all(buffer: &mut [u8], idx: usize, src: &[u8]) -> Result<usize, Er
         dest[..amt].copy_from_slice(src);
         Ok(idx + amt)
     } else {
+        unlikely_branch();
         Err(Error::UnexpectedBufferOverrun)
     }
 }
@@ -199,6 +200,7 @@ fn safe_read_exact<'a>(src: &mut &'a [u8], amt: usize) -> Result<&'a [u8], Error
         *src = b;
         Ok(a)
     } else {
+        unlikely_branch();
         Err(Error::InvalidPacket)
     }
 }
@@ -227,18 +229,18 @@ impl<Layer: ApplicationLayer> Session<Layer> {
         host: &Layer,
         mut send: SendFunction,
         local_session_id: SessionId,
-        remote_s_public_blob_raw: &[u8],
+        remote_s_public_blob: &[u8],
         offer_metadata: &[u8],
         psk: &Secret<64>,
         user_data: Layer::SessionUserData,
         mtu: usize,
         current_time: i64,
     ) -> Result<Self, Error> {
-        let bob_s_public_blob_raw = remote_s_public_blob_raw;
-        if let Some(bob_s_public) = Layer::extract_s_public_from_raw(bob_s_public_blob_raw) {
+        let bob_s_public_blob = remote_s_public_blob;
+        if let Some(bob_s_public) = Layer::extract_s_public_from_raw(bob_s_public_blob) {
             if let Some(noise_ss) = host.get_local_s_keypair().agree(&bob_s_public) {
                 let send_counter = Counter::new();
-                let bob_s_public_blob_hash = SHA384::hash(bob_s_public_blob_raw);
+                let bob_s_public_blob_hash = SHA384::hash(bob_s_public_blob);
                 let header_check_cipher =
                 Aes::new(kbkdf512(noise_ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>());
                 if let Ok(offer) = send_ephemeral_offer(
@@ -246,7 +248,7 @@ impl<Layer: ApplicationLayer> Session<Layer> {
                     send_counter.next(),
                     local_session_id,
                     None,
-                    host.get_local_s_public_raw(),
+                    host.get_local_s_public_blob(),
                     offer_metadata,
                     &bob_s_public,
                     &bob_s_public_blob_hash,
@@ -418,7 +420,7 @@ impl<Layer: ApplicationLayer> Session<Layer> {
                     self.send_counter.next(),
                     self.id,
                     state.remote_session_id,
-                    host.get_local_s_public_raw(),
+                    host.get_local_s_public_blob(),
                     offer_metadata,
                     &remote_s_public,
                     &self.remote_s_public_blob_hash,
@@ -445,7 +447,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
         Self {
             initial_offer_defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
             incoming_init_header_check_cipher: Aes::new(
-                kbkdf512(host.get_local_s_public_hash(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>(),
+                kbkdf512(host.get_local_s_public_blob_hash(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>(),
             ),
         }
     }
@@ -728,7 +730,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
 
                     // Check the second HMAC first, which proves that the sender knows the recipient's full static identity.
                     if !hmac_sha384_2(
-                        host.get_local_s_public_hash(),
+                        host.get_local_s_public_blob_hash(),
                         canonical_header_bytes,
                         &kex_packet[HEADER_SIZE..hmac1_end],
                     )
@@ -754,9 +756,9 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     ////////////////////////////////////////////////////////////////
                     // Key agreement: alice (remote) ephemeral NIST P-384 <> local static NIST P-384
                     let (alice_e_public, noise_es) =
-                        P384PublicKey::from_bytes(&kex_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
-                        .and_then(|pk| host.get_local_s_keypair().agree(&pk).map(move |s| (pk, s)))
-                        .ok_or(Error::FailedAuthentication)?;
+                    P384PublicKey::from_bytes(&kex_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
+                    .and_then(|pk| host.get_local_s_keypair().agree(&pk).map(move |s| (pk, s)))
+                    .ok_or(Error::FailedAuthentication)?;
 
                     // Initial key derivation from starting point, mixing in alice's ephemeral public and the es.
                     let es_key = Secret(hmac_sha512(&hmac_sha512(&INITIAL_KEY, alice_e_public.as_bytes()), noise_es.as_bytes()));
@@ -773,8 +775,8 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     }
 
                     // Parse payload and get alice's session ID, alice's public blob, metadata, and (if present) Alice's Kyber1024 public.
-                    let (offer_id, alice_session_id, alice_s_public_blob_raw, alice_metadata, alice_hk_public_raw, alice_ratchet_key_fingerprint) =
-                        parse_key_offer_after_header(&kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..kex_packet_len], packet_type)?;
+                    let (offer_id, alice_session_id, alice_s_public_blob, alice_metadata, alice_hk_public_raw, alice_ratchet_key_fingerprint) =
+                    parse_key_offer_after_header(&kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..kex_packet_len], packet_type)?;
 
                     // We either have a session, in which case they should have supplied a ratchet key fingerprint, or
                     // we don't and they should not have supplied one.
@@ -783,7 +785,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     }
 
                     // Extract alice's static NIST P-384 public key from her public blob.
-                    let alice_s_public = Layer::extract_s_public_from_raw(alice_s_public_blob_raw).ok_or(Error::InvalidPacket)?;
+                    let alice_s_public = Layer::extract_s_public_from_raw(alice_s_public_blob).ok_or(Error::InvalidPacket)?;
 
                     // Key agreement: both sides' static P-384 keys.
                     let noise_ss = host
@@ -813,7 +815,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     // then create new sessions.
                     let (new_session, ratchet_key, ratchet_count) = if let Some(session) = session.as_ref() {
                         // Existing session identity must match the one in this offer.
-                        if !session.remote_s_public_blob_hash.eq(&SHA384::hash(&alice_s_public_blob_raw)) {
+                        if !session.remote_s_public_blob_hash.eq(&SHA384::hash(&alice_s_public_blob)) {
                             return Err(Error::FailedAuthentication);
                         }
 
@@ -838,7 +840,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                         (None, ratchet_key, ratchet_count)
                     } else {
                         if let Some((new_session_id, psk, associated_object)) =
-                        host.accept_new_session(self, remote_address, alice_s_public_blob_raw, alice_metadata)
+                        host.accept_new_session(self, remote_address, alice_s_public_blob, alice_metadata)
                         {
                             let header_check_cipher = Aes::new(
                                 kbkdf512(noise_ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>(),
@@ -858,7 +860,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                                         offer: None,
                                         last_remote_offer: current_time,
                                     }),
-                                    remote_s_public_blob_hash: SHA384::hash(&alice_s_public_blob_raw),
+                                    remote_s_public_blob_hash: SHA384::hash(&alice_s_public_blob),
                                     remote_s_public_raw: alice_s_public.as_bytes().clone(),
                                     defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
                                 }),
@@ -1021,13 +1023,13 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                             // <- e, ee, se
                             ////////////////////////////////////////////////////////////////
                             let (bob_e_public, noise_ee) =
-                                P384PublicKey::from_bytes(&kex_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
-                                .and_then(|pk| offer.alice_e_keypair.agree(&pk).map(move |s| (pk, s)))
-                                .ok_or(Error::FailedAuthentication)?;
+                            P384PublicKey::from_bytes(&kex_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
+                            .and_then(|pk| offer.alice_e_keypair.agree(&pk).map(move |s| (pk, s)))
+                            .ok_or(Error::FailedAuthentication)?;
                             let noise_se = host
-                                .get_local_s_keypair()
-                                .agree(&bob_e_public)
-                                .ok_or(Error::FailedAuthentication)?;
+                            .get_local_s_keypair()
+                            .agree(&bob_e_public)
+                            .ok_or(Error::FailedAuthentication)?;
 
                             let noise_ik_key = Secret(hmac_sha512(
                                 session.psk.as_bytes(),
@@ -1143,10 +1145,10 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     counter: CounterValue,
     alice_session_id: SessionId,
     bob_session_id: Option<SessionId>,
-    alice_s_public: &[u8],
+    alice_s_public_blob: &[u8],
     alice_metadata: &[u8],
-    bob_s_public_p384: &P384PublicKey,
-    bob_s_public_hash: &[u8],
+    bob_s_public: &P384PublicKey,
+    bob_s_public_blob_hash: &[u8],
     noise_ss: &Secret<48>,
     current_key: Option<&SessionKey>,
     header_check_cipher: Option<&Aes>, // None to use one based on the recipient's public key for initial contact
@@ -1157,7 +1159,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     let alice_e_keypair = P384KeyPair::generate();
 
     // Perform key agreement with the other side's static P-384 public key.
-    let noise_es = alice_e_keypair.agree(bob_s_public_p384).ok_or(Error::InvalidPacket)?;
+    let noise_es = alice_e_keypair.agree(bob_s_public).ok_or(Error::InvalidPacket)?;
 
     // Generate a Kyber1024 pair if enabled.
     let alice_hk_keypair = if JEDI {
@@ -1194,8 +1196,8 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
 
     idx = safe_write_all(&mut packet_buf, idx, &id)?;
     idx = safe_write_all(&mut packet_buf, idx, &alice_session_id.0.to_le_bytes()[..SESSION_ID_SIZE])?;
-    idx = varint_safe_write(&mut packet_buf, idx, alice_s_public.len() as u64)?;
-    idx = safe_write_all(&mut packet_buf, idx, alice_s_public)?;
+    idx = varint_safe_write(&mut packet_buf, idx, alice_s_public_blob.len() as u64)?;
+    idx = safe_write_all(&mut packet_buf, idx, alice_s_public_blob)?;
     idx = varint_safe_write(&mut packet_buf, idx, alice_metadata.len() as u64)?;
     idx = safe_write_all(&mut packet_buf, idx, alice_metadata)?;
     if let Some(hkp) = alice_hk_keypair {
@@ -1249,7 +1251,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     idx = safe_write_all(&mut packet_buf, idx, &hmac)?;
 
     // Add secondary HMAC to verify that the caller knows the recipient's full static public identity.
-    let hmac2 = hmac_sha384_2(bob_s_public_hash, canonical_header.as_bytes(), &packet_buf[HEADER_SIZE..idx]);
+    let hmac2 = hmac_sha384_2(bob_s_public_blob_hash, canonical_header.as_bytes(), &packet_buf[HEADER_SIZE..idx]);
     idx = safe_write_all(&mut packet_buf, idx, &hmac2)?;
 
     if let Some(header_check_cipher) = header_check_cipher {
@@ -1259,7 +1261,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
             send,
             &mut packet_buf[..idx],
             mtu,
-            &Aes::new(kbkdf512(&bob_s_public_hash, KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>()),
+            &Aes::new(kbkdf512(&bob_s_public_blob_hash, KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>()),
         );
     }
 
@@ -1373,7 +1375,7 @@ fn parse_key_offer_after_header(
     let alice_session_id = SessionId::new_from_u64(u64::from_le_bytes(session_id_buf)).ok_or(Error::InvalidPacket)?;
 
     let alice_s_public_blob_len = varint_safe_read(&mut p)?;
-    let alice_s_public_blob_raw = safe_read_exact(&mut p, alice_s_public_blob_len as usize)?;
+    let alice_s_public_blob = safe_read_exact(&mut p, alice_s_public_blob_len as usize)?;
 
     let alice_metadata_len = varint_safe_read(&mut p)?;
     let alice_metadata = safe_read_exact(&mut p, alice_metadata_len as usize)?;
@@ -1399,7 +1401,7 @@ fn parse_key_offer_after_header(
     Ok((
         offer_id,//always 16 bytes
         alice_session_id,
-        alice_s_public_blob_raw,
+        alice_s_public_blob,
         alice_metadata,
         alice_hk_public_raw,
         alice_ratchet_key_fingerprint,//always 16 bytes

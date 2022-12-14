@@ -32,12 +32,12 @@ pub trait ApplicationLayer: Sized {
     ///
     /// This must contain a NIST P-384 public key but can contain other information. In ZeroTier this
     /// is a byte serialized identity. It could just be a naked NIST P-384 key if that's all you need.
-    fn get_local_s_public_raw(&self) -> &[u8];
+    fn get_local_s_public_blob(&self) -> &[u8];
 
     /// Get SHA384(this host's static public key blob).
     ///
     /// This allows us to avoid computing SHA384(public key blob) over and over again.
-    fn get_local_s_public_hash(&self) -> &[u8; 48];
+    fn get_local_s_public_blob_hash(&self) -> &[u8; 48];
 
     /// Get a reference to this hosts' static public key's NIST P-384 secret key pair.
     ///
