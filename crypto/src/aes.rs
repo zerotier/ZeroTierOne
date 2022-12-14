@@ -298,6 +298,9 @@ mod fruit_flavored {
 #[cfg(not(target_os = "macos"))]
 mod openssl_aes {
     use crate::secret::Secret;
+    use foreign_types::ForeignTypeRef;
+    use openssl::cipher::CipherRef;
+    use openssl::cipher_ctx::{CipherCtx, CipherCtxRef};
     use openssl::symm::{Cipher, Crypter, Mode};
     use std::cell::UnsafeCell;
     use std::mem::MaybeUninit;
@@ -385,7 +388,7 @@ mod openssl_aes {
     unsafe impl Send for Aes {}
     unsafe impl Sync for Aes {}
 
-    pub struct AesGcm(Secret<32>, usize, Option<Crypter>, bool);
+    pub struct AesGcm(Secret<32>, usize, CipherCtx, bool);
 
     impl AesGcm {
         /// Construct a new AES-GCM cipher.
@@ -395,7 +398,7 @@ mod openssl_aes {
             match k.len() {
                 16 | 24 | 32 => {
                     s.0[..k.len()].copy_from_slice(k);
-                    Self(s, k.len(), None, encrypt)
+                    Self(s, k.len(), CipherCtx::new().unwrap(), encrypt)
                 }
                 _ => {
                     panic!("AES supports 128, 192, or 256 bits keys");
@@ -408,58 +411,64 @@ mod openssl_aes {
         #[inline]
         pub fn reset_init_gcm(&mut self, iv: &[u8]) {
             assert_eq!(iv.len(), 12);
-            let mut c = Crypter::new(
-                aes_gcm_by_key_size(self.1),
-                if self.3 {
-                    Mode::Encrypt
-                } else {
-                    Mode::Decrypt
-                },
-                &self.0 .0[..self.1],
-                Some(iv),
-            )
-            .unwrap();
-            c.pad(false);
-            //let _ = c.set_tag_len(16);
-            let _ = self.2.replace(c);
+            let t = aes_gcm_by_key_size(self.1);
+            let key = &self.0 .0[..self.1];
+            {
+                let f = match self.3 {
+                    true => CipherCtxRef::encrypt_init,
+                    false => CipherCtxRef::decrypt_init,
+                };
+
+                f(
+                    &mut self.2,
+                    Some(unsafe { CipherRef::from_ptr(t.as_ptr() as *mut _) }),
+                    None,
+                    None,
+                ).unwrap();
+
+                self.2.set_key_length(key.len()).unwrap();
+
+                if let Some(iv_len) = t.iv_len() {
+                    if iv.len() != iv_len {
+                        self.2.set_iv_length(iv.len()).unwrap();
+                    }
+                }
+
+                f(&mut self.2, None, Some(key), Some(iv)).unwrap();
+            }
+
+            self.2.set_padding(false);
         }
 
         #[inline(always)]
         pub fn aad(&mut self, aad: &[u8]) {
-            assert!(self.2.as_mut().unwrap().aad_update(aad).is_ok());
+            self.2.cipher_update(aad, None).unwrap();
         }
 
         /// Encrypt or decrypt (same operation with CTR mode)
         #[inline(always)]
         pub fn crypt(&mut self, input: &[u8], output: &mut [u8]) {
-            assert!(self.2.as_mut().unwrap().update(input, output).is_ok());
+            self.2.cipher_update(input, Some(output)).unwrap();
         }
 
         /// Encrypt or decrypt in place (same operation with CTR mode)
         #[inline(always)]
         pub fn crypt_in_place(&mut self, data: &mut [u8]) {
-            assert!(self
-                .2
-                .as_mut()
-                .unwrap()
-                .update(unsafe { &*std::slice::from_raw_parts(data.as_ptr(), data.len()) }, data)
-                .is_ok());
+            self.2.cipher_update(unsafe { &*std::slice::from_raw_parts(data.as_ptr(), data.len()) }, Some(data)).unwrap();
         }
 
         #[inline(always)]
         pub fn finish_encrypt(&mut self) -> [u8; 16] {
             let mut tag = [0_u8; 16];
-            let mut c = self.2.take().unwrap();
-            assert!(c.finalize(&mut tag).is_ok());
-            assert!(c.get_tag(&mut tag).is_ok());
+            self.2.cipher_final(&mut tag).unwrap();
+            self.2.tag(&mut tag).unwrap();
             tag
         }
 
         #[inline(always)]
         pub fn finish_decrypt(&mut self, expected_tag: &[u8]) -> bool {
-            let mut c = self.2.take().unwrap();
-            if c.set_tag(expected_tag).is_ok() {
-                let result = c.finalize(&mut []).is_ok();
+            if self.2.set_tag(expected_tag).is_ok() {
+                let result = self.2.cipher_final(&mut []).is_ok();
                 result
             } else {
                 false
