@@ -774,7 +774,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
 
                     // Parse payload and get alice's session ID, alice's public blob, metadata, and (if present) Alice's Kyber1024 public.
                     let (offer_id, alice_session_id, alice_s_public_blob_raw, alice_metadata, alice_hk_public_raw, alice_ratchet_key_fingerprint) =
-                    parse_key_offer_after_header(&kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..kex_packet_len], packet_type)?;
+                        parse_key_offer_after_header(&kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..kex_packet_len], packet_type)?;
 
                     // We either have a session, in which case they should have supplied a ratchet key fingerprint, or
                     // we don't and they should not have supplied one.
