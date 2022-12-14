@@ -1,11 +1,8 @@
 
-use std::{io::Read, sync::atomic::{AtomicU64, Ordering}};
+use std::{sync::atomic::{AtomicU64, Ordering}};
 
 use zerotier_crypto::random;
 use zerotier_utils::memory;
-
-use crate::constants::*;
-
 
 
 /// "Canonical header" for generating 96-bit AES-GCM nonce and for inclusion in HMACs.

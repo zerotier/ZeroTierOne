@@ -1,5 +1,9 @@
 
-pub mod constants;
-pub mod zssp;
-pub mod app_layer;
-pub mod ints;
+mod constants;
+mod zssp;
+mod app_layer;
+mod ints;
+
+pub use zssp::{Error, ReceiveResult, ReceiveContext, Session};
+pub use app_layer::ApplicationLayer;
+pub use ints::{SessionId, Role};

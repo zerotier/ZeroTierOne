@@ -132,6 +132,13 @@ struct EphemeralOffer {
     alice_hk_keypair: Option<pqc_kyber::Keypair>, // Kyber1024 key pair (agreement result mixed post-Noise)
 }
 
+/// Key lifetime manager state and logic (separate to spotlight and keep clean)
+struct KeyLifetime {
+    rekey_at_or_after_counter: u64,
+    hard_expire_at_counter: u64,
+    rekey_at_or_after_timestamp: i64,
+}
+
 
 
 ////////////////////////////////////////////////////////////////
@@ -166,8 +173,6 @@ impl std::fmt::Debug for Error {
 }
 
 
-
-
 // Write src into buffer starting at the index idx. If buffer cannot fit src at that location, nothing at all is written and Error::UnexpectedBufferOverrun is returned. No other errors can be returned by this function. An idx incremented by the amount written is returned.
 fn safe_write_all(buffer: &mut [u8], idx: usize, src: &[u8]) -> Result<usize, Error> {
     let dest = &mut buffer[idx..];
@@ -181,7 +186,7 @@ fn safe_write_all(buffer: &mut [u8], idx: usize, src: &[u8]) -> Result<usize, Er
 }
 /// Write a variable length integer, which can consume up to 10 bytes. Uses safe_write_all to do so.
 #[inline(always)]
-pub fn varint_safe_write(buffer: &mut [u8], idx: usize, v: u64) -> Result<usize, Error> {
+fn varint_safe_write(buffer: &mut [u8], idx: usize, v: u64) -> Result<usize, Error> {
     let mut b = [0_u8; varint::VARINT_MAX_SIZE_BYTES];
     let i = varint::encode(&mut b, v);
     safe_write_all(buffer, idx, &b[0..i])
@@ -199,13 +204,12 @@ fn safe_read_exact<'a>(src: &mut &'a [u8], amt: usize) -> Result<&'a [u8], Error
 }
 /// Read a variable length integer, which can consume up to 10 bytes. Uses varint_safe_read to do so.
 #[inline(always)]
-pub fn varint_safe_read(src: &mut &[u8]) -> Result<u64, Error> {
+fn varint_safe_read(src: &mut &[u8]) -> Result<u64, Error> {
     let (v, amt) = varint::decode(*src).ok_or(Error::InvalidPacket)?;
     let (_, b) = src.split_at(amt);
     *src = b;
     Ok(v)
 }
-
 
 
 impl<Layer: ApplicationLayer> Session<Layer> {
@@ -1373,13 +1377,6 @@ fn parse_key_offer_after_header(
     ))
 }
 
-
-/// Key lifetime manager state and logic (separate to spotlight and keep clean)
-struct KeyLifetime {
-    rekey_at_or_after_counter: u64,
-    hard_expire_at_counter: u64,
-    rekey_at_or_after_timestamp: i64,
-}
 
 impl KeyLifetime {
     fn new(current_counter: CounterValue, current_time: i64) -> Self {
