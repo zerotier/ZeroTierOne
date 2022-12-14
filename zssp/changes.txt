@@ -1,8 +1,6 @@
 zssp has been moved into it's own crate.
 
-zssp has been cut up into several files, only the new zssp.rs file contains the critical security path..
-
-zssp was inconsistently using a local/remote vs alice/bob naming convention, all names have been switched to a local/remote convention.
+zssp has been cut up into several files, only the new zssp.rs file contains the critical security path.
 
 Standardized the naming conventions for security variables throughout zssp.
 

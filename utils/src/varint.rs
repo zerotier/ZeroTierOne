@@ -34,6 +34,25 @@ pub fn write<W: Write>(w: &mut W, v: u64) -> std::io::Result<()> {
 }
 
 /// Read a variable length integer, returning the value and the number of bytes written.
+pub fn decode(b: &[u8]) -> Option<(u64, usize)> {
+    let mut v = 0_u64;
+    let mut pos = 0;
+    let mut i = 0_usize;
+    while i < b.len() {
+        let b = b[i];
+        i += 1;
+        if b <= 0x7f {
+            v |= (b as u64).wrapping_shl(pos);
+            pos += 7;
+        } else {
+            v |= ((b & 0x7f) as u64).wrapping_shl(pos);
+            return Some((v, i));
+        }
+    }
+    return None;
+}
+
+/// Read a variable length integer, returning the value and the number of bytes written.
 pub fn read<R: Read>(r: &mut R) -> std::io::Result<(u64, usize)> {
     let mut v = 0_u64;
     let mut buf = [0_u8; 1];

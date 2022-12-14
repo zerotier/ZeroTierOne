@@ -53,12 +53,6 @@ impl SessionId {
         }
     }
 
-    #[inline]
-    pub fn new_from_reader<R: Read>(r: &mut R) -> std::io::Result<Option<SessionId>> {
-        let mut tmp = 0_u64.to_ne_bytes();
-        r.read_exact(&mut tmp[..SESSION_ID_SIZE])?;
-        Ok(Self::new_from_u64(u64::from_le_bytes(tmp)))
-    }
 
     #[inline]
     pub fn new_random() -> Self {
