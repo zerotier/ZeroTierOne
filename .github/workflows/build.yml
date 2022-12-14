@@ -30,10 +30,6 @@ jobs:
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: ${{ runner.os }}-cargo-
-    - name: Lint
-      run: |
-        cargo fmt --all -- --check
-        cargo clippy -- -D warnings
     - name: make
       run: make
     - name: selftest
