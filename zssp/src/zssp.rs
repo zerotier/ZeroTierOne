@@ -130,7 +130,7 @@ struct EphemeralOffer {
     ratchet_key: Option<Secret<64>>,              // Ratchet key from previous offer
     ss_key: Secret<64>,                           // Shared secret in-progress, at state after offer sent
     alice_e_keypair: P384KeyPair,                 // NIST P-384 key pair (Noise ephemeral key for Alice)
-    alice_e1_keypair: Option<pqc_kyber::Keypair>, // Kyber1024 key pair (agreement result mixed post-Noise)
+    alice_hk_keypair: Option<pqc_kyber::Keypair>, // Kyber1024 key pair (agreement result mixed post-Noise)
 }
 
 
@@ -724,7 +724,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     }
 
                     // Parse payload and get alice's session ID, alice's public blob, metadata, and (if present) Alice's Kyber1024 public.
-                    let (offer_id, alice_session_id, alice_s_public_raw, alice_metadata, alice_e1_public_raw, alice_ratchet_key_fingerprint) =
+                    let (offer_id, alice_session_id, alice_s_public_raw, alice_metadata, alice_hk_public_raw, alice_ratchet_key_fingerprint) =
                         parse_key_offer_after_header(&kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..kex_packet_len], packet_type)?;
 
                     // We either have a session, in which case they should have supplied a ratchet key fingerprint, or
@@ -852,9 +852,9 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     // At this point we've completed Noise_IK key derivation with NIST P-384 ECDH, but now for hybrid and ratcheting...
 
                     // Generate a Kyber encapsulated ciphertext if Kyber is enabled and the other side sent us a public key.
-                    let (bob_e1_public, e1e1) = if JEDI && alice_e1_public_raw.len() > 0 {
-                        if let Ok((bob_e1_public, e1e1)) = pqc_kyber::encapsulate(alice_e1_public_raw, &mut random::SecureRandom::default()) {
-                            (Some(bob_e1_public), Some(Secret(e1e1)))
+                    let (bob_hk_public, hybrid_kk) = if JEDI && alice_hk_public_raw.len() > 0 {
+                        if let Ok((bob_hk_public, hybrid_kk)) = pqc_kyber::encapsulate(alice_hk_public_raw, &mut random::SecureRandom::default()) {
+                            (Some(bob_hk_public), Some(Secret(hybrid_kk)))
                         } else {
                             return Err(Error::FailedAuthentication);
                         }
@@ -875,9 +875,9 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                         rp.write_all(&session.id.0.to_le_bytes()[..SESSION_ID_SIZE])?;
                         varint::write(&mut rp, 0)?; // they don't need our static public; they have it
                         varint::write(&mut rp, 0)?; // no meta-data in counter-offers (could be used in the future)
-                        if let Some(bob_e1_public) = bob_e1_public.as_ref() {
+                        if let Some(bob_hk_public) = bob_hk_public.as_ref() {
                             rp.write_all(&[E1_TYPE_KYBER1024])?;
-                            rp.write_all(bob_e1_public)?;
+                            rp.write_all(bob_hk_public)?;
                         } else {
                             rp.write_all(&[E1_TYPE_NONE])?;
                         }
@@ -918,8 +918,8 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     if let Some(ratchet_key) = ratchet_key {
                         session_key = Secret(hmac_sha512(ratchet_key.as_bytes(), session_key.as_bytes()));
                     }
-                    if let Some(e1e1) = e1e1.as_ref() {
-                        session_key = Secret(hmac_sha512(e1e1.as_bytes(), session_key.as_bytes()));
+                    if let Some(hybrid_kk) = hybrid_kk.as_ref() {
+                        session_key = Secret(hmac_sha512(hybrid_kk.as_bytes(), session_key.as_bytes()));
                     }
 
                     // Authenticate packet using HMAC-SHA384 with final key. Note that while the final key now has the Kyber secret
@@ -934,7 +934,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     reply_buf[reply_len..(reply_len + HMAC_SIZE)].copy_from_slice(&hmac);
                     reply_len += HMAC_SIZE;
 
-                    let session_key = SessionKey::new(session_key, Role::Bob, current_time, reply_counter, ratchet_count + 1, e1e1.is_some());
+                    let session_key = SessionKey::new(session_key, Role::Bob, current_time, reply_counter, ratchet_count + 1, hybrid_kk.is_some());
 
                     let mut state = session.state.write().unwrap();
                     let _ = state.remote_session_id.replace(alice_session_id);
@@ -994,7 +994,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
 
                             // Alice has now completed Noise_IK with NIST P-384 and verified with GCM auth, but now for hybrid...
 
-                            let (offer_id, bob_session_id, _, _, bob_e1_public_raw, bob_ratchet_key_id) = parse_key_offer_after_header(
+                            let (offer_id, bob_session_id, _, _, bob_hk_public_raw, bob_ratchet_key_id) = parse_key_offer_after_header(
                                 &kex_packet[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..kex_packet_len],
                                 packet_type,
                             )?;
@@ -1003,9 +1003,9 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                                 return Ok(ReceiveResult::Ignored);
                             }
 
-                            let e1e1 = if JEDI && bob_e1_public_raw.len() > 0 && offer.alice_e1_keypair.is_some() {
-                                if let Ok(e1e1) = pqc_kyber::decapsulate(bob_e1_public_raw, &offer.alice_e1_keypair.as_ref().unwrap().secret) {
-                                    Some(Secret(e1e1))
+                            let hybrid_kk = if JEDI && bob_hk_public_raw.len() > 0 && offer.alice_hk_keypair.is_some() {
+                                if let Ok(hybrid_kk) = pqc_kyber::decapsulate(bob_hk_public_raw, &offer.alice_hk_keypair.as_ref().unwrap().secret) {
+                                    Some(Secret(hybrid_kk))
                                 } else {
                                     return Err(Error::FailedAuthentication);
                                 }
@@ -1019,8 +1019,8 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                                 session_key = Secret(hmac_sha512(offer.ratchet_key.as_ref().unwrap().as_bytes(), session_key.as_bytes()));
                                 ratchet_count = offer.ratchet_count;
                             }
-                            if let Some(e1e1) = e1e1.as_ref() {
-                                session_key = Secret(hmac_sha512(e1e1.as_bytes(), session_key.as_bytes()));
+                            if let Some(hybrid_kk) = hybrid_kk.as_ref() {
+                                session_key = Secret(hmac_sha512(hybrid_kk.as_bytes(), session_key.as_bytes()));
                             }
 
                             if !hmac_sha384_2(
@@ -1036,7 +1036,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                             // Alice has now completed and validated the full hybrid exchange.
 
                             let counter = session.send_counter.next();
-                            let session_key = SessionKey::new(session_key, Role::Alice, current_time, counter, ratchet_count + 1, e1e1.is_some());
+                            let session_key = SessionKey::new(session_key, Role::Alice, current_time, counter, ratchet_count + 1, hybrid_kk.is_some());
 
                             let mut reply_buf = [0_u8; HEADER_SIZE + AES_GCM_TAG_SIZE];
                             create_packet_header(
@@ -1102,7 +1102,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     let noise_es = alice_e_keypair.agree(bob_s_public_p384).ok_or(Error::InvalidPacket)?;
 
     // Generate a Kyber1024 pair if enabled.
-    let alice_e1_keypair = if JEDI {
+    let alice_hk_keypair = if JEDI {
         Some(pqc_kyber::keypair(&mut random::SecureRandom::get()))
     } else {
         None
@@ -1133,9 +1133,9 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
         p.write_all(alice_s_public)?;
         varint::write(&mut p, alice_metadata.len() as u64)?;
         p.write_all(alice_metadata)?;
-        if let Some(e1kp) = alice_e1_keypair {
+        if let Some(hkkp) = alice_hk_keypair {
             p.write_all(&[E1_TYPE_KYBER1024])?;
-            p.write_all(&e1kp.public)?;
+            p.write_all(&hkkp.public)?;
         } else {
             p.write_all(&[E1_TYPE_NONE])?;
         }
@@ -1209,7 +1209,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
         ratchet_key,
         ss_key,
         alice_e_keypair,
-        alice_e1_keypair,
+        alice_hk_keypair,
     }))
 }
 
@@ -1327,22 +1327,22 @@ fn parse_key_offer_after_header(
     if p.is_empty() {
         return Err(Error::InvalidPacket);
     }
-    let alice_e1_public = match p[0] {
+    let alice_hk_public = match p[0] {
         E1_TYPE_KYBER1024 => {
             if packet_type == PACKET_TYPE_KEY_OFFER {
                 if p.len() < (pqc_kyber::KYBER_PUBLICKEYBYTES + 1) {
                     return Err(Error::InvalidPacket);
                 }
-                let e1p = &p[1..(pqc_kyber::KYBER_PUBLICKEYBYTES + 1)];
+                let hkp = &p[1..(pqc_kyber::KYBER_PUBLICKEYBYTES + 1)];
                 p = &p[(pqc_kyber::KYBER_PUBLICKEYBYTES + 1)..];
-                e1p
+                hkp
             } else {
                 if p.len() < (pqc_kyber::KYBER_CIPHERTEXTBYTES + 1) {
                     return Err(Error::InvalidPacket);
                 }
-                let e1p = &p[1..(pqc_kyber::KYBER_CIPHERTEXTBYTES + 1)];
+                let hkp = &p[1..(pqc_kyber::KYBER_CIPHERTEXTBYTES + 1)];
                 p = &p[(pqc_kyber::KYBER_CIPHERTEXTBYTES + 1)..];
-                e1p
+                hkp
             }
         }
         _ => &[],
@@ -1363,7 +1363,7 @@ fn parse_key_offer_after_header(
         alice_session_id,
         alice_s_public,
         alice_metadata,
-        alice_e1_public,
+        alice_hk_public,
         alice_ratchet_key_fingerprint,
     ))
 }
