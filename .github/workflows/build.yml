@@ -36,16 +36,12 @@ jobs:
   build_windows:
     runs-on: windows-latest
     steps:
+    - name: gitconfig
+      run: |
+        git config --global core.autocrlf true
+
     - name: checkout
       uses: actions/checkout@v3
-
-    - name: Install Rust Toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: aarch64-pc-windows-msvc
-        override: true
-        components: rustfmt, clippy
 
     - name: setup msbuild
       uses: microsoft/setup-msbuild@v1.1.3
