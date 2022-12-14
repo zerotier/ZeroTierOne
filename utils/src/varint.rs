@@ -33,12 +33,15 @@ pub fn write<W: Write>(w: &mut W, v: u64) -> std::io::Result<()> {
     w.write_all(&b[0..i])
 }
 
-/// Read a variable length integer, returning the value and the number of bytes written.
+/// Dencode up to 10 bytes as a varint.
+///
+/// if the supplied byte slice does not contain a valid varint encoding this will return None.
+/// if the supplied byte slice is shorter than expected this will return None.
 pub fn decode(b: &[u8]) -> Option<(u64, usize)> {
     let mut v = 0_u64;
     let mut pos = 0;
     let mut i = 0_usize;
-    while i < b.len() {
+    while i < b.len() && i < VARINT_MAX_SIZE_BYTES {
         let b = b[i];
         i += 1;
         if b <= 0x7f {

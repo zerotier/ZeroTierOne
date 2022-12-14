@@ -3,7 +3,6 @@
 // ZSSP: ZeroTier Secure Session Protocol
 // FIPS compliant Noise_IK with Jedi powers and built-in attack-resistant large payload (fragmentation) support.
 
-use std::mem;
 use std::sync::{Mutex, RwLock};
 
 use zerotier_crypto::aes::{Aes, AesGcm};
@@ -169,26 +168,26 @@ impl std::fmt::Debug for Error {
 
 
 
-// Write src into dest. If dest cannot fit src, nothing at all is written and UnexpectedBufferOverrun is returned. No other errors can be returned by this function. The dest slice is incremented so it starts at the end of where src was written.
-fn safe_write_all(dest: &mut &mut [u8], src: &[u8]) -> Result<(), Error> {
+// Write src into buffer starting at the index idx. If buffer cannot fit src at that location, nothing at all is written and Error::UnexpectedBufferOverrun is returned. No other errors can be returned by this function. An idx incremented by the amount written is returned.
+fn safe_write_all(buffer: &mut [u8], idx: usize, src: &[u8]) -> Result<usize, Error> {
+    let dest = &mut buffer[idx..];
     let amt = src.len();
-    if dest.len() >= amt {
-        let (a, b) = mem::replace(dest, &mut []).split_at_mut(amt);
-        a.copy_from_slice(src);
-        *dest = b;
-        Ok(())
+    if dest.len() >= amt  {
+        dest[..amt].copy_from_slice(src);
+        Ok(idx + amt)
     } else {
         Err(Error::UnexpectedBufferOverrun)
     }
 }
 /// Write a variable length integer, which can consume up to 10 bytes. Uses safe_write_all to do so.
 #[inline(always)]
-pub fn varint_safe_write(dest: &mut &mut [u8], v: u64) -> Result<(), Error> {
+pub fn varint_safe_write(buffer: &mut [u8], idx: usize, v: u64) -> Result<usize, Error> {
     let mut b = [0_u8; varint::VARINT_MAX_SIZE_BYTES];
     let i = varint::encode(&mut b, v);
-    safe_write_all(dest, &b[0..i])
+    safe_write_all(buffer, idx, &b[0..i])
 }
 
+// Read exactly amt bytes from src and return the slice those bytes reside in. If src is smaller than amt, Error::InvalidPacket is returned. if the read was successful src is incremented to start at the first unread byte.
 fn safe_read_exact<'a>(src: &mut &'a [u8], amt: usize) -> Result<&'a [u8], Error> {
     if src.len() >= amt {
         let (a, b) = src.split_at(amt);
@@ -198,7 +197,7 @@ fn safe_read_exact<'a>(src: &mut &'a [u8], amt: usize) -> Result<&'a [u8], Error
         Err(Error::InvalidPacket)
     }
 }
-/// Write a variable length integer, which can consume up to 10 bytes. Uses safe_write_all to do so.
+/// Read a variable length integer, which can consume up to 10 bytes. Uses varint_safe_read to do so.
 #[inline(always)]
 pub fn varint_safe_read(src: &mut &[u8]) -> Result<u64, Error> {
     let (v, amt) = varint::decode(*src).ok_or(Error::InvalidPacket)?;
@@ -900,35 +899,33 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     // Create reply packet.
                     let mut reply_buf = [0_u8; KEX_BUF_LEN];
                     let reply_counter = session.send_counter.next();
-                    let mut reply_len = {
-                        let mut rp = &mut reply_buf[HEADER_SIZE..];
+                    let mut idx = HEADER_SIZE;
 
+                    idx = safe_write_all(&mut reply_buf, idx, &[SESSION_PROTOCOL_VERSION])?;
+                    idx = safe_write_all(&mut reply_buf, idx, bob_e_keypair.public_key_bytes())?;
+                    let end_of_plaintext = idx;
 
-                        safe_write_all(&mut rp, &[SESSION_PROTOCOL_VERSION])?;
-                        safe_write_all(&mut rp, bob_e_keypair.public_key_bytes())?;
+                    idx = safe_write_all(&mut reply_buf, idx, offer_id)?;
+                    idx = safe_write_all(&mut reply_buf, idx, &session.id.0.to_le_bytes()[..SESSION_ID_SIZE])?;
+                    idx = varint_safe_write(&mut reply_buf, idx, 0)?; // they don't need our static public; they have it
+                    idx = varint_safe_write(&mut reply_buf, idx, 0)?; // no meta-data in counter-offers (could be used in the future)
+                    if let Some(bob_hk_public) = bob_hk_public.as_ref() {
+                        idx = safe_write_all(&mut reply_buf, idx, &[E1_TYPE_KYBER1024])?;
+                        idx = safe_write_all(&mut reply_buf, idx, bob_hk_public)?;
+                    } else {
+                        idx = safe_write_all(&mut reply_buf, idx, &[E1_TYPE_NONE])?;
+                    }
+                    if ratchet_key.is_some() {
+                        idx = safe_write_all(&mut reply_buf, idx, &[0x01])?;
+                        idx = safe_write_all(&mut reply_buf, idx, alice_ratchet_key_fingerprint.unwrap())?;
+                    } else {
+                        idx = safe_write_all(&mut reply_buf, idx, &[0x00])?;
+                    }
+                    let end_of_ciphertext = idx;
 
-                        safe_write_all(&mut rp, offer_id)?;
-                        safe_write_all(&mut rp, &session.id.0.to_le_bytes()[..SESSION_ID_SIZE])?;
-                        varint_safe_write(&mut rp, 0)?; // they don't need our static public; they have it
-                        varint_safe_write(&mut rp, 0)?; // no meta-data in counter-offers (could be used in the future)
-                        if let Some(bob_hk_public) = bob_hk_public.as_ref() {
-                            safe_write_all(&mut rp, &[E1_TYPE_KYBER1024])?;
-                            safe_write_all(&mut rp, bob_hk_public)?;
-                        } else {
-                            safe_write_all(&mut rp, &[E1_TYPE_NONE])?;
-                        }
-                        if ratchet_key.is_some() {
-                            safe_write_all(&mut rp, &[0x01])?;
-                            safe_write_all(&mut rp, alice_ratchet_key_fingerprint.unwrap())?;
-                        } else {
-                            safe_write_all(&mut rp, &[0x00])?;
-                        }
-
-                        KEX_BUF_LEN - rp.len()
-                    };
                     create_packet_header(
                         &mut reply_buf,
-                        reply_len,
+                        end_of_ciphertext,
                         mtu,
                         PACKET_TYPE_KEY_COUNTER_OFFER,
                         alice_session_id.into(),
@@ -944,10 +941,10 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                         true,
                     );
                     c.reset_init_gcm(reply_canonical_header.as_bytes());
-                    c.crypt_in_place(&mut reply_buf[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..reply_len]);
+                    c.crypt_in_place(&mut reply_buf[end_of_plaintext..end_of_ciphertext]);
                     let c = c.finish_encrypt();
-                    reply_buf[reply_len..(reply_len + AES_GCM_TAG_SIZE)].copy_from_slice(&c);
-                    reply_len += AES_GCM_TAG_SIZE;
+
+                    idx = safe_write_all(&mut reply_buf, idx, &c)?;
 
                     // Mix ratchet key from previous session key (if any) and Kyber1024 hybrid shared key (if any).
                     let mut session_key = noise_ik_key;
@@ -965,10 +962,9 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     let hmac = hmac_sha384_2(
                         kbkdf512(session_key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
                         reply_canonical_header.as_bytes(),
-                        &reply_buf[HEADER_SIZE..reply_len],
+                        &reply_buf[HEADER_SIZE..idx],
                     );
-                    reply_buf[reply_len..(reply_len + HMAC_SIZE)].copy_from_slice(&hmac);
-                    reply_len += HMAC_SIZE;
+                    idx = safe_write_all(&mut reply_buf, idx, &hmac)?;
 
                     let session_key = SessionKey::new(session_key, Role::Bob, current_time, reply_counter, ratchet_count + 1, hybrid_kk.is_some());
 
@@ -980,7 +976,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
 
                     // Bob now has final key state for this exchange. Yay! Now reply to Alice so she can construct it.
 
-                    send_with_fragmentation(send, &mut reply_buf[..reply_len], mtu, &session.header_check_cipher);
+                    send_with_fragmentation(send, &mut reply_buf[..idx], mtu, &session.header_check_cipher);
 
                     if new_session.is_some() {
                         return Ok(ReceiveResult::OkNewSession(new_session.unwrap()));
@@ -1086,7 +1082,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
 
                             let mut c = session_key.get_send_cipher(counter)?;
                             c.reset_init_gcm(CanonicalHeader::make(bob_session_id.into(), PACKET_TYPE_NOP, counter.to_u32()).as_bytes());
-                            reply_buf[HEADER_SIZE..].copy_from_slice(&c.finish_encrypt());
+                            safe_write_all(&mut reply_buf, HEADER_SIZE, &c.finish_encrypt())?;
                             session_key.return_send_cipher(c);
 
                             set_header_check_code(&mut reply_buf, &session.header_check_cipher);
@@ -1157,33 +1153,32 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     // Create ephemeral offer packet (not fragmented yet).
     const PACKET_BUF_SIZE: usize = MIN_TRANSPORT_MTU * KEY_EXCHANGE_MAX_FRAGMENTS;
     let mut packet_buf = [0_u8; PACKET_BUF_SIZE];
-    let mut packet_len = {
-        let mut p = &mut packet_buf[HEADER_SIZE..];
+    let mut idx = HEADER_SIZE;
 
-        safe_write_all(&mut p, &[SESSION_PROTOCOL_VERSION])?;
-        safe_write_all(&mut p, alice_e_keypair.public_key_bytes())?;
+    idx = safe_write_all(&mut packet_buf, idx, &[SESSION_PROTOCOL_VERSION])?;
+    idx = safe_write_all(&mut packet_buf, idx, alice_e_keypair.public_key_bytes())?;
+    let end_of_plaintext = idx;
 
-        safe_write_all(&mut p, &id)?;
-        safe_write_all(&mut p, &alice_session_id.0.to_le_bytes()[..SESSION_ID_SIZE])?;
-        varint_safe_write(&mut p, alice_s_public.len() as u64)?;
-        safe_write_all(&mut p, alice_s_public)?;
-        varint_safe_write(&mut p, alice_metadata.len() as u64)?;
-        safe_write_all(&mut p, alice_metadata)?;
-        if let Some(hkkp) = alice_hk_keypair {
-            safe_write_all(&mut p, &[E1_TYPE_KYBER1024])?;
-            safe_write_all(&mut p, &hkkp.public)?;
-        } else {
-            safe_write_all(&mut p, &[E1_TYPE_NONE])?;
-        }
-        if let Some(ratchet_key) = ratchet_key.as_ref() {
-            safe_write_all(&mut p, &[0x01])?;
-            safe_write_all(&mut p, &secret_fingerprint(ratchet_key.as_bytes())[..16])?;
-        } else {
-            safe_write_all(&mut p, &[0x00])?;
-        }
+    idx = safe_write_all(&mut packet_buf, idx, &id)?;
+    idx = safe_write_all(&mut packet_buf, idx, &alice_session_id.0.to_le_bytes()[..SESSION_ID_SIZE])?;
+    idx = varint_safe_write(&mut packet_buf, idx, alice_s_public.len() as u64)?;
+    idx = safe_write_all(&mut packet_buf, idx, alice_s_public)?;
+    idx = varint_safe_write(&mut packet_buf, idx, alice_metadata.len() as u64)?;
+    idx = safe_write_all(&mut packet_buf, idx, alice_metadata)?;
+    if let Some(hkkp) = alice_hk_keypair {
+        idx = safe_write_all(&mut packet_buf, idx, &[E1_TYPE_KYBER1024])?;
+        idx = safe_write_all(&mut packet_buf, idx, &hkkp.public)?;
+    } else {
+        idx = safe_write_all(&mut packet_buf, idx, &[E1_TYPE_NONE])?;
+    }
+    if let Some(ratchet_key) = ratchet_key.as_ref() {
+        idx = safe_write_all(&mut packet_buf, idx, &[0x01])?;
+        idx = safe_write_all(&mut packet_buf, idx, &secret_fingerprint(ratchet_key.as_bytes())[..16])?;
+    } else {
+        idx = safe_write_all(&mut packet_buf, idx, &[0x00])?;
+    }
+    let end_of_ciphertext = idx;
 
-        PACKET_BUF_SIZE - p.len()
-    };
 
     // Create ephemeral agreement secret.
     let es_key = Secret(hmac_sha512(
@@ -1192,7 +1187,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     ));
 
     let bob_session_id = bob_session_id.unwrap_or(SessionId::NIL);
-    create_packet_header(&mut packet_buf, packet_len, mtu, PACKET_TYPE_KEY_OFFER, bob_session_id, counter)?;
+    create_packet_header(&mut packet_buf, end_of_ciphertext, mtu, PACKET_TYPE_KEY_OFFER, bob_session_id, counter)?;
 
     let canonical_header = CanonicalHeader::make(bob_session_id, PACKET_TYPE_KEY_OFFER, counter.to_u32());
 
@@ -1203,11 +1198,10 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
             true,
         );
         c.reset_init_gcm(canonical_header.as_bytes());
-        c.crypt_in_place(&mut packet_buf[(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)..packet_len]);
+        c.crypt_in_place(&mut packet_buf[end_of_plaintext..end_of_ciphertext]);
         c.finish_encrypt()
     };
-    packet_buf[packet_len..(packet_len + AES_GCM_TAG_SIZE)].copy_from_slice(&gcm_tag);
-    packet_len += AES_GCM_TAG_SIZE;
+    idx = safe_write_all(&mut packet_buf, idx, &gcm_tag)?;
 
     // Mix in static secret.
     let ss_key = Secret(hmac_sha512(es_key.as_bytes(), ss.as_bytes()));
@@ -1217,22 +1211,20 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     let hmac = hmac_sha384_2(
         kbkdf512(ss_key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
         canonical_header.as_bytes(),
-        &packet_buf[HEADER_SIZE..packet_len],
+        &packet_buf[HEADER_SIZE..idx],
     );
-    packet_buf[packet_len..(packet_len + HMAC_SIZE)].copy_from_slice(&hmac);
-    packet_len += HMAC_SIZE;
+    idx = safe_write_all(&mut packet_buf, idx, &hmac)?;
 
     // Add secondary HMAC to verify that the caller knows the recipient's full static public identity.
-    let hmac = hmac_sha384_2(bob_s_public_hash, canonical_header.as_bytes(), &packet_buf[HEADER_SIZE..packet_len]);
-    packet_buf[packet_len..(packet_len + HMAC_SIZE)].copy_from_slice(&hmac);
-    packet_len += HMAC_SIZE;
+    let hmac2 = hmac_sha384_2(bob_s_public_hash, canonical_header.as_bytes(), &packet_buf[HEADER_SIZE..idx]);
+    idx = safe_write_all(&mut packet_buf, idx, &hmac2)?;
 
     if let Some(header_check_cipher) = header_check_cipher {
-        send_with_fragmentation(send, &mut packet_buf[..packet_len], mtu, header_check_cipher);
+        send_with_fragmentation(send, &mut packet_buf[..idx], mtu, header_check_cipher);
     } else {
         send_with_fragmentation(
             send,
-            &mut packet_buf[..packet_len],
+            &mut packet_buf[..idx],
             mtu,
             &Aes::new(kbkdf512(&bob_s_public_hash, KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>()),
         );
