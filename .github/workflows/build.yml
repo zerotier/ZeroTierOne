@@ -4,14 +4,13 @@ jobs:
   build_ubuntu:
     runs-on: ubuntu-latest
     steps:
-
     - name: gitconfig
       run: |
         git config --global core.autocrlf false
         git config --global core.eol lf
 
-      - name: checkout
-        uses: actions/checkout@v3
+    - name: checkout
+      uses: actions/checkout@v3
 
     - name: Install Rust
       uses: actions-rs/toolchain@v1
@@ -91,7 +90,6 @@ jobs:
   build_windows:
     runs-on: windows-latest
     steps:
-
     - name: gitconfig
       run: |
         git config --global core.autocrlf false
