@@ -302,6 +302,10 @@ impl<Layer: ApplicationLayer> Session<Layer> {
                 // This outgoing packet's nonce counter value.
                 let counter = self.send_counter.next();
 
+                ////////////////////////////////////////////////////////////////
+                // packet encoding for post-noise transport
+                ////////////////////////////////////////////////////////////////
+
                 // Create initial header for first fragment of packet and place in first HEADER_SIZE bytes of buffer.
                 create_packet_header(
                     mtu_buffer,
@@ -605,6 +609,9 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     if let Some(session_key) = state.session_keys[key_idx].as_ref() {
                         let mut c = session_key.get_receive_cipher();
                         c.reset_init_gcm(canonical_header_bytes);
+                        ////////////////////////////////////////////////////////////////
+                        // packet decoding for post-noise transport
+                        ////////////////////////////////////////////////////////////////
 
                         let mut data_len = 0;
 
@@ -709,7 +716,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
             }
 
             match packet_type {
-                PACKET_TYPE_KEY_OFFER => {
+                PACKET_TYPE_INITIAL_KEY_OFFER => {
                     // alice (remote) -> bob (local)
 
                     if kex_packet_len < (HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE + AES_GCM_TAG_SIZE + HMAC_SIZE + HMAC_SIZE) {
@@ -741,11 +748,15 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                         }
                     }
 
+                    ////////////////////////////////////////////////////////////////
+                    // packet decoding for noise initial key offer
+                    // -> e, es, s, ss
+                    ////////////////////////////////////////////////////////////////
                     // Key agreement: alice (remote) ephemeral NIST P-384 <> local static NIST P-384
                     let (alice_e_public, noise_es) =
-                    P384PublicKey::from_bytes(&kex_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
-                    .and_then(|pk| host.get_local_s_keypair().agree(&pk).map(move |s| (pk, s)))
-                    .ok_or(Error::FailedAuthentication)?;
+                        P384PublicKey::from_bytes(&kex_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
+                        .and_then(|pk| host.get_local_s_keypair().agree(&pk).map(move |s| (pk, s)))
+                        .ok_or(Error::FailedAuthentication)?;
 
                     // Initial key derivation from starting point, mixing in alice's ephemeral public and the es.
                     let es_key = Secret(hmac_sha512(&hmac_sha512(&INITIAL_KEY, alice_e_public.as_bytes()), noise_es.as_bytes()));
@@ -900,7 +911,10 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                         (None, None)
                     };
 
-                    // Create reply packet.
+                    ////////////////////////////////////////////////////////////////
+                    // packet encoding for noise key counter offer
+                    // <- e, ee, se
+                    ////////////////////////////////////////////////////////////////
                     let mut reply_buf = [0_u8; KEX_BUF_LEN];
                     let reply_counter = session.send_counter.next();
                     let mut idx = HEADER_SIZE;
@@ -1001,14 +1015,19 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     if let Some(session) = session {
                         let state = session.state.read().unwrap();
                         if let Some(offer) = state.offer.as_ref() {
+
+                            ////////////////////////////////////////////////////////////////
+                            // packet decoding for noise key counter offer
+                            // <- e, ee, se
+                            ////////////////////////////////////////////////////////////////
                             let (bob_e_public, noise_ee) =
-                            P384PublicKey::from_bytes(&kex_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
-                            .and_then(|pk| offer.alice_e_keypair.agree(&pk).map(move |s| (pk, s)))
-                            .ok_or(Error::FailedAuthentication)?;
+                                P384PublicKey::from_bytes(&kex_packet[(HEADER_SIZE + 1)..(HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE)])
+                                .and_then(|pk| offer.alice_e_keypair.agree(&pk).map(move |s| (pk, s)))
+                                .ok_or(Error::FailedAuthentication)?;
                             let noise_se = host
-                            .get_local_s_keypair()
-                            .agree(&bob_e_public)
-                            .ok_or(Error::FailedAuthentication)?;
+                                .get_local_s_keypair()
+                                .agree(&bob_e_public)
+                                .ok_or(Error::FailedAuthentication)?;
 
                             let noise_ik_key = Secret(hmac_sha512(
                                 session.psk.as_bytes(),
@@ -1074,6 +1093,9 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                             let counter = session.send_counter.next();
                             let session_key = SessionKey::new(session_key, Role::Alice, current_time, counter, ratchet_count + 1, hybrid_kk.is_some());
 
+                            ////////////////////////////////////////////////////////////////
+                            // packet encoding for post-noise session start ack
+                            ////////////////////////////////////////////////////////////////
                             let mut reply_buf = [0_u8; HEADER_SIZE + AES_GCM_TAG_SIZE];
                             create_packet_header(
                                 &mut reply_buf,
@@ -1125,7 +1147,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     alice_metadata: &[u8],
     bob_s_public_p384: &P384PublicKey,
     bob_s_public_hash: &[u8],
-    ss: &Secret<48>,
+    noise_ss: &Secret<48>,
     current_key: Option<&SessionKey>,
     header_check_cipher: Option<&Aes>, // None to use one based on the recipient's public key for initial contact
     mtu: usize,
@@ -1154,6 +1176,12 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     // Random ephemeral offer ID
     let id: [u8; 16] = random::get_bytes_secure();
 
+
+    ////////////////////////////////////////////////////////////////
+    // packet encoding for noise initial key offer and for noise rekeying
+    // -> e, es, s, ss
+    ////////////////////////////////////////////////////////////////
+
     // Create ephemeral offer packet (not fragmented yet).
     const PACKET_BUF_SIZE: usize = MIN_TRANSPORT_MTU * KEY_EXCHANGE_MAX_FRAGMENTS;
     let mut packet_buf = [0_u8; PACKET_BUF_SIZE];
@@ -1170,9 +1198,9 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     idx = safe_write_all(&mut packet_buf, idx, alice_s_public)?;
     idx = varint_safe_write(&mut packet_buf, idx, alice_metadata.len() as u64)?;
     idx = safe_write_all(&mut packet_buf, idx, alice_metadata)?;
-    if let Some(hkkp) = alice_hk_keypair {
+    if let Some(hkp) = alice_hk_keypair {
         idx = safe_write_all(&mut packet_buf, idx, &[E1_TYPE_KYBER1024])?;
-        idx = safe_write_all(&mut packet_buf, idx, &hkkp.public)?;
+        idx = safe_write_all(&mut packet_buf, idx, &hkp.public)?;
     } else {
         idx = safe_write_all(&mut packet_buf, idx, &[E1_TYPE_NONE])?;
     }
@@ -1192,9 +1220,9 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     ));
 
     let bob_session_id = bob_session_id.unwrap_or(SessionId::NIL);
-    create_packet_header(&mut packet_buf, end_of_ciphertext, mtu, PACKET_TYPE_KEY_OFFER, bob_session_id, counter)?;
+    create_packet_header(&mut packet_buf, end_of_ciphertext, mtu, PACKET_TYPE_INITIAL_KEY_OFFER, bob_session_id, counter)?;
 
-    let canonical_header = CanonicalHeader::make(bob_session_id, PACKET_TYPE_KEY_OFFER, counter.to_u32());
+    let canonical_header = CanonicalHeader::make(bob_session_id, PACKET_TYPE_INITIAL_KEY_OFFER, counter.to_u32());
 
     // Encrypt packet and attach AES-GCM tag.
     let gcm_tag = {
@@ -1209,7 +1237,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     idx = safe_write_all(&mut packet_buf, idx, &gcm_tag)?;
 
     // Mix in static secret.
-    let ss_key = Secret(hmac_sha512(es_key.as_bytes(), ss.as_bytes()));
+    let ss_key = Secret(hmac_sha512(es_key.as_bytes(), noise_ss.as_bytes()));
     drop(es_key);
 
     // HMAC packet using static + ephemeral key.
@@ -1352,7 +1380,7 @@ fn parse_key_offer_after_header(
 
     let alice_hk_public_raw = match safe_read_exact(&mut p, 1)?[0] {
         E1_TYPE_KYBER1024 => {
-            if packet_type == PACKET_TYPE_KEY_OFFER {
+            if packet_type == PACKET_TYPE_INITIAL_KEY_OFFER {
                 safe_read_exact(&mut p, pqc_kyber::KYBER_PUBLICKEYBYTES)?
             } else {
                 safe_read_exact(&mut p, pqc_kyber::KYBER_CIPHERTEXTBYTES)?
