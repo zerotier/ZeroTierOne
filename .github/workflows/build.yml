@@ -38,7 +38,7 @@ jobs:
     steps:
     - name: gitconfig
       run: |
-        git config --global core.autocrlf true
+        git config --global core.autocrlf false
 
     - name: checkout
       uses: actions/checkout@v3
