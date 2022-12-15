@@ -13,3 +13,7 @@ Refactored most buffer logic to use safe_read_exact and safe_write_all, the resu
 Fixed a buffer overrun panic when decoding alice_ratchet_key_fingerprint
 
 Renamed variables and added extra intermediate values so encoding and decoding are more obviously symmetric.
+
+Added multiple comments.
+
+Removed Box<EphemeralOffer>, EphemeralOffer is now passed out by reference instead of returned up the stack.
