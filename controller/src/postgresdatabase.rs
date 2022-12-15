@@ -27,6 +27,7 @@ use crate::model::{IpAssignmentPool, Member, Network, RequestLogItem};
 
 const RECONNECT_RATE_LIMIT: tokio::time::Duration = tokio::time::Duration::from_millis(250);
 
+/// Query for looking up a virtual network and all its relevant settings.
 const GET_NETWORK_SQL: &'static str = "
 SELECT
     n.capabilities,
@@ -52,9 +53,11 @@ FROM
     LEFT OUTER JOIN ztc_oidc_config oc ON noc.client_id = oc.client_id AND o.org_id = oc.org_id
     LEFT OUTER JOIN ztc_network_dns d ON d.network_id = n.id
 WHERE
-    id = $1 AND
-    deleted = false";
+    n.id = $1 AND
+    n.deleted = false";
 
+/// Query to get capabilities, a deprecated feature for small subsets of rules that is handled here automatically by
+/// merging with the main rule set.
 const GET_NETWORK_MEMBERS_WITH_CAPABILITIES_SQL: &'static str = "
 SELECT
     m.id,
@@ -66,8 +69,8 @@ WHERE
     authorized = true AND
     deleted = false AND
     capabilities IS NOT NULL AND
-    capabilities != '[]'
-";
+    capabilities != '[]' AND
+    capabilities != 'null'";
 
 struct PostgresConnection {
     s_list_networks: Statement,
