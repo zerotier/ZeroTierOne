@@ -313,7 +313,7 @@ impl<Layer: ApplicationLayer> Session<Layer> {
         debug_assert!(mtu_buffer.len() >= MIN_TRANSPORT_MTU);
         let state = self.state.read().unwrap();
         if let Some(remote_session_id) = state.remote_session_id {
-            if let Some(sym_key) = state.session_keys[state.cur_session_key_idx].as_ref() {
+            if let Some(session_key) = state.session_keys[state.cur_session_key_idx].as_ref() {
                 // Total size of the armored packet we are going to send (may end up being fragmented)
                 let packet_len = data.len() + HEADER_SIZE + AES_GCM_TAG_SIZE;
 
@@ -336,7 +336,7 @@ impl<Layer: ApplicationLayer> Session<Layer> {
 
                 // Get an initialized AES-GCM cipher and re-initialize with a 96-bit IV built from remote session ID,
                 // packet type, and counter.
-                let mut c = sym_key.get_send_cipher(counter)?;
+                let mut c = session_key.get_send_cipher(counter)?;
                 c.reset_init_gcm(CanonicalHeader::make(remote_session_id, PACKET_TYPE_DATA, counter.to_u32()).as_bytes());
 
                 // Send first N-1 fragments of N total fragments.
@@ -375,7 +375,7 @@ impl<Layer: ApplicationLayer> Session<Layer> {
                 send(&mut mtu_buffer[..last_fragment_size]);
 
                 // Check reusable AES-GCM instance back into pool.
-                sym_key.return_send_cipher(c);
+                session_key.return_send_cipher(c);
 
                 return Ok(());
             } else {
