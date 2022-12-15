@@ -1183,7 +1183,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     header_check_cipher: Option<&Aes>, // None to use one based on the recipient's public key for initial contact
     mtu: usize,
     current_time: i64,
-    ret_ephemeral_offer: &mut Option<EphemeralOffer>
+    ret_ephemeral_offer: &mut Option<EphemeralOffer>//We want to prevent copying the EphemeralOffer up the stack because it's very big. ret_ephemeral_offer will be overwritten with the returned EphemeralOffer when the call completes.
 ) -> Result<(), Error> {
     // Generate a NIST P-384 pair.
     let alice_e_keypair = P384KeyPair::generate();
