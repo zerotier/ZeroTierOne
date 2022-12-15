@@ -743,12 +743,13 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     let hmac1_end = kex_packet_len - HMAC_SIZE;
 
                     // Check the second HMAC first, which proves that the sender knows the recipient's full static identity.
+                    let hmac2 = &kex_packet[hmac1_end..kex_packet_len];
                     if !hmac_sha384_2(
                         host.get_local_s_public_blob_hash(),
                         canonical_header_bytes,
                         &kex_packet[HEADER_SIZE..hmac1_end],
                     )
-                    .eq(&kex_packet[hmac1_end..kex_packet_len])
+                    .eq(hmac2)
                     {
                         return Err(Error::FailedAuthentication);
                     }
@@ -808,12 +809,13 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
 
                     // Authenticate entire packet with HMAC-SHA384, verifying alice's identity via 'ss' secret that was
                     // just mixed into the key.
+                    let hmac1 = &kex_packet[aes_gcm_tag_end..hmac1_end];
                     if !hmac_sha384_2(
                         kbkdf512(ss_key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
                         canonical_header_bytes,
                         &kex_packet_saved_ciphertext[HEADER_SIZE..aes_gcm_tag_end],
                     )
-                    .eq(&kex_packet[aes_gcm_tag_end..hmac1_end])
+                    .eq(hmac1)
                     {
                         return Err(Error::FailedAuthentication);
                     }
@@ -1080,6 +1082,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                                 None
                             };
 
+                            // Mix ratchet key from previous session key (if any) and Kyber1024 hybrid shared key (if any).
                             let mut ratchet_count = 0;
                             let mut session_key = noise_ik_key;
                             if bob_ratchet_key_id.is_some() && offer.ratchet_key.is_some() {
@@ -1090,12 +1093,13 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                                 session_key = Secret(hmac_sha512(hybrid_kk.as_bytes(), session_key.as_bytes()));
                             }
 
+                            let hmac = &kex_packet[aes_gcm_tag_end..kex_packet_len];
                             if !hmac_sha384_2(
                                 kbkdf512(session_key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
                                 canonical_header_bytes,
                                 &kex_packet_saved_ciphertext[HEADER_SIZE..aes_gcm_tag_end],
                             )
-                            .eq(&kex_packet[aes_gcm_tag_end..kex_packet_len])
+                            .eq(hmac)
                             {
                                 return Err(Error::FailedAuthentication);
                             }
@@ -1257,12 +1261,12 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     drop(es_key);
 
     // HMAC packet using static + ephemeral key.
-    let hmac = hmac_sha384_2(
+    let hmac1 = hmac_sha384_2(
         kbkdf512(ss_key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
         canonical_header.as_bytes(),
         &packet_buf[HEADER_SIZE..aes_gcm_tag_end],
     );
-    idx = safe_write_all(&mut packet_buf, idx, &hmac)?;
+    idx = safe_write_all(&mut packet_buf, idx, &hmac1)?;
     let hmac1_end = idx;
 
     // Add secondary HMAC to verify that the caller knows the recipient's full static public identity.
