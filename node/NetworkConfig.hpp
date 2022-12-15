@@ -195,6 +195,8 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_STATE "ssos"
 // client ID
 #define ZT_NETWORKCONFIG_DICT_KEY_CLIENT_ID "ssocid"
+// SSO Provider
+#define ZT_NETWORKCONFIG_DICT_KEY_SSO_PROVIDER "ssop"
 
 // AuthInfo fields -- used by ncSendError for sso
 
@@ -212,6 +214,8 @@ namespace ZeroTier {
 #define ZT_AUTHINFO_DICT_KEY_STATE "aS"
 // Client ID
 #define ZT_AUTHINFO_DICT_KEY_CLIENT_ID "aCID"
+// SSO Provider
+#define ZT_AUTHINFO_DICT_KEY_SSO_PROVIDER "aSSOp"
 
 // Legacy fields -- these are obsoleted but are included when older clients query
 
@@ -289,6 +293,7 @@ public:
 		memset(ssoNonce, 0, sizeof(ssoNonce));
 		memset(ssoState, 0, sizeof(ssoState));
 		memset(ssoClientID, 0, sizeof(ssoClientID));
+		strncpy(ssoProvider, "default", sizeof(ssoProvider));
 	}
 
 	/**
@@ -699,6 +704,15 @@ public:
 	 * oidc client id
 	 */
 	char ssoClientID[256];
+
+	/**
+	 * oidc provider
+	 *
+	 * because certain providers require specific scopes to be requested
+	 * and others to be not requested in order to make everything work
+	 * correctly
+	 **/
+	char ssoProvider[64];
 };
 
 } // namespace ZeroTier

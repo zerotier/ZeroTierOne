@@ -442,24 +442,29 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 				exit(7);
 			}
 
-			r = w.exec_params("SELECT oc.client_id, oc.authorization_endpoint, oc.issuer, oc.sso_impl_version "
-							  "FROM ztc_network n "
-							  "INNER JOIN ztc_network_oidc_config noc "
-							  "  ON noc.network_id = n.id "
-							  "INNER JOIN ztc_oidc_config oc "
-							  "  ON noc.client_id = oc.client_id "
-							  "WHERE n.id = $1 AND n.sso_enabled = true", networkId);
+			r = w.exec_params(
+				"SELECT oc.client_id, oc.authorization_endpoint, oc.issuer, oc.provider, oc.sso_impl_version "
+				"FROM ztc_network AS n "
+				"INNER JOIN ztc_org o "
+				"  ON o.owner_id = n.owner_id "
+			    "LEFT OUTER JOIN ztc_network_oidc_config noc "
+				"  ON noc.network_id = n.id "
+				"LEFT OUTER JOIN ztc_oidc_config oc "
+				"  ON noc.client_id = oc.client_id AND noc.org_id = o.org_id "
+				"WHERE n.id = $1 AND n.sso_enabled = true", networkId);
 		
 			std::string client_id = "";
 			std::string authorization_endpoint = "";
 			std::string issuer = "";
+			std::string provider = "";
 			uint64_t sso_version = 0;
 
 			if (r.size() == 1) {
 				client_id = r.at(0)[0].as<std::string>();
 				authorization_endpoint = r.at(0)[1].as<std::string>();
 				issuer = r.at(0)[2].as<std::string>();
-				sso_version = r.at(0)[3].as<uint64_t>();
+				provider = r.at(0)[3].as<std::string>();
+				sso_version = r.at(0)[4].as<uint64_t>();
 			} else if (r.size() > 1) {
 				fprintf(stderr, "ERROR: More than one auth endpoint for an organization?!?!? NetworkID: %s\n", networkId.c_str());
 			} else {
@@ -489,18 +494,20 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 				} else if (info.version == 1) {
 					info.ssoClientID = client_id;
 					info.issuerURL = issuer;
+					info.ssoProvider = provider;
 					info.ssoNonce = nonce;
 					info.ssoState = std::string(state_hex) + "_" +networkId;
 					info.centralAuthURL = redirectURL;
 #ifdef ZT_DEBUG
 					fprintf(
 						stderr,
-						"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s\n",
+						"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s\nprovider: %s\n",
 						info.ssoClientID.c_str(),
 						info.issuerURL.c_str(),
 						info.ssoNonce.c_str(),
 						info.ssoState.c_str(),
-						info.centralAuthURL.c_str());
+						info.centralAuthURL.c_str(),
+						provider.c_str());
 #endif
 				}
 			}  else {
@@ -539,10 +546,12 @@ void PostgreSQL::initializeNetworks()
 		std::unordered_set<std::string> networkSet;
 
 		char qbuf[2048] = {0};
-		sprintf(qbuf, "SELECT n.id, (EXTRACT(EPOCH FROM n.creation_time AT TIME ZONE 'UTC')*1000)::bigint as creation_time, n.capabilities, "
+		sprintf(qbuf,
+			"SELECT n.id, (EXTRACT(EPOCH FROM n.creation_time AT TIME ZONE 'UTC')*1000)::bigint as creation_time, n.capabilities, "
 			"n.enable_broadcast, (EXTRACT(EPOCH FROM n.last_modified AT TIME ZONE 'UTC')*1000)::bigint AS last_modified, n.mtu, n.multicast_limit, n.name, n.private, n.remote_trace_level, "
-			"n.remote_trace_target, n.revision, n.rules, n.tags, n.v4_assign_mode, n.v6_assign_mode, n.sso_enabled, (CASE WHEN n.sso_enabled THEN o.client_id ELSE NULL END) as client_id, "
-			"(CASE WHEN n.sso_enabled THEN o.authorization_endpoint ELSE NULL END) as authorization_endpoint, d.domain, d.servers, "
+			"n.remote_trace_target, n.revision, n.rules, n.tags, n.v4_assign_mode, n.v6_assign_mode, n.sso_enabled, (CASE WHEN n.sso_enabled THEN noc.client_id ELSE NULL END) as client_id, "
+			"(CASE WHEN n.sso_enabled THEN oc.authorization_endpoint ELSE NULL END) as authorization_endpoint, "
+			"(CASE WHEN n.sso_enabled THEN oc.provider ELSE NULL END) as provider, d.domain, d.servers, "
 			"ARRAY(SELECT CONCAT(host(ip_range_start),'|', host(ip_range_end)) FROM ztc_network_assignment_pool WHERE network_id = n.id) AS assignment_pool, "
 			"ARRAY(SELECT CONCAT(host(address),'/',bits::text,'|',COALESCE(host(via), 'NULL'))FROM ztc_network_route WHERE network_id = n.id) AS routes "
 			"FROM ztc_network n "
@@ -551,7 +560,7 @@ void PostgreSQL::initializeNetworks()
 			"LEFT OUTER JOIN ztc_network_oidc_config noc "
 			"	ON noc.network_id = n.id "
 			"LEFT OUTER JOIN ztc_oidc_config oc "
-			"   ON noc.client_id = oc.client_id AND o.org_id = oc.org_id "
+			"	ON noc.client_id = oc.client_id AND oc.org_id = o.org_id "
 			"LEFT OUTER JOIN ztc_network_dns d "
 			"	ON d.network_id = n.id "
 			"WHERE deleted = false AND controller_id = '%s'", _myAddressStr.c_str());
@@ -582,6 +591,7 @@ void PostgreSQL::initializeNetworks()
 			, std::optional<bool>			// ssoEnabled
 			, std::optional<std::string>	// clientId
 			, std::optional<std::string>	// authorizationEndpoint
+			, std::optional<std::string>    // ssoProvider
 			, std::optional<std::string>	// domain
 			, std::optional<std::string>	// servers
 			, std::string					// assignmentPoolString
@@ -618,10 +628,11 @@ void PostgreSQL::initializeNetworks()
 			std::optional<bool> ssoEnabled = std::get<16>(row);
 			std::optional<std::string> clientId = std::get<17>(row);
 			std::optional<std::string> authorizationEndpoint = std::get<18>(row);
-			std::optional<std::string> dnsDomain = std::get<19>(row);
-			std::optional<std::string> dnsServers = std::get<20>(row);
-			std::string assignmentPoolString = std::get<21>(row);
-			std::string routesString = std::get<22>(row);
+			std::optional<std::string> ssoProvider = std::get<19>(row);
+			std::optional<std::string> dnsDomain = std::get<20>(row);
+			std::optional<std::string> dnsServers = std::get<21>(row);
+			std::string assignmentPoolString = std::get<22>(row);
+			std::string routesString = std::get<23>(row);
 			
 		 	config["id"] = nwid;
 		 	config["nwid"] = nwid;
@@ -646,6 +657,7 @@ void PostgreSQL::initializeNetworks()
 		 	config["routes"] = json::array();
 			config["clientId"] = clientId.value_or("");
 			config["authorizationEndpoint"] = authorizationEndpoint.value_or("");
+			config["provider"] = ssoProvider.value_or("");
 
 			networkSet.insert(nwid);
 
