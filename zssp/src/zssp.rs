@@ -120,6 +120,20 @@ struct SessionMutableState {
     last_remote_offer: i64,                               // Time of most recent ephemeral offer (ms)
 }
 
+/// A shared symmetric session key.
+struct SessionKey {
+    secret_fingerprint: [u8; 16],                 // First 128 bits of a SHA384 computed from the secret
+    establish_time: i64,                          // Time session key was established
+    establish_counter: u64,                       // Counter value at which session was established
+    lifetime: KeyLifetime,                        // Key expiration time and counter
+    ratchet_key: Secret<64>,                      // Ratchet key for deriving the next session key
+    receive_key: Secret<AES_KEY_SIZE>,            // Receive side AES-GCM key
+    send_key: Secret<AES_KEY_SIZE>,               // Send side AES-GCM key
+    receive_cipher_pool: Mutex<Vec<Box<AesGcm>>>, // Pool of initialized sending ciphers
+    send_cipher_pool: Mutex<Vec<Box<AesGcm>>>,    // Pool of initialized receiving ciphers
+    ratchet_count: u64,                           // Number of new keys negotiated in this session
+    jedi: bool,                                   // True if Kyber1024 was used (both sides enabled)
+}
 
 /// Alice's KEY_OFFER, remembered so Noise agreement process can resume on KEY_COUNTER_OFFER.
 struct EphemeralOffer {
@@ -1453,21 +1467,6 @@ impl KeyLifetime {
     fn expired(&self, counter: CounterValue) -> bool {
         counter.0 >= self.hard_expire_at_counter
     }
-}
-
-/// A shared symmetric session key.
-struct SessionKey {
-    secret_fingerprint: [u8; 16],                 // First 128 bits of a SHA384 computed from the secret
-    establish_time: i64,                          // Time session key was established
-    establish_counter: u64,                       // Counter value at which session was established
-    lifetime: KeyLifetime,                        // Key expiration time and counter
-    ratchet_key: Secret<64>,                      // Ratchet key for deriving the next session key
-    receive_key: Secret<AES_KEY_SIZE>,            // Receive side AES-GCM key
-    send_key: Secret<AES_KEY_SIZE>,               // Send side AES-GCM key
-    receive_cipher_pool: Mutex<Vec<Box<AesGcm>>>, // Pool of initialized sending ciphers
-    send_cipher_pool: Mutex<Vec<Box<AesGcm>>>,    // Pool of initialized receiving ciphers
-    ratchet_count: u64,                           // Number of new keys negotiated in this session
-    jedi: bool,                                   // True if Kyber1024 was used (both sides enabled)
 }
 
 impl SessionKey {
