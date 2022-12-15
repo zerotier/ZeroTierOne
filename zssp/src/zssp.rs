@@ -60,7 +60,7 @@ pub enum Error {
     /// Data object is too large to send, even with fragmentation
     DataTooLarge,
 
-    /// An unexpected buffer overrun occured while attempting to encode or decode a packet, this can only ever happen if exceptionally large keys are being used (which under p384 would imply there is a bug and potentially an attacker has control of a field they shouldn't), or as the result of an internal encoding bug.
+    /// An unexpected buffer overrun occured while attempting to encode or decode a packet, this can only ever happen if exceptionally large key blobs or metadata are being used, or as the result of an internal encoding bug.
     UnexpectedBufferOverrun,
 }
 
