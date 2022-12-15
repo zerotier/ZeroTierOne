@@ -1,12 +1,25 @@
 on: [ push ]
-    
-jobs:  
+
+jobs:
   build_ubuntu:
     runs-on: ubuntu-latest
     steps:
     - name: checkout
       uses: actions/checkout@v3
-        
+
+    - name: Set up cargo cache
+      uses: actions/cache@v3
+      continue-on-error: false
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ${{ runner.os }}-cargo-
+
     - name: make
       run: make
 
@@ -15,16 +28,42 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v3
-        
+
+    - name: Set up cargo cache
+      uses: actions/cache@v3
+      continue-on-error: false
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ${{ runner.os }}-cargo-
+
     - name: make
-      run: make     
+      run: make
 
   test_ubuntu:
     runs-on: ubuntu-latest
     steps:
     - name: checkout
       uses: actions/checkout@v3
-        
+
+    - name: Set up cargo cache
+      uses: actions/cache@v3
+      continue-on-error: false
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ${{ runner.os }}-cargo-
+
     - name: cargo test
       run: cargo test -v
 
@@ -33,16 +72,29 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v3
-        
+
+    - name: Set up cargo cache
+      uses: actions/cache@v3
+      continue-on-error: false
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ${{ runner.os }}-cargo-
+
     - name: cargo test
       run: cargo test -v
-      
+
   # build_windows:
   #   runs-on: windows-latest
   #   steps:
   #   - name: checkout
   #     uses: actions/checkout@v3
-        
+
   #   - name: setup msbuild
   #     uses: microsoft/setup-msbuild@v1.1.3
 
