@@ -1,5 +1,3 @@
-use std::sync::atomic::{AtomicU64, Ordering};
-
 use zerotier_crypto::random;
 use zerotier_utils::memory;
 
@@ -58,49 +56,6 @@ impl From<SessionId> for u64 {
     #[inline(always)]
     fn from(sid: SessionId) -> Self {
         sid.0
-    }
-}
-
-/// Outgoing packet counter with strictly ordered atomic semantics.
-#[repr(transparent)]
-pub(crate) struct Counter(AtomicU64);
-
-impl Counter {
-    #[inline(always)]
-    pub fn new() -> Self {
-        // Using a random value has no security implication. Zero would be fine. This just
-        // helps randomize packet contents a bit.
-        Self(AtomicU64::new(random::next_u32_secure() as u64))
-    }
-
-    /// Get the value most recently used to send a packet.
-    #[inline(always)]
-    pub fn previous(&self) -> CounterValue {
-        CounterValue(self.0.load(Ordering::SeqCst))
-    }
-
-    /// Get a counter value for the next packet being sent.
-    #[inline(always)]
-    pub fn next(&self) -> CounterValue {
-        CounterValue(self.0.fetch_add(1, Ordering::SeqCst))
-    }
-}
-
-/// A value of the outgoing packet counter.
-///
-/// The used portion of the packet counter is the least significant 32 bits, but the internal
-/// counter state is kept as a 64-bit integer. This makes it easier to correctly handle
-/// key expiration after usage limits are reached without complicated logic to handle 32-bit
-/// wrapping. Usage limits are below 2^32 so the actual 32-bit counter will not wrap for a
-/// given shared secret key.
-#[repr(transparent)]
-#[derive(Copy, Clone)]
-pub(crate) struct CounterValue(pub u64);
-
-impl CounterValue {
-    #[inline(always)]
-    pub fn to_u32(&self) -> u32 {
-        self.0 as u32
     }
 }
 

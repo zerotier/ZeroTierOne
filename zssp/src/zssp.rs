@@ -19,6 +19,7 @@ use zerotier_utils::varint;
 
 use crate::app_layer::ApplicationLayer;
 use crate::constants::*;
+use crate::counter::{Counter, CounterValue};
 use crate::ints::*;
 
 ////////////////////////////////////////////////////////////////
@@ -123,7 +124,7 @@ struct SessionMutableState {
 struct SessionKey {
     secret_fingerprint: [u8; 16],                 // First 128 bits of a SHA384 computed from the secret
     establish_time: i64,                          // Time session key was established
-    establish_counter: u64,                       // Counter value at which session was established
+    establish_counter: CounterValue,              // Counter value at which session was established
     lifetime: KeyLifetime,                        // Key expiration time and counter
     ratchet_key: Secret<64>,                      // Ratchet key for deriving the next session key
     receive_key: Secret<AES_KEY_SIZE>,            // Receive side AES-GCM key
@@ -147,8 +148,8 @@ struct EphemeralOffer {
 
 /// Key lifetime manager state and logic (separate to spotlight and keep clean)
 struct KeyLifetime {
-    rekey_at_or_after_counter: u64,
-    hard_expire_at_counter: u64,
+    rekey_at_or_after_counter: CounterValue,
+    hard_expire_at_counter: CounterValue,
     rekey_at_or_after_timestamp: i64,
 }
 
@@ -1482,24 +1483,22 @@ fn parse_dec_key_offer_after_header(
 impl KeyLifetime {
     fn new(current_counter: CounterValue, current_time: i64) -> Self {
         Self {
-            rekey_at_or_after_counter: current_counter.0
-                + REKEY_AFTER_USES
-                + (random::next_u32_secure() % REKEY_AFTER_USES_MAX_JITTER) as u64,
-            hard_expire_at_counter: current_counter.0 + EXPIRE_AFTER_USES,
+            rekey_at_or_after_counter: current_counter
+                .counter_value_after_uses(REKEY_AFTER_USES)
+                .counter_value_after_uses((random::next_u32_secure() % REKEY_AFTER_USES_MAX_JITTER) as u64),
+            hard_expire_at_counter: current_counter.counter_value_after_uses(EXPIRE_AFTER_USES),
             rekey_at_or_after_timestamp: current_time
                 + REKEY_AFTER_TIME_MS
                 + (random::next_u32_secure() % REKEY_AFTER_TIME_MS_MAX_JITTER) as i64,
         }
     }
 
-    #[inline(always)]
     fn should_rekey(&self, counter: CounterValue, current_time: i64) -> bool {
-        counter.0 >= self.rekey_at_or_after_counter || current_time >= self.rekey_at_or_after_timestamp
+        counter >= self.rekey_at_or_after_counter || current_time >= self.rekey_at_or_after_timestamp
     }
 
-    #[inline(always)]
     fn expired(&self, counter: CounterValue) -> bool {
-        counter.0 >= self.hard_expire_at_counter
+        counter >= self.hard_expire_at_counter
     }
 }
 
@@ -1515,7 +1514,7 @@ impl SessionKey {
         Self {
             secret_fingerprint: secret_fingerprint(key.as_bytes())[..16].try_into().unwrap(),
             establish_time: current_time,
-            establish_counter: current_counter.0,
+            establish_counter: current_counter,
             lifetime: KeyLifetime::new(current_counter, current_time),
             ratchet_key: kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_RATCHETING),
             receive_key,

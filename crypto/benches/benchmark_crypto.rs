@@ -9,8 +9,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let p384_a = P384KeyPair::generate();
     let p384_b = P384KeyPair::generate();
 
-    let kyber_a = pqc_kyber::keypair(&mut random::SecureRandom::default());
-    let kyber_encap = pqc_kyber::encapsulate(&kyber_a.public, &mut random::SecureRandom::default()).unwrap();
+    //let kyber_a = pqc_kyber::keypair(&mut random::SecureRandom::default());
+    //let kyber_encap = pqc_kyber::encapsulate(&kyber_a.public, &mut random::SecureRandom::default()).unwrap();
 
     let x25519_a = X25519KeyPair::generate();
     let x25519_b = X25519KeyPair::generate();
@@ -23,12 +23,12 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| p384_a.agree(p384_b.public_key()).expect("ecdhp384 failed"))
     });
     group.bench_function("ecdhx25519", |b| b.iter(|| x25519_a.agree(&x25519_b_pub)));
-    group.bench_function("kyber_encapsulate", |b| {
-        b.iter(|| pqc_kyber::encapsulate(&kyber_a.public, &mut random::SecureRandom::default()).expect("kyber encapsulate failed"))
-    });
-    group.bench_function("kyber_decapsulate", |b| {
-        b.iter(|| pqc_kyber::decapsulate(&kyber_encap.0, &kyber_a.secret).expect("kyber decapsulate failed"))
-    });
+    //group.bench_function("kyber_encapsulate", |b| {
+    //    b.iter(|| pqc_kyber::encapsulate(&kyber_a.public, &mut random::SecureRandom::default()).expect("kyber encapsulate failed"))
+    //});
+    //group.bench_function("kyber_decapsulate", |b| {
+    //    b.iter(|| pqc_kyber::decapsulate(&kyber_encap.0, &kyber_a.secret).expect("kyber decapsulate failed"))
+    //});
 
     group.finish();
 }
