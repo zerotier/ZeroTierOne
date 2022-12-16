@@ -17,7 +17,7 @@ use zerotier_utils::ringbuffermap::RingBufferMap;
 use zerotier_utils::unlikely_branch;
 use zerotier_utils::varint;
 
-use crate::app_layer::ApplicationLayer;
+use crate::applicationlayer::ApplicationLayer;
 use crate::constants::*;
 use crate::counter::{Counter, CounterValue};
 use crate::sessionid::SessionId;
