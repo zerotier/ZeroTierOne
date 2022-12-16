@@ -19,7 +19,6 @@ pub const ED25519_SIGNATURE_SIZE: usize = 64;
 pub struct X25519KeyPair(x25519_dalek::StaticSecret, Secret<32>, x25519_dalek::PublicKey);
 
 impl X25519KeyPair {
-    #[inline(always)]
     pub fn generate() -> X25519KeyPair {
         let sk = x25519_dalek::StaticSecret::new(SecureRandom::get());
         let sk2 = Secret(sk.to_bytes());
@@ -96,7 +95,6 @@ impl Clone for X25519KeyPair {
 pub struct Ed25519KeyPair(ed25519_dalek::Keypair, Secret<32>);
 
 impl Ed25519KeyPair {
-    #[inline(always)]
     pub fn generate() -> Ed25519KeyPair {
         let mut rng = SecureRandom::get();
         let kp = ed25519_dalek::Keypair::generate(&mut rng);
