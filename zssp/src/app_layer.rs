@@ -1,9 +1,14 @@
 use std::ops::Deref;
 
-use zerotier_crypto::{p384::{P384KeyPair, P384PublicKey}, secret::Secret};
+use zerotier_crypto::{
+    p384::{P384KeyPair, P384PublicKey},
+    secret::Secret,
+};
 
-use crate::{zssp::{Session, ReceiveContext}, ints::SessionId};
-
+use crate::{
+    ints::SessionId,
+    zssp::{ReceiveContext, Session},
+};
 
 /// Trait to implement to integrate the session into an application.
 ///

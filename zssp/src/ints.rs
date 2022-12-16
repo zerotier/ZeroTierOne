@@ -1,9 +1,7 @@
-
-use std::{sync::atomic::{AtomicU64, Ordering}};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use zerotier_crypto::random;
 use zerotier_utils::memory;
-
 
 /// "Canonical header" for generating 96-bit AES-GCM nonce and for inclusion in HMACs.
 ///
@@ -50,7 +48,6 @@ impl SessionId {
         }
     }
 
-
     #[inline]
     pub fn new_random() -> Self {
         Self(random::next_u64_secure() % Self::NIL.0)
@@ -63,8 +60,6 @@ impl From<SessionId> for u64 {
         sid.0
     }
 }
-
-
 
 /// Outgoing packet counter with strictly ordered atomic semantics.
 #[repr(transparent)]
@@ -108,7 +103,6 @@ impl CounterValue {
         self.0 as u32
     }
 }
-
 
 /// Was this side the one who sent the first offer (Alice) or countered (Bob).
 /// Note that role is not fixed. Either side can take either role. It's just who

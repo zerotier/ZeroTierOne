@@ -1,4 +1,3 @@
-
 /// Minimum size of a valid physical ZSSP packet or packet fragment.
 pub const MIN_PACKET_SIZE: usize = HEADER_SIZE + AES_GCM_TAG_SIZE;
 

@@ -18,9 +18,8 @@ use zerotier_utils::unlikely_branch;
 use zerotier_utils::varint;
 
 use crate::app_layer::ApplicationLayer;
-use crate::ints::*;
 use crate::constants::*;
-
+use crate::ints::*;
 
 ////////////////////////////////////////////////////////////////
 // types
@@ -101,13 +100,13 @@ pub struct Session<Layer: ApplicationLayer> {
     /// An arbitrary object associated with session (type defined in Host trait)
     pub user_data: Layer::SessionUserData,
 
-    send_counter: Counter,                            // Outgoing packet counter and nonce state
-    psk: Secret<64>,                                  // Arbitrary PSK provided by external code
-    noise_ss: Secret<48>,                             // Static raw shared ECDH NIST P-384 key
-    header_check_cipher: Aes,                         // Cipher used for header MAC (fragmentation)
-    state: RwLock<SessionMutableState>,               // Mutable parts of state (other than defrag buffers)
-    remote_s_public_blob_hash: [u8; 48],              // SHA384(remote static public key blob)
-    remote_s_public_raw: [u8; P384_PUBLIC_KEY_SIZE],  // Remote NIST P-384 static public key
+    send_counter: Counter,                           // Outgoing packet counter and nonce state
+    psk: Secret<64>,                                 // Arbitrary PSK provided by external code
+    noise_ss: Secret<48>,                            // Static raw shared ECDH NIST P-384 key
+    header_check_cipher: Aes,                        // Cipher used for header MAC (fragmentation)
+    state: RwLock<SessionMutableState>,              // Mutable parts of state (other than defrag buffers)
+    remote_s_public_blob_hash: [u8; 48],             // SHA384(remote static public key blob)
+    remote_s_public_raw: [u8; P384_PUBLIC_KEY_SIZE], // Remote NIST P-384 static public key
 
     defrag: Mutex<RingBufferMap<u32, GatherArray<Layer::IncomingPacketBuffer, MAX_FRAGMENTS>, 8, 8>>,
 }
@@ -116,7 +115,7 @@ struct SessionMutableState {
     remote_session_id: Option<SessionId>,                 // The other side's 48-bit session ID
     session_keys: [Option<SessionKey>; KEY_HISTORY_SIZE], // Buffers to store current, next, and last active key
     cur_session_key_idx: usize,                           // Pointer used for keys[] circular buffer
-    offer: Option<EphemeralOffer>,                   // Most recent ephemeral offer sent to remote
+    offer: Option<EphemeralOffer>,                        // Most recent ephemeral offer sent to remote
     last_remote_offer: i64,                               // Time of most recent ephemeral offer (ms)
 }
 
@@ -153,8 +152,6 @@ struct KeyLifetime {
     rekey_at_or_after_timestamp: i64,
 }
 
-
-
 ////////////////////////////////////////////////////////////////
 // functions
 ////////////////////////////////////////////////////////////////
@@ -186,12 +183,11 @@ impl std::fmt::Debug for Error {
     }
 }
 
-
 /// Write src into buffer starting at the index idx. If buffer cannot fit src at that location, nothing at all is written and Error::UnexpectedBufferOverrun is returned. No other errors can be returned by this function. An idx incremented by the amount written is returned.
 fn safe_write_all(buffer: &mut [u8], idx: usize, src: &[u8]) -> Result<usize, Error> {
     let dest = &mut buffer[idx..];
     let amt = src.len();
-    if dest.len() >= amt  {
+    if dest.len() >= amt {
         dest[..amt].copy_from_slice(src);
         Ok(idx + amt)
     } else {
@@ -227,7 +223,6 @@ fn varint_safe_read(src: &mut &[u8]) -> Result<u64, Error> {
     Ok(v)
 }
 
-
 impl<Layer: ApplicationLayer> Session<Layer> {
     /// Create a new session and send an initial key offer message to the other end.
     ///
@@ -256,7 +251,7 @@ impl<Layer: ApplicationLayer> Session<Layer> {
                 let send_counter = Counter::new();
                 let bob_s_public_blob_hash = SHA384::hash(bob_s_public_blob);
                 let header_check_cipher =
-                Aes::new(kbkdf512(noise_ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>());
+                    Aes::new(kbkdf512(noise_ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>());
                 let mut offer = None;
                 if send_ephemeral_offer(
                     &mut send,
@@ -272,8 +267,10 @@ impl<Layer: ApplicationLayer> Session<Layer> {
                     None,
                     mtu,
                     current_time,
-                    &mut offer
-                ).is_ok() {
+                    &mut offer,
+                )
+                .is_ok()
+                {
                     return Ok(Self {
                         id: local_session_id,
                         user_data,
@@ -424,16 +421,15 @@ impl<Layer: ApplicationLayer> Session<Layer> {
         force_rekey: bool,
     ) {
         let state = self.state.read().unwrap();
-        if (
-            force_rekey
+        if (force_rekey
             || state.session_keys[state.cur_session_key_idx]
-            .as_ref()
-            .map_or(true, |key| key.lifetime.should_rekey(self.send_counter.previous(), current_time)))
+                .as_ref()
+                .map_or(true, |key| key.lifetime.should_rekey(self.send_counter.previous(), current_time)))
             && state
-            .offer
-            .as_ref()
-            .map_or(true, |o| (current_time - o.creation_time) > Layer::REKEY_RATE_LIMIT_MS
-        ) {
+                .offer
+                .as_ref()
+                .map_or(true, |o| (current_time - o.creation_time) > Layer::REKEY_RATE_LIMIT_MS)
+        {
             if let Some(remote_s_public) = P384PublicKey::from_bytes(&self.remote_s_public_raw) {
                 let mut offer = None;
                 if send_ephemeral_offer(
@@ -454,8 +450,10 @@ impl<Layer: ApplicationLayer> Session<Layer> {
                     },
                     mtu,
                     current_time,
-                    &mut offer
-                ).is_ok() {
+                    &mut offer,
+                )
+                .is_ok()
+                {
                     drop(state);
                     let _ = self.state.write().unwrap().offer.replace(offer.unwrap());
                 }
@@ -679,9 +677,9 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                         if aead_authentication_ok {
                             // Select this key as the new default if it's newer than the current key.
                             if p > 0
-                            && state.session_keys[state.cur_session_key_idx]
-                            .as_ref()
-                            .map_or(true, |old| old.establish_counter < session_key.establish_counter)
+                                && state.session_keys[state.cur_session_key_idx]
+                                    .as_ref()
+                                    .map_or(true, |old| old.establish_counter < session_key.establish_counter)
                             {
                                 drop(state);
                                 let mut state = session.state.write().unwrap();
@@ -780,11 +778,18 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     }
 
                     // Key agreement: alice (remote) ephemeral NIST P-384 <> local static NIST P-384
-                    let alice_e_public = P384PublicKey::from_bytes(&kex_packet[(HEADER_SIZE + 1)..plaintext_end]).ok_or(Error::FailedAuthentication)?;
-                    let noise_es = host.get_local_s_keypair().agree(&alice_e_public).ok_or(Error::FailedAuthentication)?;
+                    let alice_e_public =
+                        P384PublicKey::from_bytes(&kex_packet[(HEADER_SIZE + 1)..plaintext_end]).ok_or(Error::FailedAuthentication)?;
+                    let noise_es = host
+                        .get_local_s_keypair()
+                        .agree(&alice_e_public)
+                        .ok_or(Error::FailedAuthentication)?;
 
                     // Initial key derivation from starting point, mixing in alice's ephemeral public and the es.
-                    let es_key = Secret(hmac_sha512(&hmac_sha512(&INITIAL_KEY, alice_e_public.as_bytes()), noise_es.as_bytes()));
+                    let es_key = Secret(hmac_sha512(
+                        &hmac_sha512(&INITIAL_KEY, alice_e_public.as_bytes()),
+                        noise_es.as_bytes(),
+                    ));
 
                     // Decrypt the encrypted part of the packet payload and authenticate the above key exchange via AES-GCM auth.
                     let mut c = AesGcm::new(
@@ -799,8 +804,14 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     }
 
                     // Parse payload and get alice's session ID, alice's public blob, metadata, and (if present) Alice's Kyber1024 public.
-                    let (offer_id, alice_session_id, alice_s_public_blob, alice_metadata, alice_hk_public_raw, alice_ratchet_key_fingerprint) =
-                    parse_dec_key_offer_after_header(&kex_packet[plaintext_end..kex_packet_len], packet_type)?;
+                    let (
+                        offer_id,
+                        alice_session_id,
+                        alice_s_public_blob,
+                        alice_metadata,
+                        alice_hk_public_raw,
+                        alice_ratchet_key_fingerprint,
+                    ) = parse_dec_key_offer_after_header(&kex_packet[plaintext_end..kex_packet_len], packet_type)?;
 
                     // We either have a session, in which case they should have supplied a ratchet key fingerprint, or
                     // we don't and they should not have supplied one.
@@ -865,7 +876,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                         (None, ratchet_key, ratchet_count)
                     } else {
                         if let Some((new_session_id, psk, associated_object)) =
-                        host.accept_new_session(self, remote_address, alice_s_public_blob, alice_metadata)
+                            host.accept_new_session(self, remote_address, alice_s_public_blob, alice_metadata)
                         {
                             let header_check_cipher = Aes::new(
                                 kbkdf512(noise_ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>(),
@@ -919,7 +930,10 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     let noise_ik_key = Secret(hmac_sha512(
                         session.psk.as_bytes(),
                         &hmac_sha512(
-                            &hmac_sha512(&hmac_sha512(ss_key.as_bytes(), bob_e_keypair.public_key_bytes()), noise_ee.as_bytes()),
+                            &hmac_sha512(
+                                &hmac_sha512(ss_key.as_bytes(), bob_e_keypair.public_key_bytes()),
+                                noise_ee.as_bytes(),
+                            ),
                             noise_se.as_bytes(),
                         ),
                     ));
@@ -929,7 +943,9 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
 
                     // Generate a Kyber encapsulated ciphertext if Kyber is enabled and the other side sent us a public key.
                     let (bob_hk_public, hybrid_kk) = if JEDI && alice_hk_public_raw.len() > 0 {
-                        if let Ok((bob_hk_public, hybrid_kk)) = pqc_kyber::encapsulate(alice_hk_public_raw, &mut random::SecureRandom::default()) {
+                        if let Ok((bob_hk_public, hybrid_kk)) =
+                            pqc_kyber::encapsulate(alice_hk_public_raw, &mut random::SecureRandom::default())
+                        {
                             (Some(bob_hk_public), Some(Secret(hybrid_kk)))
                         } else {
                             return Err(Error::FailedAuthentication);
@@ -1012,7 +1028,14 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     idx = safe_write_all(&mut reply_buf, idx, &hmac)?;
                     let packet_end = idx;
 
-                    let session_key = SessionKey::new(session_key, Role::Bob, current_time, reply_counter, ratchet_count + 1, hybrid_kk.is_some());
+                    let session_key = SessionKey::new(
+                        session_key,
+                        Role::Bob,
+                        current_time,
+                        reply_counter,
+                        ratchet_count + 1,
+                        hybrid_kk.is_some(),
+                    );
 
                     let mut state = session.state.write().unwrap();
                     let _ = state.remote_session_id.replace(alice_session_id);
@@ -1048,13 +1071,10 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     if let Some(session) = session {
                         let state = session.state.read().unwrap();
                         if let Some(offer) = state.offer.as_ref() {
-
-                            let bob_e_public = P384PublicKey::from_bytes(&kex_packet[(HEADER_SIZE + 1)..plaintext_end]).ok_or(Error::FailedAuthentication)?;
-                            let noise_ee = offer.alice_e_keypair.agree(&bob_e_public).ok_or(Error::FailedAuthentication)?;
-                            let noise_se = host
-                                .get_local_s_keypair()
-                                .agree(&bob_e_public)
+                            let bob_e_public = P384PublicKey::from_bytes(&kex_packet[(HEADER_SIZE + 1)..plaintext_end])
                                 .ok_or(Error::FailedAuthentication)?;
+                            let noise_ee = offer.alice_e_keypair.agree(&bob_e_public).ok_or(Error::FailedAuthentication)?;
+                            let noise_se = host.get_local_s_keypair().agree(&bob_e_public).ok_or(Error::FailedAuthentication)?;
 
                             let noise_ik_key = Secret(hmac_sha512(
                                 session.psk.as_bytes(),
@@ -1077,17 +1097,17 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
 
                             // Alice has now completed Noise_IK with NIST P-384 and verified with GCM auth, but now for hybrid...
 
-                            let (offer_id, bob_session_id, _, _, bob_hk_public_raw, bob_ratchet_key_id) = parse_dec_key_offer_after_header(
-                                &kex_packet[plaintext_end..kex_packet_len],
-                                packet_type,
-                            )?;
+                            let (offer_id, bob_session_id, _, _, bob_hk_public_raw, bob_ratchet_key_id) =
+                                parse_dec_key_offer_after_header(&kex_packet[plaintext_end..kex_packet_len], packet_type)?;
 
                             if !offer.id.eq(offer_id) {
                                 return Ok(ReceiveResult::Ignored);
                             }
 
                             let hybrid_kk = if JEDI && bob_hk_public_raw.len() > 0 && offer.alice_hk_keypair.is_some() {
-                                if let Ok(hybrid_kk) = pqc_kyber::decapsulate(bob_hk_public_raw, &offer.alice_hk_keypair.as_ref().unwrap().secret) {
+                                if let Ok(hybrid_kk) =
+                                    pqc_kyber::decapsulate(bob_hk_public_raw, &offer.alice_hk_keypair.as_ref().unwrap().secret)
+                                {
                                     Some(Secret(hybrid_kk))
                                 } else {
                                     return Err(Error::FailedAuthentication);
@@ -1121,7 +1141,14 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                             // Alice has now completed and validated the full hybrid exchange.
 
                             let counter = session.send_counter.next();
-                            let session_key = SessionKey::new(session_key, Role::Alice, current_time, counter, ratchet_count + 1, hybrid_kk.is_some());
+                            let session_key = SessionKey::new(
+                                session_key,
+                                Role::Alice,
+                                current_time,
+                                counter,
+                                ratchet_count + 1,
+                                hybrid_kk.is_some(),
+                            );
 
                             ////////////////////////////////////////////////////////////////
                             // packet encoding for post-noise session start ack
@@ -1167,7 +1194,6 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
     }
 }
 
-
 /// Create and send an ephemeral offer, returning the EphemeralOffer part that must be saved.
 fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     send: &mut SendFunction,
@@ -1183,7 +1209,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     header_check_cipher: Option<&Aes>, // None to use one based on the recipient's public key for initial contact
     mtu: usize,
     current_time: i64,
-    ret_ephemeral_offer: &mut Option<EphemeralOffer>//We want to prevent copying the EphemeralOffer up the stack because it's very big. ret_ephemeral_offer will be overwritten with the returned EphemeralOffer when the call completes.
+    ret_ephemeral_offer: &mut Option<EphemeralOffer>, //We want to prevent copying the EphemeralOffer up the stack because it's very big. ret_ephemeral_offer will be overwritten with the returned EphemeralOffer when the call completes.
 ) -> Result<(), Error> {
     // Generate a NIST P-384 pair.
     let alice_e_keypair = P384KeyPair::generate();
@@ -1207,7 +1233,6 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
 
     // Random ephemeral offer ID
     let id: [u8; 16] = random::get_bytes_secure();
-
 
     ////////////////////////////////////////////////////////////////
     // packet encoding for noise initial key offer and for noise rekeying
@@ -1244,7 +1269,6 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     }
     let payload_end = idx;
 
-
     // Create ephemeral agreement secret.
     let es_key = Secret(hmac_sha512(
         &hmac_sha512(&INITIAL_KEY, alice_e_keypair.public_key_bytes()),
@@ -1252,7 +1276,14 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     ));
 
     let bob_session_id = bob_session_id.unwrap_or(SessionId::NIL);
-    create_packet_header(&mut packet_buf, payload_end, mtu, PACKET_TYPE_INITIAL_KEY_OFFER, bob_session_id, counter)?;
+    create_packet_header(
+        &mut packet_buf,
+        payload_end,
+        mtu,
+        PACKET_TYPE_INITIAL_KEY_OFFER,
+        bob_session_id,
+        counter,
+    )?;
 
     let canonical_header = CanonicalHeader::make(bob_session_id, PACKET_TYPE_INITIAL_KEY_OFFER, counter.to_u32());
 
@@ -1284,7 +1315,11 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     let hmac1_end = idx;
 
     // Add secondary HMAC to verify that the caller knows the recipient's full static public identity.
-    let hmac2 = hmac_sha384_2(bob_s_public_blob_hash, canonical_header.as_bytes(), &packet_buf[HEADER_SIZE..hmac1_end]);
+    let hmac2 = hmac_sha384_2(
+        bob_s_public_blob_hash,
+        canonical_header.as_bytes(),
+        &packet_buf[HEADER_SIZE..hmac1_end],
+    );
     idx = safe_write_all(&mut packet_buf, idx, &hmac2)?;
     let packet_end = idx;
 
@@ -1342,7 +1377,7 @@ fn create_packet_header(
         memory::store_raw((counter.to_u32() as u64).to_le(), header);
         memory::store_raw(
             (u64::from(recipient_session_id) | (packet_type as u64).wrapping_shl(48) | ((fragment_count - 1) as u64).wrapping_shl(52))
-            .to_le(),
+                .to_le(),
             &mut header[8..],
         );
         Ok(())
@@ -1435,26 +1470,25 @@ fn parse_dec_key_offer_after_header(
         None
     };
     Ok((
-        offer_id,//always 16 bytes
+        offer_id, //always 16 bytes
         alice_session_id,
         alice_s_public_blob,
         alice_metadata,
         alice_hk_public_raw,
-        alice_ratchet_key_fingerprint,//always 16 bytes
+        alice_ratchet_key_fingerprint, //always 16 bytes
     ))
 }
-
 
 impl KeyLifetime {
     fn new(current_counter: CounterValue, current_time: i64) -> Self {
         Self {
             rekey_at_or_after_counter: current_counter.0
-            + REKEY_AFTER_USES
-            + (random::next_u32_secure() % REKEY_AFTER_USES_MAX_JITTER) as u64,
+                + REKEY_AFTER_USES
+                + (random::next_u32_secure() % REKEY_AFTER_USES_MAX_JITTER) as u64,
             hard_expire_at_counter: current_counter.0 + EXPIRE_AFTER_USES,
             rekey_at_or_after_timestamp: current_time
-            + REKEY_AFTER_TIME_MS
-            + (random::next_u32_secure() % REKEY_AFTER_TIME_MS_MAX_JITTER) as i64,
+                + REKEY_AFTER_TIME_MS
+                + (random::next_u32_secure() % REKEY_AFTER_TIME_MS_MAX_JITTER) as i64,
         }
     }
 
@@ -1496,14 +1530,12 @@ impl SessionKey {
     #[inline]
     fn get_send_cipher(&self, counter: CounterValue) -> Result<Box<AesGcm>, Error> {
         if !self.lifetime.expired(counter) {
-            Ok(
-                self
+            Ok(self
                 .send_cipher_pool
                 .lock()
                 .unwrap()
                 .pop()
-                .unwrap_or_else(|| Box::new(AesGcm::new(self.send_key.as_bytes(), true)))
-            )
+                .unwrap_or_else(|| Box::new(AesGcm::new(self.send_key.as_bytes(), true))))
         } else {
             // Not only do we return an error, but we also destroy the key.
             let mut scp = self.send_cipher_pool.lock().unwrap();
@@ -1522,10 +1554,10 @@ impl SessionKey {
     #[inline]
     fn get_receive_cipher(&self) -> Box<AesGcm> {
         self.receive_cipher_pool
-        .lock()
-        .unwrap()
-        .pop()
-        .unwrap_or_else(|| Box::new(AesGcm::new(self.receive_key.as_bytes(), false)))
+            .lock()
+            .unwrap()
+            .pop()
+            .unwrap_or_else(|| Box::new(AesGcm::new(self.receive_key.as_bytes(), false)))
     }
 
     #[inline]
