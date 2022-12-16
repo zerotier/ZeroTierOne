@@ -71,5 +71,6 @@ pub fn as_byte_array<T: Copy, const S: usize>(o: &T) -> &[u8; S] {
 #[inline(always)]
 pub fn to_byte_array<T: Copy, const S: usize>(o: T) -> [u8; S] {
     assert_eq!(S, size_of::<T>());
+    assert!(!std::mem::needs_drop::<T>());
     unsafe { *(&o as *const T).cast() }
 }
