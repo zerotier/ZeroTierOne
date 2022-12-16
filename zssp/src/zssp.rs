@@ -695,7 +695,9 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
             let mut kex_packet_len = 0;
             for i in 0..fragments.len() {
                 let mut ff = fragments[i].as_ref();
-                debug_assert!(ff.len() >= MIN_PACKET_SIZE);
+                if ff.len() < MIN_PACKET_SIZE {
+                    return Err(Error::InvalidPacket);
+                }
                 if i > 0 {
                     ff = &ff[HEADER_SIZE..];
                 }
@@ -708,7 +710,8 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
             }
             let kex_packet_saved_ciphertext = kex_packet.clone(); // save for HMAC check later
 
-            // Key exchange packets begin (after header) with the session protocol version.
+            // Key exchange packets begin (after header) with the session protocol version. This could be
+            // changed in the future to support a different cipher suite.
             if kex_packet[HEADER_SIZE] != SESSION_PROTOCOL_VERSION {
                 return Err(Error::UnknownProtocolVersion);
             }
@@ -720,9 +723,11 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                     // packet decoding for noise initial key offer
                     // -> e, es, s, ss
                     ////////////////////////////////////////////////////////////////
+
                     if kex_packet_len < (HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE + AES_GCM_TAG_SIZE + HMAC_SIZE + HMAC_SIZE) {
                         return Err(Error::InvalidPacket);
                     }
+
                     let plaintext_end = HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE;
                     let payload_end = kex_packet_len - (AES_GCM_TAG_SIZE + HMAC_SIZE + HMAC_SIZE);
                     let aes_gcm_tag_end = kex_packet_len - (HMAC_SIZE + HMAC_SIZE);
@@ -760,14 +765,14 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         .ok_or(Error::FailedAuthentication)?;
 
                     // Initial key derivation from starting point, mixing in alice's ephemeral public and the es.
-                    let es_key = Secret(hmac_sha512(
+                    let noise_ik_incomplete_es = Secret(hmac_sha512(
                         &hmac_sha512(&INITIAL_KEY, alice_e_public.as_bytes()),
                         noise_es.as_bytes(),
                     ));
 
                     // Decrypt the encrypted part of the packet payload and authenticate the above key exchange via AES-GCM auth.
                     let mut c = AesGcm::new(
-                        kbkdf512(es_key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n::<AES_KEY_SIZE>(),
+                        kbkdf512(noise_ik_incomplete_es.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n::<AES_KEY_SIZE>(),
                         false,
                     );
                     c.reset_init_gcm(canonical_header_bytes);
@@ -803,14 +808,14 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         .ok_or(Error::FailedAuthentication)?;
 
                     // Mix result of 'ss' agreement into master key.
-                    let ss_key = Secret(hmac_sha512(es_key.as_bytes(), noise_ss.as_bytes()));
-                    drop(es_key);
+                    let noise_ik_incomplete_es_ss = Secret(hmac_sha512(noise_ik_incomplete_es.as_bytes(), noise_ss.as_bytes()));
+                    drop(noise_ik_incomplete_es);
 
                     // Authenticate entire packet with HMAC-SHA384, verifying alice's identity via 'ss' secret that was
                     // just mixed into the key.
                     let hmac1 = &kex_packet[aes_gcm_tag_end..hmac1_end];
                     if !hmac_sha384_2(
-                        kbkdf512(ss_key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
+                        kbkdf512(noise_ik_incomplete_es_ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
                         canonical_header_bytes,
                         &kex_packet_saved_ciphertext[HEADER_SIZE..aes_gcm_tag_end],
                     )
@@ -901,17 +906,19 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                     // NIST/FIPS allows HKDF with HMAC(salt, key) and salt is allowed to be anything. This way if the PSK is not
                     // FIPS compliant the compliance of the entire key derivation is not invalidated. Both inputs are secrets of
                     // fixed size so this shouldn't matter cryptographically.
-                    let noise_ik_key = Secret(hmac_sha512(
+                    let noise_ik_complete = Secret(hmac_sha512(
                         session.psk.as_bytes(),
                         &hmac_sha512(
                             &hmac_sha512(
-                                &hmac_sha512(ss_key.as_bytes(), bob_e_keypair.public_key_bytes()),
+                                &hmac_sha512(noise_ik_incomplete_es_ss.as_bytes(), bob_e_keypair.public_key_bytes()),
                                 noise_ee.as_bytes(),
                             ),
                             noise_se.as_bytes(),
                         ),
                     ));
-                    drop(ss_key);
+                    drop(noise_ik_incomplete_es_ss);
+                    drop(noise_ee);
+                    drop(noise_se);
 
                     // At this point we've completed Noise_IK key derivation with NIST P-384 ECDH, but now for hybrid and ratcheting...
 
@@ -972,7 +979,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                     // Encrypt reply packet using final Noise_IK key BEFORE mixing hybrid or ratcheting, since the other side
                     // must decrypt before doing these things.
                     let mut c = AesGcm::new(
-                        kbkdf512(noise_ik_key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n::<AES_KEY_SIZE>(),
+                        kbkdf512(noise_ik_complete.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n::<AES_KEY_SIZE>(),
                         true,
                     );
                     c.reset_init_gcm(reply_canonical_header.as_bytes());
@@ -981,8 +988,9 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
                     idx = safe_write_all(&mut reply_buf, idx, &gcm_tag)?;
                     let aes_gcm_tag_end = idx;
+
                     // Mix ratchet key from previous session key (if any) and Kyber1024 hybrid shared key (if any).
-                    let mut session_key = noise_ik_key;
+                    let mut session_key = noise_ik_complete;
                     if let Some(ratchet_key) = ratchet_key {
                         session_key = Secret(hmac_sha512(ratchet_key.as_bytes(), session_key.as_bytes()));
                     }
@@ -1050,16 +1058,19 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             let noise_ee = offer.alice_e_keypair.agree(&bob_e_public).ok_or(Error::FailedAuthentication)?;
                             let noise_se = app.get_local_s_keypair().agree(&bob_e_public).ok_or(Error::FailedAuthentication)?;
 
-                            let noise_ik_key = Secret(hmac_sha512(
+                            let noise_ik_complete = Secret(hmac_sha512(
                                 session.psk.as_bytes(),
                                 &hmac_sha512(
                                     &hmac_sha512(&hmac_sha512(offer.ss_key.as_bytes(), bob_e_public.as_bytes()), noise_ee.as_bytes()),
                                     noise_se.as_bytes(),
                                 ),
                             ));
+                            drop(noise_ee);
+                            drop(noise_se);
 
                             let mut c = AesGcm::new(
-                                kbkdf512(noise_ik_key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n::<AES_KEY_SIZE>(),
+                                kbkdf512(noise_ik_complete.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE)
+                                    .first_n::<AES_KEY_SIZE>(),
                                 false,
                             );
                             c.reset_init_gcm(canonical_header_bytes);
@@ -1092,7 +1103,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
                             // Mix ratchet key from previous session key (if any) and Kyber1024 hybrid shared key (if any).
                             let mut ratchet_count = 0;
-                            let mut session_key = noise_ik_key;
+                            let mut session_key = noise_ik_complete;
                             if bob_ratchet_key_id.is_some() && offer.ratchet_key.is_some() {
                                 session_key = Secret(hmac_sha512(offer.ratchet_key.as_ref().unwrap().as_bytes(), session_key.as_bytes()));
                                 ratchet_count = offer.ratchet_count;
