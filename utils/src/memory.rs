@@ -73,12 +73,3 @@ pub fn to_byte_array<T: Copy, const S: usize>(o: T) -> [u8; S] {
     assert_eq!(S, size_of::<T>());
     unsafe { *(&o as *const T).cast() }
 }
-
-/// Get a byte array as a flat object.
-///
-/// WARNING: while this is technically safe, care must be taken if the object requires aligned access.
-#[inline(always)]
-pub fn as_flat_object<T: Copy, const S: usize>(b: &[u8; S]) -> &T {
-    assert!(std::mem::size_of::<T>() <= S);
-    unsafe { &*b.as_ptr().cast() }
-}
