@@ -101,13 +101,13 @@ pub struct ReceiveContext<H: ApplicationLayer> {
     incoming_init_header_check_cipher: Aes,
 }
 
-/// ZSSP bi-directional packet transport channel.
+/// A FIPS compliant variant of Noise_IK with hybrid Kyber1024 PQ data forward secrecy.
 pub struct Session<Application: ApplicationLayer> {
     /// This side's session ID (unique on this side)
     pub id: SessionId,
 
-    /// An arbitrary object associated with session (type defined in Host trait)
-    pub user_data: Application::SessionUserData,
+    /// An arbitrary application defined object associated with each session
+    pub application_data: Application::SessionUserData,
 
     send_counter: Counter,                           // Outgoing packet counter and nonce state
     psk: Secret<64>,                                 // Arbitrary PSK provided by external code
@@ -254,7 +254,7 @@ impl<Application: ApplicationLayer> Session<Application> {
         remote_s_public_blob: &[u8],
         offer_metadata: &[u8],
         psk: &Secret<64>,
-        user_data: Application::SessionUserData,
+        application_data: Application::SessionUserData,
         mtu: usize,
         current_time: i64,
     ) -> Result<Self, Error> {
@@ -286,7 +286,7 @@ impl<Application: ApplicationLayer> Session<Application> {
                 {
                     return Ok(Self {
                         id: local_session_id,
-                        user_data,
+                        application_data,
                         send_counter,
                         psk: psk.clone(),
                         noise_ss,
@@ -623,7 +623,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
         remote_address: &Application::RemoteAddress,
         send: &mut SendFunction,
         data_buf: &'a mut [u8],
-        canonical_header_bytes: &[u8; AES_GCM_TAG_SIZE],
+        canonical_header_bytes: &[u8; 12],
         fragments: &[Application::IncomingPacketBuffer],
         packet_type: u8,
         session: Option<Application::SessionRef>,
@@ -897,7 +897,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             (
                                 Some(Session::<Application> {
                                     id: new_session_id,
-                                    user_data: associated_object,
+                                    application_data: associated_object,
                                     send_counter: Counter::new(),
                                     psk,
                                     noise_ss,
