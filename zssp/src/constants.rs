@@ -52,10 +52,10 @@ pub(crate) const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 10; // 10 min
 pub(crate) const SESSION_PROTOCOL_VERSION: u8 = 0x00;
 
 /// Secondary key type: none, use only P-384 for forward secrecy.
-pub(crate) const E1_TYPE_NONE: u8 = 0;
+pub(crate) const HYBRID_KEY_TYPE_NONE: u8 = 0;
 
 /// Secondary key type: Kyber1024, PQ forward secrecy enabled.
-pub(crate) const E1_TYPE_KYBER1024: u8 = 1;
+pub(crate) const HYBRID_KEY_TYPE_KYBER1024: u8 = 1;
 
 /// Size of packet header
 pub(crate) const HEADER_SIZE: usize = 16;
