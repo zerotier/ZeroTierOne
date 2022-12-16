@@ -6,7 +6,7 @@ use zerotier_crypto::{
 };
 
 use crate::{
-    ints::SessionId,
+    sessionid::SessionId,
     zssp::{ReceiveContext, Session},
 };
 

@@ -20,11 +20,7 @@ use zerotier_utils::varint;
 use crate::app_layer::ApplicationLayer;
 use crate::constants::*;
 use crate::counter::{Counter, CounterValue};
-use crate::ints::*;
-
-////////////////////////////////////////////////////////////////
-// types
-////////////////////////////////////////////////////////////////
+use crate::sessionid::SessionId;
 
 pub enum Error {
     /// The packet was addressed to an unrecognized local session (should usually be ignored)
@@ -81,6 +77,15 @@ pub enum ReceiveResult<'a, H: ApplicationLayer> {
 
     /// Packet appears valid but was ignored e.g. as a duplicate.
     Ignored,
+}
+
+/// Was this side the one who sent the first offer (Alice) or countered (Bob).
+///
+/// Note that the role can switch through the course of a session. It's the side that most recently
+/// initiated a session or a rekey event. Initiator is Alice, responder is Bob.
+pub enum Role {
+    Alice,
+    Bob,
 }
 
 /// State information to associate with receiving contexts such as sockets or remote paths/endpoints.
@@ -153,14 +158,20 @@ struct KeyLifetime {
     rekey_at_or_after_timestamp: i64,
 }
 
-////////////////////////////////////////////////////////////////
-// functions
-////////////////////////////////////////////////////////////////
+/// "Canonical header" for generating 96-bit AES-GCM nonce and for inclusion in key exchange HMACs.
+///
+/// This is basically the actual header but with fragment count and fragment total set to zero.
+/// Fragmentation is not considered when authenticating the entire packet. A separate header
+/// check code is used to make fragmentation itself more robust, but that's outside the scope
+/// of AEAD authentication.
+#[derive(Clone, Copy)]
+#[repr(C, packed)]
+struct CanonicalHeader(pub u64, pub u32);
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UnknownLocalSessionId(id) => f.write_str(format!("UnknownLocalSessionId({})", id.0).as_str()),
+            Self::UnknownLocalSessionId(id) => f.write_str(format!("UnknownLocalSessionId({})", id).as_str()),
             Self::InvalidPacket => f.write_str("InvalidPacket"),
             Self::InvalidParameter => f.write_str("InvalidParameter"),
             Self::FailedAuthentication => f.write_str("FailedAuthentication"),
@@ -968,7 +979,7 @@ impl<Layer: ApplicationLayer> ReceiveContext<Layer> {
                     let plaintext_end = idx;
 
                     idx = safe_write_all(&mut reply_buf, idx, offer_id)?;
-                    idx = safe_write_all(&mut reply_buf, idx, &session.id.0.to_le_bytes()[..SESSION_ID_SIZE])?;
+                    idx = safe_write_all(&mut reply_buf, idx, session.id.as_bytes())?;
                     idx = varint_safe_write(&mut reply_buf, idx, 0)?; // they don't need our static public; they have it
                     idx = varint_safe_write(&mut reply_buf, idx, 0)?; // no meta-data in counter-offers (could be used in the future)
                     if let Some(bob_hk_public) = bob_hk_public.as_ref() {
@@ -1251,7 +1262,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     let plaintext_end = idx;
 
     idx = safe_write_all(&mut packet_buf, idx, &id)?;
-    idx = safe_write_all(&mut packet_buf, idx, &alice_session_id.0.to_le_bytes()[..SESSION_ID_SIZE])?;
+    idx = safe_write_all(&mut packet_buf, idx, alice_session_id.as_bytes())?;
     idx = varint_safe_write(&mut packet_buf, idx, alice_s_public_blob.len() as u64)?;
     idx = safe_write_all(&mut packet_buf, idx, alice_s_public_blob)?;
     idx = varint_safe_write(&mut packet_buf, idx, alice_metadata.len() as u64)?;
@@ -1480,28 +1491,6 @@ fn parse_dec_key_offer_after_header(
     ))
 }
 
-impl KeyLifetime {
-    fn new(current_counter: CounterValue, current_time: i64) -> Self {
-        Self {
-            rekey_at_or_after_counter: current_counter
-                .counter_value_after_uses(REKEY_AFTER_USES)
-                .counter_value_after_uses((random::next_u32_secure() % REKEY_AFTER_USES_MAX_JITTER) as u64),
-            hard_expire_at_counter: current_counter.counter_value_after_uses(EXPIRE_AFTER_USES),
-            rekey_at_or_after_timestamp: current_time
-                + REKEY_AFTER_TIME_MS
-                + (random::next_u32_secure() % REKEY_AFTER_TIME_MS_MAX_JITTER) as i64,
-        }
-    }
-
-    fn should_rekey(&self, counter: CounterValue, current_time: i64) -> bool {
-        counter >= self.rekey_at_or_after_counter || current_time >= self.rekey_at_or_after_timestamp
-    }
-
-    fn expired(&self, counter: CounterValue) -> bool {
-        counter >= self.hard_expire_at_counter
-    }
-}
-
 impl SessionKey {
     /// Create a new symmetric shared session key and set its key expiration times, etc.
     fn new(key: Secret<64>, role: Role, current_time: i64, current_counter: CounterValue, ratchet_count: u64, jedi: bool) -> Self {
@@ -1562,6 +1551,43 @@ impl SessionKey {
     #[inline]
     fn return_receive_cipher(&self, c: Box<AesGcm>) {
         self.receive_cipher_pool.lock().unwrap().push(c);
+    }
+}
+
+impl KeyLifetime {
+    fn new(current_counter: CounterValue, current_time: i64) -> Self {
+        Self {
+            rekey_at_or_after_counter: current_counter
+                .counter_value_after_uses(REKEY_AFTER_USES)
+                .counter_value_after_uses((random::next_u32_secure() % REKEY_AFTER_USES_MAX_JITTER) as u64),
+            hard_expire_at_counter: current_counter.counter_value_after_uses(EXPIRE_AFTER_USES),
+            rekey_at_or_after_timestamp: current_time
+                + REKEY_AFTER_TIME_MS
+                + (random::next_u32_secure() % REKEY_AFTER_TIME_MS_MAX_JITTER) as i64,
+        }
+    }
+
+    fn should_rekey(&self, counter: CounterValue, current_time: i64) -> bool {
+        counter >= self.rekey_at_or_after_counter || current_time >= self.rekey_at_or_after_timestamp
+    }
+
+    fn expired(&self, counter: CounterValue) -> bool {
+        counter >= self.hard_expire_at_counter
+    }
+}
+
+impl CanonicalHeader {
+    #[inline(always)]
+    pub fn make(session_id: SessionId, packet_type: u8, counter: u32) -> Self {
+        CanonicalHeader(
+            (u64::from(session_id) | (packet_type as u64).wrapping_shl(48)).to_le(),
+            counter.to_le(),
+        )
+    }
+
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; 12] {
+        memory::as_byte_array(self)
     }
 }
 
