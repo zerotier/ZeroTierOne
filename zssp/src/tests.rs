@@ -43,7 +43,7 @@ mod tests {
     }
 
     impl ApplicationLayer for Box<TestHost> {
-        type SessionUserData = u32;
+        type Data = u32;
         type SessionRef = Arc<Session<Box<TestHost>>>;
         type IncomingPacketBuffer = Vec<u8>;
         type RemoteAddress = u32;
@@ -80,13 +80,7 @@ mod tests {
             true
         }
 
-        fn accept_new_session(
-            &self,
-            _: &ReceiveContext<Self>,
-            _: &u32,
-            _: &[u8],
-            _: &[u8],
-        ) -> Option<(SessionId, Secret<64>, Self::SessionUserData)> {
+        fn accept_new_session(&self, _: &ReceiveContext<Self>, _: &u32, _: &[u8], _: &[u8]) -> Option<(SessionId, Secret<64>, Self::Data)> {
             loop {
                 let mut new_id = self.session_id_counter.lock().unwrap();
                 *new_id += 1;

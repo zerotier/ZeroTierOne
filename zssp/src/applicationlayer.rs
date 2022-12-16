@@ -16,7 +16,7 @@ use crate::{
 /// and use case independent.
 pub trait ApplicationLayer: Sized {
     /// Arbitrary opaque object associated with a session, such as a connection state object.
-    type SessionUserData;
+    type Data;
 
     /// Arbitrary object that dereferences to the session, such as Arc<Session<Self>>.
     type SessionRef: Deref<Target = Session<Self>>;
@@ -73,5 +73,5 @@ pub trait ApplicationLayer: Sized {
         remote_address: &Self::RemoteAddress,
         remote_static_public: &[u8],
         remote_metadata: &[u8],
-    ) -> Option<(SessionId, Secret<64>, Self::SessionUserData)>;
+    ) -> Option<(SessionId, Secret<64>, Self::Data)>;
 }
