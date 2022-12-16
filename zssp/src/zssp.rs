@@ -733,14 +733,13 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                     let aes_gcm_tag_end = kex_packet_len - (HMAC_SIZE + HMAC_SIZE);
                     let hmac1_end = kex_packet_len - HMAC_SIZE;
 
-                    // Check the second HMAC first, which proves that the sender knows the recipient's full static identity.
-                    let hmac2 = &kex_packet[hmac1_end..kex_packet_len];
+                    // Check the secondary HMAC first, which proves that the sender knows the recipient's full static identity.
                     if !hmac_sha384_2(
                         app.get_local_s_public_blob_hash(),
                         canonical_header_bytes,
                         &kex_packet[HEADER_SIZE..hmac1_end],
                     )
-                    .eq(hmac2)
+                    .eq(&kex_packet[hmac1_end..kex_packet_len])
                     {
                         return Err(Error::FailedAuthentication);
                     }
@@ -813,13 +812,12 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
                     // Authenticate entire packet with HMAC-SHA384, verifying alice's identity via 'ss' secret that was
                     // just mixed into the key.
-                    let hmac1 = &kex_packet[aes_gcm_tag_end..hmac1_end];
                     if !hmac_sha384_2(
                         kbkdf512(noise_ik_incomplete_es_ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
                         canonical_header_bytes,
                         &kex_packet_saved_ciphertext[HEADER_SIZE..aes_gcm_tag_end],
                     )
-                    .eq(hmac1)
+                    .eq(&kex_packet[aes_gcm_tag_end..hmac1_end])
                     {
                         return Err(Error::FailedAuthentication);
                     }
@@ -828,7 +826,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
                     // Perform checks and match ratchet key if there's an existing session, or gate (via host) and
                     // then create new sessions.
-                    let (new_session, ratchet_key, ratchet_count) = if let Some(session) = session.as_ref() {
+                    let (new_session, ratchet_key, last_ratchet_count) = if let Some(session) = session.as_ref() {
                         // Existing session identity must match the one in this offer.
                         if !session.remote_s_public_blob_hash.eq(&SHA384::hash(&alice_s_public_blob)) {
                             return Err(Error::FailedAuthentication);
@@ -837,13 +835,13 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         // Match ratchet key fingerprint and fail if no match, which likely indicates an old offer packet.
                         let alice_ratchet_key_fingerprint = alice_ratchet_key_fingerprint.unwrap();
                         let mut ratchet_key = None;
-                        let mut ratchet_count = 0;
+                        let mut last_ratchet_count = 0;
                         let state = session.state.read().unwrap();
                         for k in state.session_keys.iter() {
                             if let Some(k) = k.as_ref() {
                                 if public_fingerprint_of_secret(k.ratchet_key.as_bytes())[..16].eq(alice_ratchet_key_fingerprint) {
                                     ratchet_key = Some(k.ratchet_key.clone());
-                                    ratchet_count = k.ratchet_count;
+                                    last_ratchet_count = k.ratchet_count;
                                     break;
                                 }
                             }
@@ -852,7 +850,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             return Ok(ReceiveResult::Ignored); // old packet?
                         }
 
-                        (None, ratchet_key, ratchet_count)
+                        (None, ratchet_key, last_ratchet_count)
                     } else {
                         if let Some((new_session_id, psk, associated_object)) =
                             app.accept_new_session(self, remote_address, alice_s_public_blob, alice_metadata)
@@ -1015,7 +1013,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         Role::Bob,
                         current_time,
                         reply_counter,
-                        ratchet_count + 1,
+                        last_ratchet_count + 1,
                         hybrid_kk.is_some(),
                     );
 
@@ -1085,10 +1083,12 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             let (offer_id, bob_session_id, _, _, bob_hk_public_raw, bob_ratchet_key_id) =
                                 parse_dec_key_offer_after_header(&kex_packet[plaintext_end..kex_packet_len], packet_type)?;
 
+                            // Check that this is a counter offer to the original offer we sent.
                             if !offer.id.eq(offer_id) {
                                 return Ok(ReceiveResult::Ignored);
                             }
 
+                            // Kyber1024 key agreement if enabled.
                             let hybrid_kk = if JEDI && bob_hk_public_raw.len() > 0 && offer.alice_hk_keypair.is_some() {
                                 if let Ok(hybrid_kk) =
                                     pqc_kyber::decapsulate(bob_hk_public_raw, &offer.alice_hk_keypair.as_ref().unwrap().secret)
@@ -1101,24 +1101,27 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                 None
                             };
 
-                            // Mix ratchet key from previous session key (if any) and Kyber1024 hybrid shared key (if any).
-                            let mut ratchet_count = 0;
+                            // The session key starts with the final noise_ik key and may have other things mixed into it below.
                             let mut session_key = noise_ik_complete;
-                            if bob_ratchet_key_id.is_some() && offer.ratchet_key.is_some() {
+
+                            // Mix ratchet key from previous session key (if any) and Kyber1024 hybrid shared key (if any).
+                            let last_ratchet_count = if bob_ratchet_key_id.is_some() && offer.ratchet_key.is_some() {
                                 session_key = Secret(hmac_sha512(offer.ratchet_key.as_ref().unwrap().as_bytes(), session_key.as_bytes()));
-                                ratchet_count = offer.ratchet_count;
-                            }
+                                offer.ratchet_count
+                            } else {
+                                0
+                            };
                             if let Some(hybrid_kk) = hybrid_kk.as_ref() {
                                 session_key = Secret(hmac_sha512(hybrid_kk.as_bytes(), session_key.as_bytes()));
                             }
 
-                            let hmac = &kex_packet[aes_gcm_tag_end..kex_packet_len];
+                            // Check main packet HMAC for full validation of session key.
                             if !hmac_sha384_2(
                                 kbkdf512(session_key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
                                 canonical_header_bytes,
                                 &kex_packet_saved_ciphertext[HEADER_SIZE..aes_gcm_tag_end],
                             )
-                            .eq(hmac)
+                            .eq(&kex_packet[aes_gcm_tag_end..kex_packet_len])
                             {
                                 return Err(Error::FailedAuthentication);
                             }
@@ -1131,7 +1134,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                 Role::Alice,
                                 current_time,
                                 counter,
-                                ratchet_count + 1,
+                                last_ratchet_count + 1,
                                 hybrid_kk.is_some(),
                             );
 
