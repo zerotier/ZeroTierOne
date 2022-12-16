@@ -6,7 +6,7 @@ use zerotier_utils::memory::{array_range, as_byte_array};
 use crate::constants::SESSION_ID_SIZE;
 
 /// 48-bit session ID (most significant 16 bits of u64 are unused)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 pub struct SessionId(u64); // stored little endian internally
 
