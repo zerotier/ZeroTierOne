@@ -288,7 +288,7 @@ mod fruit_flavored {
 
         #[inline(always)]
         pub fn finish_decrypt(&mut self, expected_tag: &[u8]) -> bool {
-            self.finish_encrypt().eq(expected_tag)
+            crate::secure_eq(&self.finish_encrypt(), expected_tag)
         }
     }
 
@@ -419,12 +419,7 @@ mod openssl_aes {
                     false => CipherCtxRef::decrypt_init,
                 };
 
-                f(
-                    &mut self.2,
-                    Some(unsafe { CipherRef::from_ptr(t.as_ptr() as *mut _) }),
-                    None,
-                    None,
-                ).unwrap();
+                f(&mut self.2, Some(unsafe { CipherRef::from_ptr(t.as_ptr() as *mut _) }), None, None).unwrap();
 
                 self.2.set_key_length(key.len()).unwrap();
 
@@ -454,7 +449,9 @@ mod openssl_aes {
         /// Encrypt or decrypt in place (same operation with CTR mode)
         #[inline(always)]
         pub fn crypt_in_place(&mut self, data: &mut [u8]) {
-            self.2.cipher_update(unsafe { &*std::slice::from_raw_parts(data.as_ptr(), data.len()) }, Some(data)).unwrap();
+            self.2
+                .cipher_update(unsafe { &*std::slice::from_raw_parts(data.as_ptr(), data.len()) }, Some(data))
+                .unwrap();
         }
 
         #[inline(always)]
