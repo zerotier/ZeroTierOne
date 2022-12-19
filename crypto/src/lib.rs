@@ -14,7 +14,9 @@ pub mod x25519;
 pub const ZEROES: [u8; 64] = [0_u8; 64];
 
 /// Constant time byte slice equality.
-pub fn secure_eq(a: &[u8], b: &[u8]) -> bool {
+#[inline]
+pub fn secure_eq<A: AsRef<[u8]> + ?Sized, B: AsRef<[u8]> + ?Sized>(a: &A, b: &B) -> bool {
+    let (a, b) = (a.as_ref(), b.as_ref());
     if a.len() == b.len() {
         let mut x = 0u8;
         for (aa, bb) in a.iter().zip(b.iter()) {
