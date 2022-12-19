@@ -49,6 +49,7 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
         }
     }
 
+    #[inline]
     pub fn crypt(&mut self, mut plaintext: &[u8], mut ciphertext: &mut [u8]) {
         let (j0, j1, j2, j3, j4, j5, j6, j7, mut j8, mut j9, j10, j11, j12, j13, j14, j15) = (
             self.state[0],

@@ -12,3 +12,16 @@ pub mod verified;
 pub mod x25519;
 
 pub const ZEROES: [u8; 64] = [0_u8; 64];
+
+/// Constant time byte slice equality.
+pub fn secure_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() == b.len() {
+        let mut x = 0u8;
+        for (aa, bb) in a.iter().zip(b.iter()) {
+            x |= *aa ^ *bb;
+        }
+        x == 0
+    } else {
+        false
+    }
+}
