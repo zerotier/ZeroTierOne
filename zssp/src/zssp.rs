@@ -10,6 +10,7 @@ use zerotier_crypto::hash::{hmac_sha512, HMACSHA384, SHA384};
 use zerotier_crypto::p384::{P384KeyPair, P384PublicKey, P384_PUBLIC_KEY_SIZE};
 use zerotier_crypto::random;
 use zerotier_crypto::secret::Secret;
+use zerotier_crypto::secure_eq;
 
 use zerotier_utils::gatherarray::GatherArray;
 use zerotier_utils::memory;
@@ -734,13 +735,14 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                     let hmac1_end = kex_packet_len - HMAC_SIZE;
 
                     // Check the secondary HMAC first, which proves that the sender knows the recipient's full static identity.
-                    if !hmac_sha384_2(
-                        app.get_local_s_public_blob_hash(),
-                        canonical_header_bytes,
-                        &kex_packet[HEADER_SIZE..hmac1_end],
-                    )
-                    .eq(&kex_packet[hmac1_end..kex_packet_len])
-                    {
+                    if !secure_eq(
+                        &hmac_sha384_2(
+                            app.get_local_s_public_blob_hash(),
+                            canonical_header_bytes,
+                            &kex_packet[HEADER_SIZE..hmac1_end],
+                        ),
+                        &kex_packet[hmac1_end..kex_packet_len],
+                    ) {
                         return Err(Error::FailedAuthentication);
                     }
 
@@ -812,13 +814,14 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
                     // Authenticate entire packet with HMAC-SHA384, verifying alice's identity via 'ss' secret that was
                     // just mixed into the key.
-                    if !hmac_sha384_2(
-                        kbkdf512(noise_ik_incomplete_es_ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
-                        canonical_header_bytes,
-                        &kex_packet_saved_ciphertext[HEADER_SIZE..aes_gcm_tag_end],
-                    )
-                    .eq(&kex_packet[aes_gcm_tag_end..hmac1_end])
-                    {
+                    if !secure_eq(
+                        &hmac_sha384_2(
+                            kbkdf512(noise_ik_incomplete_es_ss.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
+                            canonical_header_bytes,
+                            &kex_packet_saved_ciphertext[HEADER_SIZE..aes_gcm_tag_end],
+                        ),
+                        &kex_packet[aes_gcm_tag_end..hmac1_end],
+                    ) {
                         return Err(Error::FailedAuthentication);
                     }
 
@@ -828,7 +831,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                     // then create new sessions.
                     let (new_session, ratchet_key, last_ratchet_count) = if let Some(session) = session.as_ref() {
                         // Existing session identity must match the one in this offer.
-                        if !session.remote_s_public_blob_hash.eq(&SHA384::hash(&alice_s_public_blob)) {
+                        if !secure_eq(&session.remote_s_public_blob_hash, &SHA384::hash(&alice_s_public_blob)) {
                             return Err(Error::FailedAuthentication);
                         }
 
@@ -1116,13 +1119,14 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             }
 
                             // Check main packet HMAC for full validation of session key.
-                            if !hmac_sha384_2(
-                                kbkdf512(session_key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
-                                canonical_header_bytes,
-                                &kex_packet_saved_ciphertext[HEADER_SIZE..aes_gcm_tag_end],
-                            )
-                            .eq(&kex_packet[aes_gcm_tag_end..kex_packet_len])
-                            {
+                            if !secure_eq(
+                                &hmac_sha384_2(
+                                    kbkdf512(session_key.as_bytes(), KBKDF_KEY_USAGE_LABEL_HMAC).first_n::<48>(),
+                                    canonical_header_bytes,
+                                    &kex_packet_saved_ciphertext[HEADER_SIZE..aes_gcm_tag_end],
+                                ),
+                                &kex_packet[aes_gcm_tag_end..kex_packet_len],
+                            ) {
                                 return Err(Error::FailedAuthentication);
                             }
 
