@@ -32,6 +32,7 @@ mod openssl_based {
 
     use crate::hash::SHA384;
     use crate::secret::Secret;
+    use crate::secure_eq;
 
     use super::{P384_ECDH_SHARED_SECRET_SIZE, P384_ECDSA_SIGNATURE_SIZE, P384_PUBLIC_KEY_SIZE, P384_SECRET_KEY_SIZE};
 
@@ -213,7 +214,7 @@ mod openssl_based {
 
     impl PartialEq for P384KeyPair {
         fn eq(&self, other: &Self) -> bool {
-            self.pair.private_key().eq(other.pair.private_key()) && self.public.bytes.eq(&other.public.bytes)
+            self.pair.private_key().eq(other.pair.private_key()) && secure_eq(&self.public.bytes, &other.public.bytes)
         }
     }
 
@@ -1355,7 +1356,7 @@ pub use openssl_based::*;
 
 #[cfg(test)]
 mod tests {
-    use crate::p384::P384KeyPair;
+    use crate::{p384::P384KeyPair, secure_eq};
 
     #[test]
     fn generate_sign_verify_agree() {
@@ -1372,7 +1373,7 @@ mod tests {
 
         let sec0 = kp.agree(kp2.public_key()).unwrap();
         let sec1 = kp2.agree(kp.public_key()).unwrap();
-        if !sec0.eq(&sec1) {
+        if !secure_eq(&sec0, &sec1) {
             panic!("ECDH secrets do not match");
         }
 

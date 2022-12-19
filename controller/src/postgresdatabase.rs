@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use tokio_postgres::types::Type;
 use tokio_postgres::{Client, Statement};
 
+use zerotier_crypto::secure_eq;
 use zerotier_crypto::verified::Verified;
 
 use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress, NodeStorage};
@@ -434,7 +435,7 @@ impl Database for PostgresDatabase {
         let members = self.list_members(network_id).await?;
         for a in members.iter() {
             if let Some(m) = self.get_member(network_id, *a).await? {
-                if m.ip_assignments.iter().any(|ip2| ip2.ip_bytes().eq(ip.ip_bytes())) {
+                if m.ip_assignments.iter().any(|ip2| secure_eq(ip2.ip_bytes(), ip.ip_bytes())) {
                     return Ok(true);
                 }
             }

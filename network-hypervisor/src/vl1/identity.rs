@@ -9,7 +9,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use zerotier_crypto::hash::*;
+use zerotier_crypto::{hash::*, secure_eq};
 use zerotier_crypto::p384::*;
 use zerotier_crypto::salsa::Salsa;
 use zerotier_crypto::secret::Secret;
@@ -801,7 +801,7 @@ impl Marshalable for Identity {
 impl PartialEq for Identity {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        self.fingerprint.eq(&other.fingerprint)
+        secure_eq(&self.fingerprint, &other.fingerprint)
     }
 }
 
@@ -904,17 +904,17 @@ mod tests {
         )
         .unwrap().validate().unwrap();
         let self_agree = id.agree(&id).unwrap();
-        assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));
+        debug_assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));
 
         // Identity should be upgradable.
         let mut upgraded = id.clone();
-        assert!(upgraded.upgrade().unwrap());
+        debug_assert!(upgraded.upgrade().unwrap());
 
         // Upgraded identity should generate the same result when agreeing with the old non-upgraded identity.
         let self_agree = id.agree(&upgraded).unwrap();
-        assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));
+        debug_assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));
         let self_agree = upgraded.agree(&id).unwrap();
-        assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));
+        debug_assert!(self_agree_expected.as_slice().eq(&self_agree.as_bytes()[..48]));
     }
 
     const GOOD_V0_IDENTITIES: [&'static str; 4] = [
@@ -936,7 +936,7 @@ mod tests {
         assert!(gen.agree(&gen).is_some());
         let bytes = gen.to_secret_bytes().unwrap();
         let string = gen.to_secret_string();
-        assert!(Identity::from_str(string.as_str()).unwrap().eq(&gen));
+        debug_assert!(Identity::from_str(string.as_str()).unwrap().eq(&gen));
 
         let gen_unmarshaled = Identity::from_bytes(bytes.as_bytes()).unwrap();
         assert!(gen_unmarshaled.secret.is_some());

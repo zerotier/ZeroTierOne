@@ -7,6 +7,7 @@ use crate::vl2::NetworkId;
 use serde::{Deserialize, Serialize};
 
 use zerotier_crypto::hash::SHA384;
+use zerotier_crypto::secure_eq;
 use zerotier_crypto::verified::Verified;
 use zerotier_utils::arrayvec::ArrayVec;
 use zerotier_utils::blob::Blob;
@@ -171,7 +172,7 @@ impl CertificateOfMembership {
 
     /// Verify this certificate of membership.
     pub fn verify(self, issuer: &Identity, expect_issued_to: &Identity) -> Option<Verified<Self>> {
-        if Self::v1_proto_issued_to_fingerprint(expect_issued_to).eq(&self.issued_to_fingerprint.as_bytes()[..32]) {
+        if secure_eq(&Self::v1_proto_issued_to_fingerprint(expect_issued_to), &self.issued_to_fingerprint.as_bytes()[..32]) {
             if issuer.verify(&self.v1_proto_get_qualifier_bytes(), self.signature.as_bytes()) {
                 return Some(Verified::assume_verified(self));
             }

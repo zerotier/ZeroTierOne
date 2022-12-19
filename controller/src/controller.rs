@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex, RwLock, Weak};
 
 use tokio::time::{Duration, Instant};
 
+use zerotier_crypto::secure_eq;
 use zerotier_network_hypervisor::protocol;
 use zerotier_network_hypervisor::protocol::{PacketBuffer, DEFAULT_MULTICAST_LIMIT, ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU};
 use zerotier_network_hypervisor::vl1::*;
@@ -292,7 +293,7 @@ impl Controller {
             }
 
             if let Some(pinned_fingerprint) = member.identity_fingerprint.as_ref() {
-                if pinned_fingerprint.as_bytes().eq(&source_identity.fingerprint) {
+                if secure_eq(pinned_fingerprint.as_bytes(), &source_identity.fingerprint) {
                     if member.identity.is_none() {
                         // Learn the FULL identity if the fingerprint is pinned and they match. This
                         // lets us add members by address/fingerprint with full SHA384 identity
@@ -370,12 +371,12 @@ impl Controller {
 
             // Make sure these agree. It should be impossible to end up with a member that's authorized and
             // whose identity and identity fingerprint don't match.
-            if !member
+            if !secure_eq(&member
                 .identity
                 .as_ref()
                 .unwrap()
-                .fingerprint
-                .eq(member.identity_fingerprint.as_ref().unwrap().as_bytes())
+                .fingerprint,
+                member.identity_fingerprint.as_ref().unwrap().as_bytes())
             {
                 debug_assert!(false);
                 return Ok((AuthenticationResult::RejectedDueToError, None));

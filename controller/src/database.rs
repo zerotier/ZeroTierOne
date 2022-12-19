@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 
+use zerotier_crypto::secure_eq;
 use zerotier_network_hypervisor::vl1::{Address, InetAddress, NodeStorage};
 use zerotier_network_hypervisor::vl2::NetworkId;
 
@@ -70,7 +71,7 @@ pub trait Database: Sync + Send + NodeStorage + 'static {
         let members = self.list_members(network_id).await?;
         for a in members.iter() {
             if let Some(m) = self.get_member(network_id, *a).await? {
-                if m.ip_assignments.iter().any(|ip2| ip2.ip_bytes().eq(ip.ip_bytes())) {
+                if m.ip_assignments.iter().any(|ip2| secure_eq(ip2.ip_bytes(), ip.ip_bytes())) {
                     return Ok(true);
                 }
             }

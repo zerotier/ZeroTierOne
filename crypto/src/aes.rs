@@ -6,6 +6,8 @@ mod fruit_flavored {
     use std::os::raw::{c_int, c_void};
     use std::ptr::{null, null_mut};
 
+    use crate::secure_eq;
+
     #[allow(non_upper_case_globals, unused)]
     const kCCModeECB: i32 = 1;
     #[allow(non_upper_case_globals, unused)]
@@ -288,7 +290,7 @@ mod fruit_flavored {
 
         #[inline(always)]
         pub fn finish_decrypt(&mut self, expected_tag: &[u8]) -> bool {
-            self.finish_encrypt().eq(expected_tag)
+            secure_eq(&self.finish_encrypt(), expected_tag)
         }
     }
 
