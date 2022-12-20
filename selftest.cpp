@@ -400,7 +400,7 @@ static int testCrypto()
 		C25519::agree(p1,p2.pub,buf1,64);
 		C25519::agree(p2,p1.pub,buf2,64);
 		C25519::agree(p3,p1.pub,buf3,64);
-		// p1<>p2 should equal p1<>p2
+		// p1<>p2 should equal p2<>p1
 		if (memcmp(buf1,buf2,64)) {
 			std::cout << "FAIL (1)" << std::endl;
 			return -1;
