@@ -1,6 +1,8 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 use zerotier_crypto::random;
+
+use crate::constants::COUNTER_MAX_DELTA;
 
 /// Outgoing packet counter with strictly ordered atomic semantics.
 ///
@@ -50,5 +52,37 @@ impl CounterValue {
     #[inline(always)]
     pub fn counter_value_after_uses(&self, uses: u64) -> Self {
         Self(self.0.checked_add(uses).unwrap())
+    }
+}
+
+/// Incoming packet deduplication and replay protection window.
+pub(crate) struct CounterWindow(AtomicU32, [AtomicU32; COUNTER_MAX_DELTA as usize]);
+
+impl CounterWindow {
+    #[inline(always)]
+    pub fn new(initial: u32) -> Self {
+        Self(AtomicU32::new(initial), std::array::from_fn(|_| AtomicU32::new(initial)))
+    }
+
+    #[inline(always)]
+    pub fn message_received(&self, received_counter_value: u32) -> bool {
+        let prev_max = self.0.fetch_max(received_counter_value, Ordering::AcqRel);
+        if received_counter_value >= prev_max || prev_max.wrapping_sub(received_counter_value) <= COUNTER_MAX_DELTA {
+            // First, the most common case: counter is higher than the previous maximum OR is no older than MAX_DELTA.
+            // In that case we accept the packet if it is not a duplicate. Duplicate check is this swap/compare.
+            self.1[(received_counter_value % COUNTER_MAX_DELTA) as usize].swap(received_counter_value, Ordering::AcqRel)
+                != received_counter_value
+        } else if received_counter_value.wrapping_sub(prev_max) <= COUNTER_MAX_DELTA {
+            // If the received value is lower and wraps when the previous max is subtracted, this means the
+            // unsigned integer counter has wrapped. In that case we write the new lower-but-actually-higher "max"
+            // value and then check the deduplication window.
+            self.0.store(received_counter_value, Ordering::Release);
+            self.1[(received_counter_value % COUNTER_MAX_DELTA) as usize].swap(received_counter_value, Ordering::AcqRel)
+                != received_counter_value
+        } else {
+            // If the received value is more than MAX_DELTA in the past and wrapping has NOT occurred, this packet
+            // is too old and is rejected.
+            false
+        }
     }
 }

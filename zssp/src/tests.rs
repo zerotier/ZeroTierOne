@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 #[cfg(test)]
 mod tests {
     use std::collections::LinkedList;
@@ -8,7 +9,7 @@ mod tests {
     use zerotier_crypto::secret::Secret;
     use zerotier_utils::hex;
 
-    #[allow(unused_imports)]
+    use crate::counter::CounterWindow;
     use crate::*;
     use constants::*;
 
@@ -215,5 +216,16 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn counter_window() {
+        let w = CounterWindow::new(0xffffffff);
+        assert!(!w.message_received(0xffffffff));
+        assert!(w.message_received(0));
+        assert!(w.message_received(1));
+        assert!(w.message_received(COUNTER_MAX_DELTA * 2));
+        assert!(!w.message_received(0xffffffff));
+        assert!(w.message_received(0xfffffffe));
     }
 }

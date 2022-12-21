@@ -77,6 +77,9 @@ pub(crate) const SESSION_ID_SIZE: usize = 6;
 /// Number of session keys to hold at a given time (current, previous, next).
 pub(crate) const KEY_HISTORY_SIZE: usize = 3;
 
+/// Maximum difference between out-of-order incoming packet counters, and size of deduplication buffer.
+pub(crate) const COUNTER_MAX_DELTA: u32 = 16;
+
 // Packet types can range from 0 to 15 (4 bits) -- 0-3 are defined and 4-15 are reserved for future use
 pub(crate) const PACKET_TYPE_DATA: u8 = 0;
 pub(crate) const PACKET_TYPE_NOP: u8 = 1;

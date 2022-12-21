@@ -20,7 +20,7 @@ use zerotier_utils::varint;
 
 use crate::applicationlayer::ApplicationLayer;
 use crate::constants::*;
-use crate::counter::{Counter, CounterValue};
+use crate::counter::{Counter, CounterValue, CounterWindow};
 use crate::sessionid::SessionId;
 
 pub enum Error {
@@ -136,6 +136,7 @@ struct SessionKey {
     secret_fingerprint: [u8; 16],                 // First 128 bits of a SHA384 computed from the secret
     creation_time: i64,                           // Time session key was established
     creation_counter: CounterValue,               // Counter value at which session was established
+    receive_window: CounterWindow,                // Receive window for anti-replay and deduplication
     lifetime: KeyLifetime,                        // Key expiration time and counter
     ratchet_key: Secret<64>,                      // Ratchet key for deriving the next session key
     receive_key: Secret<AES_KEY_SIZE>,            // Receive side AES-GCM key
@@ -497,6 +498,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                     remote_address,
                                     &mut send,
                                     data_buf,
+                                    counter,
                                     canonical_header.as_bytes(),
                                     assembled_packet.as_ref(),
                                     packet_type,
@@ -515,6 +517,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             remote_address,
                             &mut send,
                             data_buf,
+                            counter,
                             canonical_header.as_bytes(),
                             &[incoming_packet_buf],
                             packet_type,
@@ -546,6 +549,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             remote_address,
                             &mut send,
                             data_buf,
+                            counter,
                             canonical_header.as_bytes(),
                             assembled_packet.as_ref(),
                             packet_type,
@@ -560,6 +564,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         remote_address,
                         &mut send,
                         data_buf,
+                        counter,
                         canonical_header.as_bytes(),
                         &[incoming_packet_buf],
                         packet_type,
@@ -587,6 +592,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
         remote_address: &Application::RemoteAddress,
         send: &mut SendFunction,
         data_buf: &'a mut [u8],
+        counter: u32,
         canonical_header_bytes: &[u8; 12],
         fragments: &[Application::IncomingPacketBuffer],
         packet_type: u8,
@@ -652,31 +658,36 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         session_key.return_receive_cipher(c);
 
                         if aead_authentication_ok {
-                            // Select this key as the new default if it's newer than the current key.
-                            if p > 0
-                                && state.session_keys[state.cur_session_key_idx]
-                                    .as_ref()
-                                    .map_or(true, |old| old.creation_counter < session_key.creation_counter)
-                            {
-                                drop(state);
-                                let mut state = session.state.write().unwrap();
-                                state.cur_session_key_idx = key_idx;
-                                for i in 0..KEY_HISTORY_SIZE {
-                                    if i != key_idx {
-                                        if let Some(old_key) = state.session_keys[key_idx].as_ref() {
-                                            // Release pooled cipher memory from old keys.
-                                            old_key.receive_cipher_pool.lock().unwrap().clear();
-                                            old_key.send_cipher_pool.lock().unwrap().clear();
+                            if session_key.receive_window.message_received(counter) {
+                                // Select this key as the new default if it's newer than the current key.
+                                if p > 0
+                                    && state.session_keys[state.cur_session_key_idx]
+                                        .as_ref()
+                                        .map_or(true, |old| old.creation_counter < session_key.creation_counter)
+                                {
+                                    drop(state);
+                                    let mut state = session.state.write().unwrap();
+                                    state.cur_session_key_idx = key_idx;
+                                    for i in 0..KEY_HISTORY_SIZE {
+                                        if i != key_idx {
+                                            if let Some(old_key) = state.session_keys[key_idx].as_ref() {
+                                                // Release pooled cipher memory from old keys.
+                                                old_key.receive_cipher_pool.lock().unwrap().clear();
+                                                old_key.send_cipher_pool.lock().unwrap().clear();
+                                            }
                                         }
                                     }
                                 }
-                            }
 
-                            if packet_type == PACKET_TYPE_DATA {
-                                return Ok(ReceiveResult::OkData(&mut data_buf[..data_len]));
+                                if packet_type == PACKET_TYPE_DATA {
+                                    return Ok(ReceiveResult::OkData(&mut data_buf[..data_len]));
+                                } else {
+                                    unlikely_branch();
+                                    return Ok(ReceiveResult::Ok);
+                                }
                             } else {
                                 unlikely_branch();
-                                return Ok(ReceiveResult::Ok);
+                                return Ok(ReceiveResult::Ignored);
                             }
                         }
                     }
@@ -942,6 +953,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                     // packet encoding for noise key counter offer
                     // <- e, ee, se
                     ////////////////////////////////////////////////////////////////
+
                     let mut reply_buf = [0_u8; KEX_BUF_LEN];
                     let reply_counter = session.send_counter.next();
                     let mut idx = HEADER_SIZE;
@@ -1018,6 +1030,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         Role::Bob,
                         current_time,
                         reply_counter,
+                        counter,
                         last_ratchet_count + 1,
                         hybrid_kk.is_some(),
                     );
@@ -1041,6 +1054,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
                 PACKET_TYPE_KEY_COUNTER_OFFER => {
                     // bob (remote) -> alice (local)
+
                     ////////////////////////////////////////////////////////////////
                     // packet decoding for noise key counter offer
                     // <- e, ee, se
@@ -1134,11 +1148,12 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
                             // Alice has now completed and validated the full hybrid exchange.
 
-                            let counter = session.send_counter.next();
+                            let reply_counter = session.send_counter.next();
                             let session_key = SessionKey::new(
                                 session_key,
                                 Role::Alice,
                                 current_time,
+                                reply_counter,
                                 counter,
                                 last_ratchet_count + 1,
                                 hybrid_kk.is_some(),
@@ -1147,6 +1162,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             ////////////////////////////////////////////////////////////////
                             // packet encoding for post-noise session start ack
                             ////////////////////////////////////////////////////////////////
+
                             let mut reply_buf = [0_u8; HEADER_SIZE + AES_GCM_TAG_SIZE];
                             create_packet_header(
                                 &mut reply_buf,
@@ -1154,11 +1170,13 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                 mtu,
                                 PACKET_TYPE_NOP,
                                 bob_session_id.into(),
-                                counter,
+                                reply_counter,
                             )?;
 
-                            let mut c = session_key.get_send_cipher(counter)?;
-                            c.reset_init_gcm(CanonicalHeader::make(bob_session_id.into(), PACKET_TYPE_NOP, counter.to_u32()).as_bytes());
+                            let mut c = session_key.get_send_cipher(reply_counter)?;
+                            c.reset_init_gcm(
+                                CanonicalHeader::make(bob_session_id.into(), PACKET_TYPE_NOP, reply_counter.to_u32()).as_bytes(),
+                            );
                             let gcm_tag = c.finish_encrypt();
                             safe_write_all(&mut reply_buf, HEADER_SIZE, &gcm_tag)?;
                             session_key.return_send_cipher(c);
@@ -1474,7 +1492,15 @@ fn parse_dec_key_offer_after_header(
 
 impl SessionKey {
     /// Create a new symmetric shared session key and set its key expiration times, etc.
-    fn new(key: Secret<64>, role: Role, current_time: i64, current_counter: CounterValue, ratchet_count: u64, jedi: bool) -> Self {
+    fn new(
+        key: Secret<64>,
+        role: Role,
+        current_time: i64,
+        current_counter: CounterValue,
+        remote_counter: u32,
+        ratchet_count: u64,
+        jedi: bool,
+    ) -> Self {
         let a2b: Secret<AES_KEY_SIZE> = kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n_clone();
         let b2a: Secret<AES_KEY_SIZE> = kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n_clone();
         let (receive_key, send_key) = match role {
@@ -1485,6 +1511,7 @@ impl SessionKey {
             secret_fingerprint: public_fingerprint_of_secret(key.as_bytes())[..16].try_into().unwrap(),
             creation_time: current_time,
             creation_counter: current_counter,
+            receive_window: CounterWindow::new(remote_counter),
             lifetime: KeyLifetime::new(current_counter, current_time),
             ratchet_key: kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_RATCHETING),
             receive_key,
