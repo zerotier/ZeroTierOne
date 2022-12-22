@@ -1378,13 +1378,13 @@ fn create_packet_header(
     debug_assert!(packet_type <= 0x0f); // packet type is 4 bits
 
     if fragment_count <= MAX_FRAGMENTS {
-        // Header indexed by bit:
-        //   [0-31]    counter
-        //   [32-63]   header check code (computed later)
-        //   [64-111]  recipient's session ID (unique on their side)
-        //   [112-115] packet type (0-15)
-        //   [116-121] number of fragments (0..63 for 1..64 fragments total)
-        //   [122-127] fragment number (0, 1, 2, ...)
+        // Header indexed by bit/byte:
+        //   [0-31]/[0-3]    counter
+        //   [32-63]/[4-7]   header check code (computed later)
+        //   [64-111]/[8-13] recipient's session ID (unique on their side)
+        //   [112-115]/[14-] packet type (0-15)
+        //   [116-121]/[-]   number of fragments (0..63 for 1..64 fragments total)
+        //   [122-127]/[-15] fragment number (0, 1, 2, ...)
         memory::store_raw((counter.to_u32() as u64).to_le(), header_destination_buffer);
         memory::store_raw(
             (u64::from(recipient_session_id) | (packet_type as u64).wrapping_shl(48) | ((fragment_count - 1) as u64).wrapping_shl(52))
