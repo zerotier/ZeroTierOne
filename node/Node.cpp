@@ -50,7 +50,8 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	_lastPingCheck(0),
 	_lastGratuitousPingCheck(0),
 	_lastHousekeepingRun(0),
-	_lastMemoizedTraceSettings(0)
+	_lastMemoizedTraceSettings(0),
+	_lowBandwidthMode(false)
 {
 	if (callbacks->version != 0)
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
