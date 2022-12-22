@@ -12,7 +12,7 @@ use tokio_postgres::{Client, Statement};
 use zerotier_crypto::secure_eq;
 use zerotier_crypto::verified::Verified;
 
-use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress, NodeStorage};
+use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress, NodeStorageProvider};
 use zerotier_network_hypervisor::vl2::networkconfig::IpRoute;
 use zerotier_network_hypervisor::vl2::rule::Rule;
 use zerotier_network_hypervisor::vl2::NetworkId;
@@ -187,7 +187,7 @@ impl PostgresDatabase {
     }
 }
 
-impl NodeStorage for PostgresDatabase {
+impl NodeStorageProvider for PostgresDatabase {
     fn load_node_identity(&self) -> Option<Verified<Identity>> {
         Some(self.local_identity.clone())
     }

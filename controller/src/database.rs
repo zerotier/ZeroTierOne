@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
 use zerotier_crypto::secure_eq;
-use zerotier_network_hypervisor::vl1::{Address, InetAddress, NodeStorage};
+use zerotier_network_hypervisor::vl1::{Address, InetAddress, NodeStorageProvider};
 use zerotier_network_hypervisor::vl2::NetworkId;
 
 use zerotier_utils::tokio::sync::broadcast::Receiver;
@@ -22,7 +22,7 @@ pub enum Change {
 }
 
 #[async_trait]
-pub trait Database: Sync + Send + NodeStorage + 'static {
+pub trait Database: Sync + Send + NodeStorageProvider + 'static {
     async fn list_networks(&self) -> Result<Vec<NetworkId>, Error>;
     async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Error>;
     async fn save_network(&self, obj: Network, generate_change_notification: bool) -> Result<(), Error>;

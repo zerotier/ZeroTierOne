@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use notify::{RecursiveMode, Watcher};
 use serde::de::DeserializeOwned;
 
-use zerotier_network_hypervisor::vl1::{Address, Identity, NodeStorage, Verified};
+use zerotier_network_hypervisor::vl1::{Address, Identity, NodeStorageProvider, Verified};
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::io::{fs_restrict_permissions, read_limit};
 use zerotier_utils::reaper::Reaper;
@@ -274,7 +274,7 @@ impl Drop for FileDatabase {
     }
 }
 
-impl NodeStorage for FileDatabase {
+impl NodeStorageProvider for FileDatabase {
     fn load_node_identity(&self) -> Option<Verified<Identity>> {
         let id_data = read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 16384);
         if id_data.is_err() {

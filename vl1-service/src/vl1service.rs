@@ -27,14 +27,14 @@ const UPDATE_UDP_BINDINGS_EVERY_SECS: usize = 10;
 /// whatever inner protocol implementation is using it. This would typically be VL2 but could be
 /// a test harness or just the controller for a controller that runs stand-alone.
 pub struct VL1Service<
-    NodeStorageImpl: NodeStorage + ?Sized + 'static,
-    VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-    InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
+    NodeStorageImpl: NodeStorageProvider + ?Sized + 'static,
+    PeerToPeerAuthentication: PeerFilter + ?Sized + 'static,
+    Inner: InnerLayer + ?Sized + 'static,
 > {
     state: RwLock<VL1ServiceMutableState>,
     storage: Arc<NodeStorageImpl>,
-    vl1_auth_provider: Arc<VL1AuthProviderImpl>,
-    inner: Arc<InnerProtocolImpl>,
+    vl1_auth_provider: Arc<PeerToPeerAuthentication>,
+    inner: Arc<Inner>,
     buffer_pool: Arc<PacketBufferPool>,
     node_container: Option<Node>, // never None, set in new()
 }
@@ -47,15 +47,15 @@ struct VL1ServiceMutableState {
 }
 
 impl<
-        NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
+        NodeStorageImpl: NodeStorageProvider + ?Sized + 'static,
+        PeerToPeerAuthentication: PeerFilter + ?Sized + 'static,
+        Inner: InnerLayer + ?Sized + 'static,
+    > VL1Service<NodeStorageImpl, PeerToPeerAuthentication, Inner>
 {
     pub fn new(
         storage: Arc<NodeStorageImpl>,
-        vl1_auth_provider: Arc<VL1AuthProviderImpl>,
-        inner: Arc<InnerProtocolImpl>,
+        vl1_auth_provider: Arc<PeerToPeerAuthentication>,
+        inner: Arc<Inner>,
         settings: VL1Settings,
     ) -> Result<Arc<Self>, Box<dyn Error>> {
         let mut service = Self {
@@ -190,10 +190,10 @@ impl<
 }
 
 impl<
-        NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > UdpPacketHandler for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
+        NodeStorageImpl: NodeStorageProvider + ?Sized + 'static,
+        PeerToPeerAuthentication: PeerFilter + ?Sized + 'static,
+        Inner: InnerLayer + ?Sized + 'static,
+    > UdpPacketHandler for VL1Service<NodeStorageImpl, PeerToPeerAuthentication, Inner>
 {
     #[inline(always)]
     fn incoming_udp_packet(
@@ -216,10 +216,10 @@ impl<
 }
 
 impl<
-        NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > HostSystem for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
+        NodeStorageImpl: NodeStorageProvider + ?Sized + 'static,
+        PeerToPeerAuthentication: PeerFilter + ?Sized + 'static,
+        Inner: InnerLayer + ?Sized + 'static,
+    > ApplicationLayer for VL1Service<NodeStorageImpl, PeerToPeerAuthentication, Inner>
 {
     type Storage = NodeStorageImpl;
     type LocalSocket = crate::LocalSocket;
@@ -322,10 +322,10 @@ impl<
 }
 
 impl<
-        NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > NodeStorage for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
+        NodeStorageImpl: NodeStorageProvider + ?Sized + 'static,
+        PeerToPeerAuthentication: PeerFilter + ?Sized + 'static,
+        Inner: InnerLayer + ?Sized + 'static,
+    > NodeStorageProvider for VL1Service<NodeStorageImpl, PeerToPeerAuthentication, Inner>
 {
     #[inline(always)]
     fn load_node_identity(&self) -> Option<Verified<Identity>> {
@@ -339,10 +339,10 @@ impl<
 }
 
 impl<
-        NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > VL1AuthProvider for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
+        NodeStorageImpl: NodeStorageProvider + ?Sized + 'static,
+        PeerToPeerAuthentication: PeerFilter + ?Sized + 'static,
+        Inner: InnerLayer + ?Sized + 'static,
+    > PeerFilter for VL1Service<NodeStorageImpl, PeerToPeerAuthentication, Inner>
 {
     #[inline(always)]
     fn should_respond_to(&self, id: &Verified<Identity>) -> bool {
@@ -356,10 +356,10 @@ impl<
 }
 
 impl<
-        NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > Drop for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
+        NodeStorageImpl: NodeStorageProvider + ?Sized + 'static,
+        PeerToPeerAuthentication: PeerFilter + ?Sized + 'static,
+        Inner: InnerLayer + ?Sized + 'static,
+    > Drop for VL1Service<NodeStorageImpl, PeerToPeerAuthentication, Inner>
 {
     fn drop(&mut self) {
         let mut state = self.state.write().unwrap();

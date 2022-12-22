@@ -371,13 +371,10 @@ impl Controller {
 
             // Make sure these agree. It should be impossible to end up with a member that's authorized and
             // whose identity and identity fingerprint don't match.
-            if !secure_eq(&member
-                .identity
-                .as_ref()
-                .unwrap()
-                .fingerprint,
-                member.identity_fingerprint.as_ref().unwrap().as_bytes())
-            {
+            if !secure_eq(
+                &member.identity.as_ref().unwrap().fingerprint,
+                member.identity_fingerprint.as_ref().unwrap().as_bytes(),
+            ) {
                 debug_assert!(false);
                 return Ok((AuthenticationResult::RejectedDueToError, None));
             }
@@ -501,7 +498,7 @@ impl Controller {
 }
 
 impl InnerProtocol for Controller {
-    fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
+    fn handle_packet<HostSystemImpl: ApplicationLayer + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
         _: &Node,
@@ -641,7 +638,7 @@ impl InnerProtocol for Controller {
     }
 }
 
-impl VL1AuthProvider for Controller {
+impl PeerFilter for Controller {
     #[inline(always)]
     fn should_respond_to(&self, _: &Verified<Identity>) -> bool {
         // Controllers always have to establish sessions to process requests. We don't really know if

@@ -209,7 +209,7 @@ fn main() {
         Some(("service", _)) => {
             drop(global_args); // free unnecessary heap before starting service as we're done with CLI args
             if let Ok(_tokio_runtime) = zerotier_utils::tokio::runtime::Builder::new_multi_thread().enable_all().build() {
-                let test_inner = Arc::new(zerotier_network_hypervisor::vl1::DummyInnerProtocol::default());
+                let test_inner = Arc::new(zerotier_network_hypervisor::vl1::DummyInnerLayer::default());
                 let datadir = open_datadir(&flags);
                 let svc = VL1Service::new(
                     datadir,
