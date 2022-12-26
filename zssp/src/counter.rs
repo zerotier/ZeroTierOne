@@ -1,4 +1,7 @@
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Mutex, RwLock,
+};
 
 use zerotier_crypto::random;
 
@@ -23,7 +26,7 @@ impl Counter {
     /// Get the value most recently used to send a packet.
     #[inline(always)]
     pub fn previous(&self) -> CounterValue {
-        CounterValue(self.0.load(Ordering::SeqCst))
+        CounterValue(self.0.load(Ordering::SeqCst).wrapping_sub(1))
     }
 
     /// Get a counter value for the next packet being sent.
@@ -56,33 +59,89 @@ impl CounterValue {
 }
 
 /// Incoming packet deduplication and replay protection window.
-pub(crate) struct CounterWindow(AtomicU32, [AtomicU32; COUNTER_MAX_DELTA as usize]);
+pub(crate) struct CounterWindowAlt(RwLock<(u32, [u32; COUNTER_MAX_DELTA as usize])>);
 
-impl CounterWindow {
+impl CounterWindowAlt {
     #[inline(always)]
     pub fn new(initial: u32) -> Self {
-        Self(AtomicU32::new(initial), std::array::from_fn(|_| AtomicU32::new(initial)))
+        Self(RwLock::new((initial, std::array::from_fn(|_| initial))))
     }
 
     #[inline(always)]
     pub fn message_received(&self, received_counter_value: u32) -> bool {
-        let prev_max = self.0.fetch_max(received_counter_value, Ordering::AcqRel);
-        if received_counter_value >= prev_max || prev_max.wrapping_sub(received_counter_value) <= COUNTER_MAX_DELTA {
-            // First, the most common case: counter is higher than the previous maximum OR is no older than MAX_DELTA.
-            // In that case we accept the packet if it is not a duplicate. Duplicate check is this swap/compare.
-            self.1[(received_counter_value % COUNTER_MAX_DELTA) as usize].swap(received_counter_value, Ordering::AcqRel)
-                != received_counter_value
-        } else if received_counter_value.wrapping_sub(prev_max) <= COUNTER_MAX_DELTA {
-            // If the received value is lower and wraps when the previous max is subtracted, this means the
-            // unsigned integer counter has wrapped. In that case we write the new lower-but-actually-higher "max"
-            // value and then check the deduplication window.
-            self.0.store(received_counter_value, Ordering::Release);
-            self.1[(received_counter_value % COUNTER_MAX_DELTA) as usize].swap(received_counter_value, Ordering::AcqRel)
-                != received_counter_value
-        } else {
-            // If the received value is more than MAX_DELTA in the past and wrapping has NOT occurred, this packet
-            // is too old and is rejected.
-            false
+        let idx = (received_counter_value % COUNTER_MAX_DELTA) as usize;
+        let data = self.0.read().unwrap();
+        let max_counter_seen = data.0;
+        let lower_window = max_counter_seen.wrapping_sub(COUNTER_MAX_DELTA / 2);
+        let upper_window = max_counter_seen.wrapping_add(COUNTER_MAX_DELTA / 2);
+        if lower_window < upper_window {
+            if (lower_window <= received_counter_value) & (received_counter_value < upper_window) {
+                if data.1[idx] != received_counter_value {
+                    return true;
+                }
+            }
+        } else if (lower_window <= received_counter_value) | (received_counter_value < upper_window) {
+            if data.1[idx] != received_counter_value {
+                return true;
+            }
         }
+        return false;
+    }
+
+    #[inline(always)]
+    pub fn message_authenticated(&self, received_counter_value: u32) -> bool {
+        let idx = (received_counter_value % COUNTER_MAX_DELTA) as usize;
+        let mut data = self.0.write().unwrap();
+        let max_counter_seen = data.0;
+        let lower_window = max_counter_seen.wrapping_sub(COUNTER_MAX_DELTA / 2);
+        let upper_window = max_counter_seen.wrapping_add(COUNTER_MAX_DELTA / 2);
+        if lower_window < upper_window {
+            if (lower_window <= received_counter_value) & (received_counter_value < upper_window) {
+                if data.1[idx] != received_counter_value {
+                    data.1[idx] = received_counter_value;
+                    data.0 = max_counter_seen.max(received_counter_value);
+                    return true;
+                }
+            }
+        } else if (lower_window <= received_counter_value) | (received_counter_value < upper_window) {
+            if data.1[idx] != received_counter_value {
+                data.1[idx] = received_counter_value;
+                data.0 = (max_counter_seen as i32).max(received_counter_value as i32) as u32;
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+pub(crate) struct CounterWindow(Mutex<(usize, [u64; COUNTER_MAX_DELTA as usize])>);
+
+impl CounterWindow {
+    #[inline(always)]
+    pub fn new(initial: u32) -> Self {
+        let initial_nonce = (initial as u64).wrapping_shl(32);
+        Self(Mutex::new((0, std::array::from_fn(|_| initial_nonce))))
+    }
+
+    #[inline(always)]
+    pub fn message_received(&self, received_counter_value: u32, received_fragment_no: u8) -> bool {
+        let fragment_nonce = (received_counter_value as u64).wrapping_shl(6) | (received_fragment_no as u64);
+        //everything past this point must be atomic, i.e. these instructions must be run mutually exclusive to completion;
+        //atomic instructions are only ever atomic within themselves;
+        //sequentially consistent atomics do not guarantee that the thread is not preempted between individual atomic instructions
+        let mut data = self.0.lock().unwrap();
+        let mut is_in = false;
+        let mut is_gt_min = false;
+        for nonce in data.1 {
+            is_in |= nonce == fragment_nonce;
+            is_gt_min |= nonce.wrapping_sub(fragment_nonce) > 0;
+        }
+        if !is_in & is_gt_min {
+            let idx = data.0;
+            data.1[idx] = fragment_nonce;
+            data.0 = (idx + 1) % (COUNTER_MAX_DELTA as usize);
+            return true;
+        }
+        return false;
     }
 }

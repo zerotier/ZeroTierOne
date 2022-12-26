@@ -113,6 +113,7 @@ pub struct Session<Application: ApplicationLayer> {
     pub application_data: Application::Data,
 
     send_counter: Counter,                                  // Outgoing packet counter and nonce state
+    receive_window: CounterWindow,                          // Receive window for anti-replay and deduplication
     psk: Secret<64>,                                        // Arbitrary PSK provided by external code
     noise_ss: Secret<48>,                                   // Static raw shared ECDH NIST P-384 key
     header_check_cipher: Aes,                               // Cipher used for header check codes (not Noise related)
@@ -136,7 +137,6 @@ struct SessionKey {
     secret_fingerprint: [u8; 16],                 // First 128 bits of a SHA384 computed from the secret
     creation_time: i64,                           // Time session key was established
     creation_counter: CounterValue,               // Counter value at which session was established
-    receive_window: CounterWindow,                // Receive window for anti-replay and deduplication
     lifetime: KeyLifetime,                        // Key expiration time and counter
     ratchet_key: Secret<64>,                      // Ratchet key for deriving the next session key
     receive_key: Secret<AES_KEY_SIZE>,            // Receive side AES-GCM key
@@ -486,45 +486,50 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
         {
             if let Some(session) = app.lookup_session(local_session_id) {
                 if verify_header_check_code(incoming_packet, &session.header_check_cipher) {
-                    let canonical_header = CanonicalHeader::make(local_session_id, packet_type, counter);
-                    if fragment_count > 1 {
-                        if fragment_count <= (MAX_FRAGMENTS as u8) && fragment_no < fragment_count {
-                            let mut defrag = session.defrag.lock().unwrap();
-                            let fragment_gather_array = defrag.get_or_create_mut(&counter, || GatherArray::new(fragment_count));
-                            if let Some(assembled_packet) = fragment_gather_array.add(fragment_no, incoming_packet_buf) {
-                                drop(defrag); // release lock
-                                return self.receive_complete(
-                                    app,
-                                    remote_address,
-                                    &mut send,
-                                    data_buf,
-                                    counter,
-                                    canonical_header.as_bytes(),
-                                    assembled_packet.as_ref(),
-                                    packet_type,
-                                    Some(session),
-                                    mtu,
-                                    current_time,
-                                );
+                    if session.receive_window.message_received(counter, fragment_no) {
+                        let canonical_header = CanonicalHeader::make(local_session_id, packet_type, counter);
+                        if fragment_count > 1 {
+                            if fragment_count <= (MAX_FRAGMENTS as u8) && fragment_no < fragment_count {
+                                let mut defrag = session.defrag.lock().unwrap();
+                                let fragment_gather_array = defrag.get_or_create_mut(&counter, || GatherArray::new(fragment_count));
+                                if let Some(assembled_packet) = fragment_gather_array.add(fragment_no, incoming_packet_buf) {
+                                    drop(defrag); // release lock
+                                    return self.receive_complete(
+                                        app,
+                                        remote_address,
+                                        &mut send,
+                                        data_buf,
+                                        counter,
+                                        canonical_header.as_bytes(),
+                                        assembled_packet.as_ref(),
+                                        packet_type,
+                                        Some(session),
+                                        mtu,
+                                        current_time,
+                                    );
+                                }
+                            } else {
+                                unlikely_branch();
+                                return Err(Error::InvalidPacket);
                             }
                         } else {
-                            unlikely_branch();
-                            return Err(Error::InvalidPacket);
+                            return self.receive_complete(
+                                app,
+                                remote_address,
+                                &mut send,
+                                data_buf,
+                                counter,
+                                canonical_header.as_bytes(),
+                                &[incoming_packet_buf],
+                                packet_type,
+                                Some(session),
+                                mtu,
+                                current_time,
+                            );
                         }
                     } else {
-                        return self.receive_complete(
-                            app,
-                            remote_address,
-                            &mut send,
-                            data_buf,
-                            counter,
-                            canonical_header.as_bytes(),
-                            &[incoming_packet_buf],
-                            packet_type,
-                            Some(session),
-                            mtu,
-                            current_time,
-                        );
+                        unlikely_branch();
+                        return Ok(ReceiveResult::Ignored);
                     }
                 } else {
                     unlikely_branch();
@@ -658,36 +663,31 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         session_key.return_receive_cipher(c);
 
                         if aead_authentication_ok {
-                            if session_key.receive_window.message_received(counter) {
-                                // Select this key as the new default if it's newer than the current key.
-                                if p > 0
-                                    && state.session_keys[state.cur_session_key_idx]
-                                        .as_ref()
-                                        .map_or(true, |old| old.creation_counter < session_key.creation_counter)
-                                {
-                                    drop(state);
-                                    let mut state = session.state.write().unwrap();
-                                    state.cur_session_key_idx = key_idx;
-                                    for i in 0..KEY_HISTORY_SIZE {
-                                        if i != key_idx {
-                                            if let Some(old_key) = state.session_keys[key_idx].as_ref() {
-                                                // Release pooled cipher memory from old keys.
-                                                old_key.receive_cipher_pool.lock().unwrap().clear();
-                                                old_key.send_cipher_pool.lock().unwrap().clear();
-                                            }
+                            // Select this key as the new default if it's newer than the current key.
+                            if p > 0
+                                && state.session_keys[state.cur_session_key_idx]
+                                    .as_ref()
+                                    .map_or(true, |old| old.creation_counter < session_key.creation_counter)
+                            {
+                                drop(state);
+                                let mut state = session.state.write().unwrap();
+                                state.cur_session_key_idx = key_idx;
+                                for i in 0..KEY_HISTORY_SIZE {
+                                    if i != key_idx {
+                                        if let Some(old_key) = state.session_keys[key_idx].as_ref() {
+                                            // Release pooled cipher memory from old keys.
+                                            old_key.receive_cipher_pool.lock().unwrap().clear();
+                                            old_key.send_cipher_pool.lock().unwrap().clear();
                                         }
                                     }
                                 }
+                            }
 
-                                if packet_type == PACKET_TYPE_DATA {
-                                    return Ok(ReceiveResult::OkData(&mut data_buf[..data_len]));
-                                } else {
-                                    unlikely_branch();
-                                    return Ok(ReceiveResult::Ok);
-                                }
+                            if packet_type == PACKET_TYPE_DATA {
+                                return Ok(ReceiveResult::OkData(&mut data_buf[..data_len]));
                             } else {
                                 unlikely_branch();
-                                return Ok(ReceiveResult::Ignored);
+                                return Ok(ReceiveResult::Ok);
                             }
                         }
                     }
