@@ -228,7 +228,7 @@ mod tests {
     }
     #[test]
     fn counter_window() {
-        let mut rng = 415263;
+        let mut rng = 84632;
         let mut counter = u32::MAX - 16;
         let mut fragment_no: u8 = 0;
         let mut history = Vec::<(u32, u8)>::new();
@@ -259,7 +259,7 @@ mod tests {
                 }
                 continue;
             } else if p < 0.9995 {
-                c = counter.wrapping_add(xorshift64(&mut rng)%999);
+                c = xorshift64(&mut rng);
                 f = (xorshift64(&mut rng)%64) as u8;
                 if w.message_received(c, f) {
                     w.purge(c, f);
