@@ -228,42 +228,41 @@ mod tests {
     }
     #[test]
     fn counter_window() {
-        let sqrt_out_of_order_max = (COUNTER_MAX_ALLOWED_OOO as f32).sqrt() as u32;
-        let mut rng = 1027;//8234
+        let mut rng = 415263;
         let mut counter = u32::MAX - 16;
         let mut fragment_no: u8 = 0;
         let mut history = Vec::<(u32, u8)>::new();
 
         let mut w = CounterWindow::new(counter.wrapping_sub(1));
-        for i in 1..1000000 {
-            let p = xorshift64(&mut rng)%1000;
+        for i in 0..1000000 {
+            let p = xorshift64(&mut rng) as f32/(u32::MAX as f32 + 1.0);
             let c;
             let f;
-            if p < 200 {
+            if p < 0.5 {
                 let r = xorshift64(&mut rng);
-                c = counter.wrapping_add(r%sqrt_out_of_order_max);
-                f = fragment_no + 1 + ((r/sqrt_out_of_order_max)%sqrt_out_of_order_max) as u8;
-            } else if p < 400 {
+                c = counter.wrapping_add(r%(COUNTER_MAX_ALLOWED_OOO - 2) as u32 + 1);
+                f = 0;
+            } else if p < 0.7 {
+                fragment_no = u8::min(fragment_no + 1, 63);
+                c = counter;
+                f = fragment_no;
+            } else if p < 0.8 {
+                counter = counter.wrapping_add(1);
+                fragment_no = 0;
+                c = counter;
+                f = fragment_no;
+            } else if p < 0.9 {
                 if history.len() > 0 {
                     let idx = xorshift64(&mut rng) as usize%history.len();
                     let (c, f) = history[idx];
                     assert!(!w.message_received(c, f));
                 }
                 continue;
-            } else if p < 650 {
-                fragment_no = u8::min(fragment_no + 1, 63);
-                c = counter;
-                f = fragment_no;
-            } else if p < 900 {
-                counter = counter.wrapping_add(1);
-                fragment_no = 0;
-                c = counter;
-                f = fragment_no;
-            } else if p < 999 {
-                c = xorshift64(&mut rng);
+            } else if p < 0.9995 {
+                c = counter.wrapping_add(xorshift64(&mut rng)%999);
                 f = (xorshift64(&mut rng)%64) as u8;
                 if w.message_received(c, f) {
-                    history.push((c, f));
+                    w.purge(c, f);
                 }
                 continue;
             } else {

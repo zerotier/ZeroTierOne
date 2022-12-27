@@ -142,7 +142,6 @@ impl CounterWindow {
         //atomic instructions are only ever atomic within themselves;
         //sequentially consistent atomics do not guarantee that the thread is not preempted between individual atomic instructions
         if let Some(history) = self.0.lock().unwrap().as_mut() {
-            const NONCE_MAX_DELTA: i64 = (2*COUNTER_MAX_ALLOWED_OOO as i64).wrapping_shl(32);
             let mut is_in = false;
             let mut idx = 0;
             let mut smallest = fragment_nonce;
@@ -155,13 +154,37 @@ impl CounterWindow {
                     idx = i;
                 }
             }
-            if !is_in & (smallest != fragment_nonce) & ((fragment_nonce as i64).wrapping_sub(smallest as i64) < NONCE_MAX_DELTA) {
+            if !is_in & (smallest != fragment_nonce) {
                 history[idx] = fragment_nonce;
                 return true
             }
             return false
         } else {
             return true
+        }
+    }
+
+    #[inline(always)]
+    pub fn purge(&self, inauthentic_counter_value: u32, inauthentic_fragment_no: u8) {
+        let inauthentic_nonce = (inauthentic_counter_value as u64).wrapping_shl(32) | (inauthentic_fragment_no as u64);
+        //everything past this point must be atomic, i.e. these instructions must be run mutually exclusive to completion;
+        //atomic instructions are only ever atomic within themselves;
+        //sequentially consistent atomics do not guarantee that the thread is not preempted between individual atomic instructions
+        if let Some(history) = self.0.lock().unwrap().as_mut() {
+            let mut idx = 0;
+            let mut smallest = history[0];
+            for i in 0..history.len() {
+                let nonce = history[i];
+                if nonce == inauthentic_nonce {
+                    idx = i;
+                } else {
+                    let delta = (smallest as i64).wrapping_sub(nonce as i64);
+                    if delta > 0 {
+                        smallest = nonce;
+                    }
+                }
+            }
+            history[idx] = smallest;
         }
     }
 }
