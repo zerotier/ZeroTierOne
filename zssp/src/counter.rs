@@ -5,7 +5,7 @@ use std::sync::{
 
 use zerotier_crypto::random;
 
-use crate::constants::COUNTER_MAX_DELTA;
+use crate::constants::{COUNTER_MAX_DELTA, COUNTER_MAX_ALLOWED_OOO};
 
 /// Outgoing packet counter with strictly ordered atomic semantics.
 ///
@@ -114,34 +114,56 @@ impl CounterWindowAlt {
     }
 }
 
-pub(crate) struct CounterWindow(Mutex<(usize, [u64; COUNTER_MAX_DELTA as usize])>);
+pub(crate) struct CounterWindow(Mutex<(usize, [u64; COUNTER_MAX_ALLOWED_OOO as usize])>);
 
 impl CounterWindow {
     #[inline(always)]
     pub fn new(initial: u32) -> Self {
+        // we want our nonces to wrap at the exact same time that the counter wraps, so we shift them up to the u64 boundary
         let initial_nonce = (initial as u64).wrapping_shl(32);
-        Self(Mutex::new((0, std::array::from_fn(|_| initial_nonce))))
+        Self(Mutex::new((0, [initial_nonce; COUNTER_MAX_ALLOWED_OOO as usize])))
     }
+    #[inline(always)]
+    pub fn new_uninit() -> Self {
+        Self(Mutex::new((usize::MAX, [0; COUNTER_MAX_ALLOWED_OOO as usize])))
+    }
+    #[inline(always)]
+    pub fn init(&self, initial: u32) {
+        let initial_nonce = (initial as u64).wrapping_shl(6);
+        let mut data = self.0.lock().unwrap();
+        data.0 = 0;
+        data.1 = [initial_nonce; COUNTER_MAX_ALLOWED_OOO as usize];
+    }
+
 
     #[inline(always)]
     pub fn message_received(&self, received_counter_value: u32, received_fragment_no: u8) -> bool {
-        let fragment_nonce = (received_counter_value as u64).wrapping_shl(6) | (received_fragment_no as u64);
+        let fragment_nonce = (received_counter_value as u64).wrapping_shl(32) | (received_fragment_no as u64);
         //everything past this point must be atomic, i.e. these instructions must be run mutually exclusive to completion;
         //atomic instructions are only ever atomic within themselves;
         //sequentially consistent atomics do not guarantee that the thread is not preempted between individual atomic instructions
         let mut data = self.0.lock().unwrap();
-        let mut is_in = false;
-        let mut is_gt_min = false;
-        for nonce in data.1 {
-            is_in |= nonce == fragment_nonce;
-            is_gt_min |= nonce.wrapping_sub(fragment_nonce) > 0;
+        if data.0 == usize::MAX {
+            return true
+        } else {
+            const NONCE_MAX_DELTA: i64 = (2*COUNTER_MAX_ALLOWED_OOO as i64).wrapping_shl(32);
+            let mut is_in = false;
+            let mut idx = 0;
+            let mut smallest = fragment_nonce;
+            for i in 0..data.1.len() {
+                let nonce = data.1[i];
+                is_in |= nonce == fragment_nonce;
+                let delta = (smallest as i64).wrapping_sub(nonce as i64);
+                if delta > 0 {
+                    smallest = nonce;
+                    idx = i;
+                }
+            }
+            if !is_in & (smallest != fragment_nonce) & ((fragment_nonce as i64).wrapping_sub(smallest as i64) < NONCE_MAX_DELTA) {
+                data.1[idx] = fragment_nonce;
+                return true
+            }
+            return false
         }
-        if !is_in & is_gt_min {
-            let idx = data.0;
-            data.1[idx] = fragment_nonce;
-            data.0 = (idx + 1) % (COUNTER_MAX_DELTA as usize);
-            return true;
-        }
-        return false;
     }
 }

@@ -254,6 +254,7 @@ impl<Application: ApplicationLayer> Session<Application> {
                         id: local_session_id,
                         application_data,
                         send_counter,
+                        receive_window: CounterWindow::new_uninit(),//alice does not know bob's counter yet
                         psk: psk.clone(),
                         noise_ss,
                         header_check_cipher,
@@ -879,6 +880,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                     id: new_session_id,
                                     application_data: associated_object,
                                     send_counter: Counter::new(),
+                                    receive_window: CounterWindow::new(counter),
                                     psk,
                                     noise_ss,
                                     header_check_cipher,
@@ -1030,7 +1032,6 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         Role::Bob,
                         current_time,
                         reply_counter,
-                        counter,
                         last_ratchet_count + 1,
                         hybrid_kk.is_some(),
                     );
@@ -1154,10 +1155,10 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                 Role::Alice,
                                 current_time,
                                 reply_counter,
-                                counter,
                                 last_ratchet_count + 1,
                                 hybrid_kk.is_some(),
                             );
+                            session.receive_window.init(counter);
 
                             ////////////////////////////////////////////////////////////////
                             // packet encoding for post-noise session start ack
@@ -1497,7 +1498,6 @@ impl SessionKey {
         role: Role,
         current_time: i64,
         current_counter: CounterValue,
-        remote_counter: u32,
         ratchet_count: u64,
         jedi: bool,
     ) -> Self {
@@ -1511,7 +1511,6 @@ impl SessionKey {
             secret_fingerprint: public_fingerprint_of_secret(key.as_bytes())[..16].try_into().unwrap(),
             creation_time: current_time,
             creation_counter: current_counter,
-            receive_window: CounterWindow::new(remote_counter),
             lifetime: KeyLifetime::new(current_counter, current_time),
             ratchet_key: kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_RATCHETING),
             receive_key,

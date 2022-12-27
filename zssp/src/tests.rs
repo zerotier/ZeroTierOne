@@ -218,14 +218,62 @@ mod tests {
         }
     }
 
+
+    #[inline(always)]
+    pub fn xorshift64(x: &mut u64) -> u32 {
+        *x ^= x.wrapping_shl(13);
+        *x ^= x.wrapping_shr(7);
+        *x ^= x.wrapping_shl(17);
+        *x as u32
+    }
     #[test]
     fn counter_window() {
-        let w = CounterWindow::new(0xffffffff);
-        assert!(!w.message_received(0xffffffff));
-        assert!(w.message_received(0));
-        assert!(w.message_received(1));
-        assert!(w.message_received(COUNTER_MAX_DELTA * 2));
-        assert!(!w.message_received(0xffffffff));
-        assert!(w.message_received(0xfffffffe));
+        let sqrt_out_of_order_max = (COUNTER_MAX_ALLOWED_OOO as f32).sqrt() as u32;
+        let mut rng = 8234;
+        let mut counter = u32::MAX - 16;
+        let mut fragment_no: u8 = 0;
+        let mut history = Vec::<(u32, u8)>::new();
+
+        let mut w = CounterWindow::new(counter.wrapping_sub(1));
+        for i in 1..1000000 {
+            let p = xorshift64(&mut rng)%1000;
+            let c;
+            let f;
+            if p < 250 {
+                let r = xorshift64(&mut rng);
+                c = counter.wrapping_add(r%sqrt_out_of_order_max);
+                f = fragment_no + 1 + ((r/sqrt_out_of_order_max)%sqrt_out_of_order_max) as u8;
+            } else if p < 500 {
+                if history.len() > 0 {
+                    let idx = xorshift64(&mut rng) as usize%history.len();
+                    let (c, f) = history[idx];
+                    assert!(!w.message_received(c, f));
+                }
+                continue;
+            } else if p < 750 {
+                fragment_no = u8::min(fragment_no + 1, 63);
+                c = counter;
+                f = fragment_no;
+            } else if p < 999 {
+                counter = counter.wrapping_add(1);
+                fragment_no = 0;
+                c = counter;
+                f = fragment_no;
+            } else {
+                //simulate rekeying
+                counter = xorshift64(&mut rng);
+                fragment_no = 0;
+                w = CounterWindow::new(counter.wrapping_sub(1));
+                history = Vec::<(u32, u8)>::new();
+                c = counter;
+                f = fragment_no;
+            }
+            if history.contains(&(c, f)) {
+                assert!(!w.message_received(c, f));
+            } else {
+                assert!(w.message_received(c, f));
+                history.push((c, f));
+            }
+        }
     }
 }
