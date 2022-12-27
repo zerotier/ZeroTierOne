@@ -229,7 +229,7 @@ mod tests {
     #[test]
     fn counter_window() {
         let sqrt_out_of_order_max = (COUNTER_MAX_ALLOWED_OOO as f32).sqrt() as u32;
-        let mut rng = 8234;
+        let mut rng = 1027;//8234
         let mut counter = u32::MAX - 16;
         let mut fragment_no: u8 = 0;
         let mut history = Vec::<(u32, u8)>::new();
@@ -239,26 +239,33 @@ mod tests {
             let p = xorshift64(&mut rng)%1000;
             let c;
             let f;
-            if p < 250 {
+            if p < 200 {
                 let r = xorshift64(&mut rng);
                 c = counter.wrapping_add(r%sqrt_out_of_order_max);
                 f = fragment_no + 1 + ((r/sqrt_out_of_order_max)%sqrt_out_of_order_max) as u8;
-            } else if p < 500 {
+            } else if p < 400 {
                 if history.len() > 0 {
                     let idx = xorshift64(&mut rng) as usize%history.len();
                     let (c, f) = history[idx];
                     assert!(!w.message_received(c, f));
                 }
                 continue;
-            } else if p < 750 {
+            } else if p < 650 {
                 fragment_no = u8::min(fragment_no + 1, 63);
                 c = counter;
                 f = fragment_no;
-            } else if p < 999 {
+            } else if p < 900 {
                 counter = counter.wrapping_add(1);
                 fragment_no = 0;
                 c = counter;
                 f = fragment_no;
+            } else if p < 999 {
+                c = xorshift64(&mut rng);
+                f = (xorshift64(&mut rng)%64) as u8;
+                if w.message_received(c, f) {
+                    history.push((c, f));
+                }
+                continue;
             } else {
                 //simulate rekeying
                 counter = xorshift64(&mut rng);

@@ -142,6 +142,7 @@ impl CounterWindow {
         //atomic instructions are only ever atomic within themselves;
         //sequentially consistent atomics do not guarantee that the thread is not preempted between individual atomic instructions
         if let Some(history) = self.0.lock().unwrap().as_mut() {
+            const NONCE_MAX_DELTA: i64 = (2*COUNTER_MAX_ALLOWED_OOO as i64).wrapping_shl(32);
             let mut is_in = false;
             let mut idx = 0;
             let mut smallest = fragment_nonce;
@@ -154,7 +155,7 @@ impl CounterWindow {
                     idx = i;
                 }
             }
-            if !is_in & (smallest != fragment_nonce) {
+            if !is_in & (smallest != fragment_nonce) & ((fragment_nonce as i64).wrapping_sub(smallest as i64) < NONCE_MAX_DELTA) {
                 history[idx] = fragment_nonce;
                 return true
             }
