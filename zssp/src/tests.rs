@@ -232,7 +232,7 @@ mod tests {
         let mut counter = 1u32;
         let mut history = Vec::new();
 
-        let mut w = CounterWindow::new(counter);
+        let mut w = CounterWindow::new();
         for i in 0..1000000 {
             let p = xorshift64(&mut rng) as f32/(u32::MAX as f32 + 1.0);
             let c;
@@ -249,9 +249,14 @@ mod tests {
                     assert!(!w.message_authenticated(c));
                 }
                 continue;
-            } else {
+            } else if p < 0.999 {
                 c = xorshift64(&mut rng);
                 w.message_received(c);
+                continue;
+            } else {
+                w.reset_after_initial_offer();
+                counter = 1u32;
+                history = Vec::new();
                 continue;
             }
             if history.contains(&c) {

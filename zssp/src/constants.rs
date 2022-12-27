@@ -74,9 +74,6 @@ pub(crate) const HMAC_SIZE: usize = 48;
 /// This is large since some ZeroTier nodes handle huge numbers of links, like roots and controllers.
 pub(crate) const SESSION_ID_SIZE: usize = 6;
 
-/// Number of session keys to hold at a given time (current, previous, next).
-pub(crate) const KEY_HISTORY_SIZE: usize = 3;
-
 /// Maximum difference between out-of-order incoming packet counters, and size of deduplication buffer.
 pub(crate) const COUNTER_MAX_ALLOWED_OOO: usize = 16;
 
