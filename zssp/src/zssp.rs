@@ -480,9 +480,9 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
             return Err(Error::InvalidPacket);
         }
 
-        let mut counter = u32::from_le(memory::load_raw(incoming_packet));
-        let key_id = (counter & 1) > 0;
-        counter = counter.wrapping_shr(1);
+        let raw_counter = u32::from_le(memory::load_raw(&incoming_packet[4..8]));
+        let key_id = (raw_counter & 1) > 0;
+        let counter = raw_counter.wrapping_shr(1);
         let packet_type_fragment_info = u16::from_le(memory::load_raw(&incoming_packet[14..16]));
         let packet_type = (packet_type_fragment_info & 0x0f) as u8;
         let fragment_count = ((packet_type_fragment_info.wrapping_shr(4) + 1) as u8) & 63;
@@ -1347,17 +1347,17 @@ fn create_packet_header(
     debug_assert!(fragment_count > 0);
     debug_assert!(fragment_count <= MAX_FRAGMENTS);
     debug_assert!(packet_type <= 0x0f); // packet type is 4 bits
-    let counter = counter.to_u32().wrapping_shl(1) | (key_id as u32);
 
     if fragment_count <= MAX_FRAGMENTS {
         // Header indexed by bit/byte:
-        //   [0-31]/[0-3]    counter
-        //   [32-63]/[4-7]   header check code (computed later)
+        //   [0-31]/[0-3]    header check code (computed later)
+        //   [32-32]/[4-]    key id
+        //   [33-63]/[-7]    counter
         //   [64-111]/[8-13] recipient's session ID (unique on their side)
         //   [112-115]/[14-] packet type (0-15)
         //   [116-121]/[-]   number of fragments (0..63 for 1..64 fragments total)
         //   [122-127]/[-15] fragment number (0, 1, 2, ...)
-        memory::store_raw((counter as u64).to_le(), header_destination_buffer);
+        memory::store_raw((counter.to_u32().wrapping_shl(1) | (key_id as u32)).to_le(), &mut header_destination_buffer[4..]);
         memory::store_raw(
             (u64::from(recipient_session_id) | (packet_type as u64).wrapping_shl(48) | ((fragment_count - 1) as u64).wrapping_shl(52))
                 .to_le(),
@@ -1402,16 +1402,16 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
 fn set_header_check_code(packet: &mut [u8], header_check_cipher: &Aes) {
     debug_assert!(packet.len() >= MIN_PACKET_SIZE);
     let mut check_code = 0u128.to_ne_bytes();
-    header_check_cipher.encrypt_block(&packet[8..24], &mut check_code);
-    packet[4..8].copy_from_slice(&check_code[..4]);
+    header_check_cipher.encrypt_block(&packet[4..20], &mut check_code);
+    packet[..4].copy_from_slice(&check_code[..4]);
 }
 
 /// Verify 32-bit header check code.
 fn verify_header_check_code(packet: &[u8], header_check_cipher: &Aes) -> bool {
     debug_assert!(packet.len() >= MIN_PACKET_SIZE);
     let mut header_mac = 0u128.to_ne_bytes();
-    header_check_cipher.encrypt_block(&packet[8..24], &mut header_mac);
-    memory::load_raw::<u32>(&packet[4..8]) == memory::load_raw::<u32>(&header_mac)
+    header_check_cipher.encrypt_block(&packet[4..20], &mut header_mac);
+    memory::load_raw::<u32>(&packet[..4]) == memory::load_raw::<u32>(&header_mac)
 }
 
 /// Parse KEY_OFFER and KEY_COUNTER_OFFER starting after the unencrypted public key part.
