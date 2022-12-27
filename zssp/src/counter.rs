@@ -114,25 +114,24 @@ impl CounterWindowAlt {
     }
 }
 
-pub(crate) struct CounterWindow(Mutex<(usize, [u64; COUNTER_MAX_ALLOWED_OOO as usize])>);
+pub(crate) struct CounterWindow(Mutex<Option<[u64; COUNTER_MAX_ALLOWED_OOO as usize]>>);
 
 impl CounterWindow {
     #[inline(always)]
     pub fn new(initial: u32) -> Self {
         // we want our nonces to wrap at the exact same time that the counter wraps, so we shift them up to the u64 boundary
         let initial_nonce = (initial as u64).wrapping_shl(32);
-        Self(Mutex::new((0, [initial_nonce; COUNTER_MAX_ALLOWED_OOO as usize])))
+        Self(Mutex::new(Some([initial_nonce; COUNTER_MAX_ALLOWED_OOO as usize])))
     }
     #[inline(always)]
     pub fn new_uninit() -> Self {
-        Self(Mutex::new((usize::MAX, [0; COUNTER_MAX_ALLOWED_OOO as usize])))
+        Self(Mutex::new(None))
     }
     #[inline(always)]
     pub fn init(&self, initial: u32) {
         let initial_nonce = (initial as u64).wrapping_shl(6);
         let mut data = self.0.lock().unwrap();
-        data.0 = 0;
-        data.1 = [initial_nonce; COUNTER_MAX_ALLOWED_OOO as usize];
+        *data = Some([initial_nonce; COUNTER_MAX_ALLOWED_OOO as usize]);
     }
 
 
@@ -142,16 +141,12 @@ impl CounterWindow {
         //everything past this point must be atomic, i.e. these instructions must be run mutually exclusive to completion;
         //atomic instructions are only ever atomic within themselves;
         //sequentially consistent atomics do not guarantee that the thread is not preempted between individual atomic instructions
-        let mut data = self.0.lock().unwrap();
-        if data.0 == usize::MAX {
-            return true
-        } else {
-            const NONCE_MAX_DELTA: i64 = (2*COUNTER_MAX_ALLOWED_OOO as i64).wrapping_shl(32);
+        if let Some(history) = self.0.lock().unwrap().as_mut() {
             let mut is_in = false;
             let mut idx = 0;
             let mut smallest = fragment_nonce;
-            for i in 0..data.1.len() {
-                let nonce = data.1[i];
+            for i in 0..history.len() {
+                let nonce = history[i];
                 is_in |= nonce == fragment_nonce;
                 let delta = (smallest as i64).wrapping_sub(nonce as i64);
                 if delta > 0 {
@@ -159,11 +154,13 @@ impl CounterWindow {
                     idx = i;
                 }
             }
-            if !is_in & (smallest != fragment_nonce) & ((fragment_nonce as i64).wrapping_sub(smallest as i64) < NONCE_MAX_DELTA) {
-                data.1[idx] = fragment_nonce;
+            if !is_in & (smallest != fragment_nonce) {
+                history[idx] = fragment_nonce;
                 return true
             }
             return false
+        } else {
+            return true
         }
     }
 }
