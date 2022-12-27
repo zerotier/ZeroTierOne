@@ -78,7 +78,6 @@ pub(crate) const SESSION_ID_SIZE: usize = 6;
 pub(crate) const KEY_HISTORY_SIZE: usize = 3;
 
 /// Maximum difference between out-of-order incoming packet counters, and size of deduplication buffer.
-pub(crate) const COUNTER_MAX_DELTA: u32 = 16;
 pub(crate) const COUNTER_MAX_ALLOWED_OOO: usize = 16;
 
 // Packet types can range from 0 to 15 (4 bits) -- 0-3 are defined and 4-15 are reserved for future use

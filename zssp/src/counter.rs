@@ -1,11 +1,10 @@
-use std::sync::{
-    atomic::{AtomicU64, Ordering},
-    Mutex, RwLock,
-};
+use std::{sync::{
+    atomic::{AtomicU64, Ordering, AtomicU32, AtomicI32, AtomicBool}
+}, mem};
 
 use zerotier_crypto::random;
 
-use crate::constants::{COUNTER_MAX_DELTA, COUNTER_MAX_ALLOWED_OOO};
+use crate::constants::COUNTER_MAX_ALLOWED_OOO;
 
 /// Outgoing packet counter with strictly ordered atomic semantics.
 ///
@@ -20,7 +19,7 @@ impl Counter {
     pub fn new() -> Self {
         // Using a random value has no security implication. Zero would be fine. This just
         // helps randomize packet contents a bit.
-        Self(AtomicU64::new(random::next_u32_secure() as u64))
+        Self(AtomicU64::new((random::next_u32_secure()/2) as u64))
     }
 
     /// Get the value most recently used to send a packet.
@@ -59,132 +58,51 @@ impl CounterValue {
 }
 
 /// Incoming packet deduplication and replay protection window.
-pub(crate) struct CounterWindowAlt(RwLock<(u32, [u32; COUNTER_MAX_DELTA as usize])>);
-
-impl CounterWindowAlt {
-    #[inline(always)]
-    pub fn new(initial: u32) -> Self {
-        Self(RwLock::new((initial, std::array::from_fn(|_| initial))))
-    }
-
-    #[inline(always)]
-    pub fn message_received(&self, received_counter_value: u32) -> bool {
-        let idx = (received_counter_value % COUNTER_MAX_DELTA) as usize;
-        let data = self.0.read().unwrap();
-        let max_counter_seen = data.0;
-        let lower_window = max_counter_seen.wrapping_sub(COUNTER_MAX_DELTA / 2);
-        let upper_window = max_counter_seen.wrapping_add(COUNTER_MAX_DELTA / 2);
-        if lower_window < upper_window {
-            if (lower_window <= received_counter_value) & (received_counter_value < upper_window) {
-                if data.1[idx] != received_counter_value {
-                    return true;
-                }
-            }
-        } else if (lower_window <= received_counter_value) | (received_counter_value < upper_window) {
-            if data.1[idx] != received_counter_value {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    #[inline(always)]
-    pub fn message_authenticated(&self, received_counter_value: u32) -> bool {
-        let idx = (received_counter_value % COUNTER_MAX_DELTA) as usize;
-        let mut data = self.0.write().unwrap();
-        let max_counter_seen = data.0;
-        let lower_window = max_counter_seen.wrapping_sub(COUNTER_MAX_DELTA / 2);
-        let upper_window = max_counter_seen.wrapping_add(COUNTER_MAX_DELTA / 2);
-        if lower_window < upper_window {
-            if (lower_window <= received_counter_value) & (received_counter_value < upper_window) {
-                if data.1[idx] != received_counter_value {
-                    data.1[idx] = received_counter_value;
-                    data.0 = max_counter_seen.max(received_counter_value);
-                    return true;
-                }
-            }
-        } else if (lower_window <= received_counter_value) | (received_counter_value < upper_window) {
-            if data.1[idx] != received_counter_value {
-                data.1[idx] = received_counter_value;
-                data.0 = (max_counter_seen as i32).max(received_counter_value as i32) as u32;
-                return true;
-            }
-        }
-        return false;
-    }
-}
-
-pub(crate) struct CounterWindow(Mutex<Option<[u64; COUNTER_MAX_ALLOWED_OOO as usize]>>);
+pub(crate) struct CounterWindow(AtomicBool, AtomicBool, [AtomicU32; COUNTER_MAX_ALLOWED_OOO]);
 
 impl CounterWindow {
     #[inline(always)]
     pub fn new(initial: u32) -> Self {
-        // we want our nonces to wrap at the exact same time that the counter wraps, so we shift them up to the u64 boundary
-        let initial_nonce = (initial as u64).wrapping_shl(32);
-        Self(Mutex::new(Some([initial_nonce; COUNTER_MAX_ALLOWED_OOO as usize])))
+        Self(AtomicBool::new(true), AtomicBool::new(false), std::array::from_fn(|_| AtomicU32::new(initial)))
     }
     #[inline(always)]
     pub fn new_uninit() -> Self {
-        Self(Mutex::new(None))
+        Self(AtomicBool::new(false), AtomicBool::new(false), std::array::from_fn(|_| AtomicU32::new(0)))
     }
     #[inline(always)]
-    pub fn init(&self, initial: u32) {
-        let initial_nonce = (initial as u64).wrapping_shl(6);
-        let mut data = self.0.lock().unwrap();
-        *data = Some([initial_nonce; COUNTER_MAX_ALLOWED_OOO as usize]);
+    pub fn init_authenticated(&self, received_counter_value: u32) {
+        self.1.store((u32::MAX/4 < received_counter_value) & (received_counter_value <= u32::MAX/4*3), Ordering::SeqCst);
+        for i in 1..COUNTER_MAX_ALLOWED_OOO {
+            self.2[i].store(received_counter_value, Ordering::SeqCst);
+        }
+        self.0.store(true, Ordering::SeqCst);
     }
 
-
     #[inline(always)]
-    pub fn message_received(&self, received_counter_value: u32, received_fragment_no: u8) -> bool {
-        let fragment_nonce = (received_counter_value as u64).wrapping_shl(32) | (received_fragment_no as u64);
-        //everything past this point must be atomic, i.e. these instructions must be run mutually exclusive to completion;
-        //atomic instructions are only ever atomic within themselves;
-        //sequentially consistent atomics do not guarantee that the thread is not preempted between individual atomic instructions
-        if let Some(history) = self.0.lock().unwrap().as_mut() {
-            let mut is_in = false;
-            let mut idx = 0;
-            let mut smallest = fragment_nonce;
-            for i in 0..history.len() {
-                let nonce = history[i];
-                is_in |= nonce == fragment_nonce;
-                let delta = (smallest as i64).wrapping_sub(nonce as i64);
-                if delta > 0 {
-                    smallest = nonce;
-                    idx = i;
-                }
+    pub fn message_received(&self, received_counter_value: u32) -> bool {
+        if self.0.load(Ordering::SeqCst) {
+            let idx = (received_counter_value % COUNTER_MAX_ALLOWED_OOO as u32) as usize;
+            let pre = self.2[idx].load(Ordering::SeqCst);
+            if self.1.load(Ordering::Relaxed) {
+                return pre < received_counter_value;
+            } else {
+                return (pre as i32) < (received_counter_value as i32);
             }
-            if !is_in & (smallest != fragment_nonce) {
-                history[idx] = fragment_nonce;
-                return true
-            }
-            return false
         } else {
-            return true
+            return true;
         }
     }
 
     #[inline(always)]
-    pub fn purge(&self, inauthentic_counter_value: u32, inauthentic_fragment_no: u8) {
-        let inauthentic_nonce = (inauthentic_counter_value as u64).wrapping_shl(32) | (inauthentic_fragment_no as u64);
-        //everything past this point must be atomic, i.e. these instructions must be run mutually exclusive to completion;
-        //atomic instructions are only ever atomic within themselves;
-        //sequentially consistent atomics do not guarantee that the thread is not preempted between individual atomic instructions
-        if let Some(history) = self.0.lock().unwrap().as_mut() {
-            let mut idx = 0;
-            let mut smallest = history[0];
-            for i in 0..history.len() {
-                let nonce = history[i];
-                if nonce == inauthentic_nonce {
-                    idx = i;
-                } else {
-                    let delta = (smallest as i64).wrapping_sub(nonce as i64);
-                    if delta > 0 {
-                        smallest = nonce;
-                    }
-                }
-            }
-            history[idx] = smallest;
+    pub fn message_authenticated(&self, received_counter_value: u32) -> bool {
+        //if a valid message is received but one of its fragments was lost, it can technically be replayed, since the message is incomplete, we know it still exists in  the gather array, so the gather array will deduplicate the replayed message
+        //eventually the counter of that message will be too OOO to be accepted anymore so it can't be used to DOS
+        let idx = (received_counter_value % COUNTER_MAX_ALLOWED_OOO as u32) as usize;
+        if self.1.swap((u32::MAX/4 < received_counter_value) & (received_counter_value <= u32::MAX/4*3), Ordering::SeqCst) {
+            return self.2[idx].fetch_max(received_counter_value, Ordering::SeqCst) < received_counter_value;
+        } else {
+            let pre_as_signed: &AtomicI32 = unsafe {mem::transmute(&self.2[idx])};
+            return pre_as_signed.fetch_max(received_counter_value as i32, Ordering::SeqCst) < received_counter_value as i32;
         }
     }
 }

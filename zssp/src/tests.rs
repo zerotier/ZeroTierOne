@@ -229,56 +229,36 @@ mod tests {
     #[test]
     fn counter_window() {
         let mut rng = 84632;
-        let mut counter = u32::MAX - 16;
-        let mut fragment_no: u8 = 0;
-        let mut history = Vec::<(u32, u8)>::new();
+        let mut counter = 1u32;
+        let mut history = Vec::new();
 
-        let mut w = CounterWindow::new(counter.wrapping_sub(1));
+        let mut w = CounterWindow::new(counter);
         for i in 0..1000000 {
             let p = xorshift64(&mut rng) as f32/(u32::MAX as f32 + 1.0);
             let c;
-            let f;
             if p < 0.5 {
                 let r = xorshift64(&mut rng);
                 c = counter.wrapping_add(r%(COUNTER_MAX_ALLOWED_OOO - 2) as u32 + 1);
-                f = 0;
-            } else if p < 0.7 {
-                fragment_no = u8::min(fragment_no + 1, 63);
-                c = counter;
-                f = fragment_no;
             } else if p < 0.8 {
                 counter = counter.wrapping_add(1);
-                fragment_no = 0;
                 c = counter;
-                f = fragment_no;
             } else if p < 0.9 {
                 if history.len() > 0 {
                     let idx = xorshift64(&mut rng) as usize%history.len();
-                    let (c, f) = history[idx];
-                    assert!(!w.message_received(c, f));
+                    let c = history[idx];
+                    assert!(!w.message_authenticated(c));
                 }
                 continue;
-            } else if p < 0.9995 {
+            } else {
                 c = xorshift64(&mut rng);
-                f = (xorshift64(&mut rng)%64) as u8;
-                if w.message_received(c, f) {
-                    w.purge(c, f);
-                }
+                w.message_received(c);
                 continue;
-            } else {
-                //simulate rekeying
-                counter = xorshift64(&mut rng);
-                fragment_no = 0;
-                w = CounterWindow::new(counter.wrapping_sub(1));
-                history = Vec::<(u32, u8)>::new();
-                c = counter;
-                f = fragment_no;
             }
-            if history.contains(&(c, f)) {
-                assert!(!w.message_received(c, f));
+            if history.contains(&c) {
+                assert!(!w.message_authenticated(c));
             } else {
-                assert!(w.message_received(c, f));
-                history.push((c, f));
+                assert!(w.message_authenticated(c));
+                history.push(c);
             }
         }
     }

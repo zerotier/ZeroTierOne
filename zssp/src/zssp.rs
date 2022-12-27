@@ -487,7 +487,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
         {
             if let Some(session) = app.lookup_session(local_session_id) {
                 if verify_header_check_code(incoming_packet, &session.header_check_cipher) {
-                    if session.receive_window.message_received(counter, fragment_no) {
+                    if session.receive_window.message_received(counter) {
                         let canonical_header = CanonicalHeader::make(local_session_id, packet_type, counter);
                         if fragment_count > 1 {
                             if fragment_count <= (MAX_FRAGMENTS as u8) && fragment_no < fragment_count {
@@ -664,31 +664,33 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         session_key.return_receive_cipher(c);
 
                         if aead_authentication_ok {
-                            // Select this key as the new default if it's newer than the current key.
-                            if p > 0
-                                && state.session_keys[state.cur_session_key_idx]
-                                    .as_ref()
-                                    .map_or(true, |old| old.creation_counter < session_key.creation_counter)
-                            {
-                                drop(state);
-                                let mut state = session.state.write().unwrap();
-                                state.cur_session_key_idx = key_idx;
-                                for i in 0..KEY_HISTORY_SIZE {
-                                    if i != key_idx {
-                                        if let Some(old_key) = state.session_keys[key_idx].as_ref() {
-                                            // Release pooled cipher memory from old keys.
-                                            old_key.receive_cipher_pool.lock().unwrap().clear();
-                                            old_key.send_cipher_pool.lock().unwrap().clear();
+                            if session.receive_window.message_authenticated(counter) {
+                                // Select this key as the new default if it's newer than the current key.
+                                if p > 0
+                                    && state.session_keys[state.cur_session_key_idx]
+                                        .as_ref()
+                                        .map_or(true, |old| old.creation_counter < session_key.creation_counter)
+                                {
+                                    drop(state);
+                                    let mut state = session.state.write().unwrap();
+                                    state.cur_session_key_idx = key_idx;
+                                    for i in 0..KEY_HISTORY_SIZE {
+                                        if i != key_idx {
+                                            if let Some(old_key) = state.session_keys[key_idx].as_ref() {
+                                                // Release pooled cipher memory from old keys.
+                                                old_key.receive_cipher_pool.lock().unwrap().clear();
+                                                old_key.send_cipher_pool.lock().unwrap().clear();
+                                            }
                                         }
                                     }
                                 }
-                            }
 
-                            if packet_type == PACKET_TYPE_DATA {
-                                return Ok(ReceiveResult::OkData(&mut data_buf[..data_len]));
-                            } else {
-                                unlikely_branch();
-                                return Ok(ReceiveResult::Ok);
+                                if packet_type == PACKET_TYPE_DATA {
+                                    return Ok(ReceiveResult::OkData(&mut data_buf[..data_len]));
+                                } else {
+                                    unlikely_branch();
+                                    return Ok(ReceiveResult::Ok);
+                                }
                             }
                         }
                     }
@@ -1158,7 +1160,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                 last_ratchet_count + 1,
                                 hybrid_kk.is_some(),
                             );
-                            session.receive_window.init(counter);
+                            session.receive_window.init_authenticated(counter);
 
                             ////////////////////////////////////////////////////////////////
                             // packet encoding for post-noise session start ack
