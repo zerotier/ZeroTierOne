@@ -17,7 +17,7 @@ impl Counter {
     }
 
     #[inline(always)]
-    pub fn reset_for_initial_offer(&self) {
+    pub fn reset_for_new_key_offer(&self) {
         self.0.store(1u32, Ordering::SeqCst);
     }
 
@@ -59,7 +59,7 @@ impl CounterWindow {
     pub fn new_invalid() -> Self {
             Self(std::array::from_fn(|_| AtomicU32::new(u32::MAX)))
     }
-    pub fn reset_for_initial_offer(&self) {
+    pub fn reset_for_new_key_offer(&self) {
         for i in 0..COUNTER_MAX_ALLOWED_OOO {
             self.0[i].store(0, Ordering::SeqCst)
         }

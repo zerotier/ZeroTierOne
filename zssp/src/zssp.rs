@@ -423,9 +423,10 @@ impl<Application: ApplicationLayer> Session<Application> {
         {
             if let Some(remote_s_public) = P384PublicKey::from_bytes(&self.remote_s_public_p384_bytes) {
                 //mark the previous key as no longer being supported because it is about to be overwritten
+                //it should not be possible for a session to accidentally invalidate the key currently in use solely because of the read lock
                 self.receive_windows[(!current_key_id) as usize].invalidate();
                 let mut offer = None;
-                //TODO: what happens here if the session is in a limbo state due to dropped packets?
+                //the session will keep sending ephemeral offers until rekeying is successful
                 if send_ephemeral_offer(
                     &mut send,
                     state.send_counters[current_key_id as usize].next(),
@@ -568,6 +569,8 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
         } else {
             unlikely_branch(); // we want data receive to be the priority branch, this is only occasionally used
             //salt with a known value so new sessions can be established
+            //NOTE: this check is trivial to bypass by just replaying recorded packets
+            //this check isn't security critical so that is fine
             if verify_header_check_code(incoming_packet, 1u64, &self.incoming_init_header_check_cipher) {
                 let canonical_header = CanonicalHeader::make(SessionId::NIL, packet_type, counter);
                 if fragment_count > 1 {
@@ -860,11 +863,6 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         let alice_ratchet_key_fingerprint = alice_ratchet_key_fingerprint.unwrap();
                         let mut ratchet_key = None;
                         let state = session.state.read().unwrap();
-                        //key_id here is the key id of the key being rekeyed and replaced
-                        //it must be equal to the current session key, and not the previous session key
-                        if state.cur_session_key_id != key_id {
-                            return Ok(ReceiveResult::Ignored);
-                        }
                         if let Some(k) = state.session_keys[key_id as usize].as_ref() {
                             if public_fingerprint_of_secret(k.ratchet_key.as_bytes())[..16].eq(alice_ratchet_key_fingerprint) {
                                 ratchet_key = Some(k.ratchet_key.clone());
@@ -874,9 +872,9 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             return Ok(ReceiveResult::Ignored); // old packet?
                         }
 
-                        (None, state.send_counters[state.cur_session_key_id as usize].next(), !key_id, ratchet_key)
+                        (None, state.send_counters[key_id as usize].next(), !key_id, ratchet_key)
                     } else {
-                        if key_id != false {
+                        if key_id != false {//all new sessions must start with key_id 0, this has no security implications
                             return Ok(ReceiveResult::Ignored);
                         }
                         if let Some((new_session_id, psk, associated_object)) =
@@ -1053,19 +1051,22 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         let mut state = session.state.write().unwrap();
                         let _ = state.session_keys[new_key_id as usize].replace(session_key);
                         if existing_session.is_some() {
-                            debug_assert!(new_key_id != key_id);
-                            // receive_windows only has race conditions with the counter of the remote party. It is theoretically possible that the local host receives counters under new_key_id while the receive_window is still in the process of resetting, but this is very unlikely. If it does happen, two things could happen:
-                            // 1) The received counter is less than what is currently stored in the window, so a valid packet is rejected
-                            // 2) The received counter is greater than what is currently stored in the window, so a valid packet is accepted *but* its counter is deleted from the window so it can be replayed
-                            // To prevent these race conditions, we only update the ratchet_count for salting the check code after the window has reset. So if a counter passes the initial check code: it either means the thread sees ratchet count has been update, therefore it either sees receive_window has been reset (due to memory orderings), or it means a rare accidental check forge has occurred.
-                            session.receive_windows[new_key_id as usize].reset_for_initial_offer();
-                            ratchet_count = session.ratchet_counts[new_key_id as usize].fetch_add(2, Ordering::SeqCst) + 1;
-
                             let _ = state.remote_session_id.replace(alice_session_id);
-                            // if the following wasn't done inside a lock, a theoretical race condition exists where a thread uses the new key id before the counter is reset, or worse: a thread has held onto the previous key_id == new_key_id, and attempts to use the reset counter
-                            // for this reason do not access send_counters without holding the read lock
-                            state.cur_session_key_id = new_key_id;
-                            state.send_counters[new_key_id as usize].reset_for_initial_offer();
+                            ratchet_count = session.ratchet_counts[key_id as usize].load(Ordering::SeqCst);
+                            if state.cur_session_key_id != new_key_id {//this prevents anything from being reset twice if the key offer was made twice
+                                debug_assert!(new_key_id != key_id);
+                                // receive_windows only has race conditions with the counter of the remote party. It is theoretically possible that the local host receives counters under new_key_id while the receive_window is still in the process of resetting, but this is very unlikely. If it does happen, two things could happen:
+                                // 1) The received counter is less than what is currently stored in the window, so a valid packet would be rejected
+                                // 2) The received counter is greater than what is currently stored in the window, so a valid packet would be accepted *but* its counter is deleted from the window so it can be replayed
+                                // To prevent these race conditions, we only update the ratchet_count for salting the check code after the window has reset. So if a counter passes the initial check code: it either means the thread sees ratchet count has been update, therefore it either sees receive_window has been reset (due to memory orderings), or it means a rare accidental check forge has occurred.
+                                session.receive_windows[new_key_id as usize].reset_for_new_key_offer();
+                                session.ratchet_counts[new_key_id as usize].fetch_add(2, Ordering::SeqCst);
+
+                                // if the following wasn't done inside a lock, a theoretical race condition exists where a thread uses the new key id before the counter is reset, or worse: a thread has held onto the previous key_id == new_key_id, and attempts to use the reset counter
+                                // for this reason do not access send_counters without holding the read lock
+                                state.cur_session_key_id = new_key_id;
+                                state.send_counters[new_key_id as usize].reset_for_new_key_offer();
+                            }
                         } else {
                             ratchet_count = 1;
                         }
@@ -1196,13 +1197,13 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                 let mut state = session.state.write().unwrap();
                                 let _ = state.remote_session_id.replace(bob_session_id);
                                 let _ = state.session_keys[new_key_id as usize].replace(session_key);
-                                if last_ratchet_count > 0 {
+                                if last_ratchet_count > 0 && state.cur_session_key_id != new_key_id {
                                     //when an brand new key offer is sent, it is sent using the new_key_id==false counter, we cannot reset it in that case.
                                     //NOTE: the following code should be properly threadsafe, see the large comment above at the end of KEY_OFFER decoding for more info
-                                    session.receive_windows[new_key_id as usize].reset_for_initial_offer();
-                                    let _ = session.ratchet_counts[new_key_id as usize].fetch_add(2, Ordering::SeqCst).wrapping_add(2);
+                                    session.receive_windows[new_key_id as usize].reset_for_new_key_offer();
+                                    let _ = session.ratchet_counts[new_key_id as usize].fetch_add(2, Ordering::SeqCst);
                                     state.cur_session_key_id = new_key_id;
-                                    state.send_counters[new_key_id as usize].reset_for_initial_offer();
+                                    state.send_counters[new_key_id as usize].reset_for_new_key_offer();
                                 }
                                 let _ = state.offer.take();
 
@@ -1471,7 +1472,7 @@ fn verify_header_check_code(packet: &[u8], ratchet_count: u64, header_check_ciph
     debug_assert!(packet.len() >= MIN_PACKET_SIZE);
     //2 bytes is the ratchet key
     //12 bytes is the header we want to verify
-    //2 bytes is random salt from the encrypted message
+    //2 bytes is salt from the message
     let mut header_mac = 0u128.to_le_bytes();
     memory::store_raw((ratchet_count as u16).to_le_bytes(), &mut header_mac[0..2]);
     header_mac[2..16].copy_from_slice(&packet[4..18]);

@@ -254,7 +254,7 @@ mod tests {
                 w.message_received(c);
                 continue;
             } else {
-                w.reset_for_initial_offer();
+                w.reset_for_new_key_offer();
                 counter = 1u32;
                 history = Vec::new();
                 continue;
