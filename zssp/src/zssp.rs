@@ -82,7 +82,7 @@ pub enum ReceiveResult<'a, H: ApplicationLayer> {
     OkNewSession(Session<H>),
 
     /// Packet superficially appears valid but was ignored e.g. as a duplicate.
-    /// IMPORTANT: Authentication was not completed on this packet, so for the most part treat this the same as an Error::FailedAuthentication
+    /// IMPORTANT: This pack was not authenticated, so for the most part treat this the same as an Error::FailedAuthentication
     Ignored,
 }
 
