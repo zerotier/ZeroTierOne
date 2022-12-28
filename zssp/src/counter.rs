@@ -3,10 +3,8 @@ use std::sync::atomic::{Ordering, AtomicU32};
 use crate::constants::COUNTER_MAX_ALLOWED_OOO;
 
 /// Outgoing packet counter with strictly ordered atomic semantics.
+/// Count sequence always starts at 1u32, it must never be allowed to overflow
 ///
-/// The counter used in packets is actually 32 bits, but using a 64-bit integer internally
-/// lets us more safely implement key lifetime limits without confusing logic to handle 32-bit
-/// wrap-around.
 #[repr(transparent)]
 pub(crate) struct Counter(AtomicU32);
 
