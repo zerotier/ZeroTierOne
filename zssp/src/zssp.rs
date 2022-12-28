@@ -495,8 +495,8 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
         if let Some(local_session_id) = SessionId::new_from_u64(u64::from_le(memory::load_raw(&incoming_packet[8..16])) & 0xffffffffffffu64)
         {
             if let Some(session) = app.lookup_session(local_session_id) {
-                if session.receive_windows[key_id as usize].message_received(counter) {
-                    if verify_header_check_code(incoming_packet, &session.header_check_cipher) {
+                if verify_header_check_code(incoming_packet, &session.header_check_cipher) {
+                    if session.receive_windows[key_id as usize].message_received(counter) {
                         let canonical_header = CanonicalHeader::make(local_session_id, packet_type, counter);
                         if fragment_count > 1 {
                             if fragment_count <= (MAX_FRAGMENTS as u8) && fragment_no < fragment_count {
@@ -542,11 +542,11 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         }
                     } else {
                         unlikely_branch();
-                        return Err(Error::FailedAuthentication);
+                        return Ok(ReceiveResult::Ignored);
                     }
                 } else {
                     unlikely_branch();
-                    return Ok(ReceiveResult::Ignored);
+                    return Err(Error::FailedAuthentication);
                 }
             } else {
                 unlikely_branch();
