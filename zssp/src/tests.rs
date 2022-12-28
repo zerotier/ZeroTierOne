@@ -233,7 +233,7 @@ mod tests {
         let mut history = Vec::new();
 
         let w = CounterWindow::new();
-        for i in 0..1000000 {
+        for _i in 0..1000000 {
             let p = xorshift64(&mut rng) as f32/(u32::MAX as f32 + 1.0);
             let c;
             if p < 0.5 {

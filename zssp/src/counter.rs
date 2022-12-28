@@ -47,9 +47,6 @@ impl CounterValue {
     pub fn to_u32(&self) -> u32 {
         self.0 as u32
     }
-    pub fn get_initial_offer_counter() -> CounterValue {
-        return CounterValue(1u32);
-    }
 }
 
 /// Incoming packet deduplication and replay protection window.
@@ -65,7 +62,6 @@ impl CounterWindow {
             Self(std::array::from_fn(|_| AtomicU32::new(u32::MAX)))
     }
     pub fn reset_for_initial_offer(&self) {
-        let o = true;
         for i in 0..COUNTER_MAX_ALLOWED_OOO {
             self.0[i].store(0, Ordering::SeqCst)
         }
