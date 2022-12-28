@@ -238,9 +238,9 @@ mod tests {
             let c;
             if p < 0.5 {
                 let r = xorshift64(&mut rng);
-                c = counter.wrapping_add(r%(COUNTER_MAX_ALLOWED_OOO - 1) as u32 + 1);
+                c = counter + (r%(COUNTER_MAX_ALLOWED_OOO - 1) as u32 + 1);
             } else if p < 0.8 {
-                counter = counter.wrapping_add(1);
+                counter = counter + (1);
                 c = counter;
             } else if p < 0.9 {
                 if history.len() > 0 {
