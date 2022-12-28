@@ -228,7 +228,7 @@ mod tests {
     }
     #[test]
     fn counter_window() {
-        let mut rng = 84632;
+        let mut rng = 844632;
         let mut counter = 1u32;
         let mut history = Vec::new();
 
@@ -238,7 +238,7 @@ mod tests {
             let c;
             if p < 0.5 {
                 let r = xorshift64(&mut rng);
-                c = counter.wrapping_add(r%(COUNTER_MAX_ALLOWED_OOO - 2) as u32 + 1);
+                c = counter.wrapping_add(r%(COUNTER_MAX_ALLOWED_OOO - 1) as u32 + 1);
             } else if p < 0.8 {
                 counter = counter.wrapping_add(1);
                 c = counter;
