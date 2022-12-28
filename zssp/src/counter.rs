@@ -64,6 +64,11 @@ impl CounterWindow {
             self.0[i].store(0, Ordering::SeqCst)
         }
     }
+    pub fn invalidate(&self) {
+        for i in 0..COUNTER_MAX_ALLOWED_OOO {
+            self.0[i].store(u32::MAX, Ordering::SeqCst)
+        }
+    }
 
     #[inline(always)]
     pub fn message_received(&self, received_counter_value: u32) -> bool {
@@ -75,7 +80,7 @@ impl CounterWindow {
 
     #[inline(always)]
     pub fn message_authenticated(&self, received_counter_value: u32) -> bool {
-        //if a valid message is received but one of its fragments was lost, it can technically be replayed. However since the message is incomplete, we know it still exists in  the gather array, so the gather array will deduplicate the replayed message. Even if the gather array gets flushed, that flush still effectively deduplicates the replayed message.
+        //if a valid message is received but one of its fragments was lost, it can technically be replayed. However since the message is incomplete, we know it still exists in the gather array, so the gather array will deduplicate the replayed message. Even if the gather array gets flushed, that flush still effectively deduplicates the replayed message.
         //eventually the counter of that kind of message will be too OOO to be accepted anymore so it can't be used to DOS.
         let idx = (received_counter_value % COUNTER_MAX_ALLOWED_OOO as u32) as usize;
         return self.0[idx].fetch_max(received_counter_value, Ordering::SeqCst) < received_counter_value;

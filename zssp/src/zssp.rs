@@ -416,6 +416,8 @@ impl<Application: ApplicationLayer> Session<Application> {
                 .map_or(true, |o| (current_time - o.creation_time) > Application::REKEY_RATE_LIMIT_MS)
         {
             if let Some(remote_s_public) = P384PublicKey::from_bytes(&self.remote_s_public_p384_bytes) {
+                //mark the previous key as no longer being supported because it is about to be overwritten
+                self.receive_windows[(!current_key_id) as usize].invalidate();
                 let mut offer = None;
                 if send_ephemeral_offer(
                     &mut send,
