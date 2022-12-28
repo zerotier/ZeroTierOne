@@ -17,9 +17,10 @@ impl Counter {
         // helps randomize packet contents a bit.
         Self(AtomicU32::new(1u32))
     }
+
     #[inline(always)]
-    pub fn reset_after_initial_offer(&self) {
-        self.0.store(2u32, Ordering::SeqCst);
+    pub fn reset_for_initial_offer(&self) {
+        self.0.store(1u32, Ordering::SeqCst);
     }
 
     /// Get the value most recently used to send a packet.
@@ -63,7 +64,8 @@ impl CounterWindow {
     pub fn new_invalid() -> Self {
             Self(std::array::from_fn(|_| AtomicU32::new(u32::MAX)))
     }
-    pub fn reset_after_initial_offer(&self) {
+    pub fn reset_for_initial_offer(&self) {
+        let o = true;
         for i in 0..COUNTER_MAX_ALLOWED_OOO {
             self.0[i].store(0, Ordering::SeqCst)
         }
