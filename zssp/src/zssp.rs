@@ -1043,14 +1043,18 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         let mut state = session.state.write().unwrap();
                         let _ = state.session_keys[new_key_id as usize].replace(session_key);
                         if existing_session.is_some() {
+                            // receive_windows only has race conditions with the counter of the remote party. It is theoretically possible that the local host receives counters under new_key_id while the receive_window is still in the process of resetting, but this is very unlikely. If it does happen, two things could happen:
+                            // 1) The received counter is less than what is currently stored in the window, so a valid packet is rejected
+                            // 2) The received counter is greater than what is currently stored in the window, so a valid packet is accepted *but* its counter is deleted from the window so it can be replayed
+                            // 1 is completely acceptable behavior; 2 is unacceptable, but extremely extremely unlikely. Since it is utterly impractical for an adversary to trigger 2 intentionally, and preventing 2 is expensive, we do not currently plan to prevent it.
+                            // if receive_window is ever reimplemented, double check it maintains the above properties.
+                            session.receive_windows[new_key_id as usize].reset_for_initial_offer();
+
                             let _ = state.remote_session_id.replace(alice_session_id);
-                            //if this wasn't done inside a lock, a theoretical race condition exists where a thread uses the new key id before the counter is reset, or worse: a thread has held onto the previous key_id == new_key_id, and attempts to use the reset counter
-                            //for this reason do not access send_counters without holding the read lock
+                            // if this wasn't done inside a lock, a theoretical race condition exists where a thread uses the new key id before the counter is reset, or worse: a thread has held onto the previous key_id == new_key_id, and attempts to use the reset counter
+                            // for this reason do not access send_counters without holding the read lock
                             state.cur_session_key_id = new_key_id;
                             state.send_counters[new_key_id as usize].reset_for_initial_offer();
-                            //receive_windows only has race conditions with the send counter of the remote party. It is theoretically possible that the local host receives counters under new_key_id while the receive_window is still in the process of resetting, but this is both very unlikely and can only ever cause dropped packets under the current implementation of receive_window.
-                            //if receive_window is ever reimplemented, double check it maintains the above property.
-                            session.receive_windows[new_key_id as usize].reset_for_initial_offer();
                         }
                         drop(state);
 
@@ -1184,9 +1188,9 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                 if !is_new_session {
                                     //when an brand new key offer is sent, it is sent using the new_key_id==false counter, we cannot reset it in that case.
                                     //NOTE: the following code should be properly threadsafe, see the large comment above at the end of KEY_OFFER decoding for more info
+                                    session.receive_windows[new_key_id as usize].reset_for_initial_offer();
                                     state.cur_session_key_id = new_key_id;
                                     state.send_counters[new_key_id as usize].reset_for_initial_offer();
-                                    session.receive_windows[new_key_id as usize].reset_for_initial_offer();
                                 }
                                 let _ = state.offer.take();
 
