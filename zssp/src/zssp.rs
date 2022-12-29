@@ -36,7 +36,7 @@ pub enum Error {
 
     /// Packet failed one or more authentication (MAC) checks
     /// IMPORTANT: Do not reply to a peer who has sent a packet that has failed authentication. Any response at all will leak to an attacker what authentication step their packet failed at (timing attack), which lowers the total authentication entropy they have to brute force.
-    /// There is a safe way to reply if absolutely necessary, by sending the reply back after a constant amount of time, but this is difficult to get correct.
+    /// There is a safe way to reply if absolutely necessary, by sending the reply back after a constant amount of time, but this is very difficult to get correct.
     FailedAuthentication,
 
     /// New session was rejected by the application layer.
@@ -83,7 +83,7 @@ pub enum ReceiveResult<'a, H: ApplicationLayer> {
     OkNewSession(Session<H>),
 
     /// Packet superficially appears valid but was ignored e.g. as a duplicate.
-    /// IMPORTANT: This pack was not authenticated, so for the most part treat this the same as an Error::FailedAuthentication
+    /// IMPORTANT: This packet was not authenticated, so for the most part treat this the same as an Error::FailedAuthentication
     Ignored,
 }
 
