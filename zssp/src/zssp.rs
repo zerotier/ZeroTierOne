@@ -91,6 +91,7 @@ pub enum ReceiveResult<'a, H: ApplicationLayer> {
 ///
 /// Note that the role can switch through the course of a session. It's the side that most recently
 /// initiated a session or a rekey event. Initiator is Alice, responder is Bob.
+#[derive(PartialEq)]
 pub enum Role {
     Alice,
     Bob,
@@ -147,6 +148,7 @@ struct SessionKey {
     receive_cipher_pool: Mutex<Vec<Box<AesGcm>>>, // Pool of reusable sending ciphers
     send_cipher_pool: Mutex<Vec<Box<AesGcm>>>,    // Pool of reusable receiving ciphers
     jedi: bool,                                   // True if Kyber1024 was used (both sides enabled)
+    role: Role,                                   // The role of the local party that created this key
 }
 
 /// Key lifetime state
@@ -400,7 +402,7 @@ impl<Application: ApplicationLayer> Session<Application> {
     /// * `offer_metadata' - Any meta-data to include with initial key offers sent.
     /// * `mtu` - Current physical transport MTU
     /// * `current_time` - Current monotonic time in milliseconds
-    /// * `force_rekey` - Re-key the session now regardless of key aging (still subject to rate limiting)
+    /// * `assume_key_is_too_old` - Re-key the session now if the protocol allows it (subject to rate limits and whether it is the local party's turn to rekey)
     pub fn service<SendFunction: FnMut(&mut [u8])>(
         &self,
         app: &Application,
@@ -408,14 +410,13 @@ impl<Application: ApplicationLayer> Session<Application> {
         offer_metadata: &[u8],
         mtu: usize,
         current_time: i64,
-        force_rekey: bool,
+        assume_key_is_too_old: bool,
     ) {
         let state = self.state.read().unwrap();
         let current_key_id = state.cur_session_key_id;
-        if (force_rekey
-            || state.session_keys[state.cur_session_key_id as usize]
+        if (state.session_keys[state.cur_session_key_id as usize]
                 .as_ref()
-                .map_or(true, |key| key.lifetime.should_rekey(state.send_counters[current_key_id as usize].current(), current_time)))
+                .map_or(true, |key| key.role == Role::Bob && (assume_key_is_too_old || key.lifetime.should_rekey(state.send_counters[current_key_id as usize].current(), current_time))))
             && state
                 .offer
                 .as_ref()
@@ -864,6 +865,11 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         let mut ratchet_key = None;
                         let state = session.state.read().unwrap();
                         if let Some(k) = state.session_keys[key_id as usize].as_ref() {
+                            if k.role == Role::Bob {
+                                // The local party is not allowed to be Bob twice in a row
+                                // this prevents rekeying failure from both parties attempting to rekey at the same time
+                                return Ok(ReceiveResult::Ignored);
+                            }
                             if public_fingerprint_of_secret(k.ratchet_key.as_bytes())[..16].eq(alice_ratchet_key_fingerprint) {
                                 ratchet_key = Some(k.ratchet_key.clone());
                             }
@@ -874,7 +880,8 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
                         (None, state.send_counters[key_id as usize].next(), !key_id, ratchet_key)
                     } else {
-                        if key_id != false {//all new sessions must start with key_id 0, this has no security implications
+                        if key_id != false {
+                            //all new sessions must start with key_id 0, this has no security implications
                             return Ok(ReceiveResult::Ignored);
                         }
                         if let Some((new_session_id, psk, associated_object)) =
@@ -1552,6 +1559,7 @@ impl SessionKey {
             receive_cipher_pool: Mutex::new(Vec::with_capacity(2)),
             send_cipher_pool: Mutex::new(Vec::with_capacity(2)),
             jedi,
+            role,
         }
     }
 
