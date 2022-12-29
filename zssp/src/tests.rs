@@ -209,7 +209,7 @@ mod tests {
                                 )
                                 .is_ok());
                         }
-                        if (test_loop % 8) == 0 && test_loop >= 8 && host.this_name.eq("alice") {
+                        if (test_loop % 8) == 0 && test_loop >= 8 {
                             session.service(host, send_to_other, &[], mtu_buffer.len(), test_loop as i64, true);
                         }
                     }

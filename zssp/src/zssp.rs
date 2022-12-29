@@ -773,7 +773,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
                     // Check rate limits.
                     if let Some(session) = session.as_ref() {
-                        if (current_time - session.state.read().unwrap().last_remote_offer) < Application::REKEY_RATE_LIMIT_MS {
+                        if current_time < session.state.read().unwrap().last_remote_offer + Application::REKEY_RATE_LIMIT_MS {
                             return Err(Error::RateLimited);
                         }
                     } else {
@@ -867,7 +867,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         if let Some(k) = state.session_keys[key_id as usize].as_ref() {
                             if k.role == Role::Bob {
                                 // The local party is not allowed to be Bob twice in a row
-                                // this prevents rekeying failure from both parties attempting to rekey at the same time
+                                // This prevents rekeying failure from both parties attempting to rekey at the same time
                                 return Ok(ReceiveResult::Ignored);
                             }
                             if public_fingerprint_of_secret(k.ratchet_key.as_bytes())[..16].eq(alice_ratchet_key_fingerprint) {
