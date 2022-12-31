@@ -3,14 +3,14 @@
 use std::sync::Arc;
 
 use crate::protocol::PacketBuffer;
-use crate::vl1::{ApplicationLayer, InnerLayer, Node, PacketHandlerResult, Path, Peer};
+use crate::vl1::{ApplicationLayer, InnerProtocolLayer, Node, PacketHandlerResult, Path, Peer};
 
 pub trait SwitchInterface: Sync + Send {}
 
 pub struct Switch {}
 
 #[allow(unused_variables)]
-impl InnerLayer for Switch {
+impl InnerProtocolLayer for Switch {
     fn handle_packet<Application: ApplicationLayer + ?Sized>(
         &self,
         app: &Application,

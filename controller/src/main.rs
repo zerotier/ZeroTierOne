@@ -13,7 +13,7 @@ use zerotier_utils::exitcode;
 use zerotier_utils::tokio::runtime::Runtime;
 use zerotier_vl1_service::VL1Service;
 
-async fn run(database: Arc<dyn Database>, runtime: &Runtime) -> i32 {
+async fn run(database: Arc<impl Database>, runtime: &Runtime) -> i32 {
     let handler = Controller::new(database.clone(), runtime.handle().clone()).await;
     if handler.is_err() {
         eprintln!("FATAL: error initializing handler: {}", handler.err().unwrap().to_string());
@@ -22,7 +22,7 @@ async fn run(database: Arc<dyn Database>, runtime: &Runtime) -> i32 {
         let handler = handler.unwrap();
 
         let svc = VL1Service::new(
-            database.clone(),
+            database,
             handler.clone(),
             handler.clone(),
             zerotier_vl1_service::VL1Settings::default(),

@@ -31,7 +31,7 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 /// ZeroTier VL2 network controller packet handler, answers VL2 netconf queries.
 pub struct Controller {
     self_ref: Weak<Self>,
-    service: RwLock<Weak<VL1Service<dyn Database, Self, Self>>>,
+    service: RwLock<Weak<VL1Service<Self>>>,
     reaper: Reaper,
     runtime: tokio::runtime::Handle,
     database: Arc<dyn Database>,
@@ -78,7 +78,7 @@ impl Controller {
     /// This must be called once the service that uses this handler is up or the controller
     /// won't actually do anything. The controller holds a weak reference to VL1Service so
     /// be sure it's not dropped.
-    pub async fn start(&self, service: &Arc<VL1Service<dyn Database, Self, Self>>) {
+    pub async fn start(&self, service: &Arc<VL1Service<Self>>) {
         *self.service.write().unwrap() = Arc::downgrade(service);
 
         // Create database change listener.
@@ -497,7 +497,7 @@ impl Controller {
     }
 }
 
-impl InnerProtocol for Controller {
+impl InnerProtocolLayer for Controller {
     fn handle_packet<HostSystemImpl: ApplicationLayer + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
@@ -512,7 +512,7 @@ impl InnerProtocol for Controller {
     ) -> PacketHandlerResult {
         match verb {
             protocol::message_type::VL2_NETWORK_CONFIG_REQUEST => {
-                if !host_system.should_respond_to(&source.identity) {
+                if !host_system.peer_filter().should_respond_to(&source.identity) {
                     return PacketHandlerResult::Ok; // handled and ignored
                 }
 

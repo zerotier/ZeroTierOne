@@ -27,42 +27,11 @@ use zerotier_utils::marshalable::Marshalable;
 use zerotier_utils::ringbuffer::RingBuffer;
 use zerotier_utils::thing::Thing;
 
-/// Trait providing functions to determine what peers we should talk to.
+/// Interface trait to be implemented by code that's using the ZeroTier network hypervisor.
 ///
-/// This is included in ApplicationLayer but is provided as a separate trait to make it easy for
-/// implementers of ApplicationLayer to break this out and allow a user to specify it.
-pub trait PeerFilter: Sync + Send {
-    /// Check if this node should respond to messages from a given peer at all.
-    ///
-    /// If this returns false, the node simply drops messages on the floor and refuses
-    /// to init V2 sessions.
-    fn should_respond_to(&self, id: &Verified<Identity>) -> bool;
-
-    /// Check if this node has any trust relationship with the provided identity.
-    ///
-    /// This should return true if there is any special trust relationship such as mutual
-    /// membership in a network or for controllers the peer's membership in any network
-    /// they control.
-    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool;
-}
-
-/// Trait to be implemented by outside code to provide object storage to VL1
-///
-/// This is included in ApplicationLayer but is provided as a separate trait to make it easy for
-/// implementers of ApplicationLayer to break this out and allow a user to specify it.
-pub trait NodeStorageProvider: Sync + Send {
-    /// Load this node's identity from the data store.
-    fn load_node_identity(&self) -> Option<Verified<Identity>>;
-
-    /// Save this node's identity to the data store.
-    fn save_node_identity(&self, id: &Verified<Identity>);
-}
-
-/// Trait implemented by external code to handle events and provide an interface to the system or application.
-pub trait ApplicationLayer: PeerFilter + NodeStorageProvider + 'static {
-    /// Type for implementation of NodeStorage.
-    type Storage: NodeStorageProvider + ?Sized;
-
+/// This is analogous to a C struct full of function pointers to callbacks along with some
+/// associated type definitions.
+pub trait ApplicationLayer: 'static {
     /// Type for local system sockets.
     type LocalSocket: Sync + Send + Hash + PartialEq + Eq + Clone + ToString + Sized + 'static;
 
@@ -73,7 +42,10 @@ pub trait ApplicationLayer: PeerFilter + NodeStorageProvider + 'static {
     fn event(&self, event: Event);
 
     /// Get a reference to the local storage implementation at this host.
-    fn storage(&self) -> &Self::Storage;
+    fn storage(&self) -> &dyn NodeStorageProvider;
+
+    /// Get the PeerFilter implementation used to check whether this node should communicate at VL1 with other peers.
+    fn peer_filter(&self) -> &dyn PeerFilter;
 
     /// Get a pooled packet buffer for internal use.
     fn get_buffer(&self) -> PooledPacketBuffer;
@@ -140,6 +112,31 @@ pub trait ApplicationLayer: PeerFilter + NodeStorageProvider + 'static {
     fn time_clock(&self) -> i64;
 }
 
+/// Trait providing functions to determine what peers we should talk to.
+pub trait PeerFilter: Sync + Send {
+    /// Check if this node should respond to messages from a given peer at all.
+    ///
+    /// If this returns false, the node simply drops messages on the floor and refuses
+    /// to init V2 sessions.
+    fn should_respond_to(&self, id: &Verified<Identity>) -> bool;
+
+    /// Check if this node has any trust relationship with the provided identity.
+    ///
+    /// This should return true if there is any special trust relationship such as mutual
+    /// membership in a network or for controllers the peer's membership in any network
+    /// they control.
+    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool;
+}
+
+/// Trait to be implemented by outside code to provide object storage to VL1
+pub trait NodeStorageProvider: Sync + Send {
+    /// Load this node's identity from the data store.
+    fn load_node_identity(&self) -> Option<Verified<Identity>>;
+
+    /// Save this node's identity to the data store.
+    fn save_node_identity(&self, id: &Verified<Identity>);
+}
+
 /// Result of a packet handler.
 pub enum PacketHandlerResult {
     /// Packet was handled successfully.
@@ -157,7 +154,7 @@ pub enum PacketHandlerResult {
 /// This is implemented by Switch in VL2. It's usually not used outside of VL2 in the core but
 /// it could also be implemented for testing or "off label" use of VL1 to carry different protocols.
 #[allow(unused)]
-pub trait InnerLayer: Sync + Send {
+pub trait InnerProtocolLayer: Sync + Send {
     /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
@@ -729,7 +726,7 @@ impl Node {
         INTERVAL
     }
 
-    pub fn handle_incoming_physical_packet<Application: ApplicationLayer + ?Sized, Inner: InnerLayer + ?Sized>(
+    pub fn handle_incoming_physical_packet<Application: ApplicationLayer + ?Sized, Inner: InnerProtocolLayer + ?Sized>(
         &self,
         app: &Application,
         inner: &Inner,
@@ -972,7 +969,7 @@ impl Node {
     }
 
     /// Called by Peer when an identity is received from another node, e.g. via OK(WHOIS).
-    pub(crate) fn handle_incoming_identity<Application: ApplicationLayer + ?Sized, Inner: InnerLayer + ?Sized>(
+    pub(crate) fn handle_incoming_identity<Application: ApplicationLayer + ?Sized, Inner: InnerProtocolLayer + ?Sized>(
         &self,
         app: &Application,
         inner: &Inner,
@@ -985,7 +982,7 @@ impl Node {
                 let mut whois_queue = self.whois_queue.lock().unwrap();
                 if let Some(qi) = whois_queue.get_mut(&received_identity.address) {
                     let address = received_identity.address;
-                    if app.should_respond_to(&received_identity) {
+                    if app.peer_filter().should_respond_to(&received_identity) {
                         let mut peers = self.peers.write().unwrap();
                         if let Some(peer) = peers.get(&address).cloned().or_else(|| {
                             Peer::new(&self.identity, received_identity, time_ticks)
@@ -1110,7 +1107,7 @@ impl<Application: ApplicationLayer + ?Sized> PathKey<'_, '_, Application> {
 #[derive(Default)]
 pub struct DummyInnerLayer;
 
-impl InnerLayer for DummyInnerLayer {}
+impl InnerProtocolLayer for DummyInnerLayer {}
 
 impl PeerFilter for DummyInnerLayer {
     #[inline(always)]
