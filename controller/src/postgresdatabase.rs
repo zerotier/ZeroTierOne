@@ -12,7 +12,7 @@ use tokio_postgres::{Client, Statement};
 use zerotier_crypto::secure_eq;
 use zerotier_crypto::verified::Verified;
 
-use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress, NodeStorageProvider};
+use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress};
 use zerotier_network_hypervisor::vl2::networkconfig::IpRoute;
 use zerotier_network_hypervisor::vl2::rule::Rule;
 use zerotier_network_hypervisor::vl2::NetworkId;
@@ -22,6 +22,7 @@ use zerotier_utils::tokio;
 use zerotier_utils::tokio::runtime::Handle;
 use zerotier_utils::tokio::sync::broadcast::{channel, Receiver, Sender};
 use zerotier_utils::tokio::task::JoinHandle;
+use zerotier_vl1_service::VL1DataStorage;
 
 use crate::database::*;
 use crate::model::{IpAssignmentPool, Member, Network, RequestLogItem};
@@ -187,14 +188,13 @@ impl PostgresDatabase {
     }
 }
 
-impl NodeStorageProvider for PostgresDatabase {
+impl VL1DataStorage for PostgresDatabase {
     fn load_node_identity(&self) -> Option<Verified<Identity>> {
         Some(self.local_identity.clone())
     }
 
-    fn save_node_identity(&self, _: &Verified<Identity>) {
-        eprintln!("FATAL: NodeStorage::save_node_identity() not implemented in PostgresDatabase, identity must be pregenerated");
-        panic!();
+    fn save_node_identity(&self, id: &Verified<Identity>) -> bool {
+        panic!("local identity saving not supported by PostgresDatabase")
     }
 }
 

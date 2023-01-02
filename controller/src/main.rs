@@ -7,7 +7,7 @@ use clap::{Arg, Command};
 use zerotier_network_controller::database::Database;
 use zerotier_network_controller::filedatabase::FileDatabase;
 use zerotier_network_controller::Controller;
-
+use zerotier_network_hypervisor::vl1::PeerFilter;
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 use zerotier_utils::exitcode;
 use zerotier_utils::tokio::runtime::Runtime;
@@ -22,8 +22,8 @@ async fn run(database: Arc<impl Database>, runtime: &Runtime) -> i32 {
         let handler = handler.unwrap();
 
         let svc = VL1Service::new(
-            database,
-            handler.clone(),
+            Arc::new(AdmitAllPeerFilter),
+            database.clone(),
             handler.clone(),
             zerotier_vl1_service::VL1Settings::default(),
         );
@@ -96,5 +96,16 @@ fn main() {
     } else {
         eprintln!("FATAL: can't start async runtime");
         std::process::exit(exitcode::ERR_IOERR)
+    }
+}
+
+struct AdmitAllPeerFilter;
+impl PeerFilter for AdmitAllPeerFilter {
+    fn should_respond_to(&self, id: &zerotier_crypto::verified::Verified<zerotier_network_hypervisor::vl1::Identity>) -> bool {
+        true
+    }
+
+    fn has_trust_relationship(&self, id: &zerotier_crypto::verified::Verified<zerotier_network_hypervisor::vl1::Identity>) -> bool {
+        true
     }
 }

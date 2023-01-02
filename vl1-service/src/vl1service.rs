@@ -20,6 +20,12 @@ use crate::LocalSocket;
 /// Update UDP bindings every this many seconds.
 const UPDATE_UDP_BINDINGS_EVERY_SECS: usize = 10;
 
+/// Trait to implement to provide storage for VL1-related state information.
+pub trait VL1DataStorage: Sync + Send {
+    fn load_node_identity(&self) -> Option<Verified<Identity>>;
+    fn save_node_identity(&self, id: &Verified<Identity>) -> bool;
+}
+
 /// VL1 service that connects to the physical network and hosts an inner protocol like ZeroTier VL2.
 ///
 /// This is the "outward facing" half of a full ZeroTier stack on a normal system. It binds sockets,
@@ -28,8 +34,8 @@ const UPDATE_UDP_BINDINGS_EVERY_SECS: usize = 10;
 /// a test harness or just the controller for a controller that runs stand-alone.
 pub struct VL1Service<Inner: InnerProtocolLayer + ?Sized + 'static> {
     state: RwLock<VL1ServiceMutableState>,
-    storage: Arc<dyn NodeStorageProvider>,
     peer_filter: Arc<dyn PeerFilter>,
+    vl1_data_storage: Arc<dyn VL1DataStorage>,
     inner: Arc<Inner>,
     buffer_pool: Arc<PacketBufferPool>,
     node_container: Option<Node>, // never None, set in new()
@@ -44,8 +50,8 @@ struct VL1ServiceMutableState {
 
 impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
     pub fn new(
-        storage: Arc<dyn NodeStorageProvider>,
         peer_filter: Arc<dyn PeerFilter>,
+        vl1_data_storage: Arc<dyn VL1DataStorage>,
         inner: Arc<Inner>,
         settings: VL1Settings,
     ) -> Result<Arc<Self>, Box<dyn Error>> {
@@ -56,8 +62,8 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
                 settings,
                 running: true,
             }),
-            storage,
             peer_filter,
+            vl1_data_storage,
             inner,
             buffer_pool: Arc::new(PacketBufferPool::new(
                 std::thread::available_parallelism().map_or(2, |c| c.get() + 2),
@@ -212,14 +218,19 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> ApplicationLayer for VL1Servi
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn local_socket_is_valid(&self, socket: &Self::LocalSocket) -> bool {
         socket.is_valid()
     }
 
     #[inline(always)]
-    fn storage(&self) -> &dyn NodeStorageProvider {
-        self.storage.as_ref()
+    fn load_node_identity(&self) -> Option<Verified<Identity>> {
+        self.vl1_data_storage.load_node_identity()
+    }
+
+    #[inline(always)]
+    fn save_node_identity(&self, id: &Verified<Identity>) -> bool {
+        self.vl1_data_storage.save_node_identity(id)
     }
 
     #[inline(always)]

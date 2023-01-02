@@ -1,21 +1,20 @@
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 
 use async_trait::async_trait;
 use notify::{RecursiveMode, Watcher};
 use serde::de::DeserializeOwned;
 
-use zerotier_network_hypervisor::vl1::{Address, Identity, NodeStorageProvider, Verified};
+use zerotier_network_hypervisor::vl1::{Address, Identity, Verified};
 use zerotier_network_hypervisor::vl2::NetworkId;
-use zerotier_utils::io::{fs_restrict_permissions, read_limit};
 use zerotier_utils::reaper::Reaper;
 use zerotier_utils::tokio::fs;
 use zerotier_utils::tokio::runtime::Handle;
 use zerotier_utils::tokio::sync::broadcast::{channel, Receiver, Sender};
 use zerotier_utils::tokio::task::JoinHandle;
 use zerotier_utils::tokio::time::{sleep, Duration, Instant};
+use zerotier_vl1_service::datadir::{load_node_identity, save_node_identity};
+use zerotier_vl1_service::VL1DataStorage;
 
 use crate::cache::Cache;
 use crate::database::{Change, Database, Error};
@@ -34,7 +33,7 @@ const EVENT_HANDLER_TASK_TIMEOUT: Duration = Duration::from_secs(5);
 /// is different from V1 so it'll need a converter to use with V1 FileDb controller data.
 pub struct FileDatabase {
     base_path: PathBuf,
-    controller_address: AtomicU64,
+    local_identity: Verified<Identity>,
     change_sender: Sender<Change>,
     tasks: Reaper,
     cache: Cache,
@@ -53,9 +52,13 @@ impl FileDatabase {
         let db_weak = db_weak_tmp.clone();
         let runtime2 = runtime.clone();
 
+        let local_identity = load_node_identity(base_path.as_path())
+            .ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "identity.secret not found"))?;
+        let controller_address = local_identity.address;
+
         let db = Arc::new(Self {
             base_path: base_path.clone(),
-            controller_address: AtomicU64::new(0),
+            local_identity,
             change_sender,
             tasks: Reaper::new(&runtime2),
             cache: Cache::new(),
@@ -65,127 +68,115 @@ impl FileDatabase {
                         match event.kind {
                             notify::EventKind::Create(_) | notify::EventKind::Modify(_) | notify::EventKind::Remove(_) => {
                                 if let Some(db) = db_weak.lock().unwrap().upgrade() {
-                                    if let Some(controller_address) = db.get_controller_address() {
-                                        db.clone().tasks.add(
-                                            runtime.spawn(async move {
-                                                if let Some(path0) = event.paths.first() {
-                                                    if let Some((record_type, network_id, node_id)) =
-                                                        Self::record_type_from_path(controller_address, path0.as_path())
-                                                    {
-                                                        // Paths to objects that were deleted or changed. Changed includes adding new objects.
-                                                        let mut deleted = None;
-                                                        let mut changed = None;
+                                    db.clone().tasks.add(
+                                        runtime.spawn(async move {
+                                            if let Some(path0) = event.paths.first() {
+                                                if let Some((record_type, network_id, node_id)) =
+                                                    Self::record_type_from_path(controller_address, path0.as_path())
+                                                {
+                                                    // Paths to objects that were deleted or changed. Changed includes adding new objects.
+                                                    let mut deleted = None;
+                                                    let mut changed = None;
 
-                                                        match event.kind {
-                                                            notify::EventKind::Create(create_kind) => match create_kind {
-                                                                notify::event::CreateKind::File => {
-                                                                    changed = Some(path0.as_path());
-                                                                }
-                                                                _ => {}
-                                                            },
-                                                            notify::EventKind::Modify(modify_kind) => match modify_kind {
-                                                                notify::event::ModifyKind::Data(_) => {
-                                                                    changed = Some(path0.as_path());
-                                                                }
-                                                                notify::event::ModifyKind::Name(rename_mode) => match rename_mode {
-                                                                    notify::event::RenameMode::Both => {
-                                                                        if event.paths.len() >= 2 {
-                                                                            if let Some(path1) = event.paths.last() {
-                                                                                deleted = Some(path0.as_path());
-                                                                                changed = Some(path1.as_path());
-                                                                            }
+                                                    match event.kind {
+                                                        notify::EventKind::Create(create_kind) => match create_kind {
+                                                            notify::event::CreateKind::File => {
+                                                                changed = Some(path0.as_path());
+                                                            }
+                                                            _ => {}
+                                                        },
+                                                        notify::EventKind::Modify(modify_kind) => match modify_kind {
+                                                            notify::event::ModifyKind::Data(_) => {
+                                                                changed = Some(path0.as_path());
+                                                            }
+                                                            notify::event::ModifyKind::Name(rename_mode) => match rename_mode {
+                                                                notify::event::RenameMode::Both => {
+                                                                    if event.paths.len() >= 2 {
+                                                                        if let Some(path1) = event.paths.last() {
+                                                                            deleted = Some(path0.as_path());
+                                                                            changed = Some(path1.as_path());
                                                                         }
                                                                     }
-                                                                    notify::event::RenameMode::From => {
-                                                                        deleted = Some(path0.as_path());
-                                                                    }
-                                                                    notify::event::RenameMode::To => {
-                                                                        changed = Some(path0.as_path());
-                                                                    }
-                                                                    _ => {}
-                                                                },
-                                                                _ => {}
-                                                            },
-                                                            notify::EventKind::Remove(remove_kind) => match remove_kind {
-                                                                notify::event::RemoveKind::File => {
+                                                                }
+                                                                notify::event::RenameMode::From => {
                                                                     deleted = Some(path0.as_path());
+                                                                }
+                                                                notify::event::RenameMode::To => {
+                                                                    changed = Some(path0.as_path());
                                                                 }
                                                                 _ => {}
                                                             },
                                                             _ => {}
-                                                        }
-
-                                                        if deleted.is_some() {
-                                                            match record_type {
-                                                                RecordType::Network => {
-                                                                    if let Some((network, members)) =
-                                                                        db.cache.on_network_deleted(network_id)
-                                                                    {
-                                                                        let _ =
-                                                                            db.change_sender.send(Change::NetworkDeleted(network, members));
-                                                                    }
-                                                                }
-                                                                RecordType::Member => {
-                                                                    if let Some(node_id) = node_id {
-                                                                        if let Some(member) =
-                                                                            db.cache.on_member_deleted(network_id, node_id)
-                                                                        {
-                                                                            let _ = db.change_sender.send(Change::MemberDeleted(member));
-                                                                        }
-                                                                    }
-                                                                }
-                                                                _ => {}
+                                                        },
+                                                        notify::EventKind::Remove(remove_kind) => match remove_kind {
+                                                            notify::event::RemoveKind::File => {
+                                                                deleted = Some(path0.as_path());
                                                             }
-                                                        }
+                                                            _ => {}
+                                                        },
+                                                        _ => {}
+                                                    }
 
-                                                        if let Some(changed) = changed {
-                                                            match record_type {
-                                                                RecordType::Network => {
-                                                                    if let Ok(Some(new_network)) =
-                                                                        Self::load_object::<Network>(changed).await
-                                                                    {
-                                                                        match db.cache.on_network_updated(new_network.clone()) {
-                                                                            (true, Some(old_network)) => {
-                                                                                let _ = db
-                                                                                    .change_sender
-                                                                                    .send(Change::NetworkChanged(old_network, new_network));
-                                                                            }
-                                                                            (true, None) => {
-                                                                                let _ = db
-                                                                                    .change_sender
-                                                                                    .send(Change::NetworkCreated(new_network));
-                                                                            }
-                                                                            _ => {}
-                                                                        }
-                                                                    }
+                                                    if deleted.is_some() {
+                                                        match record_type {
+                                                            RecordType::Network => {
+                                                                if let Some((network, members)) = db.cache.on_network_deleted(network_id) {
+                                                                    let _ = db.change_sender.send(Change::NetworkDeleted(network, members));
                                                                 }
-                                                                RecordType::Member => {
-                                                                    if let Ok(Some(new_member)) = Self::load_object::<Member>(changed).await
-                                                                    {
-                                                                        match db.cache.on_member_updated(new_member.clone()) {
-                                                                            (true, Some(old_member)) => {
-                                                                                let _ = db
-                                                                                    .change_sender
-                                                                                    .send(Change::MemberChanged(old_member, new_member));
-                                                                            }
-                                                                            (true, None) => {
-                                                                                let _ = db
-                                                                                    .change_sender
-                                                                                    .send(Change::MemberCreated(new_member));
-                                                                            }
-                                                                            _ => {}
-                                                                        }
-                                                                    }
-                                                                }
-                                                                _ => {}
                                                             }
+                                                            RecordType::Member => {
+                                                                if let Some(node_id) = node_id {
+                                                                    if let Some(member) = db.cache.on_member_deleted(network_id, node_id) {
+                                                                        let _ = db.change_sender.send(Change::MemberDeleted(member));
+                                                                    }
+                                                                }
+                                                            }
+                                                            _ => {}
+                                                        }
+                                                    }
+
+                                                    if let Some(changed) = changed {
+                                                        match record_type {
+                                                            RecordType::Network => {
+                                                                if let Ok(Some(new_network)) = Self::load_object::<Network>(changed).await {
+                                                                    match db.cache.on_network_updated(new_network.clone()) {
+                                                                        (true, Some(old_network)) => {
+                                                                            let _ = db
+                                                                                .change_sender
+                                                                                .send(Change::NetworkChanged(old_network, new_network));
+                                                                        }
+                                                                        (true, None) => {
+                                                                            let _ =
+                                                                                db.change_sender.send(Change::NetworkCreated(new_network));
+                                                                        }
+                                                                        _ => {}
+                                                                    }
+                                                                }
+                                                            }
+                                                            RecordType::Member => {
+                                                                if let Ok(Some(new_member)) = Self::load_object::<Member>(changed).await {
+                                                                    match db.cache.on_member_updated(new_member.clone()) {
+                                                                        (true, Some(old_member)) => {
+                                                                            let _ = db
+                                                                                .change_sender
+                                                                                .send(Change::MemberChanged(old_member, new_member));
+                                                                        }
+                                                                        (true, None) => {
+                                                                            let _ =
+                                                                                db.change_sender.send(Change::MemberCreated(new_member));
+                                                                        }
+                                                                        _ => {}
+                                                                    }
+                                                                }
+                                                            }
+                                                            _ => {}
                                                         }
                                                     }
                                                 }
-                                            }),
-                                            Instant::now().checked_add(EVENT_HANDLER_TASK_TIMEOUT).unwrap(),
-                                        );
-                                    }
+                                            }
+                                        }),
+                                        Instant::now().checked_add(EVENT_HANDLER_TASK_TIMEOUT).unwrap(),
+                                    );
                                 }
                             }
                             _ => {}
@@ -213,20 +204,6 @@ impl FileDatabase {
         *db_weak_tmp.lock().unwrap() = Arc::downgrade(&db); // this starts the daemon tasks and starts watching for file changes
 
         Ok(db)
-    }
-
-    fn get_controller_address(&self) -> Option<Address> {
-        let a = self.controller_address.load(Ordering::Relaxed);
-        if a == 0 {
-            if let Some(id) = self.load_node_identity() {
-                self.controller_address.store(id.address.into(), Ordering::Relaxed);
-                Some(id.address)
-            } else {
-                None
-            }
-        } else {
-            Address::from_u64(a)
-        }
     }
 
     fn network_path(&self, network_id: NetworkId) -> PathBuf {
@@ -274,25 +251,13 @@ impl Drop for FileDatabase {
     }
 }
 
-impl NodeStorageProvider for FileDatabase {
+impl VL1DataStorage for FileDatabase {
     fn load_node_identity(&self) -> Option<Verified<Identity>> {
-        let id_data = read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 16384);
-        if id_data.is_err() {
-            return None;
-        }
-        let id_data = Identity::from_str(String::from_utf8_lossy(id_data.unwrap().as_slice()).as_ref());
-        if id_data.is_err() {
-            return None;
-        }
-        Some(Verified::assume_verified(id_data.unwrap()))
+        load_node_identity(self.base_path.as_path())
     }
 
-    fn save_node_identity(&self, id: &Verified<Identity>) {
-        assert!(id.secret.is_some());
-        let id_secret_str = id.to_secret_string();
-        let secret_path = self.base_path.join(IDENTITY_SECRET_FILENAME);
-        assert!(std::fs::write(&secret_path, id_secret_str.as_bytes()).is_ok());
-        assert!(fs_restrict_permissions(&secret_path));
+    fn save_node_identity(&self, id: &Verified<Identity>) -> bool {
+        save_node_identity(self.base_path.as_path(), id)
     }
 }
 
@@ -300,19 +265,17 @@ impl NodeStorageProvider for FileDatabase {
 impl Database for FileDatabase {
     async fn list_networks(&self) -> Result<Vec<NetworkId>, Error> {
         let mut networks = Vec::new();
-        if let Some(controller_address) = self.get_controller_address() {
-            let controller_address_shift24 = u64::from(controller_address).wrapping_shl(24);
-            let mut dir = fs::read_dir(&self.base_path).await?;
-            while let Ok(Some(ent)) = dir.next_entry().await {
-                if ent.file_type().await.map_or(false, |t| t.is_dir()) {
-                    let osname = ent.file_name();
-                    let name = osname.to_string_lossy();
-                    if name.len() == 7 && name.starts_with("N") {
-                        if fs::metadata(ent.path().join("config.yaml")).await.is_ok() {
-                            if let Ok(nwid_last24bits) = u64::from_str_radix(&name[1..], 16) {
-                                if let Some(nwid) = NetworkId::from_u64(controller_address_shift24 | nwid_last24bits) {
-                                    networks.push(nwid);
-                                }
+        let controller_address_shift24 = u64::from(self.local_identity.address).wrapping_shl(24);
+        let mut dir = fs::read_dir(&self.base_path).await?;
+        while let Ok(Some(ent)) = dir.next_entry().await {
+            if ent.file_type().await.map_or(false, |t| t.is_dir()) {
+                let osname = ent.file_name();
+                let name = osname.to_string_lossy();
+                if name.len() == 7 && name.starts_with("N") {
+                    if fs::metadata(ent.path().join("config.yaml")).await.is_ok() {
+                        if let Ok(nwid_last24bits) = u64::from_str_radix(&name[1..], 16) {
+                            if let Some(nwid) = NetworkId::from_u64(controller_address_shift24 | nwid_last24bits) {
+                                networks.push(nwid);
                             }
                         }
                     }
@@ -328,12 +291,10 @@ impl Database for FileDatabase {
             // FileDatabase stores networks by their "network number" and automatically adapts their IDs
             // if the controller's identity changes. This is done to make it easy to just clone networks,
             // including storing them in "git."
-            if let Some(controller_address) = self.get_controller_address() {
-                let network_id_should_be = network.id.change_network_controller(controller_address);
-                if network.id != network_id_should_be {
-                    network.id = network_id_should_be;
-                    let _ = self.save_network(network.clone(), false).await?;
-                }
+            let network_id_should_be = network.id.change_network_controller(self.local_identity.address);
+            if network.id != network_id_should_be {
+                network.id = network_id_should_be;
+                let _ = self.save_network(network.clone(), false).await?;
             }
         }
         Ok(network)
