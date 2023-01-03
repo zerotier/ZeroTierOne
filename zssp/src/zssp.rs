@@ -1162,10 +1162,16 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             let mut session_key = noise_ik_complete;
 
                             // Mix ratchet key from previous session key (if any) and Kyber1024 hybrid shared key (if any).
+                            // We either have a session, in which case they should have supplied a ratchet key fingerprint, or
+                            // we don't and they should not have supplied one.
                             if let Some(cur_session_key) = state.session_keys[key_id as usize].as_ref() {
                                 if bob_ratchet_key_id.is_some() {
                                     session_key = Secret(hmac_sha512(cur_session_key.ratchet_key.as_bytes(), session_key.as_bytes()));
+                                } else {
+                                    return Err(Error::FailedAuthentication);
                                 }
+                            } else if bob_ratchet_key_id.is_some() {
+                                return Err(Error::FailedAuthentication);
                             }
                             if let Some(hybrid_kk) = hybrid_kk.as_ref() {
                                 session_key = Secret(hmac_sha512(hybrid_kk.as_bytes(), session_key.as_bytes()));
