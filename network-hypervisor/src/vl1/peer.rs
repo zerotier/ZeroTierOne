@@ -593,7 +593,7 @@ impl Peer {
         source_path: &Arc<Path>,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
-        if !(app.peer_filter().should_respond_to(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
+        if !(inner.should_respond_to(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
             debug_event!(
                 app,
                 "[vl1] dropping HELLO from {} due to lack of trust relationship",
@@ -787,7 +787,7 @@ impl Peer {
         message_id: MessageId,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
-        if node.this_node_is_root() || app.peer_filter().should_respond_to(&self.identity) {
+        if node.this_node_is_root() || inner.should_respond_to(&self.identity) {
             let mut addresses = payload.as_bytes();
             while addresses.len() >= ADDRESS_SIZE {
                 if !self
@@ -833,7 +833,7 @@ impl Peer {
         message_id: MessageId,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
-        if app.peer_filter().should_respond_to(&self.identity) || node.is_peer_root(self) {
+        if inner.should_respond_to(&self.identity) || node.is_peer_root(self) {
             self.send(app, node, None, time_ticks, |packet| {
                 let mut f: &mut OkHeader = packet.append_struct_get_mut().unwrap();
                 f.verb = message_type::VL1_OK;

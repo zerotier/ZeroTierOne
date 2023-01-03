@@ -498,6 +498,22 @@ impl Controller {
 }
 
 impl InnerProtocolLayer for Controller {
+    #[inline(always)]
+    fn should_respond_to(&self, _: &Verified<Identity>) -> bool {
+        // Controllers always have to establish sessions to process requests. We don't really know if
+        // a member is relevant until we have looked up both the network and the member, since whether
+        // or not to "learn" unknown members is a network level option.
+        true
+    }
+
+    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool {
+        self.recently_authorized
+            .read()
+            .unwrap()
+            .get(&id.fingerprint)
+            .map_or(false, |by_network| by_network.values().any(|t| *t > ms_monotonic()))
+    }
+
     fn handle_packet<HostSystemImpl: ApplicationLayer + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
@@ -512,7 +528,7 @@ impl InnerProtocolLayer for Controller {
     ) -> PacketHandlerResult {
         match verb {
             protocol::message_type::VL2_NETWORK_CONFIG_REQUEST => {
-                if !host_system.peer_filter().should_respond_to(&source.identity) {
+                if !self.should_respond_to(&source.identity) {
                     return PacketHandlerResult::Ok; // handled and ignored
                 }
 
@@ -635,24 +651,6 @@ impl InnerProtocolLayer for Controller {
 
             _ => PacketHandlerResult::NotHandled,
         }
-    }
-}
-
-impl PeerFilter for Controller {
-    #[inline(always)]
-    fn should_respond_to(&self, _: &Verified<Identity>) -> bool {
-        // Controllers always have to establish sessions to process requests. We don't really know if
-        // a member is relevant until we have looked up both the network and the member, since whether
-        // or not to "learn" unknown members is a network level option.
-        true
-    }
-
-    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool {
-        self.recently_authorized
-            .read()
-            .unwrap()
-            .get(&id.fingerprint)
-            .map_or(false, |by_network| by_network.values().any(|t| *t > ms_monotonic()))
     }
 }
 

@@ -212,7 +212,7 @@ fn main() {
             if let Ok(_tokio_runtime) = zerotier_utils::tokio::runtime::Builder::new_multi_thread().enable_all().build() {
                 let test_inner = Arc::new(DummyInnerLayer);
                 let datadir = open_datadir(&flags);
-                let svc = VL1Service::new(todo!(), datadir, test_inner, zerotier_vl1_service::VL1Settings::default());
+                let svc = VL1Service::new(datadir, test_inner, zerotier_vl1_service::VL1Settings::default());
                 if svc.is_ok() {
                     let svc = svc.unwrap();
                     svc.node().init_default_roots();

@@ -47,9 +47,6 @@ pub trait ApplicationLayer: Sync + Send {
     /// Save this node's identity to the data store, returning true on success.
     fn save_node_identity(&self, id: &Verified<Identity>) -> bool;
 
-    /// Get the PeerFilter implementation used to check whether this node should communicate at VL1 with other peers.
-    fn peer_filter(&self) -> &dyn PeerFilter;
-
     /// Get a pooled packet buffer for internal use.
     fn get_buffer(&self) -> PooledPacketBuffer;
 
@@ -115,22 +112,6 @@ pub trait ApplicationLayer: Sync + Send {
     fn time_clock(&self) -> i64;
 }
 
-/// Trait providing functions to determine what peers we should talk to.
-pub trait PeerFilter: Sync + Send {
-    /// Check if this node should respond to messages from a given peer at all.
-    ///
-    /// If this returns false, the node simply drops messages on the floor and refuses
-    /// to init V2 sessions.
-    fn should_respond_to(&self, id: &Verified<Identity>) -> bool;
-
-    /// Check if this node has any trust relationship with the provided identity.
-    ///
-    /// This should return true if there is any special trust relationship such as mutual
-    /// membership in a network or for controllers the peer's membership in any network
-    /// they control.
-    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool;
-}
-
 /// Result of a packet handler.
 pub enum PacketHandlerResult {
     /// Packet was handled successfully.
@@ -149,6 +130,24 @@ pub enum PacketHandlerResult {
 /// it could also be implemented for testing or "off label" use of VL1 to carry different protocols.
 #[allow(unused)]
 pub trait InnerProtocolLayer: Sync + Send {
+    /// Check if this node should respond to messages from a given peer at all.
+    ///
+    /// The default implementation always returns true.
+    fn should_respond_to(&self, id: &Verified<Identity>) -> bool {
+        true
+    }
+
+    /// Check if this node has any trust relationship with the provided identity.
+    ///
+    /// This should return true if there is any special trust relationship. It controls things
+    /// like sharing of detailed P2P connectivity data, which should be limited to peers with
+    /// some privileged relationship like mutual membership in a network.
+    ///
+    /// The default implementation always returns true.
+    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool {
+        true
+    }
+
     /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
@@ -980,7 +979,7 @@ impl Node {
                 let mut whois_queue = self.whois_queue.lock().unwrap();
                 if let Some(qi) = whois_queue.get_mut(&received_identity.address) {
                     let address = received_identity.address;
-                    if app.peer_filter().should_respond_to(&received_identity) {
+                    if inner.should_respond_to(&received_identity) {
                         let mut peers = self.peers.write().unwrap();
                         if let Some(peer) = peers.get(&address).cloned().or_else(|| {
                             Peer::new(&self.identity, received_identity, time_ticks)
@@ -1007,6 +1006,7 @@ impl Node {
     ///
     /// This will only replace an existing root set with a newer one. It won't add a new root set, which must be
     /// done by an authorized user or administrator not just by a root.
+    #[allow(unused)]
     pub(crate) fn on_remote_update_root_set(&self, received_from: &Identity, rs: Verified<RootSet>) {
         let mut roots = self.roots.write().unwrap();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {

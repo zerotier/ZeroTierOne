@@ -34,7 +34,6 @@ pub trait VL1DataStorage: Sync + Send {
 /// a test harness or just the controller for a controller that runs stand-alone.
 pub struct VL1Service<Inner: InnerProtocolLayer + ?Sized + 'static> {
     state: RwLock<VL1ServiceMutableState>,
-    peer_filter: Arc<dyn PeerFilter>,
     vl1_data_storage: Arc<dyn VL1DataStorage>,
     inner: Arc<Inner>,
     buffer_pool: Arc<PacketBufferPool>,
@@ -49,12 +48,7 @@ struct VL1ServiceMutableState {
 }
 
 impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
-    pub fn new(
-        peer_filter: Arc<dyn PeerFilter>,
-        vl1_data_storage: Arc<dyn VL1DataStorage>,
-        inner: Arc<Inner>,
-        settings: VL1Settings,
-    ) -> Result<Arc<Self>, Box<dyn Error>> {
+    pub fn new(vl1_data_storage: Arc<dyn VL1DataStorage>, inner: Arc<Inner>, settings: VL1Settings) -> Result<Arc<Self>, Box<dyn Error>> {
         let mut service = Self {
             state: RwLock::new(VL1ServiceMutableState {
                 daemons: Vec::with_capacity(2),
@@ -62,7 +56,6 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
                 settings,
                 running: true,
             }),
-            peer_filter,
             vl1_data_storage,
             inner,
             buffer_pool: Arc::new(PacketBufferPool::new(
@@ -231,11 +224,6 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> ApplicationLayer for VL1Servi
     #[inline(always)]
     fn save_node_identity(&self, id: &Verified<Identity>) -> bool {
         self.vl1_data_storage.save_node_identity(id)
-    }
-
-    #[inline(always)]
-    fn peer_filter(&self) -> &dyn PeerFilter {
-        self.peer_filter.as_ref()
     }
 
     #[inline]

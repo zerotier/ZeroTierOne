@@ -20,8 +20,7 @@ use crate::cache::Cache;
 use crate::database::{Change, Database, Error};
 use crate::model::*;
 
-const IDENTITY_SECRET_FILENAME: &'static str = "identity.secret";
-const EVENT_HANDLER_TASK_TIMEOUT: Duration = Duration::from_secs(5);
+const EVENT_HANDLER_TASK_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// An in-filesystem database that permits live editing.
 ///

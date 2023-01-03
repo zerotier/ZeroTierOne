@@ -18,7 +18,7 @@ pub use event::Event;
 pub use identity::Identity;
 pub use inetaddress::InetAddress;
 pub use mac::MAC;
-pub use node::{ApplicationLayer, InnerProtocolLayer, Node, PacketHandlerResult, PeerFilter};
+pub use node::{ApplicationLayer, InnerProtocolLayer, Node, PacketHandlerResult};
 pub use path::Path;
 pub use peer::Peer;
 pub use rootset::{Root, RootSet};

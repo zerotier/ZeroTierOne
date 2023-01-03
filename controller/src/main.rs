@@ -2,53 +2,41 @@
 
 use std::sync::Arc;
 
-use clap::{Arg, Command};
-
 use zerotier_network_controller::database::Database;
 use zerotier_network_controller::filedatabase::FileDatabase;
 use zerotier_network_controller::Controller;
-use zerotier_network_hypervisor::vl1::PeerFilter;
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 use zerotier_utils::exitcode;
 use zerotier_utils::tokio::runtime::Runtime;
 use zerotier_vl1_service::VL1Service;
 
 async fn run(database: Arc<impl Database>, runtime: &Runtime) -> i32 {
-    let handler = Controller::new(database.clone(), runtime.handle().clone()).await;
-    if handler.is_err() {
-        eprintln!("FATAL: error initializing handler: {}", handler.err().unwrap().to_string());
-        exitcode::ERR_CONFIG
-    } else {
-        let handler = handler.unwrap();
-
-        let svc = VL1Service::new(
-            Arc::new(AdmitAllPeerFilter),
-            database.clone(),
-            handler.clone(),
-            zerotier_vl1_service::VL1Settings::default(),
-        );
-
-        if svc.is_ok() {
-            let svc = svc.unwrap();
-            svc.node().init_default_roots();
-
-            handler.start(&svc).await;
-
-            zerotier_utils::wait_for_process_abort();
-            println!("Terminate signal received, shutting down...");
-            exitcode::OK
-        } else {
-            eprintln!("FATAL: error launching service: {}", svc.err().unwrap().to_string());
-            exitcode::ERR_IOERR
+    match Controller::new(database.clone(), runtime.handle().clone()).await {
+        Err(err) => {
+            eprintln!("FATAL: error initializing handler: {}", err.to_string());
+            exitcode::ERR_CONFIG
         }
+        Ok(handler) => match VL1Service::new(database.clone(), handler.clone(), zerotier_vl1_service::VL1Settings::default()) {
+            Err(err) => {
+                eprintln!("FATAL: error launching service: {}", err.to_string());
+                exitcode::ERR_IOERR
+            }
+            Ok(svc) => {
+                svc.node().init_default_roots();
+                handler.start(&svc).await;
+                zerotier_utils::wait_for_process_abort();
+                println!("Terminate signal received, shutting down...");
+                exitcode::OK
+            }
+        },
     }
 }
 
 fn main() {
     const REQUIRE_ONE_OF_ARGS: [&'static str; 2] = ["postgres", "filedb"];
-    let global_args = Command::new("zerotier-controller")
+    let global_args = clap::Command::new("zerotier-controller")
         .arg(
-            Arg::new("filedb")
+            clap::Arg::new("filedb")
                 .short('f')
                 .long("filedb")
                 .takes_value(true)
@@ -58,7 +46,7 @@ fn main() {
                 .required_unless_present_any(&REQUIRE_ONE_OF_ARGS),
         )
         .arg(
-            Arg::new("postgres")
+            clap::Arg::new("postgres")
                 .short('p')
                 .long("postgres")
                 .takes_value(true)
@@ -96,16 +84,5 @@ fn main() {
     } else {
         eprintln!("FATAL: can't start async runtime");
         std::process::exit(exitcode::ERR_IOERR)
-    }
-}
-
-struct AdmitAllPeerFilter;
-impl PeerFilter for AdmitAllPeerFilter {
-    fn should_respond_to(&self, id: &zerotier_crypto::verified::Verified<zerotier_network_hypervisor::vl1::Identity>) -> bool {
-        true
-    }
-
-    fn has_trust_relationship(&self, id: &zerotier_crypto::verified::Verified<zerotier_network_hypervisor::vl1::Identity>) -> bool {
-        true
     }
 }
