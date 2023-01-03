@@ -1493,15 +1493,15 @@ fn parse_dec_key_offer_after_header(
 
     let mut session_id_buf = 0_u64.to_ne_bytes();
     session_id_buf[..SESSION_ID_SIZE].copy_from_slice(safe_read_exact(&mut p, SESSION_ID_SIZE)?);
-    let alice_session_id = SessionId::new_from_u64(u64::from_le_bytes(session_id_buf)).ok_or(Error::InvalidPacket)?;
+    let remote_session_id = SessionId::new_from_u64(u64::from_le_bytes(session_id_buf)).ok_or(Error::InvalidPacket)?;
 
-    let alice_s_public_blob_len = varint_safe_read(&mut p)?;
-    let alice_s_public_blob = safe_read_exact(&mut p, alice_s_public_blob_len as usize)?;
+    let remote_s_public_blob_len = varint_safe_read(&mut p)?;
+    let remote_s_public_blob = safe_read_exact(&mut p, remote_s_public_blob_len as usize)?;
 
-    let alice_metadata_len = varint_safe_read(&mut p)?;
-    let alice_metadata = safe_read_exact(&mut p, alice_metadata_len as usize)?;
+    let remote_metadata_len = varint_safe_read(&mut p)?;
+    let remote_metadata = safe_read_exact(&mut p, remote_metadata_len as usize)?;
 
-    let alice_hk_public_raw = match safe_read_exact(&mut p, 1)?[0] {
+    let remote_hk_public_raw = match safe_read_exact(&mut p, 1)?[0] {
         HYBRID_KEY_TYPE_KYBER1024 => {
             if packet_type == PACKET_TYPE_INITIAL_KEY_OFFER {
                 safe_read_exact(&mut p, pqc_kyber::KYBER_PUBLICKEYBYTES)?
@@ -1515,7 +1515,7 @@ fn parse_dec_key_offer_after_header(
     if p.is_empty() {
         return Err(Error::InvalidPacket);
     }
-    let alice_ratchet_key_fingerprint = if safe_read_exact(&mut p, 1)?[0] == 0x01 {
+    let remote_ratchet_key_fingerprint = if safe_read_exact(&mut p, 1)?[0] == 0x01 {
         Some(safe_read_exact(&mut p, 16)?)
     } else {
         None
@@ -1523,11 +1523,11 @@ fn parse_dec_key_offer_after_header(
 
     Ok((
         offer_id, //always 16 bytes
-        alice_session_id,
-        alice_s_public_blob,
-        alice_metadata,
-        alice_hk_public_raw,
-        alice_ratchet_key_fingerprint, //always 16 bytes
+        remote_session_id,
+        remote_s_public_blob,
+        remote_metadata,
+        remote_hk_public_raw,
+        remote_ratchet_key_fingerprint, //always 16 bytes
     ))
 }
 
