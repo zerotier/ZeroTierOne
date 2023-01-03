@@ -1051,7 +1051,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                     idx = safe_write_all(&mut reply_buf, idx, &hmac)?;
                     let packet_end = idx;
                     if session.receive_windows[key_id as usize].message_authenticated(counter) {
-                        //initial key offers should only check this if this is a rekey
+                        // Initial key offers should only check this if this is a rekey
                         let session_key = SessionKey::new(
                             session_key,
                             Role::Bob,
