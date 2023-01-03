@@ -205,9 +205,6 @@ pub trait InnerProtocolLayer: Sync + Send {
     }
 }
 
-/// How often to check the root cluster definitions against the root list and update.
-const ROOT_SYNC_INTERVAL_MS: i64 = 1000;
-
 struct RootInfo {
     /// Root sets to which we are a member.
     sets: HashMap<String, Verified<RootSet>>,
@@ -226,7 +223,9 @@ struct RootInfo {
     online: bool,
 }
 
-/// Interval gate objects used ot fire off background tasks, see do_background_tasks().
+/// How often to check the root cluster definitions against the root list and update.
+const ROOT_SYNC_INTERVAL_MS: i64 = 1000;
+
 #[derive(Default)]
 struct BackgroundTaskIntervals {
     root_sync: IntervalGate<{ ROOT_SYNC_INTERVAL_MS }>,
@@ -237,7 +236,6 @@ struct BackgroundTaskIntervals {
     whois_queue_retry: IntervalGate<{ WHOIS_RETRY_INTERVAL }>,
 }
 
-/// WHOIS requests and any packets that are waiting on them to be decrypted and authenticated.
 struct WhoisQueueItem {
     v1_proto_waiting_packets: RingBuffer<(Weak<Path>, PooledPacketBuffer), WHOIS_MAX_WAITING_PACKETS>,
     last_retry_time: i64,
@@ -250,9 +248,6 @@ type PathMap<LocalSocket> = HashMap<PathKey<'static, 'static, LocalSocket>, Arc<
 /// A ZeroTier VL1 node that can communicate securely with the ZeroTier peer-to-peer network.
 pub struct Node {
     /// A random ID generated to identify this particular running instance.
-    ///
-    /// This can be used to implement multi-homing by allowing remote nodes to distinguish instances
-    /// that share an identity.
     pub instance_id: [u8; 16],
 
     /// This node's identity and permanent keys.
@@ -327,30 +322,36 @@ impl Node {
         })
     }
 
+    #[inline]
     pub fn peer(&self, a: Address) -> Option<Arc<Peer>> {
         self.peers.read().unwrap().get(&a).cloned()
     }
 
+    #[inline]
     pub fn is_online(&self) -> bool {
         self.roots.read().unwrap().online
     }
 
     /// Get the current "best" root from among this node's trusted roots.
+    #[inline]
     pub fn best_root(&self) -> Option<Arc<Peer>> {
         self.best_root.read().unwrap().clone()
     }
 
     /// Check whether a peer is a root according to any root set trusted by this node.
+    #[inline]
     pub fn is_peer_root(&self, peer: &Peer) -> bool {
         self.roots.read().unwrap().roots.keys().any(|p| p.identity.eq(&peer.identity))
     }
 
     /// Returns true if this node is a member of a root set (that it knows about).
+    #[inline]
     pub fn this_node_is_root(&self) -> bool {
         self.roots.read().unwrap().this_root_sets.is_some()
     }
 
     /// Add a new root set or update the existing root set if the new root set is newer and otherwise matches.
+    #[inline]
     pub fn add_update_root_set(&self, rs: Verified<RootSet>) -> bool {
         let mut roots = self.roots.write().unwrap();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
@@ -369,11 +370,13 @@ impl Node {
     }
 
     /// Returns whether or not this node has any root sets defined.
+    #[inline]
     pub fn has_roots_defined(&self) -> bool {
         self.roots.read().unwrap().sets.iter().any(|rs| !rs.1.members.is_empty())
     }
 
     /// Initialize with default roots if there are no roots defined, otherwise do nothing.
+    #[inline]
     pub fn init_default_roots(&self) -> bool {
         if !self.has_roots_defined() {
             self.add_update_root_set(RootSet::zerotier_default())
@@ -383,6 +386,7 @@ impl Node {
     }
 
     /// Get the root sets that this node trusts.
+    #[inline]
     pub fn root_sets(&self) -> Vec<RootSet> {
         self.roots.read().unwrap().sets.values().cloned().map(|s| s.unwrap()).collect()
     }
@@ -392,59 +396,17 @@ impl Node {
         const INTERVAL: Duration = Duration::from_millis(INTERVAL_MS as u64);
         let time_ticks = app.time_ticks();
 
-        let (root_sync, root_hello, mut root_spam_hello, peer_service, path_service, whois_queue_retry) = {
+        let (root_sync, root_hello, root_spam_hello, peer_service, path_service, whois_queue_retry) = {
             let mut intervals = self.intervals.lock().unwrap();
             (
                 intervals.root_sync.gate(time_ticks),
                 intervals.root_hello.gate(time_ticks),
-                intervals.root_spam_hello.gate(time_ticks),
+                intervals.root_spam_hello.gate(time_ticks) && !self.is_online(),
                 intervals.peer_service.gate(time_ticks),
                 intervals.path_service.gate(time_ticks),
                 intervals.whois_queue_retry.gate(time_ticks),
             )
         };
-
-        // We only "spam" (try to contact roots more often) if we are offline.
-        if root_spam_hello {
-            root_spam_hello = !self.is_online();
-        }
-
-        /*
-        debug_event!(
-            host_system,
-            "[vl1] do_background_tasks:{}{}{}{}{}{} ----",
-            if root_sync {
-                " root_sync"
-            } else {
-                ""
-            },
-            if root_hello {
-                " root_hello"
-            } else {
-                ""
-            },
-            if root_spam_hello {
-                " root_spam_hello"
-            } else {
-                ""
-            },
-            if peer_service {
-                " peer_service"
-            } else {
-                ""
-            },
-            if path_service {
-                " path_service"
-            } else {
-                ""
-            },
-            if whois_queue_retry {
-                " whois_queue_retry"
-            } else {
-                ""
-            }
-        );
-        */
 
         if root_sync {
             if {
@@ -719,7 +681,6 @@ impl Node {
             }
         }
 
-        //debug_event!(host_system, "[vl1] do_background_tasks DONE ----");
         INTERVAL
     }
 
@@ -1058,7 +1019,7 @@ enum PathKey<'a, 'b, LocalSocket: Hash + PartialEq + Eq + Clone> {
 }
 
 impl<LocalSocket: Hash + PartialEq + Eq + Clone> Hash for PathKey<'_, '_, LocalSocket> {
-    #[inline]
+    #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
             Self::Copied(ep, ls) => {
@@ -1074,7 +1035,7 @@ impl<LocalSocket: Hash + PartialEq + Eq + Clone> Hash for PathKey<'_, '_, LocalS
 }
 
 impl<LocalSocket: Hash + PartialEq + Eq + Clone> PartialEq for PathKey<'_, '_, LocalSocket> {
-    #[inline]
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Copied(ep1, ls1), Self::Copied(ep2, ls2)) => ep1.eq(ep2) && ls1.eq(ls2),
@@ -1088,7 +1049,7 @@ impl<LocalSocket: Hash + PartialEq + Eq + Clone> PartialEq for PathKey<'_, '_, L
 impl<LocalSocket: Hash + PartialEq + Eq + Clone> Eq for PathKey<'_, '_, LocalSocket> {}
 
 impl<LocalSocket: Hash + PartialEq + Eq + Clone> PathKey<'_, '_, LocalSocket> {
-    #[inline]
+    #[inline(always)]
     fn local_socket(&self) -> &LocalSocket {
         match self {
             Self::Copied(_, ls) => ls,
@@ -1096,7 +1057,7 @@ impl<LocalSocket: Hash + PartialEq + Eq + Clone> PathKey<'_, '_, LocalSocket> {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn to_copied(&self) -> PathKey<'static, 'static, LocalSocket> {
         match self {
             Self::Copied(ep, ls) => PathKey::<'static, 'static, LocalSocket>::Copied(ep.clone(), ls.clone()),
