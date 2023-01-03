@@ -164,7 +164,6 @@ struct EphemeralOffer {
     id: [u8; 16],                                 // Arbitrary random offer ID
     key_id: bool,                                 // The key_id bound to this offer, for handling OOO rekeying
     creation_time: i64,                           // Local time when offer was created
-    ratchet_key: Option<Secret<64>>,              // Ratchet key from previous offer or None if first offer
     ss_key: Secret<64>,                           // Noise session key "under construction" at state after offer sent
     alice_e_keypair: P384KeyPair,                 // NIST P-384 key pair (Noise ephemeral key for Alice)
     alice_hk_keypair: Option<pqc_kyber::Keypair>, // Kyber1024 key pair (PQ hybrid ephemeral key for Alice)
@@ -1055,28 +1054,23 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             hybrid_kk.is_some(),
                         );
 
-                        let ratchet_count;
                         let mut state = session.state.write().unwrap();
                         let _ = state.session_keys[new_key_id as usize].replace(session_key);
-                        if existing_session.is_some() {
-                            let _ = state.remote_session_id.replace(alice_session_id);
-                            ratchet_count = session.ratchet_counts[key_id as usize].load(Ordering::SeqCst);
-                            if state.cur_session_key_id != new_key_id {//this prevents anything from being reset twice if the key offer was made twice
-                                debug_assert!(new_key_id != key_id);
-                                // receive_windows only has race conditions with the counter of the remote party. It is theoretically possible that the local host receives counters under new_key_id while the receive_window is still in the process of resetting, but this is very unlikely. If it does happen, two things could happen:
-                                // 1) The received counter is less than what is currently stored in the window, so a valid packet would be rejected
-                                // 2) The received counter is greater than what is currently stored in the window, so a valid packet would be accepted *but* its counter is deleted from the window so it can be replayed
-                                // To prevent these race conditions, we only update the ratchet_count for salting the check code after the window has reset. So if a counter passes the initial check code: it either means the thread sees ratchet count has been update, therefore it either sees receive_window has been reset (due to memory orderings), or it means a rare accidental check forge has occurred.
-                                session.receive_windows[new_key_id as usize].reset_for_new_key_offer();
-                                session.ratchet_counts[new_key_id as usize].fetch_add(2, Ordering::SeqCst);
+                        let _ = state.remote_session_id.replace(alice_session_id);
+                        let ratchet_count = session.ratchet_counts[key_id as usize].load(Ordering::SeqCst);
+                        if state.cur_session_key_id != new_key_id {//this prevents anything from being reset twice if the key offer was made twice
+                            debug_assert!(new_key_id != key_id);
+                            // receive_windows only has race conditions with the counter of the remote party. It is theoretically possible that the local host receives counters under new_key_id while the receive_window is still in the process of resetting, but this is very unlikely. If it does happen, two things could happen:
+                            // 1) The received counter is less than what is currently stored in the window, so a valid packet would be rejected
+                            // 2) The received counter is greater than what is currently stored in the window, so a valid packet would be accepted *but* its counter is deleted from the window so it can be replayed
+                            // To prevent these race conditions, we only update the ratchet_count for salting the check code after the window has reset. So if a counter passes the initial check code: it either means the thread sees ratchet count has been update, therefore it either sees receive_window has been reset (due to memory orderings), or it means a rare accidental check forge has occurred.
+                            session.receive_windows[new_key_id as usize].reset_for_new_key_offer();
+                            session.ratchet_counts[new_key_id as usize].fetch_add(2, Ordering::SeqCst);
 
-                                // if the following wasn't done inside a lock, a theoretical race condition exists where a thread uses the new key id before the counter is reset, or worse: a thread has held onto the previous key_id == new_key_id, and attempts to use the reset counter
-                                // for this reason do not access send_counters without holding the read lock
-                                state.cur_session_key_id = new_key_id;
-                                state.send_counters[new_key_id as usize].reset_for_new_key_offer();
-                            }
-                        } else {
-                            ratchet_count = 1;
+                            // if the following wasn't done inside a lock, a theoretical race condition exists where a thread uses the new key id before the counter is reset, or worse: a thread has held onto the previous key_id == new_key_id, and attempts to use the reset counter
+                            // for this reason do not access send_counters without holding the read lock
+                            state.cur_session_key_id = new_key_id;
+                            state.send_counters[new_key_id as usize].reset_for_new_key_offer();
                         }
                         drop(state);
 
@@ -1168,9 +1162,11 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             let mut session_key = noise_ik_complete;
 
                             // Mix ratchet key from previous session key (if any) and Kyber1024 hybrid shared key (if any).
-                            if bob_ratchet_key_id.is_some() && offer.ratchet_key.is_some() {
-                                session_key = Secret(hmac_sha512(offer.ratchet_key.as_ref().unwrap().as_bytes(), session_key.as_bytes()));
-                            };
+                            if let Some(cur_session_key) = state.session_keys[key_id as usize].as_ref() {
+                                if bob_ratchet_key_id.is_some() {
+                                    session_key = Secret(hmac_sha512(cur_session_key.ratchet_key.as_bytes(), session_key.as_bytes()));
+                                }
+                            }
                             if let Some(hybrid_kk) = hybrid_kk.as_ref() {
                                 session_key = Secret(hmac_sha512(hybrid_kk.as_bytes(), session_key.as_bytes()));
                             }
@@ -1197,13 +1193,12 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                 );
 
                                 let new_key_id = offer.key_id;
-                                let has_existing_session = state.remote_session_id.is_some();
                                 drop(state);
                                 //TODO: check for correct orderings
                                 let mut state = session.state.write().unwrap();
                                 let _ = state.remote_session_id.replace(bob_session_id);
                                 let _ = state.session_keys[new_key_id as usize].replace(session_key);
-                                if has_existing_session && state.cur_session_key_id != new_key_id {
+                                if state.cur_session_key_id != new_key_id {
                                     //when an brand new key offer is sent, it is sent using the new_key_id==false counter, we cannot reset it in that case.
                                     //NOTE: the following code should be properly threadsafe, see the large comment above at the end of KEY_OFFER decoding for more info
                                     session.receive_windows[new_key_id as usize].reset_for_new_key_offer();
@@ -1268,13 +1263,6 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
         None
     };
 
-    // Get ratchet key for current key if one exists.
-    let ratchet_key = if let Some(current_key) = current_key {
-        Some(current_key.ratchet_key.clone())
-    } else {
-        None
-    };
-
     // Random ephemeral offer ID
     let id: [u8; 16] = random::get_bytes_secure();
 
@@ -1305,9 +1293,9 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     } else {
         idx = safe_write_all(&mut packet_buf, idx, &[HYBRID_KEY_TYPE_NONE])?;
     }
-    if let Some(ratchet_key) = ratchet_key.as_ref() {
+    if let Some(current_key) = current_key {
         idx = safe_write_all(&mut packet_buf, idx, &[0x01])?;
-        idx = safe_write_all(&mut packet_buf, idx, &public_fingerprint_of_secret(ratchet_key.as_bytes())[..16])?;
+        idx = safe_write_all(&mut packet_buf, idx, &public_fingerprint_of_secret(current_key.ratchet_key.as_bytes())[..16])?;
     } else {
         idx = safe_write_all(&mut packet_buf, idx, &[0x00])?;
     }
@@ -1384,7 +1372,6 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
         id,
         key_id: new_key_id,
         creation_time: current_time,
-        ratchet_key,
         ss_key,
         alice_e_keypair,
         alice_hk_keypair,
