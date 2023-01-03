@@ -211,17 +211,17 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> ApplicationLayer for VL1Servi
         }
     }
 
-    #[inline(always)]
+    #[inline]
     fn local_socket_is_valid(&self, socket: &Self::LocalSocket) -> bool {
         socket.is_valid()
     }
 
-    #[inline(always)]
+    #[inline]
     fn load_node_identity(&self) -> Option<Verified<Identity>> {
         self.vl1_data_storage.load_node_identity()
     }
 
-    #[inline(always)]
+    #[inline]
     fn save_node_identity(&self, id: &Verified<Identity>) -> bool {
         self.vl1_data_storage.save_node_identity(id)
     }
@@ -231,6 +231,7 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> ApplicationLayer for VL1Servi
         self.buffer_pool.get()
     }
 
+    #[inline]
     fn wire_send(
         &self,
         endpoint: &Endpoint,
