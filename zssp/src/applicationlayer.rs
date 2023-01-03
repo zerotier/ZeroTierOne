@@ -67,6 +67,16 @@ pub trait ApplicationLayer: Sized {
     /// On success a tuple of local session ID, static secret, and associated object is returned. The
     /// static secret is whatever results from agreement between the local and remote static public
     /// keys.
+    ///
+    /// When `accept_new_session` is called, `remote_static_public` and `remote_metadata` have not yet been
+    /// authenticated. As such avoid mutating state until OkNewSession(Session) is returned, as the connection
+    /// may be adversarial.
+    ///
+    /// When `remote_static_public` and `remote_metadata` are eventually authenticated, the zssp protocol cannot
+    /// guarantee that they are unique, i.e. `remote_static_public` and `remote_metadata` may be duplicates from
+    /// an old attempt to establish a session, and may even have been replayed by an adversary. If your use-case
+    /// needs uniqueness for reliability or security, consider either including a timestamp in the metadata, or
+    /// sending the metadata as an extra transport packet after the session is fully established.
     fn accept_new_session(
         &self,
         receive_context: &ReceiveContext<Self>,
