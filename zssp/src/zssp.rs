@@ -36,8 +36,11 @@ pub enum Error {
 
     /// Packet failed one or more authentication (MAC) checks.
     ///
-    /// **IMPORTANT**: Do not reply to a peer who has sent a packet that has failed authentication. Any response at all will leak to an attacker what authentication step their packet failed at (timing attack), which lowers the total authentication entropy they have to brute force.
-    /// There is a safe way to reply if absolutely necessary, by sending the reply back after a constant amount of time, but this is very difficult to get correct.
+    /// **IMPORTANT**: Do not reply to a peer who has sent a packet that has failed authentication.
+    /// Any response at all will leak to an attacker what authentication step their packet failed at
+    /// (timing attack), which lowers the total authentication entropy they have to brute force.
+    /// There is a safe way to reply if absolutely necessary; by sending the reply back after a constant
+    /// amount of time, but this is very difficult to get correct.
     FailedAuthentication,
 
     /// New session was rejected by the application layer.
@@ -80,12 +83,13 @@ pub enum ReceiveResult<'a, H: ApplicationLayer> {
 
     /// Packet is valid and a new session was created.
     ///
-    /// The session will have already been gated by the accept_new_session() method in the Host trait.
+    /// The session will have already been gated by the `accept_new_session()` method in the Host trait.
     OkNewSession(Session<H>),
 
     /// Packet superficially appears valid but was ignored e.g. as a duplicate.
     ///
-    /// **IMPORTANT**: This packet was not authenticated, so for the most part treat this the same as an Error::FailedAuthentication.
+    /// **IMPORTANT**: This packet was not authenticated, so for the most part treat this the same
+    /// as an `Error::FailedAuthentication`.
     Ignored,
 }
 
@@ -93,6 +97,8 @@ pub enum ReceiveResult<'a, H: ApplicationLayer> {
 ///
 /// Note that the role can switch through the course of a session. It's the side that most recently
 /// initiated a session or a rekey event. Initiator is Alice, responder is Bob.
+///
+/// We require that after every rekeying event Alice and Bob switch roles.
 #[derive(PartialEq)]
 pub enum Role {
     Alice,
@@ -139,7 +145,6 @@ struct SessionMutableState {
 }
 
 /// A shared symmetric session key.
-/// sessions always start at counter 1u32
 struct SessionKey {
     secret_fingerprint: [u8; 16],                 // First 128 bits of a SHA384 computed from the secret
     creation_time: i64,                           // Time session key was established
@@ -423,14 +428,14 @@ impl<Application: ApplicationLayer> Session<Application> {
                 .map_or(true, |o| (current_time - o.creation_time) > Application::REKEY_RATE_LIMIT_MS)
         {
             if let Some(remote_s_public) = P384PublicKey::from_bytes(&self.remote_s_public_p384_bytes) {
-                //this routine handles sending a rekeying packet, resending lost rekeying packets, and resending lost initial offer packets
-                //the protocol has been designed such that initial rekeying packets are identical to resent rekeying packets, except for the counter, so we can reuse the same code for doing both
+                // This routine handles sending a rekeying packet, resending lost rekeying packets, and resending lost initial offer packets
+                // The protocol has been designed such that initial rekeying packets are identical to resent rekeying packets, except for the counter, so we can reuse the same code for doing both
                 let has_existing_session = state.remote_session_id.is_some();
-                //mark the previous key as no longer being supported because it is about to be overwritten
-                //it should not be possible for a session to accidentally invalidate the key currently in use solely because of the read lock
+                // Mark the previous key as no longer being supported because it is about to be overwritten
+                // It should not be possible for a session to accidentally invalidate the key currently in use solely because of the read lock
                 self.receive_windows[(!current_key_id) as usize].invalidate();
                 let mut offer = None;
-                //the session will keep sending ephemeral offers until rekeying is successful
+                // The session will keep sending ephemeral offers until rekeying is successful
                 if send_ephemeral_offer(
                     &mut send,
                     state.send_counters[current_key_id as usize].next(),
@@ -506,8 +511,8 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
         if let Some(local_session_id) = SessionId::new_from_u64(u64::from_le(memory::load_raw(&incoming_packet[8..16])) & 0xffffffffffffu64)
         {
             if let Some(session) = app.lookup_session(local_session_id) {
-                //this is the only time ratchet_counts is ever accessed outside of a lock
-                //as such this read can be wrong, but that is incredibly unlikely since we are tracking the last two ratchet counts, and if it's wrong it just means we drop a packet that would have been dropped anyways for being too old or too new
+                // This is the only time ratchet_counts is ever accessed outside of a lock
+                // As such this read can be wrong, but that is incredibly unlikely since we are tracking the last two ratchet counts, and if it's wrong it just means we drop a packet that would have been dropped anyways for being too old or too new
                 let ratchet_count = session.ratchet_counts[key_id as usize].load(Ordering::SeqCst);
                 if verify_header_check_code(incoming_packet, ratchet_count, &session.header_check_cipher) {
                     if session.receive_windows[key_id as usize].message_received(counter) {
@@ -567,10 +572,10 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                 return Err(Error::UnknownLocalSessionId(local_session_id));
             }
         } else {
-            unlikely_branch(); // we want data receive to be the priority branch, this is only occasionally used
-            //salt with a known value so new sessions can be established
-            //NOTE: this check is trivial to bypass by just replaying recorded packets
-            //this check isn't security critical so that is fine
+            unlikely_branch(); // We want data receive to be the priority branch, this is only occasionally used
+            // Salt with a known value so new sessions can be established
+            // NOTE: this check is trivial to bypass by just replaying recorded packets
+            // This check isn't security critical so that is fine
             if verify_header_check_code(incoming_packet, 1u64, &self.incoming_init_header_check_cipher) {
                 let canonical_header = CanonicalHeader::make(SessionId::NIL, packet_type, counter);
                 if fragment_count > 1 {
@@ -1061,14 +1066,14 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         if state.cur_session_key_id != new_key_id {//this prevents anything from being reset twice if the key offer was made twice
                             debug_assert!(new_key_id != key_id);
                             // receive_windows only has race conditions with the counter of the remote party. It is theoretically possible that the local host receives counters under new_key_id while the receive_window is still in the process of resetting, but this is very unlikely. If it does happen, two things could happen:
-                            // 1) The received counter is less than what is currently stored in the window, so a valid packet would be rejected
-                            // 2) The received counter is greater than what is currently stored in the window, so a valid packet would be accepted *but* its counter is deleted from the window so it can be replayed
-                            // To prevent these race conditions, we only update the ratchet_count for salting the check code after the window has reset. So if a counter passes the initial check code: it either means the thread sees ratchet count has been update, therefore it either sees receive_window has been reset (due to memory orderings), or it means a rare accidental check forge has occurred.
+                            // 1) The received counter is less than what is currently stored in the window, so a valid packet would be rejected.
+                            // 2) The received counter is greater than what is currently stored in the window, so a valid packet would be accepted *but* its counter is deleted from the window so it can be replayed.
+                            // To prevent these race conditions, we only update the ratchet_count for salting the check code after the window has reset. So if a counter passes the initial check code: it either means the thread sees ratchet count has been update therefore it sees receive_window has been reset (due to memory orderings), or it means a rare accidental check code collision has occurred.
                             session.receive_windows[new_key_id as usize].reset_for_new_key_offer();
                             session.ratchet_counts[new_key_id as usize].fetch_add(2, Ordering::SeqCst);
 
-                            // if the following wasn't done inside a lock, a theoretical race condition exists where a thread uses the new key id before the counter is reset, or worse: a thread has held onto the previous key_id == new_key_id, and attempts to use the reset counter
-                            // for this reason do not access send_counters without holding the read lock
+                            // If the following wasn't done inside a lock, a theoretical race condition exists where a thread uses the new key id before the counter is reset, or worse: a thread has held onto the previous key id equal to new_key_id, and attempts to use the reset counter for encryption.
+                            // For this reason do not access send_counters without holding the read lock.
                             state.cur_session_key_id = new_key_id;
                             state.send_counters[new_key_id as usize].reset_for_new_key_offer();
                         }
@@ -1200,13 +1205,12 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
                                 let new_key_id = offer.key_id;
                                 drop(state);
-                                //TODO: check for correct orderings
                                 let mut state = session.state.write().unwrap();
                                 let _ = state.remote_session_id.replace(bob_session_id);
                                 let _ = state.session_keys[new_key_id as usize].replace(session_key);
                                 if state.cur_session_key_id != new_key_id {
-                                    //when an brand new key offer is sent, it is sent using the new_key_id==false counter, we cannot reset it in that case.
-                                    //NOTE: the following code should be properly threadsafe, see the large comment above at the end of KEY_OFFER decoding for more info
+                                    // When an brand new key offer is sent, it is sent using the new_key_id==false counter, we cannot reset it in that case.
+                                    // NOTE: the following code should be properly threadsafe, see the large comment above at the end of KEY_OFFER decoding for more info
                                     session.receive_windows[new_key_id as usize].reset_for_new_key_offer();
                                     let _ = session.ratchet_counts[new_key_id as usize].fetch_add(2, Ordering::SeqCst);
                                     state.cur_session_key_id = new_key_id;
@@ -1283,7 +1287,6 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     let mut idx = HEADER_SIZE;
 
     idx = safe_write_all(&mut packet_buf, idx, &[SESSION_PROTOCOL_VERSION])?;
-    //TODO: check this, the below line is supposed to be the blob, not just the key, right?
     idx = safe_write_all(&mut packet_buf, idx, alice_e_keypair.public_key_bytes())?;
     let plaintext_end = idx;
 
