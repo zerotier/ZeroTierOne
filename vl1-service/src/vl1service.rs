@@ -204,6 +204,7 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> ApplicationLayer for VL1Servi
     type LocalSocket = crate::LocalSocket;
     type LocalInterface = crate::LocalInterface;
 
+    #[inline]
     fn event(&self, event: Event) {
         println!("{}", event.to_string());
         match event {
@@ -244,7 +245,7 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> ApplicationLayer for VL1Servi
             Endpoint::IpUdp(address) => {
                 // This is the fast path -- the socket is known to the core so just send it.
                 if let Some(s) = local_socket {
-                    if let Some(s) = s.0.upgrade() {
+                    if let Some(s) = s.socket() {
                         s.send(address, data, packet_ttl);
                     } else {
                         return;

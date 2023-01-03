@@ -1,33 +1,30 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
 use std::hash::Hash;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 
 use crate::sys::udp::BoundUdpSocket;
 
-static LOCAL_SOCKET_UNIQUE_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
-
 /// Local socket wrapper to provide to the core.
 ///
-/// This implements very fast hash and equality in terms of an arbitrary unique ID assigned at
-/// construction and holds a weak reference to the bound socket so dead sockets will silently
-/// cease to exist or work. This also means that this code can check the weak count to determine
-/// if the core is currently holding/using a socket for any reason.
+/// This wraps a bound UDP socket in weak form so sockets that are released by the UDP
+/// binding engine can be "garbage collected" by the core.
+#[repr(transparent)]
 #[derive(Clone)]
-pub struct LocalSocket(pub(crate) Weak<BoundUdpSocket>, usize);
+pub struct LocalSocket(Weak<BoundUdpSocket>);
 
 impl LocalSocket {
+    #[inline]
     pub fn new(s: &Arc<BoundUdpSocket>) -> Self {
-        Self(Arc::downgrade(s), LOCAL_SOCKET_UNIQUE_ID_COUNTER.fetch_add(1, Ordering::SeqCst))
+        Self(Arc::downgrade(s))
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn is_valid(&self) -> bool {
         self.0.strong_count() > 0
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn socket(&self) -> Option<Arc<BoundUdpSocket>> {
         self.0.upgrade()
     }
@@ -36,7 +33,7 @@ impl LocalSocket {
 impl PartialEq for LocalSocket {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        self.1 == other.1
+        self.0.ptr_eq(&other.0)
     }
 }
 
@@ -45,7 +42,7 @@ impl Eq for LocalSocket {}
 impl Hash for LocalSocket {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.1.hash(state)
+        self.0.as_ptr().hash(state)
     }
 }
 
