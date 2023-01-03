@@ -84,7 +84,7 @@ pub enum ReceiveResult<'a, H: ApplicationLayer> {
     OkNewSession(Session<H>),
 
     /// Packet superficially appears valid but was ignored e.g. as a duplicate.
-    /// 
+    ///
     /// **IMPORTANT**: This packet was not authenticated, so for the most part treat this the same as an Error::FailedAuthentication.
     Ignored,
 }
@@ -117,7 +117,7 @@ pub struct Session<Application: ApplicationLayer> {
     /// An arbitrary application defined object associated with each session
     pub application_data: Application::Data,
 
-    ratchet_counts: [AtomicU64; 2],                           // Number of preceding session keys in ratchet
+    ratchet_counts: [AtomicU64; 2],                         // Number of session keys in ratchet, starts at 1
     header_check_cipher: Aes,                               // Cipher used for header check codes (not Noise related)
     receive_windows: [CounterWindow; 2],                    // Receive window for anti-replay and deduplication
     state: RwLock<SessionMutableState>,                     // Mutable parts of state (other than defrag buffers)
@@ -131,7 +131,7 @@ pub struct Session<Application: ApplicationLayer> {
 
 struct SessionMutableState {
     remote_session_id: Option<SessionId>,                 // The other side's 48-bit session ID
-    send_counters: [Counter; 2],                          // Outgoing packet counter and nonce state
+    send_counters: [Counter; 2],                          // Outgoing packet counter and nonce state, starts at 1
     session_keys: [Option<SessionKey>; 2],                // Buffers to store current, next, and last active key
     cur_session_key_id: bool,                             // Pointer used for keys[] circular buffer
     offer: Option<EphemeralOffer>,                        // Most recent ephemeral offer sent to remote
@@ -164,7 +164,6 @@ struct EphemeralOffer {
     id: [u8; 16],                                 // Arbitrary random offer ID
     key_id: bool,                                 // The key_id bound to this offer, for handling OOO rekeying
     creation_time: i64,                           // Local time when offer was created
-    ratchet_count: u64,                           // Ratchet count (starting at zero) for initial offer
     ratchet_key: Option<Secret<64>>,              // Ratchet key from previous offer or None if first offer
     ss_key: Secret<64>,                           // Noise session key "under construction" at state after offer sent
     alice_e_keypair: P384KeyPair,                 // NIST P-384 key pair (Noise ephemeral key for Alice)
@@ -425,6 +424,9 @@ impl<Application: ApplicationLayer> Session<Application> {
                 .map_or(true, |o| (current_time - o.creation_time) > Application::REKEY_RATE_LIMIT_MS)
         {
             if let Some(remote_s_public) = P384PublicKey::from_bytes(&self.remote_s_public_p384_bytes) {
+                //this routine handles sending a rekeying packet, resending lost rekeying packets, and resending lost initial offer packets
+                //the protocol has been designed such that initial rekeying packets are identical to resent rekeying packets, except for the counter, so we can reuse the same code for doing both
+                let has_existing_session = state.remote_session_id.is_some();
                 //mark the previous key as no longer being supported because it is about to be overwritten
                 //it should not be possible for a session to accidentally invalidate the key currently in use solely because of the read lock
                 self.receive_windows[(!current_key_id) as usize].invalidate();
@@ -434,7 +436,7 @@ impl<Application: ApplicationLayer> Session<Application> {
                     &mut send,
                     state.send_counters[current_key_id as usize].next(),
                     current_key_id,
-                    !current_key_id,
+                    has_existing_session && !current_key_id,
                     self.id,
                     state.remote_session_id,
                     app.get_local_s_public_blob(),
@@ -444,11 +446,7 @@ impl<Application: ApplicationLayer> Session<Application> {
                     &self.noise_ss,
                     state.session_keys[current_key_id as usize].as_ref(),
                     self.ratchet_counts[current_key_id as usize].load(Ordering::Relaxed),
-                    if state.remote_session_id.is_some() {
-                        Some(&self.header_check_cipher)
-                    } else {
-                        None
-                    },
+                    if has_existing_session { Some(&self.header_check_cipher) } else { None },
                     mtu,
                     current_time,
                     &mut offer,
@@ -883,7 +881,8 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         (None, state.send_counters[key_id as usize].next(), !key_id, ratchet_key)
                     } else {
                         if key_id != false {
-                            //all new sessions must start with key_id 0, this has no security implications
+                            // All new sessions must start with key_id 0
+                            // This has no security implications, it just makes programming the initial offer easier
                             return Ok(ReceiveResult::Ignored);
                         }
                         if let Some((new_session_id, psk, associated_object)) =
@@ -1169,11 +1168,8 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                             let mut session_key = noise_ik_complete;
 
                             // Mix ratchet key from previous session key (if any) and Kyber1024 hybrid shared key (if any).
-                            let last_ratchet_count = if bob_ratchet_key_id.is_some() && offer.ratchet_key.is_some() {
+                            if bob_ratchet_key_id.is_some() && offer.ratchet_key.is_some() {
                                 session_key = Secret(hmac_sha512(offer.ratchet_key.as_ref().unwrap().as_bytes(), session_key.as_bytes()));
-                                offer.ratchet_count
-                            } else {
-                                0
                             };
                             if let Some(hybrid_kk) = hybrid_kk.as_ref() {
                                 session_key = Secret(hmac_sha512(hybrid_kk.as_bytes(), session_key.as_bytes()));
@@ -1201,12 +1197,13 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                 );
 
                                 let new_key_id = offer.key_id;
+                                let has_existing_session = state.remote_session_id.is_some();
                                 drop(state);
                                 //TODO: check for correct orderings
                                 let mut state = session.state.write().unwrap();
                                 let _ = state.remote_session_id.replace(bob_session_id);
                                 let _ = state.session_keys[new_key_id as usize].replace(session_key);
-                                if last_ratchet_count > 0 && state.cur_session_key_id != new_key_id {
+                                if has_existing_session && state.cur_session_key_id != new_key_id {
                                     //when an brand new key offer is sent, it is sent using the new_key_id==false counter, we cannot reset it in that case.
                                     //NOTE: the following code should be properly threadsafe, see the large comment above at the end of KEY_OFFER decoding for more info
                                     session.receive_windows[new_key_id as usize].reset_for_new_key_offer();
@@ -1221,6 +1218,9 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                 return Ok(ReceiveResult::Ignored);
                             }
                         }
+                    } else {
+                        unlikely_branch();
+                        return Err(Error::SessionNotEstablished);
                     }
 
                     // Just ignore counter-offers that are out of place. They probably indicate that this side
@@ -1384,7 +1384,6 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
         id,
         key_id: new_key_id,
         creation_time: current_time,
-        ratchet_count,
         ratchet_key,
         ss_key,
         alice_e_keypair,
@@ -1467,11 +1466,13 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
 /// Set 32-bit header check code, used to make fragmentation mechanism robust.
 fn set_header_check_code(packet: &mut [u8], ratchet_count: u64, header_check_cipher: &Aes) {
     debug_assert!(packet.len() >= MIN_PACKET_SIZE);
-
+    //4 bytes is the ratchet key
+    //12 bytes is the header we want to verify
     let mut header_mac = 0u128.to_le_bytes();
-    memory::store_raw((ratchet_count as u16).to_le_bytes(), &mut header_mac[0..2]);
-    header_mac[2..16].copy_from_slice(&packet[4..18]);
+    memory::store_raw((ratchet_count as u32).to_le_bytes(), &mut header_mac[0..4]);
+    header_mac[4..16].copy_from_slice(&packet[4..16]);
     header_check_cipher.encrypt_block_in_place(&mut header_mac);
+
     packet[..4].copy_from_slice(&header_mac[..4]);
 }
 
@@ -1479,13 +1480,13 @@ fn set_header_check_code(packet: &mut [u8], ratchet_count: u64, header_check_cip
 /// This is not nearly enough entropy to be cryptographically secure, it only is meant for making DOS attacks very hard
 fn verify_header_check_code(packet: &[u8], ratchet_count: u64, header_check_cipher: &Aes) -> bool {
     debug_assert!(packet.len() >= MIN_PACKET_SIZE);
-    //2 bytes is the ratchet key
+    //4 bytes is the ratchet key
     //12 bytes is the header we want to verify
-    //2 bytes is salt from the message
     let mut header_mac = 0u128.to_le_bytes();
-    memory::store_raw((ratchet_count as u16).to_le_bytes(), &mut header_mac[0..2]);
-    header_mac[2..16].copy_from_slice(&packet[4..18]);
+    memory::store_raw((ratchet_count as u32).to_le_bytes(), &mut header_mac[0..4]);
+    header_mac[4..16].copy_from_slice(&packet[4..16]);
     header_check_cipher.encrypt_block_in_place(&mut header_mac);
+
     memory::load_raw::<u32>(&packet[..4]) == memory::load_raw::<u32>(&header_mac[..4])
 }
 
