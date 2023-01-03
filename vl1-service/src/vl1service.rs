@@ -22,8 +22,8 @@ const UPDATE_UDP_BINDINGS_EVERY_SECS: usize = 10;
 
 /// Trait to implement to provide storage for VL1-related state information.
 pub trait VL1DataStorage: Sync + Send {
-    fn load_node_identity(&self) -> Option<Verified<Identity>>;
-    fn save_node_identity(&self, id: &Verified<Identity>) -> bool;
+    fn load_node_identity(&self) -> Option<Valid<Identity>>;
+    fn save_node_identity(&self, id: &Valid<Identity>) -> bool;
 }
 
 /// VL1 service that connects to the physical network and hosts an inner protocol like ZeroTier VL2.
@@ -218,12 +218,12 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> ApplicationLayer for VL1Servi
     }
 
     #[inline]
-    fn load_node_identity(&self) -> Option<Verified<Identity>> {
+    fn load_node_identity(&self) -> Option<Valid<Identity>> {
         self.vl1_data_storage.load_node_identity()
     }
 
     #[inline]
-    fn save_node_identity(&self, id: &Verified<Identity>) -> bool {
+    fn save_node_identity(&self, id: &Valid<Identity>) -> bool {
         self.vl1_data_storage.save_node_identity(id)
     }
 

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use notify::{RecursiveMode, Watcher};
 use serde::de::DeserializeOwned;
 
-use zerotier_network_hypervisor::vl1::{Address, Identity, Verified};
+use zerotier_network_hypervisor::vl1::{Address, Identity, Valid};
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::reaper::Reaper;
 use zerotier_utils::tokio::fs;
@@ -32,7 +32,7 @@ const EVENT_HANDLER_TASK_TIMEOUT: Duration = Duration::from_secs(10);
 /// is different from V1 so it'll need a converter to use with V1 FileDb controller data.
 pub struct FileDatabase {
     base_path: PathBuf,
-    local_identity: Verified<Identity>,
+    local_identity: Valid<Identity>,
     change_sender: Sender<Change>,
     tasks: Reaper,
     cache: Cache,
@@ -251,11 +251,11 @@ impl Drop for FileDatabase {
 }
 
 impl VL1DataStorage for FileDatabase {
-    fn load_node_identity(&self) -> Option<Verified<Identity>> {
+    fn load_node_identity(&self) -> Option<Valid<Identity>> {
         load_node_identity(self.base_path.as_path())
     }
 
-    fn save_node_identity(&self, id: &Verified<Identity>) -> bool {
+    fn save_node_identity(&self, id: &Valid<Identity>) -> bool {
         save_node_identity(self.base_path.as_path(), id)
     }
 }

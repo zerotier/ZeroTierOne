@@ -17,7 +17,7 @@ use crate::vl1::identity::Identity;
 use crate::vl1::path::{Path, PathServiceResult};
 use crate::vl1::peer::Peer;
 use crate::vl1::rootset::RootSet;
-use crate::vl1::Verified;
+use crate::vl1::Valid;
 
 use zerotier_crypto::random;
 use zerotier_utils::error::InvalidParameterError;
@@ -42,10 +42,10 @@ pub trait ApplicationLayer: Sync + Send {
     fn event(&self, event: Event);
 
     /// Load this node's identity from the data store.
-    fn load_node_identity(&self) -> Option<Verified<Identity>>;
+    fn load_node_identity(&self) -> Option<Valid<Identity>>;
 
     /// Save this node's identity to the data store, returning true on success.
-    fn save_node_identity(&self, id: &Verified<Identity>) -> bool;
+    fn save_node_identity(&self, id: &Valid<Identity>) -> bool;
 
     /// Get a pooled packet buffer for internal use.
     fn get_buffer(&self) -> PooledPacketBuffer;
@@ -84,7 +84,7 @@ pub trait ApplicationLayer: Sync + Send {
     #[allow(unused_variables)]
     fn should_use_physical_path<Application: ApplicationLayer + ?Sized>(
         &self,
-        id: &Verified<Identity>,
+        id: &Valid<Identity>,
         endpoint: &Endpoint,
         local_socket: Option<&Application::LocalSocket>,
         local_interface: Option<&Application::LocalInterface>,
@@ -98,7 +98,7 @@ pub trait ApplicationLayer: Sync + Send {
     #[allow(unused_variables)]
     fn get_path_hints<Application: ApplicationLayer + ?Sized>(
         &self,
-        id: &Verified<Identity>,
+        id: &Valid<Identity>,
     ) -> Option<Vec<(Endpoint, Option<Application::LocalSocket>, Option<Application::LocalInterface>)>> {
         None
     }
@@ -133,7 +133,7 @@ pub trait InnerProtocolLayer: Sync + Send {
     /// Check if this node should respond to messages from a given peer at all.
     ///
     /// The default implementation always returns true.
-    fn should_respond_to(&self, id: &Verified<Identity>) -> bool {
+    fn should_respond_to(&self, id: &Valid<Identity>) -> bool {
         true
     }
 
@@ -144,7 +144,7 @@ pub trait InnerProtocolLayer: Sync + Send {
     /// some privileged relationship like mutual membership in a network.
     ///
     /// The default implementation always returns true.
-    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool {
+    fn has_trust_relationship(&self, id: &Valid<Identity>) -> bool {
         true
     }
 
@@ -207,7 +207,7 @@ pub trait InnerProtocolLayer: Sync + Send {
 
 struct RootInfo {
     /// Root sets to which we are a member.
-    sets: HashMap<String, Verified<RootSet>>,
+    sets: HashMap<String, Valid<RootSet>>,
 
     /// Root peers and their statically defined endpoints (from root sets).
     roots: HashMap<Arc<Peer>, Vec<Endpoint>>,
@@ -251,7 +251,7 @@ pub struct Node {
     pub instance_id: [u8; 16],
 
     /// This node's identity and permanent keys.
-    pub identity: Verified<Identity>,
+    pub identity: Valid<Identity>,
 
     /// Interval latches for periodic background tasks.
     intervals: Mutex<BackgroundTaskIntervals>,
@@ -352,7 +352,7 @@ impl Node {
 
     /// Add a new root set or update the existing root set if the new root set is newer and otherwise matches.
     #[inline]
-    pub fn add_update_root_set(&self, rs: Verified<RootSet>) -> bool {
+    pub fn add_update_root_set(&self, rs: Valid<RootSet>) -> bool {
         let mut roots = self.roots.write().unwrap();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
             if rs.should_replace(entry) {
@@ -468,8 +468,7 @@ impl Node {
                                 if let Some(peer) = peers.get(&m.identity.address) {
                                     new_roots.insert(peer.clone(), m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                 } else {
-                                    if let Some(peer) = Peer::new(&self.identity, Verified::assume_verified(m.identity.clone()), time_ticks)
-                                    {
+                                    if let Some(peer) = Peer::new(&self.identity, Valid::assume_verified(m.identity.clone()), time_ticks) {
                                         drop(peers);
                                         new_roots.insert(
                                             self.peers
@@ -968,7 +967,7 @@ impl Node {
     /// This will only replace an existing root set with a newer one. It won't add a new root set, which must be
     /// done by an authorized user or administrator not just by a root.
     #[allow(unused)]
-    pub(crate) fn on_remote_update_root_set(&self, received_from: &Identity, rs: Verified<RootSet>) {
+    pub(crate) fn on_remote_update_root_set(&self, received_from: &Identity, rs: Valid<RootSet>) {
         let mut roots = self.roots.write().unwrap();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
             if entry.members.iter().any(|m| m.identity.eq(received_from)) && rs.should_replace(entry) {

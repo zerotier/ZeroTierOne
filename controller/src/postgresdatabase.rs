@@ -10,7 +10,7 @@ use tokio_postgres::types::Type;
 use tokio_postgres::{Client, Statement};
 
 use zerotier_crypto::secure_eq;
-use zerotier_crypto::verified::Verified;
+use zerotier_crypto::typestate::Valid;
 
 use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress};
 use zerotier_network_hypervisor::vl2::networkconfig::IpRoute;
@@ -137,7 +137,7 @@ impl<'a> Drop for ConnectionHolder<'a> {
 
 pub struct PostgresDatabase {
     local_controller_id_str: String,
-    local_identity: Verified<Identity>,
+    local_identity: Valid<Identity>,
     connections: Mutex<(Vec<Box<PostgresConnection>>, Sender<()>)>,
     postgres_path: String,
     runtime: Handle,
@@ -148,7 +148,7 @@ impl PostgresDatabase {
         runtime: Handle,
         postgres_path: String,
         num_connections: usize,
-        local_identity: Verified<Identity>,
+        local_identity: Valid<Identity>,
     ) -> Result<Arc<Self>, Error> {
         assert!(num_connections > 0);
         let (sender, _) = channel(4096);
@@ -189,11 +189,11 @@ impl PostgresDatabase {
 }
 
 impl VL1DataStorage for PostgresDatabase {
-    fn load_node_identity(&self) -> Option<Verified<Identity>> {
+    fn load_node_identity(&self) -> Option<Valid<Identity>> {
         Some(self.local_identity.clone())
     }
 
-    fn save_node_identity(&self, id: &Verified<Identity>) -> bool {
+    fn save_node_identity(&self, id: &Valid<Identity>) -> bool {
         panic!("local identity saving not supported by PostgresDatabase")
     }
 }

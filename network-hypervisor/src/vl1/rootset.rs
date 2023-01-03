@@ -6,7 +6,7 @@ use std::io::Write;
 use crate::vl1::identity::{Identity, IDENTITY_MAX_SIGNATURE_SIZE};
 use crate::vl1::Endpoint;
 
-use zerotier_crypto::verified::Verified;
+use zerotier_crypto::typestate::Valid;
 use zerotier_utils::arrayvec::ArrayVec;
 use zerotier_utils::buffer::Buffer;
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
@@ -91,7 +91,7 @@ impl RootSet {
     }
 
     /// Get the ZeroTier default root set, which contains roots run by ZeroTier Inc.
-    pub fn zerotier_default() -> Verified<Self> {
+    pub fn zerotier_default() -> Valid<Self> {
         let mut cursor = 0;
         let rs = include_bytes!("../../default-rootset/root.zerotier.com.bin");
         //let rs = include_bytes!("../../default-rootset/test-root.bin");
@@ -107,7 +107,7 @@ impl RootSet {
     }
 
     /// Verify signatures present in this root cluster definition.
-    pub fn verify(self) -> Option<Verified<Self>> {
+    pub fn verify(self) -> Option<Valid<Self>> {
         if self.members.is_empty() {
             return None;
         }
@@ -119,7 +119,7 @@ impl RootSet {
             }
         }
 
-        return Some(Verified::assume_verified(self));
+        return Some(Valid::assume_verified(self));
     }
 
     /// Add a member to this definition, replacing any current entry with this address.

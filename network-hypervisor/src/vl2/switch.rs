@@ -11,11 +11,11 @@ pub struct Switch {}
 
 #[allow(unused_variables)]
 impl InnerProtocolLayer for Switch {
-    fn should_respond_to(&self, id: &zerotier_crypto::verified::Verified<crate::vl1::Identity>) -> bool {
+    fn should_respond_to(&self, id: &zerotier_crypto::typestate::Valid<crate::vl1::Identity>) -> bool {
         true
     }
 
-    fn has_trust_relationship(&self, id: &zerotier_crypto::verified::Verified<crate::vl1::Identity>) -> bool {
+    fn has_trust_relationship(&self, id: &zerotier_crypto::typestate::Valid<crate::vl1::Identity>) -> bool {
         true
     }
 

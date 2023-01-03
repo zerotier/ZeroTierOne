@@ -35,7 +35,7 @@ pub struct Controller {
     reaper: Reaper,
     runtime: tokio::runtime::Handle,
     database: Arc<dyn Database>,
-    local_identity: Verified<Identity>,
+    local_identity: Valid<Identity>,
 
     /// Handler for MULTICAST_LIKE and MULTICAST_GATHER messages.
     multicast_authority: MulticastAuthority,
@@ -256,7 +256,7 @@ impl Controller {
     /// reason is returned with None or an acceptance reason with a network configuration is returned.
     async fn authorize(
         self: &Arc<Self>,
-        source_identity: &Verified<Identity>,
+        source_identity: &Valid<Identity>,
         network_id: NetworkId,
         time_clock: i64,
     ) -> Result<(AuthenticationResult, Option<NetworkConfig>), Box<dyn Error + Send + Sync>> {
@@ -499,14 +499,14 @@ impl Controller {
 
 impl InnerProtocolLayer for Controller {
     #[inline(always)]
-    fn should_respond_to(&self, _: &Verified<Identity>) -> bool {
+    fn should_respond_to(&self, _: &Valid<Identity>) -> bool {
         // Controllers always have to establish sessions to process requests. We don't really know if
         // a member is relevant until we have looked up both the network and the member, since whether
         // or not to "learn" unknown members is a network level option.
         true
     }
 
-    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool {
+    fn has_trust_relationship(&self, id: &Valid<Identity>) -> bool {
         self.recently_authorized
             .read()
             .unwrap()

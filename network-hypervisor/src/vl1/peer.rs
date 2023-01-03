@@ -18,14 +18,14 @@ use crate::protocol::*;
 use crate::vl1::address::Address;
 use crate::vl1::debug_event;
 use crate::vl1::node::*;
-use crate::vl1::Verified;
+use crate::vl1::Valid;
 use crate::vl1::{Endpoint, Identity, Path};
 use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = 10000;
 
 pub struct Peer {
-    pub identity: Verified<Identity>,
+    pub identity: Valid<Identity>,
 
     v1_proto_static_secret: v1::SymmetricSecret,
     paths: Mutex<Vec<PeerPath>>,
@@ -62,7 +62,7 @@ impl Peer {
     ///
     /// This only returns None if this_node_identity does not have its secrets or if some
     /// fatal error occurs performing key agreement between the two identities.
-    pub(crate) fn new(this_node_identity: &Verified<Identity>, id: Verified<Identity>, time_ticks: i64) -> Option<Self> {
+    pub(crate) fn new(this_node_identity: &Valid<Identity>, id: Valid<Identity>, time_ticks: i64) -> Option<Self> {
         this_node_identity.agree(&id).map(|static_secret| -> Self {
             Self {
                 identity: id,

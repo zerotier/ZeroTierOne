@@ -8,7 +8,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use zerotier_crypto::random::next_u32_secure;
-use zerotier_network_hypervisor::vl1::{Identity, Verified};
+use zerotier_network_hypervisor::vl1::{Identity, Valid};
 use zerotier_utils::io::{fs_restrict_permissions, read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 use zerotier_utils::json::to_json_pretty;
 
@@ -22,7 +22,7 @@ pub const CONFIG_FILENAME: &'static str = "local.conf";
 const AUTH_TOKEN_DEFAULT_LENGTH: usize = 48;
 const AUTH_TOKEN_POSSIBLE_CHARS: &'static str = "0123456789abcdefghijklmnopqrstuvwxyz";
 
-pub fn load_node_identity(base_path: &Path) -> Option<Verified<Identity>> {
+pub fn load_node_identity(base_path: &Path) -> Option<Valid<Identity>> {
     let id_data = read_limit(base_path.join(IDENTITY_SECRET_FILENAME), 4096);
     if id_data.is_err() {
         return None;
@@ -31,10 +31,10 @@ pub fn load_node_identity(base_path: &Path) -> Option<Verified<Identity>> {
     if id_data.is_err() {
         return None;
     }
-    Some(Verified::assume_verified(id_data.unwrap()))
+    Some(Valid::assume_verified(id_data.unwrap()))
 }
 
-pub fn save_node_identity(base_path: &Path, id: &Verified<Identity>) -> bool {
+pub fn save_node_identity(base_path: &Path, id: &Valid<Identity>) -> bool {
     assert!(id.secret.is_some());
     let id_secret_str = id.to_secret_string();
     let id_public_str = id.to_string();
@@ -53,11 +53,11 @@ pub struct DataDir<Config: PartialEq + Eq + Clone + Send + Sync + Default + Seri
 }
 
 impl<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + DeserializeOwned + 'static> VL1DataStorage for DataDir<Config> {
-    fn load_node_identity(&self) -> Option<Verified<Identity>> {
+    fn load_node_identity(&self) -> Option<Valid<Identity>> {
         load_node_identity(self.base_path.as_path())
     }
 
-    fn save_node_identity(&self, id: &Verified<Identity>) -> bool {
+    fn save_node_identity(&self, id: &Valid<Identity>) -> bool {
         save_node_identity(self.base_path.as_path(), id)
     }
 }

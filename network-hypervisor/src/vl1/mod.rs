@@ -23,7 +23,7 @@ pub use path::Path;
 pub use peer::Peer;
 pub use rootset::{Root, RootSet};
 
-pub use zerotier_crypto::verified::Verified;
+pub use zerotier_crypto::typestate::Valid;
 
 #[cfg(feature = "debug_events")]
 #[allow(unused_macros)]
