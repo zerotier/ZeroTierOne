@@ -77,6 +77,7 @@ pub trait ApplicationLayer: Sized {
     /// an old attempt to establish a session, and may even have been replayed by an adversary. If your use-case
     /// needs uniqueness for reliability or security, consider either including a timestamp in the metadata, or
     /// sending the metadata as an extra transport packet after the session is fully established.
+    /// It is guaranteed they will be unique for at least the lifetime of the returned session.
     fn accept_new_session(
         &self,
         receive_context: &ReceiveContext<Self>,
