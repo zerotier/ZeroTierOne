@@ -17,9 +17,9 @@ use crate::vl1::identity::Identity;
 use crate::vl1::path::{Path, PathServiceResult};
 use crate::vl1::peer::Peer;
 use crate::vl1::rootset::RootSet;
-use crate::vl1::Valid;
 
 use zerotier_crypto::random;
+use zerotier_crypto::typestate::{Valid, Verified};
 use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::gate::IntervalGate;
 use zerotier_utils::hex;
@@ -207,7 +207,7 @@ pub trait InnerProtocolLayer: Sync + Send {
 
 struct RootInfo {
     /// Root sets to which we are a member.
-    sets: HashMap<String, Valid<RootSet>>,
+    sets: HashMap<String, Verified<RootSet>>,
 
     /// Root peers and their statically defined endpoints (from root sets).
     roots: HashMap<Arc<Peer>, Vec<Endpoint>>,
@@ -352,7 +352,7 @@ impl Node {
 
     /// Add a new root set or update the existing root set if the new root set is newer and otherwise matches.
     #[inline]
-    pub fn add_update_root_set(&self, rs: Valid<RootSet>) -> bool {
+    pub fn add_update_root_set(&self, rs: Verified<RootSet>) -> bool {
         let mut roots = self.roots.write().unwrap();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
             if rs.should_replace(entry) {
@@ -468,7 +468,7 @@ impl Node {
                                 if let Some(peer) = peers.get(&m.identity.address) {
                                     new_roots.insert(peer.clone(), m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                 } else {
-                                    if let Some(peer) = Peer::new(&self.identity, Valid::assume_verified(m.identity.clone()), time_ticks) {
+                                    if let Some(peer) = Peer::new(&self.identity, Valid::wrap(m.identity.clone()), time_ticks) {
                                         drop(peers);
                                         new_roots.insert(
                                             self.peers
@@ -967,7 +967,7 @@ impl Node {
     /// This will only replace an existing root set with a newer one. It won't add a new root set, which must be
     /// done by an authorized user or administrator not just by a root.
     #[allow(unused)]
-    pub(crate) fn on_remote_update_root_set(&self, received_from: &Identity, rs: Valid<RootSet>) {
+    pub(crate) fn on_remote_update_root_set(&self, received_from: &Identity, rs: Verified<RootSet>) {
         let mut roots = self.roots.write().unwrap();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
             if entry.members.iter().any(|m| m.identity.eq(received_from)) && rs.should_replace(entry) {
