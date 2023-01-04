@@ -302,10 +302,12 @@ public:
 				assert(_config.issuerURL != nullptr);
 				assert(_config.ssoClientID != nullptr);
 				assert(_config.centralAuthURL != nullptr);
+				assert(_config.ssoProvider != nullptr);
 
 				_idc = zeroidc::zeroidc_new(
 					_config.issuerURL,
 					_config.ssoClientID,
+					_config.ssoProvider,
 					_config.centralAuthURL,
 					_webPort
 				);

@@ -1450,6 +1450,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	Utils::scopy(ec->ssoNonce, sizeof(ec->ssoNonce), _config.ssoNonce);
 	Utils::scopy(ec->ssoState, sizeof(ec->ssoState), _config.ssoState);
 	Utils::scopy(ec->ssoClientID, sizeof(ec->ssoClientID), _config.ssoClientID);
+	Utils::scopy(ec->ssoProvider, sizeof(ec->ssoProvider), _config.ssoProvider);
 }
 
 void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup)

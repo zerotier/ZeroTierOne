@@ -1246,6 +1246,11 @@ typedef struct
 	 * oidc client id
 	 */
 	char ssoClientID[256];
+
+	/**
+	 * sso provider
+	 **/
+	char ssoProvider[64];
 } ZT_VirtualNetworkConfig;
 
 /**

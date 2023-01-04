@@ -28,6 +28,7 @@ pub extern "C" fn zeroidc_new(
     issuer: *const c_char,
     client_id: *const c_char,
     auth_endpoint: *const c_char,
+    provider: *const c_char,
     web_listen_port: u16,
 ) -> *mut ZeroIDC {
     if issuer.is_null() {
@@ -40,6 +41,11 @@ pub extern "C" fn zeroidc_new(
         return std::ptr::null_mut();
     }
 
+    if provider.is_null() {
+        println!("provider is null");
+        return std::ptr::null_mut();
+    }
+
     if auth_endpoint.is_null() {
         println!("auth_endpoint is null");
         return std::ptr::null_mut();
@@ -47,10 +53,12 @@ pub extern "C" fn zeroidc_new(
 
     let issuer = unsafe { CStr::from_ptr(issuer) };
     let client_id = unsafe { CStr::from_ptr(client_id) };
+    let provider = unsafe { CStr::from_ptr(provider) };
     let auth_endpoint = unsafe { CStr::from_ptr(auth_endpoint) };
     match ZeroIDC::new(
         issuer.to_str().unwrap(),
         client_id.to_str().unwrap(),
+        provider.to_str().unwrap(),
         auth_endpoint.to_str().unwrap(),
         web_listen_port,
     ) {

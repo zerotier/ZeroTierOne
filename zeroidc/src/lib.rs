@@ -61,6 +61,7 @@ struct Inner {
     running: bool,
     issuer: String,
     auth_endpoint: String,
+    provider: String,
     oidc_thread: Option<JoinHandle<()>>,
     oidc_client: Option<openidconnect::core::CoreClient>,
     access_token: Option<AccessToken>,
@@ -115,6 +116,7 @@ impl ZeroIDC {
     pub fn new(
         issuer: &str,
         client_id: &str,
+        provider: &str,
         auth_ep: &str,
         local_web_port: u16,
     ) -> Result<ZeroIDC, ZeroIDCError> {
@@ -122,6 +124,7 @@ impl ZeroIDC {
             inner: Arc::new(Mutex::new(Inner {
                 running: false,
                 issuer: issuer.to_string(),
+                provider: provider.to_string(),
                 auth_endpoint: auth_ep.to_string(),
                 oidc_thread: None,
                 oidc_client: None,
@@ -444,36 +447,53 @@ impl ZeroIDC {
                 if need_verifier || csrf_diff || nonce_diff {
                     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
                     let r = i.oidc_client.as_ref().map(|c| {
-                        if i.issuer.contains("okta") {
-                            let (auth_url, csrf_token, nonce) = c
-                                .authorize_url(
-                                    AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
-                                    csrf_func(csrf_token),
-                                    nonce_func(nonce),
-                                )
-                                .add_scope(Scope::new("profile".to_string()))
-                                .add_scope(Scope::new("email".to_string()))
-                                .add_scope(Scope::new("offline_access".to_string()))
-                                .add_scope(Scope::new("groups".to_string()))
-                                .set_pkce_challenge(pkce_challenge)
-                                .url();
-
-                            (auth_url, csrf_token, nonce)
-                        } else {
-                            let (auth_url, csrf_token, nonce) = c
-                                .authorize_url(
-                                    AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
-                                    csrf_func(csrf_token),
-                                    nonce_func(nonce),
-                                )
-                                .add_scope(Scope::new("profile".to_string()))
-                                .add_scope(Scope::new("email".to_string()))
-                                .add_scope(Scope::new("offline_access".to_string()))
-                                .set_pkce_challenge(pkce_challenge)
-                                .url();
-
-                            (auth_url, csrf_token, nonce)
+                        let mut auth_builder = c
+                            .authorize_url(
+                                AuthenticationFlow::<CoreResponseType>::AuthorizationCode,
+                                csrf_func(csrf_token),
+                                nonce_func(nonce),
+                            )
+                            .set_pkce_challenge(pkce_challenge);
+                        match i.provider.as_str() {
+                            "auth0" => {
+                                auth_builder = auth_builder
+                                    .add_scope(Scope::new("profile".to_string()))
+                                    .add_scope(Scope::new("email".to_string()))
+                                    .add_scope(Scope::new("offline_access".to_string()));
+                            }
+                            "okta" => {
+                                auth_builder = auth_builder
+                                    .add_scope(Scope::new("profile".to_string()))
+                                    .add_scope(Scope::new("email".to_string()))
+                                    .add_scope(Scope::new("groups".to_string()))
+                                    .add_scope(Scope::new("offline_access".to_string()));
+                            }
+                            "keycloak" => {
+                                auth_builder = auth_builder
+                                    .add_scope(Scope::new("profile".to_string()))
+                                    .add_scope(Scope::new("email".to_string()));
+                            }
+                            "onelogin" => {
+                                auth_builder = auth_builder
+                                    .add_scope(Scope::new("profile".to_string()))
+                                    .add_scope(Scope::new("email".to_string()))
+                                    .add_scope(Scope::new("groups".to_string()))
+                            }
+                            "default" => {
+                                auth_builder = auth_builder
+                                    .add_scope(Scope::new("profile".to_string()))
+                                    .add_scope(Scope::new("email".to_string()))
+                                    .add_scope(Scope::new("offline_access".to_string()));
+                            }
+                            _ => {
+                                auth_builder = auth_builder
+                                    .add_scope(Scope::new("profile".to_string()))
+                                    .add_scope(Scope::new("email".to_string()))
+                                    .add_scope(Scope::new("offline_access".to_string()));
+                            }
                         }
+
+                        auth_builder.url()
                     });
 
                     if let Some(r) = r {
