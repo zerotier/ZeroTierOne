@@ -64,9 +64,8 @@ pub trait ApplicationLayer: Sized {
 
     /// Check whether a new session should be accepted.
     ///
-    /// On success a tuple of local session ID, static secret, and associated object is returned. The
-    /// static secret is whatever results from agreement between the local and remote static public
-    /// keys.
+    /// On success a tuple of local session ID, psk, and associated object is returned.
+    /// Set psk to all zeros if one is not in use with the remote party.
     ///
     /// When `accept_new_session` is called, `remote_static_public` and `remote_metadata` have not yet been
     /// authenticated. As such avoid mutating state until OkNewSession(Session) is returned, as the connection
