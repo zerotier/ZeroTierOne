@@ -102,12 +102,12 @@ where
 
 impl<T> Valid<T> {
     #[inline(always)]
-    pub fn unwrap(self) -> T {
+    pub fn remove_typestate(self) -> T {
         self.0
     }
 
     #[inline(always)]
-    pub fn wrap(o: T) -> Self {
+    pub fn mark_valid(o: T) -> Self {
         Self(o)
     }
 }
@@ -212,12 +212,12 @@ where
 
 impl<T> Verified<T> {
     #[inline(always)]
-    pub fn unwrap(self) -> T {
+    pub fn remove_typestate(self) -> T {
         self.0
     }
 
     #[inline(always)]
-    pub fn wrap(o: T) -> Self {
+    pub fn mark_verified(o: T) -> Self {
         Self(o)
     }
 }

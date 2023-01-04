@@ -206,7 +206,7 @@ impl Identity {
         assert!(id.upgrade().is_ok());
         assert!(id.p384.is_some() && id.secret.as_ref().unwrap().p384.is_some());
 
-        Valid::wrap(id)
+        Valid::mark_valid(id)
     }
 
     /// Upgrade older x25519-only identities to hybrid identities with both x25519 and NIST P-384 curves.
@@ -321,7 +321,7 @@ impl Identity {
         zt_address_derivation_work_function(&mut digest);
 
         return if digest[0] < IDENTITY_POW_THRESHOLD && Address::from_bytes(&digest[59..64]).map_or(false, |a| a == self.address) {
-            Some(Valid::wrap(self))
+            Some(Valid::mark_valid(self))
         } else {
             None
         };

@@ -45,7 +45,7 @@ pub fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity, Strin
                 if !validate {
                     Ok(id)
                 } else if let Some(id) = id.validate() {
-                    Ok(id.unwrap())
+                    Ok(id.remove_typestate())
                 } else {
                     Err(String::from("invalid identity: local validation failed"))
                 }

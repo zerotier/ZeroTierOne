@@ -177,7 +177,7 @@ impl CertificateOfMembership {
             &self.issued_to_fingerprint.as_bytes()[..32],
         ) {
             if issuer.verify(&self.v1_proto_get_qualifier_bytes(), self.signature.as_bytes()) {
-                return Some(Verified::wrap(self));
+                return Some(Verified::mark_verified(self));
             }
         }
         return None;

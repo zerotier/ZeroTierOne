@@ -119,7 +119,7 @@ impl RootSet {
             }
         }
 
-        return Some(Verified::wrap(self));
+        return Some(Verified::mark_verified(self));
     }
 
     /// Add a member to this definition, replacing any current entry with this address.

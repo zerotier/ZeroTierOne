@@ -31,7 +31,7 @@ pub fn load_node_identity(base_path: &Path) -> Option<Valid<Identity>> {
     if id_data.is_err() {
         return None;
     }
-    Some(Valid::wrap(id_data.unwrap()))
+    Some(Valid::mark_valid(id_data.unwrap()))
 }
 
 pub fn save_node_identity(base_path: &Path, id: &Valid<Identity>) -> bool {

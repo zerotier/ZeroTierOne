@@ -298,7 +298,7 @@ impl Node {
             let old = id.clone();
             if id.upgrade()? {
                 app.save_node_identity(&id);
-                app.event(Event::IdentityAutoUpgraded(old.unwrap(), id.as_ref().clone()));
+                app.event(Event::IdentityAutoUpgraded(old.remove_typestate(), id.as_ref().clone()));
             }
         }
 
@@ -388,7 +388,14 @@ impl Node {
     /// Get the root sets that this node trusts.
     #[inline]
     pub fn root_sets(&self) -> Vec<RootSet> {
-        self.roots.read().unwrap().sets.values().cloned().map(|s| s.unwrap()).collect()
+        self.roots
+            .read()
+            .unwrap()
+            .sets
+            .values()
+            .cloned()
+            .map(|s| s.remove_typestate())
+            .collect()
     }
 
     pub fn do_background_tasks<Application: ApplicationLayer + ?Sized>(&self, app: &Application) -> Duration {
@@ -468,7 +475,7 @@ impl Node {
                                 if let Some(peer) = peers.get(&m.identity.address) {
                                     new_roots.insert(peer.clone(), m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                 } else {
-                                    if let Some(peer) = Peer::new(&self.identity, Valid::wrap(m.identity.clone()), time_ticks) {
+                                    if let Some(peer) = Peer::new(&self.identity, Valid::mark_valid(m.identity.clone()), time_ticks) {
                                         drop(peers);
                                         new_roots.insert(
                                             self.peers
