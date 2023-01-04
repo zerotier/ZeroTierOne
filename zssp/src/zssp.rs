@@ -83,7 +83,7 @@ pub enum ReceiveResult<'a, H: ApplicationLayer> {
 
     /// Packet is valid and a new session was created.
     ///
-    /// The session will have already been gated by the `accept_new_session()` method in the Host trait.
+    /// The session will have already been gated by the accept_new_session() method in ApplicationLayer.
     OkNewSession(Session<H>),
 
     /// Packet superficially appears valid but was ignored e.g. as a duplicate.

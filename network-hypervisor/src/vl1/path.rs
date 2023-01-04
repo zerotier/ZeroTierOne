@@ -37,10 +37,10 @@ pub struct Path {
 }
 
 impl Path {
-    pub(crate) fn new<HostSystemImpl: HostSystem + ?Sized>(
+    pub(crate) fn new<Application: ApplicationLayer + ?Sized>(
         endpoint: Endpoint,
-        local_socket: HostSystemImpl::LocalSocket,
-        local_interface: HostSystemImpl::LocalInterface,
+        local_socket: Application::LocalSocket,
+        local_interface: Application::LocalInterface,
         time_ticks: i64,
     ) -> Self {
         Self {
@@ -55,12 +55,12 @@ impl Path {
     }
 
     #[inline(always)]
-    pub(crate) fn local_socket<HostSystemImpl: HostSystem + ?Sized>(&self) -> &HostSystemImpl::LocalSocket {
+    pub(crate) fn local_socket<Application: ApplicationLayer + ?Sized>(&self) -> &Application::LocalSocket {
         self.local_socket.get()
     }
 
     #[inline(always)]
-    pub(crate) fn local_interface<HostSystemImpl: HostSystem + ?Sized>(&self) -> &HostSystemImpl::LocalInterface {
+    pub(crate) fn local_interface<Application: ApplicationLayer + ?Sized>(&self) -> &Application::LocalInterface {
         self.local_interface.get()
     }
 

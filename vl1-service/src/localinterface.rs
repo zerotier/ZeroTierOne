@@ -13,21 +13,22 @@ use std::hash::Hash;
 pub struct LocalInterface(u128);
 
 impl LocalInterface {
+    #[inline]
     #[cfg(unix)]
     pub fn from_unix_interface_name(name: &str) -> Self {
-        let mut tmp = [0_u8; 16];
+        let mut tmp = 0u128.to_ne_bytes();
         let nb = name.as_bytes();
         let l = nb.len();
         assert!(l <= 16); // do any *nix OSes have device names longer than 16 bytes?
         tmp[..l].copy_from_slice(&nb[..l]);
-        Self(u128::from_be_bytes(tmp))
+        Self(u128::from_ne_bytes(tmp))
     }
 }
 
 impl ToString for LocalInterface {
     #[cfg(unix)]
     fn to_string(&self) -> String {
-        let b = self.0.to_be_bytes();
+        let b = self.0.to_ne_bytes();
         let mut l = 0;
         for bb in b.iter() {
             if *bb > 0 {
@@ -41,6 +42,6 @@ impl ToString for LocalInterface {
 
     #[cfg(windows)]
     fn to_string(&self) -> String {
-        zerotier_core_crypto::hex::to_string(&self.0.to_be_bytes())
+        zerotier_core_crypto::hex::to_string(&self.0.to_ne_bytes())
     }
 }

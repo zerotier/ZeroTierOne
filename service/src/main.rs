@@ -15,6 +15,7 @@ use clap::error::{ContextKind, ContextValue};
 #[allow(unused_imports)]
 use clap::{Arg, ArgMatches, Command};
 
+use zerotier_network_hypervisor::vl1::InnerProtocolLayer;
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 use zerotier_utils::exitcode;
 use zerotier_vl1_service::datadir::DataDir;
@@ -209,14 +210,9 @@ fn main() {
         Some(("service", _)) => {
             drop(global_args); // free unnecessary heap before starting service as we're done with CLI args
             if let Ok(_tokio_runtime) = zerotier_utils::tokio::runtime::Builder::new_multi_thread().enable_all().build() {
-                let test_inner = Arc::new(zerotier_network_hypervisor::vl1::DummyInnerProtocol::default());
+                let test_inner = Arc::new(DummyInnerLayer);
                 let datadir = open_datadir(&flags);
-                let svc = VL1Service::new(
-                    datadir,
-                    test_inner.clone(),
-                    test_inner,
-                    zerotier_vl1_service::VL1Settings::default(),
-                );
+                let svc = VL1Service::new(datadir, test_inner, zerotier_vl1_service::VL1Settings::default());
                 if svc.is_ok() {
                     let svc = svc.unwrap();
                     svc.node().init_default_roots();
@@ -254,3 +250,7 @@ fn main() {
 
     std::process::exit(exit_code);
 }
+
+struct DummyInnerLayer;
+
+impl InnerProtocolLayer for DummyInnerLayer {}

@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use zerotier_crypto::verified::Verified;
+use zerotier_crypto::typestate::Valid;
 use zerotier_utils::arrayvec::ArrayVec;
 
 use serde::{Deserialize, Serialize};
@@ -26,7 +26,7 @@ impl Revocation {
         threshold: i64,
         target: Address,
         issued_to: Address,
-        signer: &Verified<Identity>,
+        signer: &Valid<Identity>,
         fast_propagate: bool,
     ) -> Option<Self> {
         let mut r = Self {

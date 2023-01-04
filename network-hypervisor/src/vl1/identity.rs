@@ -9,11 +9,11 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use zerotier_crypto::{hash::*, secure_eq};
 use zerotier_crypto::p384::*;
 use zerotier_crypto::salsa::Salsa;
 use zerotier_crypto::secret::Secret;
 use zerotier_crypto::x25519::*;
+use zerotier_crypto::{hash::*, secure_eq};
 
 use zerotier_utils::arrayvec::ArrayVec;
 use zerotier_utils::buffer::Buffer;
@@ -23,7 +23,7 @@ use zerotier_utils::{base64_decode_url_nopad, base64_encode_url_nopad, hex};
 
 use crate::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_POW_THRESHOLD};
 use crate::vl1::Address;
-use crate::vl1::Verified;
+use crate::vl1::Valid;
 
 /// Current maximum size for an identity signature.
 pub const IDENTITY_MAX_SIGNATURE_SIZE: usize = P384_ECDSA_SIGNATURE_SIZE + 1;
@@ -166,7 +166,7 @@ impl Identity {
     const FLAG_INCLUDES_SECRETS: u8 = 0x80;
 
     /// Generate a new identity.
-    pub fn generate() -> Verified<Self> {
+    pub fn generate() -> Valid<Self> {
         // First generate an identity with just x25519 keys and derive its address.
         let mut sha = SHA512::new();
         let ed25519 = Ed25519KeyPair::generate();
@@ -206,7 +206,7 @@ impl Identity {
         assert!(id.upgrade().is_ok());
         assert!(id.p384.is_some() && id.secret.as_ref().unwrap().p384.is_some());
 
-        Verified::assume_verified(id)
+        Valid::assume_verified(id)
     }
 
     /// Upgrade older x25519-only identities to hybrid identities with both x25519 and NIST P-384 curves.
@@ -290,7 +290,7 @@ impl Identity {
     /// Locally check the validity of this identity.
     ///
     /// This is somewhat time consuming due to the memory-intensive work algorithm.
-    pub fn validate(self) -> Option<Verified<Self>> {
+    pub fn validate(self) -> Option<Valid<Self>> {
         if let Some(p384) = self.p384.as_ref() {
             let mut self_sign_buf: Vec<u8> = Vec::with_capacity(
                 ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE,
@@ -321,7 +321,7 @@ impl Identity {
         zt_address_derivation_work_function(&mut digest);
 
         return if digest[0] < IDENTITY_POW_THRESHOLD && Address::from_bytes(&digest[59..64]).map_or(false, |a| a == self.address) {
-            Some(Verified::assume_verified(self))
+            Some(Valid::assume_verified(self))
         } else {
             None
         };
@@ -345,7 +345,7 @@ impl Identity {
     /// For new identities with P-384 keys a hybrid agreement is performed using both X25519 and NIST P-384 ECDH.
     /// The final key is derived as HMAC(x25519 secret, p-384 secret) to yield a FIPS-compliant key agreement with
     /// the X25519 secret being used as a "salt" as far as FIPS is concerned.
-    pub fn agree(&self, other: &Verified<Identity>) -> Option<Secret<64>> {
+    pub fn agree(&self, other: &Valid<Identity>) -> Option<Secret<64>> {
         if let Some(secret) = self.secret.as_ref() {
             let c25519_secret: Secret<64> = Secret(SHA512::hash(&secret.x25519.agree(&other.x25519).0));
 

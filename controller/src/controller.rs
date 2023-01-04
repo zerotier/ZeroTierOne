@@ -31,11 +31,11 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 /// ZeroTier VL2 network controller packet handler, answers VL2 netconf queries.
 pub struct Controller {
     self_ref: Weak<Self>,
-    service: RwLock<Weak<VL1Service<dyn Database, Self, Self>>>,
+    service: RwLock<Weak<VL1Service<Self>>>,
     reaper: Reaper,
     runtime: tokio::runtime::Handle,
     database: Arc<dyn Database>,
-    local_identity: Verified<Identity>,
+    local_identity: Valid<Identity>,
 
     /// Handler for MULTICAST_LIKE and MULTICAST_GATHER messages.
     multicast_authority: MulticastAuthority,
@@ -78,7 +78,7 @@ impl Controller {
     /// This must be called once the service that uses this handler is up or the controller
     /// won't actually do anything. The controller holds a weak reference to VL1Service so
     /// be sure it's not dropped.
-    pub async fn start(&self, service: &Arc<VL1Service<dyn Database, Self, Self>>) {
+    pub async fn start(&self, service: &Arc<VL1Service<Self>>) {
         *self.service.write().unwrap() = Arc::downgrade(service);
 
         // Create database change listener.
@@ -256,7 +256,7 @@ impl Controller {
     /// reason is returned with None or an acceptance reason with a network configuration is returned.
     async fn authorize(
         self: &Arc<Self>,
-        source_identity: &Verified<Identity>,
+        source_identity: &Valid<Identity>,
         network_id: NetworkId,
         time_clock: i64,
     ) -> Result<(AuthenticationResult, Option<NetworkConfig>), Box<dyn Error + Send + Sync>> {
@@ -371,13 +371,10 @@ impl Controller {
 
             // Make sure these agree. It should be impossible to end up with a member that's authorized and
             // whose identity and identity fingerprint don't match.
-            if !secure_eq(&member
-                .identity
-                .as_ref()
-                .unwrap()
-                .fingerprint,
-                member.identity_fingerprint.as_ref().unwrap().as_bytes())
-            {
+            if !secure_eq(
+                &member.identity.as_ref().unwrap().fingerprint,
+                member.identity_fingerprint.as_ref().unwrap().as_bytes(),
+            ) {
                 debug_assert!(false);
                 return Ok((AuthenticationResult::RejectedDueToError, None));
             }
@@ -500,8 +497,24 @@ impl Controller {
     }
 }
 
-impl InnerProtocol for Controller {
-    fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
+impl InnerProtocolLayer for Controller {
+    #[inline(always)]
+    fn should_respond_to(&self, _: &Valid<Identity>) -> bool {
+        // Controllers always have to establish sessions to process requests. We don't really know if
+        // a member is relevant until we have looked up both the network and the member, since whether
+        // or not to "learn" unknown members is a network level option.
+        true
+    }
+
+    fn has_trust_relationship(&self, id: &Valid<Identity>) -> bool {
+        self.recently_authorized
+            .read()
+            .unwrap()
+            .get(&id.fingerprint)
+            .map_or(false, |by_network| by_network.values().any(|t| *t > ms_monotonic()))
+    }
+
+    fn handle_packet<HostSystemImpl: ApplicationLayer + ?Sized>(
         &self,
         host_system: &HostSystemImpl,
         _: &Node,
@@ -515,7 +528,7 @@ impl InnerProtocol for Controller {
     ) -> PacketHandlerResult {
         match verb {
             protocol::message_type::VL2_NETWORK_CONFIG_REQUEST => {
-                if !host_system.should_respond_to(&source.identity) {
+                if !self.should_respond_to(&source.identity) {
                     return PacketHandlerResult::Ok; // handled and ignored
                 }
 
@@ -638,24 +651,6 @@ impl InnerProtocol for Controller {
 
             _ => PacketHandlerResult::NotHandled,
         }
-    }
-}
-
-impl VL1AuthProvider for Controller {
-    #[inline(always)]
-    fn should_respond_to(&self, _: &Verified<Identity>) -> bool {
-        // Controllers always have to establish sessions to process requests. We don't really know if
-        // a member is relevant until we have looked up both the network and the member, since whether
-        // or not to "learn" unknown members is a network level option.
-        true
-    }
-
-    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool {
-        self.recently_authorized
-            .read()
-            .unwrap()
-            .get(&id.fingerprint)
-            .map_or(false, |by_network| by_network.values().any(|t| *t > ms_monotonic()))
     }
 }
 

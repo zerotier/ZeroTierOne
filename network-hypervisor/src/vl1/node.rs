@@ -17,7 +17,7 @@ use crate::vl1::identity::Identity;
 use crate::vl1::path::{Path, PathServiceResult};
 use crate::vl1::peer::Peer;
 use crate::vl1::rootset::RootSet;
-use crate::vl1::Verified;
+use crate::vl1::Valid;
 
 use zerotier_crypto::random;
 use zerotier_utils::error::InvalidParameterError;
@@ -27,42 +27,11 @@ use zerotier_utils::marshalable::Marshalable;
 use zerotier_utils::ringbuffer::RingBuffer;
 use zerotier_utils::thing::Thing;
 
-/// Trait providing VL1 authentication functions to determine which nodes we should talk to.
+/// Interface trait to be implemented by code that's using the ZeroTier network hypervisor.
 ///
-/// This is included in HostSystem but is provided as a separate trait to make it easy for
-/// implementers of HostSystem to break this out and allow a user to specify it.
-pub trait VL1AuthProvider: Sync + Send {
-    /// Check if this node should respond to messages from a given peer at all.
-    ///
-    /// If this returns false, the node simply drops messages on the floor and refuses
-    /// to init V2 sessions.
-    fn should_respond_to(&self, id: &Verified<Identity>) -> bool;
-
-    /// Check if this node has any trust relationship with the provided identity.
-    ///
-    /// This should return true if there is any special trust relationship such as mutual
-    /// membership in a network or for controllers the peer's membership in any network
-    /// they control.
-    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool;
-}
-
-/// Trait to be implemented by outside code to provide object storage to VL1
-///
-/// This is included in HostSystem but is provided as a separate trait to make it easy for
-/// implementers of HostSystem to break this out and allow a user to specify it.
-pub trait NodeStorage: Sync + Send {
-    /// Load this node's identity from the data store.
-    fn load_node_identity(&self) -> Option<Verified<Identity>>;
-
-    /// Save this node's identity to the data store.
-    fn save_node_identity(&self, id: &Verified<Identity>);
-}
-
-/// Trait implemented by external code to handle events and provide an interface to the system or application.
-pub trait HostSystem: VL1AuthProvider + NodeStorage + 'static {
-    /// Type for implementation of NodeStorage.
-    type Storage: NodeStorage + ?Sized;
-
+/// This is analogous to a C struct full of function pointers to callbacks along with some
+/// associated type definitions.
+pub trait ApplicationLayer: Sync + Send {
     /// Type for local system sockets.
     type LocalSocket: Sync + Send + Hash + PartialEq + Eq + Clone + ToString + Sized + 'static;
 
@@ -72,8 +41,11 @@ pub trait HostSystem: VL1AuthProvider + NodeStorage + 'static {
     /// A VL1 level event occurred.
     fn event(&self, event: Event);
 
-    /// Get a reference to the local storage implementation at this host.
-    fn storage(&self) -> &Self::Storage;
+    /// Load this node's identity from the data store.
+    fn load_node_identity(&self) -> Option<Valid<Identity>>;
+
+    /// Save this node's identity to the data store, returning true on success.
+    fn save_node_identity(&self, id: &Valid<Identity>) -> bool;
 
     /// Get a pooled packet buffer for internal use.
     fn get_buffer(&self) -> PooledPacketBuffer;
@@ -110,12 +82,12 @@ pub trait HostSystem: VL1AuthProvider + NodeStorage + 'static {
     ///
     /// The default implementation always returns true.
     #[allow(unused_variables)]
-    fn should_use_physical_path<HostSystemImpl: HostSystem + ?Sized>(
+    fn should_use_physical_path<Application: ApplicationLayer + ?Sized>(
         &self,
-        id: &Verified<Identity>,
+        id: &Valid<Identity>,
         endpoint: &Endpoint,
-        local_socket: Option<&HostSystemImpl::LocalSocket>,
-        local_interface: Option<&HostSystemImpl::LocalInterface>,
+        local_socket: Option<&Application::LocalSocket>,
+        local_interface: Option<&Application::LocalInterface>,
     ) -> bool {
         true
     }
@@ -124,16 +96,10 @@ pub trait HostSystem: VL1AuthProvider + NodeStorage + 'static {
     ///
     /// The default implementation always returns None.
     #[allow(unused_variables)]
-    fn get_path_hints<HostSystemImpl: HostSystem + ?Sized>(
+    fn get_path_hints<Application: ApplicationLayer + ?Sized>(
         &self,
-        id: &Verified<Identity>,
-    ) -> Option<
-        Vec<(
-            Endpoint,
-            Option<HostSystemImpl::LocalSocket>,
-            Option<HostSystemImpl::LocalInterface>,
-        )>,
-    > {
+        id: &Valid<Identity>,
+    ) -> Option<Vec<(Endpoint, Option<Application::LocalSocket>, Option<Application::LocalInterface>)>> {
         None
     }
 
@@ -163,14 +129,32 @@ pub enum PacketHandlerResult {
 /// This is implemented by Switch in VL2. It's usually not used outside of VL2 in the core but
 /// it could also be implemented for testing or "off label" use of VL1 to carry different protocols.
 #[allow(unused)]
-pub trait InnerProtocol: Sync + Send {
+pub trait InnerProtocolLayer: Sync + Send {
+    /// Check if this node should respond to messages from a given peer at all.
+    ///
+    /// The default implementation always returns true.
+    fn should_respond_to(&self, id: &Valid<Identity>) -> bool {
+        true
+    }
+
+    /// Check if this node has any trust relationship with the provided identity.
+    ///
+    /// This should return true if there is any special trust relationship. It controls things
+    /// like sharing of detailed P2P connectivity data, which should be limited to peers with
+    /// some privileged relationship like mutual membership in a network.
+    ///
+    /// The default implementation always returns true.
+    fn has_trust_relationship(&self, id: &Valid<Identity>) -> bool {
+        true
+    }
+
     /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
     /// The default version returns NotHandled.
-    fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
+    fn handle_packet<Application: ApplicationLayer + ?Sized>(
         &self,
-        host_system: &HostSystemImpl,
+        app: &Application,
         node: &Node,
         source: &Arc<Peer>,
         source_path: &Arc<Path>,
@@ -185,9 +169,9 @@ pub trait InnerProtocol: Sync + Send {
 
     /// Handle errors, returning true if the error was recognized.
     /// The default version returns NotHandled.
-    fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
+    fn handle_error<Application: ApplicationLayer + ?Sized>(
         &self,
-        host_system: &HostSystemImpl,
+        app: &Application,
         node: &Node,
         source: &Arc<Peer>,
         source_path: &Arc<Path>,
@@ -204,9 +188,9 @@ pub trait InnerProtocol: Sync + Send {
 
     /// Handle an OK, returning true if the OK was recognized.
     /// The default version returns NotHandled.
-    fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
+    fn handle_ok<Application: ApplicationLayer + ?Sized>(
         &self,
-        host_system: &HostSystemImpl,
+        app: &Application,
         node: &Node,
         source: &Arc<Peer>,
         source_path: &Arc<Path>,
@@ -221,12 +205,9 @@ pub trait InnerProtocol: Sync + Send {
     }
 }
 
-/// How often to check the root cluster definitions against the root list and update.
-const ROOT_SYNC_INTERVAL_MS: i64 = 1000;
-
 struct RootInfo {
     /// Root sets to which we are a member.
-    sets: HashMap<String, Verified<RootSet>>,
+    sets: HashMap<String, Valid<RootSet>>,
 
     /// Root peers and their statically defined endpoints (from root sets).
     roots: HashMap<Arc<Peer>, Vec<Endpoint>>,
@@ -242,7 +223,9 @@ struct RootInfo {
     online: bool,
 }
 
-/// Interval gate objects used ot fire off background tasks, see do_background_tasks().
+/// How often to check the root cluster definitions against the root list and update.
+const ROOT_SYNC_INTERVAL_MS: i64 = 1000;
+
 #[derive(Default)]
 struct BackgroundTaskIntervals {
     root_sync: IntervalGate<{ ROOT_SYNC_INTERVAL_MS }>,
@@ -253,7 +236,6 @@ struct BackgroundTaskIntervals {
     whois_queue_retry: IntervalGate<{ WHOIS_RETRY_INTERVAL }>,
 }
 
-/// WHOIS requests and any packets that are waiting on them to be decrypted and authenticated.
 struct WhoisQueueItem {
     v1_proto_waiting_packets: RingBuffer<(Weak<Path>, PooledPacketBuffer), WHOIS_MAX_WAITING_PACKETS>,
     last_retry_time: i64,
@@ -261,24 +243,21 @@ struct WhoisQueueItem {
 }
 
 const PATH_MAP_SIZE: usize = std::mem::size_of::<HashMap<[u8; std::mem::size_of::<Endpoint>() + 128], Arc<Path>>>();
-type PathMap<HostSystemImpl> = HashMap<PathKey<'static, 'static, HostSystemImpl>, Arc<Path>>;
+type PathMap<LocalSocket> = HashMap<PathKey<'static, 'static, LocalSocket>, Arc<Path>>;
 
 /// A ZeroTier VL1 node that can communicate securely with the ZeroTier peer-to-peer network.
 pub struct Node {
     /// A random ID generated to identify this particular running instance.
-    ///
-    /// This can be used to implement multi-homing by allowing remote nodes to distinguish instances
-    /// that share an identity.
     pub instance_id: [u8; 16],
 
     /// This node's identity and permanent keys.
-    pub identity: Verified<Identity>,
+    pub identity: Valid<Identity>,
 
     /// Interval latches for periodic background tasks.
     intervals: Mutex<BackgroundTaskIntervals>,
 
     /// Canonicalized network paths, held as Weak<> to be automatically cleaned when no longer in use.
-    paths: RwLock<Thing<PATH_MAP_SIZE>>, // holds a PathMap<> but as a Thing<> to hide HostSystemImpl template parameter
+    paths: RwLock<Thing<PATH_MAP_SIZE>>, // holds a PathMap<> but as a Thing<> to hide ApplicationLayer template parameter
 
     /// Peers with which we are currently communicating.
     peers: RwLock<HashMap<Address, Arc<Peer>>>,
@@ -294,20 +273,20 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new<HostSystemImpl: HostSystem + ?Sized>(
-        host_system: &HostSystemImpl,
+    pub fn new<Application: ApplicationLayer + ?Sized>(
+        app: &Application,
         auto_generate_identity: bool,
         auto_upgrade_identity: bool,
     ) -> Result<Self, InvalidParameterError> {
         let mut id = {
-            let id = host_system.storage().load_node_identity();
+            let id = app.load_node_identity();
             if id.is_none() {
                 if !auto_generate_identity {
                     return Err(InvalidParameterError("no identity found and auto-generate not enabled"));
                 } else {
                     let id = Identity::generate();
-                    host_system.event(Event::IdentityAutoGenerated(id.as_ref().clone()));
-                    host_system.storage().save_node_identity(&id);
+                    app.event(Event::IdentityAutoGenerated(id.as_ref().clone()));
+                    app.save_node_identity(&id);
                     id
                 }
             } else {
@@ -318,18 +297,18 @@ impl Node {
         if auto_upgrade_identity {
             let old = id.clone();
             if id.upgrade()? {
-                host_system.storage().save_node_identity(&id);
-                host_system.event(Event::IdentityAutoUpgraded(old.unwrap(), id.as_ref().clone()));
+                app.save_node_identity(&id);
+                app.event(Event::IdentityAutoUpgraded(old.unwrap(), id.as_ref().clone()));
             }
         }
 
-        debug_event!(host_system, "[vl1] loaded identity {}", id.to_string());
+        debug_event!(app, "[vl1] loaded identity {}", id.to_string());
 
         Ok(Self {
             instance_id: random::get_bytes_secure(),
             identity: id,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
-            paths: RwLock::new(Thing::new(PathMap::<HostSystemImpl>::new())),
+            paths: RwLock::new(Thing::new(PathMap::<Application::LocalSocket>::new())),
             peers: RwLock::new(HashMap::new()),
             roots: RwLock::new(RootInfo {
                 sets: HashMap::new(),
@@ -343,31 +322,37 @@ impl Node {
         })
     }
 
+    #[inline]
     pub fn peer(&self, a: Address) -> Option<Arc<Peer>> {
         self.peers.read().unwrap().get(&a).cloned()
     }
 
+    #[inline]
     pub fn is_online(&self) -> bool {
         self.roots.read().unwrap().online
     }
 
     /// Get the current "best" root from among this node's trusted roots.
+    #[inline]
     pub fn best_root(&self) -> Option<Arc<Peer>> {
         self.best_root.read().unwrap().clone()
     }
 
     /// Check whether a peer is a root according to any root set trusted by this node.
+    #[inline]
     pub fn is_peer_root(&self, peer: &Peer) -> bool {
         self.roots.read().unwrap().roots.keys().any(|p| p.identity.eq(&peer.identity))
     }
 
     /// Returns true if this node is a member of a root set (that it knows about).
+    #[inline]
     pub fn this_node_is_root(&self) -> bool {
         self.roots.read().unwrap().this_root_sets.is_some()
     }
 
     /// Add a new root set or update the existing root set if the new root set is newer and otherwise matches.
-    pub fn add_update_root_set(&self, rs: Verified<RootSet>) -> bool {
+    #[inline]
+    pub fn add_update_root_set(&self, rs: Valid<RootSet>) -> bool {
         let mut roots = self.roots.write().unwrap();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
             if rs.should_replace(entry) {
@@ -385,11 +370,13 @@ impl Node {
     }
 
     /// Returns whether or not this node has any root sets defined.
+    #[inline]
     pub fn has_roots_defined(&self) -> bool {
         self.roots.read().unwrap().sets.iter().any(|rs| !rs.1.members.is_empty())
     }
 
     /// Initialize with default roots if there are no roots defined, otherwise do nothing.
+    #[inline]
     pub fn init_default_roots(&self) -> bool {
         if !self.has_roots_defined() {
             self.add_update_root_set(RootSet::zerotier_default())
@@ -399,68 +386,27 @@ impl Node {
     }
 
     /// Get the root sets that this node trusts.
+    #[inline]
     pub fn root_sets(&self) -> Vec<RootSet> {
         self.roots.read().unwrap().sets.values().cloned().map(|s| s.unwrap()).collect()
     }
 
-    pub fn do_background_tasks<HostSystemImpl: HostSystem + ?Sized>(&self, host_system: &HostSystemImpl) -> Duration {
+    pub fn do_background_tasks<Application: ApplicationLayer + ?Sized>(&self, app: &Application) -> Duration {
         const INTERVAL_MS: i64 = 1000;
         const INTERVAL: Duration = Duration::from_millis(INTERVAL_MS as u64);
-        let time_ticks = host_system.time_ticks();
+        let time_ticks = app.time_ticks();
 
-        let (root_sync, root_hello, mut root_spam_hello, peer_service, path_service, whois_queue_retry) = {
+        let (root_sync, root_hello, root_spam_hello, peer_service, path_service, whois_queue_retry) = {
             let mut intervals = self.intervals.lock().unwrap();
             (
                 intervals.root_sync.gate(time_ticks),
                 intervals.root_hello.gate(time_ticks),
-                intervals.root_spam_hello.gate(time_ticks),
+                intervals.root_spam_hello.gate(time_ticks) && !self.is_online(),
                 intervals.peer_service.gate(time_ticks),
                 intervals.path_service.gate(time_ticks),
                 intervals.whois_queue_retry.gate(time_ticks),
             )
         };
-
-        // We only "spam" (try to contact roots more often) if we are offline.
-        if root_spam_hello {
-            root_spam_hello = !self.is_online();
-        }
-
-        /*
-        debug_event!(
-            host_system,
-            "[vl1] do_background_tasks:{}{}{}{}{}{} ----",
-            if root_sync {
-                " root_sync"
-            } else {
-                ""
-            },
-            if root_hello {
-                " root_hello"
-            } else {
-                ""
-            },
-            if root_spam_hello {
-                " root_spam_hello"
-            } else {
-                ""
-            },
-            if peer_service {
-                " peer_service"
-            } else {
-                ""
-            },
-            if path_service {
-                " path_service"
-            } else {
-                ""
-            },
-            if whois_queue_retry {
-                " whois_queue_retry"
-            } else {
-                ""
-            }
-        );
-        */
 
         if root_sync {
             if {
@@ -472,7 +418,7 @@ impl Node {
                     false
                 }
             } {
-                debug_event!(host_system, "[vl1] root sets modified, synchronizing internal data structures");
+                debug_event!(app, "[vl1] root sets modified, synchronizing internal data structures");
 
                 let (mut old_root_identities, address_collisions, new_roots, bad_identities, my_root_sets) = {
                     let roots = self.roots.read().unwrap();
@@ -513,7 +459,7 @@ impl Node {
                             if m.endpoints.is_some() && !address_collisions.contains(&m.identity.address) && !m.identity.eq(&self.identity)
                             {
                                 debug_event!(
-                                    host_system,
+                                    app,
                                     "[vl1] examining root {} with {} endpoints",
                                     m.identity.address.to_string(),
                                     m.endpoints.as_ref().map_or(0, |e| e.len())
@@ -522,8 +468,7 @@ impl Node {
                                 if let Some(peer) = peers.get(&m.identity.address) {
                                     new_roots.insert(peer.clone(), m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                 } else {
-                                    if let Some(peer) = Peer::new(&self.identity, Verified::assume_verified(m.identity.clone()), time_ticks)
-                                    {
+                                    if let Some(peer) = Peer::new(&self.identity, Valid::assume_verified(m.identity.clone()), time_ticks) {
                                         drop(peers);
                                         new_roots.insert(
                                             self.peers
@@ -546,13 +491,13 @@ impl Node {
                 };
 
                 for c in address_collisions.iter() {
-                    host_system.event(Event::SecurityWarning(format!(
+                    app.event(Event::SecurityWarning(format!(
                         "address/identity collision in root sets! address {} collides across root sets or with an existing peer and is being ignored as a root!",
                         c.to_string()
                     )));
                 }
                 for i in bad_identities.iter() {
-                    host_system.event(Event::SecurityWarning(format!(
+                    app.event(Event::SecurityWarning(format!(
                         "bad identity detected for address {} in at least one root set, ignoring (error creating peer object)",
                         i.address.to_string()
                     )));
@@ -566,7 +511,7 @@ impl Node {
                     let mut roots = self.roots.write().unwrap();
                     roots.roots = new_roots;
                     roots.this_root_sets = my_root_sets;
-                    host_system.event(Event::UpdatedRoots(old_root_identities, new_root_identities));
+                    app.event(Event::UpdatedRoots(old_root_identities, new_root_identities));
                 }
             }
 
@@ -592,7 +537,7 @@ impl Node {
                         let mut best_root = self.best_root.write().unwrap();
                         if let Some(best_root) = best_root.as_mut() {
                             debug_event!(
-                                host_system,
+                                app,
                                 "[vl1] selected new best root: {} (replaced {})",
                                 best.identity.address.to_string(),
                                 best_root.identity.address.to_string()
@@ -600,7 +545,7 @@ impl Node {
                             *best_root = best.clone();
                         } else {
                             debug_event!(
-                                host_system,
+                                app,
                                 "[vl1] selected new best root: {} (was empty)",
                                 best.identity.address.to_string()
                             );
@@ -610,7 +555,7 @@ impl Node {
                 } else {
                     if let Some(old_best) = self.best_root.write().unwrap().take() {
                         debug_event!(
-                            host_system,
+                            app,
                             "[vl1] selected new best root: NONE (replaced {})",
                             old_best.identity.address.to_string()
                         );
@@ -622,12 +567,12 @@ impl Node {
                     if !roots.online {
                         drop(roots);
                         self.roots.write().unwrap().online = true;
-                        host_system.event(Event::Online(true));
+                        app.event(Event::Online(true));
                     }
                 } else if roots.online {
                     drop(roots);
                     self.roots.write().unwrap().online = false;
-                    host_system.event(Event::Online(false));
+                    app.event(Event::Online(false));
                 }
             }
         }
@@ -648,14 +593,14 @@ impl Node {
             for (root, endpoints) in roots.iter() {
                 for ep in endpoints.iter() {
                     debug_event!(
-                        host_system,
+                        app,
                         "sending HELLO to root {} (root interval: {})",
                         root.identity.address.to_string(),
                         ROOT_HELLO_INTERVAL
                     );
                     let root = root.clone();
                     let ep = ep.clone();
-                    root.send_hello(host_system, self, Some(&ep));
+                    root.send_hello(app, self, Some(&ep));
                 }
             }
         }
@@ -667,7 +612,7 @@ impl Node {
             {
                 let roots = self.roots.read().unwrap();
                 for (a, peer) in self.peers.read().unwrap().iter() {
-                    if !peer.service(host_system, self, time_ticks) && !roots.roots.contains_key(peer) {
+                    if !peer.service(app, self, time_ticks) && !roots.roots.contains_key(peer) {
                         dead_peers.push(*a);
                     }
                 }
@@ -682,8 +627,8 @@ impl Node {
             let mut need_keepalive = Vec::new();
 
             // First check all paths in read mode to avoid blocking the entire node.
-            for (k, path) in self.paths.read().unwrap().get::<PathMap<HostSystemImpl>>().iter() {
-                if host_system.local_socket_is_valid(k.local_socket()) {
+            for (k, path) in self.paths.read().unwrap().get::<PathMap<Application::LocalSocket>>().iter() {
+                if app.local_socket_is_valid(k.local_socket()) {
                     match path.service(time_ticks) {
                         PathServiceResult::Ok => {}
                         PathServiceResult::Dead => dead_paths.push(k.to_copied()),
@@ -696,16 +641,20 @@ impl Node {
 
             // Lock in write mode and remove dead paths, doing so piecemeal to again avoid blocking.
             for dp in dead_paths.iter() {
-                self.paths.write().unwrap().get_mut::<PathMap<HostSystemImpl>>().remove(dp);
+                self.paths
+                    .write()
+                    .unwrap()
+                    .get_mut::<PathMap<Application::LocalSocket>>()
+                    .remove(dp);
             }
 
             // Finally run keepalive sends as a batch.
             let keepalive_buf = [time_ticks as u8]; // just an arbitrary byte, no significance
             for p in need_keepalive.iter() {
-                host_system.wire_send(
+                app.wire_send(
                     &p.endpoint,
-                    Some(p.local_socket::<HostSystemImpl>()),
-                    Some(p.local_interface::<HostSystemImpl>()),
+                    Some(p.local_socket::<Application>()),
+                    Some(p.local_interface::<Application>()),
                     &keepalive_buf,
                     0,
                 );
@@ -727,26 +676,25 @@ impl Node {
                 need_whois
             };
             if !need_whois.is_empty() {
-                self.send_whois(host_system, need_whois.as_slice(), time_ticks);
+                self.send_whois(app, need_whois.as_slice(), time_ticks);
             }
         }
 
-        //debug_event!(host_system, "[vl1] do_background_tasks DONE ----");
         INTERVAL
     }
 
-    pub fn handle_incoming_physical_packet<HostSystemImpl: HostSystem + ?Sized, InnerProtocolImpl: InnerProtocol + ?Sized>(
+    pub fn handle_incoming_physical_packet<Application: ApplicationLayer + ?Sized, Inner: InnerProtocolLayer + ?Sized>(
         &self,
-        host_system: &HostSystemImpl,
-        inner: &InnerProtocolImpl,
+        app: &Application,
+        inner: &Inner,
         source_endpoint: &Endpoint,
-        source_local_socket: &HostSystemImpl::LocalSocket,
-        source_local_interface: &HostSystemImpl::LocalInterface,
+        source_local_socket: &Application::LocalSocket,
+        source_local_interface: &Application::LocalInterface,
         time_ticks: i64,
         mut packet: PooledPacketBuffer,
     ) {
         debug_event!(
-            host_system,
+            app,
             "[vl1] {} -> #{} {}->{} length {} (on socket {}@{})",
             source_endpoint.to_string(),
             packet
@@ -779,15 +727,14 @@ impl Node {
 
                 if dest == self.identity.address {
                     let fragment_header = &*fragment_header; // discard mut
-                    let path =
-                        self.canonical_path::<HostSystemImpl>(source_endpoint, source_local_socket, source_local_interface, time_ticks);
+                    let path = self.canonical_path::<Application>(source_endpoint, source_local_socket, source_local_interface, time_ticks);
                     path.log_receive_anything(time_ticks);
 
                     if fragment_header.is_fragment() {
                         #[cfg(debug_assertions)]
                         let fragment_header_id = u64::from_be_bytes(fragment_header.id);
                         debug_event!(
-                            host_system,
+                            app,
                             "[vl1] [v1] #{:0>16x} fragment {} of {} received",
                             u64::from_be_bytes(fragment_header.id),
                             fragment_header.fragment_no(),
@@ -803,14 +750,14 @@ impl Node {
                         ) {
                             if let Some(frag0) = assembled_packet.frags[0].as_ref() {
                                 #[cfg(debug_assertions)]
-                                debug_event!(host_system, "[vl1] [v1] #{:0>16x} packet fully assembled!", fragment_header_id);
+                                debug_event!(app, "[vl1] [v1] #{:0>16x} packet fully assembled!", fragment_header_id);
 
                                 if let Ok(packet_header) = frag0.struct_at::<v1::PacketHeader>(0) {
                                     if let Some(source) = Address::from_bytes(&packet_header.src) {
                                         if let Some(peer) = self.peer(source) {
                                             peer.v1_proto_receive(
                                                 self,
-                                                host_system,
+                                                app,
                                                 inner,
                                                 time_ticks,
                                                 &path,
@@ -821,7 +768,7 @@ impl Node {
                                         } else {
                                             // If WHOIS is needed we need to go ahead and combine the packet so it can be cached
                                             // for later processing when a WHOIS reply comes back.
-                                            let mut combined_packet = host_system.get_buffer();
+                                            let mut combined_packet = app.get_buffer();
                                             let mut ok = combined_packet.append_bytes(frag0.as_bytes()).is_ok();
                                             for i in 1..assembled_packet.have {
                                                 if let Some(f) = assembled_packet.frags[i as usize].as_ref() {
@@ -832,7 +779,7 @@ impl Node {
                                                 }
                                             }
                                             if ok {
-                                                self.whois(host_system, source, Some((Arc::downgrade(&path), combined_packet)), time_ticks);
+                                                self.whois(app, source, Some((Arc::downgrade(&path), combined_packet)), time_ticks);
                                             }
                                         }
                                     } // else source address invalid
@@ -840,17 +787,13 @@ impl Node {
                             } // else reassembly failed (in a way that shouldn't be possible)
                         } // else packet not fully assembled yet
                     } else if let Ok(packet_header) = packet.struct_at::<v1::PacketHeader>(0) {
-                        debug_event!(
-                            host_system,
-                            "[vl1] [v1] #{:0>16x} is unfragmented",
-                            u64::from_be_bytes(packet_header.id)
-                        );
+                        debug_event!(app, "[vl1] [v1] #{:0>16x} is unfragmented", u64::from_be_bytes(packet_header.id));
 
                         if let Some(source) = Address::from_bytes(&packet_header.src) {
                             if let Some(peer) = self.peer(source) {
-                                peer.v1_proto_receive(self, host_system, inner, time_ticks, &path, packet_header, packet.as_ref(), &[]);
+                                peer.v1_proto_receive(self, app, inner, time_ticks, &path, packet_header, packet.as_ref(), &[]);
                             } else {
-                                self.whois(host_system, source, Some((Arc::downgrade(&path), packet)), time_ticks);
+                                self.whois(app, source, Some((Arc::downgrade(&path), packet)), time_ticks);
                             }
                         }
                     } // else not fragment and header incomplete
@@ -866,7 +809,7 @@ impl Node {
                         {
                             debug_packet_id = u64::from_be_bytes(fragment_header.id);
                             debug_event!(
-                                host_system,
+                                app,
                                 "[vl1] [v1] #{:0>16x} forwarding packet fragment to {}",
                                 debug_packet_id,
                                 dest.to_string()
@@ -874,7 +817,7 @@ impl Node {
                         }
                         if fragment_header.increment_hops() > v1::FORWARD_MAX_HOPS {
                             #[cfg(debug_assertions)]
-                            debug_event!(host_system, "[vl1] [v1] #{:0>16x} discarded: max hops exceeded!", debug_packet_id);
+                            debug_event!(app, "[vl1] [v1] #{:0>16x} discarded: max hops exceeded!", debug_packet_id);
                             return;
                         }
                     } else if let Ok(packet_header) = packet.struct_mut_at::<v1::PacketHeader>(0) {
@@ -882,7 +825,7 @@ impl Node {
                         {
                             debug_packet_id = u64::from_be_bytes(packet_header.id);
                             debug_event!(
-                                host_system,
+                                app,
                                 "[vl1] [v1] #{:0>16x} forwarding packet to {}",
                                 debug_packet_id,
                                 dest.to_string()
@@ -891,7 +834,7 @@ impl Node {
                         if packet_header.increment_hops() > v1::FORWARD_MAX_HOPS {
                             #[cfg(debug_assertions)]
                             debug_event!(
-                                host_system,
+                                app,
                                 "[vl1] [v1] #{:0>16x} discarded: max hops exceeded!",
                                 u64::from_be_bytes(packet_header.id)
                             );
@@ -903,10 +846,10 @@ impl Node {
 
                     if let Some(peer) = self.peer(dest) {
                         if let Some(forward_path) = peer.direct_path() {
-                            host_system.wire_send(
+                            app.wire_send(
                                 &forward_path.endpoint,
-                                Some(forward_path.local_socket::<HostSystemImpl>()),
-                                Some(forward_path.local_interface::<HostSystemImpl>()),
+                                Some(forward_path.local_socket::<Application>()),
+                                Some(forward_path.local_interface::<Application>()),
                                 packet.as_bytes(),
                                 0,
                             );
@@ -914,7 +857,7 @@ impl Node {
                             peer.last_forward_time_ticks.store(time_ticks, Ordering::Relaxed);
 
                             #[cfg(debug_assertions)]
-                            debug_event!(host_system, "[vl1] [v1] #{:0>16x} forwarded successfully", debug_packet_id);
+                            debug_event!(app, "[vl1] [v1] #{:0>16x} forwarded successfully", debug_packet_id);
                         }
                     }
                 } // else not for this node and shouldn't be forwarded
@@ -923,9 +866,9 @@ impl Node {
     }
 
     /// Enqueue and send a WHOIS query for a given address, adding the supplied packet (if any) to the list to be processed on reply.
-    fn whois<HostSystemImpl: HostSystem + ?Sized>(
+    fn whois<Application: ApplicationLayer + ?Sized>(
         &self,
-        host_system: &HostSystemImpl,
+        app: &Application,
         address: Address,
         waiting_packet: Option<(Weak<Path>, PooledPacketBuffer)>,
         time_ticks: i64,
@@ -947,13 +890,13 @@ impl Node {
                 qi.retry_count += 1;
             }
         }
-        self.send_whois(host_system, &[address], time_ticks);
+        self.send_whois(app, &[address], time_ticks);
     }
 
     /// Send a WHOIS query to the current best root.
-    fn send_whois<HostSystemImpl: HostSystem + ?Sized>(&self, host_system: &HostSystemImpl, mut addresses: &[Address], time_ticks: i64) {
+    fn send_whois<Application: ApplicationLayer + ?Sized>(&self, app: &Application, mut addresses: &[Address], time_ticks: i64) {
         debug_assert!(!addresses.is_empty());
-        debug_event!(host_system, "[vl1] [v1] sending WHOIS for {}", {
+        debug_event!(app, "[vl1] [v1] sending WHOIS for {}", {
             let mut tmp = String::new();
             for a in addresses.iter() {
                 if !tmp.is_empty() {
@@ -966,7 +909,7 @@ impl Node {
         if let Some(root) = self.best_root() {
             while !addresses.is_empty() {
                 if !root
-                    .send(host_system, self, None, time_ticks, |packet| -> Result<(), Infallible> {
+                    .send(app, self, None, time_ticks, |packet| -> Result<(), Infallible> {
                         assert!(packet.append_u8(message_type::VL1_WHOIS).is_ok());
                         while !addresses.is_empty() && (packet.len() + ADDRESS_SIZE) <= UDP_DEFAULT_MTU {
                             assert!(packet.append_bytes_fixed(&addresses[0].to_bytes()).is_ok());
@@ -983,10 +926,10 @@ impl Node {
     }
 
     /// Called by Peer when an identity is received from another node, e.g. via OK(WHOIS).
-    pub(crate) fn handle_incoming_identity<HostSystemImpl: HostSystem + ?Sized, InnerProtocolImpl: InnerProtocol + ?Sized>(
+    pub(crate) fn handle_incoming_identity<Application: ApplicationLayer + ?Sized, Inner: InnerProtocolLayer + ?Sized>(
         &self,
-        host_system: &HostSystemImpl,
-        inner: &InnerProtocolImpl,
+        app: &Application,
+        inner: &Inner,
         received_identity: Identity,
         time_ticks: i64,
         authoritative: bool,
@@ -996,7 +939,7 @@ impl Node {
                 let mut whois_queue = self.whois_queue.lock().unwrap();
                 if let Some(qi) = whois_queue.get_mut(&received_identity.address) {
                     let address = received_identity.address;
-                    if host_system.should_respond_to(&received_identity) {
+                    if inner.should_respond_to(&received_identity) {
                         let mut peers = self.peers.write().unwrap();
                         if let Some(peer) = peers.get(&address).cloned().or_else(|| {
                             Peer::new(&self.identity, received_identity, time_ticks)
@@ -1007,7 +950,7 @@ impl Node {
                             for p in qi.v1_proto_waiting_packets.iter() {
                                 if let Some(path) = p.0.upgrade() {
                                     if let Ok(packet_header) = p.1.struct_at::<v1::PacketHeader>(0) {
-                                        peer.v1_proto_receive(self, host_system, inner, time_ticks, &path, packet_header, &p.1, &[]);
+                                        peer.v1_proto_receive(self, app, inner, time_ticks, &path, packet_header, &p.1, &[]);
                                     }
                                 }
                             }
@@ -1023,7 +966,8 @@ impl Node {
     ///
     /// This will only replace an existing root set with a newer one. It won't add a new root set, which must be
     /// done by an authorized user or administrator not just by a root.
-    pub(crate) fn on_remote_update_root_set(&self, received_from: &Identity, rs: Verified<RootSet>) {
+    #[allow(unused)]
+    pub(crate) fn on_remote_update_root_set(&self, received_from: &Identity, rs: Valid<RootSet>) {
         let mut roots = self.roots.write().unwrap();
         if let Some(entry) = roots.sets.get_mut(&rs.name) {
             if entry.members.iter().any(|m| m.identity.eq(received_from)) && rs.should_replace(entry) {
@@ -1034,25 +978,28 @@ impl Node {
     }
 
     /// Get the canonical Path object corresponding to an endpoint.
-    pub(crate) fn canonical_path<HostSystemImpl: HostSystem + ?Sized>(
+    pub(crate) fn canonical_path<Application: ApplicationLayer + ?Sized>(
         &self,
         ep: &Endpoint,
-        local_socket: &HostSystemImpl::LocalSocket,
-        local_interface: &HostSystemImpl::LocalInterface,
+        local_socket: &Application::LocalSocket,
+        local_interface: &Application::LocalInterface,
         time_ticks: i64,
     ) -> Arc<Path> {
         let paths = self.paths.read().unwrap();
-        if let Some(path) = paths.get::<PathMap<HostSystemImpl>>().get(&PathKey::Ref(ep, local_socket)) {
+        if let Some(path) = paths
+            .get::<PathMap<Application::LocalSocket>>()
+            .get(&PathKey::Ref(ep, local_socket))
+        {
             path.clone()
         } else {
             drop(paths);
             self.paths
                 .write()
                 .unwrap()
-                .get_mut::<PathMap<HostSystemImpl>>()
+                .get_mut::<PathMap<Application::LocalSocket>>()
                 .entry(PathKey::Copied(ep.clone(), local_socket.clone()))
                 .or_insert_with(|| {
-                    Arc::new(Path::new::<HostSystemImpl>(
+                    Arc::new(Path::new::<Application>(
                         ep.clone(),
                         local_socket.clone(),
                         local_interface.clone(),
@@ -1064,14 +1011,14 @@ impl Node {
     }
 }
 
-/// Key used to look up paths in a hash map
-/// This supports copied keys for storing and refs for fast lookup without having to copy anything.
-enum PathKey<'a, 'b, HostSystemImpl: HostSystem + ?Sized> {
-    Copied(Endpoint, HostSystemImpl::LocalSocket),
-    Ref(&'a Endpoint, &'b HostSystemImpl::LocalSocket),
+/// Key used to look up paths in a hash map efficiently.
+enum PathKey<'a, 'b, LocalSocket: Hash + PartialEq + Eq + Clone> {
+    Copied(Endpoint, LocalSocket),
+    Ref(&'a Endpoint, &'b LocalSocket),
 }
 
-impl<HostSystemImpl: HostSystem + ?Sized> Hash for PathKey<'_, '_, HostSystemImpl> {
+impl<LocalSocket: Hash + PartialEq + Eq + Clone> Hash for PathKey<'_, '_, LocalSocket> {
+    #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
             Self::Copied(ep, ls) => {
@@ -1086,7 +1033,8 @@ impl<HostSystemImpl: HostSystem + ?Sized> Hash for PathKey<'_, '_, HostSystemImp
     }
 }
 
-impl<HostSystemImpl: HostSystem + ?Sized> PartialEq for PathKey<'_, '_, HostSystemImpl> {
+impl<LocalSocket: Hash + PartialEq + Eq + Clone> PartialEq for PathKey<'_, '_, LocalSocket> {
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Copied(ep1, ls1), Self::Copied(ep2, ls2)) => ep1.eq(ep2) && ls1.eq(ls2),
@@ -1097,11 +1045,11 @@ impl<HostSystemImpl: HostSystem + ?Sized> PartialEq for PathKey<'_, '_, HostSyst
     }
 }
 
-impl<HostSystemImpl: HostSystem + ?Sized> Eq for PathKey<'_, '_, HostSystemImpl> {}
+impl<LocalSocket: Hash + PartialEq + Eq + Clone> Eq for PathKey<'_, '_, LocalSocket> {}
 
-impl<HostSystemImpl: HostSystem + ?Sized> PathKey<'_, '_, HostSystemImpl> {
+impl<LocalSocket: Hash + PartialEq + Eq + Clone> PathKey<'_, '_, LocalSocket> {
     #[inline(always)]
-    fn local_socket(&self) -> &HostSystemImpl::LocalSocket {
+    fn local_socket(&self) -> &LocalSocket {
         match self {
             Self::Copied(_, ls) => ls,
             Self::Ref(_, ls) => *ls,
@@ -1109,28 +1057,10 @@ impl<HostSystemImpl: HostSystem + ?Sized> PathKey<'_, '_, HostSystemImpl> {
     }
 
     #[inline(always)]
-    fn to_copied(&self) -> PathKey<'static, 'static, HostSystemImpl> {
+    fn to_copied(&self) -> PathKey<'static, 'static, LocalSocket> {
         match self {
-            Self::Copied(ep, ls) => PathKey::<'static, 'static, HostSystemImpl>::Copied(ep.clone(), ls.clone()),
-            Self::Ref(ep, ls) => PathKey::<'static, 'static, HostSystemImpl>::Copied((*ep).clone(), (*ls).clone()),
+            Self::Copied(ep, ls) => PathKey::<'static, 'static, LocalSocket>::Copied(ep.clone(), ls.clone()),
+            Self::Ref(ep, ls) => PathKey::<'static, 'static, LocalSocket>::Copied((*ep).clone(), (*ls).clone()),
         }
-    }
-}
-
-/// Dummy no-op inner protocol for debugging and testing.
-#[derive(Default)]
-pub struct DummyInnerProtocol;
-
-impl InnerProtocol for DummyInnerProtocol {}
-
-impl VL1AuthProvider for DummyInnerProtocol {
-    #[inline(always)]
-    fn should_respond_to(&self, _: &Verified<Identity>) -> bool {
-        true
-    }
-
-    #[inline(always)]
-    fn has_trust_relationship(&self, _: &Verified<Identity>) -> bool {
-        true
     }
 }

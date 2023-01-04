@@ -3,17 +3,25 @@
 use std::sync::Arc;
 
 use crate::protocol::PacketBuffer;
-use crate::vl1::{HostSystem, InnerProtocol, Node, PacketHandlerResult, Path, Peer};
+use crate::vl1::{ApplicationLayer, InnerProtocolLayer, Node, PacketHandlerResult, Path, Peer};
 
 pub trait SwitchInterface: Sync + Send {}
 
 pub struct Switch {}
 
 #[allow(unused_variables)]
-impl InnerProtocol for Switch {
-    fn handle_packet<HostSystemImpl: HostSystem + ?Sized>(
+impl InnerProtocolLayer for Switch {
+    fn should_respond_to(&self, id: &zerotier_crypto::typestate::Valid<crate::vl1::Identity>) -> bool {
+        true
+    }
+
+    fn has_trust_relationship(&self, id: &zerotier_crypto::typestate::Valid<crate::vl1::Identity>) -> bool {
+        true
+    }
+
+    fn handle_packet<Application: ApplicationLayer + ?Sized>(
         &self,
-        host_system: &HostSystemImpl,
+        app: &Application,
         node: &Node,
         source: &Arc<Peer>,
         source_path: &Arc<Path>,
@@ -26,9 +34,9 @@ impl InnerProtocol for Switch {
         PacketHandlerResult::NotHandled
     }
 
-    fn handle_error<HostSystemImpl: HostSystem + ?Sized>(
+    fn handle_error<Application: ApplicationLayer + ?Sized>(
         &self,
-        host_system: &HostSystemImpl,
+        app: &Application,
         node: &Node,
         source: &Arc<Peer>,
         source_path: &Arc<Path>,
@@ -43,9 +51,9 @@ impl InnerProtocol for Switch {
         PacketHandlerResult::NotHandled
     }
 
-    fn handle_ok<HostSystemImpl: HostSystem + ?Sized>(
+    fn handle_ok<Application: ApplicationLayer + ?Sized>(
         &self,
-        host_system: &HostSystemImpl,
+        app: &Application,
         node: &Node,
         source: &Arc<Peer>,
         source_path: &Arc<Path>,

@@ -10,9 +10,9 @@ use tokio_postgres::types::Type;
 use tokio_postgres::{Client, Statement};
 
 use zerotier_crypto::secure_eq;
-use zerotier_crypto::verified::Verified;
+use zerotier_crypto::typestate::Valid;
 
-use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress, NodeStorage};
+use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress};
 use zerotier_network_hypervisor::vl2::networkconfig::IpRoute;
 use zerotier_network_hypervisor::vl2::rule::Rule;
 use zerotier_network_hypervisor::vl2::NetworkId;
@@ -22,6 +22,7 @@ use zerotier_utils::tokio;
 use zerotier_utils::tokio::runtime::Handle;
 use zerotier_utils::tokio::sync::broadcast::{channel, Receiver, Sender};
 use zerotier_utils::tokio::task::JoinHandle;
+use zerotier_vl1_service::VL1DataStorage;
 
 use crate::database::*;
 use crate::model::{IpAssignmentPool, Member, Network, RequestLogItem};
@@ -136,7 +137,7 @@ impl<'a> Drop for ConnectionHolder<'a> {
 
 pub struct PostgresDatabase {
     local_controller_id_str: String,
-    local_identity: Verified<Identity>,
+    local_identity: Valid<Identity>,
     connections: Mutex<(Vec<Box<PostgresConnection>>, Sender<()>)>,
     postgres_path: String,
     runtime: Handle,
@@ -147,7 +148,7 @@ impl PostgresDatabase {
         runtime: Handle,
         postgres_path: String,
         num_connections: usize,
-        local_identity: Verified<Identity>,
+        local_identity: Valid<Identity>,
     ) -> Result<Arc<Self>, Error> {
         assert!(num_connections > 0);
         let (sender, _) = channel(4096);
@@ -187,14 +188,13 @@ impl PostgresDatabase {
     }
 }
 
-impl NodeStorage for PostgresDatabase {
-    fn load_node_identity(&self) -> Option<Verified<Identity>> {
+impl VL1DataStorage for PostgresDatabase {
+    fn load_node_identity(&self) -> Option<Valid<Identity>> {
         Some(self.local_identity.clone())
     }
 
-    fn save_node_identity(&self, _: &Verified<Identity>) {
-        eprintln!("FATAL: NodeStorage::save_node_identity() not implemented in PostgresDatabase, identity must be pregenerated");
-        panic!();
+    fn save_node_identity(&self, id: &Valid<Identity>) -> bool {
+        panic!("local identity saving not supported by PostgresDatabase")
     }
 }
 

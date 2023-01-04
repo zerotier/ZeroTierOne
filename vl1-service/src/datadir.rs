@@ -8,9 +8,11 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use zerotier_crypto::random::next_u32_secure;
-use zerotier_network_hypervisor::vl1::{Identity, NodeStorage, Verified};
+use zerotier_network_hypervisor::vl1::{Identity, Valid};
 use zerotier_utils::io::{fs_restrict_permissions, read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 use zerotier_utils::json::to_json_pretty;
+
+use crate::vl1service::VL1DataStorage;
 
 pub const AUTH_TOKEN_FILENAME: &'static str = "authtoken.secret";
 pub const IDENTITY_PUBLIC_FILENAME: &'static str = "identity.public";
@@ -20,34 +22,43 @@ pub const CONFIG_FILENAME: &'static str = "local.conf";
 const AUTH_TOKEN_DEFAULT_LENGTH: usize = 48;
 const AUTH_TOKEN_POSSIBLE_CHARS: &'static str = "0123456789abcdefghijklmnopqrstuvwxyz";
 
+pub fn load_node_identity(base_path: &Path) -> Option<Valid<Identity>> {
+    let id_data = read_limit(base_path.join(IDENTITY_SECRET_FILENAME), 4096);
+    if id_data.is_err() {
+        return None;
+    }
+    let id_data = Identity::from_str(String::from_utf8_lossy(id_data.unwrap().as_slice()).as_ref());
+    if id_data.is_err() {
+        return None;
+    }
+    Some(Valid::assume_verified(id_data.unwrap()))
+}
+
+pub fn save_node_identity(base_path: &Path, id: &Valid<Identity>) -> bool {
+    assert!(id.secret.is_some());
+    let id_secret_str = id.to_secret_string();
+    let id_public_str = id.to_string();
+    let secret_path = base_path.join(IDENTITY_SECRET_FILENAME);
+    if std::fs::write(&secret_path, id_secret_str.as_bytes()).is_err() {
+        return false;
+    }
+    assert!(fs_restrict_permissions(&secret_path));
+    return std::fs::write(base_path.join(IDENTITY_PUBLIC_FILENAME), id_public_str.as_bytes()).is_ok();
+}
+
 pub struct DataDir<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + DeserializeOwned + 'static> {
     pub base_path: PathBuf,
     config: RwLock<Arc<Config>>,
     authtoken: Mutex<String>,
 }
 
-impl<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + DeserializeOwned + 'static> NodeStorage for DataDir<Config> {
-    fn load_node_identity(&self) -> Option<Verified<Identity>> {
-        let id_data = read_limit(self.base_path.join(IDENTITY_SECRET_FILENAME), 4096);
-        if id_data.is_err() {
-            return None;
-        }
-        let id_data = Identity::from_str(String::from_utf8_lossy(id_data.unwrap().as_slice()).as_ref());
-        if id_data.is_err() {
-            return None;
-        }
-        Some(Verified::assume_verified(id_data.unwrap()))
+impl<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + DeserializeOwned + 'static> VL1DataStorage for DataDir<Config> {
+    fn load_node_identity(&self) -> Option<Valid<Identity>> {
+        load_node_identity(self.base_path.as_path())
     }
 
-    fn save_node_identity(&self, id: &Verified<Identity>) {
-        assert!(id.secret.is_some());
-        let id_secret_str = id.to_secret_string();
-        let id_public_str = id.to_string();
-        let secret_path = self.base_path.join(IDENTITY_SECRET_FILENAME);
-        // TODO: handle errors
-        let _ = std::fs::write(&secret_path, id_secret_str.as_bytes());
-        assert!(fs_restrict_permissions(&secret_path));
-        let _ = std::fs::write(self.base_path.join(IDENTITY_PUBLIC_FILENAME), id_public_str.as_bytes());
+    fn save_node_identity(&self, id: &Valid<Identity>) -> bool {
+        save_node_identity(self.base_path.as_path(), id)
     }
 }
 

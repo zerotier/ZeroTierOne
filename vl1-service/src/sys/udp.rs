@@ -42,7 +42,7 @@ fn socket_read_concurrency() -> usize {
     }
 }
 
-pub trait UdpPacketHandler: Send + Sync + 'static {
+pub trait UdpPacketHandler: Send + Sync {
     fn incoming_udp_packet(
         self: &Arc<Self>,
         time_ticks: i64,
@@ -189,7 +189,7 @@ impl BoundUdpPort {
     /// The caller can check the 'sockets' member variable after calling to determine which if any bindings were
     /// successful. Any errors that occurred are returned as tuples of (interface, address, error). The second vector
     /// returned contains newly bound sockets.
-    pub fn update_bindings<UdpPacketHandlerImpl: UdpPacketHandler + ?Sized>(
+    pub fn update_bindings<UdpPacketHandlerImpl: UdpPacketHandler + ?Sized + 'static>(
         &mut self,
         interface_prefix_blacklist: &HashSet<String>,
         cidr_blacklist: &HashSet<InetAddress>,

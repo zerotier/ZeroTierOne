@@ -8,7 +8,7 @@ pub mod poly1305;
 pub mod random;
 pub mod salsa;
 pub mod secret;
-pub mod verified;
+pub mod typestate;
 pub mod x25519;
 
 pub const ZEROES: [u8; 64] = [0_u8; 64];

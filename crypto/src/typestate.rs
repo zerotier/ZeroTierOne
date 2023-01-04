@@ -4,31 +4,25 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::ops::{Deref, DerefMut};
 
-/// A zero-overhead typestate indicating that a credential has been verified as valid.
-///
-/// What this means is obviously specific to the credential.
-///
-/// The purpose of this is to make code more self-documenting and make it harder to accidentally
-/// use an unverified/unvalidated credential (or other security critical object) where a verified
-/// one is required.
+/// Typestate indicating that a credential or other object has been internally validated.
 #[repr(transparent)]
-pub struct Verified<T>(T);
+pub struct Valid<T>(T);
 
-impl<T> AsRef<T> for Verified<T> {
+impl<T> AsRef<T> for Valid<T> {
     #[inline(always)]
     fn as_ref(&self) -> &T {
         &self.0
     }
 }
 
-impl<T> AsMut<T> for Verified<T> {
+impl<T> AsMut<T> for Valid<T> {
     #[inline(always)]
     fn as_mut(&mut self) -> &mut T {
         &mut self.0
     }
 }
 
-impl<T> Deref for Verified<T> {
+impl<T> Deref for Valid<T> {
     type Target = T;
 
     #[inline(always)]
@@ -37,14 +31,14 @@ impl<T> Deref for Verified<T> {
     }
 }
 
-impl<T> DerefMut for Verified<T> {
+impl<T> DerefMut for Valid<T> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl<T> Clone for Verified<T>
+impl<T> Clone for Valid<T>
 where
     T: Clone,
 {
@@ -54,7 +48,7 @@ where
     }
 }
 
-impl<T> PartialEq for Verified<T>
+impl<T> PartialEq for Valid<T>
 where
     T: PartialEq,
 {
@@ -64,9 +58,9 @@ where
     }
 }
 
-impl<T> Eq for Verified<T> where T: Eq {}
+impl<T> Eq for Valid<T> where T: Eq {}
 
-impl<T> Ord for Verified<T>
+impl<T> Ord for Valid<T>
 where
     T: Ord,
 {
@@ -76,7 +70,7 @@ where
     }
 }
 
-impl<T> PartialOrd for Verified<T>
+impl<T> PartialOrd for Valid<T>
 where
     T: PartialOrd,
 {
@@ -86,7 +80,7 @@ where
     }
 }
 
-impl<T> Hash for Verified<T>
+impl<T> Hash for Valid<T>
 where
     T: Hash,
 {
@@ -96,7 +90,7 @@ where
     }
 }
 
-impl<T> Debug for Verified<T>
+impl<T> Debug for Valid<T>
 where
     T: Debug,
 {
@@ -106,7 +100,7 @@ where
     }
 }
 
-impl<T> Verified<T> {
+impl<T> Valid<T> {
     /// Strip the Verified typestate off this object.
     #[inline(always)]
     pub fn unwrap(self) -> T {

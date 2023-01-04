@@ -18,12 +18,12 @@ pub use event::Event;
 pub use identity::Identity;
 pub use inetaddress::InetAddress;
 pub use mac::MAC;
-pub use node::{DummyInnerProtocol, HostSystem, InnerProtocol, Node, NodeStorage, PacketHandlerResult, VL1AuthProvider};
+pub use node::{ApplicationLayer, InnerProtocolLayer, Node, PacketHandlerResult};
 pub use path::Path;
 pub use peer::Peer;
 pub use rootset::{Root, RootSet};
 
-pub use zerotier_crypto::verified::Verified;
+pub use zerotier_crypto::typestate::Valid;
 
 #[cfg(feature = "debug_events")]
 #[allow(unused_macros)]

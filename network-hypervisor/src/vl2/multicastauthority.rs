@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::protocol;
 use crate::protocol::PacketBuffer;
-use crate::vl1::{Address, HostSystem, Identity, Node, PacketHandlerResult, Peer, MAC};
+use crate::vl1::{Address, ApplicationLayer, Identity, Node, PacketHandlerResult, Peer, MAC};
 use crate::vl2::{MulticastGroup, NetworkId};
 
 use zerotier_utils::buffer::OutOfBoundsError;
@@ -84,7 +84,7 @@ impl MulticastAuthority {
     }
 
     /// Call for VL2_MULTICAST_GATHER packets.
-    pub fn handle_vl2_multicast_gather<HostSystemImpl: HostSystem + ?Sized, Authenticator: Fn(NetworkId, &Identity) -> bool>(
+    pub fn handle_vl2_multicast_gather<HostSystemImpl: ApplicationLayer + ?Sized, Authenticator: Fn(NetworkId, &Identity) -> bool>(
         &self,
         auth: Authenticator,
         time_ticks: i64,

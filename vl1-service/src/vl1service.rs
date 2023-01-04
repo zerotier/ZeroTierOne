@@ -20,21 +20,22 @@ use crate::LocalSocket;
 /// Update UDP bindings every this many seconds.
 const UPDATE_UDP_BINDINGS_EVERY_SECS: usize = 10;
 
+/// Trait to implement to provide storage for VL1-related state information.
+pub trait VL1DataStorage: Sync + Send {
+    fn load_node_identity(&self) -> Option<Valid<Identity>>;
+    fn save_node_identity(&self, id: &Valid<Identity>) -> bool;
+}
+
 /// VL1 service that connects to the physical network and hosts an inner protocol like ZeroTier VL2.
 ///
 /// This is the "outward facing" half of a full ZeroTier stack on a normal system. It binds sockets,
 /// talks to the physical network, manages the vl1 node, and presents a templated interface for
 /// whatever inner protocol implementation is using it. This would typically be VL2 but could be
 /// a test harness or just the controller for a controller that runs stand-alone.
-pub struct VL1Service<
-    NodeStorageImpl: NodeStorage + ?Sized + 'static,
-    VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-    InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-> {
+pub struct VL1Service<Inner: InnerProtocolLayer + ?Sized + 'static> {
     state: RwLock<VL1ServiceMutableState>,
-    storage: Arc<NodeStorageImpl>,
-    vl1_auth_provider: Arc<VL1AuthProviderImpl>,
-    inner: Arc<InnerProtocolImpl>,
+    vl1_data_storage: Arc<dyn VL1DataStorage>,
+    inner: Arc<Inner>,
     buffer_pool: Arc<PacketBufferPool>,
     node_container: Option<Node>, // never None, set in new()
 }
@@ -46,18 +47,8 @@ struct VL1ServiceMutableState {
     running: bool,
 }
 
-impl<
-        NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
-{
-    pub fn new(
-        storage: Arc<NodeStorageImpl>,
-        vl1_auth_provider: Arc<VL1AuthProviderImpl>,
-        inner: Arc<InnerProtocolImpl>,
-        settings: VL1Settings,
-    ) -> Result<Arc<Self>, Box<dyn Error>> {
+impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
+    pub fn new(vl1_data_storage: Arc<dyn VL1DataStorage>, inner: Arc<Inner>, settings: VL1Settings) -> Result<Arc<Self>, Box<dyn Error>> {
         let mut service = Self {
             state: RwLock::new(VL1ServiceMutableState {
                 daemons: Vec::with_capacity(2),
@@ -65,8 +56,7 @@ impl<
                 settings,
                 running: true,
             }),
-            storage,
-            vl1_auth_provider,
+            vl1_data_storage,
             inner,
             buffer_pool: Arc::new(PacketBufferPool::new(
                 std::thread::available_parallelism().map_or(2, |c| c.get() + 2),
@@ -189,12 +179,7 @@ impl<
     }
 }
 
-impl<
-        NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > UdpPacketHandler for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
-{
+impl<Inner: InnerProtocolLayer + ?Sized + 'static> UdpPacketHandler for VL1Service<Inner> {
     #[inline(always)]
     fn incoming_udp_packet(
         self: &Arc<Self>,
@@ -215,16 +200,11 @@ impl<
     }
 }
 
-impl<
-        NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > HostSystem for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
-{
-    type Storage = NodeStorageImpl;
+impl<Inner: InnerProtocolLayer + ?Sized + 'static> ApplicationLayer for VL1Service<Inner> {
     type LocalSocket = crate::LocalSocket;
     type LocalInterface = crate::LocalInterface;
 
+    #[inline]
     fn event(&self, event: Event) {
         println!("{}", event.to_string());
         match event {
@@ -237,9 +217,14 @@ impl<
         socket.is_valid()
     }
 
-    #[inline(always)]
-    fn storage(&self) -> &Self::Storage {
-        self.storage.as_ref()
+    #[inline]
+    fn load_node_identity(&self) -> Option<Valid<Identity>> {
+        self.vl1_data_storage.load_node_identity()
+    }
+
+    #[inline]
+    fn save_node_identity(&self, id: &Valid<Identity>) -> bool {
+        self.vl1_data_storage.save_node_identity(id)
     }
 
     #[inline]
@@ -247,6 +232,7 @@ impl<
         self.buffer_pool.get()
     }
 
+    #[inline]
     fn wire_send(
         &self,
         endpoint: &Endpoint,
@@ -259,7 +245,7 @@ impl<
             Endpoint::IpUdp(address) => {
                 // This is the fast path -- the socket is known to the core so just send it.
                 if let Some(s) = local_socket {
-                    if let Some(s) = s.0.upgrade() {
+                    if let Some(s) = s.socket() {
                         s.send(address, data, packet_ttl);
                     } else {
                         return;
@@ -321,46 +307,7 @@ impl<
     }
 }
 
-impl<
-        NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > NodeStorage for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
-{
-    #[inline(always)]
-    fn load_node_identity(&self) -> Option<Verified<Identity>> {
-        self.storage.load_node_identity()
-    }
-
-    #[inline(always)]
-    fn save_node_identity(&self, id: &Verified<Identity>) {
-        self.storage.save_node_identity(id)
-    }
-}
-
-impl<
-        NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > VL1AuthProvider for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
-{
-    #[inline(always)]
-    fn should_respond_to(&self, id: &Verified<Identity>) -> bool {
-        self.vl1_auth_provider.should_respond_to(id)
-    }
-
-    #[inline(always)]
-    fn has_trust_relationship(&self, id: &Verified<Identity>) -> bool {
-        self.vl1_auth_provider.has_trust_relationship(id)
-    }
-}
-
-impl<
-        NodeStorageImpl: NodeStorage + ?Sized + 'static,
-        VL1AuthProviderImpl: VL1AuthProvider + ?Sized + 'static,
-        InnerProtocolImpl: InnerProtocol + ?Sized + 'static,
-    > Drop for VL1Service<NodeStorageImpl, VL1AuthProviderImpl, InnerProtocolImpl>
-{
+impl<Inner: InnerProtocolLayer + ?Sized + 'static> Drop for VL1Service<Inner> {
     fn drop(&mut self) {
         let mut state = self.state.write().unwrap();
         state.running = false;
