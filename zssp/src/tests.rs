@@ -17,7 +17,7 @@ mod tests {
         local_s: P384KeyPair,
         local_s_hash: [u8; 48],
         psk: Secret<64>,
-        session: Mutex<Option<Arc<Session<Box<TestHost>>>>>,
+        session: Mutex<Option<Arc<Session<TestHost>>>>,
         session_id_counter: Mutex<u64>,
         queue: Mutex<LinkedList<Vec<u8>>>,
         key_id: Mutex<[u8; 16]>,
@@ -43,9 +43,9 @@ mod tests {
         }
     }
 
-    impl ApplicationLayer for Box<TestHost> {
+    impl ApplicationLayer for TestHost {
         type Data = u32;
-        type SessionRef<'a> = Arc<Session<Box<TestHost>>>;
+        type SessionRef<'a> = Arc<Session<TestHost>>;
         type IncomingPacketBuffer = Vec<u8>;
         type RemoteAddress = u32;
 
@@ -98,10 +98,10 @@ mod tests {
         let mut psk: Secret<64> = Secret::default();
         random::fill_bytes_secure(&mut psk.0);
 
-        let alice_host = Box::new(TestHost::new(psk.clone(), "alice", "bob"));
-        let bob_host = Box::new(TestHost::new(psk.clone(), "bob", "alice"));
-        let alice_rc: Box<ReceiveContext<Box<TestHost>>> = Box::new(ReceiveContext::new(&alice_host));
-        let bob_rc: Box<ReceiveContext<Box<TestHost>>> = Box::new(ReceiveContext::new(&bob_host));
+        let alice_host = TestHost::new(psk.clone(), "alice", "bob");
+        let bob_host = TestHost::new(psk.clone(), "bob", "alice");
+        let alice_rc: ReceiveContext<TestHost> = ReceiveContext::new(&alice_host);
+        let bob_rc: ReceiveContext<TestHost> = ReceiveContext::new(&bob_host);
 
         //println!("zssp: size of session (bytes): {}", std::mem::size_of::<Session<Box<TestHost>>>());
 
