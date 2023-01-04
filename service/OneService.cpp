@@ -78,6 +78,7 @@
 #include "../osdep/MacDNSHelper.hpp"
 #elif defined(__WINDOWS__)
 #include "../osdep/WinDNSHelper.hpp"
+#include "../osdep/WinFWHelper.hpp"
 #endif
 
 #ifdef ZT_USE_SYSTEM_HTTP_PARSER
@@ -847,6 +848,9 @@ public:
 
 	virtual ~OneServiceImpl()
 	{
+#ifdef __WINDOWS__ 
+		WinFWHelper::removeICMPRules();
+#endif
 		_binder.closeAll(_phy);
 		_phy.close(_localControlSocket4);
 		_phy.close(_localControlSocket6);
@@ -854,6 +858,8 @@ public:
 #if ZT_VAULT_SUPPORT
 		curl_global_cleanup();
 #endif
+
+
 
 #ifdef ZT_USE_MINIUPNPC
 		delete _portMapper;
@@ -898,6 +904,7 @@ public:
 				cb.pathLookupFunction = SnodePathLookupFunction;
 				_node = new Node(this,(void *)0,&cb,OSUtils::now());
 			}
+
 
 			// local.conf
 			readLocalSettings();
@@ -2263,6 +2270,10 @@ public:
 				if (std::find(newManagedIps.begin(),newManagedIps.end(),*ip) == newManagedIps.end()) {
 					if (!n.tap()->removeIp(*ip))
 						fprintf(stderr,"ERROR: unable to remove ip address %s" ZT_EOL_S, ip->toString(ipbuf));
+
+					#ifdef __WINDOWS__
+					WinFWHelper::removeICMPRule(*ip, n.config().nwid);
+					#endif
 				}
 			}
 
@@ -2270,6 +2281,10 @@ public:
 				if (std::find(n.managedIps().begin(),n.managedIps().end(),*ip) == n.managedIps().end()) {
 					if (!n.tap()->addIp(*ip))
 						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString(ipbuf));
+
+					#ifdef __WINDOWS__
+					WinFWHelper::newICMPRule(*ip, n.config().nwid);
+					#endif
 				}
 			}
 
@@ -2750,8 +2765,10 @@ public:
 					n.tap().reset();
 					_nets.erase(nwid);
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
-					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))
+					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY) && (winInstanceId.length() > 0)) {
 						WindowsEthernetTap::deletePersistentTapDevice(winInstanceId.c_str());
+						WinFWHelper::removeICMPRules(nwid);
+					}
 #endif
 					if (op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY) {
 						char nlcpath[256];
