@@ -45,7 +45,7 @@ mod tests {
 
     impl ApplicationLayer for Box<TestHost> {
         type Data = u32;
-        type SessionRef = Arc<Session<Box<TestHost>>>;
+        type SessionRef<'a> = Arc<Session<Box<TestHost>>>;
         type IncomingPacketBuffer = Vec<u8>;
         type RemoteAddress = u32;
 
@@ -67,7 +67,7 @@ mod tests {
             P384PublicKey::from_bytes(static_public)
         }
 
-        fn lookup_session(&self, local_session_id: SessionId) -> Option<Self::SessionRef> {
+        fn lookup_session<'a>(&self, local_session_id: SessionId) -> Option<Self::SessionRef<'a>> {
             self.session.lock().unwrap().as_ref().and_then(|s| {
                 if s.id == local_session_id {
                     Some(s.clone())
