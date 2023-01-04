@@ -209,7 +209,7 @@ mod tests {
                                 )
                                 .is_ok());
                         }
-                        if (test_loop % 8) == 0 && test_loop >= 8 && host.this_name.eq("alice") {
+                        if (test_loop % 8) == 0 && test_loop >= 8 {
                             session.service(host, send_to_other, &[], mtu_buffer.len(), test_loop as i64, true);
                         }
                     }
@@ -218,14 +218,53 @@ mod tests {
         }
     }
 
+
+    #[inline(always)]
+    pub fn xorshift64(x: &mut u64) -> u32 {
+        *x ^= x.wrapping_shl(13);
+        *x ^= x.wrapping_shr(7);
+        *x ^= x.wrapping_shl(17);
+        *x as u32
+    }
     #[test]
     fn counter_window() {
-        let w = CounterWindow::new(0xffffffff);
-        assert!(!w.message_received(0xffffffff));
-        assert!(w.message_received(0));
-        assert!(w.message_received(1));
-        assert!(w.message_received(COUNTER_MAX_DELTA * 2));
-        assert!(!w.message_received(0xffffffff));
-        assert!(w.message_received(0xfffffffe));
+        let mut rng = 844632;
+        let mut counter = 1u32;
+        let mut history = Vec::new();
+
+        let w = CounterWindow::new();
+        for _i in 0..1000000 {
+            let p = xorshift64(&mut rng) as f32/(u32::MAX as f32 + 1.0);
+            let c;
+            if p < 0.5 {
+                let r = xorshift64(&mut rng);
+                c = counter + (r%(COUNTER_MAX_ALLOWED_OOO - 1) as u32 + 1);
+            } else if p < 0.8 {
+                counter = counter + (1);
+                c = counter;
+            } else if p < 0.9 {
+                if history.len() > 0 {
+                    let idx = xorshift64(&mut rng) as usize%history.len();
+                    let c = history[idx];
+                    assert!(!w.message_authenticated(c));
+                }
+                continue;
+            } else if p < 0.999 {
+                c = xorshift64(&mut rng);
+                w.message_received(c);
+                continue;
+            } else {
+                w.reset_for_new_key_offer();
+                counter = 1u32;
+                history = Vec::new();
+                continue;
+            }
+            if history.contains(&c) {
+                assert!(!w.message_authenticated(c));
+            } else {
+                assert!(w.message_authenticated(c));
+                history.push(c);
+            }
+        }
     }
 }
