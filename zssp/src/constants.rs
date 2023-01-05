@@ -79,9 +79,8 @@ pub(crate) const COUNTER_MAX_ALLOWED_OOO: usize = 16;
 
 // Packet types can range from 0 to 15 (4 bits) -- 0-3 are defined and 4-15 are reserved for future use
 pub(crate) const PACKET_TYPE_DATA: u8 = 0;
-pub(crate) const PACKET_TYPE_NOP: u8 = 1;
-pub(crate) const PACKET_TYPE_INITIAL_KEY_OFFER: u8 = 2; // "alice"
-pub(crate) const PACKET_TYPE_KEY_COUNTER_OFFER: u8 = 3; // "bob"
+pub(crate) const PACKET_TYPE_INITIAL_KEY_OFFER: u8 = 1; // "alice"
+pub(crate) const PACKET_TYPE_KEY_COUNTER_OFFER: u8 = 2; // "bob"
 
 // Key usage labels for sub-key derivation using NIST-style KBKDF (basically just HMAC KDF).
 pub(crate) const KBKDF_KEY_USAGE_LABEL_HMAC: u8 = b'M'; // HMAC-SHA384 authentication for key exchanges

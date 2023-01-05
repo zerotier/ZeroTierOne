@@ -1,5 +1,6 @@
 mod applicationlayer;
 mod counter;
+mod error;
 mod sessionid;
 mod tests;
 mod zssp;
@@ -7,5 +8,6 @@ mod zssp;
 pub mod constants;
 
 pub use crate::applicationlayer::ApplicationLayer;
+pub use crate::error::Error;
 pub use crate::sessionid::SessionId;
-pub use crate::zssp::{Error, ReceiveContext, ReceiveResult, Session};
+pub use crate::zssp::{ReceiveContext, ReceiveResult, Session};
