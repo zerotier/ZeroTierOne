@@ -19,7 +19,7 @@ pub trait ApplicationLayer: Sized {
     type Data;
 
     /// Arbitrary object that dereferences to the session, such as Arc<Session<Self>>.
-    type SessionRef: Deref<Target = Session<Self>>;
+    type SessionRef<'a>: Deref<Target = Session<Self>>;
 
     /// A buffer containing data read from the network that can be cached.
     ///
@@ -57,16 +57,15 @@ pub trait ApplicationLayer: Sized {
     fn extract_s_public_from_raw(static_public: &[u8]) -> Option<P384PublicKey>;
 
     /// Look up a local session by local session ID or return None if not found.
-    fn lookup_session(&self, local_session_id: SessionId) -> Option<Self::SessionRef>;
+    fn lookup_session<'a>(&self, local_session_id: SessionId) -> Option<Self::SessionRef<'a>>;
 
     /// Rate limit and check an attempted new session (called before accept_new_session).
     fn check_new_session(&self, rc: &ReceiveContext<Self>, remote_address: &Self::RemoteAddress) -> bool;
 
     /// Check whether a new session should be accepted.
     ///
-    /// On success a tuple of local session ID, static secret, and associated object is returned. The
-    /// static secret is whatever results from agreement between the local and remote static public
-    /// keys.
+    /// On success a tuple of local session ID, psk, and associated object is returned.
+    /// Set psk to all zeros if one is not in use with the remote party.
     ///
     /// When `accept_new_session` is called, `remote_static_public` and `remote_metadata` have not yet been
     /// authenticated. As such avoid mutating state until OkNewSession(Session) is returned, as the connection

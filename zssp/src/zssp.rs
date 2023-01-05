@@ -577,7 +577,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
         canonical_header_bytes: &[u8; 12],
         fragments: &[Application::IncomingPacketBuffer],
         packet_type: u8,
-        session: Option<Application::SessionRef>,
+        session: Option<Application::SessionRef<'a>>,
         mtu: usize,
         current_time: i64,
     ) -> Result<ReceiveResult<'a, Application>, Error> {
