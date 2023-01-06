@@ -109,3 +109,6 @@ Users behind certain types of firewalls and "symmetric" NAT devices may not able
 If a firewall between you and the Internet blocks ZeroTier's UDP traffic, you will fall back to last-resort TCP tunneling to rootservers over port 443 (https impersonation). This will work almost anywhere but is *very slow* compared to UDP or direct peer to peer connectivity.
 
 Additional help can be found in our [knowledge base](https://zerotier.atlassian.net/wiki/spaces/SD/overview).
+
+=)
+
