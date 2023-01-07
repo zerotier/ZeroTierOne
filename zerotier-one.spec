@@ -1,5 +1,5 @@
 Name:           zerotier-one
-Version:        1.10.1
+Version:        1.10.2
 Release:        1%{?dist}
 Summary:        ZeroTier network virtualization service
 
@@ -54,6 +54,12 @@ Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 # Amazon
 
 %if "%{?dist}" == ".amzn2"
+BuildRequires:  systemd openssl-devel
+Requires:       systemd openssl
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+%endif
+
+%if "%{?dist}" == ".amzn2022"
 BuildRequires:  systemd openssl-devel
 Requires:       systemd openssl
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
@@ -131,6 +137,9 @@ chmod 0755 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 %endif
 
 %changelog
+* Mon Oct 13 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.10.2
+- see https://github.com/zerotier/ZeroTierOne for release notes
+
 * Mon Jun 27 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.10.1
 - see https://github.com/zerotier/ZeroTierOne for release notes
 

@@ -18,6 +18,8 @@ RUN apt -y install \
     libssl-dev \
     postgresql-client \
     postgresql-client-common \
-    curl
+    curl \
+    google-perftools \
+    libgoogle-perftools-dev
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y

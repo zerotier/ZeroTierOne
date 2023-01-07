@@ -50,7 +50,8 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	_lastPingCheck(0),
 	_lastGratuitousPingCheck(0),
 	_lastHousekeepingRun(0),
-	_lastMemoizedTraceSettings(0)
+	_lastMemoizedTraceSettings(0),
+	_lowBandwidthMode(false)
 {
 	if (callbacks->version != 0)
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
@@ -202,6 +203,14 @@ public:
 	{
 		const std::vector<InetAddress> *const alwaysContactEndpoints = _alwaysContact.get(p->address());
 		if (alwaysContactEndpoints) {
+
+			// Contact upstream peers as infrequently as possible
+			ZT_PeerRole role = RR->topology->role(p->address());
+			int roleBasedTimerScale = (role == ZT_PEER_ROLE_LEAF) ? 2 : 16;
+			if ((RR->node->now() - p->lastSentFullHello()) <= (ZT_PATH_HEARTBEAT_PERIOD * roleBasedTimerScale)) {
+				return;
+			}
+
 			const unsigned int sent = p->doPingAndKeepalive(_tPtr,_now);
 			bool contacted = (sent != 0);
 
@@ -262,7 +271,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 		}
 	}
 
-	unsigned long timeUntilNextPingCheck = ZT_PING_CHECK_INVERVAL;
+	unsigned long timeUntilNextPingCheck = _lowBandwidthMode ? (ZT_PING_CHECK_INVERVAL * 5) : ZT_PING_CHECK_INVERVAL;
 	const int64_t timeSinceLastPingCheck = now - _lastPingCheck;
 	if (timeSinceLastPingCheck >= timeUntilNextPingCheck) {
 		try {
@@ -309,6 +318,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 
 			// Get peers we should stay connected to according to network configs
 			// Also get networks and whether they need config so we only have to do one pass over networks
+			int timerScale = _lowBandwidthMode ? 64 : 1;
 			std::vector< std::pair< SharedPtr<Network>,bool > > networkConfigNeeded;
 			{
 				Mutex::Lock l(_networks_m);
@@ -317,7 +327,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 				SharedPtr<Network> *network = (SharedPtr<Network> *)0;
 				while (i.next(nwid,network)) {
 					(*network)->config().alwaysContactAddresses(alwaysContact);
-					networkConfigNeeded.push_back( std::pair< SharedPtr<Network>,bool >(*network,(((now - (*network)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!(*network)->hasConfig()))) );
+					networkConfigNeeded.push_back( std::pair< SharedPtr<Network>,bool >(*network,(((now - (*network)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY * timerScale)||(!(*network)->hasConfig()))) );
 				}
 			}
 
@@ -336,9 +346,12 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 
 			// Refresh network config or broadcast network updates to members as needed
 			for(std::vector< std::pair< SharedPtr<Network>,bool > >::const_iterator n(networkConfigNeeded.begin());n!=networkConfigNeeded.end();++n) {
-				if (n->second)
+				if (n->second) {
 					n->first->requestConfiguration(tptr);
-				n->first->sendUpdatesToMembers(tptr);
+				}
+				if (! _lowBandwidthMode) {
+					n->first->sendUpdatesToMembers(tptr);
+				}
 			}
 
 			// Update online status, post status change as event
@@ -496,15 +509,30 @@ ZT_PeerList *Node::peers() const
 		SharedPtr<Path> bestp(pi->second->getAppropriatePath(_now,false));
 		p->pathCount = 0;
 		for(std::vector< SharedPtr<Path> >::iterator path(paths.begin());path!=paths.end();++path) {
-			memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
-			p->paths[p->pathCount].localSocket = (*path)->localSocket();
-			p->paths[p->pathCount].lastSend = (*path)->lastOut();
-			p->paths[p->pathCount].lastReceive = (*path)->lastIn();
-			p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
-			p->paths[p->pathCount].expired = 0;
-			p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
-			p->paths[p->pathCount].scope = (*path)->ipScope();
-			++p->pathCount;
+			if((*path)->valid()) {
+				memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
+				p->paths[p->pathCount].localSocket = (*path)->localSocket();
+				p->paths[p->pathCount].lastSend = (*path)->lastOut();
+				p->paths[p->pathCount].lastReceive = (*path)->lastIn();
+				p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
+				p->paths[p->pathCount].expired = 0;
+				p->paths[p->pathCount].preferred = ((*path) == bestp) ? 1 : 0;
+				p->paths[p->pathCount].scope = (*path)->ipScope();
+				if (pi->second->bond()) {
+					p->paths[p->pathCount].latencyMean = (*path)->latencyMean();
+					p->paths[p->pathCount].latencyVariance = (*path)->latencyVariance();
+					p->paths[p->pathCount].packetLossRatio = (*path)->packetLossRatio();
+					p->paths[p->pathCount].packetErrorRatio = (*path)->packetErrorRatio();
+					p->paths[p->pathCount].relativeQuality = (*path)->relativeQuality();
+					p->paths[p->pathCount].linkSpeed = (*path)->givenLinkSpeed();
+					p->paths[p->pathCount].bonded = (*path)->bonded();
+					p->paths[p->pathCount].eligible = (*path)->eligible();
+					std::string ifname = std::string((*path)->ifname());
+					memset(p->paths[p->pathCount].ifname, 0x0, std::min((int)ifname.length() + 1, ZT_MAX_PHYSIFNAME));
+					memcpy(p->paths[p->pathCount].ifname, ifname.c_str(), std::min((int)ifname.length(), ZT_MAX_PHYSIFNAME));
+				}
+				++p->pathCount;
+			}
 		}
 		if (pi->second->bond()) {
 			p->isBonded = pi->second->bond();

@@ -5,7 +5,7 @@ ZeroTier One SDK - Android JNI Wrapper
 Building
 -----
 
-Reqires:
+Requires:
 
 * JDK
 * ANT

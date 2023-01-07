@@ -1,5 +1,5 @@
 ARG PLATFORM
-FROM registry.sean.farm/${PLATFORM}-builder as stage
+FROM 084037375216.dkr.ecr.us-east-2.amazonaws.com/${PLATFORM}-builder as stage
 WORKDIR /root/rpmbuild/BUILD
 COPY . .
 RUN make redhat

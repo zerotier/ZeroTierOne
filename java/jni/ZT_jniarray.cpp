@@ -5,6 +5,7 @@
 #include "ZT_jniarray.h"
 #include <vector>
 #include <string>
+#include <cassert>
 
 jclass java_util_ArrayList;
 jmethodID java_util_ArrayList_;

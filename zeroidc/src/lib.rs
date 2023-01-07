@@ -354,15 +354,21 @@ impl ZeroIDC {
                                             }
                                             None => {
                                                 println!("no id token?!?");
+                                                (*inner_local.lock().unwrap()).exp_time = 0;
+                                                (*inner_local.lock().unwrap()).running = false;
                                             }
                                         }
                                     }
                                     Err(e) => {
                                         println!("token error: {}", e);
+                                        (*inner_local.lock().unwrap()).exp_time = 0;
+                                        (*inner_local.lock().unwrap()).running = false;
                                     }
                                 }
                             } else {
                                 println!("token response??");
+                                (*inner_local.lock().unwrap()).exp_time = 0;
+                                (*inner_local.lock().unwrap()).running = false;
                             }
                         } else {
                             #[cfg(debug_assertions)]
@@ -370,6 +376,8 @@ impl ZeroIDC {
                         }
                     } else {
                         println!("no refresh token?");
+                        (*inner_local.lock().unwrap()).exp_time = 0;
+                        (*inner_local.lock().unwrap()).running = false;
                     }
 
                     sleep(Duration::from_secs(1));
@@ -377,6 +385,7 @@ impl ZeroIDC {
                         running = (*inner_local.lock().unwrap()).running;
                     }
                 }
+                // end run loop
 
                 println!("thread done!");
                 (*inner_local.lock().unwrap()).running = false;
@@ -489,7 +498,8 @@ impl ZeroIDC {
                             let n = match i.nonce.clone() {
                                 Some(n) => n,
                                 None => {
-                                    println!("no noce");
+                                    println!("no nonce");
+                                    i.running = false;
                                     return None;
                                 }
                             };
@@ -498,6 +508,7 @@ impl ZeroIDC {
                                 Some(t) => t,
                                 None => {
                                     println!("no id token");
+                                    i.running = false;
                                     return None;
                                 }
                             };
@@ -506,6 +517,7 @@ impl ZeroIDC {
                                 Ok(c) => c,
                                 Err(_e) => {
                                     println!("no claims");
+                                    i.running = false;
                                     return None;
                                 }
                             };
@@ -514,6 +526,7 @@ impl ZeroIDC {
                                 Ok(s) => s,
                                 Err(_) => {
                                     println!("no signing algorithm");
+                                    i.running = false;
                                     return None;
                                 }
                             };
@@ -526,12 +539,14 @@ impl ZeroIDC {
                                     Ok(h) => h,
                                     Err(e) => {
                                         println!("Error hashing access token: {}", e);
+                                        i.running = false;
                                         return None;
                                     }
                                 };
 
                                 if actual_hash != *expected_hash {
                                     println!("token hash error");
+                                    i.running = false;
                                     return None;
                                 }
                             }
@@ -540,7 +555,7 @@ impl ZeroIDC {
                         Err(e) => {
                             println!("token response error: {:?}", e.to_string());
                             println!("\t {:?}", e.source());
-
+                            i.running = false;
                             None
                         }
                     }
@@ -625,10 +640,12 @@ impl ZeroIDC {
 
                                     Ok(bytes)
                                 } else if res.status() == 402 {
-                                        Err(SSOExchangeError::new(
-                                            "additional license seats required. Please contact your network administrator.".to_string(),
-                                        ))
+                                    i.running = false;
+                                    Err(SSOExchangeError::new(
+                                        "additional license seats required. Please contact your network administrator.".to_string(),
+                                    ))
                                 } else {
+                                    i.running = false;
                                     Err(SSOExchangeError::new(
                                         "error from central endpoint".to_string(),
                                     ))
@@ -640,20 +657,24 @@ impl ZeroIDC {
                                 println!("Status: {}", res.status().unwrap());
                                 println!("Post error: {}", res);
                                 i.exp_time = 0;
+                                i.running = false;
                                 Err(SSOExchangeError::new(
                                     "error from central endpoint".to_string(),
                                 ))
                             }
                         }
                     } else {
+                        i.running = false;
                         Err(SSOExchangeError::new(
                             "error splitting state token".to_string(),
                         ))
                     }
                 } else {
+                    i.running = false;
                     Err(SSOExchangeError::new("invalid token response".to_string()))
                 }
             } else {
+                i.running = false;
                 Err(SSOExchangeError::new("invalid pkce verifier".to_string()))
             }
         });

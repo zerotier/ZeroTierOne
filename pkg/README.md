@@ -1,4 +1,4 @@
 Third-party packaging
 =====
 
-Builds packages for various embedded devices and appliances and platforms
+For package documentation see the `Devices` section here: [docs.zerotier.com](https://docs.zerotier.com/)

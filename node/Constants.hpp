@@ -390,7 +390,7 @@
 /**
  * Number of samples to consider when processing real-time path statistics
  */
-#define ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE 32
+#define ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE 64
 
 /**
  * Max allowable time spent in any queue (in ms)
@@ -517,7 +517,7 @@
 #define ZT_ACK_CUTOFF_LIMIT 128
 #define ZT_ACK_DRAINAGE_DIVISOR (1000 / ZT_ACK_CUTOFF_LIMIT)
 
-#define ZT_BOND_DEFAULT_REFRCTORY_PERIOD 8000
+#define ZT_BOND_DEFAULT_REFRACTORY_PERIOD 8000
 #define ZT_BOND_MAX_REFRACTORY_PERIOD 600000
 
 /**

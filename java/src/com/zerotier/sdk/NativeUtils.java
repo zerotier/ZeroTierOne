@@ -43,7 +43,7 @@ public class NativeUtils {
         String[] parts = path.split("/");
         String filename = (parts.length > 1) ? parts[parts.length - 1] : null;
  
-        // Split filename to prexif and suffix (extension)
+        // Split filename to prefix and suffix (extension)
         String prefix = "";
         String suffix = null;
         if (filename != null) {

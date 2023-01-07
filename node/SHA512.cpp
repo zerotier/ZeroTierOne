@@ -1,5 +1,7 @@
 // This code is public domain, taken from a PD crypto source file on GitHub.
 
+#include <algorithm>
+
 #include "SHA512.hpp"
 #include "Utils.hpp"
 

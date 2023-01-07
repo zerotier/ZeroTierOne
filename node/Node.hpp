@@ -35,6 +35,7 @@
 #include "NetworkController.hpp"
 #include "Hashtable.hpp"
 #include "Bond.hpp"
+#include "SelfAwareness.hpp"
 
 // Bit mask for "expecting reply" hash
 #define ZT_EXPECTING_REPLIES_BUCKET_MASK1 255
@@ -187,6 +188,8 @@ public:
 
 	inline const Identity &identity() const { return _RR.identity; }
 
+	inline const std::vector<InetAddress> SurfaceAddresses() const { return _RR.sa->whoami(); }
+
 	inline Bond *bondController() const { return _RR.bc; }
 
 	/**
@@ -266,6 +269,16 @@ public:
 		_stats.inVerbBytes[v] += (uint64_t)bytes;
 	}
 
+	inline void setLowBandwidthMode(bool isEnabled)
+	{
+		_lowBandwidthMode = isEnabled;
+	}
+
+	inline bool lowBandwidthModeEnabled()
+	{
+		return _lowBandwidthMode;
+	}
+
 private:
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
@@ -313,6 +326,7 @@ private:
 	int64_t _lastMemoizedTraceSettings;
 	volatile int64_t _prngState[2];
 	bool _online;
+	bool _lowBandwidthMode;
 };
 
 } // namespace ZeroTier

@@ -107,7 +107,7 @@ namespace {
         enum ZT_VirtualNetworkConfigOperation operation,
         const ZT_VirtualNetworkConfig *config)
     {
-        LOGV("VritualNetworkConfigFunctionCallback");
+        LOGV("VirtualNetworkConfigFunctionCallback");
         JniRef *ref = (JniRef*)userData;
         JNIEnv *env = NULL;
         ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
@@ -573,7 +573,26 @@ namespace {
             return true;
         }
 
-        struct sockaddr_storage nullAddress = {0};
+        //
+        // was:
+        // struct sockaddr_storage nullAddress = {0};
+        //
+        // but was getting this warning:
+        // warning: suggest braces around initialization of subobject
+        //
+        // when building ZeroTierOne
+        //
+        struct sockaddr_storage nullAddress;
+
+        //
+        // It is possible to assume knowledge about internals of sockaddr_storage and construct
+        // correct 0-initializer, but it is simpler to just treat sockaddr_storage as opaque and
+        // use memset here to fill with 0
+        //
+        // This is also done in InetAddress.hpp for InetAddress
+        //
+        memset(&nullAddress, 0, sizeof(sockaddr_storage));
+
         jobject remoteAddressObj = NULL;
 
         if(memcmp(remoteAddress, &nullAddress, sizeof(sockaddr_storage)) != 0)
@@ -1025,7 +1044,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         inetAddressClass, "getAddress", "()[B");
     if(getAddressMethod == NULL)
     {
-        // cant find InetAddress.getAddres()
+        // cant find InetAddress.getAddress()
         return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
     }
 

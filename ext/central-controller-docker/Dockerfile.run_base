@@ -1,8 +1,14 @@
 FROM ubuntu:jammy
+
 RUN apt update && apt upgrade -y
+
 RUN apt -y install \
     postgresql-client \
     postgresql-client-common \
     libjemalloc2 \
     libpq5 \
-    curl
+    curl \
+    binutils \
+    linux-tools-gke \
+    perf-tools-unstable \
+    google-perftools

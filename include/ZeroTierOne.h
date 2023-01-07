@@ -87,6 +87,11 @@ extern "C" {
 #define ZT_MIN_PHYSMTU 1400
 
 /**
+ * Maximum physical interface name length. This number is gigantic because of Windows.
+ */
+#define ZT_MAX_PHYSIFNAME 256
+
+/**
  * Default UDP payload size (physical path MTU) not including UDP and IP overhead
  *
  * This is small enough for PPPoE and for Google Cloud's bizarrely tiny MTUs.
@@ -1203,7 +1208,7 @@ typedef struct
 	bool ssoEnabled;
 
 	/**
-	 * SSO verison
+	 * SSO version
 	 */
 	uint64_t ssoVersion;
 
@@ -1318,34 +1323,19 @@ typedef struct
 	float packetErrorRatio;
 
 	/**
-	 * Mean throughput
-	 */
-	uint64_t throughputMean;
-
-	/**
-	 * Maximum observed throughput
-	 */
-	float throughputMax;
-
-	/**
-	 * Throughput variance
-	 */
-	float throughputVariance;
-
-	/**
 	 * Address scope
 	 */
 	uint8_t scope;
 
 	/**
-	 * Percentage of traffic allocated to this path
+	 * Relative quality value
 	 */
-	float allocation;
+	float relativeQuality;
 
 	/**
-	 * Name of physical interface (for monitoring)
+	 * Name of physical interface this path resides on
 	 */
-	char ifname[32];
+	char ifname[ZT_MAX_PHYSIFNAME];
 
 	uint64_t localSocket;
 
@@ -1353,6 +1343,21 @@ typedef struct
 	 * Is path expired?
 	 */
 	int expired;
+
+	/**
+	 * Whether this path is currently included in the bond
+	 */
+	uint8_t bonded;
+
+	/**
+	 * Whether this path is currently eligible to be used in a bond
+	 */
+	uint8_t eligible;
+
+	/**
+	 * The capacity of this link (as given to bonding layer)
+	 */
+	uint32_t linkSpeed;
 
 	/**
 	 * Is path preferred?
@@ -2061,7 +2066,7 @@ ZT_SDK_API int ZT_Node_sendUserMessage(ZT_Node *node,void *tptr,uint64_t dest,ui
  * NetworkConfigMaster base class in node/. No type checking is performed,
  * so a pointer to anything else will result in a crash.
  *
- * @param node ZertTier One node
+ * @param node ZeroTier One node
  * @param networkConfigMasterInstance Instance of NetworkConfigMaster C++ class or NULL to disable
  * @return OK (0) or error code if a fatal error condition has occurred
  */

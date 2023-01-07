@@ -113,7 +113,7 @@ MemberNotificationReceiver::MemberNotificationReceiver(PostgreSQL *p, pqxx::conn
 	: pqxx::notification_receiver(c, channel)
 	, _psql(p)
 {
-	fprintf(stderr, "initialize MemberNotificaitonReceiver\n");
+	fprintf(stderr, "initialize MemberNotificationReceiver\n");
 }
 	
 
@@ -140,7 +140,7 @@ NetworkNotificationReceiver::NetworkNotificationReceiver(PostgreSQL *p, pqxx::co
 }
 
 void NetworkNotificationReceiver::operator() (const std::string &payload, int packend_pid) {
-	fprintf(stderr, "Network Notificaiton received: %s\n", payload.c_str());
+	fprintf(stderr, "Network Notification received: %s\n", payload.c_str());
 	json tmp(json::parse(payload));
 	json &ov = tmp["old_val"];
 	json &nv = tmp["new_val"];
@@ -185,7 +185,7 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 	fprintf(stderr, "ZT_SSO_PSK: %s\n", ssoPskHex);
 #endif
 	if (ssoPskHex) {
-		// SECURITY: note that ssoPskHex will always be null-terminated if libc acatually
+		// SECURITY: note that ssoPskHex will always be null-terminated if libc actually
 		// returns something non-NULL. If the hex encodes something shorter than 48 bytes,
 		// it will be padded at the end with zeroes. If longer, it'll be truncated.
 		Utils::unhex(ssoPskHex, _ssoPsk, sizeof(_ssoPsk));
@@ -217,10 +217,11 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 		opts.password = _rc->password;
 		opts.db = 0;
 		opts.keep_alive = true;
-		opts.connect_timeout = std::chrono::seconds(5);
+		opts.connect_timeout = std::chrono::seconds(3);
 		poolOpts.size = 25;
-		poolOpts.wait_timeout = std::chrono::milliseconds(1000);
-		poolOpts.connection_lifetime = std::chrono::minutes(5);
+		poolOpts.wait_timeout = std::chrono::seconds(5);
+		poolOpts.connection_lifetime = std::chrono::minutes(3);
+		poolOpts.connection_idle_time = std::chrono::minutes(1);
 		if (_rc->clusterMode) {
 			fprintf(stderr, "Using Redis in Cluster Mode\n");
 			_cluster = std::make_shared<sw::redis::RedisCluster>(opts, poolOpts);
@@ -709,11 +710,11 @@ void PostgreSQL::initializeNetworks()
 			if (_redisMemberStatus) {
 				fprintf(stderr, "adding networks to redis...\n");
 				if (_rc->clusterMode) {
-					auto tx = _cluster->transaction(_myAddressStr, true);
+					auto tx = _cluster->transaction(_myAddressStr, true, false);
 					tx.sadd(setKey, networkSet.begin(), networkSet.end());
 					tx.exec();
 				} else {
-					auto tx = _redis->transaction(true);
+					auto tx = _redis->transaction(true, false);
 					tx.sadd(setKey, networkSet.begin(), networkSet.end());
 					tx.exec();
 				}
@@ -765,13 +766,13 @@ void PostgreSQL::initializeMembers()
 			if (!deletes.empty()) {
 				try {
 					if (_rc->clusterMode) {
-						auto tx = _cluster->transaction(_myAddressStr, true);
+						auto tx = _cluster->transaction(_myAddressStr, true, false);
 						for (std::string k : deletes) {
 							tx.del(k);
 						}
 						tx.exec();
 					} else {
-						auto tx = _redis->transaction(true);
+						auto tx = _redis->transaction(true, false);
 						for (std::string k : deletes) {
 							tx.del(k);
 						}
@@ -784,22 +785,29 @@ void PostgreSQL::initializeMembers()
 		}
 
 		char qbuf[2048];
-		sprintf(qbuf, "SELECT m.id, m.network_id, m.active_bridge, m.authorized, m.capabilities, (EXTRACT(EPOCH FROM m.creation_time AT TIME ZONE 'UTC')*1000)::bigint, m.identity, "
-			"	(EXTRACT(EPOCH FROM m.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
-			"	(EXTRACT(EPOCH FROM m.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
-			"	m.remote_trace_level, m.remote_trace_target, m.tags, m.v_major, m.v_minor, m.v_rev, m.v_proto, "
-			"	m.no_auto_assign_ips, m.revision, sso_exempt, "
-			"	(SELECT (EXTRACT(EPOCH FROM e.authentication_expiry_time)*1000)::bigint "
-	 		"		FROM ztc_sso_expiry e "
-			"		INNER JOIN ztc_network n1 "
-			"			ON n.id = e.network_id "
-			"		WHERE e.network_id = m.network_id AND e.member_id = m.id AND n.sso_enabled = TRUE AND e.authentication_expiry_time IS NOT NULL "
-			"		ORDER BY e.authentication_expiry_time DESC LIMIT 1) AS authentication_expiry_time, "
-			"	ARRAY(SELECT DISTINCT address FROM ztc_member_ip_assignment WHERE member_id = m.id AND network_id = m.network_id) AS assigned_addresses "
+		sprintf(qbuf,
+			"SELECT m.id, m.network_id, m.active_bridge, m.authorized, m.capabilities, "
+				"(EXTRACT(EPOCH FROM m.creation_time AT TIME ZONE 'UTC')*1000)::bigint, m.identity, "
+				"(EXTRACT(EPOCH FROM m.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
+				"(EXTRACT(EPOCH FROM m.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
+				"m.remote_trace_level, m.remote_trace_target, m.tags, m.v_major, m.v_minor, m.v_rev, m.v_proto, "
+				"m.no_auto_assign_ips, m.revision, m.sso_exempt, "
+				"(CASE WHEN n.sso_enabled = TRUE AND m.sso_exempt = FALSE THEN "
+				" ( "
+				"	SELECT (EXTRACT(EPOCH FROM e.authentication_expiry_time)*1000)::bigint "
+				"	FROM ztc_sso_expiry e "
+				"	INNER JOIN ztc_network n1 "
+				"	ON n1.id = e.network_id  AND n1.deleted = TRUE "
+				"	WHERE e.network_id = m.network_id AND e.member_id = m.id AND n.sso_enabled = TRUE AND e.authentication_expiry_time IS NOT NULL "
+				"	ORDER BY e.authentication_expiry_time DESC LIMIT 1 "
+				" ) "
+				" ELSE NULL "
+				" END) AS authentication_expiry_time, "
+				"ARRAY(SELECT DISTINCT address FROM ztc_member_ip_assignment WHERE member_id = m.id AND network_id = m.network_id) AS assigned_addresses "
 			"FROM ztc_member m "
 			"INNER JOIN ztc_network n "
 			"	ON n.id = m.network_id "
-			"WHERE n.controller_id = '%s' AND m.deleted = false", _myAddressStr.c_str());
+			"WHERE n.controller_id = '%s' AND n.deleted = FALSE AND m.deleted = FALSE", _myAddressStr.c_str());
 		auto c = _pool->borrow();
 		auto c2 = _pool->borrow();
 		pqxx::work w{*c->c};
@@ -925,13 +933,13 @@ void PostgreSQL::initializeMembers()
 			if (_redisMemberStatus) {
 				fprintf(stderr, "Load member data into redis...\n");
 				if (_rc->clusterMode) {
-					auto tx = _cluster->transaction(_myAddressStr, true);
+					auto tx = _cluster->transaction(_myAddressStr, true, false);
 					for (auto it : networkMembers) {
 						tx.sadd(it.first, it.second);
 					}
 					tx.exec();
 				} else {
-					auto tx = _redis->transaction(true);
+					auto tx = _redis->transaction(true, false);
 					for (auto it : networkMembers) {
 						tx.sadd(it.first, it.second);
 					}
@@ -951,6 +959,7 @@ void PostgreSQL::initializeMembers()
 		}
 	} catch (sw::redis::Error &e) {
 		fprintf(stderr, "ERROR: Error initializing members (redis): %s\n", e.what());
+		exit(-1);
 	} catch (std::exception &e) {
 		fprintf(stderr, "ERROR: Error initializing member: %s-%s %s\n", networkId.c_str(), memberId.c_str(), e.what());
 		exit(-1);
@@ -1012,12 +1021,16 @@ void PostgreSQL::heartbeat()
 		}
 		_pool->unborrow(c);
 
-		if (_redisMemberStatus) {
-			if (_rc->clusterMode) {
-				_cluster->zadd("controllers", "controllerId", ts);
-			} else {
-				_redis->zadd("controllers", "controllerId", ts);
+		try {
+			if (_redisMemberStatus) {
+				if (_rc->clusterMode) {
+					_cluster->zadd("controllers", "controllerId", ts);
+				} else {
+					_redis->zadd("controllers", "controllerId", ts);
+				}
 			}
+		} catch (sw::redis::Error &e) {
+			fprintf(stderr, "ERROR: Redis error in heartbeat thread: %s\n", e.what());
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -1374,7 +1387,7 @@ void PostgreSQL::commitThread()
 						"sso_enabled = EXCLUDED.sso_enabled",
 						id,
 						_myAddressStr,
-						OSUtils::jsonDump(config["capabilitles"], -1),
+						OSUtils::jsonDump(config["capabilities"], -1),
 						(bool)config["enableBroadcast"],
 						OSUtils::now(),
 						(int)config["mtu"],
@@ -1573,7 +1586,7 @@ void PostgreSQL::onlineNotificationThread()
 /**
  * ONLY UNCOMMENT FOR TEMPORARY DB MAINTENANCE
  *
- * This define temproarly turns off writing to the member status table
+ * This define temporarily turns off writing to the member status table
  * so it can be reindexed when the indexes get too large.
  */
 
@@ -1694,10 +1707,10 @@ void PostgreSQL::onlineNotification_Redis()
 		try {
 			if (!lastOnline.empty()) {
 				if (_rc->clusterMode) {
-					auto tx = _cluster->transaction(controllerId, true);
+					auto tx = _cluster->transaction(controllerId, true, false);
 					count = _doRedisUpdate(tx, controllerId, lastOnline);
 				} else {
-					auto tx = _redis->transaction(true);
+					auto tx = _redis->transaction(true, false);
 					count = _doRedisUpdate(tx, controllerId, lastOnline);
 				}
 			}

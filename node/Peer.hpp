@@ -302,6 +302,8 @@ public:
 	 */
 	inline int64_t isActive(int64_t now) const { return ((now - _lastNontrivialReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
+	inline int64_t lastSentFullHello() { return _lastSentFullHello; }
+
 	/**
 	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown / no paths
 	 */

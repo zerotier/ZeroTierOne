@@ -24,7 +24,7 @@
 namespace ZeroTier {
 
 /**
- * DNS data serealization methods
+ * DNS data serialization methods
  */
 class DNS {
 public:
@@ -44,6 +44,7 @@ public:
         char *d = (char*)b.data()+p;
         memset(dns, 0, sizeof(ZT_VirtualNetworkDNS));
         memcpy(dns->domain, d, 128);
+        dns->domain[127] = 0;
         p += 128;
         for (unsigned int j = 0; j < ZT_MAX_DNS_SERVERS; ++j) {
             p += reinterpret_cast<InetAddress *>(&(dns->server_addr[j]))->deserialize(b, p);

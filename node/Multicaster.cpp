@@ -268,7 +268,8 @@ void Multicaster::send(
 
 			const unsigned int gatherLimit = (limit - (unsigned int)gs.members.size()) + 1;
 
-			if ((gs.members.empty())||((now - gs.lastExplicitGather) >= ZT_MULTICAST_EXPLICIT_GATHER_DELAY)) {
+			int timerScale = RR->node->lowBandwidthModeEnabled() ? 3 : 1;
+			if ((gs.members.empty())||((now - gs.lastExplicitGather) >= (ZT_MULTICAST_EXPLICIT_GATHER_DELAY * timerScale))) {
 				gs.lastExplicitGather = now;
 
 				Address explicitGatherPeers[16];

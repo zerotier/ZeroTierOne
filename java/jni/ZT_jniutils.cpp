@@ -296,7 +296,7 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
         inetAddressClass, "getByAddress", "([B)Ljava/net/InetAddress;");
     if(env->ExceptionCheck() || inetAddress_getByAddress == NULL)
     {
-        LOGE("Erorr finding getByAddress() static method");
+        LOGE("Error finding getByAddress() static method");
         return NULL;
     }
 

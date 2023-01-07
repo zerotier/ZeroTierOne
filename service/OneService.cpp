@@ -78,6 +78,7 @@
 #include "../osdep/MacDNSHelper.hpp"
 #elif defined(__WINDOWS__)
 #include "../osdep/WinDNSHelper.hpp"
+#include "../osdep/WinFWHelper.hpp"
 #endif
 
 #ifdef ZT_USE_SYSTEM_HTTP_PARSER
@@ -520,7 +521,7 @@ static void _networkToJson(nlohmann::json &nj,NetworkState &ns)
 	}
 }
 
-static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
+static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer, SharedPtr<Bond> &bond)
 {
 	char tmp[256];
 
@@ -541,10 +542,15 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 	pj["latency"] = peer->latency;
 	pj["role"] = prole;
 	pj["isBonded"] = peer->isBonded;
-	if (peer->isBonded) {
-		pj["bondingPolicy"] = peer->bondingPolicy;
+	if (bond && peer->isBonded) {
+		pj["bondingPolicyCode"] = peer->bondingPolicy;
+		pj["bondingPolicyStr"] = Bond::getPolicyStrByCode(peer->bondingPolicy);
 		pj["numAliveLinks"] = peer->numAliveLinks;
 		pj["numTotalLinks"] = peer->numTotalLinks;
+		pj["failoverInterval"] = bond->getFailoverInterval();
+		pj["downDelay"] = bond->getDownDelay();
+		pj["upDelay"] = bond->getUpDelay();
+		pj["packetsPerLink"] = bond->getPacketsPerLink();
 	}
 
 	nlohmann::json pa = nlohmann::json::array();
@@ -560,56 +566,23 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer)
 		j["expired"] = (bool)(peer->paths[i].expired != 0);
 		j["preferred"] = (bool)(peer->paths[i].preferred != 0);
 		j["localSocket"] = peer->paths[i].localSocket;
+		if (bond && peer->isBonded) {
+			uint64_t now = OSUtils::now();
+			j["ifname"] = std::string(peer->paths[i].ifname);
+			j["latencyMean"] = peer->paths[i].latencyMean;
+			j["latencyVariance"] = peer->paths[i].latencyVariance;
+			j["packetLossRatio"] = peer->paths[i].packetLossRatio;
+			j["packetErrorRatio"] = peer->paths[i].packetErrorRatio;
+			j["lastInAge"] = (now - lastReceive);
+			j["lastOutAge"] = (now - lastSend);
+			j["bonded"] = peer->paths[i].bonded;
+			j["eligible"] = peer->paths[i].eligible;
+			j["givenLinkSpeed"] = peer->paths[i].linkSpeed;
+			j["relativeQuality"] = peer->paths[i].relativeQuality;
+		}
 		pa.push_back(j);
 	}
 	pj["paths"] = pa;
-}
-
-static void _bondToJson(nlohmann::json &pj, SharedPtr<Bond> &bond)
-{
-	uint64_t now = OSUtils::now();
-
-	int bondingPolicy = bond->policy();
-	pj["bondingPolicy"] = Bond::getPolicyStrByCode(bondingPolicy);
-	if (bondingPolicy == ZT_BOND_POLICY_NONE) {
-		return;
-	}
-
-	pj["numAliveLinks"] = bond->getNumAliveLinks();
-	pj["numTotalLinks"] = bond->getNumTotalLinks();
-	pj["failoverInterval"] = bond->getFailoverInterval();
-	pj["downDelay"] = bond->getDownDelay();
-	pj["upDelay"] = bond->getUpDelay();
-	if (bondingPolicy == ZT_BOND_POLICY_BALANCE_RR) {
-		pj["packetsPerLink"] = bond->getPacketsPerLink();
-	}
-	if (bondingPolicy == ZT_BOND_POLICY_ACTIVE_BACKUP) {
-		pj["linkSelectMethod"] = bond->getLinkSelectMethod();
-	}
-
-	nlohmann::json pa = nlohmann::json::array();
-	std::vector< SharedPtr<Path> > paths = bond->paths(now);
-
-	for(unsigned int i=0;i<paths.size();++i) {
-		char pathStr[128];
-		paths[i]->address().toString(pathStr);
-
-		nlohmann::json j;
-		j["ifname"] = bond->getLink(paths[i])->ifname();
-		j["path"] = pathStr;
-		/*
-		j["alive"] = paths[i]->alive(now,true);
-		j["bonded"] = paths[i]->bonded();
-		j["latencyMean"] = paths[i]->latencyMean();
-		j["latencyVariance"] = paths[i]->latencyVariance();
-		j["packetLossRatio"] = paths[i]->packetLossRatio();
-		j["packetErrorRatio"] = paths[i]->packetErrorRatio();
-		j["givenLinkSpeed"] = 1000;
-		j["allocation"] = paths[i]->allocation();
-		*/
-		pa.push_back(j);
-	}
-	pj["links"] = pa;
 }
 
 static void _moonToJson(nlohmann::json &mj,const World &world)
@@ -875,6 +848,9 @@ public:
 
 	virtual ~OneServiceImpl()
 	{
+#ifdef __WINDOWS__ 
+		WinFWHelper::removeICMPRules();
+#endif
 		_binder.closeAll(_phy);
 		_phy.close(_localControlSocket4);
 		_phy.close(_localControlSocket6);
@@ -882,6 +858,8 @@ public:
 #if ZT_VAULT_SUPPORT
 		curl_global_cleanup();
 #endif
+
+
 
 #ifdef ZT_USE_MINIUPNPC
 		delete _portMapper;
@@ -926,6 +904,7 @@ public:
 				cb.pathLookupFunction = SnodePathLookupFunction;
 				_node = new Node(this,(void *)0,&cb,OSUtils::now());
 			}
+
 
 			// local.conf
 			readLocalSettings();
@@ -1429,7 +1408,7 @@ public:
 
 		/* Note: this is kind of restricted in what it'll take. It does not support
 		 * URL encoding, and /'s in URL args will screw it up. But the only URL args
-		 * it really uses in ?jsonp=funcionName, and otherwise it just takes simple
+		 * it really uses in ?jsonp=functionName, and otherwise it just takes simple
 		 * paths to simply-named resources. */
 		if (!ps.empty()) {
 			std::size_t qpos = ps[ps.size() - 1].find('?');
@@ -1498,23 +1477,27 @@ public:
 				if (ps[0] == "bond") {
 					if (_node->bondController()->inUse()) {
 						if (ps.size() == 3) {
-							//fprintf(stderr, "ps[0]=%s\nps[1]=%s\nps[2]=%s\n", ps[0].c_str(), ps[1].c_str(), ps[2].c_str());
 							if (ps[2].length() == 10) {
 								// check if hex string
-								const uint64_t id = Utils::hexStrToU64(ps[2].c_str());
-								if (ps[1] == "show") {
-									SharedPtr<Bond> bond = _node->bondController()->getBondByPeerId(id);
-									if (bond) {
-										_bondToJson(res,bond);
-										scode = 200;
-									} else {
-										fprintf(stderr, "unable to find bond to peer %llx\n", (unsigned long long)id);
-										scode = 400;
+
+								ZT_PeerList *pl = _node->peers();
+								if (pl) {
+									uint64_t wantp = Utils::hexStrToU64(ps[2].c_str());
+									for(unsigned long i=0;i<pl->peerCount;++i) {
+										if (pl->peers[i].address == wantp) {
+											if (ps[1] == "show") {
+												SharedPtr<Bond> bond = _node->bondController()->getBondByPeerId(wantp);
+												if (bond) {
+													_peerToJson(res,&(pl->peers[i]),bond);
+													scode = 200;
+												} else {
+													scode = 400;
+												}
+											}
+										}
 									}
 								}
-								if (ps[1] == "flows") {
-									fprintf(stderr, "displaying flows\n");
-								}
+								_node->freeQueryResult((void *)pl);
 							}
 						}
 					} else {
@@ -1550,7 +1533,7 @@ public:
 					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 					settings["secondaryPort"] = OSUtils::jsonInt(settings["secondaryPort"],(uint64_t)_secondaryPort) & 0xffff;
 					settings["tertiaryPort"] = OSUtils::jsonInt(settings["tertiaryPort"],(uint64_t)_tertiaryPort) & 0xffff;
-					// Enumerate all external listening address/port pairs
+					// Enumerate all local address/port pairs that this node is listening on
 					std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());
 					auto boundAddrArray = json::array();
 					for (int i = 0; i < boundAddrs.size(); i++) {
@@ -1559,6 +1542,15 @@ public:
 						boundAddrArray.push_back(ipBuf);
 					}
 					settings["listeningOn"] = boundAddrArray;
+					// Enumerate all external address/port pairs that are reported for this node
+					std::vector<InetAddress> surfaceAddrs = _node->SurfaceAddresses();
+					auto surfaceAddrArray = json::array();
+					for (int i = 0; i < surfaceAddrs.size(); i++) {
+						char ipBuf[64] = { 0 };
+						surfaceAddrs[i].toString(ipBuf);
+						surfaceAddrArray.push_back(ipBuf);
+					}
+					settings["surfaceAddresses"] = surfaceAddrArray;
 
 #ifdef ZT_USE_MINIUPNPC
 					settings["portMappingEnabled"] = OSUtils::jsonBool(settings["portMappingEnabled"],true);
@@ -1637,36 +1629,12 @@ public:
 							res = nlohmann::json::array();
 							for(unsigned long i=0;i<pl->peerCount;++i) {
 								nlohmann::json pj;
-								_peerToJson(pj,&(pl->peers[i]));
-								res.push_back(pj);
-							}
-
-							scode = 200;
-						} else if (ps.size() == 2) {
-							// Return a single peer by ID or 404 if not found
-
-							uint64_t wantp = Utils::hexStrToU64(ps[1].c_str());
-							for(unsigned long i=0;i<pl->peerCount;++i) {
-								if (pl->peers[i].address == wantp) {
-									_peerToJson(res,&(pl->peers[i]));
-									scode = 200;
-									break;
+								SharedPtr<Bond> bond = SharedPtr<Bond>();
+								if (pl->peers[i].isBonded) {
+									const uint64_t id = pl->peers[i].address;
+									bond = _node->bondController()->getBondByPeerId(id);
 								}
-							}
-
-						} else scode = 404;
-						_node->freeQueryResult((void *)pl);
-					} else scode = 500;
-				} else if (ps[0] == "bonds") {
-					ZT_PeerList *pl = _node->peers();
-					if (pl) {
-						if (ps.size() == 1) {
-							// Return [array] of all peers
-
-							res = nlohmann::json::array();
-							for(unsigned long i=0;i<pl->peerCount;++i) {
-								nlohmann::json pj;
-								_peerToJson(pj,&(pl->peers[i]));
+								_peerToJson(pj,&(pl->peers[i]),bond);
 								res.push_back(pj);
 							}
 
@@ -1677,7 +1645,11 @@ public:
 							uint64_t wantp = Utils::hexStrToU64(ps[1].c_str());
 							for(unsigned long i=0;i<pl->peerCount;++i) {
 								if (pl->peers[i].address == wantp) {
-									_peerToJson(res,&(pl->peers[i]));
+									SharedPtr<Bond> bond = SharedPtr<Bond>();
+									if (pl->peers[i].isBonded) {
+										bond = _node->bondController()->getBondByPeerId(wantp);
+									}
+									_peerToJson(res,&(pl->peers[i]),bond);
 									scode = 200;
 									break;
 								}
@@ -1771,11 +1743,11 @@ public:
 				if (ps[0] == "bond") {
 					if (_node->bondController()->inUse()) {
 						if (ps.size() == 3) {
-							//fprintf(stderr, "ps[0]=%s\nps[1]=%s\nps[2]=%s\n", ps[0].c_str(), ps[1].c_str(), ps[2].c_str());
 							if (ps[2].length() == 10) {
 								// check if hex string
 								const uint64_t id = Utils::hexStrToU64(ps[2].c_str());
 								if (ps[1] == "rotate") {
+									exit(0);
 									SharedPtr<Bond> bond = _node->bondController()->getBondByPeerId(id);
 									if (bond) {
 										scode = bond->abForciblyRotateLink() ? 200 : 400;
@@ -1783,9 +1755,6 @@ public:
 										fprintf(stderr, "unable to find bond to peer %llx\n", (unsigned long long)id);
 										scode = 400;
 									}
-								}
-								if (ps[1] == "enable") {
-									fprintf(stderr, "enabling bond\n");
 								}
 							}
 						}
@@ -2041,6 +2010,7 @@ public:
 		json &settings = lc["settings"];
 
 		if (!_node->bondController()->inUse()) {
+			_node->bondController()->setBinder(&_binder);
 			// defaultBondingPolicy
 			std::string defaultBondingPolicyStr(OSUtils::jsonString(settings["defaultBondingPolicy"],""));
 			int defaultBondingPolicy = _node->bondController()->getPolicyCodeByStr(defaultBondingPolicyStr);
@@ -2068,32 +2038,24 @@ public:
 				}
 				// New bond, used as a copy template for new instances
 				SharedPtr<Bond> newTemplateBond = new Bond(NULL, basePolicyStr, customPolicyStr, SharedPtr<Peer>());
-				// Acceptable ranges
 				newTemplateBond->setPolicy(basePolicyCode);
-				newTemplateBond->setMaxAcceptableLatency(OSUtils::jsonInt(customPolicy["maxAcceptableLatency"],-1));
-				newTemplateBond->setMaxAcceptableMeanLatency(OSUtils::jsonInt(customPolicy["maxAcceptableMeanLatency"],-1));
-				newTemplateBond->setMaxAcceptablePacketDelayVariance(OSUtils::jsonInt(customPolicy["maxAcceptablePacketDelayVariance"],-1));
-				newTemplateBond->setMaxAcceptablePacketLossRatio((float)OSUtils::jsonDouble(customPolicy["maxAcceptablePacketLossRatio"],-1));
-				newTemplateBond->setMaxAcceptablePacketErrorRatio((float)OSUtils::jsonDouble(customPolicy["maxAcceptablePacketErrorRatio"],-1));
-				newTemplateBond->setMinAcceptableAllocation((float)OSUtils::jsonDouble(customPolicy["minAcceptableAllocation"],0));
-				// Quality weights
-				json &qualityWeights = customPolicy["qualityWeights"];
-				if (qualityWeights.size() == ZT_QOS_WEIGHT_SIZE) { // TODO: Generalize this
-					float weights[ZT_QOS_WEIGHT_SIZE];
-					weights[ZT_QOS_LAT_IDX] = (float)OSUtils::jsonDouble(qualityWeights["lat"],0.0);
-					weights[ZT_QOS_LTM_IDX] = (float)OSUtils::jsonDouble(qualityWeights["ltm"],0.0);
-					weights[ZT_QOS_PDV_IDX] = (float)OSUtils::jsonDouble(qualityWeights["pdv"],0.0);
-					weights[ZT_QOS_PLR_IDX] = (float)OSUtils::jsonDouble(qualityWeights["plr"],0.0);
-					weights[ZT_QOS_PER_IDX] = (float)OSUtils::jsonDouble(qualityWeights["per"],0.0);
-					weights[ZT_QOS_THR_IDX] = (float)OSUtils::jsonDouble(qualityWeights["thr"],0.0);
-					weights[ZT_QOS_THM_IDX] = (float)OSUtils::jsonDouble(qualityWeights["thm"],0.0);
-					weights[ZT_QOS_THV_IDX] = (float)OSUtils::jsonDouble(qualityWeights["thv"],0.0);
-					newTemplateBond->setUserQualityWeights(weights,ZT_QOS_WEIGHT_SIZE);
+				// Custom link quality spec
+				json &linkQualitySpec = customPolicy["linkQuality"];
+				if (linkQualitySpec.size() == ZT_QOS_PARAMETER_SIZE) {
+					float weights[ZT_QOS_PARAMETER_SIZE] = {};
+					weights[ZT_QOS_LAT_MAX_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["lat_max"],0.0);
+					weights[ZT_QOS_PDV_MAX_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["pdv_max"],0.0);
+					weights[ZT_QOS_PLR_MAX_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["plr_max"],0.0);
+					weights[ZT_QOS_PER_MAX_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["per_max"],0.0);
+					weights[ZT_QOS_LAT_WEIGHT_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["lat_weight"],0.0);
+					weights[ZT_QOS_PDV_WEIGHT_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["pdv_weight"],0.0);
+					weights[ZT_QOS_PLR_WEIGHT_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["plr_weight"],0.0);
+					weights[ZT_QOS_PER_WEIGHT_IDX] = (float)OSUtils::jsonDouble(linkQualitySpec["per_weight"],0.0);
+					newTemplateBond->setUserLinkQualitySpec(weights,ZT_QOS_PARAMETER_SIZE);
 				}
 				// Bond-specific properties
 				newTemplateBond->setUpDelay(OSUtils::jsonInt(customPolicy["upDelay"],-1));
 				newTemplateBond->setDownDelay(OSUtils::jsonInt(customPolicy["downDelay"],-1));
-				newTemplateBond->setFlowRebalanceStrategy(OSUtils::jsonInt(customPolicy["flowRebalanceStrategy"],(uint64_t)0));
 				newTemplateBond->setFailoverInterval(OSUtils::jsonInt(customPolicy["failoverInterval"],ZT_BOND_FAILOVER_DEFAULT_INTERVAL));
 				newTemplateBond->setPacketsPerLink(OSUtils::jsonInt(customPolicy["packetsPerLink"],-1));
 
@@ -2102,16 +2064,8 @@ public:
 				for (json::iterator linkItr = links.begin(); linkItr != links.end();++linkItr) {
 					std::string linkNameStr(linkItr.key());
 					json &link = linkItr.value();
-
 					bool enabled = OSUtils::jsonInt(link["enabled"],true);
-					uint32_t speed = OSUtils::jsonInt(link["speed"],0);
-					float alloc = (float)OSUtils::jsonDouble(link["alloc"],0);
-
-					if (speed && alloc) {
-						fprintf(stderr, "error: cannot specify both speed (%d) and alloc (%f) for link (%s), pick one, link disabled.\n",
-							speed, alloc, linkNameStr.c_str());
-						enabled = false;
-					}
+					uint32_t capacity = OSUtils::jsonInt(link["capacity"],0);
 					uint8_t ipvPref = OSUtils::jsonInt(link["ipvPref"],0);
 					std::string failoverToStr(OSUtils::jsonString(link["failoverTo"],""));
 					// Mode
@@ -2129,7 +2083,7 @@ public:
 						failoverToStr = "";
 						enabled = false;
 					}
-					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,speed,enabled,linkMode,failoverToStr,alloc));
+					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,capacity,enabled,linkMode,failoverToStr));
 				}
 				std::string linkSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"optimize"));
 				if (linkSelectMethodStr == "always") {
@@ -2147,12 +2101,6 @@ public:
 				if (newTemplateBond->getLinkSelectMethod() < 0 || newTemplateBond->getLinkSelectMethod() > 3) {
 					fprintf(stderr, "warning: invalid value (%s) for linkSelectMethod, assuming mode: always\n", linkSelectMethodStr.c_str());
 				}
-				/*
-				newBond->setPolicy(_node->bondController()->getPolicyCodeByStr(basePolicyStr));
-				newBond->setFlowHashing((bool)OSUtils::jsonInt(userSpecifiedBondingPolicies[i]["allowFlowHashing"],(bool)allowFlowHashing));
-				newBond->setBondMonitorInterval((unsigned int)OSUtils::jsonInt(userSpecifiedBondingPolicies[i]["monitorInterval"],(uint64_t)0));
-				newBond->setAllowPathNegotiation((bool)OSUtils::jsonInt(userSpecifiedBondingPolicies[i]["allowPathNegotiation"],(bool)false));
-				*/
 				if (!_node->bondController()->addCustomPolicy(newTemplateBond)) {
 					fprintf(stderr, "error: a custom policy of this name (%s) already exists.\n", customPolicyStr.c_str());
 				}
@@ -2171,7 +2119,7 @@ public:
 		// bondingPolicy cannot be used with allowTcpFallbackRelay
 		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
 #ifdef ZT_TCP_FALLBACK_RELAY
-		_fallbackRelayAddress = InetAddress(OSUtils::jsonString("tcpFallbackRelay", ZT_TCP_FALLBACK_RELAY).c_str());
+		_fallbackRelayAddress = InetAddress(OSUtils::jsonString(settings["tcpFallbackRelay"], ZT_TCP_FALLBACK_RELAY).c_str());
 #endif
 		_primaryPort = (unsigned int)OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 		_allowSecondaryPort = OSUtils::jsonBool(settings["allowSecondaryPort"],true);
@@ -2181,6 +2129,7 @@ public:
 			fprintf(stderr,"WARNING: using manually-specified secondary and/or tertiary ports. This can cause NAT issues." ZT_EOL_S);
 		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
+		_node->setLowBandwidthMode(OSUtils::jsonBool(settings["lowBandwidthMode"],false));
 
 #ifndef ZT_SDK
 		const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
@@ -2321,6 +2270,10 @@ public:
 				if (std::find(newManagedIps.begin(),newManagedIps.end(),*ip) == newManagedIps.end()) {
 					if (!n.tap()->removeIp(*ip))
 						fprintf(stderr,"ERROR: unable to remove ip address %s" ZT_EOL_S, ip->toString(ipbuf));
+
+					#ifdef __WINDOWS__
+					WinFWHelper::removeICMPRule(*ip, n.config().nwid);
+					#endif
 				}
 			}
 
@@ -2328,6 +2281,10 @@ public:
 				if (std::find(n.managedIps().begin(),n.managedIps().end(),*ip) == n.managedIps().end()) {
 					if (!n.tap()->addIp(*ip))
 						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString(ipbuf));
+
+					#ifdef __WINDOWS__
+					WinFWHelper::newICMPRule(*ip, n.config().nwid);
+					#endif
 				}
 			}
 
@@ -2808,8 +2765,10 @@ public:
 					n.tap().reset();
 					_nets.erase(nwid);
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
-					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))
+					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY) && (winInstanceId.length() > 0)) {
 						WindowsEthernetTap::deletePersistentTapDevice(winInstanceId.c_str());
+						WinFWHelper::removeICMPRules(nwid);
+					}
 #endif
 					if (op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY) {
 						char nlcpath[256];

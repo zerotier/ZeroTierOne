@@ -1,6 +1,17 @@
 ZeroTier Release Notes
 ======
 
+# 2022-11-01 -- Version 1.10.2
+
+ * Fix another SSO "stuck client" issue in zeroidc.
+ * Expose root-reported external IP/port information via the local JSON API for better diagnostics.
+ * Multipath: CLI output improvement for inspecting bonds
+ * Multipath: balance-aware mode
+ * Multipath: Custom policies
+ * Multipath: Link quality measurement improvements
+
+Note that releases are coming few and far between because most of our dev effort is going into version 2.
+
 # 2022-06-27 -- Version 1.10.1
 
  * Fix an issue that could cause SSO clients to get "stuck" on stale auth URLs.
@@ -21,7 +32,7 @@ ZeroTier Release Notes
 
 # 2022-04-25 -- Version 1.8.9
 
- * Fixed a long-standing and strange bug that was causing sporadic "phantom" packet authentication failures. Not a security problem but could be behind spordaic reports of link failures under some conditions.
+ * Fixed a long-standing and strange bug that was causing sporadic "phantom" packet authentication failures. Not a security problem but could be behind sporadic reports of link failures under some conditions.
  * Fized a memory leak in SSO/OIDC support.
  * Fixed SSO/OIDC display error on CLI.
  * Fixed a bug causing nodes to sometimes fail to push certs to each other (primarily affects SSO/OIDC use cases).
