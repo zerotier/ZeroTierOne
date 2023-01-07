@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
@@ -181,9 +181,9 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
     pub fn PSPropertyBag_ReadBOOL(propbag: super::super::super::System::Com::StructuredStorage::IPropertyBag, propname: ::windows_sys::core::PCWSTR, value: *mut super::super::super::Foundation::BOOL) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
-    pub fn PSPropertyBag_ReadBSTR(propbag: super::super::super::System::Com::StructuredStorage::IPropertyBag, propname: ::windows_sys::core::PCWSTR, value: *mut super::super::super::Foundation::BSTR) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+    #[cfg(feature = "Win32_System_Com_StructuredStorage")]
+    pub fn PSPropertyBag_ReadBSTR(propbag: super::super::super::System::Com::StructuredStorage::IPropertyBag, propname: ::windows_sys::core::PCWSTR, value: *mut ::windows_sys::core::BSTR) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
     #[cfg(feature = "Win32_System_Com_StructuredStorage")]
     pub fn PSPropertyBag_ReadDWORD(propbag: super::super::super::System::Com::StructuredStorage::IPropertyBag, propname: ::windows_sys::core::PCWSTR, value: *mut u32) -> ::windows_sys::core::HRESULT;
@@ -222,7 +222,7 @@ extern "system" {
     pub fn PSPropertyBag_ReadStream(propbag: super::super::super::System::Com::StructuredStorage::IPropertyBag, propname: ::windows_sys::core::PCWSTR, value: *mut super::super::super::System::Com::IStream) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_System_Ole\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
-    pub fn PSPropertyBag_ReadType(propbag: super::super::super::System::Com::StructuredStorage::IPropertyBag, propname: ::windows_sys::core::PCWSTR, var: *mut super::super::super::System::Com::VARIANT, r#type: u16) -> ::windows_sys::core::HRESULT;
+    pub fn PSPropertyBag_ReadType(propbag: super::super::super::System::Com::StructuredStorage::IPropertyBag, propname: ::windows_sys::core::PCWSTR, var: *mut super::super::super::System::Com::VARIANT, r#type: super::super::super::System::Com::VARENUM) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
     #[cfg(feature = "Win32_System_Com_StructuredStorage")]
     pub fn PSPropertyBag_ReadULONGLONG(propbag: super::super::super::System::Com::StructuredStorage::IPropertyBag, propname: ::windows_sys::core::PCWSTR, value: *mut u64) -> ::windows_sys::core::HRESULT;
@@ -232,9 +232,9 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
     pub fn PSPropertyBag_WriteBOOL(propbag: super::super::super::System::Com::StructuredStorage::IPropertyBag, propname: ::windows_sys::core::PCWSTR, value: super::super::super::Foundation::BOOL) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
-    pub fn PSPropertyBag_WriteBSTR(propbag: super::super::super::System::Com::StructuredStorage::IPropertyBag, propname: ::windows_sys::core::PCWSTR, value: super::super::super::Foundation::BSTR) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+    #[cfg(feature = "Win32_System_Com_StructuredStorage")]
+    pub fn PSPropertyBag_WriteBSTR(propbag: super::super::super::System::Com::StructuredStorage::IPropertyBag, propname: ::windows_sys::core::PCWSTR, value: ::windows_sys::core::BSTR) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
     #[cfg(feature = "Win32_System_Com_StructuredStorage")]
     pub fn PSPropertyBag_WriteDWORD(propbag: super::super::super::System::Com::StructuredStorage::IPropertyBag, propname: ::windows_sys::core::PCWSTR, value: u32) -> ::windows_sys::core::HRESULT;
@@ -301,7 +301,7 @@ extern "system" {
     pub fn PifMgr_SetProperties(hprops: super::super::super::Foundation::HANDLE, pszgroup: ::windows_sys::core::PCSTR, lpprops: *const ::core::ffi::c_void, cbprops: i32, flopt: u32) -> i32;
     #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
-    pub fn PropVariantChangeType(ppropvardest: *mut super::super::super::System::Com::StructuredStorage::PROPVARIANT, propvarsrc: *const super::super::super::System::Com::StructuredStorage::PROPVARIANT, flags: PROPVAR_CHANGE_FLAGS, vt: u16) -> ::windows_sys::core::HRESULT;
+    pub fn PropVariantChangeType(ppropvardest: *mut super::super::super::System::Com::StructuredStorage::PROPVARIANT, propvarsrc: *const super::super::super::System::Com::StructuredStorage::PROPVARIANT, flags: PROPVAR_CHANGE_FLAGS, vt: super::super::super::System::Com::VARENUM) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
     pub fn PropVariantCompareEx(propvar1: *const super::super::super::System::Com::StructuredStorage::PROPVARIANT, propvar2: *const super::super::super::System::Com::StructuredStorage::PROPVARIANT, unit: PROPVAR_COMPARE_UNIT, flags: PROPVAR_COMPARE_FLAGS) -> i32;
@@ -340,7 +340,7 @@ extern "system" {
     pub fn PropVariantGetUInt64Elem(propvar: *const super::super::super::System::Com::StructuredStorage::PROPVARIANT, ielem: u32, pnval: *mut u64) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
-    pub fn PropVariantToBSTR(propvar: *const super::super::super::System::Com::StructuredStorage::PROPVARIANT, pbstrout: *mut super::super::super::Foundation::BSTR) -> ::windows_sys::core::HRESULT;
+    pub fn PropVariantToBSTR(propvar: *const super::super::super::System::Com::StructuredStorage::PROPVARIANT, pbstrout: *mut ::windows_sys::core::BSTR) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
     pub fn PropVariantToBoolean(propvarin: *const super::super::super::System::Com::StructuredStorage::PROPVARIANT, pfret: *mut super::super::super::Foundation::BOOL) -> ::windows_sys::core::HRESULT;
@@ -662,6 +662,37 @@ extern "system" {
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
     pub fn WinRTPropertyValueToPropVariant(punkpropertyvalue: ::windows_sys::core::IUnknown, ppropvar: *mut super::super::super::System::Com::StructuredStorage::PROPVARIANT) -> ::windows_sys::core::HRESULT;
 }
+pub type ICreateObject = *mut ::core::ffi::c_void;
+pub type IDelayedPropertyStoreFactory = *mut ::core::ffi::c_void;
+pub type IInitializeWithFile = *mut ::core::ffi::c_void;
+pub type IInitializeWithStream = *mut ::core::ffi::c_void;
+pub type INamedPropertyStore = *mut ::core::ffi::c_void;
+pub type IObjectWithPropertyKey = *mut ::core::ffi::c_void;
+pub type IPersistSerializedPropStorage = *mut ::core::ffi::c_void;
+pub type IPersistSerializedPropStorage2 = *mut ::core::ffi::c_void;
+pub type IPropertyChange = *mut ::core::ffi::c_void;
+pub type IPropertyChangeArray = *mut ::core::ffi::c_void;
+pub type IPropertyDescription = *mut ::core::ffi::c_void;
+pub type IPropertyDescription2 = *mut ::core::ffi::c_void;
+pub type IPropertyDescriptionAliasInfo = *mut ::core::ffi::c_void;
+pub type IPropertyDescriptionList = *mut ::core::ffi::c_void;
+pub type IPropertyDescriptionRelatedPropertyInfo = *mut ::core::ffi::c_void;
+pub type IPropertyDescriptionSearchInfo = *mut ::core::ffi::c_void;
+pub type IPropertyEnumType = *mut ::core::ffi::c_void;
+pub type IPropertyEnumType2 = *mut ::core::ffi::c_void;
+pub type IPropertyEnumTypeList = *mut ::core::ffi::c_void;
+pub type IPropertyStore = *mut ::core::ffi::c_void;
+pub type IPropertyStoreCache = *mut ::core::ffi::c_void;
+pub type IPropertyStoreCapabilities = *mut ::core::ffi::c_void;
+pub type IPropertyStoreFactory = *mut ::core::ffi::c_void;
+pub type IPropertySystem = *mut ::core::ffi::c_void;
+pub type IPropertySystemChangeNotify = *mut ::core::ffi::c_void;
+pub type IPropertyUI = *mut ::core::ffi::c_void;
+pub const InMemoryPropertyStore: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2583879698, data2: 25347, data3: 19998, data4: [185, 161, 99, 15, 128, 37, 146, 197] };
+pub const InMemoryPropertyStoreMarshalByValue: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3570011693, data2: 28071, data3: 19317, data4: [169, 124, 95, 48, 111, 14, 174, 220] };
+#[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
+pub const PKEY_PIDSTR_MAX: u32 = 10u32;
+pub const PropertySystem: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3096870789, data2: 22702, data3: 20294, data4: [159, 178, 93, 121, 4, 121, 143, 75] };
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 pub type DRAWPROGRESSFLAGS = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
@@ -708,34 +739,6 @@ pub const GPS_VOLATILEPROPERTIES: GETPROPERTYSTOREFLAGS = 2048u32;
 pub const GPS_VOLATILEPROPERTIESONLY: GETPROPERTYSTOREFLAGS = 4096u32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 pub const GPS_MASK_VALID: GETPROPERTYSTOREFLAGS = 8191u32;
-pub type ICreateObject = *mut ::core::ffi::c_void;
-pub type IDelayedPropertyStoreFactory = *mut ::core::ffi::c_void;
-pub type IInitializeWithFile = *mut ::core::ffi::c_void;
-pub type IInitializeWithStream = *mut ::core::ffi::c_void;
-pub type INamedPropertyStore = *mut ::core::ffi::c_void;
-pub type IObjectWithPropertyKey = *mut ::core::ffi::c_void;
-pub type IPersistSerializedPropStorage = *mut ::core::ffi::c_void;
-pub type IPersistSerializedPropStorage2 = *mut ::core::ffi::c_void;
-pub type IPropertyChange = *mut ::core::ffi::c_void;
-pub type IPropertyChangeArray = *mut ::core::ffi::c_void;
-pub type IPropertyDescription = *mut ::core::ffi::c_void;
-pub type IPropertyDescription2 = *mut ::core::ffi::c_void;
-pub type IPropertyDescriptionAliasInfo = *mut ::core::ffi::c_void;
-pub type IPropertyDescriptionList = *mut ::core::ffi::c_void;
-pub type IPropertyDescriptionRelatedPropertyInfo = *mut ::core::ffi::c_void;
-pub type IPropertyDescriptionSearchInfo = *mut ::core::ffi::c_void;
-pub type IPropertyEnumType = *mut ::core::ffi::c_void;
-pub type IPropertyEnumType2 = *mut ::core::ffi::c_void;
-pub type IPropertyEnumTypeList = *mut ::core::ffi::c_void;
-pub type IPropertyStore = *mut ::core::ffi::c_void;
-pub type IPropertyStoreCache = *mut ::core::ffi::c_void;
-pub type IPropertyStoreCapabilities = *mut ::core::ffi::c_void;
-pub type IPropertyStoreFactory = *mut ::core::ffi::c_void;
-pub type IPropertySystem = *mut ::core::ffi::c_void;
-pub type IPropertySystemChangeNotify = *mut ::core::ffi::c_void;
-pub type IPropertyUI = *mut ::core::ffi::c_void;
-pub const InMemoryPropertyStore: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2583879698, data2: 25347, data3: 19998, data4: [185, 161, 99, 15, 128, 37, 146, 197] };
-pub const InMemoryPropertyStoreMarshalByValue: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3570011693, data2: 28071, data3: 19317, data4: [169, 124, 95, 48, 111, 14, 174, 220] };
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 pub type PDOPSTATUS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
@@ -756,8 +759,6 @@ pub const PKA_SET: PKA_FLAGS = 0u32;
 pub const PKA_APPEND: PKA_FLAGS = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 pub const PKA_DELETE: PKA_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
-pub const PKEY_PIDSTR_MAX: u32 = 10u32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 pub type PLACEHOLDER_STATES = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
@@ -1020,18 +1021,6 @@ pub const PET_RANGEDVALUE: PROPENUMTYPE = 1i32;
 pub const PET_DEFAULTVALUE: PROPENUMTYPE = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 pub const PET_ENDRANGE: PROPENUMTYPE = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
-pub struct PROPERTYKEY {
-    pub fmtid: ::windows_sys::core::GUID,
-    pub pid: u32,
-}
-impl ::core::marker::Copy for PROPERTYKEY {}
-impl ::core::clone::Clone for PROPERTYKEY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 pub type PROPERTYUI_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
@@ -1058,31 +1047,6 @@ pub type PROPERTYUI_NAME_FLAGS = u32;
 pub const PUIFNF_DEFAULT: PROPERTYUI_NAME_FLAGS = 0u32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 pub const PUIFNF_MNEMONIC: PROPERTYUI_NAME_FLAGS = 1u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PROPPRG {
-    pub flPrg: u16,
-    pub flPrgInit: u16,
-    pub achTitle: [super::super::super::Foundation::CHAR; 30],
-    pub achCmdLine: [super::super::super::Foundation::CHAR; 128],
-    pub achWorkDir: [super::super::super::Foundation::CHAR; 64],
-    pub wHotKey: u16,
-    pub achIconFile: [super::super::super::Foundation::CHAR; 80],
-    pub wIconIndex: u16,
-    pub dwEnhModeFlags: u32,
-    pub dwRealModeFlags: u32,
-    pub achOtherFile: [super::super::super::Foundation::CHAR; 80],
-    pub achPIFFile: [super::super::super::Foundation::CHAR; 260],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PROPPRG {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PROPPRG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 pub type PROPVAR_CHANGE_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
@@ -1145,9 +1109,6 @@ pub type PSTIME_FLAGS = u32;
 pub const PSTF_UTC: PSTIME_FLAGS = 0u32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 pub const PSTF_LOCAL: PSTIME_FLAGS = 1u32;
-pub const PropertySystem: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3096870789, data2: 22702, data3: 20294, data4: [159, 178, 93, 121, 4, 121, 143, 75] };
-#[repr(C)]
-pub struct SERIALIZEDPROPSTORAGE(pub u8);
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 pub type SYNC_ENGINE_STATE_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
@@ -1206,3 +1167,42 @@ pub const FPSPS_DEFAULT: _PERSIST_SPROPSTORE_FLAGS = 0i32;
 pub const FPSPS_READONLY: _PERSIST_SPROPSTORE_FLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 pub const FPSPS_TREAT_NEW_VALUES_AS_DIRTY: _PERSIST_SPROPSTORE_FLAGS = 2i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`*"]
+pub struct PROPERTYKEY {
+    pub fmtid: ::windows_sys::core::GUID,
+    pub pid: u32,
+}
+impl ::core::marker::Copy for PROPERTYKEY {}
+impl ::core::clone::Clone for PROPERTYKEY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell_PropertiesSystem\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct PROPPRG {
+    pub flPrg: u16,
+    pub flPrgInit: u16,
+    pub achTitle: [super::super::super::Foundation::CHAR; 30],
+    pub achCmdLine: [super::super::super::Foundation::CHAR; 128],
+    pub achWorkDir: [super::super::super::Foundation::CHAR; 64],
+    pub wHotKey: u16,
+    pub achIconFile: [super::super::super::Foundation::CHAR; 80],
+    pub wIconIndex: u16,
+    pub dwEnhModeFlags: u32,
+    pub dwRealModeFlags: u32,
+    pub achOtherFile: [super::super::super::Foundation::CHAR; 80],
+    pub achPIFFile: [super::super::super::Foundation::CHAR; 260],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for PROPPRG {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for PROPPRG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct SERIALIZEDPROPSTORAGE(pub u8);

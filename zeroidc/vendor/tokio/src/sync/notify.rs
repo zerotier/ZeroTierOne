@@ -13,6 +13,7 @@ use crate::util::WakeList;
 use std::cell::UnsafeCell;
 use std::future::Future;
 use std::marker::PhantomPinned;
+use std::panic::{RefUnwindSafe, UnwindSafe};
 use std::pin::Pin;
 use std::ptr::NonNull;
 use std::sync::atomic::Ordering::SeqCst;
@@ -214,7 +215,6 @@ enum NotificationType {
 }
 
 #[derive(Debug)]
-#[repr(C)] // required by `linked_list::Link` impl
 struct Waiter {
     /// Intrusive linked-list pointers.
     pointers: linked_list::Pointers<Waiter>,
@@ -227,6 +227,14 @@ struct Waiter {
 
     /// Should not be `Unpin`.
     _p: PhantomPinned,
+}
+
+generate_addr_of_methods! {
+    impl<> Waiter {
+        unsafe fn addr_of_pointers(self: NonNull<Self>) -> NonNull<linked_list::Pointers<Waiter>> {
+            &self.pointers
+        }
+    }
 }
 
 /// Future returned from [`Notify::notified()`].
@@ -558,6 +566,9 @@ impl Default for Notify {
         Notify::new()
     }
 }
+
+impl UnwindSafe for Notify {}
+impl RefUnwindSafe for Notify {}
 
 fn notify_locked(waiters: &mut WaitList, state: &AtomicUsize, curr: usize) -> Option<Waker> {
     loop {
@@ -950,7 +961,7 @@ unsafe impl linked_list::Link for Waiter {
     }
 
     unsafe fn pointers(target: NonNull<Waiter>) -> NonNull<linked_list::Pointers<Waiter>> {
-        target.cast()
+        Waiter::addr_of_pointers(target)
     }
 }
 

@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_HostComputeNetwork\"`*"]
     pub fn HcnCloseEndpoint(endpoint: *const ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
@@ -119,8 +119,6 @@ pub const HcnNotificationServiceDisconnect: HCN_NOTIFICATIONS = 16777216i32;
 #[doc = "*Required features: `\"Win32_System_HostComputeNetwork\"`*"]
 pub const HcnNotificationFlagsReserved: HCN_NOTIFICATIONS = -268435456i32;
 #[doc = "*Required features: `\"Win32_System_HostComputeNetwork\"`*"]
-pub type HCN_NOTIFICATION_CALLBACK = ::core::option::Option<unsafe extern "system" fn(notificationtype: u32, context: *const ::core::ffi::c_void, notificationstatus: ::windows_sys::core::HRESULT, notificationdata: ::windows_sys::core::PCWSTR)>;
-#[doc = "*Required features: `\"Win32_System_HostComputeNetwork\"`*"]
 pub type HCN_PORT_ACCESS = i32;
 #[doc = "*Required features: `\"Win32_System_HostComputeNetwork\"`*"]
 pub const HCN_PORT_ACCESS_EXCLUSIVE: HCN_PORT_ACCESS = 1i32;
@@ -165,3 +163,5 @@ impl ::core::clone::Clone for HCN_PORT_RANGE_RESERVATION {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_System_HostComputeNetwork\"`*"]
+pub type HCN_NOTIFICATION_CALLBACK = ::core::option::Option<unsafe extern "system" fn(notificationtype: u32, context: *const ::core::ffi::c_void, notificationstatus: ::windows_sys::core::HRESULT, notificationdata: ::windows_sys::core::PCWSTR)>;

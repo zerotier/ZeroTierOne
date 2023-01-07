@@ -26,16 +26,17 @@ pub mod Printing;
 pub mod Shell;
 #[cfg(feature = "Win32_System_WinRT_Storage")]
 pub mod Storage;
-#[cfg(feature = "Win32_System_WinRT_Xaml")]
-pub mod Xaml;
-#[link(name = "windows")]
-extern "system" {
-    #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-    pub fn CoDecodeProxy(dwclientpid: u32, ui64proxyaddress: u64, pserverinformation: *mut ServerInformation) -> ::windows_sys::core::HRESULT;
+#[cfg_attr(windows, link(name = "windows"))]
+extern "cdecl" {
     #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
     pub fn CreateControlInput(riid: *const ::windows_sys::core::GUID, ppv: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
     pub fn CreateControlInputEx(pcorewindow: ::windows_sys::core::IUnknown, riid: *const ::windows_sys::core::GUID, ppv: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
+}
+#[cfg_attr(windows, link(name = "windows"))]
+extern "system" {
+    #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+    pub fn CoDecodeProxy(dwclientpid: u32, ui64proxyaddress: u64, pserverinformation: *mut ServerInformation) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_System_WinRT\"`, `\"System\"`*"]
     #[cfg(feature = "System")]
     pub fn CreateDispatcherQueueController(options: DispatcherQueueOptions, dispatcherqueuecontroller: *mut super::super::super::System::DispatcherQueueController) -> ::windows_sys::core::HRESULT;
@@ -182,121 +183,6 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
     pub fn WindowsTrimStringStart(string: ::windows_sys::core::HSTRING, trimstring: ::windows_sys::core::HSTRING, newstring: *mut ::windows_sys::core::HSTRING) -> ::windows_sys::core::HRESULT;
 }
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub type ACTIVATIONTYPE = i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const ACTIVATIONTYPE_UNCATEGORIZED: ACTIVATIONTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const ACTIVATIONTYPE_FROM_MONIKER: ACTIVATIONTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const ACTIVATIONTYPE_FROM_DATA: ACTIVATIONTYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const ACTIVATIONTYPE_FROM_STORAGE: ACTIVATIONTYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const ACTIVATIONTYPE_FROM_STREAM: ACTIVATIONTYPE = 8i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const ACTIVATIONTYPE_FROM_FILE: ACTIVATIONTYPE = 16i32;
-pub type APARTMENT_SHUTDOWN_REGISTRATION_COOKIE = isize;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub type AgileReferenceOptions = i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const AGILEREFERENCE_DEFAULT: AgileReferenceOptions = 0i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const AGILEREFERENCE_DELAYEDMARSHAL: AgileReferenceOptions = 1i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub type BSOS_OPTIONS = i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const BSOS_DEFAULT: BSOS_OPTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const BSOS_PREFERDESTINATIONSTREAM: BSOS_OPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub type CASTING_CONNECTION_ERROR_STATUS = i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CASTING_CONNECTION_ERROR_STATUS_SUCCEEDED: CASTING_CONNECTION_ERROR_STATUS = 0i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CASTING_CONNECTION_ERROR_STATUS_DEVICE_DID_NOT_RESPOND: CASTING_CONNECTION_ERROR_STATUS = 1i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CASTING_CONNECTION_ERROR_STATUS_DEVICE_ERROR: CASTING_CONNECTION_ERROR_STATUS = 2i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CASTING_CONNECTION_ERROR_STATUS_DEVICE_LOCKED: CASTING_CONNECTION_ERROR_STATUS = 3i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CASTING_CONNECTION_ERROR_STATUS_PROTECTED_PLAYBACK_FAILED: CASTING_CONNECTION_ERROR_STATUS = 4i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CASTING_CONNECTION_ERROR_STATUS_INVALID_CASTING_SOURCE: CASTING_CONNECTION_ERROR_STATUS = 5i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CASTING_CONNECTION_ERROR_STATUS_UNKNOWN: CASTING_CONNECTION_ERROR_STATUS = 6i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub type CASTING_CONNECTION_STATE = i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CASTING_CONNECTION_STATE_DISCONNECTED: CASTING_CONNECTION_STATE = 0i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CASTING_CONNECTION_STATE_CONNECTED: CASTING_CONNECTION_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CASTING_CONNECTION_STATE_RENDERING: CASTING_CONNECTION_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CASTING_CONNECTION_STATE_DISCONNECTING: CASTING_CONNECTION_STATE = 3i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CASTING_CONNECTION_STATE_CONNECTING: CASTING_CONNECTION_STATE = 4i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CastingSourceInfo_Property_CastingTypes: &str = "CastingTypes";
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CastingSourceInfo_Property_PreferredSourceUriScheme: &str = "PreferredSourceUriScheme";
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const CastingSourceInfo_Property_ProtectedMedia: &str = "ProtectedMedia";
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub type DISPATCHERQUEUE_THREAD_APARTMENTTYPE = i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const DQTAT_COM_NONE: DISPATCHERQUEUE_THREAD_APARTMENTTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const DQTAT_COM_ASTA: DISPATCHERQUEUE_THREAD_APARTMENTTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const DQTAT_COM_STA: DISPATCHERQUEUE_THREAD_APARTMENTTYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub type DISPATCHERQUEUE_THREAD_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const DQTYPE_THREAD_DEDICATED: DISPATCHERQUEUE_THREAD_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const DQTYPE_THREAD_CURRENT: DISPATCHERQUEUE_THREAD_TYPE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub struct DispatcherQueueOptions {
-    pub dwSize: u32,
-    pub threadType: DISPATCHERQUEUE_THREAD_TYPE,
-    pub apartmentType: DISPATCHERQUEUE_THREAD_APARTMENTTYPE,
-}
-impl ::core::marker::Copy for DispatcherQueueOptions {}
-impl ::core::clone::Clone for DispatcherQueueOptions {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub struct EventRegistrationToken {
-    pub value: i64,
-}
-impl ::core::marker::Copy for EventRegistrationToken {}
-impl ::core::clone::Clone for EventRegistrationToken {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type HSTRING_BUFFER = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub struct HSTRING_HEADER {
-    pub flags: u32,
-    pub length: u32,
-    pub padding1: u32,
-    pub padding2: u32,
-    pub data: isize,
-}
-impl ::core::marker::Copy for HSTRING_HEADER {}
-impl ::core::clone::Clone for HSTRING_HEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub type IAccountsSettingsPaneInterop = *mut ::core::ffi::c_void;
 pub type IActivationFactory = *mut ::core::ffi::c_void;
 pub type IAgileReference = *mut ::core::ffi::c_void;
@@ -338,14 +224,81 @@ pub type IWeakReference = *mut ::core::ffi::c_void;
 pub type IWeakReferenceSource = *mut ::core::ffi::c_void;
 pub type IWebAuthenticationCoreManagerInterop = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CastingSourceInfo_Property_CastingTypes: &str = "CastingTypes";
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CastingSourceInfo_Property_PreferredSourceUriScheme: &str = "PreferredSourceUriScheme";
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CastingSourceInfo_Property_ProtectedMedia: &str = "ProtectedMedia";
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
 pub const MAX_ERROR_MESSAGE_CHARS: u32 = 512u32;
 #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub type PINSPECT_HSTRING_CALLBACK = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, readaddress: usize, length: u32, buffer: *mut u8) -> ::windows_sys::core::HRESULT>;
+pub type ACTIVATIONTYPE = i32;
 #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub type PINSPECT_HSTRING_CALLBACK2 = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, readaddress: u64, length: u32, buffer: *mut u8) -> ::windows_sys::core::HRESULT>;
+pub const ACTIVATIONTYPE_UNCATEGORIZED: ACTIVATIONTYPE = 0i32;
 #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub type PINSPECT_MEMORY_CALLBACK = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, readaddress: usize, length: u32, buffer: *mut u8) -> ::windows_sys::core::HRESULT>;
-pub type ROPARAMIIDHANDLE = isize;
+pub const ACTIVATIONTYPE_FROM_MONIKER: ACTIVATIONTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const ACTIVATIONTYPE_FROM_DATA: ACTIVATIONTYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const ACTIVATIONTYPE_FROM_STORAGE: ACTIVATIONTYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const ACTIVATIONTYPE_FROM_STREAM: ACTIVATIONTYPE = 8i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const ACTIVATIONTYPE_FROM_FILE: ACTIVATIONTYPE = 16i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub type AgileReferenceOptions = i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const AGILEREFERENCE_DEFAULT: AgileReferenceOptions = 0i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const AGILEREFERENCE_DELAYEDMARSHAL: AgileReferenceOptions = 1i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub type BSOS_OPTIONS = i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const BSOS_DEFAULT: BSOS_OPTIONS = 0i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const BSOS_PREFERDESTINATIONSTREAM: BSOS_OPTIONS = 1i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub type CASTING_CONNECTION_ERROR_STATUS = i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CASTING_CONNECTION_ERROR_STATUS_SUCCEEDED: CASTING_CONNECTION_ERROR_STATUS = 0i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CASTING_CONNECTION_ERROR_STATUS_DEVICE_DID_NOT_RESPOND: CASTING_CONNECTION_ERROR_STATUS = 1i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CASTING_CONNECTION_ERROR_STATUS_DEVICE_ERROR: CASTING_CONNECTION_ERROR_STATUS = 2i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CASTING_CONNECTION_ERROR_STATUS_DEVICE_LOCKED: CASTING_CONNECTION_ERROR_STATUS = 3i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CASTING_CONNECTION_ERROR_STATUS_PROTECTED_PLAYBACK_FAILED: CASTING_CONNECTION_ERROR_STATUS = 4i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CASTING_CONNECTION_ERROR_STATUS_INVALID_CASTING_SOURCE: CASTING_CONNECTION_ERROR_STATUS = 5i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CASTING_CONNECTION_ERROR_STATUS_UNKNOWN: CASTING_CONNECTION_ERROR_STATUS = 6i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub type CASTING_CONNECTION_STATE = i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CASTING_CONNECTION_STATE_DISCONNECTED: CASTING_CONNECTION_STATE = 0i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CASTING_CONNECTION_STATE_CONNECTED: CASTING_CONNECTION_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CASTING_CONNECTION_STATE_RENDERING: CASTING_CONNECTION_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CASTING_CONNECTION_STATE_DISCONNECTING: CASTING_CONNECTION_STATE = 3i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const CASTING_CONNECTION_STATE_CONNECTING: CASTING_CONNECTION_STATE = 4i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub type DISPATCHERQUEUE_THREAD_APARTMENTTYPE = i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const DQTAT_COM_NONE: DISPATCHERQUEUE_THREAD_APARTMENTTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const DQTAT_COM_ASTA: DISPATCHERQUEUE_THREAD_APARTMENTTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const DQTAT_COM_STA: DISPATCHERQUEUE_THREAD_APARTMENTTYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub type DISPATCHERQUEUE_THREAD_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const DQTYPE_THREAD_DEDICATED: DISPATCHERQUEUE_THREAD_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const DQTYPE_THREAD_CURRENT: DISPATCHERQUEUE_THREAD_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
 pub type RO_ERROR_REPORTING_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
@@ -364,6 +317,56 @@ pub type RO_INIT_TYPE = i32;
 pub const RO_INIT_SINGLETHREADED: RO_INIT_TYPE = 0i32;
 #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
 pub const RO_INIT_MULTITHREADED: RO_INIT_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub type TrustLevel = i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const BaseTrust: TrustLevel = 0i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const PartialTrust: TrustLevel = 1i32;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub const FullTrust: TrustLevel = 2i32;
+pub type APARTMENT_SHUTDOWN_REGISTRATION_COOKIE = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub struct DispatcherQueueOptions {
+    pub dwSize: u32,
+    pub threadType: DISPATCHERQUEUE_THREAD_TYPE,
+    pub apartmentType: DISPATCHERQUEUE_THREAD_APARTMENTTYPE,
+}
+impl ::core::marker::Copy for DispatcherQueueOptions {}
+impl ::core::clone::Clone for DispatcherQueueOptions {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub struct EventRegistrationToken {
+    pub value: i64,
+}
+impl ::core::marker::Copy for EventRegistrationToken {}
+impl ::core::clone::Clone for EventRegistrationToken {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type HSTRING_BUFFER = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub struct HSTRING_HEADER {
+    pub flags: u32,
+    pub length: u32,
+    pub padding1: u32,
+    pub padding2: u32,
+    pub data: isize,
+}
+impl ::core::marker::Copy for HSTRING_HEADER {}
+impl ::core::clone::Clone for HSTRING_HEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type ROPARAMIIDHANDLE = isize;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
 pub struct ServerInformation {
@@ -377,13 +380,11 @@ impl ::core::clone::Clone for ServerInformation {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub type TrustLevel = i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const BaseTrust: TrustLevel = 0i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const PartialTrust: TrustLevel = 1i32;
-#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
-pub const FullTrust: TrustLevel = 2i32;
 #[repr(C)]
 pub struct _RO_REGISTRATION_COOKIE(pub u8);
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub type PINSPECT_HSTRING_CALLBACK = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, readaddress: usize, length: u32, buffer: *mut u8) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub type PINSPECT_HSTRING_CALLBACK2 = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, readaddress: u64, length: u32, buffer: *mut u8) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_WinRT\"`*"]
+pub type PINSPECT_MEMORY_CALLBACK = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, readaddress: usize, length: u32, buffer: *mut u8) -> ::windows_sys::core::HRESULT>;

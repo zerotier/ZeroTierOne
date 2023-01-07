@@ -1,4 +1,11 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
+extern "cdecl" {
+    #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+    pub fn SetupWriteTextLog(logtoken: u64, category: u32, flags: u32, messagestr: ::windows_sys::core::PCSTR);
+    #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+    pub fn SetupWriteTextLogError(logtoken: u64, category: u32, logflags: u32, error: u32, messagestr: ::windows_sys::core::PCSTR);
+}
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
     pub fn CMP_WaitNoPendingInstallEvents(dwtimeout: u32) -> u32;
@@ -27,13 +34,13 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
     pub fn CM_Connect_MachineW(uncservername: ::windows_sys::core::PCWSTR, phmachine: *mut isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Create_DevNodeA(pdndevinst: *mut u32, pdeviceid: *const i8, dnparent: u32, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Create_DevNodeA(pdndevinst: *mut u32, pdeviceid: ::windows_sys::core::PCSTR, dnparent: u32, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Create_DevNodeW(pdndevinst: *mut u32, pdeviceid: *const u16, dnparent: u32, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Create_DevNodeW(pdndevinst: *mut u32, pdeviceid: ::windows_sys::core::PCWSTR, dnparent: u32, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Create_DevNode_ExA(pdndevinst: *mut u32, pdeviceid: *const i8, dnparent: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Create_DevNode_ExA(pdndevinst: *mut u32, pdeviceid: ::windows_sys::core::PCSTR, dnparent: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Create_DevNode_ExW(pdndevinst: *mut u32, pdeviceid: *const u16, dnparent: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Create_DevNode_ExW(pdndevinst: *mut u32, pdeviceid: ::windows_sys::core::PCWSTR, dnparent: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
     pub fn CM_Create_Range_List(prlh: *mut usize, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -213,21 +220,21 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
     pub fn CM_Get_Device_Interface_Alias_ExW(pszdeviceinterface: ::windows_sys::core::PCWSTR, aliasinterfaceguid: *const ::windows_sys::core::GUID, pszaliasdeviceinterface: ::windows_sys::core::PWSTR, pullength: *mut u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_Device_Interface_ListA(interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: *const i8, buffer: ::windows_sys::core::PSTR, bufferlen: u32, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Get_Device_Interface_ListA(interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: ::windows_sys::core::PCSTR, buffer: ::windows_sys::core::PSTR, bufferlen: u32, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_Device_Interface_ListW(interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: *const u16, buffer: ::windows_sys::core::PWSTR, bufferlen: u32, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Get_Device_Interface_ListW(interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: ::windows_sys::core::PCWSTR, buffer: ::windows_sys::core::PWSTR, bufferlen: u32, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_Device_Interface_List_ExA(interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: *const i8, buffer: ::windows_sys::core::PSTR, bufferlen: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Get_Device_Interface_List_ExA(interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: ::windows_sys::core::PCSTR, buffer: ::windows_sys::core::PSTR, bufferlen: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_Device_Interface_List_ExW(interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: *const u16, buffer: ::windows_sys::core::PWSTR, bufferlen: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Get_Device_Interface_List_ExW(interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: ::windows_sys::core::PCWSTR, buffer: ::windows_sys::core::PWSTR, bufferlen: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_Device_Interface_List_SizeA(pullen: *mut u32, interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: *const i8, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Get_Device_Interface_List_SizeA(pullen: *mut u32, interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: ::windows_sys::core::PCSTR, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_Device_Interface_List_SizeW(pullen: *mut u32, interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: *const u16, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Get_Device_Interface_List_SizeW(pullen: *mut u32, interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: ::windows_sys::core::PCWSTR, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_Device_Interface_List_Size_ExA(pullen: *mut u32, interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: *const i8, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Get_Device_Interface_List_Size_ExA(pullen: *mut u32, interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: ::windows_sys::core::PCSTR, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_Device_Interface_List_Size_ExW(pullen: *mut u32, interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: *const u16, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Get_Device_Interface_List_Size_ExW(pullen: *mut u32, interfaceclassguid: *const ::windows_sys::core::GUID, pdeviceid: ::windows_sys::core::PCWSTR, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Devices_Properties\"`*"]
     #[cfg(feature = "Win32_Devices_Properties")]
     pub fn CM_Get_Device_Interface_PropertyW(pszdeviceinterface: ::windows_sys::core::PCWSTR, propertykey: *const super::Properties::DEVPROPKEY, propertytype: *mut u32, propertybuffer: *mut u8, propertybuffersize: *mut u32, ulflags: u32) -> CONFIGRET;
@@ -249,23 +256,23 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
     pub fn CM_Get_Global_State_Ex(pulstate: *mut u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_HW_Prof_FlagsA(pdeviceid: *const i8, ulhardwareprofile: u32, pulvalue: *mut u32, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Get_HW_Prof_FlagsA(pdeviceid: ::windows_sys::core::PCSTR, ulhardwareprofile: u32, pulvalue: *mut u32, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_HW_Prof_FlagsW(pdeviceid: *const u16, ulhardwareprofile: u32, pulvalue: *mut u32, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Get_HW_Prof_FlagsW(pdeviceid: ::windows_sys::core::PCWSTR, ulhardwareprofile: u32, pulvalue: *mut u32, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_HW_Prof_Flags_ExA(pdeviceid: *const i8, ulhardwareprofile: u32, pulvalue: *mut u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Get_HW_Prof_Flags_ExA(pdeviceid: ::windows_sys::core::PCSTR, ulhardwareprofile: u32, pulvalue: *mut u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_HW_Prof_Flags_ExW(pdeviceid: *const u16, ulhardwareprofile: u32, pulvalue: *mut u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Get_HW_Prof_Flags_ExW(pdeviceid: ::windows_sys::core::PCWSTR, ulhardwareprofile: u32, pulvalue: *mut u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn CM_Get_Hardware_Profile_InfoA(ulindex: u32, phwprofileinfo: *mut HWProfileInfo_sA, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_Hardware_Profile_InfoW(ulindex: u32, phwprofileinfo: *mut HWProfileInfo_sW, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Get_Hardware_Profile_InfoW(ulindex: u32, phwprofileinfo: *mut HWPROFILEINFO_W, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn CM_Get_Hardware_Profile_Info_ExA(ulindex: u32, phwprofileinfo: *mut HWProfileInfo_sA, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Get_Hardware_Profile_Info_ExW(ulindex: u32, phwprofileinfo: *mut HWProfileInfo_sW, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Get_Hardware_Profile_Info_ExW(ulindex: u32, phwprofileinfo: *mut HWPROFILEINFO_W, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
     pub fn CM_Get_Log_Conf_Priority(lclogconf: usize, ppriority: *mut u32, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -322,13 +329,13 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn CM_Is_Version_Available_Ex(wversion: u16, hmachine: isize) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Locate_DevNodeA(pdndevinst: *mut u32, pdeviceid: *const i8, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Locate_DevNodeA(pdndevinst: *mut u32, pdeviceid: ::windows_sys::core::PCSTR, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Locate_DevNodeW(pdndevinst: *mut u32, pdeviceid: *const u16, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Locate_DevNodeW(pdndevinst: *mut u32, pdeviceid: ::windows_sys::core::PCWSTR, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Locate_DevNode_ExA(pdndevinst: *mut u32, pdeviceid: *const i8, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Locate_DevNode_ExA(pdndevinst: *mut u32, pdeviceid: ::windows_sys::core::PCSTR, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Locate_DevNode_ExW(pdndevinst: *mut u32, pdeviceid: *const u16, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Locate_DevNode_ExW(pdndevinst: *mut u32, pdeviceid: ::windows_sys::core::PCWSTR, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
     pub fn CM_MapCrToWin32Err(cmreturncode: CONFIGRET, defaulterr: u32) -> u32;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -473,13 +480,13 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
     pub fn CM_Set_HW_Prof_Ex(ulhardwareprofile: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Set_HW_Prof_FlagsA(pdeviceid: *const i8, ulconfig: u32, ulvalue: u32, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Set_HW_Prof_FlagsA(pdeviceid: ::windows_sys::core::PCSTR, ulconfig: u32, ulvalue: u32, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Set_HW_Prof_FlagsW(pdeviceid: *const u16, ulconfig: u32, ulvalue: u32, ulflags: u32) -> CONFIGRET;
+    pub fn CM_Set_HW_Prof_FlagsW(pdeviceid: ::windows_sys::core::PCWSTR, ulconfig: u32, ulvalue: u32, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Set_HW_Prof_Flags_ExA(pdeviceid: *const i8, ulconfig: u32, ulvalue: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Set_HW_Prof_Flags_ExA(pdeviceid: ::windows_sys::core::PCSTR, ulconfig: u32, ulvalue: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn CM_Set_HW_Prof_Flags_ExW(pdeviceid: *const u16, ulconfig: u32, ulvalue: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
+    pub fn CM_Set_HW_Prof_Flags_ExW(pdeviceid: ::windows_sys::core::PCWSTR, ulconfig: u32, ulvalue: u32, ulflags: u32, hmachine: isize) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
     pub fn CM_Setup_DevNode(dndevinst: u32, ulflags: u32) -> CONFIGRET;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -1497,10 +1504,6 @@ extern "system" {
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Diagnostics_Debug"))]
     pub fn SetupVerifyInfFileW(infname: ::windows_sys::core::PCWSTR, altplatforminfo: *const SP_ALTPLATFORM_INFO_V2, infsignerinfo: *mut SP_INF_SIGNER_INFO_V2_W) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn SetupWriteTextLog(logtoken: u64, category: u32, flags: u32, messagestr: ::windows_sys::core::PCSTR);
-    #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-    pub fn SetupWriteTextLogError(logtoken: u64, category: u32, logflags: u32, error: u32, messagestr: ::windows_sys::core::PCSTR);
-    #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
     pub fn SetupWriteTextLogInfLine(logtoken: u64, flags: u32, infhandle: *const ::core::ffi::c_void, context: *const INFCONTEXT);
     #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -1515,119 +1518,6 @@ pub const ALLOC_LOG_CONF: u32 = 2u32;
 pub const BASIC_LOG_CONF: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const BOOT_LOG_CONF: u32 = 3u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct BUSNUMBER_DES {
-    pub BUSD_Count: u32,
-    pub BUSD_Type: u32,
-    pub BUSD_Flags: u32,
-    pub BUSD_Alloc_Base: u32,
-    pub BUSD_Alloc_End: u32,
-}
-impl ::core::marker::Copy for BUSNUMBER_DES {}
-impl ::core::clone::Clone for BUSNUMBER_DES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct BUSNUMBER_RANGE {
-    pub BUSR_Min: u32,
-    pub BUSR_Max: u32,
-    pub BUSR_nBusNumbers: u32,
-    pub BUSR_Flags: u32,
-}
-impl ::core::marker::Copy for BUSNUMBER_RANGE {}
-impl ::core::clone::Clone for BUSNUMBER_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct BUSNUMBER_RESOURCE {
-    pub BusNumber_Header: BUSNUMBER_DES,
-    pub BusNumber_Data: [BUSNUMBER_RANGE; 1],
-}
-impl ::core::marker::Copy for BUSNUMBER_RESOURCE {}
-impl ::core::clone::Clone for BUSNUMBER_RESOURCE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct CABINET_INFO_A {
-    pub CabinetPath: ::windows_sys::core::PCSTR,
-    pub CabinetFile: ::windows_sys::core::PCSTR,
-    pub DiskName: ::windows_sys::core::PCSTR,
-    pub SetId: u16,
-    pub CabinetNumber: u16,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for CABINET_INFO_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for CABINET_INFO_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct CABINET_INFO_A {
-    pub CabinetPath: ::windows_sys::core::PCSTR,
-    pub CabinetFile: ::windows_sys::core::PCSTR,
-    pub DiskName: ::windows_sys::core::PCSTR,
-    pub SetId: u16,
-    pub CabinetNumber: u16,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for CABINET_INFO_A {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for CABINET_INFO_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct CABINET_INFO_W {
-    pub CabinetPath: ::windows_sys::core::PCWSTR,
-    pub CabinetFile: ::windows_sys::core::PCWSTR,
-    pub DiskName: ::windows_sys::core::PCWSTR,
-    pub SetId: u16,
-    pub CabinetNumber: u16,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for CABINET_INFO_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for CABINET_INFO_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct CABINET_INFO_W {
-    pub CabinetPath: ::windows_sys::core::PCWSTR,
-    pub CabinetFile: ::windows_sys::core::PCWSTR,
-    pub DiskName: ::windows_sys::core::PCWSTR,
-    pub SetId: u16,
-    pub CabinetNumber: u16,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for CABINET_INFO_W {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for CABINET_INFO_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const CM_ADD_ID_BITS: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -1969,182 +1859,9 @@ pub const CM_NAME_ATTRIBUTE_NAME_RETRIEVED_FROM_DEVICE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const CM_NAME_ATTRIBUTE_USER_ASSIGNED_NAME: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub type CM_NOTIFY_ACTION = i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_ACTION_DEVICEINTERFACEARRIVAL: CM_NOTIFY_ACTION = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_ACTION_DEVICEINTERFACEREMOVAL: CM_NOTIFY_ACTION = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_ACTION_DEVICEQUERYREMOVE: CM_NOTIFY_ACTION = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_ACTION_DEVICEQUERYREMOVEFAILED: CM_NOTIFY_ACTION = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_ACTION_DEVICEREMOVEPENDING: CM_NOTIFY_ACTION = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_ACTION_DEVICEREMOVECOMPLETE: CM_NOTIFY_ACTION = 5i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_ACTION_DEVICECUSTOMEVENT: CM_NOTIFY_ACTION = 6i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_ACTION_DEVICEINSTANCEENUMERATED: CM_NOTIFY_ACTION = 7i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_ACTION_DEVICEINSTANCESTARTED: CM_NOTIFY_ACTION = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_ACTION_DEVICEINSTANCEREMOVED: CM_NOTIFY_ACTION = 9i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_ACTION_MAX: CM_NOTIFY_ACTION = 10i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct CM_NOTIFY_EVENT_DATA {
-    pub FilterType: CM_NOTIFY_FILTER_TYPE,
-    pub Reserved: u32,
-    pub u: CM_NOTIFY_EVENT_DATA_0,
-}
-impl ::core::marker::Copy for CM_NOTIFY_EVENT_DATA {}
-impl ::core::clone::Clone for CM_NOTIFY_EVENT_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub union CM_NOTIFY_EVENT_DATA_0 {
-    pub DeviceInterface: CM_NOTIFY_EVENT_DATA_0_2,
-    pub DeviceHandle: CM_NOTIFY_EVENT_DATA_0_0,
-    pub DeviceInstance: CM_NOTIFY_EVENT_DATA_0_1,
-}
-impl ::core::marker::Copy for CM_NOTIFY_EVENT_DATA_0 {}
-impl ::core::clone::Clone for CM_NOTIFY_EVENT_DATA_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct CM_NOTIFY_EVENT_DATA_0_0 {
-    pub EventGuid: ::windows_sys::core::GUID,
-    pub NameOffset: i32,
-    pub DataSize: u32,
-    pub Data: [u8; 1],
-}
-impl ::core::marker::Copy for CM_NOTIFY_EVENT_DATA_0_0 {}
-impl ::core::clone::Clone for CM_NOTIFY_EVENT_DATA_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct CM_NOTIFY_EVENT_DATA_0_1 {
-    pub InstanceId: [u16; 1],
-}
-impl ::core::marker::Copy for CM_NOTIFY_EVENT_DATA_0_1 {}
-impl ::core::clone::Clone for CM_NOTIFY_EVENT_DATA_0_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct CM_NOTIFY_EVENT_DATA_0_2 {
-    pub ClassGuid: ::windows_sys::core::GUID,
-    pub SymbolicLink: [u16; 1],
-}
-impl ::core::marker::Copy for CM_NOTIFY_EVENT_DATA_0_2 {}
-impl ::core::clone::Clone for CM_NOTIFY_EVENT_DATA_0_2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CM_NOTIFY_FILTER {
-    pub cbSize: u32,
-    pub Flags: u32,
-    pub FilterType: CM_NOTIFY_FILTER_TYPE,
-    pub Reserved: u32,
-    pub u: CM_NOTIFY_FILTER_0,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CM_NOTIFY_FILTER {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CM_NOTIFY_FILTER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union CM_NOTIFY_FILTER_0 {
-    pub DeviceInterface: CM_NOTIFY_FILTER_0_2,
-    pub DeviceHandle: CM_NOTIFY_FILTER_0_0,
-    pub DeviceInstance: CM_NOTIFY_FILTER_0_1,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CM_NOTIFY_FILTER_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CM_NOTIFY_FILTER_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CM_NOTIFY_FILTER_0_0 {
-    pub hTarget: super::super::Foundation::HANDLE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CM_NOTIFY_FILTER_0_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CM_NOTIFY_FILTER_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CM_NOTIFY_FILTER_0_1 {
-    pub InstanceId: [u16; 200],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CM_NOTIFY_FILTER_0_1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CM_NOTIFY_FILTER_0_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CM_NOTIFY_FILTER_0_2 {
-    pub ClassGuid: ::windows_sys::core::GUID,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CM_NOTIFY_FILTER_0_2 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CM_NOTIFY_FILTER_0_2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const CM_NOTIFY_FILTER_FLAG_ALL_DEVICE_INSTANCES: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const CM_NOTIFY_FILTER_FLAG_ALL_INTERFACE_CLASSES: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub type CM_NOTIFY_FILTER_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_FILTER_TYPE_DEVICEINTERFACE: CM_NOTIFY_FILTER_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_FILTER_TYPE_DEVICEHANDLE: CM_NOTIFY_FILTER_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_FILTER_TYPE_DEVICEINSTANCE: CM_NOTIFY_FILTER_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CM_NOTIFY_FILTER_TYPE_MAX: CM_NOTIFY_FILTER_TYPE = 3i32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const CM_OPEN_CLASS_KEY_BITS: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -2375,213 +2092,8 @@ pub const CM_SET_DEVNODE_PROBLEM_OVERRIDE: u32 = 1u32;
 pub const CM_SET_HW_PROF_FLAGS_BITS: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const CM_SET_HW_PROF_FLAGS_UI_NOT_OK: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct COINSTALLER_CONTEXT_DATA {
-    pub PostProcessing: super::super::Foundation::BOOL,
-    pub InstallResult: u32,
-    pub PrivateData: *mut ::core::ffi::c_void,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for COINSTALLER_CONTEXT_DATA {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for COINSTALLER_CONTEXT_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct COINSTALLER_CONTEXT_DATA {
-    pub PostProcessing: super::super::Foundation::BOOL,
-    pub InstallResult: u32,
-    pub PrivateData: *mut ::core::ffi::c_void,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for COINSTALLER_CONTEXT_DATA {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for COINSTALLER_CONTEXT_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const CONFIGMG_VERSION: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub type CONFIGRET = u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_SUCCESS: CONFIGRET = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_DEFAULT: CONFIGRET = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_OUT_OF_MEMORY: CONFIGRET = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_POINTER: CONFIGRET = 3u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_FLAG: CONFIGRET = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_DEVNODE: CONFIGRET = 5u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_DEVINST: CONFIGRET = 5u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_RES_DES: CONFIGRET = 6u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_LOG_CONF: CONFIGRET = 7u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_ARBITRATOR: CONFIGRET = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_NODELIST: CONFIGRET = 9u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_DEVNODE_HAS_REQS: CONFIGRET = 10u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_DEVINST_HAS_REQS: CONFIGRET = 10u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_RESOURCEID: CONFIGRET = 11u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_DLVXD_NOT_FOUND: CONFIGRET = 12u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_SUCH_DEVNODE: CONFIGRET = 13u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_SUCH_DEVINST: CONFIGRET = 13u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_MORE_LOG_CONF: CONFIGRET = 14u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_MORE_RES_DES: CONFIGRET = 15u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_ALREADY_SUCH_DEVNODE: CONFIGRET = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_ALREADY_SUCH_DEVINST: CONFIGRET = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_RANGE_LIST: CONFIGRET = 17u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_RANGE: CONFIGRET = 18u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_FAILURE: CONFIGRET = 19u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_SUCH_LOGICAL_DEV: CONFIGRET = 20u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_CREATE_BLOCKED: CONFIGRET = 21u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NOT_SYSTEM_VM: CONFIGRET = 22u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_REMOVE_VETOED: CONFIGRET = 23u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_APM_VETOED: CONFIGRET = 24u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_LOAD_TYPE: CONFIGRET = 25u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_BUFFER_SMALL: CONFIGRET = 26u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_ARBITRATOR: CONFIGRET = 27u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_REGISTRY_HANDLE: CONFIGRET = 28u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_REGISTRY_ERROR: CONFIGRET = 29u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_DEVICE_ID: CONFIGRET = 30u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_DATA: CONFIGRET = 31u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_API: CONFIGRET = 32u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_DEVLOADER_NOT_READY: CONFIGRET = 33u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NEED_RESTART: CONFIGRET = 34u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_MORE_HW_PROFILES: CONFIGRET = 35u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_DEVICE_NOT_THERE: CONFIGRET = 36u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_SUCH_VALUE: CONFIGRET = 37u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_WRONG_TYPE: CONFIGRET = 38u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_PRIORITY: CONFIGRET = 39u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NOT_DISABLEABLE: CONFIGRET = 40u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_FREE_RESOURCES: CONFIGRET = 41u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_QUERY_VETOED: CONFIGRET = 42u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_CANT_SHARE_IRQ: CONFIGRET = 43u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_DEPENDENT: CONFIGRET = 44u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_SAME_RESOURCES: CONFIGRET = 45u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_SUCH_REGISTRY_KEY: CONFIGRET = 46u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_MACHINENAME: CONFIGRET = 47u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_REMOTE_COMM_FAILURE: CONFIGRET = 48u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_MACHINE_UNAVAILABLE: CONFIGRET = 49u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_CM_SERVICES: CONFIGRET = 50u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_ACCESS_DENIED: CONFIGRET = 51u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_CALL_NOT_IMPLEMENTED: CONFIGRET = 52u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_PROPERTY: CONFIGRET = 53u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_DEVICE_INTERFACE_ACTIVE: CONFIGRET = 54u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_NO_SUCH_DEVICE_INTERFACE: CONFIGRET = 55u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_REFERENCE_STRING: CONFIGRET = 56u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_CONFLICT_LIST: CONFIGRET = 57u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_INDEX: CONFIGRET = 58u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const CR_INVALID_STRUCTURE_SIZE: CONFIGRET = 59u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const NUM_CR_RESULTS: CONFIGRET = 60u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CONFLICT_DETAILS_A {
-    pub CD_ulSize: u32,
-    pub CD_ulMask: u32,
-    pub CD_dnDevInst: u32,
-    pub CD_rdResDes: usize,
-    pub CD_ulFlags: u32,
-    pub CD_szDescription: [super::super::Foundation::CHAR; 260],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CONFLICT_DETAILS_A {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CONFLICT_DETAILS_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct CONFLICT_DETAILS_W {
-    pub CD_ulSize: u32,
-    pub CD_ulMask: u32,
-    pub CD_dnDevInst: u32,
-    pub CD_rdResDes: usize,
-    pub CD_ulFlags: u32,
-    pub CD_szDescription: [u16; 260],
-}
-impl ::core::marker::Copy for CONFLICT_DETAILS_W {}
-impl ::core::clone::Clone for CONFLICT_DETAILS_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const COPYFLG_FORCE_FILE_IN_USE: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -2608,61 +2120,6 @@ pub const COPYFLG_REPLACEONLY: u32 = 1024u32;
 pub const COPYFLG_REPLACE_BOOT_FILE: u32 = 4096u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const COPYFLG_WARN_IF_SKIP: u32 = 1u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct CS_DES {
-    pub CSD_SignatureLength: u32,
-    pub CSD_LegacyDataOffset: u32,
-    pub CSD_LegacyDataSize: u32,
-    pub CSD_Flags: u32,
-    pub CSD_ClassGuid: ::windows_sys::core::GUID,
-    pub CSD_Signature: [u8; 1],
-}
-impl ::core::marker::Copy for CS_DES {}
-impl ::core::clone::Clone for CS_DES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct CS_RESOURCE {
-    pub CS_Header: CS_DES,
-}
-impl ::core::marker::Copy for CS_RESOURCE {}
-impl ::core::clone::Clone for CS_RESOURCE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct Connection_Des_s {
-    pub COND_Type: u32,
-    pub COND_Flags: u32,
-    pub COND_Class: u8,
-    pub COND_ClassType: u8,
-    pub COND_Reserved1: u8,
-    pub COND_Reserved2: u8,
-    pub COND_Id: i64,
-}
-impl ::core::marker::Copy for Connection_Des_s {}
-impl ::core::clone::Clone for Connection_Des_s {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct Connection_Resource_s {
-    pub Connection_Header: Connection_Des_s,
-}
-impl ::core::marker::Copy for Connection_Resource_s {}
-impl ::core::clone::Clone for Connection_Resource_s {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const DELFLG_IN_USE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -3057,45 +2514,6 @@ pub const DI_SHOWOEM: i32 = 1i32;
 pub const DI_UNREMOVEDEVICE_CONFIGSPECIFIC: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const DI_USECI_SELECTSTRINGS: i32 = 134217728i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct DMA_DES {
-    pub DD_Count: u32,
-    pub DD_Type: u32,
-    pub DD_Flags: u32,
-    pub DD_Alloc_Chan: u32,
-}
-impl ::core::marker::Copy for DMA_DES {}
-impl ::core::clone::Clone for DMA_DES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct DMA_RANGE {
-    pub DR_Min: u32,
-    pub DR_Max: u32,
-    pub DR_Flags: u32,
-}
-impl ::core::marker::Copy for DMA_RANGE {}
-impl ::core::clone::Clone for DMA_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct DMA_RESOURCE {
-    pub DMA_Header: DMA_DES,
-    pub DMA_Data: [DMA_RANGE; 1],
-}
-impl ::core::marker::Copy for DMA_RESOURCE {}
-impl ::core::clone::Clone for DMA_RESOURCE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const DMI_BKCOLOR: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -3282,47 +2700,6 @@ pub const DYNAWIZ_FLAG_INSTALLDET_NEXT: u32 = 2u32;
 pub const DYNAWIZ_FLAG_INSTALLDET_PREV: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const DYNAWIZ_FLAG_PAGESADDED: u32 = 1u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct DevPrivate_Des_s {
-    pub PD_Count: u32,
-    pub PD_Type: u32,
-    pub PD_Data1: u32,
-    pub PD_Data2: u32,
-    pub PD_Data3: u32,
-    pub PD_Flags: u32,
-}
-impl ::core::marker::Copy for DevPrivate_Des_s {}
-impl ::core::clone::Clone for DevPrivate_Des_s {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct DevPrivate_Range_s {
-    pub PR_Data1: u32,
-    pub PR_Data2: u32,
-    pub PR_Data3: u32,
-}
-impl ::core::marker::Copy for DevPrivate_Range_s {}
-impl ::core::clone::Clone for DevPrivate_Range_s {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct DevPrivate_Resource_s {
-    pub PRV_Header: DevPrivate_Des_s,
-    pub PRV_Data: [DevPrivate_Range_s; 1],
-}
-impl ::core::marker::Copy for DevPrivate_Resource_s {}
-impl ::core::clone::Clone for DevPrivate_Resource_s {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const ENABLECLASS_FAILURE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -3343,154 +2720,6 @@ pub const FILEOP_RENAME: u32 = 1u32;
 pub const FILEOP_RETRY: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const FILEOP_SKIP: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct FILEPATHS_A {
-    pub Target: ::windows_sys::core::PCSTR,
-    pub Source: ::windows_sys::core::PCSTR,
-    pub Win32Error: u32,
-    pub Flags: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for FILEPATHS_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for FILEPATHS_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct FILEPATHS_A {
-    pub Target: ::windows_sys::core::PCSTR,
-    pub Source: ::windows_sys::core::PCSTR,
-    pub Win32Error: u32,
-    pub Flags: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for FILEPATHS_A {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for FILEPATHS_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct FILEPATHS_SIGNERINFO_A {
-    pub Target: ::windows_sys::core::PCSTR,
-    pub Source: ::windows_sys::core::PCSTR,
-    pub Win32Error: u32,
-    pub Flags: u32,
-    pub DigitalSigner: ::windows_sys::core::PCSTR,
-    pub Version: ::windows_sys::core::PCSTR,
-    pub CatalogFile: ::windows_sys::core::PCSTR,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for FILEPATHS_SIGNERINFO_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for FILEPATHS_SIGNERINFO_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct FILEPATHS_SIGNERINFO_A {
-    pub Target: ::windows_sys::core::PCSTR,
-    pub Source: ::windows_sys::core::PCSTR,
-    pub Win32Error: u32,
-    pub Flags: u32,
-    pub DigitalSigner: ::windows_sys::core::PCSTR,
-    pub Version: ::windows_sys::core::PCSTR,
-    pub CatalogFile: ::windows_sys::core::PCSTR,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for FILEPATHS_SIGNERINFO_A {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for FILEPATHS_SIGNERINFO_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct FILEPATHS_SIGNERINFO_W {
-    pub Target: ::windows_sys::core::PCWSTR,
-    pub Source: ::windows_sys::core::PCWSTR,
-    pub Win32Error: u32,
-    pub Flags: u32,
-    pub DigitalSigner: ::windows_sys::core::PCWSTR,
-    pub Version: ::windows_sys::core::PCWSTR,
-    pub CatalogFile: ::windows_sys::core::PCWSTR,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for FILEPATHS_SIGNERINFO_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for FILEPATHS_SIGNERINFO_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct FILEPATHS_SIGNERINFO_W {
-    pub Target: ::windows_sys::core::PCWSTR,
-    pub Source: ::windows_sys::core::PCWSTR,
-    pub Win32Error: u32,
-    pub Flags: u32,
-    pub DigitalSigner: ::windows_sys::core::PCWSTR,
-    pub Version: ::windows_sys::core::PCWSTR,
-    pub CatalogFile: ::windows_sys::core::PCWSTR,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for FILEPATHS_SIGNERINFO_W {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for FILEPATHS_SIGNERINFO_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct FILEPATHS_W {
-    pub Target: ::windows_sys::core::PCWSTR,
-    pub Source: ::windows_sys::core::PCWSTR,
-    pub Win32Error: u32,
-    pub Flags: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for FILEPATHS_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for FILEPATHS_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct FILEPATHS_W {
-    pub Target: ::windows_sys::core::PCWSTR,
-    pub Source: ::windows_sys::core::PCWSTR,
-    pub Win32Error: u32,
-    pub Flags: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for FILEPATHS_W {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for FILEPATHS_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const FILE_COMPRESSION_MSZIP: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -3499,92 +2728,6 @@ pub const FILE_COMPRESSION_NONE: u32 = 0u32;
 pub const FILE_COMPRESSION_NTCAB: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const FILE_COMPRESSION_WINLZA: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FILE_IN_CABINET_INFO_A {
-    pub NameInCabinet: ::windows_sys::core::PCSTR,
-    pub FileSize: u32,
-    pub Win32Error: u32,
-    pub DosDate: u16,
-    pub DosTime: u16,
-    pub DosAttribs: u16,
-    pub FullTargetName: [super::super::Foundation::CHAR; 260],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FILE_IN_CABINET_INFO_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FILE_IN_CABINET_INFO_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FILE_IN_CABINET_INFO_A {
-    pub NameInCabinet: ::windows_sys::core::PCSTR,
-    pub FileSize: u32,
-    pub Win32Error: u32,
-    pub DosDate: u16,
-    pub DosTime: u16,
-    pub DosAttribs: u16,
-    pub FullTargetName: [super::super::Foundation::CHAR; 260],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FILE_IN_CABINET_INFO_A {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FILE_IN_CABINET_INFO_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct FILE_IN_CABINET_INFO_W {
-    pub NameInCabinet: ::windows_sys::core::PCWSTR,
-    pub FileSize: u32,
-    pub Win32Error: u32,
-    pub DosDate: u16,
-    pub DosTime: u16,
-    pub DosAttribs: u16,
-    pub FullTargetName: [u16; 260],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for FILE_IN_CABINET_INFO_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for FILE_IN_CABINET_INFO_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct FILE_IN_CABINET_INFO_W {
-    pub NameInCabinet: ::windows_sys::core::PCWSTR,
-    pub FileSize: u32,
-    pub Win32Error: u32,
-    pub DosDate: u16,
-    pub DosTime: u16,
-    pub DosAttribs: u16,
-    pub FullTargetName: [u16; 260],
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for FILE_IN_CABINET_INFO_W {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for FILE_IN_CABINET_INFO_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const FILTERED_LOG_CONF: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -3851,37 +2994,6 @@ pub const GUID_TARGET_DEVICE_TRANSPORT_RELATIONS_CHANGED: ::windows_sys::core::G
 pub const GUID_THERMAL_COOLING_INTERFACE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3971893160, data2: 50328, data3: 19385, data4: [189, 112, 232, 103, 224, 148, 13, 34] };
 pub const GUID_TRANSLATOR_INTERFACE_STANDARD: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1813334674, data2: 43727, data3: 4560, data4: [141, 42, 0, 160, 201, 6, 178, 68] };
 pub const GUID_WUDF_DEVICE_HOST_PROBLEM: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3292341693, data2: 37702, data3: 16622, data4: [162, 210, 215, 12, 21, 248, 183, 91] };
-pub type HCMNOTIFICATION = isize;
-pub type HDEVINFO = isize;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct HWProfileInfo_sA {
-    pub HWPI_ulHWProfile: u32,
-    pub HWPI_szFriendlyName: [super::super::Foundation::CHAR; 80],
-    pub HWPI_dwFlags: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for HWProfileInfo_sA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for HWProfileInfo_sA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct HWProfileInfo_sW {
-    pub HWPI_ulHWProfile: u32,
-    pub HWPI_szFriendlyName: [u16; 80],
-    pub HWPI_dwFlags: u32,
-}
-impl ::core::marker::Copy for HWProfileInfo_sW {}
-impl ::core::clone::Clone for HWProfileInfo_sW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const IDD_DYNAWIZ_ANALYZEDEV_PAGE: u32 = 10010u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -3950,40 +3062,6 @@ pub const IDI_RESOURCELAST: u32 = 161u32;
 pub const IDI_RESOURCEOVERLAYFIRST: u32 = 161u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const IDI_RESOURCEOVERLAYLAST: u32 = 161u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct INFCONTEXT {
-    pub Inf: *mut ::core::ffi::c_void,
-    pub CurrentInf: *mut ::core::ffi::c_void,
-    pub Section: u32,
-    pub Line: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for INFCONTEXT {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for INFCONTEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct INFCONTEXT {
-    pub Inf: *mut ::core::ffi::c_void,
-    pub CurrentInf: *mut ::core::ffi::c_void,
-    pub Section: u32,
-    pub Line: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for INFCONTEXT {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for INFCONTEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const INFINFO_DEFAULT_SEARCH: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -4382,116 +3460,6 @@ pub const IO_ALIAS_12_BIT_DECODE: u32 = 16u32;
 pub const IO_ALIAS_16_BIT_DECODE: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const IO_ALIAS_POSITIVE_DECODE: u32 = 255u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct IO_DES {
-    pub IOD_Count: u32,
-    pub IOD_Type: u32,
-    pub IOD_Alloc_Base: u64,
-    pub IOD_Alloc_End: u64,
-    pub IOD_DesFlags: u32,
-}
-impl ::core::marker::Copy for IO_DES {}
-impl ::core::clone::Clone for IO_DES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct IO_RANGE {
-    pub IOR_Align: u64,
-    pub IOR_nPorts: u32,
-    pub IOR_Min: u64,
-    pub IOR_Max: u64,
-    pub IOR_RangeFlags: u32,
-    pub IOR_Alias: u64,
-}
-impl ::core::marker::Copy for IO_RANGE {}
-impl ::core::clone::Clone for IO_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct IO_RESOURCE {
-    pub IO_Header: IO_DES,
-    pub IO_Data: [IO_RANGE; 1],
-}
-impl ::core::marker::Copy for IO_RESOURCE {}
-impl ::core::clone::Clone for IO_RESOURCE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct IRQ_DES_32 {
-    pub IRQD_Count: u32,
-    pub IRQD_Type: u32,
-    pub IRQD_Flags: u32,
-    pub IRQD_Alloc_Num: u32,
-    pub IRQD_Affinity: u32,
-}
-impl ::core::marker::Copy for IRQ_DES_32 {}
-impl ::core::clone::Clone for IRQ_DES_32 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct IRQ_DES_64 {
-    pub IRQD_Count: u32,
-    pub IRQD_Type: u32,
-    pub IRQD_Flags: u32,
-    pub IRQD_Alloc_Num: u32,
-    pub IRQD_Affinity: u64,
-}
-impl ::core::marker::Copy for IRQ_DES_64 {}
-impl ::core::clone::Clone for IRQ_DES_64 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct IRQ_RANGE {
-    pub IRQR_Min: u32,
-    pub IRQR_Max: u32,
-    pub IRQR_Flags: u32,
-}
-impl ::core::marker::Copy for IRQ_RANGE {}
-impl ::core::clone::Clone for IRQ_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct IRQ_RESOURCE_32 {
-    pub IRQ_Header: IRQ_DES_32,
-    pub IRQ_Data: [IRQ_RANGE; 1],
-}
-impl ::core::marker::Copy for IRQ_RESOURCE_32 {}
-impl ::core::clone::Clone for IRQ_RESOURCE_32 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct IRQ_RESOURCE_64 {
-    pub IRQ_Header: IRQ_DES_64,
-    pub IRQ_Data: [IRQ_RANGE; 1],
-}
-impl ::core::marker::Copy for IRQ_RESOURCE_64 {}
-impl ::core::clone::Clone for IRQ_RESOURCE_64 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const LCPRI_BOOTCONFIG: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -4584,124 +3552,8 @@ pub const MAX_SERVICE_NAME_LEN: u32 = 256u32;
 pub const MAX_SUBTITLE_LEN: u32 = 256u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const MAX_TITLE_LEN: u32 = 60u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct MEM_DES {
-    pub MD_Count: u32,
-    pub MD_Type: u32,
-    pub MD_Alloc_Base: u64,
-    pub MD_Alloc_End: u64,
-    pub MD_Flags: u32,
-    pub MD_Reserved: u32,
-}
-impl ::core::marker::Copy for MEM_DES {}
-impl ::core::clone::Clone for MEM_DES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct MEM_RANGE {
-    pub MR_Align: u64,
-    pub MR_nBytes: u32,
-    pub MR_Min: u64,
-    pub MR_Max: u64,
-    pub MR_Flags: u32,
-    pub MR_Reserved: u32,
-}
-impl ::core::marker::Copy for MEM_RANGE {}
-impl ::core::clone::Clone for MEM_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct MEM_RESOURCE {
-    pub MEM_Header: MEM_DES,
-    pub MEM_Data: [MEM_RANGE; 1],
-}
-impl ::core::marker::Copy for MEM_RESOURCE {}
-impl ::core::clone::Clone for MEM_RESOURCE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct MFCARD_DES {
-    pub PMF_Count: u32,
-    pub PMF_Type: u32,
-    pub PMF_Flags: u32,
-    pub PMF_ConfigOptions: u8,
-    pub PMF_IoResourceIndex: u8,
-    pub PMF_Reserved: [u8; 2],
-    pub PMF_ConfigRegisterBase: u32,
-}
-impl ::core::marker::Copy for MFCARD_DES {}
-impl ::core::clone::Clone for MFCARD_DES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct MFCARD_RESOURCE {
-    pub MfCard_Header: MFCARD_DES,
-}
-impl ::core::marker::Copy for MFCARD_RESOURCE {}
-impl ::core::clone::Clone for MFCARD_RESOURCE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const MIN_IDD_DYNAWIZ_RESOURCE_ID: u32 = 10000u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct Mem_Large_Des_s {
-    pub MLD_Count: u32,
-    pub MLD_Type: u32,
-    pub MLD_Alloc_Base: u64,
-    pub MLD_Alloc_End: u64,
-    pub MLD_Flags: u32,
-    pub MLD_Reserved: u32,
-}
-impl ::core::marker::Copy for Mem_Large_Des_s {}
-impl ::core::clone::Clone for Mem_Large_Des_s {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct Mem_Large_Range_s {
-    pub MLR_Align: u64,
-    pub MLR_nBytes: u64,
-    pub MLR_Min: u64,
-    pub MLR_Max: u64,
-    pub MLR_Flags: u32,
-    pub MLR_Reserved: u32,
-}
-impl ::core::marker::Copy for Mem_Large_Range_s {}
-impl ::core::clone::Clone for Mem_Large_Range_s {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct Mem_Large_Resource_s {
-    pub MEM_LARGE_Header: Mem_Large_Des_s,
-    pub MEM_LARGE_Data: [Mem_Large_Range_s; 1],
-}
-impl ::core::marker::Copy for Mem_Large_Resource_s {}
-impl ::core::clone::Clone for Mem_Large_Resource_s {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const NDW_INSTALLFLAG_CI_PICKED_OEM: u32 = 32768u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -4755,97 +3607,17 @@ pub const NUM_CM_PROB_V9: u32 = 58u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const NUM_LOG_CONF: u32 = 6u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub type OEM_SOURCE_MEDIA_TYPE = u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SPOST_NONE: OEM_SOURCE_MEDIA_TYPE = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SPOST_PATH: OEM_SOURCE_MEDIA_TYPE = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SPOST_URL: OEM_SOURCE_MEDIA_TYPE = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const OVERRIDE_LOG_CONF: u32 = 5u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct PCCARD_DES {
-    pub PCD_Count: u32,
-    pub PCD_Type: u32,
-    pub PCD_Flags: u32,
-    pub PCD_ConfigIndex: u8,
-    pub PCD_Reserved: [u8; 3],
-    pub PCD_MemoryCardBase1: u32,
-    pub PCD_MemoryCardBase2: u32,
-    pub PCD_MemoryCardBase: [u32; 2],
-    pub PCD_MemoryFlags: [u16; 2],
-    pub PCD_IoFlags: [u8; 2],
-}
-impl ::core::marker::Copy for PCCARD_DES {}
-impl ::core::clone::Clone for PCCARD_DES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub struct PCCARD_RESOURCE {
-    pub PcCard_Header: PCCARD_DES,
-}
-impl ::core::marker::Copy for PCCARD_RESOURCE {}
-impl ::core::clone::Clone for PCCARD_RESOURCE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const PCD_MAX_IO: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const PCD_MAX_MEMORY: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub type PCM_NOTIFY_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hnotify: HCMNOTIFICATION, context: *const ::core::ffi::c_void, action: CM_NOTIFY_ACTION, eventdata: *const CM_NOTIFY_EVENT_DATA, eventdatasize: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PDETECT_PROGRESS_NOTIFY = ::core::option::Option<unsafe extern "system" fn(progressnotifyparam: *const ::core::ffi::c_void, detectcomplete: u32) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub type PNP_VETO_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoTypeUnknown: PNP_VETO_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoLegacyDevice: PNP_VETO_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoPendingClose: PNP_VETO_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoWindowsApp: PNP_VETO_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoWindowsService: PNP_VETO_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoOutstandingOpen: PNP_VETO_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoDevice: PNP_VETO_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoDriver: PNP_VETO_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoIllegalDeviceRequest: PNP_VETO_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoInsufficientPower: PNP_VETO_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoNonDisableable: PNP_VETO_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoLegacyDriver: PNP_VETO_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoInsufficientRights: PNP_VETO_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const PNP_VetoAlreadyRemoved: PNP_VETO_TYPE = 13i32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const PRIORITY_BIT: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const PRIORITY_EQUAL_FIRST: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const PRIORITY_EQUAL_LAST: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub type PSP_DETSIG_CMPPROC = ::core::option::Option<unsafe extern "system" fn(deviceinfoset: HDEVINFO, newdevicedata: *const SP_DEVINFO_DATA, existingdevicedata: *const SP_DEVINFO_DATA, comparecontext: *const ::core::ffi::c_void) -> u32>;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub type PSP_FILE_CALLBACK_A = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, notification: u32, param1: usize, param2: usize) -> u32>;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub type PSP_FILE_CALLBACK_W = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, notification: u32, param1: usize, param2: usize) -> u32>;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const ROLLBACK_BITS: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -4895,18 +3667,6 @@ pub const SCWMI_CLOBBER_SECURITY: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const SETDIRID_NOT_FULL_PATH: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub type SETUP_DI_BUILD_DRIVER_DRIVER_TYPE = u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SPDIT_CLASSDRIVER: SETUP_DI_BUILD_DRIVER_DRIVER_TYPE = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SPDIT_COMPATDRIVER: SETUP_DI_BUILD_DRIVER_DRIVER_TYPE = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub type SETUP_FILE_OPERATION = u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const FILEOP_DELETE: SETUP_FILE_OPERATION = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const FILEOP_COPY: SETUP_FILE_OPERATION = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const SIGNERSCORE_AUTHENTICODE: u32 = 251658240u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const SIGNERSCORE_INBOX: u32 = 218103811u32;
@@ -4928,82 +3688,6 @@ pub const SIGNERSCORE_UNSIGNED: u32 = 2147483648u32;
 pub const SIGNERSCORE_W9X_SUSPECT: u32 = 3221225472u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const SIGNERSCORE_WHQL: u32 = 218103813u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SOURCE_MEDIA_A {
-    pub Reserved: ::windows_sys::core::PCSTR,
-    pub Tagfile: ::windows_sys::core::PCSTR,
-    pub Description: ::windows_sys::core::PCSTR,
-    pub SourcePath: ::windows_sys::core::PCSTR,
-    pub SourceFile: ::windows_sys::core::PCSTR,
-    pub Flags: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SOURCE_MEDIA_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SOURCE_MEDIA_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SOURCE_MEDIA_A {
-    pub Reserved: ::windows_sys::core::PCSTR,
-    pub Tagfile: ::windows_sys::core::PCSTR,
-    pub Description: ::windows_sys::core::PCSTR,
-    pub SourcePath: ::windows_sys::core::PCSTR,
-    pub SourceFile: ::windows_sys::core::PCSTR,
-    pub Flags: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SOURCE_MEDIA_A {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SOURCE_MEDIA_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SOURCE_MEDIA_W {
-    pub Reserved: ::windows_sys::core::PCWSTR,
-    pub Tagfile: ::windows_sys::core::PCWSTR,
-    pub Description: ::windows_sys::core::PCWSTR,
-    pub SourcePath: ::windows_sys::core::PCWSTR,
-    pub SourceFile: ::windows_sys::core::PCWSTR,
-    pub Flags: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SOURCE_MEDIA_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SOURCE_MEDIA_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SOURCE_MEDIA_W {
-    pub Reserved: ::windows_sys::core::PCWSTR,
-    pub Tagfile: ::windows_sys::core::PCWSTR,
-    pub Description: ::windows_sys::core::PCWSTR,
-    pub SourcePath: ::windows_sys::core::PCWSTR,
-    pub SourceFile: ::windows_sys::core::PCWSTR,
-    pub Flags: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SOURCE_MEDIA_W {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SOURCE_MEDIA_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const SPCRP_CHARACTERISTICS: u32 = 27u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -5322,432 +4006,562 @@ pub const SPWP_USE_DEVINFO_DATA: u32 = 1u32;
 pub const SP_ALTPLATFORM_FLAGS_SUITE_MASK: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const SP_ALTPLATFORM_FLAGS_VERSION_RANGE: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-pub struct SP_ALTPLATFORM_INFO_V1 {
-    pub cbSize: u32,
-    pub Platform: super::super::System::Diagnostics::Debug::VER_PLATFORM,
-    pub MajorVersion: u32,
-    pub MinorVersion: u32,
-    pub ProcessorArchitecture: u16,
-    pub Reserved: u16,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V1 {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-pub struct SP_ALTPLATFORM_INFO_V1 {
-    pub cbSize: u32,
-    pub Platform: super::super::System::Diagnostics::Debug::VER_PLATFORM,
-    pub MajorVersion: u32,
-    pub MinorVersion: u32,
-    pub ProcessorArchitecture: u16,
-    pub Reserved: u16,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V1 {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-pub struct SP_ALTPLATFORM_INFO_V2 {
-    pub cbSize: u32,
-    pub Platform: super::super::System::Diagnostics::Debug::VER_PLATFORM,
-    pub MajorVersion: u32,
-    pub MinorVersion: u32,
-    pub ProcessorArchitecture: u16,
-    pub Anonymous: SP_ALTPLATFORM_INFO_V2_0,
-    pub FirstValidatedMajorVersion: u32,
-    pub FirstValidatedMinorVersion: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V2 {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-pub union SP_ALTPLATFORM_INFO_V2_0 {
-    pub Reserved: u16,
-    pub Flags: u16,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V2_0 {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V2_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-pub struct SP_ALTPLATFORM_INFO_V2 {
-    pub cbSize: u32,
-    pub Platform: super::super::System::Diagnostics::Debug::VER_PLATFORM,
-    pub MajorVersion: u32,
-    pub MinorVersion: u32,
-    pub ProcessorArchitecture: u16,
-    pub Anonymous: SP_ALTPLATFORM_INFO_V2_0,
-    pub FirstValidatedMajorVersion: u32,
-    pub FirstValidatedMinorVersion: u32,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V2 {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-pub union SP_ALTPLATFORM_INFO_V2_0 {
-    pub Reserved: u16,
-    pub Flags: u16,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V2_0 {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Diagnostics_Debug")]
-impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V2_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_ALTPLATFORM_INFO_V3 {
-    pub cbSize: u32,
-    pub Platform: u32,
-    pub MajorVersion: u32,
-    pub MinorVersion: u32,
-    pub ProcessorArchitecture: u16,
-    pub Anonymous: SP_ALTPLATFORM_INFO_V3_0,
-    pub FirstValidatedMajorVersion: u32,
-    pub FirstValidatedMinorVersion: u32,
-    pub ProductType: u8,
-    pub SuiteMask: u16,
-    pub BuildNumber: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V3 {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V3 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub union SP_ALTPLATFORM_INFO_V3_0 {
-    pub Reserved: u16,
-    pub Flags: u16,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V3_0 {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V3_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_ALTPLATFORM_INFO_V3 {
-    pub cbSize: u32,
-    pub Platform: u32,
-    pub MajorVersion: u32,
-    pub MinorVersion: u32,
-    pub ProcessorArchitecture: u16,
-    pub Anonymous: SP_ALTPLATFORM_INFO_V3_0,
-    pub FirstValidatedMajorVersion: u32,
-    pub FirstValidatedMinorVersion: u32,
-    pub ProductType: u8,
-    pub SuiteMask: u16,
-    pub BuildNumber: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V3 {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V3 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub union SP_ALTPLATFORM_INFO_V3_0 {
-    pub Reserved: u16,
-    pub Flags: u16,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V3_0 {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V3_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const SP_BACKUP_BACKUPPASS: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const SP_BACKUP_BOOTFILE: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const SP_BACKUP_DEMANDPASS: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_BACKUP_QUEUE_PARAMS_V1_A {
-    pub cbSize: u32,
-    pub FullInfPath: [super::super::Foundation::CHAR; 260],
-    pub FilenameOffset: i32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V1_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V1_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_BACKUP_QUEUE_PARAMS_V1_A {
-    pub cbSize: u32,
-    pub FullInfPath: [super::super::Foundation::CHAR; 260],
-    pub FilenameOffset: i32,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V1_A {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V1_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_BACKUP_QUEUE_PARAMS_V1_W {
-    pub cbSize: u32,
-    pub FullInfPath: [u16; 260],
-    pub FilenameOffset: i32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V1_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V1_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_BACKUP_QUEUE_PARAMS_V1_W {
-    pub cbSize: u32,
-    pub FullInfPath: [u16; 260],
-    pub FilenameOffset: i32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V1_W {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V1_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_BACKUP_QUEUE_PARAMS_V2_A {
-    pub cbSize: u32,
-    pub FullInfPath: [super::super::Foundation::CHAR; 260],
-    pub FilenameOffset: i32,
-    pub ReinstallInstance: [super::super::Foundation::CHAR; 260],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V2_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V2_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_BACKUP_QUEUE_PARAMS_V2_A {
-    pub cbSize: u32,
-    pub FullInfPath: [super::super::Foundation::CHAR; 260],
-    pub FilenameOffset: i32,
-    pub ReinstallInstance: [super::super::Foundation::CHAR; 260],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V2_A {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V2_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_BACKUP_QUEUE_PARAMS_V2_W {
-    pub cbSize: u32,
-    pub FullInfPath: [u16; 260],
-    pub FilenameOffset: i32,
-    pub ReinstallInstance: [u16; 260],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V2_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V2_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_BACKUP_QUEUE_PARAMS_V2_W {
-    pub cbSize: u32,
-    pub FullInfPath: [u16; 260],
-    pub FilenameOffset: i32,
-    pub ReinstallInstance: [u16; 260],
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V2_W {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V2_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const SP_BACKUP_SPECIAL: u32 = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_UI_Controls\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_UI_Controls")]
-pub struct SP_CLASSIMAGELIST_DATA {
-    pub cbSize: u32,
-    pub ImageList: super::super::UI::Controls::HIMAGELIST,
-    pub Reserved: usize,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_UI_Controls")]
-impl ::core::marker::Copy for SP_CLASSIMAGELIST_DATA {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_UI_Controls")]
-impl ::core::clone::Clone for SP_CLASSIMAGELIST_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_UI_Controls\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_UI_Controls")]
-pub struct SP_CLASSIMAGELIST_DATA {
-    pub cbSize: u32,
-    pub ImageList: super::super::UI::Controls::HIMAGELIST,
-    pub Reserved: usize,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_UI_Controls")]
-impl ::core::marker::Copy for SP_CLASSIMAGELIST_DATA {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_UI_Controls")]
-impl ::core::clone::Clone for SP_CLASSIMAGELIST_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_CLASSINSTALL_HEADER {
-    pub cbSize: u32,
-    pub InstallFunction: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_CLASSINSTALL_HEADER {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_CLASSINSTALL_HEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
+pub const SP_FLAG_CABINETCONTINUATION: u32 = 2048u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_CLASSINSTALL_HEADER {
-    pub cbSize: u32,
-    pub InstallFunction: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_CLASSINSTALL_HEADER {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_CLASSINSTALL_HEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const SP_MAX_MACHINENAME_LENGTH: u32 = 263u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCINFO_DESCRIPTION: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCINFO_FLAGS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCINFO_PATH: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCINFO_TAGFILE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCINFO_TAGFILE2: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCLIST_APPEND: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCLIST_NOBROWSE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCLIST_NOSTRIPPLATFORM: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCLIST_SUBDIRS: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCLIST_SYSIFADMIN: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCLIST_SYSTEM: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCLIST_TEMPORARY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRCLIST_USER: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SRC_FLAGS_CABFILE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SUOI_FORCEDELETE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SUOI_INTERNAL1: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDAUTOLOGGER: &str = "AddAutoLogger";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDAUTOLOGGERPROVIDER: &str = "AddAutoLoggerProvider";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDCHANNEL: &str = "AddChannel";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDEVENTPROVIDER: &str = "AddEventProvider";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDFILTER: &str = "AddFilter";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDIME: &str = "AddIme";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDINTERFACE: &str = "AddInterface";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDPOWERSETTING: &str = "AddPowerSetting";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDPROP: &str = "AddProperty";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDREG: &str = "AddReg";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDREGNOCLOBBER: &str = "AddRegNoClobber";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDSERVICE: &str = "AddService";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_ADDTRIGGER: &str = "AddTrigger";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_BITREG: &str = "BitReg";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_CLEANONLY: &str = "CleanOnly";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_COPYFILES: &str = "CopyFiles";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_COPYINF: &str = "CopyINF";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_DEFAULTOPTION: &str = "DefaultOption";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_DEFDESTDIR: &str = "DefaultDestDir";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_DELFILES: &str = "DelFiles";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_DELIME: &str = "DelIme";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_DELPROP: &str = "DelProperty";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_DELREG: &str = "DelReg";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_DELSERVICE: &str = "DelService";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_DESTDIRS: &str = "DestinationDirs";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_EXCLUDEID: &str = "ExcludeId";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_FEATURESCORE: &str = "FeatureScore";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_FILTERLEVEL: &str = "FilterLevel";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_FILTERPOSITION: &str = "FilterPosition";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_HARDWARE: &str = "Hardware";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_IMPORTCHANNEL: &str = "ImportChannel";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_INI2REG: &str = "Ini2Reg";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_LAYOUT_FILE: &str = "LayoutFile";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_LDIDOEM: &str = "LdidOEM";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_LFN_SECTION: &str = "VarLDID.LFN";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_LISTOPTIONS: &str = "ListOptions";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_LOGCONFIG: &str = "LogConfig";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_MODULES: &str = "Modules";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_OPTIONDESC: &str = "OptionDesc";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_PHASE1: &str = "Phase1";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_PROFILEITEMS: &str = "ProfileItems";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_REGSVR: &str = "RegisterDlls";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_RENFILES: &str = "RenFiles";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_SFN_SECTION: &str = "VarLDID.SFN";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_SRCDISKFILES: &str = "SourceDisksFiles";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_SRCDISKNAMES: &str = "SourceDisksNames";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_STRINGS: &str = "Strings";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_UNREGSVR: &str = "UnregisterDlls";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_UPDATEAUTOLOGGER: &str = "UpdateAutoLogger";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_UPDATEINIFIELDS: &str = "UpdateIniFields";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_UPDATEINIS: &str = "UpdateInis";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SZ_KEY_UPGRADEONLY: &str = "UpgradeOnly";
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fDD_BYTE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fDD_BYTE_AND_WORD: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fDD_BusMaster: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fDD_DWORD: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fDD_NoBusMaster: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fDD_TypeA: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fDD_TypeB: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fDD_TypeF: u32 = 24u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fDD_TypeStandard: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fDD_WORD: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIOD_10_BIT_DECODE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIOD_12_BIT_DECODE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIOD_16_BIT_DECODE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIOD_DECODE: u32 = 252u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIOD_IO: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIOD_Memory: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIOD_PASSIVE_DECODE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIOD_PORT_BAR: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIOD_POSITIVE_DECODE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIOD_PortType: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIOD_WINDOW_DECODE: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIRQD_Edge: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIRQD_Exclusive: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIRQD_Level: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIRQD_Level_Bit: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIRQD_Share: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fIRQD_Share_Bit: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_24: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_32: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_32_24: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_Cacheable: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_CombinedWrite: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_CombinedWriteAllowed: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_CombinedWriteDisallowed: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_MEMORY_BAR: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_MemoryType: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_NonCacheable: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_Pref: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_PrefetchAllowed: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_PrefetchDisallowed: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_Prefetchable: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_RAM: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_ROM: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_ReadAllowed: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_ReadDisallowed: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_Readable: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fMD_WINDOW_DECODE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_ATTRIBUTES_PER_WINDOW: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO1_16: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO1_SRC_16: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO1_WS_16: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO1_ZW_8: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO2_16: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO2_SRC_16: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO2_WS_16: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO2_ZW_8: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO_16: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO_8: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO_SRC_16: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO_WS_16: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_IO_ZW_8: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM1_16: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM1_A: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM1_WS_ONE: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM1_WS_THREE: u32 = 50331648u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM1_WS_TWO: u32 = 33554432u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM2_16: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM2_A: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM2_WS_ONE: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM2_WS_THREE: u32 = 805306368u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM2_WS_TWO: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM_16: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM_8: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM_A: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM_WS_ONE: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM_WS_THREE: u32 = 768u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPCD_MEM_WS_TWO: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const fPMF_AUDIO_ENABLE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mDD_BusMaster: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mDD_Type: u32 = 24u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mDD_Width: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mIRQD_Edge_Level: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mIRQD_Share: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mMD_32_24: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mMD_Cacheable: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mMD_CombinedWrite: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mMD_MemoryType: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mMD_Prefetchable: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mMD_Readable: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mPCD_IO_8_16: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mPCD_MEM1_WS: u32 = 50331648u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mPCD_MEM2_WS: u32 = 805306368u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mPCD_MEM_8_16: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mPCD_MEM_A_C: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mPCD_MEM_WS: u32 = 768u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const mPMF_AUDIO_ENABLE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub type CM_NOTIFY_ACTION = i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_ACTION_DEVICEINTERFACEARRIVAL: CM_NOTIFY_ACTION = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_ACTION_DEVICEINTERFACEREMOVAL: CM_NOTIFY_ACTION = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_ACTION_DEVICEQUERYREMOVE: CM_NOTIFY_ACTION = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_ACTION_DEVICEQUERYREMOVEFAILED: CM_NOTIFY_ACTION = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_ACTION_DEVICEREMOVEPENDING: CM_NOTIFY_ACTION = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_ACTION_DEVICEREMOVECOMPLETE: CM_NOTIFY_ACTION = 5i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_ACTION_DEVICECUSTOMEVENT: CM_NOTIFY_ACTION = 6i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_ACTION_DEVICEINSTANCEENUMERATED: CM_NOTIFY_ACTION = 7i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_ACTION_DEVICEINSTANCESTARTED: CM_NOTIFY_ACTION = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_ACTION_DEVICEINSTANCEREMOVED: CM_NOTIFY_ACTION = 9i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_ACTION_MAX: CM_NOTIFY_ACTION = 10i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub type CM_NOTIFY_FILTER_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_FILTER_TYPE_DEVICEINTERFACE: CM_NOTIFY_FILTER_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_FILTER_TYPE_DEVICEHANDLE: CM_NOTIFY_FILTER_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_FILTER_TYPE_DEVICEINSTANCE: CM_NOTIFY_FILTER_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CM_NOTIFY_FILTER_TYPE_MAX: CM_NOTIFY_FILTER_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub type CONFIGRET = u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_SUCCESS: CONFIGRET = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_DEFAULT: CONFIGRET = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_OUT_OF_MEMORY: CONFIGRET = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_POINTER: CONFIGRET = 3u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_FLAG: CONFIGRET = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_DEVNODE: CONFIGRET = 5u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_DEVINST: CONFIGRET = 5u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_RES_DES: CONFIGRET = 6u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_LOG_CONF: CONFIGRET = 7u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_ARBITRATOR: CONFIGRET = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_NODELIST: CONFIGRET = 9u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_DEVNODE_HAS_REQS: CONFIGRET = 10u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_DEVINST_HAS_REQS: CONFIGRET = 10u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_RESOURCEID: CONFIGRET = 11u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_DLVXD_NOT_FOUND: CONFIGRET = 12u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_SUCH_DEVNODE: CONFIGRET = 13u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_SUCH_DEVINST: CONFIGRET = 13u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_MORE_LOG_CONF: CONFIGRET = 14u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_MORE_RES_DES: CONFIGRET = 15u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_ALREADY_SUCH_DEVNODE: CONFIGRET = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_ALREADY_SUCH_DEVINST: CONFIGRET = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_RANGE_LIST: CONFIGRET = 17u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_RANGE: CONFIGRET = 18u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_FAILURE: CONFIGRET = 19u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_SUCH_LOGICAL_DEV: CONFIGRET = 20u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_CREATE_BLOCKED: CONFIGRET = 21u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NOT_SYSTEM_VM: CONFIGRET = 22u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_REMOVE_VETOED: CONFIGRET = 23u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_APM_VETOED: CONFIGRET = 24u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_LOAD_TYPE: CONFIGRET = 25u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_BUFFER_SMALL: CONFIGRET = 26u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_ARBITRATOR: CONFIGRET = 27u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_REGISTRY_HANDLE: CONFIGRET = 28u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_REGISTRY_ERROR: CONFIGRET = 29u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_DEVICE_ID: CONFIGRET = 30u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_DATA: CONFIGRET = 31u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_API: CONFIGRET = 32u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_DEVLOADER_NOT_READY: CONFIGRET = 33u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NEED_RESTART: CONFIGRET = 34u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_MORE_HW_PROFILES: CONFIGRET = 35u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_DEVICE_NOT_THERE: CONFIGRET = 36u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_SUCH_VALUE: CONFIGRET = 37u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_WRONG_TYPE: CONFIGRET = 38u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_PRIORITY: CONFIGRET = 39u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NOT_DISABLEABLE: CONFIGRET = 40u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_FREE_RESOURCES: CONFIGRET = 41u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_QUERY_VETOED: CONFIGRET = 42u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_CANT_SHARE_IRQ: CONFIGRET = 43u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_DEPENDENT: CONFIGRET = 44u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_SAME_RESOURCES: CONFIGRET = 45u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_SUCH_REGISTRY_KEY: CONFIGRET = 46u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_MACHINENAME: CONFIGRET = 47u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_REMOTE_COMM_FAILURE: CONFIGRET = 48u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_MACHINE_UNAVAILABLE: CONFIGRET = 49u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_CM_SERVICES: CONFIGRET = 50u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_ACCESS_DENIED: CONFIGRET = 51u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_CALL_NOT_IMPLEMENTED: CONFIGRET = 52u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_PROPERTY: CONFIGRET = 53u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_DEVICE_INTERFACE_ACTIVE: CONFIGRET = 54u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_NO_SUCH_DEVICE_INTERFACE: CONFIGRET = 55u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_REFERENCE_STRING: CONFIGRET = 56u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_CONFLICT_LIST: CONFIGRET = 57u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_INDEX: CONFIGRET = 58u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const CR_INVALID_STRUCTURE_SIZE: CONFIGRET = 59u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const NUM_CR_RESULTS: CONFIGRET = 60u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub type OEM_SOURCE_MEDIA_TYPE = u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SPOST_NONE: OEM_SOURCE_MEDIA_TYPE = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SPOST_PATH: OEM_SOURCE_MEDIA_TYPE = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SPOST_URL: OEM_SOURCE_MEDIA_TYPE = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub type PNP_VETO_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoTypeUnknown: PNP_VETO_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoLegacyDevice: PNP_VETO_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoPendingClose: PNP_VETO_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoWindowsApp: PNP_VETO_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoWindowsService: PNP_VETO_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoOutstandingOpen: PNP_VETO_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoDevice: PNP_VETO_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoDriver: PNP_VETO_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoIllegalDeviceRequest: PNP_VETO_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoInsufficientPower: PNP_VETO_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoNonDisableable: PNP_VETO_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoLegacyDriver: PNP_VETO_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoInsufficientRights: PNP_VETO_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const PNP_VetoAlreadyRemoved: PNP_VETO_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub type SETUP_DI_BUILD_DRIVER_DRIVER_TYPE = u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SPDIT_CLASSDRIVER: SETUP_DI_BUILD_DRIVER_DRIVER_TYPE = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SPDIT_COMPATDRIVER: SETUP_DI_BUILD_DRIVER_DRIVER_TYPE = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub type SETUP_FILE_OPERATION = u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const FILEOP_DELETE: SETUP_FILE_OPERATION = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const FILEOP_COPY: SETUP_FILE_OPERATION = 0u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub type SP_COPY_STYLE = u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -5806,994 +4620,6 @@ pub const SP_COPY_IN_USE_TRY_RENAME: SP_COPY_STYLE = 67108864u32;
 pub const SP_COPY_INBOX_INF: SP_COPY_STYLE = 134217728u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const SP_COPY_HARDLINK: SP_COPY_STYLE = 268435456u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DETECTDEVICE_PARAMS {
-    pub ClassInstallHeader: SP_CLASSINSTALL_HEADER,
-    pub DetectProgressNotify: PDETECT_PROGRESS_NOTIFY,
-    pub ProgressNotifyParam: *mut ::core::ffi::c_void,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DETECTDEVICE_PARAMS {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DETECTDEVICE_PARAMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DETECTDEVICE_PARAMS {
-    pub ClassInstallHeader: SP_CLASSINSTALL_HEADER,
-    pub DetectProgressNotify: PDETECT_PROGRESS_NOTIFY,
-    pub ProgressNotifyParam: *mut ::core::ffi::c_void,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DETECTDEVICE_PARAMS {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DETECTDEVICE_PARAMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_DEVICE_INTERFACE_DATA {
-    pub cbSize: u32,
-    pub InterfaceClassGuid: ::windows_sys::core::GUID,
-    pub Flags: u32,
-    pub Reserved: usize,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_DEVICE_INTERFACE_DATA {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_DEVICE_INTERFACE_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_DEVICE_INTERFACE_DATA {
-    pub cbSize: u32,
-    pub InterfaceClassGuid: ::windows_sys::core::GUID,
-    pub Flags: u32,
-    pub Reserved: usize,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_DEVICE_INTERFACE_DATA {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_DEVICE_INTERFACE_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DEVICE_INTERFACE_DETAIL_DATA_A {
-    pub cbSize: u32,
-    pub DevicePath: [super::super::Foundation::CHAR; 1],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DEVICE_INTERFACE_DETAIL_DATA_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DEVICE_INTERFACE_DETAIL_DATA_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DEVICE_INTERFACE_DETAIL_DATA_A {
-    pub cbSize: u32,
-    pub DevicePath: [super::super::Foundation::CHAR; 1],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DEVICE_INTERFACE_DETAIL_DATA_A {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DEVICE_INTERFACE_DETAIL_DATA_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_DEVICE_INTERFACE_DETAIL_DATA_W {
-    pub cbSize: u32,
-    pub DevicePath: [u16; 1],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_DEVICE_INTERFACE_DETAIL_DATA_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_DEVICE_INTERFACE_DETAIL_DATA_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_DEVICE_INTERFACE_DETAIL_DATA_W {
-    pub cbSize: u32,
-    pub DevicePath: [u16; 1],
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_DEVICE_INTERFACE_DETAIL_DATA_W {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_DEVICE_INTERFACE_DETAIL_DATA_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_DEVINFO_DATA {
-    pub cbSize: u32,
-    pub ClassGuid: ::windows_sys::core::GUID,
-    pub DevInst: u32,
-    pub Reserved: usize,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_DEVINFO_DATA {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_DEVINFO_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_DEVINFO_DATA {
-    pub cbSize: u32,
-    pub ClassGuid: ::windows_sys::core::GUID,
-    pub DevInst: u32,
-    pub Reserved: usize,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_DEVINFO_DATA {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_DEVINFO_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DEVINFO_LIST_DETAIL_DATA_A {
-    pub cbSize: u32,
-    pub ClassGuid: ::windows_sys::core::GUID,
-    pub RemoteMachineHandle: super::super::Foundation::HANDLE,
-    pub RemoteMachineName: [super::super::Foundation::CHAR; 263],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DEVINFO_LIST_DETAIL_DATA_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DEVINFO_LIST_DETAIL_DATA_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DEVINFO_LIST_DETAIL_DATA_A {
-    pub cbSize: u32,
-    pub ClassGuid: ::windows_sys::core::GUID,
-    pub RemoteMachineHandle: super::super::Foundation::HANDLE,
-    pub RemoteMachineName: [super::super::Foundation::CHAR; 263],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DEVINFO_LIST_DETAIL_DATA_A {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DEVINFO_LIST_DETAIL_DATA_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DEVINFO_LIST_DETAIL_DATA_W {
-    pub cbSize: u32,
-    pub ClassGuid: ::windows_sys::core::GUID,
-    pub RemoteMachineHandle: super::super::Foundation::HANDLE,
-    pub RemoteMachineName: [u16; 263],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DEVINFO_LIST_DETAIL_DATA_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DEVINFO_LIST_DETAIL_DATA_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DEVINFO_LIST_DETAIL_DATA_W {
-    pub cbSize: u32,
-    pub ClassGuid: ::windows_sys::core::GUID,
-    pub RemoteMachineHandle: super::super::Foundation::HANDLE,
-    pub RemoteMachineName: [u16; 263],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DEVINFO_LIST_DETAIL_DATA_W {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DEVINFO_LIST_DETAIL_DATA_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DEVINSTALL_PARAMS_A {
-    pub cbSize: u32,
-    pub Flags: u32,
-    pub FlagsEx: u32,
-    pub hwndParent: super::super::Foundation::HWND,
-    pub InstallMsgHandler: PSP_FILE_CALLBACK_A,
-    pub InstallMsgHandlerContext: *mut ::core::ffi::c_void,
-    pub FileQueue: *mut ::core::ffi::c_void,
-    pub ClassInstallReserved: usize,
-    pub Reserved: u32,
-    pub DriverPath: [super::super::Foundation::CHAR; 260],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DEVINSTALL_PARAMS_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DEVINSTALL_PARAMS_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DEVINSTALL_PARAMS_A {
-    pub cbSize: u32,
-    pub Flags: u32,
-    pub FlagsEx: u32,
-    pub hwndParent: super::super::Foundation::HWND,
-    pub InstallMsgHandler: PSP_FILE_CALLBACK_A,
-    pub InstallMsgHandlerContext: *mut ::core::ffi::c_void,
-    pub FileQueue: *mut ::core::ffi::c_void,
-    pub ClassInstallReserved: usize,
-    pub Reserved: u32,
-    pub DriverPath: [super::super::Foundation::CHAR; 260],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DEVINSTALL_PARAMS_A {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DEVINSTALL_PARAMS_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DEVINSTALL_PARAMS_W {
-    pub cbSize: u32,
-    pub Flags: u32,
-    pub FlagsEx: u32,
-    pub hwndParent: super::super::Foundation::HWND,
-    pub InstallMsgHandler: PSP_FILE_CALLBACK_A,
-    pub InstallMsgHandlerContext: *mut ::core::ffi::c_void,
-    pub FileQueue: *mut ::core::ffi::c_void,
-    pub ClassInstallReserved: usize,
-    pub Reserved: u32,
-    pub DriverPath: [u16; 260],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DEVINSTALL_PARAMS_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DEVINSTALL_PARAMS_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DEVINSTALL_PARAMS_W {
-    pub cbSize: u32,
-    pub Flags: u32,
-    pub FlagsEx: u32,
-    pub hwndParent: super::super::Foundation::HWND,
-    pub InstallMsgHandler: PSP_FILE_CALLBACK_A,
-    pub InstallMsgHandlerContext: *mut ::core::ffi::c_void,
-    pub FileQueue: *mut ::core::ffi::c_void,
-    pub ClassInstallReserved: usize,
-    pub Reserved: u32,
-    pub DriverPath: [u16; 260],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DEVINSTALL_PARAMS_W {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DEVINSTALL_PARAMS_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DRVINFO_DATA_V1_A {
-    pub cbSize: u32,
-    pub DriverType: u32,
-    pub Reserved: usize,
-    pub Description: [super::super::Foundation::CHAR; 256],
-    pub MfgName: [super::super::Foundation::CHAR; 256],
-    pub ProviderName: [super::super::Foundation::CHAR; 256],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DRVINFO_DATA_V1_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DRVINFO_DATA_V1_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DRVINFO_DATA_V1_A {
-    pub cbSize: u32,
-    pub DriverType: u32,
-    pub Reserved: usize,
-    pub Description: [super::super::Foundation::CHAR; 256],
-    pub MfgName: [super::super::Foundation::CHAR; 256],
-    pub ProviderName: [super::super::Foundation::CHAR; 256],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DRVINFO_DATA_V1_A {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DRVINFO_DATA_V1_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_DRVINFO_DATA_V1_W {
-    pub cbSize: u32,
-    pub DriverType: u32,
-    pub Reserved: usize,
-    pub Description: [u16; 256],
-    pub MfgName: [u16; 256],
-    pub ProviderName: [u16; 256],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_DRVINFO_DATA_V1_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_DRVINFO_DATA_V1_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_DRVINFO_DATA_V1_W {
-    pub cbSize: u32,
-    pub DriverType: u32,
-    pub Reserved: usize,
-    pub Description: [u16; 256],
-    pub MfgName: [u16; 256],
-    pub ProviderName: [u16; 256],
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_DRVINFO_DATA_V1_W {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_DRVINFO_DATA_V1_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DRVINFO_DATA_V2_A {
-    pub cbSize: u32,
-    pub DriverType: u32,
-    pub Reserved: usize,
-    pub Description: [super::super::Foundation::CHAR; 256],
-    pub MfgName: [super::super::Foundation::CHAR; 256],
-    pub ProviderName: [super::super::Foundation::CHAR; 256],
-    pub DriverDate: super::super::Foundation::FILETIME,
-    pub DriverVersion: u64,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DRVINFO_DATA_V2_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DRVINFO_DATA_V2_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DRVINFO_DATA_V2_A {
-    pub cbSize: u32,
-    pub DriverType: u32,
-    pub Reserved: usize,
-    pub Description: [super::super::Foundation::CHAR; 256],
-    pub MfgName: [super::super::Foundation::CHAR; 256],
-    pub ProviderName: [super::super::Foundation::CHAR; 256],
-    pub DriverDate: super::super::Foundation::FILETIME,
-    pub DriverVersion: u64,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DRVINFO_DATA_V2_A {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DRVINFO_DATA_V2_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DRVINFO_DATA_V2_W {
-    pub cbSize: u32,
-    pub DriverType: u32,
-    pub Reserved: usize,
-    pub Description: [u16; 256],
-    pub MfgName: [u16; 256],
-    pub ProviderName: [u16; 256],
-    pub DriverDate: super::super::Foundation::FILETIME,
-    pub DriverVersion: u64,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DRVINFO_DATA_V2_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DRVINFO_DATA_V2_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DRVINFO_DATA_V2_W {
-    pub cbSize: u32,
-    pub DriverType: u32,
-    pub Reserved: usize,
-    pub Description: [u16; 256],
-    pub MfgName: [u16; 256],
-    pub ProviderName: [u16; 256],
-    pub DriverDate: super::super::Foundation::FILETIME,
-    pub DriverVersion: u64,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DRVINFO_DATA_V2_W {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DRVINFO_DATA_V2_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DRVINFO_DETAIL_DATA_A {
-    pub cbSize: u32,
-    pub InfDate: super::super::Foundation::FILETIME,
-    pub CompatIDsOffset: u32,
-    pub CompatIDsLength: u32,
-    pub Reserved: usize,
-    pub SectionName: [super::super::Foundation::CHAR; 256],
-    pub InfFileName: [super::super::Foundation::CHAR; 260],
-    pub DrvDescription: [super::super::Foundation::CHAR; 256],
-    pub HardwareID: [super::super::Foundation::CHAR; 1],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DRVINFO_DETAIL_DATA_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DRVINFO_DETAIL_DATA_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DRVINFO_DETAIL_DATA_A {
-    pub cbSize: u32,
-    pub InfDate: super::super::Foundation::FILETIME,
-    pub CompatIDsOffset: u32,
-    pub CompatIDsLength: u32,
-    pub Reserved: usize,
-    pub SectionName: [super::super::Foundation::CHAR; 256],
-    pub InfFileName: [super::super::Foundation::CHAR; 260],
-    pub DrvDescription: [super::super::Foundation::CHAR; 256],
-    pub HardwareID: [super::super::Foundation::CHAR; 1],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DRVINFO_DETAIL_DATA_A {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DRVINFO_DETAIL_DATA_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DRVINFO_DETAIL_DATA_W {
-    pub cbSize: u32,
-    pub InfDate: super::super::Foundation::FILETIME,
-    pub CompatIDsOffset: u32,
-    pub CompatIDsLength: u32,
-    pub Reserved: usize,
-    pub SectionName: [u16; 256],
-    pub InfFileName: [u16; 260],
-    pub DrvDescription: [u16; 256],
-    pub HardwareID: [u16; 1],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DRVINFO_DETAIL_DATA_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DRVINFO_DETAIL_DATA_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_DRVINFO_DETAIL_DATA_W {
-    pub cbSize: u32,
-    pub InfDate: super::super::Foundation::FILETIME,
-    pub CompatIDsOffset: u32,
-    pub CompatIDsLength: u32,
-    pub Reserved: usize,
-    pub SectionName: [u16; 256],
-    pub InfFileName: [u16; 260],
-    pub DrvDescription: [u16; 256],
-    pub HardwareID: [u16; 1],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_DRVINFO_DETAIL_DATA_W {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_DRVINFO_DETAIL_DATA_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_DRVINSTALL_PARAMS {
-    pub cbSize: u32,
-    pub Rank: u32,
-    pub Flags: u32,
-    pub PrivateData: usize,
-    pub Reserved: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_DRVINSTALL_PARAMS {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_DRVINSTALL_PARAMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_DRVINSTALL_PARAMS {
-    pub cbSize: u32,
-    pub Rank: u32,
-    pub Flags: u32,
-    pub PrivateData: usize,
-    pub Reserved: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_DRVINSTALL_PARAMS {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_DRVINSTALL_PARAMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_ENABLECLASS_PARAMS {
-    pub ClassInstallHeader: SP_CLASSINSTALL_HEADER,
-    pub ClassGuid: ::windows_sys::core::GUID,
-    pub EnableMessage: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_ENABLECLASS_PARAMS {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_ENABLECLASS_PARAMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_ENABLECLASS_PARAMS {
-    pub ClassInstallHeader: SP_CLASSINSTALL_HEADER,
-    pub ClassGuid: ::windows_sys::core::GUID,
-    pub EnableMessage: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_ENABLECLASS_PARAMS {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_ENABLECLASS_PARAMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_FILE_COPY_PARAMS_A {
-    pub cbSize: u32,
-    pub QueueHandle: *mut ::core::ffi::c_void,
-    pub SourceRootPath: ::windows_sys::core::PCSTR,
-    pub SourcePath: ::windows_sys::core::PCSTR,
-    pub SourceFilename: ::windows_sys::core::PCSTR,
-    pub SourceDescription: ::windows_sys::core::PCSTR,
-    pub SourceTagfile: ::windows_sys::core::PCSTR,
-    pub TargetDirectory: ::windows_sys::core::PCSTR,
-    pub TargetFilename: ::windows_sys::core::PCSTR,
-    pub CopyStyle: u32,
-    pub LayoutInf: *mut ::core::ffi::c_void,
-    pub SecurityDescriptor: ::windows_sys::core::PCSTR,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_FILE_COPY_PARAMS_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_FILE_COPY_PARAMS_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_FILE_COPY_PARAMS_A {
-    pub cbSize: u32,
-    pub QueueHandle: *mut ::core::ffi::c_void,
-    pub SourceRootPath: ::windows_sys::core::PCSTR,
-    pub SourcePath: ::windows_sys::core::PCSTR,
-    pub SourceFilename: ::windows_sys::core::PCSTR,
-    pub SourceDescription: ::windows_sys::core::PCSTR,
-    pub SourceTagfile: ::windows_sys::core::PCSTR,
-    pub TargetDirectory: ::windows_sys::core::PCSTR,
-    pub TargetFilename: ::windows_sys::core::PCSTR,
-    pub CopyStyle: u32,
-    pub LayoutInf: *mut ::core::ffi::c_void,
-    pub SecurityDescriptor: ::windows_sys::core::PCSTR,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_FILE_COPY_PARAMS_A {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_FILE_COPY_PARAMS_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_FILE_COPY_PARAMS_W {
-    pub cbSize: u32,
-    pub QueueHandle: *mut ::core::ffi::c_void,
-    pub SourceRootPath: ::windows_sys::core::PCWSTR,
-    pub SourcePath: ::windows_sys::core::PCWSTR,
-    pub SourceFilename: ::windows_sys::core::PCWSTR,
-    pub SourceDescription: ::windows_sys::core::PCWSTR,
-    pub SourceTagfile: ::windows_sys::core::PCWSTR,
-    pub TargetDirectory: ::windows_sys::core::PCWSTR,
-    pub TargetFilename: ::windows_sys::core::PCWSTR,
-    pub CopyStyle: u32,
-    pub LayoutInf: *mut ::core::ffi::c_void,
-    pub SecurityDescriptor: ::windows_sys::core::PCWSTR,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_FILE_COPY_PARAMS_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_FILE_COPY_PARAMS_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_FILE_COPY_PARAMS_W {
-    pub cbSize: u32,
-    pub QueueHandle: *mut ::core::ffi::c_void,
-    pub SourceRootPath: ::windows_sys::core::PCWSTR,
-    pub SourcePath: ::windows_sys::core::PCWSTR,
-    pub SourceFilename: ::windows_sys::core::PCWSTR,
-    pub SourceDescription: ::windows_sys::core::PCWSTR,
-    pub SourceTagfile: ::windows_sys::core::PCWSTR,
-    pub TargetDirectory: ::windows_sys::core::PCWSTR,
-    pub TargetFilename: ::windows_sys::core::PCWSTR,
-    pub CopyStyle: u32,
-    pub LayoutInf: *mut ::core::ffi::c_void,
-    pub SecurityDescriptor: ::windows_sys::core::PCWSTR,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_FILE_COPY_PARAMS_W {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_FILE_COPY_PARAMS_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SP_FLAG_CABINETCONTINUATION: u32 = 2048u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_INF_INFORMATION {
-    pub InfStyle: SP_INF_STYLE,
-    pub InfCount: u32,
-    pub VersionData: [u8; 1],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_INF_INFORMATION {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_INF_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_INF_INFORMATION {
-    pub InfStyle: SP_INF_STYLE,
-    pub InfCount: u32,
-    pub VersionData: [u8; 1],
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_INF_INFORMATION {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_INF_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_INF_SIGNER_INFO_V1_A {
-    pub cbSize: u32,
-    pub CatalogFile: [super::super::Foundation::CHAR; 260],
-    pub DigitalSigner: [super::super::Foundation::CHAR; 260],
-    pub DigitalSignerVersion: [super::super::Foundation::CHAR; 260],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V1_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V1_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_INF_SIGNER_INFO_V1_A {
-    pub cbSize: u32,
-    pub CatalogFile: [super::super::Foundation::CHAR; 260],
-    pub DigitalSigner: [super::super::Foundation::CHAR; 260],
-    pub DigitalSignerVersion: [super::super::Foundation::CHAR; 260],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V1_A {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V1_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_INF_SIGNER_INFO_V1_W {
-    pub cbSize: u32,
-    pub CatalogFile: [u16; 260],
-    pub DigitalSigner: [u16; 260],
-    pub DigitalSignerVersion: [u16; 260],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V1_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V1_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_INF_SIGNER_INFO_V1_W {
-    pub cbSize: u32,
-    pub CatalogFile: [u16; 260],
-    pub DigitalSigner: [u16; 260],
-    pub DigitalSignerVersion: [u16; 260],
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V1_W {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V1_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_INF_SIGNER_INFO_V2_A {
-    pub cbSize: u32,
-    pub CatalogFile: [super::super::Foundation::CHAR; 260],
-    pub DigitalSigner: [super::super::Foundation::CHAR; 260],
-    pub DigitalSignerVersion: [super::super::Foundation::CHAR; 260],
-    pub SignerScore: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V2_A {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V2_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SP_INF_SIGNER_INFO_V2_A {
-    pub cbSize: u32,
-    pub CatalogFile: [super::super::Foundation::CHAR; 260],
-    pub DigitalSigner: [super::super::Foundation::CHAR; 260],
-    pub DigitalSignerVersion: [super::super::Foundation::CHAR; 260],
-    pub SignerScore: u32,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V2_A {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V2_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SP_INF_SIGNER_INFO_V2_W {
-    pub cbSize: u32,
-    pub CatalogFile: [u16; 260],
-    pub DigitalSigner: [u16; 260],
-    pub DigitalSignerVersion: [u16; 260],
-    pub SignerScore: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V2_W {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V2_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SP_INF_SIGNER_INFO_V2_W {
-    pub cbSize: u32,
-    pub CatalogFile: [u16; 260],
-    pub DigitalSigner: [u16; 260],
-    pub DigitalSignerVersion: [u16; 260],
-    pub SignerScore: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V2_W {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V2_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub type SP_INF_STYLE = u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
@@ -6802,6 +4628,2516 @@ pub const INF_STYLE_NONE: SP_INF_STYLE = 0u32;
 pub const INF_STYLE_OLDNT: SP_INF_STYLE = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
 pub const INF_STYLE_WIN4: SP_INF_STYLE = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub type SetupFileLogInfo = i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SetupFileLogSourceFilename: SetupFileLogInfo = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SetupFileLogChecksum: SetupFileLogInfo = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SetupFileLogDiskTagfile: SetupFileLogInfo = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SetupFileLogDiskDescription: SetupFileLogInfo = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SetupFileLogOtherInfo: SetupFileLogInfo = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub const SetupFileLogMax: SetupFileLogInfo = 5i32;
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct BUSNUMBER_DES {
+    pub BUSD_Count: u32,
+    pub BUSD_Type: u32,
+    pub BUSD_Flags: u32,
+    pub BUSD_Alloc_Base: u32,
+    pub BUSD_Alloc_End: u32,
+}
+impl ::core::marker::Copy for BUSNUMBER_DES {}
+impl ::core::clone::Clone for BUSNUMBER_DES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct BUSNUMBER_RANGE {
+    pub BUSR_Min: u32,
+    pub BUSR_Max: u32,
+    pub BUSR_nBusNumbers: u32,
+    pub BUSR_Flags: u32,
+}
+impl ::core::marker::Copy for BUSNUMBER_RANGE {}
+impl ::core::clone::Clone for BUSNUMBER_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct BUSNUMBER_RESOURCE {
+    pub BusNumber_Header: BUSNUMBER_DES,
+    pub BusNumber_Data: [BUSNUMBER_RANGE; 1],
+}
+impl ::core::marker::Copy for BUSNUMBER_RESOURCE {}
+impl ::core::clone::Clone for BUSNUMBER_RESOURCE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct CABINET_INFO_A {
+    pub CabinetPath: ::windows_sys::core::PCSTR,
+    pub CabinetFile: ::windows_sys::core::PCSTR,
+    pub DiskName: ::windows_sys::core::PCSTR,
+    pub SetId: u16,
+    pub CabinetNumber: u16,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for CABINET_INFO_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for CABINET_INFO_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct CABINET_INFO_A {
+    pub CabinetPath: ::windows_sys::core::PCSTR,
+    pub CabinetFile: ::windows_sys::core::PCSTR,
+    pub DiskName: ::windows_sys::core::PCSTR,
+    pub SetId: u16,
+    pub CabinetNumber: u16,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for CABINET_INFO_A {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for CABINET_INFO_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct CABINET_INFO_W {
+    pub CabinetPath: ::windows_sys::core::PCWSTR,
+    pub CabinetFile: ::windows_sys::core::PCWSTR,
+    pub DiskName: ::windows_sys::core::PCWSTR,
+    pub SetId: u16,
+    pub CabinetNumber: u16,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for CABINET_INFO_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for CABINET_INFO_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct CABINET_INFO_W {
+    pub CabinetPath: ::windows_sys::core::PCWSTR,
+    pub CabinetFile: ::windows_sys::core::PCWSTR,
+    pub DiskName: ::windows_sys::core::PCWSTR,
+    pub SetId: u16,
+    pub CabinetNumber: u16,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for CABINET_INFO_W {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for CABINET_INFO_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct CM_NOTIFY_EVENT_DATA {
+    pub FilterType: CM_NOTIFY_FILTER_TYPE,
+    pub Reserved: u32,
+    pub u: CM_NOTIFY_EVENT_DATA_0,
+}
+impl ::core::marker::Copy for CM_NOTIFY_EVENT_DATA {}
+impl ::core::clone::Clone for CM_NOTIFY_EVENT_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub union CM_NOTIFY_EVENT_DATA_0 {
+    pub DeviceInterface: CM_NOTIFY_EVENT_DATA_0_2,
+    pub DeviceHandle: CM_NOTIFY_EVENT_DATA_0_0,
+    pub DeviceInstance: CM_NOTIFY_EVENT_DATA_0_1,
+}
+impl ::core::marker::Copy for CM_NOTIFY_EVENT_DATA_0 {}
+impl ::core::clone::Clone for CM_NOTIFY_EVENT_DATA_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct CM_NOTIFY_EVENT_DATA_0_0 {
+    pub EventGuid: ::windows_sys::core::GUID,
+    pub NameOffset: i32,
+    pub DataSize: u32,
+    pub Data: [u8; 1],
+}
+impl ::core::marker::Copy for CM_NOTIFY_EVENT_DATA_0_0 {}
+impl ::core::clone::Clone for CM_NOTIFY_EVENT_DATA_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct CM_NOTIFY_EVENT_DATA_0_1 {
+    pub InstanceId: [u16; 1],
+}
+impl ::core::marker::Copy for CM_NOTIFY_EVENT_DATA_0_1 {}
+impl ::core::clone::Clone for CM_NOTIFY_EVENT_DATA_0_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct CM_NOTIFY_EVENT_DATA_0_2 {
+    pub ClassGuid: ::windows_sys::core::GUID,
+    pub SymbolicLink: [u16; 1],
+}
+impl ::core::marker::Copy for CM_NOTIFY_EVENT_DATA_0_2 {}
+impl ::core::clone::Clone for CM_NOTIFY_EVENT_DATA_0_2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct CM_NOTIFY_FILTER {
+    pub cbSize: u32,
+    pub Flags: u32,
+    pub FilterType: CM_NOTIFY_FILTER_TYPE,
+    pub Reserved: u32,
+    pub u: CM_NOTIFY_FILTER_0,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CM_NOTIFY_FILTER {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CM_NOTIFY_FILTER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub union CM_NOTIFY_FILTER_0 {
+    pub DeviceInterface: CM_NOTIFY_FILTER_0_2,
+    pub DeviceHandle: CM_NOTIFY_FILTER_0_0,
+    pub DeviceInstance: CM_NOTIFY_FILTER_0_1,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CM_NOTIFY_FILTER_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CM_NOTIFY_FILTER_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct CM_NOTIFY_FILTER_0_0 {
+    pub hTarget: super::super::Foundation::HANDLE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CM_NOTIFY_FILTER_0_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CM_NOTIFY_FILTER_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct CM_NOTIFY_FILTER_0_1 {
+    pub InstanceId: [u16; 200],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CM_NOTIFY_FILTER_0_1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CM_NOTIFY_FILTER_0_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct CM_NOTIFY_FILTER_0_2 {
+    pub ClassGuid: ::windows_sys::core::GUID,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CM_NOTIFY_FILTER_0_2 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CM_NOTIFY_FILTER_0_2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct COINSTALLER_CONTEXT_DATA {
+    pub PostProcessing: super::super::Foundation::BOOL,
+    pub InstallResult: u32,
+    pub PrivateData: *mut ::core::ffi::c_void,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for COINSTALLER_CONTEXT_DATA {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for COINSTALLER_CONTEXT_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct COINSTALLER_CONTEXT_DATA {
+    pub PostProcessing: super::super::Foundation::BOOL,
+    pub InstallResult: u32,
+    pub PrivateData: *mut ::core::ffi::c_void,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for COINSTALLER_CONTEXT_DATA {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for COINSTALLER_CONTEXT_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct CONFLICT_DETAILS_A {
+    pub CD_ulSize: u32,
+    pub CD_ulMask: u32,
+    pub CD_dnDevInst: u32,
+    pub CD_rdResDes: usize,
+    pub CD_ulFlags: u32,
+    pub CD_szDescription: [super::super::Foundation::CHAR; 260],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CONFLICT_DETAILS_A {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CONFLICT_DETAILS_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct CONFLICT_DETAILS_W {
+    pub CD_ulSize: u32,
+    pub CD_ulMask: u32,
+    pub CD_dnDevInst: u32,
+    pub CD_rdResDes: usize,
+    pub CD_ulFlags: u32,
+    pub CD_szDescription: [u16; 260],
+}
+impl ::core::marker::Copy for CONFLICT_DETAILS_W {}
+impl ::core::clone::Clone for CONFLICT_DETAILS_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct CONNECTION_DES {
+    pub COND_Type: u32,
+    pub COND_Flags: u32,
+    pub COND_Class: u8,
+    pub COND_ClassType: u8,
+    pub COND_Reserved1: u8,
+    pub COND_Reserved2: u8,
+    pub COND_Id: i64,
+}
+impl ::core::marker::Copy for CONNECTION_DES {}
+impl ::core::clone::Clone for CONNECTION_DES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct CONNECTION_RESOURCE {
+    pub Connection_Header: CONNECTION_DES,
+}
+impl ::core::marker::Copy for CONNECTION_RESOURCE {}
+impl ::core::clone::Clone for CONNECTION_RESOURCE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct CS_DES {
+    pub CSD_SignatureLength: u32,
+    pub CSD_LegacyDataOffset: u32,
+    pub CSD_LegacyDataSize: u32,
+    pub CSD_Flags: u32,
+    pub CSD_ClassGuid: ::windows_sys::core::GUID,
+    pub CSD_Signature: [u8; 1],
+}
+impl ::core::marker::Copy for CS_DES {}
+impl ::core::clone::Clone for CS_DES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct CS_RESOURCE {
+    pub CS_Header: CS_DES,
+}
+impl ::core::marker::Copy for CS_RESOURCE {}
+impl ::core::clone::Clone for CS_RESOURCE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct DEVPRIVATE_DES {
+    pub PD_Count: u32,
+    pub PD_Type: u32,
+    pub PD_Data1: u32,
+    pub PD_Data2: u32,
+    pub PD_Data3: u32,
+    pub PD_Flags: u32,
+}
+impl ::core::marker::Copy for DEVPRIVATE_DES {}
+impl ::core::clone::Clone for DEVPRIVATE_DES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct DEVPRIVATE_RANGE {
+    pub PR_Data1: u32,
+    pub PR_Data2: u32,
+    pub PR_Data3: u32,
+}
+impl ::core::marker::Copy for DEVPRIVATE_RANGE {}
+impl ::core::clone::Clone for DEVPRIVATE_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct DEVPRIVATE_RESOURCE {
+    pub PRV_Header: DEVPRIVATE_DES,
+    pub PRV_Data: [DEVPRIVATE_RANGE; 1],
+}
+impl ::core::marker::Copy for DEVPRIVATE_RESOURCE {}
+impl ::core::clone::Clone for DEVPRIVATE_RESOURCE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct DMA_DES {
+    pub DD_Count: u32,
+    pub DD_Type: u32,
+    pub DD_Flags: u32,
+    pub DD_Alloc_Chan: u32,
+}
+impl ::core::marker::Copy for DMA_DES {}
+impl ::core::clone::Clone for DMA_DES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct DMA_RANGE {
+    pub DR_Min: u32,
+    pub DR_Max: u32,
+    pub DR_Flags: u32,
+}
+impl ::core::marker::Copy for DMA_RANGE {}
+impl ::core::clone::Clone for DMA_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct DMA_RESOURCE {
+    pub DMA_Header: DMA_DES,
+    pub DMA_Data: [DMA_RANGE; 1],
+}
+impl ::core::marker::Copy for DMA_RESOURCE {}
+impl ::core::clone::Clone for DMA_RESOURCE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct FILEPATHS_A {
+    pub Target: ::windows_sys::core::PCSTR,
+    pub Source: ::windows_sys::core::PCSTR,
+    pub Win32Error: u32,
+    pub Flags: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for FILEPATHS_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for FILEPATHS_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct FILEPATHS_A {
+    pub Target: ::windows_sys::core::PCSTR,
+    pub Source: ::windows_sys::core::PCSTR,
+    pub Win32Error: u32,
+    pub Flags: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for FILEPATHS_A {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for FILEPATHS_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct FILEPATHS_SIGNERINFO_A {
+    pub Target: ::windows_sys::core::PCSTR,
+    pub Source: ::windows_sys::core::PCSTR,
+    pub Win32Error: u32,
+    pub Flags: u32,
+    pub DigitalSigner: ::windows_sys::core::PCSTR,
+    pub Version: ::windows_sys::core::PCSTR,
+    pub CatalogFile: ::windows_sys::core::PCSTR,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for FILEPATHS_SIGNERINFO_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for FILEPATHS_SIGNERINFO_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct FILEPATHS_SIGNERINFO_A {
+    pub Target: ::windows_sys::core::PCSTR,
+    pub Source: ::windows_sys::core::PCSTR,
+    pub Win32Error: u32,
+    pub Flags: u32,
+    pub DigitalSigner: ::windows_sys::core::PCSTR,
+    pub Version: ::windows_sys::core::PCSTR,
+    pub CatalogFile: ::windows_sys::core::PCSTR,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for FILEPATHS_SIGNERINFO_A {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for FILEPATHS_SIGNERINFO_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct FILEPATHS_SIGNERINFO_W {
+    pub Target: ::windows_sys::core::PCWSTR,
+    pub Source: ::windows_sys::core::PCWSTR,
+    pub Win32Error: u32,
+    pub Flags: u32,
+    pub DigitalSigner: ::windows_sys::core::PCWSTR,
+    pub Version: ::windows_sys::core::PCWSTR,
+    pub CatalogFile: ::windows_sys::core::PCWSTR,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for FILEPATHS_SIGNERINFO_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for FILEPATHS_SIGNERINFO_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct FILEPATHS_SIGNERINFO_W {
+    pub Target: ::windows_sys::core::PCWSTR,
+    pub Source: ::windows_sys::core::PCWSTR,
+    pub Win32Error: u32,
+    pub Flags: u32,
+    pub DigitalSigner: ::windows_sys::core::PCWSTR,
+    pub Version: ::windows_sys::core::PCWSTR,
+    pub CatalogFile: ::windows_sys::core::PCWSTR,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for FILEPATHS_SIGNERINFO_W {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for FILEPATHS_SIGNERINFO_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct FILEPATHS_W {
+    pub Target: ::windows_sys::core::PCWSTR,
+    pub Source: ::windows_sys::core::PCWSTR,
+    pub Win32Error: u32,
+    pub Flags: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for FILEPATHS_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for FILEPATHS_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct FILEPATHS_W {
+    pub Target: ::windows_sys::core::PCWSTR,
+    pub Source: ::windows_sys::core::PCWSTR,
+    pub Win32Error: u32,
+    pub Flags: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for FILEPATHS_W {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for FILEPATHS_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FILE_IN_CABINET_INFO_A {
+    pub NameInCabinet: ::windows_sys::core::PCSTR,
+    pub FileSize: u32,
+    pub Win32Error: u32,
+    pub DosDate: u16,
+    pub DosTime: u16,
+    pub DosAttribs: u16,
+    pub FullTargetName: [super::super::Foundation::CHAR; 260],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FILE_IN_CABINET_INFO_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FILE_IN_CABINET_INFO_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FILE_IN_CABINET_INFO_A {
+    pub NameInCabinet: ::windows_sys::core::PCSTR,
+    pub FileSize: u32,
+    pub Win32Error: u32,
+    pub DosDate: u16,
+    pub DosTime: u16,
+    pub DosAttribs: u16,
+    pub FullTargetName: [super::super::Foundation::CHAR; 260],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FILE_IN_CABINET_INFO_A {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FILE_IN_CABINET_INFO_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct FILE_IN_CABINET_INFO_W {
+    pub NameInCabinet: ::windows_sys::core::PCWSTR,
+    pub FileSize: u32,
+    pub Win32Error: u32,
+    pub DosDate: u16,
+    pub DosTime: u16,
+    pub DosAttribs: u16,
+    pub FullTargetName: [u16; 260],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for FILE_IN_CABINET_INFO_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for FILE_IN_CABINET_INFO_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct FILE_IN_CABINET_INFO_W {
+    pub NameInCabinet: ::windows_sys::core::PCWSTR,
+    pub FileSize: u32,
+    pub Win32Error: u32,
+    pub DosDate: u16,
+    pub DosTime: u16,
+    pub DosAttribs: u16,
+    pub FullTargetName: [u16; 260],
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for FILE_IN_CABINET_INFO_W {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for FILE_IN_CABINET_INFO_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type HCMNOTIFICATION = isize;
+pub type HDEVINFO = isize;
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct HWPROFILEINFO_W {
+    pub HWPI_ulHWProfile: u32,
+    pub HWPI_szFriendlyName: [u16; 80],
+    pub HWPI_dwFlags: u32,
+}
+impl ::core::marker::Copy for HWPROFILEINFO_W {}
+impl ::core::clone::Clone for HWPROFILEINFO_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct HWProfileInfo_sA {
+    pub HWPI_ulHWProfile: u32,
+    pub HWPI_szFriendlyName: [super::super::Foundation::CHAR; 80],
+    pub HWPI_dwFlags: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for HWProfileInfo_sA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for HWProfileInfo_sA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct INFCONTEXT {
+    pub Inf: *mut ::core::ffi::c_void,
+    pub CurrentInf: *mut ::core::ffi::c_void,
+    pub Section: u32,
+    pub Line: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for INFCONTEXT {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for INFCONTEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct INFCONTEXT {
+    pub Inf: *mut ::core::ffi::c_void,
+    pub CurrentInf: *mut ::core::ffi::c_void,
+    pub Section: u32,
+    pub Line: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for INFCONTEXT {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for INFCONTEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct IO_DES {
+    pub IOD_Count: u32,
+    pub IOD_Type: u32,
+    pub IOD_Alloc_Base: u64,
+    pub IOD_Alloc_End: u64,
+    pub IOD_DesFlags: u32,
+}
+impl ::core::marker::Copy for IO_DES {}
+impl ::core::clone::Clone for IO_DES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct IO_RANGE {
+    pub IOR_Align: u64,
+    pub IOR_nPorts: u32,
+    pub IOR_Min: u64,
+    pub IOR_Max: u64,
+    pub IOR_RangeFlags: u32,
+    pub IOR_Alias: u64,
+}
+impl ::core::marker::Copy for IO_RANGE {}
+impl ::core::clone::Clone for IO_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct IO_RESOURCE {
+    pub IO_Header: IO_DES,
+    pub IO_Data: [IO_RANGE; 1],
+}
+impl ::core::marker::Copy for IO_RESOURCE {}
+impl ::core::clone::Clone for IO_RESOURCE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct IRQ_DES_32 {
+    pub IRQD_Count: u32,
+    pub IRQD_Type: u32,
+    pub IRQD_Flags: u32,
+    pub IRQD_Alloc_Num: u32,
+    pub IRQD_Affinity: u32,
+}
+impl ::core::marker::Copy for IRQ_DES_32 {}
+impl ::core::clone::Clone for IRQ_DES_32 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct IRQ_DES_64 {
+    pub IRQD_Count: u32,
+    pub IRQD_Type: u32,
+    pub IRQD_Flags: u32,
+    pub IRQD_Alloc_Num: u32,
+    pub IRQD_Affinity: u64,
+}
+impl ::core::marker::Copy for IRQ_DES_64 {}
+impl ::core::clone::Clone for IRQ_DES_64 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct IRQ_RANGE {
+    pub IRQR_Min: u32,
+    pub IRQR_Max: u32,
+    pub IRQR_Flags: u32,
+}
+impl ::core::marker::Copy for IRQ_RANGE {}
+impl ::core::clone::Clone for IRQ_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct IRQ_RESOURCE_32 {
+    pub IRQ_Header: IRQ_DES_32,
+    pub IRQ_Data: [IRQ_RANGE; 1],
+}
+impl ::core::marker::Copy for IRQ_RESOURCE_32 {}
+impl ::core::clone::Clone for IRQ_RESOURCE_32 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct IRQ_RESOURCE_64 {
+    pub IRQ_Header: IRQ_DES_64,
+    pub IRQ_Data: [IRQ_RANGE; 1],
+}
+impl ::core::marker::Copy for IRQ_RESOURCE_64 {}
+impl ::core::clone::Clone for IRQ_RESOURCE_64 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct MEM_DES {
+    pub MD_Count: u32,
+    pub MD_Type: u32,
+    pub MD_Alloc_Base: u64,
+    pub MD_Alloc_End: u64,
+    pub MD_Flags: u32,
+    pub MD_Reserved: u32,
+}
+impl ::core::marker::Copy for MEM_DES {}
+impl ::core::clone::Clone for MEM_DES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct MEM_LARGE_DES {
+    pub MLD_Count: u32,
+    pub MLD_Type: u32,
+    pub MLD_Alloc_Base: u64,
+    pub MLD_Alloc_End: u64,
+    pub MLD_Flags: u32,
+    pub MLD_Reserved: u32,
+}
+impl ::core::marker::Copy for MEM_LARGE_DES {}
+impl ::core::clone::Clone for MEM_LARGE_DES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct MEM_LARGE_RANGE {
+    pub MLR_Align: u64,
+    pub MLR_nBytes: u64,
+    pub MLR_Min: u64,
+    pub MLR_Max: u64,
+    pub MLR_Flags: u32,
+    pub MLR_Reserved: u32,
+}
+impl ::core::marker::Copy for MEM_LARGE_RANGE {}
+impl ::core::clone::Clone for MEM_LARGE_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct MEM_LARGE_RESOURCE {
+    pub MEM_LARGE_Header: MEM_LARGE_DES,
+    pub MEM_LARGE_Data: [MEM_LARGE_RANGE; 1],
+}
+impl ::core::marker::Copy for MEM_LARGE_RESOURCE {}
+impl ::core::clone::Clone for MEM_LARGE_RESOURCE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct MEM_RANGE {
+    pub MR_Align: u64,
+    pub MR_nBytes: u32,
+    pub MR_Min: u64,
+    pub MR_Max: u64,
+    pub MR_Flags: u32,
+    pub MR_Reserved: u32,
+}
+impl ::core::marker::Copy for MEM_RANGE {}
+impl ::core::clone::Clone for MEM_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct MEM_RESOURCE {
+    pub MEM_Header: MEM_DES,
+    pub MEM_Data: [MEM_RANGE; 1],
+}
+impl ::core::marker::Copy for MEM_RESOURCE {}
+impl ::core::clone::Clone for MEM_RESOURCE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct MFCARD_DES {
+    pub PMF_Count: u32,
+    pub PMF_Type: u32,
+    pub PMF_Flags: u32,
+    pub PMF_ConfigOptions: u8,
+    pub PMF_IoResourceIndex: u8,
+    pub PMF_Reserved: [u8; 2],
+    pub PMF_ConfigRegisterBase: u32,
+}
+impl ::core::marker::Copy for MFCARD_DES {}
+impl ::core::clone::Clone for MFCARD_DES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct MFCARD_RESOURCE {
+    pub MfCard_Header: MFCARD_DES,
+}
+impl ::core::marker::Copy for MFCARD_RESOURCE {}
+impl ::core::clone::Clone for MFCARD_RESOURCE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct PCCARD_DES {
+    pub PCD_Count: u32,
+    pub PCD_Type: u32,
+    pub PCD_Flags: u32,
+    pub PCD_ConfigIndex: u8,
+    pub PCD_Reserved: [u8; 3],
+    pub PCD_MemoryCardBase1: u32,
+    pub PCD_MemoryCardBase2: u32,
+    pub PCD_MemoryCardBase: [u32; 2],
+    pub PCD_MemoryFlags: [u16; 2],
+    pub PCD_IoFlags: [u8; 2],
+}
+impl ::core::marker::Copy for PCCARD_DES {}
+impl ::core::clone::Clone for PCCARD_DES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+pub struct PCCARD_RESOURCE {
+    pub PcCard_Header: PCCARD_DES,
+}
+impl ::core::marker::Copy for PCCARD_RESOURCE {}
+impl ::core::clone::Clone for PCCARD_RESOURCE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SOURCE_MEDIA_A {
+    pub Reserved: ::windows_sys::core::PCSTR,
+    pub Tagfile: ::windows_sys::core::PCSTR,
+    pub Description: ::windows_sys::core::PCSTR,
+    pub SourcePath: ::windows_sys::core::PCSTR,
+    pub SourceFile: ::windows_sys::core::PCSTR,
+    pub Flags: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SOURCE_MEDIA_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SOURCE_MEDIA_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SOURCE_MEDIA_A {
+    pub Reserved: ::windows_sys::core::PCSTR,
+    pub Tagfile: ::windows_sys::core::PCSTR,
+    pub Description: ::windows_sys::core::PCSTR,
+    pub SourcePath: ::windows_sys::core::PCSTR,
+    pub SourceFile: ::windows_sys::core::PCSTR,
+    pub Flags: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SOURCE_MEDIA_A {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SOURCE_MEDIA_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SOURCE_MEDIA_W {
+    pub Reserved: ::windows_sys::core::PCWSTR,
+    pub Tagfile: ::windows_sys::core::PCWSTR,
+    pub Description: ::windows_sys::core::PCWSTR,
+    pub SourcePath: ::windows_sys::core::PCWSTR,
+    pub SourceFile: ::windows_sys::core::PCWSTR,
+    pub Flags: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SOURCE_MEDIA_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SOURCE_MEDIA_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SOURCE_MEDIA_W {
+    pub Reserved: ::windows_sys::core::PCWSTR,
+    pub Tagfile: ::windows_sys::core::PCWSTR,
+    pub Description: ::windows_sys::core::PCWSTR,
+    pub SourcePath: ::windows_sys::core::PCWSTR,
+    pub SourceFile: ::windows_sys::core::PCWSTR,
+    pub Flags: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SOURCE_MEDIA_W {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SOURCE_MEDIA_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+pub struct SP_ALTPLATFORM_INFO_V1 {
+    pub cbSize: u32,
+    pub Platform: super::super::System::Diagnostics::Debug::VER_PLATFORM,
+    pub MajorVersion: u32,
+    pub MinorVersion: u32,
+    pub ProcessorArchitecture: u16,
+    pub Reserved: u16,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V1 {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+pub struct SP_ALTPLATFORM_INFO_V1 {
+    pub cbSize: u32,
+    pub Platform: super::super::System::Diagnostics::Debug::VER_PLATFORM,
+    pub MajorVersion: u32,
+    pub MinorVersion: u32,
+    pub ProcessorArchitecture: u16,
+    pub Reserved: u16,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V1 {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+pub struct SP_ALTPLATFORM_INFO_V2 {
+    pub cbSize: u32,
+    pub Platform: super::super::System::Diagnostics::Debug::VER_PLATFORM,
+    pub MajorVersion: u32,
+    pub MinorVersion: u32,
+    pub ProcessorArchitecture: u16,
+    pub Anonymous: SP_ALTPLATFORM_INFO_V2_0,
+    pub FirstValidatedMajorVersion: u32,
+    pub FirstValidatedMinorVersion: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V2 {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+pub union SP_ALTPLATFORM_INFO_V2_0 {
+    pub Reserved: u16,
+    pub Flags: u16,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V2_0 {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V2_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+pub struct SP_ALTPLATFORM_INFO_V2 {
+    pub cbSize: u32,
+    pub Platform: super::super::System::Diagnostics::Debug::VER_PLATFORM,
+    pub MajorVersion: u32,
+    pub MinorVersion: u32,
+    pub ProcessorArchitecture: u16,
+    pub Anonymous: SP_ALTPLATFORM_INFO_V2_0,
+    pub FirstValidatedMajorVersion: u32,
+    pub FirstValidatedMinorVersion: u32,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V2 {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+pub union SP_ALTPLATFORM_INFO_V2_0 {
+    pub Reserved: u16,
+    pub Flags: u16,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V2_0 {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Diagnostics_Debug")]
+impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V2_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_ALTPLATFORM_INFO_V3 {
+    pub cbSize: u32,
+    pub Platform: u32,
+    pub MajorVersion: u32,
+    pub MinorVersion: u32,
+    pub ProcessorArchitecture: u16,
+    pub Anonymous: SP_ALTPLATFORM_INFO_V3_0,
+    pub FirstValidatedMajorVersion: u32,
+    pub FirstValidatedMinorVersion: u32,
+    pub ProductType: u8,
+    pub SuiteMask: u16,
+    pub BuildNumber: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V3 {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V3 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub union SP_ALTPLATFORM_INFO_V3_0 {
+    pub Reserved: u16,
+    pub Flags: u16,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V3_0 {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V3_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_ALTPLATFORM_INFO_V3 {
+    pub cbSize: u32,
+    pub Platform: u32,
+    pub MajorVersion: u32,
+    pub MinorVersion: u32,
+    pub ProcessorArchitecture: u16,
+    pub Anonymous: SP_ALTPLATFORM_INFO_V3_0,
+    pub FirstValidatedMajorVersion: u32,
+    pub FirstValidatedMinorVersion: u32,
+    pub ProductType: u8,
+    pub SuiteMask: u16,
+    pub BuildNumber: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V3 {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V3 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub union SP_ALTPLATFORM_INFO_V3_0 {
+    pub Reserved: u16,
+    pub Flags: u16,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_ALTPLATFORM_INFO_V3_0 {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_ALTPLATFORM_INFO_V3_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_BACKUP_QUEUE_PARAMS_V1_A {
+    pub cbSize: u32,
+    pub FullInfPath: [super::super::Foundation::CHAR; 260],
+    pub FilenameOffset: i32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V1_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V1_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_BACKUP_QUEUE_PARAMS_V1_A {
+    pub cbSize: u32,
+    pub FullInfPath: [super::super::Foundation::CHAR; 260],
+    pub FilenameOffset: i32,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V1_A {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V1_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_BACKUP_QUEUE_PARAMS_V1_W {
+    pub cbSize: u32,
+    pub FullInfPath: [u16; 260],
+    pub FilenameOffset: i32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V1_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V1_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_BACKUP_QUEUE_PARAMS_V1_W {
+    pub cbSize: u32,
+    pub FullInfPath: [u16; 260],
+    pub FilenameOffset: i32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V1_W {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V1_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_BACKUP_QUEUE_PARAMS_V2_A {
+    pub cbSize: u32,
+    pub FullInfPath: [super::super::Foundation::CHAR; 260],
+    pub FilenameOffset: i32,
+    pub ReinstallInstance: [super::super::Foundation::CHAR; 260],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V2_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V2_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_BACKUP_QUEUE_PARAMS_V2_A {
+    pub cbSize: u32,
+    pub FullInfPath: [super::super::Foundation::CHAR; 260],
+    pub FilenameOffset: i32,
+    pub ReinstallInstance: [super::super::Foundation::CHAR; 260],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V2_A {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V2_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_BACKUP_QUEUE_PARAMS_V2_W {
+    pub cbSize: u32,
+    pub FullInfPath: [u16; 260],
+    pub FilenameOffset: i32,
+    pub ReinstallInstance: [u16; 260],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V2_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V2_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_BACKUP_QUEUE_PARAMS_V2_W {
+    pub cbSize: u32,
+    pub FullInfPath: [u16; 260],
+    pub FilenameOffset: i32,
+    pub ReinstallInstance: [u16; 260],
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_BACKUP_QUEUE_PARAMS_V2_W {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_BACKUP_QUEUE_PARAMS_V2_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_UI_Controls\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_UI_Controls")]
+pub struct SP_CLASSIMAGELIST_DATA {
+    pub cbSize: u32,
+    pub ImageList: super::super::UI::Controls::HIMAGELIST,
+    pub Reserved: usize,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_UI_Controls")]
+impl ::core::marker::Copy for SP_CLASSIMAGELIST_DATA {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_UI_Controls")]
+impl ::core::clone::Clone for SP_CLASSIMAGELIST_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_UI_Controls\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_UI_Controls")]
+pub struct SP_CLASSIMAGELIST_DATA {
+    pub cbSize: u32,
+    pub ImageList: super::super::UI::Controls::HIMAGELIST,
+    pub Reserved: usize,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_UI_Controls")]
+impl ::core::marker::Copy for SP_CLASSIMAGELIST_DATA {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_UI_Controls")]
+impl ::core::clone::Clone for SP_CLASSIMAGELIST_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_CLASSINSTALL_HEADER {
+    pub cbSize: u32,
+    pub InstallFunction: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_CLASSINSTALL_HEADER {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_CLASSINSTALL_HEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_CLASSINSTALL_HEADER {
+    pub cbSize: u32,
+    pub InstallFunction: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_CLASSINSTALL_HEADER {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_CLASSINSTALL_HEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DETECTDEVICE_PARAMS {
+    pub ClassInstallHeader: SP_CLASSINSTALL_HEADER,
+    pub DetectProgressNotify: PDETECT_PROGRESS_NOTIFY,
+    pub ProgressNotifyParam: *mut ::core::ffi::c_void,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DETECTDEVICE_PARAMS {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DETECTDEVICE_PARAMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DETECTDEVICE_PARAMS {
+    pub ClassInstallHeader: SP_CLASSINSTALL_HEADER,
+    pub DetectProgressNotify: PDETECT_PROGRESS_NOTIFY,
+    pub ProgressNotifyParam: *mut ::core::ffi::c_void,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DETECTDEVICE_PARAMS {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DETECTDEVICE_PARAMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_DEVICE_INTERFACE_DATA {
+    pub cbSize: u32,
+    pub InterfaceClassGuid: ::windows_sys::core::GUID,
+    pub Flags: u32,
+    pub Reserved: usize,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_DEVICE_INTERFACE_DATA {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_DEVICE_INTERFACE_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_DEVICE_INTERFACE_DATA {
+    pub cbSize: u32,
+    pub InterfaceClassGuid: ::windows_sys::core::GUID,
+    pub Flags: u32,
+    pub Reserved: usize,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_DEVICE_INTERFACE_DATA {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_DEVICE_INTERFACE_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DEVICE_INTERFACE_DETAIL_DATA_A {
+    pub cbSize: u32,
+    pub DevicePath: [super::super::Foundation::CHAR; 1],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DEVICE_INTERFACE_DETAIL_DATA_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DEVICE_INTERFACE_DETAIL_DATA_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DEVICE_INTERFACE_DETAIL_DATA_A {
+    pub cbSize: u32,
+    pub DevicePath: [super::super::Foundation::CHAR; 1],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DEVICE_INTERFACE_DETAIL_DATA_A {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DEVICE_INTERFACE_DETAIL_DATA_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_DEVICE_INTERFACE_DETAIL_DATA_W {
+    pub cbSize: u32,
+    pub DevicePath: [u16; 1],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_DEVICE_INTERFACE_DETAIL_DATA_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_DEVICE_INTERFACE_DETAIL_DATA_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_DEVICE_INTERFACE_DETAIL_DATA_W {
+    pub cbSize: u32,
+    pub DevicePath: [u16; 1],
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_DEVICE_INTERFACE_DETAIL_DATA_W {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_DEVICE_INTERFACE_DETAIL_DATA_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_DEVINFO_DATA {
+    pub cbSize: u32,
+    pub ClassGuid: ::windows_sys::core::GUID,
+    pub DevInst: u32,
+    pub Reserved: usize,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_DEVINFO_DATA {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_DEVINFO_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_DEVINFO_DATA {
+    pub cbSize: u32,
+    pub ClassGuid: ::windows_sys::core::GUID,
+    pub DevInst: u32,
+    pub Reserved: usize,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_DEVINFO_DATA {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_DEVINFO_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DEVINFO_LIST_DETAIL_DATA_A {
+    pub cbSize: u32,
+    pub ClassGuid: ::windows_sys::core::GUID,
+    pub RemoteMachineHandle: super::super::Foundation::HANDLE,
+    pub RemoteMachineName: [super::super::Foundation::CHAR; 263],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DEVINFO_LIST_DETAIL_DATA_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DEVINFO_LIST_DETAIL_DATA_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DEVINFO_LIST_DETAIL_DATA_A {
+    pub cbSize: u32,
+    pub ClassGuid: ::windows_sys::core::GUID,
+    pub RemoteMachineHandle: super::super::Foundation::HANDLE,
+    pub RemoteMachineName: [super::super::Foundation::CHAR; 263],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DEVINFO_LIST_DETAIL_DATA_A {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DEVINFO_LIST_DETAIL_DATA_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DEVINFO_LIST_DETAIL_DATA_W {
+    pub cbSize: u32,
+    pub ClassGuid: ::windows_sys::core::GUID,
+    pub RemoteMachineHandle: super::super::Foundation::HANDLE,
+    pub RemoteMachineName: [u16; 263],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DEVINFO_LIST_DETAIL_DATA_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DEVINFO_LIST_DETAIL_DATA_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DEVINFO_LIST_DETAIL_DATA_W {
+    pub cbSize: u32,
+    pub ClassGuid: ::windows_sys::core::GUID,
+    pub RemoteMachineHandle: super::super::Foundation::HANDLE,
+    pub RemoteMachineName: [u16; 263],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DEVINFO_LIST_DETAIL_DATA_W {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DEVINFO_LIST_DETAIL_DATA_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DEVINSTALL_PARAMS_A {
+    pub cbSize: u32,
+    pub Flags: u32,
+    pub FlagsEx: u32,
+    pub hwndParent: super::super::Foundation::HWND,
+    pub InstallMsgHandler: PSP_FILE_CALLBACK_A,
+    pub InstallMsgHandlerContext: *mut ::core::ffi::c_void,
+    pub FileQueue: *mut ::core::ffi::c_void,
+    pub ClassInstallReserved: usize,
+    pub Reserved: u32,
+    pub DriverPath: [super::super::Foundation::CHAR; 260],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DEVINSTALL_PARAMS_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DEVINSTALL_PARAMS_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DEVINSTALL_PARAMS_A {
+    pub cbSize: u32,
+    pub Flags: u32,
+    pub FlagsEx: u32,
+    pub hwndParent: super::super::Foundation::HWND,
+    pub InstallMsgHandler: PSP_FILE_CALLBACK_A,
+    pub InstallMsgHandlerContext: *mut ::core::ffi::c_void,
+    pub FileQueue: *mut ::core::ffi::c_void,
+    pub ClassInstallReserved: usize,
+    pub Reserved: u32,
+    pub DriverPath: [super::super::Foundation::CHAR; 260],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DEVINSTALL_PARAMS_A {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DEVINSTALL_PARAMS_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DEVINSTALL_PARAMS_W {
+    pub cbSize: u32,
+    pub Flags: u32,
+    pub FlagsEx: u32,
+    pub hwndParent: super::super::Foundation::HWND,
+    pub InstallMsgHandler: PSP_FILE_CALLBACK_A,
+    pub InstallMsgHandlerContext: *mut ::core::ffi::c_void,
+    pub FileQueue: *mut ::core::ffi::c_void,
+    pub ClassInstallReserved: usize,
+    pub Reserved: u32,
+    pub DriverPath: [u16; 260],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DEVINSTALL_PARAMS_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DEVINSTALL_PARAMS_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DEVINSTALL_PARAMS_W {
+    pub cbSize: u32,
+    pub Flags: u32,
+    pub FlagsEx: u32,
+    pub hwndParent: super::super::Foundation::HWND,
+    pub InstallMsgHandler: PSP_FILE_CALLBACK_A,
+    pub InstallMsgHandlerContext: *mut ::core::ffi::c_void,
+    pub FileQueue: *mut ::core::ffi::c_void,
+    pub ClassInstallReserved: usize,
+    pub Reserved: u32,
+    pub DriverPath: [u16; 260],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DEVINSTALL_PARAMS_W {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DEVINSTALL_PARAMS_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DRVINFO_DATA_V1_A {
+    pub cbSize: u32,
+    pub DriverType: u32,
+    pub Reserved: usize,
+    pub Description: [super::super::Foundation::CHAR; 256],
+    pub MfgName: [super::super::Foundation::CHAR; 256],
+    pub ProviderName: [super::super::Foundation::CHAR; 256],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DRVINFO_DATA_V1_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DRVINFO_DATA_V1_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DRVINFO_DATA_V1_A {
+    pub cbSize: u32,
+    pub DriverType: u32,
+    pub Reserved: usize,
+    pub Description: [super::super::Foundation::CHAR; 256],
+    pub MfgName: [super::super::Foundation::CHAR; 256],
+    pub ProviderName: [super::super::Foundation::CHAR; 256],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DRVINFO_DATA_V1_A {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DRVINFO_DATA_V1_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_DRVINFO_DATA_V1_W {
+    pub cbSize: u32,
+    pub DriverType: u32,
+    pub Reserved: usize,
+    pub Description: [u16; 256],
+    pub MfgName: [u16; 256],
+    pub ProviderName: [u16; 256],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_DRVINFO_DATA_V1_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_DRVINFO_DATA_V1_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_DRVINFO_DATA_V1_W {
+    pub cbSize: u32,
+    pub DriverType: u32,
+    pub Reserved: usize,
+    pub Description: [u16; 256],
+    pub MfgName: [u16; 256],
+    pub ProviderName: [u16; 256],
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_DRVINFO_DATA_V1_W {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_DRVINFO_DATA_V1_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DRVINFO_DATA_V2_A {
+    pub cbSize: u32,
+    pub DriverType: u32,
+    pub Reserved: usize,
+    pub Description: [super::super::Foundation::CHAR; 256],
+    pub MfgName: [super::super::Foundation::CHAR; 256],
+    pub ProviderName: [super::super::Foundation::CHAR; 256],
+    pub DriverDate: super::super::Foundation::FILETIME,
+    pub DriverVersion: u64,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DRVINFO_DATA_V2_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DRVINFO_DATA_V2_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DRVINFO_DATA_V2_A {
+    pub cbSize: u32,
+    pub DriverType: u32,
+    pub Reserved: usize,
+    pub Description: [super::super::Foundation::CHAR; 256],
+    pub MfgName: [super::super::Foundation::CHAR; 256],
+    pub ProviderName: [super::super::Foundation::CHAR; 256],
+    pub DriverDate: super::super::Foundation::FILETIME,
+    pub DriverVersion: u64,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DRVINFO_DATA_V2_A {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DRVINFO_DATA_V2_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DRVINFO_DATA_V2_W {
+    pub cbSize: u32,
+    pub DriverType: u32,
+    pub Reserved: usize,
+    pub Description: [u16; 256],
+    pub MfgName: [u16; 256],
+    pub ProviderName: [u16; 256],
+    pub DriverDate: super::super::Foundation::FILETIME,
+    pub DriverVersion: u64,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DRVINFO_DATA_V2_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DRVINFO_DATA_V2_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DRVINFO_DATA_V2_W {
+    pub cbSize: u32,
+    pub DriverType: u32,
+    pub Reserved: usize,
+    pub Description: [u16; 256],
+    pub MfgName: [u16; 256],
+    pub ProviderName: [u16; 256],
+    pub DriverDate: super::super::Foundation::FILETIME,
+    pub DriverVersion: u64,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DRVINFO_DATA_V2_W {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DRVINFO_DATA_V2_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DRVINFO_DETAIL_DATA_A {
+    pub cbSize: u32,
+    pub InfDate: super::super::Foundation::FILETIME,
+    pub CompatIDsOffset: u32,
+    pub CompatIDsLength: u32,
+    pub Reserved: usize,
+    pub SectionName: [super::super::Foundation::CHAR; 256],
+    pub InfFileName: [super::super::Foundation::CHAR; 260],
+    pub DrvDescription: [super::super::Foundation::CHAR; 256],
+    pub HardwareID: [super::super::Foundation::CHAR; 1],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DRVINFO_DETAIL_DATA_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DRVINFO_DETAIL_DATA_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DRVINFO_DETAIL_DATA_A {
+    pub cbSize: u32,
+    pub InfDate: super::super::Foundation::FILETIME,
+    pub CompatIDsOffset: u32,
+    pub CompatIDsLength: u32,
+    pub Reserved: usize,
+    pub SectionName: [super::super::Foundation::CHAR; 256],
+    pub InfFileName: [super::super::Foundation::CHAR; 260],
+    pub DrvDescription: [super::super::Foundation::CHAR; 256],
+    pub HardwareID: [super::super::Foundation::CHAR; 1],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DRVINFO_DETAIL_DATA_A {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DRVINFO_DETAIL_DATA_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DRVINFO_DETAIL_DATA_W {
+    pub cbSize: u32,
+    pub InfDate: super::super::Foundation::FILETIME,
+    pub CompatIDsOffset: u32,
+    pub CompatIDsLength: u32,
+    pub Reserved: usize,
+    pub SectionName: [u16; 256],
+    pub InfFileName: [u16; 260],
+    pub DrvDescription: [u16; 256],
+    pub HardwareID: [u16; 1],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DRVINFO_DETAIL_DATA_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DRVINFO_DETAIL_DATA_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_DRVINFO_DETAIL_DATA_W {
+    pub cbSize: u32,
+    pub InfDate: super::super::Foundation::FILETIME,
+    pub CompatIDsOffset: u32,
+    pub CompatIDsLength: u32,
+    pub Reserved: usize,
+    pub SectionName: [u16; 256],
+    pub InfFileName: [u16; 260],
+    pub DrvDescription: [u16; 256],
+    pub HardwareID: [u16; 1],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_DRVINFO_DETAIL_DATA_W {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_DRVINFO_DETAIL_DATA_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_DRVINSTALL_PARAMS {
+    pub cbSize: u32,
+    pub Rank: u32,
+    pub Flags: u32,
+    pub PrivateData: usize,
+    pub Reserved: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_DRVINSTALL_PARAMS {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_DRVINSTALL_PARAMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_DRVINSTALL_PARAMS {
+    pub cbSize: u32,
+    pub Rank: u32,
+    pub Flags: u32,
+    pub PrivateData: usize,
+    pub Reserved: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_DRVINSTALL_PARAMS {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_DRVINSTALL_PARAMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_ENABLECLASS_PARAMS {
+    pub ClassInstallHeader: SP_CLASSINSTALL_HEADER,
+    pub ClassGuid: ::windows_sys::core::GUID,
+    pub EnableMessage: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_ENABLECLASS_PARAMS {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_ENABLECLASS_PARAMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_ENABLECLASS_PARAMS {
+    pub ClassInstallHeader: SP_CLASSINSTALL_HEADER,
+    pub ClassGuid: ::windows_sys::core::GUID,
+    pub EnableMessage: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_ENABLECLASS_PARAMS {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_ENABLECLASS_PARAMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_FILE_COPY_PARAMS_A {
+    pub cbSize: u32,
+    pub QueueHandle: *mut ::core::ffi::c_void,
+    pub SourceRootPath: ::windows_sys::core::PCSTR,
+    pub SourcePath: ::windows_sys::core::PCSTR,
+    pub SourceFilename: ::windows_sys::core::PCSTR,
+    pub SourceDescription: ::windows_sys::core::PCSTR,
+    pub SourceTagfile: ::windows_sys::core::PCSTR,
+    pub TargetDirectory: ::windows_sys::core::PCSTR,
+    pub TargetFilename: ::windows_sys::core::PCSTR,
+    pub CopyStyle: u32,
+    pub LayoutInf: *mut ::core::ffi::c_void,
+    pub SecurityDescriptor: ::windows_sys::core::PCSTR,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_FILE_COPY_PARAMS_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_FILE_COPY_PARAMS_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_FILE_COPY_PARAMS_A {
+    pub cbSize: u32,
+    pub QueueHandle: *mut ::core::ffi::c_void,
+    pub SourceRootPath: ::windows_sys::core::PCSTR,
+    pub SourcePath: ::windows_sys::core::PCSTR,
+    pub SourceFilename: ::windows_sys::core::PCSTR,
+    pub SourceDescription: ::windows_sys::core::PCSTR,
+    pub SourceTagfile: ::windows_sys::core::PCSTR,
+    pub TargetDirectory: ::windows_sys::core::PCSTR,
+    pub TargetFilename: ::windows_sys::core::PCSTR,
+    pub CopyStyle: u32,
+    pub LayoutInf: *mut ::core::ffi::c_void,
+    pub SecurityDescriptor: ::windows_sys::core::PCSTR,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_FILE_COPY_PARAMS_A {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_FILE_COPY_PARAMS_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_FILE_COPY_PARAMS_W {
+    pub cbSize: u32,
+    pub QueueHandle: *mut ::core::ffi::c_void,
+    pub SourceRootPath: ::windows_sys::core::PCWSTR,
+    pub SourcePath: ::windows_sys::core::PCWSTR,
+    pub SourceFilename: ::windows_sys::core::PCWSTR,
+    pub SourceDescription: ::windows_sys::core::PCWSTR,
+    pub SourceTagfile: ::windows_sys::core::PCWSTR,
+    pub TargetDirectory: ::windows_sys::core::PCWSTR,
+    pub TargetFilename: ::windows_sys::core::PCWSTR,
+    pub CopyStyle: u32,
+    pub LayoutInf: *mut ::core::ffi::c_void,
+    pub SecurityDescriptor: ::windows_sys::core::PCWSTR,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_FILE_COPY_PARAMS_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_FILE_COPY_PARAMS_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_FILE_COPY_PARAMS_W {
+    pub cbSize: u32,
+    pub QueueHandle: *mut ::core::ffi::c_void,
+    pub SourceRootPath: ::windows_sys::core::PCWSTR,
+    pub SourcePath: ::windows_sys::core::PCWSTR,
+    pub SourceFilename: ::windows_sys::core::PCWSTR,
+    pub SourceDescription: ::windows_sys::core::PCWSTR,
+    pub SourceTagfile: ::windows_sys::core::PCWSTR,
+    pub TargetDirectory: ::windows_sys::core::PCWSTR,
+    pub TargetFilename: ::windows_sys::core::PCWSTR,
+    pub CopyStyle: u32,
+    pub LayoutInf: *mut ::core::ffi::c_void,
+    pub SecurityDescriptor: ::windows_sys::core::PCWSTR,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_FILE_COPY_PARAMS_W {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_FILE_COPY_PARAMS_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_INF_INFORMATION {
+    pub InfStyle: SP_INF_STYLE,
+    pub InfCount: u32,
+    pub VersionData: [u8; 1],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_INF_INFORMATION {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_INF_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_INF_INFORMATION {
+    pub InfStyle: SP_INF_STYLE,
+    pub InfCount: u32,
+    pub VersionData: [u8; 1],
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_INF_INFORMATION {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_INF_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_INF_SIGNER_INFO_V1_A {
+    pub cbSize: u32,
+    pub CatalogFile: [super::super::Foundation::CHAR; 260],
+    pub DigitalSigner: [super::super::Foundation::CHAR; 260],
+    pub DigitalSignerVersion: [super::super::Foundation::CHAR; 260],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V1_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V1_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_INF_SIGNER_INFO_V1_A {
+    pub cbSize: u32,
+    pub CatalogFile: [super::super::Foundation::CHAR; 260],
+    pub DigitalSigner: [super::super::Foundation::CHAR; 260],
+    pub DigitalSignerVersion: [super::super::Foundation::CHAR; 260],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V1_A {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V1_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_INF_SIGNER_INFO_V1_W {
+    pub cbSize: u32,
+    pub CatalogFile: [u16; 260],
+    pub DigitalSigner: [u16; 260],
+    pub DigitalSignerVersion: [u16; 260],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V1_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V1_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_INF_SIGNER_INFO_V1_W {
+    pub cbSize: u32,
+    pub CatalogFile: [u16; 260],
+    pub DigitalSigner: [u16; 260],
+    pub DigitalSignerVersion: [u16; 260],
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V1_W {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V1_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_INF_SIGNER_INFO_V2_A {
+    pub cbSize: u32,
+    pub CatalogFile: [super::super::Foundation::CHAR; 260],
+    pub DigitalSigner: [super::super::Foundation::CHAR; 260],
+    pub DigitalSignerVersion: [super::super::Foundation::CHAR; 260],
+    pub SignerScore: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V2_A {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V2_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SP_INF_SIGNER_INFO_V2_A {
+    pub cbSize: u32,
+    pub CatalogFile: [super::super::Foundation::CHAR; 260],
+    pub DigitalSigner: [super::super::Foundation::CHAR; 260],
+    pub DigitalSignerVersion: [super::super::Foundation::CHAR; 260],
+    pub SignerScore: u32,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V2_A {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V2_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SP_INF_SIGNER_INFO_V2_W {
+    pub cbSize: u32,
+    pub CatalogFile: [u16; 260],
+    pub DigitalSigner: [u16; 260],
+    pub DigitalSignerVersion: [u16; 260],
+    pub SignerScore: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V2_W {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V2_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SP_INF_SIGNER_INFO_V2_W {
+    pub cbSize: u32,
+    pub CatalogFile: [u16; 260],
+    pub DigitalSigner: [u16; 260],
+    pub DigitalSignerVersion: [u16; 260],
+    pub SignerScore: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SP_INF_SIGNER_INFO_V2_W {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SP_INF_SIGNER_INFO_V2_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Controls\"`*"]
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
@@ -6850,8 +7186,6 @@ impl ::core::clone::Clone for SP_INSTALLWIZARD_DATA {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SP_MAX_MACHINENAME_LENGTH: u32 = 263u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Controls\"`*"]
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
@@ -7313,344 +7647,13 @@ impl ::core::clone::Clone for SP_UNREMOVEDEVICE_PARAMS {
     }
 }
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCINFO_DESCRIPTION: u32 = 3u32;
+pub type PCM_NOTIFY_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hnotify: HCMNOTIFICATION, context: *const ::core::ffi::c_void, action: CM_NOTIFY_ACTION, eventdata: *const CM_NOTIFY_EVENT_DATA, eventdatasize: u32) -> u32>;
+#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PDETECT_PROGRESS_NOTIFY = ::core::option::Option<unsafe extern "system" fn(progressnotifyparam: *const ::core::ffi::c_void, detectcomplete: u32) -> super::super::Foundation::BOOL>;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCINFO_FLAGS: u32 = 4u32;
+pub type PSP_DETSIG_CMPPROC = ::core::option::Option<unsafe extern "system" fn(deviceinfoset: HDEVINFO, newdevicedata: *const SP_DEVINFO_DATA, existingdevicedata: *const SP_DEVINFO_DATA, comparecontext: *const ::core::ffi::c_void) -> u32>;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCINFO_PATH: u32 = 1u32;
+pub type PSP_FILE_CALLBACK_A = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, notification: u32, param1: usize, param2: usize) -> u32>;
 #[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCINFO_TAGFILE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCINFO_TAGFILE2: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCLIST_APPEND: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCLIST_NOBROWSE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCLIST_NOSTRIPPLATFORM: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCLIST_SUBDIRS: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCLIST_SYSIFADMIN: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCLIST_SYSTEM: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCLIST_TEMPORARY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRCLIST_USER: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SRC_FLAGS_CABFILE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SUOI_FORCEDELETE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SUOI_INTERNAL1: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDAUTOLOGGER: &str = "AddAutoLogger";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDAUTOLOGGERPROVIDER: &str = "AddAutoLoggerProvider";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDCHANNEL: &str = "AddChannel";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDEVENTPROVIDER: &str = "AddEventProvider";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDFILTER: &str = "AddFilter";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDIME: &str = "AddIme";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDINTERFACE: &str = "AddInterface";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDPOWERSETTING: &str = "AddPowerSetting";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDPROP: &str = "AddProperty";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDREG: &str = "AddReg";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDREGNOCLOBBER: &str = "AddRegNoClobber";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDSERVICE: &str = "AddService";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_ADDTRIGGER: &str = "AddTrigger";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_BITREG: &str = "BitReg";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_CLEANONLY: &str = "CleanOnly";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_COPYFILES: &str = "CopyFiles";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_COPYINF: &str = "CopyINF";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_DEFAULTOPTION: &str = "DefaultOption";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_DEFDESTDIR: &str = "DefaultDestDir";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_DELFILES: &str = "DelFiles";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_DELIME: &str = "DelIme";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_DELPROP: &str = "DelProperty";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_DELREG: &str = "DelReg";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_DELSERVICE: &str = "DelService";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_DESTDIRS: &str = "DestinationDirs";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_EXCLUDEID: &str = "ExcludeId";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_FEATURESCORE: &str = "FeatureScore";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_FILTERLEVEL: &str = "FilterLevel";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_FILTERPOSITION: &str = "FilterPosition";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_HARDWARE: &str = "Hardware";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_IMPORTCHANNEL: &str = "ImportChannel";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_INI2REG: &str = "Ini2Reg";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_LAYOUT_FILE: &str = "LayoutFile";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_LDIDOEM: &str = "LdidOEM";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_LFN_SECTION: &str = "VarLDID.LFN";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_LISTOPTIONS: &str = "ListOptions";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_LOGCONFIG: &str = "LogConfig";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_MODULES: &str = "Modules";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_OPTIONDESC: &str = "OptionDesc";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_PHASE1: &str = "Phase1";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_PROFILEITEMS: &str = "ProfileItems";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_REGSVR: &str = "RegisterDlls";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_RENFILES: &str = "RenFiles";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_SFN_SECTION: &str = "VarLDID.SFN";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_SRCDISKFILES: &str = "SourceDisksFiles";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_SRCDISKNAMES: &str = "SourceDisksNames";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_STRINGS: &str = "Strings";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_UNREGSVR: &str = "UnregisterDlls";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_UPDATEAUTOLOGGER: &str = "UpdateAutoLogger";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_UPDATEINIFIELDS: &str = "UpdateIniFields";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_UPDATEINIS: &str = "UpdateInis";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SZ_KEY_UPGRADEONLY: &str = "UpgradeOnly";
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub type SetupFileLogInfo = i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SetupFileLogSourceFilename: SetupFileLogInfo = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SetupFileLogChecksum: SetupFileLogInfo = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SetupFileLogDiskTagfile: SetupFileLogInfo = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SetupFileLogDiskDescription: SetupFileLogInfo = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SetupFileLogOtherInfo: SetupFileLogInfo = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const SetupFileLogMax: SetupFileLogInfo = 5i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fDD_BYTE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fDD_BYTE_AND_WORD: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fDD_BusMaster: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fDD_DWORD: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fDD_NoBusMaster: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fDD_TypeA: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fDD_TypeB: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fDD_TypeF: u32 = 24u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fDD_TypeStandard: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fDD_WORD: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIOD_10_BIT_DECODE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIOD_12_BIT_DECODE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIOD_16_BIT_DECODE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIOD_DECODE: u32 = 252u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIOD_IO: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIOD_Memory: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIOD_PASSIVE_DECODE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIOD_PORT_BAR: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIOD_POSITIVE_DECODE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIOD_PortType: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIOD_WINDOW_DECODE: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIRQD_Edge: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIRQD_Exclusive: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIRQD_Level: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIRQD_Level_Bit: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIRQD_Share: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fIRQD_Share_Bit: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_24: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_32: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_32_24: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_Cacheable: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_CombinedWrite: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_CombinedWriteAllowed: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_CombinedWriteDisallowed: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_MEMORY_BAR: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_MemoryType: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_NonCacheable: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_Pref: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_PrefetchAllowed: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_PrefetchDisallowed: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_Prefetchable: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_RAM: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_ROM: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_ReadAllowed: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_ReadDisallowed: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_Readable: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fMD_WINDOW_DECODE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_ATTRIBUTES_PER_WINDOW: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO1_16: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO1_SRC_16: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO1_WS_16: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO1_ZW_8: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO2_16: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO2_SRC_16: u32 = 4194304u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO2_WS_16: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO2_ZW_8: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO_16: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO_8: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO_SRC_16: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO_WS_16: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_IO_ZW_8: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM1_16: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM1_A: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM1_WS_ONE: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM1_WS_THREE: u32 = 50331648u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM1_WS_TWO: u32 = 33554432u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM2_16: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM2_A: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM2_WS_ONE: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM2_WS_THREE: u32 = 805306368u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM2_WS_TWO: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM_16: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM_8: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM_A: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM_WS_ONE: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM_WS_THREE: u32 = 768u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPCD_MEM_WS_TWO: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const fPMF_AUDIO_ENABLE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mDD_BusMaster: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mDD_Type: u32 = 24u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mDD_Width: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mIRQD_Edge_Level: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mIRQD_Share: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mMD_32_24: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mMD_Cacheable: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mMD_CombinedWrite: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mMD_MemoryType: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mMD_Prefetchable: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mMD_Readable: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mPCD_IO_8_16: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mPCD_MEM1_WS: u32 = 50331648u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mPCD_MEM2_WS: u32 = 805306368u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mPCD_MEM_8_16: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mPCD_MEM_A_C: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mPCD_MEM_WS: u32 = 768u32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceAndDriverInstallation\"`*"]
-pub const mPMF_AUDIO_ENABLE: u32 = 8u32;
+pub type PSP_FILE_CALLBACK_W = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, notification: u32, param1: usize, param2: usize) -> u32>;

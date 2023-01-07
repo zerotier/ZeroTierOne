@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -176,6 +176,70 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn StiCreateInstanceW(hinst: super::super::Foundation::HINSTANCE, dwver: u32, ppsti: *mut IStillImageW, punkouter: ::windows_sys::core::IUnknown) -> ::windows_sys::core::HRESULT;
 }
+pub type IFaxAccount = *mut ::core::ffi::c_void;
+pub type IFaxAccountFolders = *mut ::core::ffi::c_void;
+pub type IFaxAccountIncomingArchive = *mut ::core::ffi::c_void;
+pub type IFaxAccountIncomingQueue = *mut ::core::ffi::c_void;
+pub type IFaxAccountNotify = *mut ::core::ffi::c_void;
+pub type IFaxAccountOutgoingArchive = *mut ::core::ffi::c_void;
+pub type IFaxAccountOutgoingQueue = *mut ::core::ffi::c_void;
+pub type IFaxAccountSet = *mut ::core::ffi::c_void;
+pub type IFaxAccounts = *mut ::core::ffi::c_void;
+pub type IFaxActivity = *mut ::core::ffi::c_void;
+pub type IFaxActivityLogging = *mut ::core::ffi::c_void;
+pub type IFaxConfiguration = *mut ::core::ffi::c_void;
+pub type IFaxDevice = *mut ::core::ffi::c_void;
+pub type IFaxDeviceIds = *mut ::core::ffi::c_void;
+pub type IFaxDeviceProvider = *mut ::core::ffi::c_void;
+pub type IFaxDeviceProviders = *mut ::core::ffi::c_void;
+pub type IFaxDevices = *mut ::core::ffi::c_void;
+pub type IFaxDocument = *mut ::core::ffi::c_void;
+pub type IFaxDocument2 = *mut ::core::ffi::c_void;
+pub type IFaxEventLogging = *mut ::core::ffi::c_void;
+pub type IFaxFolders = *mut ::core::ffi::c_void;
+pub type IFaxInboundRouting = *mut ::core::ffi::c_void;
+pub type IFaxInboundRoutingExtension = *mut ::core::ffi::c_void;
+pub type IFaxInboundRoutingExtensions = *mut ::core::ffi::c_void;
+pub type IFaxInboundRoutingMethod = *mut ::core::ffi::c_void;
+pub type IFaxInboundRoutingMethods = *mut ::core::ffi::c_void;
+pub type IFaxIncomingArchive = *mut ::core::ffi::c_void;
+pub type IFaxIncomingJob = *mut ::core::ffi::c_void;
+pub type IFaxIncomingJobs = *mut ::core::ffi::c_void;
+pub type IFaxIncomingMessage = *mut ::core::ffi::c_void;
+pub type IFaxIncomingMessage2 = *mut ::core::ffi::c_void;
+pub type IFaxIncomingMessageIterator = *mut ::core::ffi::c_void;
+pub type IFaxIncomingQueue = *mut ::core::ffi::c_void;
+pub type IFaxJobStatus = *mut ::core::ffi::c_void;
+pub type IFaxLoggingOptions = *mut ::core::ffi::c_void;
+pub type IFaxOutboundRouting = *mut ::core::ffi::c_void;
+pub type IFaxOutboundRoutingGroup = *mut ::core::ffi::c_void;
+pub type IFaxOutboundRoutingGroups = *mut ::core::ffi::c_void;
+pub type IFaxOutboundRoutingRule = *mut ::core::ffi::c_void;
+pub type IFaxOutboundRoutingRules = *mut ::core::ffi::c_void;
+pub type IFaxOutgoingArchive = *mut ::core::ffi::c_void;
+pub type IFaxOutgoingJob = *mut ::core::ffi::c_void;
+pub type IFaxOutgoingJob2 = *mut ::core::ffi::c_void;
+pub type IFaxOutgoingJobs = *mut ::core::ffi::c_void;
+pub type IFaxOutgoingMessage = *mut ::core::ffi::c_void;
+pub type IFaxOutgoingMessage2 = *mut ::core::ffi::c_void;
+pub type IFaxOutgoingMessageIterator = *mut ::core::ffi::c_void;
+pub type IFaxOutgoingQueue = *mut ::core::ffi::c_void;
+pub type IFaxReceiptOptions = *mut ::core::ffi::c_void;
+pub type IFaxRecipient = *mut ::core::ffi::c_void;
+pub type IFaxRecipients = *mut ::core::ffi::c_void;
+pub type IFaxSecurity = *mut ::core::ffi::c_void;
+pub type IFaxSecurity2 = *mut ::core::ffi::c_void;
+pub type IFaxSender = *mut ::core::ffi::c_void;
+pub type IFaxServer = *mut ::core::ffi::c_void;
+pub type IFaxServer2 = *mut ::core::ffi::c_void;
+pub type IFaxServerNotify = *mut ::core::ffi::c_void;
+pub type IFaxServerNotify2 = *mut ::core::ffi::c_void;
+pub type IStiDevice = *mut ::core::ffi::c_void;
+pub type IStiDeviceControl = *mut ::core::ffi::c_void;
+pub type IStiUSD = *mut ::core::ffi::c_void;
+pub type IStillImageW = *mut ::core::ffi::c_void;
+pub type _IFaxAccountNotify = *mut ::core::ffi::c_void;
+pub type _IFaxServerNotify2 = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const CF_MSFAXSRV_DEVICE_ID: &str = "FAXSRV_DeviceID";
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
@@ -198,404 +262,9 @@ pub const FAXDEVRECEIVE_SIZE: u32 = 4096u32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FAXDEVREPORTSTATUS_SIZE: u32 = 4096u32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAXROUTE_ENABLE = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const QUERY_STATUS: FAXROUTE_ENABLE = -1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STATUS_DISABLE: FAXROUTE_ENABLE = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STATUS_ENABLE: FAXROUTE_ENABLE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_ACCESS_RIGHTS_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const farSUBMIT_LOW: FAX_ACCESS_RIGHTS_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const farSUBMIT_NORMAL: FAX_ACCESS_RIGHTS_ENUM = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const farSUBMIT_HIGH: FAX_ACCESS_RIGHTS_ENUM = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const farQUERY_JOBS: FAX_ACCESS_RIGHTS_ENUM = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const farMANAGE_JOBS: FAX_ACCESS_RIGHTS_ENUM = 16i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const farQUERY_CONFIG: FAX_ACCESS_RIGHTS_ENUM = 32i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const farMANAGE_CONFIG: FAX_ACCESS_RIGHTS_ENUM = 64i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const farQUERY_IN_ARCHIVE: FAX_ACCESS_RIGHTS_ENUM = 128i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const farMANAGE_IN_ARCHIVE: FAX_ACCESS_RIGHTS_ENUM = 256i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const farQUERY_OUT_ARCHIVE: FAX_ACCESS_RIGHTS_ENUM = 512i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const farMANAGE_OUT_ARCHIVE: FAX_ACCESS_RIGHTS_ENUM = 1024i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_ACCESS_RIGHTS_ENUM_2 = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const far2SUBMIT_LOW: FAX_ACCESS_RIGHTS_ENUM_2 = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const far2SUBMIT_NORMAL: FAX_ACCESS_RIGHTS_ENUM_2 = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const far2SUBMIT_HIGH: FAX_ACCESS_RIGHTS_ENUM_2 = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const far2QUERY_OUT_JOBS: FAX_ACCESS_RIGHTS_ENUM_2 = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const far2MANAGE_OUT_JOBS: FAX_ACCESS_RIGHTS_ENUM_2 = 16i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const far2QUERY_CONFIG: FAX_ACCESS_RIGHTS_ENUM_2 = 32i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const far2MANAGE_CONFIG: FAX_ACCESS_RIGHTS_ENUM_2 = 64i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const far2QUERY_ARCHIVES: FAX_ACCESS_RIGHTS_ENUM_2 = 128i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const far2MANAGE_ARCHIVES: FAX_ACCESS_RIGHTS_ENUM_2 = 256i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const far2MANAGE_RECEIVE_FOLDER: FAX_ACCESS_RIGHTS_ENUM_2 = 512i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_ACCOUNT_EVENTS_TYPE_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const faetNONE: FAX_ACCOUNT_EVENTS_TYPE_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const faetIN_QUEUE: FAX_ACCOUNT_EVENTS_TYPE_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const faetOUT_QUEUE: FAX_ACCOUNT_EVENTS_TYPE_ENUM = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const faetIN_ARCHIVE: FAX_ACCOUNT_EVENTS_TYPE_ENUM = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const faetOUT_ARCHIVE: FAX_ACCOUNT_EVENTS_TYPE_ENUM = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const faetFXSSVC_ENDED: FAX_ACCOUNT_EVENTS_TYPE_ENUM = 16i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_CONFIGURATIONA {
-    pub SizeOfStruct: u32,
-    pub Retries: u32,
-    pub RetryDelay: u32,
-    pub DirtyDays: u32,
-    pub Branding: super::super::Foundation::BOOL,
-    pub UseDeviceTsid: super::super::Foundation::BOOL,
-    pub ServerCp: super::super::Foundation::BOOL,
-    pub PauseServerQueue: super::super::Foundation::BOOL,
-    pub StartCheapTime: FAX_TIME,
-    pub StopCheapTime: FAX_TIME,
-    pub ArchiveOutgoingFaxes: super::super::Foundation::BOOL,
-    pub ArchiveDirectory: ::windows_sys::core::PCSTR,
-    pub Reserved: ::windows_sys::core::PCSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_CONFIGURATIONA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_CONFIGURATIONA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_CONFIGURATIONW {
-    pub SizeOfStruct: u32,
-    pub Retries: u32,
-    pub RetryDelay: u32,
-    pub DirtyDays: u32,
-    pub Branding: super::super::Foundation::BOOL,
-    pub UseDeviceTsid: super::super::Foundation::BOOL,
-    pub ServerCp: super::super::Foundation::BOOL,
-    pub PauseServerQueue: super::super::Foundation::BOOL,
-    pub StartCheapTime: FAX_TIME,
-    pub StopCheapTime: FAX_TIME,
-    pub ArchiveOutgoingFaxes: super::super::Foundation::BOOL,
-    pub ArchiveDirectory: ::windows_sys::core::PCWSTR,
-    pub Reserved: ::windows_sys::core::PCWSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_CONFIGURATIONW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_CONFIGURATIONW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FAX_CONFIG_QUERY: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FAX_CONFIG_SET: u32 = 8u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-pub struct FAX_CONTEXT_INFOA {
-    pub SizeOfStruct: u32,
-    pub hDC: super::super::Graphics::Gdi::HDC,
-    pub ServerName: [super::super::Foundation::CHAR; 16],
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::marker::Copy for FAX_CONTEXT_INFOA {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::clone::Clone for FAX_CONTEXT_INFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct FAX_CONTEXT_INFOW {
-    pub SizeOfStruct: u32,
-    pub hDC: super::super::Graphics::Gdi::HDC,
-    pub ServerName: [u16; 16],
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for FAX_CONTEXT_INFOW {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for FAX_CONTEXT_INFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_COVERPAGE_INFOA {
-    pub SizeOfStruct: u32,
-    pub CoverPageName: ::windows_sys::core::PCSTR,
-    pub UseServerCoverPage: super::super::Foundation::BOOL,
-    pub RecName: ::windows_sys::core::PCSTR,
-    pub RecFaxNumber: ::windows_sys::core::PCSTR,
-    pub RecCompany: ::windows_sys::core::PCSTR,
-    pub RecStreetAddress: ::windows_sys::core::PCSTR,
-    pub RecCity: ::windows_sys::core::PCSTR,
-    pub RecState: ::windows_sys::core::PCSTR,
-    pub RecZip: ::windows_sys::core::PCSTR,
-    pub RecCountry: ::windows_sys::core::PCSTR,
-    pub RecTitle: ::windows_sys::core::PCSTR,
-    pub RecDepartment: ::windows_sys::core::PCSTR,
-    pub RecOfficeLocation: ::windows_sys::core::PCSTR,
-    pub RecHomePhone: ::windows_sys::core::PCSTR,
-    pub RecOfficePhone: ::windows_sys::core::PCSTR,
-    pub SdrName: ::windows_sys::core::PCSTR,
-    pub SdrFaxNumber: ::windows_sys::core::PCSTR,
-    pub SdrCompany: ::windows_sys::core::PCSTR,
-    pub SdrAddress: ::windows_sys::core::PCSTR,
-    pub SdrTitle: ::windows_sys::core::PCSTR,
-    pub SdrDepartment: ::windows_sys::core::PCSTR,
-    pub SdrOfficeLocation: ::windows_sys::core::PCSTR,
-    pub SdrHomePhone: ::windows_sys::core::PCSTR,
-    pub SdrOfficePhone: ::windows_sys::core::PCSTR,
-    pub Note: ::windows_sys::core::PCSTR,
-    pub Subject: ::windows_sys::core::PCSTR,
-    pub TimeSent: super::super::Foundation::SYSTEMTIME,
-    pub PageCount: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_COVERPAGE_INFOA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_COVERPAGE_INFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_COVERPAGE_INFOW {
-    pub SizeOfStruct: u32,
-    pub CoverPageName: ::windows_sys::core::PCWSTR,
-    pub UseServerCoverPage: super::super::Foundation::BOOL,
-    pub RecName: ::windows_sys::core::PCWSTR,
-    pub RecFaxNumber: ::windows_sys::core::PCWSTR,
-    pub RecCompany: ::windows_sys::core::PCWSTR,
-    pub RecStreetAddress: ::windows_sys::core::PCWSTR,
-    pub RecCity: ::windows_sys::core::PCWSTR,
-    pub RecState: ::windows_sys::core::PCWSTR,
-    pub RecZip: ::windows_sys::core::PCWSTR,
-    pub RecCountry: ::windows_sys::core::PCWSTR,
-    pub RecTitle: ::windows_sys::core::PCWSTR,
-    pub RecDepartment: ::windows_sys::core::PCWSTR,
-    pub RecOfficeLocation: ::windows_sys::core::PCWSTR,
-    pub RecHomePhone: ::windows_sys::core::PCWSTR,
-    pub RecOfficePhone: ::windows_sys::core::PCWSTR,
-    pub SdrName: ::windows_sys::core::PCWSTR,
-    pub SdrFaxNumber: ::windows_sys::core::PCWSTR,
-    pub SdrCompany: ::windows_sys::core::PCWSTR,
-    pub SdrAddress: ::windows_sys::core::PCWSTR,
-    pub SdrTitle: ::windows_sys::core::PCWSTR,
-    pub SdrDepartment: ::windows_sys::core::PCWSTR,
-    pub SdrOfficeLocation: ::windows_sys::core::PCWSTR,
-    pub SdrHomePhone: ::windows_sys::core::PCWSTR,
-    pub SdrOfficePhone: ::windows_sys::core::PCWSTR,
-    pub Note: ::windows_sys::core::PCWSTR,
-    pub Subject: ::windows_sys::core::PCWSTR,
-    pub TimeSent: super::super::Foundation::SYSTEMTIME,
-    pub PageCount: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_COVERPAGE_INFOW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_COVERPAGE_INFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_COVERPAGE_TYPE_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fcptNONE: FAX_COVERPAGE_TYPE_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fcptLOCAL: FAX_COVERPAGE_TYPE_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fcptSERVER: FAX_COVERPAGE_TYPE_ENUM = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_DEVICE_RECEIVE_MODE_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fdrmNO_ANSWER: FAX_DEVICE_RECEIVE_MODE_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fdrmAUTO_ANSWER: FAX_DEVICE_RECEIVE_MODE_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fdrmMANUAL_ANSWER: FAX_DEVICE_RECEIVE_MODE_ENUM = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_DEVICE_STATUSA {
-    pub SizeOfStruct: u32,
-    pub CallerId: ::windows_sys::core::PCSTR,
-    pub Csid: ::windows_sys::core::PCSTR,
-    pub CurrentPage: u32,
-    pub DeviceId: u32,
-    pub DeviceName: ::windows_sys::core::PCSTR,
-    pub DocumentName: ::windows_sys::core::PCSTR,
-    pub JobType: u32,
-    pub PhoneNumber: ::windows_sys::core::PCSTR,
-    pub RoutingString: ::windows_sys::core::PCSTR,
-    pub SenderName: ::windows_sys::core::PCSTR,
-    pub RecipientName: ::windows_sys::core::PCSTR,
-    pub Size: u32,
-    pub StartTime: super::super::Foundation::FILETIME,
-    pub Status: u32,
-    pub StatusString: ::windows_sys::core::PCSTR,
-    pub SubmittedTime: super::super::Foundation::FILETIME,
-    pub TotalPages: u32,
-    pub Tsid: ::windows_sys::core::PCSTR,
-    pub UserName: ::windows_sys::core::PCSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_DEVICE_STATUSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_DEVICE_STATUSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_DEVICE_STATUSW {
-    pub SizeOfStruct: u32,
-    pub CallerId: ::windows_sys::core::PCWSTR,
-    pub Csid: ::windows_sys::core::PCWSTR,
-    pub CurrentPage: u32,
-    pub DeviceId: u32,
-    pub DeviceName: ::windows_sys::core::PCWSTR,
-    pub DocumentName: ::windows_sys::core::PCWSTR,
-    pub JobType: u32,
-    pub PhoneNumber: ::windows_sys::core::PCWSTR,
-    pub RoutingString: ::windows_sys::core::PCWSTR,
-    pub SenderName: ::windows_sys::core::PCWSTR,
-    pub RecipientName: ::windows_sys::core::PCWSTR,
-    pub Size: u32,
-    pub StartTime: super::super::Foundation::FILETIME,
-    pub Status: u32,
-    pub StatusString: ::windows_sys::core::PCWSTR,
-    pub SubmittedTime: super::super::Foundation::FILETIME,
-    pub TotalPages: u32,
-    pub Tsid: ::windows_sys::core::PCWSTR,
-    pub UserName: ::windows_sys::core::PCWSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_DEVICE_STATUSW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_DEVICE_STATUSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct FAX_DEV_STATUS {
-    pub SizeOfStruct: u32,
-    pub StatusId: u32,
-    pub StringId: u32,
-    pub PageCount: u32,
-    pub CSI: ::windows_sys::core::PWSTR,
-    pub CallerId: ::windows_sys::core::PWSTR,
-    pub RoutingInfo: ::windows_sys::core::PWSTR,
-    pub ErrorCode: u32,
-    pub Reserved: [u32; 3],
-}
-impl ::core::marker::Copy for FAX_DEV_STATUS {}
-impl ::core::clone::Clone for FAX_DEV_STATUS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_ENUM_DELIVERY_REPORT_TYPES = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const DRT_NONE: FAX_ENUM_DELIVERY_REPORT_TYPES = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const DRT_EMAIL: FAX_ENUM_DELIVERY_REPORT_TYPES = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const DRT_INBOX: FAX_ENUM_DELIVERY_REPORT_TYPES = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_ENUM_DEVICE_ID_SOURCE = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const DEV_ID_SRC_FAX: FAX_ENUM_DEVICE_ID_SOURCE = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const DEV_ID_SRC_TAPI: FAX_ENUM_DEVICE_ID_SOURCE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_ENUM_JOB_COMMANDS = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const JC_UNKNOWN: FAX_ENUM_JOB_COMMANDS = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const JC_DELETE: FAX_ENUM_JOB_COMMANDS = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const JC_PAUSE: FAX_ENUM_JOB_COMMANDS = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const JC_RESUME: FAX_ENUM_JOB_COMMANDS = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_ENUM_JOB_SEND_ATTRIBUTES = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const JSA_NOW: FAX_ENUM_JOB_SEND_ATTRIBUTES = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const JSA_SPECIFIC_TIME: FAX_ENUM_JOB_SEND_ATTRIBUTES = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const JSA_DISCOUNT_PERIOD: FAX_ENUM_JOB_SEND_ATTRIBUTES = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_ENUM_LOG_CATEGORIES = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const FAXLOG_CATEGORY_INIT: FAX_ENUM_LOG_CATEGORIES = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const FAXLOG_CATEGORY_OUTBOUND: FAX_ENUM_LOG_CATEGORIES = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const FAXLOG_CATEGORY_INBOUND: FAX_ENUM_LOG_CATEGORIES = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const FAXLOG_CATEGORY_UNKNOWN: FAX_ENUM_LOG_CATEGORIES = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_ENUM_LOG_LEVELS = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const FAXLOG_LEVEL_NONE: FAX_ENUM_LOG_LEVELS = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const FAXLOG_LEVEL_MIN: FAX_ENUM_LOG_LEVELS = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const FAXLOG_LEVEL_MED: FAX_ENUM_LOG_LEVELS = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const FAXLOG_LEVEL_MAX: FAX_ENUM_LOG_LEVELS = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_ENUM_PORT_OPEN_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const PORT_OPEN_QUERY: FAX_ENUM_PORT_OPEN_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const PORT_OPEN_MODIFY: FAX_ENUM_PORT_OPEN_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FAX_ERR_BAD_GROUP_CONFIGURATION: i32 = 7003i32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
@@ -626,42 +295,6 @@ pub const FAX_ERR_SRV_OUTOFMEMORY: i32 = 7001i32;
 pub const FAX_ERR_START: i32 = 7001i32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FAX_ERR_VERSION_MISMATCH: i32 = 7012i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_EVENTA {
-    pub SizeOfStruct: u32,
-    pub TimeStamp: super::super::Foundation::FILETIME,
-    pub DeviceId: u32,
-    pub EventId: u32,
-    pub JobId: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_EVENTA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_EVENTA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_EVENTW {
-    pub SizeOfStruct: u32,
-    pub TimeStamp: super::super::Foundation::FILETIME,
-    pub DeviceId: u32,
-    pub EventId: u32,
-    pub JobId: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_EVENTW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_EVENTW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FAX_E_BAD_GROUP_CONFIGURATION: ::windows_sys::core::HRESULT = -2147214501i32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
@@ -688,625 +321,16 @@ pub const FAX_E_RULE_NOT_FOUND: ::windows_sys::core::HRESULT = -2147214499i32;
 pub const FAX_E_SRV_OUTOFMEMORY: ::windows_sys::core::HRESULT = -2147214503i32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FAX_E_VERSION_MISMATCH: ::windows_sys::core::HRESULT = -2147214492i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct FAX_GLOBAL_ROUTING_INFOA {
-    pub SizeOfStruct: u32,
-    pub Priority: u32,
-    pub Guid: ::windows_sys::core::PCSTR,
-    pub FriendlyName: ::windows_sys::core::PCSTR,
-    pub FunctionName: ::windows_sys::core::PCSTR,
-    pub ExtensionImageName: ::windows_sys::core::PCSTR,
-    pub ExtensionFriendlyName: ::windows_sys::core::PCSTR,
-}
-impl ::core::marker::Copy for FAX_GLOBAL_ROUTING_INFOA {}
-impl ::core::clone::Clone for FAX_GLOBAL_ROUTING_INFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct FAX_GLOBAL_ROUTING_INFOW {
-    pub SizeOfStruct: u32,
-    pub Priority: u32,
-    pub Guid: ::windows_sys::core::PCWSTR,
-    pub FriendlyName: ::windows_sys::core::PCWSTR,
-    pub FunctionName: ::windows_sys::core::PCWSTR,
-    pub ExtensionImageName: ::windows_sys::core::PCWSTR,
-    pub ExtensionFriendlyName: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for FAX_GLOBAL_ROUTING_INFOW {}
-impl ::core::clone::Clone for FAX_GLOBAL_ROUTING_INFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_GROUP_STATUS_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fgsALL_DEV_VALID: FAX_GROUP_STATUS_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fgsEMPTY: FAX_GROUP_STATUS_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fgsALL_DEV_NOT_VALID: FAX_GROUP_STATUS_ENUM = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fgsSOME_DEV_NOT_VALID: FAX_GROUP_STATUS_ENUM = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_JOB_ENTRYA {
-    pub SizeOfStruct: u32,
-    pub JobId: u32,
-    pub UserName: ::windows_sys::core::PCSTR,
-    pub JobType: u32,
-    pub QueueStatus: u32,
-    pub Status: u32,
-    pub Size: u32,
-    pub PageCount: u32,
-    pub RecipientNumber: ::windows_sys::core::PCSTR,
-    pub RecipientName: ::windows_sys::core::PCSTR,
-    pub Tsid: ::windows_sys::core::PCSTR,
-    pub SenderName: ::windows_sys::core::PCSTR,
-    pub SenderCompany: ::windows_sys::core::PCSTR,
-    pub SenderDept: ::windows_sys::core::PCSTR,
-    pub BillingCode: ::windows_sys::core::PCSTR,
-    pub ScheduleAction: u32,
-    pub ScheduleTime: super::super::Foundation::SYSTEMTIME,
-    pub DeliveryReportType: u32,
-    pub DeliveryReportAddress: ::windows_sys::core::PCSTR,
-    pub DocumentName: ::windows_sys::core::PCSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_JOB_ENTRYA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_JOB_ENTRYA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_JOB_ENTRYW {
-    pub SizeOfStruct: u32,
-    pub JobId: u32,
-    pub UserName: ::windows_sys::core::PCWSTR,
-    pub JobType: u32,
-    pub QueueStatus: u32,
-    pub Status: u32,
-    pub Size: u32,
-    pub PageCount: u32,
-    pub RecipientNumber: ::windows_sys::core::PCWSTR,
-    pub RecipientName: ::windows_sys::core::PCWSTR,
-    pub Tsid: ::windows_sys::core::PCWSTR,
-    pub SenderName: ::windows_sys::core::PCWSTR,
-    pub SenderCompany: ::windows_sys::core::PCWSTR,
-    pub SenderDept: ::windows_sys::core::PCWSTR,
-    pub BillingCode: ::windows_sys::core::PCWSTR,
-    pub ScheduleAction: u32,
-    pub ScheduleTime: super::super::Foundation::SYSTEMTIME,
-    pub DeliveryReportType: u32,
-    pub DeliveryReportAddress: ::windows_sys::core::PCWSTR,
-    pub DocumentName: ::windows_sys::core::PCWSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_JOB_ENTRYW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_JOB_ENTRYW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_JOB_EXTENDED_STATUS_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesNONE: FAX_JOB_EXTENDED_STATUS_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesDISCONNECTED: FAX_JOB_EXTENDED_STATUS_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesINITIALIZING: FAX_JOB_EXTENDED_STATUS_ENUM = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesDIALING: FAX_JOB_EXTENDED_STATUS_ENUM = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesTRANSMITTING: FAX_JOB_EXTENDED_STATUS_ENUM = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesANSWERED: FAX_JOB_EXTENDED_STATUS_ENUM = 5i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesRECEIVING: FAX_JOB_EXTENDED_STATUS_ENUM = 6i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesLINE_UNAVAILABLE: FAX_JOB_EXTENDED_STATUS_ENUM = 7i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesBUSY: FAX_JOB_EXTENDED_STATUS_ENUM = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesNO_ANSWER: FAX_JOB_EXTENDED_STATUS_ENUM = 9i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesBAD_ADDRESS: FAX_JOB_EXTENDED_STATUS_ENUM = 10i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesNO_DIAL_TONE: FAX_JOB_EXTENDED_STATUS_ENUM = 11i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesFATAL_ERROR: FAX_JOB_EXTENDED_STATUS_ENUM = 12i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesCALL_DELAYED: FAX_JOB_EXTENDED_STATUS_ENUM = 13i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesCALL_BLACKLISTED: FAX_JOB_EXTENDED_STATUS_ENUM = 14i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesNOT_FAX_CALL: FAX_JOB_EXTENDED_STATUS_ENUM = 15i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesPARTIALLY_RECEIVED: FAX_JOB_EXTENDED_STATUS_ENUM = 16i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesHANDLED: FAX_JOB_EXTENDED_STATUS_ENUM = 17i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesCALL_COMPLETED: FAX_JOB_EXTENDED_STATUS_ENUM = 18i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesCALL_ABORTED: FAX_JOB_EXTENDED_STATUS_ENUM = 19i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjesPROPRIETARY: FAX_JOB_EXTENDED_STATUS_ENUM = 16777216i32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FAX_JOB_MANAGE: u32 = 64u32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_JOB_OPERATIONS_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjoVIEW: FAX_JOB_OPERATIONS_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjoPAUSE: FAX_JOB_OPERATIONS_ENUM = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjoRESUME: FAX_JOB_OPERATIONS_ENUM = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjoRESTART: FAX_JOB_OPERATIONS_ENUM = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjoDELETE: FAX_JOB_OPERATIONS_ENUM = 16i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjoRECIPIENT_INFO: FAX_JOB_OPERATIONS_ENUM = 32i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjoSENDER_INFO: FAX_JOB_OPERATIONS_ENUM = 64i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_JOB_PARAMA {
-    pub SizeOfStruct: u32,
-    pub RecipientNumber: ::windows_sys::core::PCSTR,
-    pub RecipientName: ::windows_sys::core::PCSTR,
-    pub Tsid: ::windows_sys::core::PCSTR,
-    pub SenderName: ::windows_sys::core::PCSTR,
-    pub SenderCompany: ::windows_sys::core::PCSTR,
-    pub SenderDept: ::windows_sys::core::PCSTR,
-    pub BillingCode: ::windows_sys::core::PCSTR,
-    pub ScheduleAction: u32,
-    pub ScheduleTime: super::super::Foundation::SYSTEMTIME,
-    pub DeliveryReportType: u32,
-    pub DeliveryReportAddress: ::windows_sys::core::PCSTR,
-    pub DocumentName: ::windows_sys::core::PCSTR,
-    pub CallHandle: u32,
-    pub Reserved: [usize; 3],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_JOB_PARAMA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_JOB_PARAMA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_JOB_PARAMW {
-    pub SizeOfStruct: u32,
-    pub RecipientNumber: ::windows_sys::core::PCWSTR,
-    pub RecipientName: ::windows_sys::core::PCWSTR,
-    pub Tsid: ::windows_sys::core::PCWSTR,
-    pub SenderName: ::windows_sys::core::PCWSTR,
-    pub SenderCompany: ::windows_sys::core::PCWSTR,
-    pub SenderDept: ::windows_sys::core::PCWSTR,
-    pub BillingCode: ::windows_sys::core::PCWSTR,
-    pub ScheduleAction: u32,
-    pub ScheduleTime: super::super::Foundation::SYSTEMTIME,
-    pub DeliveryReportType: u32,
-    pub DeliveryReportAddress: ::windows_sys::core::PCWSTR,
-    pub DocumentName: ::windows_sys::core::PCWSTR,
-    pub CallHandle: u32,
-    pub Reserved: [usize; 3],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_JOB_PARAMW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_JOB_PARAMW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FAX_JOB_QUERY: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_JOB_STATUS_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjsPENDING: FAX_JOB_STATUS_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjsINPROGRESS: FAX_JOB_STATUS_ENUM = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjsFAILED: FAX_JOB_STATUS_ENUM = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjsPAUSED: FAX_JOB_STATUS_ENUM = 16i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjsNOLINE: FAX_JOB_STATUS_ENUM = 32i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjsRETRYING: FAX_JOB_STATUS_ENUM = 64i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjsRETRIES_EXCEEDED: FAX_JOB_STATUS_ENUM = 128i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjsCOMPLETED: FAX_JOB_STATUS_ENUM = 256i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjsCANCELED: FAX_JOB_STATUS_ENUM = 512i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjsCANCELING: FAX_JOB_STATUS_ENUM = 1024i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjsROUTING: FAX_JOB_STATUS_ENUM = 2048i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FAX_JOB_SUBMIT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_JOB_TYPE_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjtSEND: FAX_JOB_TYPE_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjtRECEIVE: FAX_JOB_TYPE_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fjtROUTING: FAX_JOB_TYPE_ENUM = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct FAX_LOG_CATEGORYA {
-    pub Name: ::windows_sys::core::PCSTR,
-    pub Category: u32,
-    pub Level: u32,
-}
-impl ::core::marker::Copy for FAX_LOG_CATEGORYA {}
-impl ::core::clone::Clone for FAX_LOG_CATEGORYA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct FAX_LOG_CATEGORYW {
-    pub Name: ::windows_sys::core::PCWSTR,
-    pub Category: u32,
-    pub Level: u32,
-}
-impl ::core::marker::Copy for FAX_LOG_CATEGORYW {}
-impl ::core::clone::Clone for FAX_LOG_CATEGORYW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_LOG_LEVEL_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fllNONE: FAX_LOG_LEVEL_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fllMIN: FAX_LOG_LEVEL_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fllMED: FAX_LOG_LEVEL_ENUM = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fllMAX: FAX_LOG_LEVEL_ENUM = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct FAX_PORT_INFOA {
-    pub SizeOfStruct: u32,
-    pub DeviceId: u32,
-    pub State: u32,
-    pub Flags: u32,
-    pub Rings: u32,
-    pub Priority: u32,
-    pub DeviceName: ::windows_sys::core::PCSTR,
-    pub Tsid: ::windows_sys::core::PCSTR,
-    pub Csid: ::windows_sys::core::PCSTR,
-}
-impl ::core::marker::Copy for FAX_PORT_INFOA {}
-impl ::core::clone::Clone for FAX_PORT_INFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct FAX_PORT_INFOW {
-    pub SizeOfStruct: u32,
-    pub DeviceId: u32,
-    pub State: u32,
-    pub Flags: u32,
-    pub Rings: u32,
-    pub Priority: u32,
-    pub DeviceName: ::windows_sys::core::PCWSTR,
-    pub Tsid: ::windows_sys::core::PCWSTR,
-    pub Csid: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for FAX_PORT_INFOW {}
-impl ::core::clone::Clone for FAX_PORT_INFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FAX_PORT_QUERY: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FAX_PORT_SET: u32 = 32u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct FAX_PRINT_INFOA {
-    pub SizeOfStruct: u32,
-    pub DocName: ::windows_sys::core::PCSTR,
-    pub RecipientName: ::windows_sys::core::PCSTR,
-    pub RecipientNumber: ::windows_sys::core::PCSTR,
-    pub SenderName: ::windows_sys::core::PCSTR,
-    pub SenderCompany: ::windows_sys::core::PCSTR,
-    pub SenderDept: ::windows_sys::core::PCSTR,
-    pub SenderBillingCode: ::windows_sys::core::PCSTR,
-    pub Reserved: ::windows_sys::core::PCSTR,
-    pub DrEmailAddress: ::windows_sys::core::PCSTR,
-    pub OutputFileName: ::windows_sys::core::PCSTR,
-}
-impl ::core::marker::Copy for FAX_PRINT_INFOA {}
-impl ::core::clone::Clone for FAX_PRINT_INFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct FAX_PRINT_INFOW {
-    pub SizeOfStruct: u32,
-    pub DocName: ::windows_sys::core::PCWSTR,
-    pub RecipientName: ::windows_sys::core::PCWSTR,
-    pub RecipientNumber: ::windows_sys::core::PCWSTR,
-    pub SenderName: ::windows_sys::core::PCWSTR,
-    pub SenderCompany: ::windows_sys::core::PCWSTR,
-    pub SenderDept: ::windows_sys::core::PCWSTR,
-    pub SenderBillingCode: ::windows_sys::core::PCWSTR,
-    pub Reserved: ::windows_sys::core::PCWSTR,
-    pub DrEmailAddress: ::windows_sys::core::PCWSTR,
-    pub OutputFileName: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for FAX_PRINT_INFOW {}
-impl ::core::clone::Clone for FAX_PRINT_INFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_PRIORITY_TYPE_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fptLOW: FAX_PRIORITY_TYPE_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fptNORMAL: FAX_PRIORITY_TYPE_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fptHIGH: FAX_PRIORITY_TYPE_ENUM = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_PROVIDER_STATUS_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fpsSUCCESS: FAX_PROVIDER_STATUS_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fpsSERVER_ERROR: FAX_PROVIDER_STATUS_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fpsBAD_GUID: FAX_PROVIDER_STATUS_ENUM = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fpsBAD_VERSION: FAX_PROVIDER_STATUS_ENUM = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fpsCANT_LOAD: FAX_PROVIDER_STATUS_ENUM = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fpsCANT_LINK: FAX_PROVIDER_STATUS_ENUM = 5i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fpsCANT_INIT: FAX_PROVIDER_STATUS_ENUM = 6i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_RECEIPT_TYPE_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const frtNONE: FAX_RECEIPT_TYPE_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const frtMAIL: FAX_RECEIPT_TYPE_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const frtMSGBOX: FAX_RECEIPT_TYPE_ENUM = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct FAX_RECEIVE {
-    pub SizeOfStruct: u32,
-    pub FileName: ::windows_sys::core::PWSTR,
-    pub ReceiverName: ::windows_sys::core::PWSTR,
-    pub ReceiverNumber: ::windows_sys::core::PWSTR,
-    pub Reserved: [u32; 4],
-}
-impl ::core::marker::Copy for FAX_RECEIVE {}
-impl ::core::clone::Clone for FAX_RECEIVE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct FAX_ROUTE {
-    pub SizeOfStruct: u32,
-    pub JobId: u32,
-    pub ElapsedTime: u64,
-    pub ReceiveTime: u64,
-    pub PageCount: u32,
-    pub Csid: ::windows_sys::core::PCWSTR,
-    pub Tsid: ::windows_sys::core::PCWSTR,
-    pub CallerId: ::windows_sys::core::PCWSTR,
-    pub RoutingInfo: ::windows_sys::core::PCWSTR,
-    pub ReceiverName: ::windows_sys::core::PCWSTR,
-    pub ReceiverNumber: ::windows_sys::core::PCWSTR,
-    pub DeviceName: ::windows_sys::core::PCWSTR,
-    pub DeviceId: u32,
-    pub RoutingInfoData: *mut u8,
-    pub RoutingInfoDataSize: u32,
-}
-impl ::core::marker::Copy for FAX_ROUTE {}
-impl ::core::clone::Clone for FAX_ROUTE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_ROUTE_CALLBACKROUTINES {
-    pub SizeOfStruct: u32,
-    pub FaxRouteAddFile: PFAXROUTEADDFILE,
-    pub FaxRouteDeleteFile: PFAXROUTEDELETEFILE,
-    pub FaxRouteGetFile: PFAXROUTEGETFILE,
-    pub FaxRouteEnumFiles: PFAXROUTEENUMFILES,
-    pub FaxRouteModifyRoutingData: PFAXROUTEMODIFYROUTINGDATA,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_ROUTE_CALLBACKROUTINES {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_ROUTE_CALLBACKROUTINES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_ROUTING_METHODA {
-    pub SizeOfStruct: u32,
-    pub DeviceId: u32,
-    pub Enabled: super::super::Foundation::BOOL,
-    pub DeviceName: ::windows_sys::core::PCSTR,
-    pub Guid: ::windows_sys::core::PCSTR,
-    pub FriendlyName: ::windows_sys::core::PCSTR,
-    pub FunctionName: ::windows_sys::core::PCSTR,
-    pub ExtensionImageName: ::windows_sys::core::PCSTR,
-    pub ExtensionFriendlyName: ::windows_sys::core::PCSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_ROUTING_METHODA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_ROUTING_METHODA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_ROUTING_METHODW {
-    pub SizeOfStruct: u32,
-    pub DeviceId: u32,
-    pub Enabled: super::super::Foundation::BOOL,
-    pub DeviceName: ::windows_sys::core::PCWSTR,
-    pub Guid: ::windows_sys::core::PCWSTR,
-    pub FriendlyName: ::windows_sys::core::PCWSTR,
-    pub FunctionName: ::windows_sys::core::PCWSTR,
-    pub ExtensionImageName: ::windows_sys::core::PCWSTR,
-    pub ExtensionFriendlyName: ::windows_sys::core::PCWSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_ROUTING_METHODW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_ROUTING_METHODW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_ROUTING_RULE_CODE_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const frrcANY_CODE: FAX_ROUTING_RULE_CODE_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_RULE_STATUS_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const frsVALID: FAX_RULE_STATUS_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const frsEMPTY_GROUP: FAX_RULE_STATUS_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const frsALL_GROUP_DEV_NOT_VALID: FAX_RULE_STATUS_ENUM = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const frsSOME_GROUP_DEV_NOT_VALID: FAX_RULE_STATUS_ENUM = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const frsBAD_DEVICE: FAX_RULE_STATUS_ENUM = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_SCHEDULE_TYPE_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fstNOW: FAX_SCHEDULE_TYPE_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fstSPECIFIC_TIME: FAX_SCHEDULE_TYPE_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fstDISCOUNT_PERIOD: FAX_SCHEDULE_TYPE_ENUM = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FAX_SEND {
-    pub SizeOfStruct: u32,
-    pub FileName: ::windows_sys::core::PWSTR,
-    pub CallerName: ::windows_sys::core::PWSTR,
-    pub CallerNumber: ::windows_sys::core::PWSTR,
-    pub ReceiverName: ::windows_sys::core::PWSTR,
-    pub ReceiverNumber: ::windows_sys::core::PWSTR,
-    pub Branding: super::super::Foundation::BOOL,
-    pub CallHandle: u32,
-    pub Reserved: [u32; 3],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FAX_SEND {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FAX_SEND {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_SERVER_APIVERSION_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsAPI_VERSION_0: FAX_SERVER_APIVERSION_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsAPI_VERSION_1: FAX_SERVER_APIVERSION_ENUM = 65536i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsAPI_VERSION_2: FAX_SERVER_APIVERSION_ENUM = 131072i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsAPI_VERSION_3: FAX_SERVER_APIVERSION_ENUM = 196608i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_SERVER_EVENTS_TYPE_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsetNONE: FAX_SERVER_EVENTS_TYPE_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsetIN_QUEUE: FAX_SERVER_EVENTS_TYPE_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsetOUT_QUEUE: FAX_SERVER_EVENTS_TYPE_ENUM = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsetCONFIG: FAX_SERVER_EVENTS_TYPE_ENUM = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsetACTIVITY: FAX_SERVER_EVENTS_TYPE_ENUM = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsetQUEUE_STATE: FAX_SERVER_EVENTS_TYPE_ENUM = 16i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsetIN_ARCHIVE: FAX_SERVER_EVENTS_TYPE_ENUM = 32i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsetOUT_ARCHIVE: FAX_SERVER_EVENTS_TYPE_ENUM = 64i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsetFXSSVC_ENDED: FAX_SERVER_EVENTS_TYPE_ENUM = 128i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsetDEVICE_STATUS: FAX_SERVER_EVENTS_TYPE_ENUM = 256i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsetINCOMING_CALL: FAX_SERVER_EVENTS_TYPE_ENUM = 512i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type FAX_SMTP_AUTHENTICATION_TYPE_ENUM = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsatANONYMOUS: FAX_SMTP_AUTHENTICATION_TYPE_ENUM = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsatBASIC: FAX_SMTP_AUTHENTICATION_TYPE_ENUM = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const fsatNTLM: FAX_SMTP_AUTHENTICATION_TYPE_ENUM = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct FAX_TIME {
-    pub Hour: u16,
-    pub Minute: u16,
-}
-impl ::core::marker::Copy for FAX_TIME {}
-impl ::core::clone::Clone for FAX_TIME {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const FEI_ABORTING: u32 = 15u32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
@@ -1506,74 +530,10 @@ pub const GUID_STIUserDefined3: ::windows_sys::core::GUID = ::windows_sys::core:
 pub const GUID_ScanFaxImage: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3222189971, data2: 35950, data3: 4562, data4: [151, 122, 0, 0, 248, 122, 146, 111] };
 pub const GUID_ScanImage: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2797971221, data2: 35950, data3: 4562, data4: [151, 122, 0, 0, 248, 122, 146, 111] };
 pub const GUID_ScanPrintImage: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3024221221, data2: 35950, data3: 4562, data4: [151, 122, 0, 0, 248, 122, 146, 111] };
-pub type IFaxAccount = *mut ::core::ffi::c_void;
-pub type IFaxAccountFolders = *mut ::core::ffi::c_void;
-pub type IFaxAccountIncomingArchive = *mut ::core::ffi::c_void;
-pub type IFaxAccountIncomingQueue = *mut ::core::ffi::c_void;
-pub type IFaxAccountNotify = *mut ::core::ffi::c_void;
-pub type IFaxAccountOutgoingArchive = *mut ::core::ffi::c_void;
-pub type IFaxAccountOutgoingQueue = *mut ::core::ffi::c_void;
-pub type IFaxAccountSet = *mut ::core::ffi::c_void;
-pub type IFaxAccounts = *mut ::core::ffi::c_void;
-pub type IFaxActivity = *mut ::core::ffi::c_void;
-pub type IFaxActivityLogging = *mut ::core::ffi::c_void;
-pub type IFaxConfiguration = *mut ::core::ffi::c_void;
-pub type IFaxDevice = *mut ::core::ffi::c_void;
-pub type IFaxDeviceIds = *mut ::core::ffi::c_void;
-pub type IFaxDeviceProvider = *mut ::core::ffi::c_void;
-pub type IFaxDeviceProviders = *mut ::core::ffi::c_void;
-pub type IFaxDevices = *mut ::core::ffi::c_void;
-pub type IFaxDocument = *mut ::core::ffi::c_void;
-pub type IFaxDocument2 = *mut ::core::ffi::c_void;
-pub type IFaxEventLogging = *mut ::core::ffi::c_void;
-pub type IFaxFolders = *mut ::core::ffi::c_void;
-pub type IFaxInboundRouting = *mut ::core::ffi::c_void;
-pub type IFaxInboundRoutingExtension = *mut ::core::ffi::c_void;
-pub type IFaxInboundRoutingExtensions = *mut ::core::ffi::c_void;
-pub type IFaxInboundRoutingMethod = *mut ::core::ffi::c_void;
-pub type IFaxInboundRoutingMethods = *mut ::core::ffi::c_void;
-pub type IFaxIncomingArchive = *mut ::core::ffi::c_void;
-pub type IFaxIncomingJob = *mut ::core::ffi::c_void;
-pub type IFaxIncomingJobs = *mut ::core::ffi::c_void;
-pub type IFaxIncomingMessage = *mut ::core::ffi::c_void;
-pub type IFaxIncomingMessage2 = *mut ::core::ffi::c_void;
-pub type IFaxIncomingMessageIterator = *mut ::core::ffi::c_void;
-pub type IFaxIncomingQueue = *mut ::core::ffi::c_void;
-pub type IFaxJobStatus = *mut ::core::ffi::c_void;
-pub type IFaxLoggingOptions = *mut ::core::ffi::c_void;
-pub type IFaxOutboundRouting = *mut ::core::ffi::c_void;
-pub type IFaxOutboundRoutingGroup = *mut ::core::ffi::c_void;
-pub type IFaxOutboundRoutingGroups = *mut ::core::ffi::c_void;
-pub type IFaxOutboundRoutingRule = *mut ::core::ffi::c_void;
-pub type IFaxOutboundRoutingRules = *mut ::core::ffi::c_void;
-pub type IFaxOutgoingArchive = *mut ::core::ffi::c_void;
-pub type IFaxOutgoingJob = *mut ::core::ffi::c_void;
-pub type IFaxOutgoingJob2 = *mut ::core::ffi::c_void;
-pub type IFaxOutgoingJobs = *mut ::core::ffi::c_void;
-pub type IFaxOutgoingMessage = *mut ::core::ffi::c_void;
-pub type IFaxOutgoingMessage2 = *mut ::core::ffi::c_void;
-pub type IFaxOutgoingMessageIterator = *mut ::core::ffi::c_void;
-pub type IFaxOutgoingQueue = *mut ::core::ffi::c_void;
-pub type IFaxReceiptOptions = *mut ::core::ffi::c_void;
-pub type IFaxRecipient = *mut ::core::ffi::c_void;
-pub type IFaxRecipients = *mut ::core::ffi::c_void;
-pub type IFaxSecurity = *mut ::core::ffi::c_void;
-pub type IFaxSecurity2 = *mut ::core::ffi::c_void;
-pub type IFaxSender = *mut ::core::ffi::c_void;
-pub type IFaxServer = *mut ::core::ffi::c_void;
-pub type IFaxServer2 = *mut ::core::ffi::c_void;
-pub type IFaxServerNotify = *mut ::core::ffi::c_void;
-pub type IFaxServerNotify2 = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const IS_DIGITAL_CAMERA_STR: &str = "IsDigitalCamera";
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const IS_DIGITAL_CAMERA_VAL: u32 = 1u32;
-pub type IStiDevice = *mut ::core::ffi::c_void;
-pub type IStiDeviceControl = *mut ::core::ffi::c_void;
-#[repr(C)]
-pub struct IStiDeviceW(pub u8);
-pub type IStiUSD = *mut ::core::ffi::c_void;
-pub type IStillImageW = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const JS_DELETING: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
@@ -1608,6 +568,1446 @@ pub const MS_FAXROUTE_EMAIL_GUID: &str = "{6bbf7bfe-9af2-11d0-abf7-00c04fd91a4e}
 pub const MS_FAXROUTE_FOLDER_GUID: &str = "{92041a90-9af2-11d0-abf7-00c04fd91a4e}";
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
 pub const MS_FAXROUTE_PRINTING_GUID: &str = "{aec1b37c-9af2-11d0-abf7-00c04fd91a4e}";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_BAUDRATE: &str = "BaudRate";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_BAUDRATE_A: &str = "BaudRate";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_DATA_W: &str = "DeviceData";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_DEVICESUBTYPE_W: &str = "DeviceSubType";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_DEVICETYPE_W: &str = "DeviceType";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_DEVICE_NAME_W: &str = "DriverDesc";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_DEV_NAME_W: &str = "DeviceName";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_DRIVER_DESC_W: &str = "DriverDesc";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_FRIENDLY_NAME_W: &str = "FriendlyName";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_GENERIC_CAPS_W: &str = "Capabilities";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_GUID: &str = "GUID";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_GUID_W: &str = "GUID";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_HARDWARE: &str = "HardwareConfig";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_HARDWARE_W: &str = "HardwareConfig";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_LAUNCHABLE: &str = "Launchable";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_LAUNCHABLE_W: &str = "Launchable";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_LAUNCH_APPS: &str = "LaunchApplications";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_LAUNCH_APPS_W: &str = "LaunchApplications";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_SHUTDOWNDELAY: &str = "ShutdownIfUnusedDelay";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_SHUTDOWNDELAY_W: &str = "ShutdownIfUnusedDelay";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_TYPE_W: &str = "Type";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const REGSTR_VAL_VENDOR_NAME_W: &str = "Vendor";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIEDFL_ALLDEVICES: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIEDFL_ATTACHEDONLY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_ALREADY_INITIALIZED: ::windows_sys::core::HRESULT = -2147023649i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_BADDRIVER: ::windows_sys::core::HRESULT = -2147024777i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_BETA_VERSION: ::windows_sys::core::HRESULT = -2147023743i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_DEVICENOTREG: i32 = -2147221164i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_DEVICE_LOCKED: ::windows_sys::core::HRESULT = -2147024863i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_DEVICE_NOTREADY: ::windows_sys::core::HRESULT = -2147024875i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_GENERIC: i32 = -2147467259i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_HANDLEEXISTS: ::windows_sys::core::HRESULT = -2147024713i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_INVALID_DEVICE_NAME: ::windows_sys::core::HRESULT = -2147024773i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_INVALID_HW_TYPE: ::windows_sys::core::HRESULT = -2147024883i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_INVALID_PARAM: i32 = -2147024809i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_NEEDS_LOCK: ::windows_sys::core::HRESULT = -2147024738i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_NOEVENTS: ::windows_sys::core::HRESULT = -2147024637i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_NOINTERFACE: i32 = -2147467262i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_NOTINITIALIZED: i32 = -2147024891i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_NOT_INITIALIZED: ::windows_sys::core::HRESULT = -2147024875i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_OBJECTNOTFOUND: ::windows_sys::core::HRESULT = -2147024894i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_OLD_VERSION: ::windows_sys::core::HRESULT = -2147023746i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_OUTOFMEMORY: i32 = -2147024882i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_READONLY: i32 = -2147024891i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_SHARING_VIOLATION: ::windows_sys::core::HRESULT = -2147024864i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STIERR_UNSUPPORTED: i32 = -2147467263i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ADD_DEVICE_BROADCAST_ACTION: &str = "Arrival";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ADD_DEVICE_BROADCAST_STRING: &str = "STI\\";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_CHANGENOEFFECT: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_CREATE_BOTH: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_CREATE_DATA: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_CREATE_FOR_MONITOR: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_CREATE_MASK: u32 = 65535u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_CREATE_STATUS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_VALUE_DEFAULT_LAUNCHAPP: &str = "DefaultLaunchApp";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_VALUE_DEFAULT_LAUNCHAPP_A: &str = "DefaultLaunchApp";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_VALUE_DISABLE_NOTIFICATIONS: &str = "DisableNotifications";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_VALUE_DISABLE_NOTIFICATIONS_A: &str = "DisableNotifications";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_VALUE_ICM_PROFILE: &str = "ICMProfile";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_VALUE_ICM_PROFILE_A: &str = "ICMProfile";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_VALUE_ISIS_NAME: &str = "ISISDriverName";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_VALUE_ISIS_NAME_A: &str = "ISISDriverName";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_VALUE_TIMEOUT: &str = "PollTimeout";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_VALUE_TIMEOUT_A: &str = "PollTimeout";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_VALUE_TWAIN_NAME: &str = "TwainDS";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVICE_VALUE_TWAIN_NAME_A: &str = "TwainDS";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVSTATUS_EVENTS_STATE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DEVSTATUS_ONLINE_STATE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_DIAGCODE_HWPRESENCE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ERROR_NO_ERROR: i32 = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_EVENTHANDLING_ENABLED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_EVENTHANDLING_PENDING: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_EVENTHANDLING_POLLING: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_GENCAP_AUTO_PORTSELECT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_GENCAP_GENERATE_ARRIVALEVENT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_GENCAP_NOTIFICATIONS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_GENCAP_POLLING_NEEDED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_GENCAP_SUBSET: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_GENCAP_WIA: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_HW_CONFIG_PARALLEL: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_HW_CONFIG_SCSI: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_HW_CONFIG_SERIAL: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_HW_CONFIG_UNKNOWN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_HW_CONFIG_USB: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_MAX_INTERNAL_NAME_LENGTH: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_NOTCONNECTED: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_OK: i32 = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_BUSY: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_ERROR: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_INITIALIZING: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_IO_ACTIVE: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_OFFLINE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_OPERATIONAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_PAPER_JAM: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_PAPER_PROBLEM: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_PAUSED: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_PENDING: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_POWER_SAVE: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_TRANSFERRING: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_USER_INTERVENTION: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_ONLINESTATE_WARMING_UP: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_RAW_RESERVED: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_REMOVE_DEVICE_BROADCAST_ACTION: &str = "Removal";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_REMOVE_DEVICE_BROADCAST_STRING: &str = "STI\\";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_SUBSCRIBE_FLAG_EVENT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_SUBSCRIBE_FLAG_WINDOW: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_TRACE_ERROR: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_TRACE_INFORMATION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_TRACE_WARNING: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_UNICODE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_USD_GENCAP_NATIVE_PUSHSUPPORT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_VERSION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_VERSION_FLAG_MASK: u32 = 4278190080u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_VERSION_FLAG_UNICODE: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_VERSION_MIN_ALLOWED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STI_VERSION_REAL: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const SUPPORTS_MSCPLUS_STR: &str = "SupportsMSCPlus";
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const SUPPORTS_MSCPLUS_VAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const WIA_INCOMPAT_XP: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const lDEFAULT_PREFETCH_SIZE: i32 = 100i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const prv_DEFAULT_PREFETCH_SIZE: u32 = 100u32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const wcharREASSIGN_RECIPIENTS_DELIMITER: u16 = 59u16;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAXROUTE_ENABLE = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const QUERY_STATUS: FAXROUTE_ENABLE = -1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STATUS_DISABLE: FAXROUTE_ENABLE = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const STATUS_ENABLE: FAXROUTE_ENABLE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_ACCESS_RIGHTS_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const farSUBMIT_LOW: FAX_ACCESS_RIGHTS_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const farSUBMIT_NORMAL: FAX_ACCESS_RIGHTS_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const farSUBMIT_HIGH: FAX_ACCESS_RIGHTS_ENUM = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const farQUERY_JOBS: FAX_ACCESS_RIGHTS_ENUM = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const farMANAGE_JOBS: FAX_ACCESS_RIGHTS_ENUM = 16i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const farQUERY_CONFIG: FAX_ACCESS_RIGHTS_ENUM = 32i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const farMANAGE_CONFIG: FAX_ACCESS_RIGHTS_ENUM = 64i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const farQUERY_IN_ARCHIVE: FAX_ACCESS_RIGHTS_ENUM = 128i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const farMANAGE_IN_ARCHIVE: FAX_ACCESS_RIGHTS_ENUM = 256i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const farQUERY_OUT_ARCHIVE: FAX_ACCESS_RIGHTS_ENUM = 512i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const farMANAGE_OUT_ARCHIVE: FAX_ACCESS_RIGHTS_ENUM = 1024i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_ACCESS_RIGHTS_ENUM_2 = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const far2SUBMIT_LOW: FAX_ACCESS_RIGHTS_ENUM_2 = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const far2SUBMIT_NORMAL: FAX_ACCESS_RIGHTS_ENUM_2 = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const far2SUBMIT_HIGH: FAX_ACCESS_RIGHTS_ENUM_2 = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const far2QUERY_OUT_JOBS: FAX_ACCESS_RIGHTS_ENUM_2 = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const far2MANAGE_OUT_JOBS: FAX_ACCESS_RIGHTS_ENUM_2 = 16i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const far2QUERY_CONFIG: FAX_ACCESS_RIGHTS_ENUM_2 = 32i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const far2MANAGE_CONFIG: FAX_ACCESS_RIGHTS_ENUM_2 = 64i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const far2QUERY_ARCHIVES: FAX_ACCESS_RIGHTS_ENUM_2 = 128i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const far2MANAGE_ARCHIVES: FAX_ACCESS_RIGHTS_ENUM_2 = 256i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const far2MANAGE_RECEIVE_FOLDER: FAX_ACCESS_RIGHTS_ENUM_2 = 512i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_ACCOUNT_EVENTS_TYPE_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const faetNONE: FAX_ACCOUNT_EVENTS_TYPE_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const faetIN_QUEUE: FAX_ACCOUNT_EVENTS_TYPE_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const faetOUT_QUEUE: FAX_ACCOUNT_EVENTS_TYPE_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const faetIN_ARCHIVE: FAX_ACCOUNT_EVENTS_TYPE_ENUM = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const faetOUT_ARCHIVE: FAX_ACCOUNT_EVENTS_TYPE_ENUM = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const faetFXSSVC_ENDED: FAX_ACCOUNT_EVENTS_TYPE_ENUM = 16i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_COVERPAGE_TYPE_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fcptNONE: FAX_COVERPAGE_TYPE_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fcptLOCAL: FAX_COVERPAGE_TYPE_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fcptSERVER: FAX_COVERPAGE_TYPE_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_DEVICE_RECEIVE_MODE_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fdrmNO_ANSWER: FAX_DEVICE_RECEIVE_MODE_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fdrmAUTO_ANSWER: FAX_DEVICE_RECEIVE_MODE_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fdrmMANUAL_ANSWER: FAX_DEVICE_RECEIVE_MODE_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_ENUM_DELIVERY_REPORT_TYPES = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const DRT_NONE: FAX_ENUM_DELIVERY_REPORT_TYPES = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const DRT_EMAIL: FAX_ENUM_DELIVERY_REPORT_TYPES = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const DRT_INBOX: FAX_ENUM_DELIVERY_REPORT_TYPES = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_ENUM_DEVICE_ID_SOURCE = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const DEV_ID_SRC_FAX: FAX_ENUM_DEVICE_ID_SOURCE = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const DEV_ID_SRC_TAPI: FAX_ENUM_DEVICE_ID_SOURCE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_ENUM_JOB_COMMANDS = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const JC_UNKNOWN: FAX_ENUM_JOB_COMMANDS = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const JC_DELETE: FAX_ENUM_JOB_COMMANDS = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const JC_PAUSE: FAX_ENUM_JOB_COMMANDS = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const JC_RESUME: FAX_ENUM_JOB_COMMANDS = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_ENUM_JOB_SEND_ATTRIBUTES = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const JSA_NOW: FAX_ENUM_JOB_SEND_ATTRIBUTES = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const JSA_SPECIFIC_TIME: FAX_ENUM_JOB_SEND_ATTRIBUTES = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const JSA_DISCOUNT_PERIOD: FAX_ENUM_JOB_SEND_ATTRIBUTES = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_ENUM_LOG_CATEGORIES = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const FAXLOG_CATEGORY_INIT: FAX_ENUM_LOG_CATEGORIES = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const FAXLOG_CATEGORY_OUTBOUND: FAX_ENUM_LOG_CATEGORIES = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const FAXLOG_CATEGORY_INBOUND: FAX_ENUM_LOG_CATEGORIES = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const FAXLOG_CATEGORY_UNKNOWN: FAX_ENUM_LOG_CATEGORIES = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_ENUM_LOG_LEVELS = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const FAXLOG_LEVEL_NONE: FAX_ENUM_LOG_LEVELS = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const FAXLOG_LEVEL_MIN: FAX_ENUM_LOG_LEVELS = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const FAXLOG_LEVEL_MED: FAX_ENUM_LOG_LEVELS = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const FAXLOG_LEVEL_MAX: FAX_ENUM_LOG_LEVELS = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_ENUM_PORT_OPEN_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const PORT_OPEN_QUERY: FAX_ENUM_PORT_OPEN_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const PORT_OPEN_MODIFY: FAX_ENUM_PORT_OPEN_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_GROUP_STATUS_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fgsALL_DEV_VALID: FAX_GROUP_STATUS_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fgsEMPTY: FAX_GROUP_STATUS_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fgsALL_DEV_NOT_VALID: FAX_GROUP_STATUS_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fgsSOME_DEV_NOT_VALID: FAX_GROUP_STATUS_ENUM = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_JOB_EXTENDED_STATUS_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesNONE: FAX_JOB_EXTENDED_STATUS_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesDISCONNECTED: FAX_JOB_EXTENDED_STATUS_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesINITIALIZING: FAX_JOB_EXTENDED_STATUS_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesDIALING: FAX_JOB_EXTENDED_STATUS_ENUM = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesTRANSMITTING: FAX_JOB_EXTENDED_STATUS_ENUM = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesANSWERED: FAX_JOB_EXTENDED_STATUS_ENUM = 5i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesRECEIVING: FAX_JOB_EXTENDED_STATUS_ENUM = 6i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesLINE_UNAVAILABLE: FAX_JOB_EXTENDED_STATUS_ENUM = 7i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesBUSY: FAX_JOB_EXTENDED_STATUS_ENUM = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesNO_ANSWER: FAX_JOB_EXTENDED_STATUS_ENUM = 9i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesBAD_ADDRESS: FAX_JOB_EXTENDED_STATUS_ENUM = 10i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesNO_DIAL_TONE: FAX_JOB_EXTENDED_STATUS_ENUM = 11i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesFATAL_ERROR: FAX_JOB_EXTENDED_STATUS_ENUM = 12i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesCALL_DELAYED: FAX_JOB_EXTENDED_STATUS_ENUM = 13i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesCALL_BLACKLISTED: FAX_JOB_EXTENDED_STATUS_ENUM = 14i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesNOT_FAX_CALL: FAX_JOB_EXTENDED_STATUS_ENUM = 15i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesPARTIALLY_RECEIVED: FAX_JOB_EXTENDED_STATUS_ENUM = 16i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesHANDLED: FAX_JOB_EXTENDED_STATUS_ENUM = 17i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesCALL_COMPLETED: FAX_JOB_EXTENDED_STATUS_ENUM = 18i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesCALL_ABORTED: FAX_JOB_EXTENDED_STATUS_ENUM = 19i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjesPROPRIETARY: FAX_JOB_EXTENDED_STATUS_ENUM = 16777216i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_JOB_OPERATIONS_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjoVIEW: FAX_JOB_OPERATIONS_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjoPAUSE: FAX_JOB_OPERATIONS_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjoRESUME: FAX_JOB_OPERATIONS_ENUM = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjoRESTART: FAX_JOB_OPERATIONS_ENUM = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjoDELETE: FAX_JOB_OPERATIONS_ENUM = 16i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjoRECIPIENT_INFO: FAX_JOB_OPERATIONS_ENUM = 32i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjoSENDER_INFO: FAX_JOB_OPERATIONS_ENUM = 64i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_JOB_STATUS_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjsPENDING: FAX_JOB_STATUS_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjsINPROGRESS: FAX_JOB_STATUS_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjsFAILED: FAX_JOB_STATUS_ENUM = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjsPAUSED: FAX_JOB_STATUS_ENUM = 16i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjsNOLINE: FAX_JOB_STATUS_ENUM = 32i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjsRETRYING: FAX_JOB_STATUS_ENUM = 64i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjsRETRIES_EXCEEDED: FAX_JOB_STATUS_ENUM = 128i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjsCOMPLETED: FAX_JOB_STATUS_ENUM = 256i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjsCANCELED: FAX_JOB_STATUS_ENUM = 512i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjsCANCELING: FAX_JOB_STATUS_ENUM = 1024i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjsROUTING: FAX_JOB_STATUS_ENUM = 2048i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_JOB_TYPE_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjtSEND: FAX_JOB_TYPE_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjtRECEIVE: FAX_JOB_TYPE_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fjtROUTING: FAX_JOB_TYPE_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_LOG_LEVEL_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fllNONE: FAX_LOG_LEVEL_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fllMIN: FAX_LOG_LEVEL_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fllMED: FAX_LOG_LEVEL_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fllMAX: FAX_LOG_LEVEL_ENUM = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_PRIORITY_TYPE_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fptLOW: FAX_PRIORITY_TYPE_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fptNORMAL: FAX_PRIORITY_TYPE_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fptHIGH: FAX_PRIORITY_TYPE_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_PROVIDER_STATUS_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fpsSUCCESS: FAX_PROVIDER_STATUS_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fpsSERVER_ERROR: FAX_PROVIDER_STATUS_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fpsBAD_GUID: FAX_PROVIDER_STATUS_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fpsBAD_VERSION: FAX_PROVIDER_STATUS_ENUM = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fpsCANT_LOAD: FAX_PROVIDER_STATUS_ENUM = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fpsCANT_LINK: FAX_PROVIDER_STATUS_ENUM = 5i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fpsCANT_INIT: FAX_PROVIDER_STATUS_ENUM = 6i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_RECEIPT_TYPE_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const frtNONE: FAX_RECEIPT_TYPE_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const frtMAIL: FAX_RECEIPT_TYPE_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const frtMSGBOX: FAX_RECEIPT_TYPE_ENUM = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_ROUTING_RULE_CODE_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const frrcANY_CODE: FAX_ROUTING_RULE_CODE_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_RULE_STATUS_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const frsVALID: FAX_RULE_STATUS_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const frsEMPTY_GROUP: FAX_RULE_STATUS_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const frsALL_GROUP_DEV_NOT_VALID: FAX_RULE_STATUS_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const frsSOME_GROUP_DEV_NOT_VALID: FAX_RULE_STATUS_ENUM = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const frsBAD_DEVICE: FAX_RULE_STATUS_ENUM = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_SCHEDULE_TYPE_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fstNOW: FAX_SCHEDULE_TYPE_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fstSPECIFIC_TIME: FAX_SCHEDULE_TYPE_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fstDISCOUNT_PERIOD: FAX_SCHEDULE_TYPE_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_SERVER_APIVERSION_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsAPI_VERSION_0: FAX_SERVER_APIVERSION_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsAPI_VERSION_1: FAX_SERVER_APIVERSION_ENUM = 65536i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsAPI_VERSION_2: FAX_SERVER_APIVERSION_ENUM = 131072i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsAPI_VERSION_3: FAX_SERVER_APIVERSION_ENUM = 196608i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_SERVER_EVENTS_TYPE_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsetNONE: FAX_SERVER_EVENTS_TYPE_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsetIN_QUEUE: FAX_SERVER_EVENTS_TYPE_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsetOUT_QUEUE: FAX_SERVER_EVENTS_TYPE_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsetCONFIG: FAX_SERVER_EVENTS_TYPE_ENUM = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsetACTIVITY: FAX_SERVER_EVENTS_TYPE_ENUM = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsetQUEUE_STATE: FAX_SERVER_EVENTS_TYPE_ENUM = 16i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsetIN_ARCHIVE: FAX_SERVER_EVENTS_TYPE_ENUM = 32i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsetOUT_ARCHIVE: FAX_SERVER_EVENTS_TYPE_ENUM = 64i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsetFXSSVC_ENDED: FAX_SERVER_EVENTS_TYPE_ENUM = 128i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsetDEVICE_STATUS: FAX_SERVER_EVENTS_TYPE_ENUM = 256i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsetINCOMING_CALL: FAX_SERVER_EVENTS_TYPE_ENUM = 512i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type FAX_SMTP_AUTHENTICATION_TYPE_ENUM = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsatANONYMOUS: FAX_SMTP_AUTHENTICATION_TYPE_ENUM = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsatBASIC: FAX_SMTP_AUTHENTICATION_TYPE_ENUM = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const fsatNTLM: FAX_SMTP_AUTHENTICATION_TYPE_ENUM = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type STI_DEVICE_MJ_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const StiDeviceTypeDefault: STI_DEVICE_MJ_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const StiDeviceTypeScanner: STI_DEVICE_MJ_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const StiDeviceTypeDigitalCamera: STI_DEVICE_MJ_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const StiDeviceTypeStreamingVideo: STI_DEVICE_MJ_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub type SendToMode = i32;
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub const SEND_TO_FAX_RECIPIENT_ATTACHMENT: SendToMode = 0i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_CONFIGURATIONA {
+    pub SizeOfStruct: u32,
+    pub Retries: u32,
+    pub RetryDelay: u32,
+    pub DirtyDays: u32,
+    pub Branding: super::super::Foundation::BOOL,
+    pub UseDeviceTsid: super::super::Foundation::BOOL,
+    pub ServerCp: super::super::Foundation::BOOL,
+    pub PauseServerQueue: super::super::Foundation::BOOL,
+    pub StartCheapTime: FAX_TIME,
+    pub StopCheapTime: FAX_TIME,
+    pub ArchiveOutgoingFaxes: super::super::Foundation::BOOL,
+    pub ArchiveDirectory: ::windows_sys::core::PCSTR,
+    pub Reserved: ::windows_sys::core::PCSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_CONFIGURATIONA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_CONFIGURATIONA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_CONFIGURATIONW {
+    pub SizeOfStruct: u32,
+    pub Retries: u32,
+    pub RetryDelay: u32,
+    pub DirtyDays: u32,
+    pub Branding: super::super::Foundation::BOOL,
+    pub UseDeviceTsid: super::super::Foundation::BOOL,
+    pub ServerCp: super::super::Foundation::BOOL,
+    pub PauseServerQueue: super::super::Foundation::BOOL,
+    pub StartCheapTime: FAX_TIME,
+    pub StopCheapTime: FAX_TIME,
+    pub ArchiveOutgoingFaxes: super::super::Foundation::BOOL,
+    pub ArchiveDirectory: ::windows_sys::core::PCWSTR,
+    pub Reserved: ::windows_sys::core::PCWSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_CONFIGURATIONW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_CONFIGURATIONW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct FAX_CONTEXT_INFOA {
+    pub SizeOfStruct: u32,
+    pub hDC: super::super::Graphics::Gdi::HDC,
+    pub ServerName: [super::super::Foundation::CHAR; 16],
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for FAX_CONTEXT_INFOA {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for FAX_CONTEXT_INFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct FAX_CONTEXT_INFOW {
+    pub SizeOfStruct: u32,
+    pub hDC: super::super::Graphics::Gdi::HDC,
+    pub ServerName: [u16; 16],
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for FAX_CONTEXT_INFOW {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for FAX_CONTEXT_INFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_COVERPAGE_INFOA {
+    pub SizeOfStruct: u32,
+    pub CoverPageName: ::windows_sys::core::PCSTR,
+    pub UseServerCoverPage: super::super::Foundation::BOOL,
+    pub RecName: ::windows_sys::core::PCSTR,
+    pub RecFaxNumber: ::windows_sys::core::PCSTR,
+    pub RecCompany: ::windows_sys::core::PCSTR,
+    pub RecStreetAddress: ::windows_sys::core::PCSTR,
+    pub RecCity: ::windows_sys::core::PCSTR,
+    pub RecState: ::windows_sys::core::PCSTR,
+    pub RecZip: ::windows_sys::core::PCSTR,
+    pub RecCountry: ::windows_sys::core::PCSTR,
+    pub RecTitle: ::windows_sys::core::PCSTR,
+    pub RecDepartment: ::windows_sys::core::PCSTR,
+    pub RecOfficeLocation: ::windows_sys::core::PCSTR,
+    pub RecHomePhone: ::windows_sys::core::PCSTR,
+    pub RecOfficePhone: ::windows_sys::core::PCSTR,
+    pub SdrName: ::windows_sys::core::PCSTR,
+    pub SdrFaxNumber: ::windows_sys::core::PCSTR,
+    pub SdrCompany: ::windows_sys::core::PCSTR,
+    pub SdrAddress: ::windows_sys::core::PCSTR,
+    pub SdrTitle: ::windows_sys::core::PCSTR,
+    pub SdrDepartment: ::windows_sys::core::PCSTR,
+    pub SdrOfficeLocation: ::windows_sys::core::PCSTR,
+    pub SdrHomePhone: ::windows_sys::core::PCSTR,
+    pub SdrOfficePhone: ::windows_sys::core::PCSTR,
+    pub Note: ::windows_sys::core::PCSTR,
+    pub Subject: ::windows_sys::core::PCSTR,
+    pub TimeSent: super::super::Foundation::SYSTEMTIME,
+    pub PageCount: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_COVERPAGE_INFOA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_COVERPAGE_INFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_COVERPAGE_INFOW {
+    pub SizeOfStruct: u32,
+    pub CoverPageName: ::windows_sys::core::PCWSTR,
+    pub UseServerCoverPage: super::super::Foundation::BOOL,
+    pub RecName: ::windows_sys::core::PCWSTR,
+    pub RecFaxNumber: ::windows_sys::core::PCWSTR,
+    pub RecCompany: ::windows_sys::core::PCWSTR,
+    pub RecStreetAddress: ::windows_sys::core::PCWSTR,
+    pub RecCity: ::windows_sys::core::PCWSTR,
+    pub RecState: ::windows_sys::core::PCWSTR,
+    pub RecZip: ::windows_sys::core::PCWSTR,
+    pub RecCountry: ::windows_sys::core::PCWSTR,
+    pub RecTitle: ::windows_sys::core::PCWSTR,
+    pub RecDepartment: ::windows_sys::core::PCWSTR,
+    pub RecOfficeLocation: ::windows_sys::core::PCWSTR,
+    pub RecHomePhone: ::windows_sys::core::PCWSTR,
+    pub RecOfficePhone: ::windows_sys::core::PCWSTR,
+    pub SdrName: ::windows_sys::core::PCWSTR,
+    pub SdrFaxNumber: ::windows_sys::core::PCWSTR,
+    pub SdrCompany: ::windows_sys::core::PCWSTR,
+    pub SdrAddress: ::windows_sys::core::PCWSTR,
+    pub SdrTitle: ::windows_sys::core::PCWSTR,
+    pub SdrDepartment: ::windows_sys::core::PCWSTR,
+    pub SdrOfficeLocation: ::windows_sys::core::PCWSTR,
+    pub SdrHomePhone: ::windows_sys::core::PCWSTR,
+    pub SdrOfficePhone: ::windows_sys::core::PCWSTR,
+    pub Note: ::windows_sys::core::PCWSTR,
+    pub Subject: ::windows_sys::core::PCWSTR,
+    pub TimeSent: super::super::Foundation::SYSTEMTIME,
+    pub PageCount: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_COVERPAGE_INFOW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_COVERPAGE_INFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_DEVICE_STATUSA {
+    pub SizeOfStruct: u32,
+    pub CallerId: ::windows_sys::core::PCSTR,
+    pub Csid: ::windows_sys::core::PCSTR,
+    pub CurrentPage: u32,
+    pub DeviceId: u32,
+    pub DeviceName: ::windows_sys::core::PCSTR,
+    pub DocumentName: ::windows_sys::core::PCSTR,
+    pub JobType: u32,
+    pub PhoneNumber: ::windows_sys::core::PCSTR,
+    pub RoutingString: ::windows_sys::core::PCSTR,
+    pub SenderName: ::windows_sys::core::PCSTR,
+    pub RecipientName: ::windows_sys::core::PCSTR,
+    pub Size: u32,
+    pub StartTime: super::super::Foundation::FILETIME,
+    pub Status: u32,
+    pub StatusString: ::windows_sys::core::PCSTR,
+    pub SubmittedTime: super::super::Foundation::FILETIME,
+    pub TotalPages: u32,
+    pub Tsid: ::windows_sys::core::PCSTR,
+    pub UserName: ::windows_sys::core::PCSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_DEVICE_STATUSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_DEVICE_STATUSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_DEVICE_STATUSW {
+    pub SizeOfStruct: u32,
+    pub CallerId: ::windows_sys::core::PCWSTR,
+    pub Csid: ::windows_sys::core::PCWSTR,
+    pub CurrentPage: u32,
+    pub DeviceId: u32,
+    pub DeviceName: ::windows_sys::core::PCWSTR,
+    pub DocumentName: ::windows_sys::core::PCWSTR,
+    pub JobType: u32,
+    pub PhoneNumber: ::windows_sys::core::PCWSTR,
+    pub RoutingString: ::windows_sys::core::PCWSTR,
+    pub SenderName: ::windows_sys::core::PCWSTR,
+    pub RecipientName: ::windows_sys::core::PCWSTR,
+    pub Size: u32,
+    pub StartTime: super::super::Foundation::FILETIME,
+    pub Status: u32,
+    pub StatusString: ::windows_sys::core::PCWSTR,
+    pub SubmittedTime: super::super::Foundation::FILETIME,
+    pub TotalPages: u32,
+    pub Tsid: ::windows_sys::core::PCWSTR,
+    pub UserName: ::windows_sys::core::PCWSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_DEVICE_STATUSW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_DEVICE_STATUSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct FAX_DEV_STATUS {
+    pub SizeOfStruct: u32,
+    pub StatusId: u32,
+    pub StringId: u32,
+    pub PageCount: u32,
+    pub CSI: ::windows_sys::core::PWSTR,
+    pub CallerId: ::windows_sys::core::PWSTR,
+    pub RoutingInfo: ::windows_sys::core::PWSTR,
+    pub ErrorCode: u32,
+    pub Reserved: [u32; 3],
+}
+impl ::core::marker::Copy for FAX_DEV_STATUS {}
+impl ::core::clone::Clone for FAX_DEV_STATUS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_EVENTA {
+    pub SizeOfStruct: u32,
+    pub TimeStamp: super::super::Foundation::FILETIME,
+    pub DeviceId: u32,
+    pub EventId: u32,
+    pub JobId: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_EVENTA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_EVENTA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_EVENTW {
+    pub SizeOfStruct: u32,
+    pub TimeStamp: super::super::Foundation::FILETIME,
+    pub DeviceId: u32,
+    pub EventId: u32,
+    pub JobId: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_EVENTW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_EVENTW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct FAX_GLOBAL_ROUTING_INFOA {
+    pub SizeOfStruct: u32,
+    pub Priority: u32,
+    pub Guid: ::windows_sys::core::PCSTR,
+    pub FriendlyName: ::windows_sys::core::PCSTR,
+    pub FunctionName: ::windows_sys::core::PCSTR,
+    pub ExtensionImageName: ::windows_sys::core::PCSTR,
+    pub ExtensionFriendlyName: ::windows_sys::core::PCSTR,
+}
+impl ::core::marker::Copy for FAX_GLOBAL_ROUTING_INFOA {}
+impl ::core::clone::Clone for FAX_GLOBAL_ROUTING_INFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct FAX_GLOBAL_ROUTING_INFOW {
+    pub SizeOfStruct: u32,
+    pub Priority: u32,
+    pub Guid: ::windows_sys::core::PCWSTR,
+    pub FriendlyName: ::windows_sys::core::PCWSTR,
+    pub FunctionName: ::windows_sys::core::PCWSTR,
+    pub ExtensionImageName: ::windows_sys::core::PCWSTR,
+    pub ExtensionFriendlyName: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for FAX_GLOBAL_ROUTING_INFOW {}
+impl ::core::clone::Clone for FAX_GLOBAL_ROUTING_INFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_JOB_ENTRYA {
+    pub SizeOfStruct: u32,
+    pub JobId: u32,
+    pub UserName: ::windows_sys::core::PCSTR,
+    pub JobType: u32,
+    pub QueueStatus: u32,
+    pub Status: u32,
+    pub Size: u32,
+    pub PageCount: u32,
+    pub RecipientNumber: ::windows_sys::core::PCSTR,
+    pub RecipientName: ::windows_sys::core::PCSTR,
+    pub Tsid: ::windows_sys::core::PCSTR,
+    pub SenderName: ::windows_sys::core::PCSTR,
+    pub SenderCompany: ::windows_sys::core::PCSTR,
+    pub SenderDept: ::windows_sys::core::PCSTR,
+    pub BillingCode: ::windows_sys::core::PCSTR,
+    pub ScheduleAction: u32,
+    pub ScheduleTime: super::super::Foundation::SYSTEMTIME,
+    pub DeliveryReportType: u32,
+    pub DeliveryReportAddress: ::windows_sys::core::PCSTR,
+    pub DocumentName: ::windows_sys::core::PCSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_JOB_ENTRYA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_JOB_ENTRYA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_JOB_ENTRYW {
+    pub SizeOfStruct: u32,
+    pub JobId: u32,
+    pub UserName: ::windows_sys::core::PCWSTR,
+    pub JobType: u32,
+    pub QueueStatus: u32,
+    pub Status: u32,
+    pub Size: u32,
+    pub PageCount: u32,
+    pub RecipientNumber: ::windows_sys::core::PCWSTR,
+    pub RecipientName: ::windows_sys::core::PCWSTR,
+    pub Tsid: ::windows_sys::core::PCWSTR,
+    pub SenderName: ::windows_sys::core::PCWSTR,
+    pub SenderCompany: ::windows_sys::core::PCWSTR,
+    pub SenderDept: ::windows_sys::core::PCWSTR,
+    pub BillingCode: ::windows_sys::core::PCWSTR,
+    pub ScheduleAction: u32,
+    pub ScheduleTime: super::super::Foundation::SYSTEMTIME,
+    pub DeliveryReportType: u32,
+    pub DeliveryReportAddress: ::windows_sys::core::PCWSTR,
+    pub DocumentName: ::windows_sys::core::PCWSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_JOB_ENTRYW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_JOB_ENTRYW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_JOB_PARAMA {
+    pub SizeOfStruct: u32,
+    pub RecipientNumber: ::windows_sys::core::PCSTR,
+    pub RecipientName: ::windows_sys::core::PCSTR,
+    pub Tsid: ::windows_sys::core::PCSTR,
+    pub SenderName: ::windows_sys::core::PCSTR,
+    pub SenderCompany: ::windows_sys::core::PCSTR,
+    pub SenderDept: ::windows_sys::core::PCSTR,
+    pub BillingCode: ::windows_sys::core::PCSTR,
+    pub ScheduleAction: u32,
+    pub ScheduleTime: super::super::Foundation::SYSTEMTIME,
+    pub DeliveryReportType: u32,
+    pub DeliveryReportAddress: ::windows_sys::core::PCSTR,
+    pub DocumentName: ::windows_sys::core::PCSTR,
+    pub CallHandle: u32,
+    pub Reserved: [usize; 3],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_JOB_PARAMA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_JOB_PARAMA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_JOB_PARAMW {
+    pub SizeOfStruct: u32,
+    pub RecipientNumber: ::windows_sys::core::PCWSTR,
+    pub RecipientName: ::windows_sys::core::PCWSTR,
+    pub Tsid: ::windows_sys::core::PCWSTR,
+    pub SenderName: ::windows_sys::core::PCWSTR,
+    pub SenderCompany: ::windows_sys::core::PCWSTR,
+    pub SenderDept: ::windows_sys::core::PCWSTR,
+    pub BillingCode: ::windows_sys::core::PCWSTR,
+    pub ScheduleAction: u32,
+    pub ScheduleTime: super::super::Foundation::SYSTEMTIME,
+    pub DeliveryReportType: u32,
+    pub DeliveryReportAddress: ::windows_sys::core::PCWSTR,
+    pub DocumentName: ::windows_sys::core::PCWSTR,
+    pub CallHandle: u32,
+    pub Reserved: [usize; 3],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_JOB_PARAMW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_JOB_PARAMW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct FAX_LOG_CATEGORYA {
+    pub Name: ::windows_sys::core::PCSTR,
+    pub Category: u32,
+    pub Level: u32,
+}
+impl ::core::marker::Copy for FAX_LOG_CATEGORYA {}
+impl ::core::clone::Clone for FAX_LOG_CATEGORYA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct FAX_LOG_CATEGORYW {
+    pub Name: ::windows_sys::core::PCWSTR,
+    pub Category: u32,
+    pub Level: u32,
+}
+impl ::core::marker::Copy for FAX_LOG_CATEGORYW {}
+impl ::core::clone::Clone for FAX_LOG_CATEGORYW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct FAX_PORT_INFOA {
+    pub SizeOfStruct: u32,
+    pub DeviceId: u32,
+    pub State: u32,
+    pub Flags: u32,
+    pub Rings: u32,
+    pub Priority: u32,
+    pub DeviceName: ::windows_sys::core::PCSTR,
+    pub Tsid: ::windows_sys::core::PCSTR,
+    pub Csid: ::windows_sys::core::PCSTR,
+}
+impl ::core::marker::Copy for FAX_PORT_INFOA {}
+impl ::core::clone::Clone for FAX_PORT_INFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct FAX_PORT_INFOW {
+    pub SizeOfStruct: u32,
+    pub DeviceId: u32,
+    pub State: u32,
+    pub Flags: u32,
+    pub Rings: u32,
+    pub Priority: u32,
+    pub DeviceName: ::windows_sys::core::PCWSTR,
+    pub Tsid: ::windows_sys::core::PCWSTR,
+    pub Csid: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for FAX_PORT_INFOW {}
+impl ::core::clone::Clone for FAX_PORT_INFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct FAX_PRINT_INFOA {
+    pub SizeOfStruct: u32,
+    pub DocName: ::windows_sys::core::PCSTR,
+    pub RecipientName: ::windows_sys::core::PCSTR,
+    pub RecipientNumber: ::windows_sys::core::PCSTR,
+    pub SenderName: ::windows_sys::core::PCSTR,
+    pub SenderCompany: ::windows_sys::core::PCSTR,
+    pub SenderDept: ::windows_sys::core::PCSTR,
+    pub SenderBillingCode: ::windows_sys::core::PCSTR,
+    pub Reserved: ::windows_sys::core::PCSTR,
+    pub DrEmailAddress: ::windows_sys::core::PCSTR,
+    pub OutputFileName: ::windows_sys::core::PCSTR,
+}
+impl ::core::marker::Copy for FAX_PRINT_INFOA {}
+impl ::core::clone::Clone for FAX_PRINT_INFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct FAX_PRINT_INFOW {
+    pub SizeOfStruct: u32,
+    pub DocName: ::windows_sys::core::PCWSTR,
+    pub RecipientName: ::windows_sys::core::PCWSTR,
+    pub RecipientNumber: ::windows_sys::core::PCWSTR,
+    pub SenderName: ::windows_sys::core::PCWSTR,
+    pub SenderCompany: ::windows_sys::core::PCWSTR,
+    pub SenderDept: ::windows_sys::core::PCWSTR,
+    pub SenderBillingCode: ::windows_sys::core::PCWSTR,
+    pub Reserved: ::windows_sys::core::PCWSTR,
+    pub DrEmailAddress: ::windows_sys::core::PCWSTR,
+    pub OutputFileName: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for FAX_PRINT_INFOW {}
+impl ::core::clone::Clone for FAX_PRINT_INFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct FAX_RECEIVE {
+    pub SizeOfStruct: u32,
+    pub FileName: ::windows_sys::core::PWSTR,
+    pub ReceiverName: ::windows_sys::core::PWSTR,
+    pub ReceiverNumber: ::windows_sys::core::PWSTR,
+    pub Reserved: [u32; 4],
+}
+impl ::core::marker::Copy for FAX_RECEIVE {}
+impl ::core::clone::Clone for FAX_RECEIVE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct FAX_ROUTE {
+    pub SizeOfStruct: u32,
+    pub JobId: u32,
+    pub ElapsedTime: u64,
+    pub ReceiveTime: u64,
+    pub PageCount: u32,
+    pub Csid: ::windows_sys::core::PCWSTR,
+    pub Tsid: ::windows_sys::core::PCWSTR,
+    pub CallerId: ::windows_sys::core::PCWSTR,
+    pub RoutingInfo: ::windows_sys::core::PCWSTR,
+    pub ReceiverName: ::windows_sys::core::PCWSTR,
+    pub ReceiverNumber: ::windows_sys::core::PCWSTR,
+    pub DeviceName: ::windows_sys::core::PCWSTR,
+    pub DeviceId: u32,
+    pub RoutingInfoData: *mut u8,
+    pub RoutingInfoDataSize: u32,
+}
+impl ::core::marker::Copy for FAX_ROUTE {}
+impl ::core::clone::Clone for FAX_ROUTE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_ROUTE_CALLBACKROUTINES {
+    pub SizeOfStruct: u32,
+    pub FaxRouteAddFile: PFAXROUTEADDFILE,
+    pub FaxRouteDeleteFile: PFAXROUTEDELETEFILE,
+    pub FaxRouteGetFile: PFAXROUTEGETFILE,
+    pub FaxRouteEnumFiles: PFAXROUTEENUMFILES,
+    pub FaxRouteModifyRoutingData: PFAXROUTEMODIFYROUTINGDATA,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_ROUTE_CALLBACKROUTINES {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_ROUTE_CALLBACKROUTINES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_ROUTING_METHODA {
+    pub SizeOfStruct: u32,
+    pub DeviceId: u32,
+    pub Enabled: super::super::Foundation::BOOL,
+    pub DeviceName: ::windows_sys::core::PCSTR,
+    pub Guid: ::windows_sys::core::PCSTR,
+    pub FriendlyName: ::windows_sys::core::PCSTR,
+    pub FunctionName: ::windows_sys::core::PCSTR,
+    pub ExtensionImageName: ::windows_sys::core::PCSTR,
+    pub ExtensionFriendlyName: ::windows_sys::core::PCSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_ROUTING_METHODA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_ROUTING_METHODA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_ROUTING_METHODW {
+    pub SizeOfStruct: u32,
+    pub DeviceId: u32,
+    pub Enabled: super::super::Foundation::BOOL,
+    pub DeviceName: ::windows_sys::core::PCWSTR,
+    pub Guid: ::windows_sys::core::PCWSTR,
+    pub FriendlyName: ::windows_sys::core::PCWSTR,
+    pub FunctionName: ::windows_sys::core::PCWSTR,
+    pub ExtensionImageName: ::windows_sys::core::PCWSTR,
+    pub ExtensionFriendlyName: ::windows_sys::core::PCWSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_ROUTING_METHODW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_ROUTING_METHODW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FAX_SEND {
+    pub SizeOfStruct: u32,
+    pub FileName: ::windows_sys::core::PWSTR,
+    pub CallerName: ::windows_sys::core::PWSTR,
+    pub CallerNumber: ::windows_sys::core::PWSTR,
+    pub ReceiverName: ::windows_sys::core::PWSTR,
+    pub ReceiverNumber: ::windows_sys::core::PWSTR,
+    pub Branding: super::super::Foundation::BOOL,
+    pub CallHandle: u32,
+    pub Reserved: [u32; 3],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FAX_SEND {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FAX_SEND {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct FAX_TIME {
+    pub Hour: u16,
+    pub Minute: u16,
+}
+impl ::core::marker::Copy for FAX_TIME {}
+impl ::core::clone::Clone for FAX_TIME {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct STINOTIFY {
+    pub dwSize: u32,
+    pub guidNotificationCode: ::windows_sys::core::GUID,
+    pub abNotificationData: [u8; 64],
+}
+impl ::core::marker::Copy for STINOTIFY {}
+impl ::core::clone::Clone for STINOTIFY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct STISUBSCRIBE {
+    pub dwSize: u32,
+    pub dwFlags: u32,
+    pub dwFilter: u32,
+    pub hWndNotify: super::super::Foundation::HWND,
+    pub hEvent: super::super::Foundation::HANDLE,
+    pub uiNotificationMessage: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for STISUBSCRIBE {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for STISUBSCRIBE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct STI_DEVICE_INFORMATIONW {
+    pub dwSize: u32,
+    pub DeviceType: u32,
+    pub szDeviceInternalName: [u16; 128],
+    pub DeviceCapabilitiesA: STI_DEV_CAPS,
+    pub dwHardwareConfiguration: u32,
+    pub pszVendorDescription: ::windows_sys::core::PWSTR,
+    pub pszDeviceDescription: ::windows_sys::core::PWSTR,
+    pub pszPortName: ::windows_sys::core::PWSTR,
+    pub pszPropProvider: ::windows_sys::core::PWSTR,
+    pub pszLocalName: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for STI_DEVICE_INFORMATIONW {}
+impl ::core::clone::Clone for STI_DEVICE_INFORMATIONW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct STI_DEVICE_STATUS {
+    pub dwSize: u32,
+    pub StatusMask: u32,
+    pub dwOnlineState: u32,
+    pub dwHardwareStatusCode: u32,
+    pub dwEventHandlingState: u32,
+    pub dwPollingInterval: u32,
+}
+impl ::core::marker::Copy for STI_DEVICE_STATUS {}
+impl ::core::clone::Clone for STI_DEVICE_STATUS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct STI_DEV_CAPS {
+    pub dwGeneric: u32,
+}
+impl ::core::marker::Copy for STI_DEV_CAPS {}
+impl ::core::clone::Clone for STI_DEV_CAPS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct STI_DIAG {
+    pub dwSize: u32,
+    pub dwBasicDiagCode: u32,
+    pub dwVendorDiagCode: u32,
+    pub dwStatusMask: u32,
+    pub sErrorInfo: _ERROR_INFOW,
+}
+impl ::core::marker::Copy for STI_DIAG {}
+impl ::core::clone::Clone for STI_DIAG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct STI_USD_CAPS {
+    pub dwVersion: u32,
+    pub dwGenericCaps: u32,
+}
+impl ::core::marker::Copy for STI_USD_CAPS {}
+impl ::core::clone::Clone for STI_USD_CAPS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct STI_WIA_DEVICE_INFORMATIONW {
+    pub dwSize: u32,
+    pub DeviceType: u32,
+    pub szDeviceInternalName: [u16; 128],
+    pub DeviceCapabilitiesA: STI_DEV_CAPS,
+    pub dwHardwareConfiguration: u32,
+    pub pszVendorDescription: ::windows_sys::core::PWSTR,
+    pub pszDeviceDescription: ::windows_sys::core::PWSTR,
+    pub pszPortName: ::windows_sys::core::PWSTR,
+    pub pszPropProvider: ::windows_sys::core::PWSTR,
+    pub pszLocalName: ::windows_sys::core::PWSTR,
+    pub pszUiDll: ::windows_sys::core::PWSTR,
+    pub pszServer: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for STI_WIA_DEVICE_INFORMATIONW {}
+impl ::core::clone::Clone for STI_WIA_DEVICE_INFORMATIONW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
+pub struct _ERROR_INFOW {
+    pub dwSize: u32,
+    pub dwGenericError: u32,
+    pub dwVendorError: u32,
+    pub szExtendedErrorText: [u16; 255],
+}
+impl ::core::marker::Copy for _ERROR_INFOW {}
+impl ::core::clone::Clone for _ERROR_INFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
 pub type PFAXABORT = ::core::option::Option<unsafe extern "system" fn(faxhandle: super::super::Foundation::HANDLE, jobid: u32) -> super::super::Foundation::BOOL>;
@@ -1874,405 +2274,3 @@ pub type PFAX_SEND_CALLBACK = ::core::option::Option<unsafe extern "system" fn(f
 #[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
 pub type PFAX_SERVICE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(faxhandle: super::super::Foundation::HANDLE, deviceid: u32, param1: usize, param2: usize, param3: usize) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_BAUDRATE: &str = "BaudRate";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_BAUDRATE_A: &str = "BaudRate";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_DATA_W: &str = "DeviceData";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_DEVICESUBTYPE_W: &str = "DeviceSubType";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_DEVICETYPE_W: &str = "DeviceType";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_DEVICE_NAME_W: &str = "DriverDesc";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_DEV_NAME_W: &str = "DeviceName";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_DRIVER_DESC_W: &str = "DriverDesc";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_FRIENDLY_NAME_W: &str = "FriendlyName";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_GENERIC_CAPS_W: &str = "Capabilities";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_GUID: &str = "GUID";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_GUID_W: &str = "GUID";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_HARDWARE: &str = "HardwareConfig";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_HARDWARE_W: &str = "HardwareConfig";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_LAUNCHABLE: &str = "Launchable";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_LAUNCHABLE_W: &str = "Launchable";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_LAUNCH_APPS: &str = "LaunchApplications";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_LAUNCH_APPS_W: &str = "LaunchApplications";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_SHUTDOWNDELAY: &str = "ShutdownIfUnusedDelay";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_SHUTDOWNDELAY_W: &str = "ShutdownIfUnusedDelay";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_TYPE_W: &str = "Type";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const REGSTR_VAL_VENDOR_NAME_W: &str = "Vendor";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIEDFL_ALLDEVICES: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIEDFL_ATTACHEDONLY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_ALREADY_INITIALIZED: ::windows_sys::core::HRESULT = -2147023649i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_BADDRIVER: ::windows_sys::core::HRESULT = -2147024777i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_BETA_VERSION: ::windows_sys::core::HRESULT = -2147023743i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_DEVICENOTREG: i32 = -2147221164i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_DEVICE_LOCKED: ::windows_sys::core::HRESULT = -2147024863i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_DEVICE_NOTREADY: ::windows_sys::core::HRESULT = -2147024875i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_GENERIC: i32 = -2147467259i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_HANDLEEXISTS: ::windows_sys::core::HRESULT = -2147024713i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_INVALID_DEVICE_NAME: ::windows_sys::core::HRESULT = -2147024773i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_INVALID_HW_TYPE: ::windows_sys::core::HRESULT = -2147024883i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_INVALID_PARAM: i32 = -2147024809i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_NEEDS_LOCK: ::windows_sys::core::HRESULT = -2147024738i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_NOEVENTS: ::windows_sys::core::HRESULT = -2147024637i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_NOINTERFACE: i32 = -2147467262i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_NOTINITIALIZED: i32 = -2147024891i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_NOT_INITIALIZED: ::windows_sys::core::HRESULT = -2147024875i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_OBJECTNOTFOUND: ::windows_sys::core::HRESULT = -2147024894i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_OLD_VERSION: ::windows_sys::core::HRESULT = -2147023746i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_OUTOFMEMORY: i32 = -2147024882i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_READONLY: i32 = -2147024891i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_SHARING_VIOLATION: ::windows_sys::core::HRESULT = -2147024864i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STIERR_UNSUPPORTED: i32 = -2147467263i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct STINOTIFY {
-    pub dwSize: u32,
-    pub guidNotificationCode: ::windows_sys::core::GUID,
-    pub abNotificationData: [u8; 64],
-}
-impl ::core::marker::Copy for STINOTIFY {}
-impl ::core::clone::Clone for STINOTIFY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct STISUBSCRIBE {
-    pub dwSize: u32,
-    pub dwFlags: u32,
-    pub dwFilter: u32,
-    pub hWndNotify: super::super::Foundation::HWND,
-    pub hEvent: super::super::Foundation::HANDLE,
-    pub uiNotificationMessage: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for STISUBSCRIBE {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for STISUBSCRIBE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ADD_DEVICE_BROADCAST_ACTION: &str = "Arrival";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ADD_DEVICE_BROADCAST_STRING: &str = "STI\\";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_CHANGENOEFFECT: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_CREATE_BOTH: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_CREATE_DATA: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_CREATE_FOR_MONITOR: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_CREATE_MASK: u32 = 65535u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_CREATE_STATUS: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct STI_DEVICE_INFORMATIONW {
-    pub dwSize: u32,
-    pub DeviceType: u32,
-    pub szDeviceInternalName: [u16; 128],
-    pub DeviceCapabilitiesA: STI_DEV_CAPS,
-    pub dwHardwareConfiguration: u32,
-    pub pszVendorDescription: ::windows_sys::core::PWSTR,
-    pub pszDeviceDescription: ::windows_sys::core::PWSTR,
-    pub pszPortName: ::windows_sys::core::PWSTR,
-    pub pszPropProvider: ::windows_sys::core::PWSTR,
-    pub pszLocalName: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for STI_DEVICE_INFORMATIONW {}
-impl ::core::clone::Clone for STI_DEVICE_INFORMATIONW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type STI_DEVICE_MJ_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const StiDeviceTypeDefault: STI_DEVICE_MJ_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const StiDeviceTypeScanner: STI_DEVICE_MJ_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const StiDeviceTypeDigitalCamera: STI_DEVICE_MJ_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const StiDeviceTypeStreamingVideo: STI_DEVICE_MJ_TYPE = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct STI_DEVICE_STATUS {
-    pub dwSize: u32,
-    pub StatusMask: u32,
-    pub dwOnlineState: u32,
-    pub dwHardwareStatusCode: u32,
-    pub dwEventHandlingState: u32,
-    pub dwPollingInterval: u32,
-}
-impl ::core::marker::Copy for STI_DEVICE_STATUS {}
-impl ::core::clone::Clone for STI_DEVICE_STATUS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_VALUE_DEFAULT_LAUNCHAPP: &str = "DefaultLaunchApp";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_VALUE_DEFAULT_LAUNCHAPP_A: &str = "DefaultLaunchApp";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_VALUE_DISABLE_NOTIFICATIONS: &str = "DisableNotifications";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_VALUE_DISABLE_NOTIFICATIONS_A: &str = "DisableNotifications";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_VALUE_ICM_PROFILE: &str = "ICMProfile";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_VALUE_ICM_PROFILE_A: &str = "ICMProfile";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_VALUE_ISIS_NAME: &str = "ISISDriverName";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_VALUE_ISIS_NAME_A: &str = "ISISDriverName";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_VALUE_TIMEOUT: &str = "PollTimeout";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_VALUE_TIMEOUT_A: &str = "PollTimeout";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_VALUE_TWAIN_NAME: &str = "TwainDS";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVICE_VALUE_TWAIN_NAME_A: &str = "TwainDS";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVSTATUS_EVENTS_STATE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DEVSTATUS_ONLINE_STATE: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct STI_DEV_CAPS {
-    pub dwGeneric: u32,
-}
-impl ::core::marker::Copy for STI_DEV_CAPS {}
-impl ::core::clone::Clone for STI_DEV_CAPS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct STI_DIAG {
-    pub dwSize: u32,
-    pub dwBasicDiagCode: u32,
-    pub dwVendorDiagCode: u32,
-    pub dwStatusMask: u32,
-    pub sErrorInfo: _ERROR_INFOW,
-}
-impl ::core::marker::Copy for STI_DIAG {}
-impl ::core::clone::Clone for STI_DIAG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_DIAGCODE_HWPRESENCE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ERROR_NO_ERROR: i32 = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_EVENTHANDLING_ENABLED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_EVENTHANDLING_PENDING: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_EVENTHANDLING_POLLING: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_GENCAP_AUTO_PORTSELECT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_GENCAP_GENERATE_ARRIVALEVENT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_GENCAP_NOTIFICATIONS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_GENCAP_POLLING_NEEDED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_GENCAP_SUBSET: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_GENCAP_WIA: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_HW_CONFIG_PARALLEL: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_HW_CONFIG_SCSI: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_HW_CONFIG_SERIAL: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_HW_CONFIG_UNKNOWN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_HW_CONFIG_USB: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_MAX_INTERNAL_NAME_LENGTH: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_NOTCONNECTED: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_OK: i32 = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_BUSY: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_ERROR: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_INITIALIZING: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_IO_ACTIVE: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_OFFLINE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_OPERATIONAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_PAPER_JAM: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_PAPER_PROBLEM: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_PAUSED: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_PENDING: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_POWER_SAVE: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_TRANSFERRING: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_USER_INTERVENTION: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_ONLINESTATE_WARMING_UP: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_RAW_RESERVED: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_REMOVE_DEVICE_BROADCAST_ACTION: &str = "Removal";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_REMOVE_DEVICE_BROADCAST_STRING: &str = "STI\\";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_SUBSCRIBE_FLAG_EVENT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_SUBSCRIBE_FLAG_WINDOW: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_TRACE_ERROR: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_TRACE_INFORMATION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_TRACE_WARNING: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_UNICODE: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct STI_USD_CAPS {
-    pub dwVersion: u32,
-    pub dwGenericCaps: u32,
-}
-impl ::core::marker::Copy for STI_USD_CAPS {}
-impl ::core::clone::Clone for STI_USD_CAPS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_USD_GENCAP_NATIVE_PUSHSUPPORT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_VERSION: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_VERSION_FLAG_MASK: u32 = 4278190080u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_VERSION_FLAG_UNICODE: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_VERSION_MIN_ALLOWED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const STI_VERSION_REAL: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct STI_WIA_DEVICE_INFORMATIONW {
-    pub dwSize: u32,
-    pub DeviceType: u32,
-    pub szDeviceInternalName: [u16; 128],
-    pub DeviceCapabilitiesA: STI_DEV_CAPS,
-    pub dwHardwareConfiguration: u32,
-    pub pszVendorDescription: ::windows_sys::core::PWSTR,
-    pub pszDeviceDescription: ::windows_sys::core::PWSTR,
-    pub pszPortName: ::windows_sys::core::PWSTR,
-    pub pszPropProvider: ::windows_sys::core::PWSTR,
-    pub pszLocalName: ::windows_sys::core::PWSTR,
-    pub pszUiDll: ::windows_sys::core::PWSTR,
-    pub pszServer: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for STI_WIA_DEVICE_INFORMATIONW {}
-impl ::core::clone::Clone for STI_WIA_DEVICE_INFORMATIONW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const SUPPORTS_MSCPLUS_STR: &str = "SupportsMSCPlus";
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const SUPPORTS_MSCPLUS_VAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub type SendToMode = i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const SEND_TO_FAX_RECIPIENT_ATTACHMENT: SendToMode = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const WIA_INCOMPAT_XP: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub struct _ERROR_INFOW {
-    pub dwSize: u32,
-    pub dwGenericError: u32,
-    pub dwVendorError: u32,
-    pub szExtendedErrorText: [u16; 255],
-}
-impl ::core::marker::Copy for _ERROR_INFOW {}
-impl ::core::clone::Clone for _ERROR_INFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type _IFaxAccountNotify = *mut ::core::ffi::c_void;
-pub type _IFaxServerNotify2 = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const lDEFAULT_PREFETCH_SIZE: i32 = 100i32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const prv_DEFAULT_PREFETCH_SIZE: u32 = 100u32;
-#[doc = "*Required features: `\"Win32_Devices_Fax\"`*"]
-pub const wcharREASSIGN_RECIPIENTS_DELIMITER: u16 = 59u16;

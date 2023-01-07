@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
     pub fn AddISNSServerA(address: ::windows_sys::core::PCSTR) -> u32;
@@ -196,6 +196,440 @@ pub const ATA_FLAGS_DRDY_REQUIRED: u32 = 1u32;
 pub const ATA_FLAGS_NO_MULTIPLE: u32 = 32u32;
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub const ATA_FLAGS_USE_DMA: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const DD_SCSI_DEVICE_NAME: &str = "\\Device\\ScsiPort";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const DUMP_DRIVER_NAME_LENGTH: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const DUMP_EX_FLAG_DRIVER_FULL_PATH_SUPPORT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const DUMP_EX_FLAG_RESUME_SUPPORT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const DUMP_EX_FLAG_SUPPORT_64BITMEMORY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const DUMP_EX_FLAG_SUPPORT_DD_TELEMETRY: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const DUMP_POINTERS_VERSION_1: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const DUMP_POINTERS_VERSION_2: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const DUMP_POINTERS_VERSION_3: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const DUMP_POINTERS_VERSION_4: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FILE_DEVICE_SCSI: u32 = 27u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_FUNCTION_ACTIVATE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_FUNCTION_DOWNLOAD: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_FUNCTION_GET_INFO: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_REQUEST_BLOCK_STRUCTURE_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_REQUEST_FLAG_CONTROLLER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_REQUEST_FLAG_FIRST_SEGMENT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_REQUEST_FLAG_LAST_SEGMENT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_REQUEST_FLAG_SWITCH_TO_EXISTING_FIRMWARE: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_COMMAND_ABORT: u32 = 133u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_CONTROLLER_ERROR: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_DEVICE_ERROR: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_END_OF_MEDIA: u32 = 134u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_ERROR: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_ID_NOT_FOUND: u32 = 131u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_ILLEGAL_LENGTH: u32 = 135u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_ILLEGAL_REQUEST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_INPUT_BUFFER_TOO_BIG: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_INTERFACE_CRC_ERROR: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_INVALID_IMAGE: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_INVALID_PARAMETER: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_INVALID_SLOT: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_MEDIA_CHANGE: u32 = 130u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_MEDIA_CHANGE_REQUEST: u32 = 132u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_OUTPUT_BUFFER_TOO_SMALL: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_POWER_CYCLE_REQUIRED: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_SUCCESS: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const FIRMWARE_STATUS_UNCORRECTABLE_DATA_ERROR: u32 = 129u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const HYBRID_FUNCTION_DEMOTE_BY_SIZE: u32 = 19u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const HYBRID_FUNCTION_DISABLE_CACHING_MEDIUM: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const HYBRID_FUNCTION_ENABLE_CACHING_MEDIUM: u32 = 17u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const HYBRID_FUNCTION_GET_INFO: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const HYBRID_FUNCTION_SET_DIRTY_THRESHOLD: u32 = 18u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const HYBRID_REQUEST_BLOCK_STRUCTURE_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const HYBRID_REQUEST_INFO_STRUCTURE_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const HYBRID_STATUS_ENABLE_REFCOUNT_HOLD: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const HYBRID_STATUS_ILLEGAL_REQUEST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const HYBRID_STATUS_INVALID_PARAMETER: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const HYBRID_STATUS_OUTPUT_BUFFER_TOO_SMALL: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const HYBRID_STATUS_SUCCESS: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ID_FQDN: &str = "2";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ID_IPV4_ADDR: &str = "1";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ID_IPV6_ADDR: &str = "5";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ID_USER_FQDN: &str = "3";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_ATA_MINIPORT: u32 = 315444u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_ATA_PASS_THROUGH: u32 = 315436u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_ATA_PASS_THROUGH_DIRECT: u32 = 315440u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_IDE_PASS_THROUGH: u32 = 315432u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MINIPORT_PROCESS_SERVICE_IRP: u32 = 315448u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MINIPORT_SIGNATURE_DSM_GENERAL: &str = "MPDSMGEN";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MINIPORT_SIGNATURE_DSM_NOTIFICATION: &str = "MPDSM   ";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MINIPORT_SIGNATURE_ENDURANCE_INFO: &str = "ENDURINF";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MINIPORT_SIGNATURE_FIRMWARE: &str = "FIRMWARE";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MINIPORT_SIGNATURE_HYBRDISK: &str = "HYBRDISK";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MINIPORT_SIGNATURE_QUERY_PHYSICAL_TOPOLOGY: &str = "TOPOLOGY";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MINIPORT_SIGNATURE_QUERY_PROTOCOL: &str = "PROTOCOL";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MINIPORT_SIGNATURE_QUERY_TEMPERATURE: &str = "TEMPERAT";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MINIPORT_SIGNATURE_SCSIDISK: &str = "SCSIDISK";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MINIPORT_SIGNATURE_SET_PROTOCOL: &str = "SETPROTO";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MINIPORT_SIGNATURE_SET_TEMPERATURE_THRESHOLD: &str = "SETTEMPT";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MPIO_PASS_THROUGH_PATH: u32 = 315452u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MPIO_PASS_THROUGH_PATH_DIRECT: u32 = 315456u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MPIO_PASS_THROUGH_PATH_DIRECT_EX: u32 = 315472u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_MPIO_PASS_THROUGH_PATH_EX: u32 = 315468u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_SCSI_BASE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_SCSI_FREE_DUMP_POINTERS: u32 = 266276u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_SCSI_GET_ADDRESS: u32 = 266264u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_SCSI_GET_CAPABILITIES: u32 = 266256u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_SCSI_GET_DUMP_POINTERS: u32 = 266272u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_SCSI_GET_INQUIRY_DATA: u32 = 266252u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_SCSI_MINIPORT: u32 = 315400u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_SCSI_PASS_THROUGH: u32 = 315396u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_SCSI_PASS_THROUGH_DIRECT: u32 = 315412u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_SCSI_PASS_THROUGH_DIRECT_EX: u32 = 315464u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_SCSI_PASS_THROUGH_EX: u32 = 315460u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IOCTL_SCSI_RESCAN_BUS: u32 = 266268u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_FLAG_ALLOW_PORTAL_HOPPING: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_FLAG_MULTIPATH_ENABLED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_FLAG_REQUIRE_IPSEC: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_FLAG_RESERVED1: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_FLAG_USE_RADIUS_RESPONSE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_FLAG_USE_RADIUS_VERIFICATION: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_OPTIONS_AUTH_TYPE: &str = "0x00000080";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_OPTIONS_DATA_DIGEST: &str = "0x00000002";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_OPTIONS_DEFAULT_TIME_2_RETAIN: &str = "0x00000010";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_OPTIONS_DEFAULT_TIME_2_WAIT: &str = "0x00000008";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_OPTIONS_HEADER_DIGEST: &str = "0x00000001";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_OPTIONS_MAXIMUM_CONNECTIONS: &str = "0x00000004";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_OPTIONS_PASSWORD: &str = "0x00000040";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_OPTIONS_USERNAME: &str = "0x00000020";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_LOGIN_OPTIONS_VERSION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_SECURITY_FLAG_AGGRESSIVE_MODE_ENABLED: &str = "0x00000008";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_SECURITY_FLAG_IKE_IPSEC_ENABLED: &str = "0x00000002";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_SECURITY_FLAG_MAIN_MODE_ENABLED: &str = "0x00000004";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_SECURITY_FLAG_PFS_ENABLED: &str = "0x00000010";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_SECURITY_FLAG_TRANSPORT_MODE_PREFERRED: &str = "0x00000020";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_SECURITY_FLAG_TUNNEL_MODE_PREFERRED: &str = "0x00000040";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_SECURITY_FLAG_VALID: &str = "0x00000001";
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_TARGET_FLAG_HIDE_STATIC_TARGET: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_TARGET_FLAG_MERGE_TARGET_INFORMATION: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MAX_ISCSI_ALIAS_LEN: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MAX_ISCSI_DISCOVERY_DOMAIN_LEN: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MAX_ISCSI_HBANAME_LEN: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MAX_ISCSI_NAME_LEN: u32 = 223u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MAX_ISCSI_PORTAL_ADDRESS_LEN: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MAX_ISCSI_PORTAL_ALIAS_LEN: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MAX_ISCSI_PORTAL_NAME_LEN: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MAX_ISCSI_TEXT_ADDRESS_LEN: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MAX_RADIUS_ADDRESS_LEN: u32 = 41u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MINIPORT_DSM_NOTIFICATION_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MINIPORT_DSM_NOTIFICATION_VERSION_1: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MINIPORT_DSM_NOTIFY_FLAG_BEGIN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MINIPORT_DSM_NOTIFY_FLAG_END: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MINIPORT_DSM_PROFILE_CRASHDUMP_FILE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MINIPORT_DSM_PROFILE_HIBERNATION_FILE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MINIPORT_DSM_PROFILE_PAGE_FILE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MINIPORT_DSM_PROFILE_UNKNOWN: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MPIO_IOCTL_FLAG_INVOLVE_DSM: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MPIO_IOCTL_FLAG_USE_PATHID: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MPIO_IOCTL_FLAG_USE_SCSIADDRESS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_ADD_LBAS_PINNED_SET: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_FLUSH_NVCACHE: u32 = 20u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_NVCACHE_INFO: u32 = 236u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_NVCACHE_POWER_MODE_RETURN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_NVCACHE_POWER_MODE_SET: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_NVSEPARATED_FLUSH: u32 = 193u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_NVSEPARATED_INFO: u32 = 192u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_NVSEPARATED_WB_DISABLE: u32 = 194u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_NVSEPARATED_WB_REVERT_DEFAULT: u32 = 195u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_PASS_HINT_PAYLOAD: u32 = 224u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_QUERY_ASCENDER_STATUS: u32 = 208u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_QUERY_CACHE_MISS: u32 = 19u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_QUERY_HYBRID_DISK_STATUS: u32 = 209u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_QUERY_PINNED_SET: u32 = 18u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_REMOVE_LBAS_PINNED_SET: u32 = 17u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_FUNCTION_SPINDLE_STATUS: u32 = 229u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_ILLEGAL_REQUEST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_INPUT_DATA_OVERRUN: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_INPUT_DATA_UNDERRUN: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_INVALID_PARAMETER: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_OUTPUT_DATA_OVERRUN: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_OUTPUT_DATA_UNDERRUN: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NRB_SUCCESS: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NV_SEP_CACHE_PARAMETER_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NV_SEP_CACHE_PARAMETER_VERSION_1: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const SCSI_IOCTL_DATA_BIDIRECTIONAL: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const SCSI_IOCTL_DATA_IN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const SCSI_IOCTL_DATA_OUT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const SCSI_IOCTL_DATA_UNSPECIFIED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_DIAGNOSTIC_STATUS_BUFFER_TOO_SMALL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_DIAGNOSTIC_STATUS_INVALID_PARAMETER: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_DIAGNOSTIC_STATUS_INVALID_SIGNATURE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_DIAGNOSTIC_STATUS_INVALID_TARGET_TYPE: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_DIAGNOSTIC_STATUS_MORE_DATA: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_DIAGNOSTIC_STATUS_SUCCESS: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_DIAGNOSTIC_STATUS_UNSUPPORTED_VERSION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_FIRMWARE_ACTIVATE_STRUCTURE_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_FIRMWARE_DOWNLOAD_STRUCTURE_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_FIRMWARE_DOWNLOAD_STRUCTURE_VERSION_V2: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_FIRMWARE_INFO_INVALID_SLOT: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_FIRMWARE_INFO_STRUCTURE_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_FIRMWARE_INFO_STRUCTURE_VERSION_V2: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const STORAGE_FIRMWARE_SLOT_INFO_V2_REVISION_LENGTH: u32 = 16u32;
+pub const ScsiRawInterfaceGuid: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1408590601, data2: 46783, data3: 4560, data4: [148, 242, 0, 160, 201, 30, 251, 139] };
+pub const WmiScsiAddressGuid: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1408590607, data2: 46783, data3: 4560, data4: [148, 242, 0, 160, 201, 30, 251, 139] };
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub type IKE_AUTHENTICATION_METHOD = i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const IKE_AUTHENTICATION_PRESHARED_KEY_METHOD: IKE_AUTHENTICATION_METHOD = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub type ISCSI_AUTH_TYPES = i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_NO_AUTH_TYPE: ISCSI_AUTH_TYPES = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_CHAP_AUTH_TYPE: ISCSI_AUTH_TYPES = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_MUTUAL_CHAP_AUTH_TYPE: ISCSI_AUTH_TYPES = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub type ISCSI_DIGEST_TYPES = i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_DIGEST_TYPE_NONE: ISCSI_DIGEST_TYPES = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_DIGEST_TYPE_CRC32C: ISCSI_DIGEST_TYPES = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub type MP_STORAGE_DIAGNOSTIC_LEVEL = i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MpStorageDiagnosticLevelDefault: MP_STORAGE_DIAGNOSTIC_LEVEL = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MpStorageDiagnosticLevelMax: MP_STORAGE_DIAGNOSTIC_LEVEL = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub type MP_STORAGE_DIAGNOSTIC_TARGET_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MpStorageDiagnosticTargetTypeUndefined: MP_STORAGE_DIAGNOSTIC_TARGET_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MpStorageDiagnosticTargetTypeMiniport: MP_STORAGE_DIAGNOSTIC_TARGET_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MpStorageDiagnosticTargetTypeHbaFirmware: MP_STORAGE_DIAGNOSTIC_TARGET_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const MpStorageDiagnosticTargetTypeMax: MP_STORAGE_DIAGNOSTIC_TARGET_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub type NVCACHE_STATUS = i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NvCacheStatusUnknown: NVCACHE_STATUS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NvCacheStatusDisabling: NVCACHE_STATUS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NvCacheStatusDisabled: NVCACHE_STATUS = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NvCacheStatusEnabled: NVCACHE_STATUS = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub type NVCACHE_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NvCacheTypeUnknown: NVCACHE_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NvCacheTypeNone: NVCACHE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NvCacheTypeWriteBack: NVCACHE_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NvCacheTypeWriteThrough: NVCACHE_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub type NV_SEP_WRITE_CACHE_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NVSEPWriteCacheTypeUnknown: NV_SEP_WRITE_CACHE_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NVSEPWriteCacheTypeNone: NV_SEP_WRITE_CACHE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NVSEPWriteCacheTypeWriteBack: NV_SEP_WRITE_CACHE_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const NVSEPWriteCacheTypeWriteThrough: NV_SEP_WRITE_CACHE_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub type TARGETPROTOCOLTYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ISCSI_TCP_PROTOCOL_TYPE: TARGETPROTOCOLTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub type TARGET_INFORMATION_CLASS = i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const ProtocolType: TARGET_INFORMATION_CLASS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const TargetAlias: TARGET_INFORMATION_CLASS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const DiscoveryMechanisms: TARGET_INFORMATION_CLASS = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const PortalGroups: TARGET_INFORMATION_CLASS = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const PersistentTargetMappings: TARGET_INFORMATION_CLASS = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const InitiatorName: TARGET_INFORMATION_CLASS = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const TargetFlags: TARGET_INFORMATION_CLASS = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub const LoginOptions: TARGET_INFORMATION_CLASS = 7i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct ATA_PASS_THROUGH_DIRECT {
@@ -290,8 +724,6 @@ impl ::core::clone::Clone for ATA_PASS_THROUGH_EX32 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const DD_SCSI_DEVICE_NAME: &str = "\\Device\\ScsiPort";
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct DSM_NOTIFICATION_REQUEST_BLOCK {
@@ -336,16 +768,6 @@ impl ::core::clone::Clone for DUMP_DRIVER_EX {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const DUMP_DRIVER_NAME_LENGTH: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const DUMP_EX_FLAG_DRIVER_FULL_PATH_SUPPORT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const DUMP_EX_FLAG_RESUME_SUPPORT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const DUMP_EX_FLAG_SUPPORT_64BITMEMORY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const DUMP_EX_FLAG_SUPPORT_DD_TELEMETRY: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -410,22 +832,6 @@ impl ::core::clone::Clone for DUMP_POINTERS_VERSION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const DUMP_POINTERS_VERSION_1: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const DUMP_POINTERS_VERSION_2: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const DUMP_POINTERS_VERSION_3: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const DUMP_POINTERS_VERSION_4: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FILE_DEVICE_SCSI: u32 = 27u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_FUNCTION_ACTIVATE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_FUNCTION_DOWNLOAD: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_FUNCTION_GET_INFO: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct FIRMWARE_REQUEST_BLOCK {
@@ -442,54 +848,6 @@ impl ::core::clone::Clone for FIRMWARE_REQUEST_BLOCK {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_REQUEST_BLOCK_STRUCTURE_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_REQUEST_FLAG_CONTROLLER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_REQUEST_FLAG_FIRST_SEGMENT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_REQUEST_FLAG_LAST_SEGMENT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_REQUEST_FLAG_SWITCH_TO_EXISTING_FIRMWARE: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_COMMAND_ABORT: u32 = 133u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_CONTROLLER_ERROR: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_DEVICE_ERROR: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_END_OF_MEDIA: u32 = 134u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_ERROR: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_ID_NOT_FOUND: u32 = 131u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_ILLEGAL_LENGTH: u32 = 135u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_ILLEGAL_REQUEST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_INPUT_BUFFER_TOO_BIG: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_INTERFACE_CRC_ERROR: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_INVALID_IMAGE: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_INVALID_PARAMETER: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_INVALID_SLOT: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_MEDIA_CHANGE: u32 = 130u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_MEDIA_CHANGE_REQUEST: u32 = 132u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_OUTPUT_BUFFER_TOO_SMALL: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_POWER_CYCLE_REQUIRED: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_SUCCESS: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const FIRMWARE_STATUS_UNCORRECTABLE_DATA_ERROR: u32 = 129u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct HYBRID_DEMOTE_BY_SIZE {
@@ -521,16 +879,6 @@ impl ::core::clone::Clone for HYBRID_DIRTY_THRESHOLDS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const HYBRID_FUNCTION_DEMOTE_BY_SIZE: u32 = 19u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const HYBRID_FUNCTION_DISABLE_CACHING_MEDIUM: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const HYBRID_FUNCTION_ENABLE_CACHING_MEDIUM: u32 = 17u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const HYBRID_FUNCTION_GET_INFO: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const HYBRID_FUNCTION_SET_DIRTY_THRESHOLD: u32 = 18u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -622,20 +970,6 @@ impl ::core::clone::Clone for HYBRID_REQUEST_BLOCK {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const HYBRID_REQUEST_BLOCK_STRUCTURE_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const HYBRID_REQUEST_INFO_STRUCTURE_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const HYBRID_STATUS_ENABLE_REFCOUNT_HOLD: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const HYBRID_STATUS_ILLEGAL_REQUEST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const HYBRID_STATUS_INVALID_PARAMETER: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const HYBRID_STATUS_OUTPUT_BUFFER_TOO_SMALL: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const HYBRID_STATUS_SUCCESS: u32 = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct IDE_IO_CONTROL {
@@ -652,14 +986,6 @@ impl ::core::clone::Clone for IDE_IO_CONTROL {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ID_FQDN: &str = "2";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ID_IPV4_ADDR: &str = "1";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ID_IPV6_ADDR: &str = "5";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ID_USER_FQDN: &str = "3";
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct IKE_AUTHENTICATION_INFORMATION {
@@ -683,10 +1009,6 @@ impl ::core::clone::Clone for IKE_AUTHENTICATION_INFORMATION_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub type IKE_AUTHENTICATION_METHOD = i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IKE_AUTHENTICATION_PRESHARED_KEY_METHOD: IKE_AUTHENTICATION_METHOD = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct IKE_AUTHENTICATION_PRESHARED_KEY {
@@ -703,70 +1025,6 @@ impl ::core::clone::Clone for IKE_AUTHENTICATION_PRESHARED_KEY {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_ATA_MINIPORT: u32 = 315444u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_ATA_PASS_THROUGH: u32 = 315436u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_ATA_PASS_THROUGH_DIRECT: u32 = 315440u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_IDE_PASS_THROUGH: u32 = 315432u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MINIPORT_PROCESS_SERVICE_IRP: u32 = 315448u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MINIPORT_SIGNATURE_DSM_GENERAL: &str = "MPDSMGEN";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MINIPORT_SIGNATURE_DSM_NOTIFICATION: &str = "MPDSM   ";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MINIPORT_SIGNATURE_ENDURANCE_INFO: &str = "ENDURINF";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MINIPORT_SIGNATURE_FIRMWARE: &str = "FIRMWARE";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MINIPORT_SIGNATURE_HYBRDISK: &str = "HYBRDISK";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MINIPORT_SIGNATURE_QUERY_PHYSICAL_TOPOLOGY: &str = "TOPOLOGY";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MINIPORT_SIGNATURE_QUERY_PROTOCOL: &str = "PROTOCOL";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MINIPORT_SIGNATURE_QUERY_TEMPERATURE: &str = "TEMPERAT";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MINIPORT_SIGNATURE_SCSIDISK: &str = "SCSIDISK";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MINIPORT_SIGNATURE_SET_PROTOCOL: &str = "SETPROTO";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MINIPORT_SIGNATURE_SET_TEMPERATURE_THRESHOLD: &str = "SETTEMPT";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MPIO_PASS_THROUGH_PATH: u32 = 315452u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MPIO_PASS_THROUGH_PATH_DIRECT: u32 = 315456u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MPIO_PASS_THROUGH_PATH_DIRECT_EX: u32 = 315472u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_MPIO_PASS_THROUGH_PATH_EX: u32 = 315468u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_SCSI_BASE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_SCSI_FREE_DUMP_POINTERS: u32 = 266276u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_SCSI_GET_ADDRESS: u32 = 266264u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_SCSI_GET_CAPABILITIES: u32 = 266256u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_SCSI_GET_DUMP_POINTERS: u32 = 266272u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_SCSI_GET_INQUIRY_DATA: u32 = 266252u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_SCSI_MINIPORT: u32 = 315400u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_SCSI_PASS_THROUGH: u32 = 315396u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_SCSI_PASS_THROUGH_DIRECT: u32 = 315412u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_SCSI_PASS_THROUGH_DIRECT_EX: u32 = 315464u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_SCSI_PASS_THROUGH_EX: u32 = 315460u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const IOCTL_SCSI_RESCAN_BUS: u32 = 266268u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -788,14 +1046,6 @@ impl ::core::clone::Clone for IO_SCSI_CAPABILITIES {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub type ISCSI_AUTH_TYPES = i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_NO_AUTH_TYPE: ISCSI_AUTH_TYPES = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_CHAP_AUTH_TYPE: ISCSI_AUTH_TYPES = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_MUTUAL_CHAP_AUTH_TYPE: ISCSI_AUTH_TYPES = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct ISCSI_CONNECTION_INFOA {
@@ -889,24 +1139,6 @@ impl ::core::clone::Clone for ISCSI_DEVICE_ON_SESSIONW {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub type ISCSI_DIGEST_TYPES = i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_DIGEST_TYPE_NONE: ISCSI_DIGEST_TYPES = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_DIGEST_TYPE_CRC32C: ISCSI_DIGEST_TYPES = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_FLAG_ALLOW_PORTAL_HOPPING: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_FLAG_MULTIPATH_ENABLED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_FLAG_REQUIRE_IPSEC: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_FLAG_RESERVED1: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_FLAG_USE_RADIUS_RESPONSE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_FLAG_USE_RADIUS_VERIFICATION: u32 = 32u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct ISCSI_LOGIN_OPTIONS {
@@ -930,38 +1162,6 @@ impl ::core::clone::Clone for ISCSI_LOGIN_OPTIONS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_OPTIONS_AUTH_TYPE: &str = "0x00000080";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_OPTIONS_DATA_DIGEST: &str = "0x00000002";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_OPTIONS_DEFAULT_TIME_2_RETAIN: &str = "0x00000010";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_OPTIONS_DEFAULT_TIME_2_WAIT: &str = "0x00000008";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_OPTIONS_HEADER_DIGEST: &str = "0x00000001";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_OPTIONS_MAXIMUM_CONNECTIONS: &str = "0x00000004";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_OPTIONS_PASSWORD: &str = "0x00000040";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_OPTIONS_USERNAME: &str = "0x00000020";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_LOGIN_OPTIONS_VERSION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_SECURITY_FLAG_AGGRESSIVE_MODE_ENABLED: &str = "0x00000008";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_SECURITY_FLAG_IKE_IPSEC_ENABLED: &str = "0x00000002";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_SECURITY_FLAG_MAIN_MODE_ENABLED: &str = "0x00000004";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_SECURITY_FLAG_PFS_ENABLED: &str = "0x00000010";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_SECURITY_FLAG_TRANSPORT_MODE_PREFERRED: &str = "0x00000020";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_SECURITY_FLAG_TUNNEL_MODE_PREFERRED: &str = "0x00000040";
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_SECURITY_FLAG_VALID: &str = "0x00000001";
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct ISCSI_SESSION_INFOA {
@@ -1024,10 +1224,6 @@ impl ::core::clone::Clone for ISCSI_SESSION_INFO_EX {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_TARGET_FLAG_HIDE_STATIC_TARGET: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_TARGET_FLAG_MERGE_TARGET_INFORMATION: u32 = 4u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1218,46 +1414,6 @@ impl ::core::clone::Clone for ISCSI_VERSION_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MAX_ISCSI_ALIAS_LEN: u32 = 255u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MAX_ISCSI_DISCOVERY_DOMAIN_LEN: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MAX_ISCSI_HBANAME_LEN: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MAX_ISCSI_NAME_LEN: u32 = 223u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MAX_ISCSI_PORTAL_ADDRESS_LEN: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MAX_ISCSI_PORTAL_ALIAS_LEN: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MAX_ISCSI_PORTAL_NAME_LEN: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MAX_ISCSI_TEXT_ADDRESS_LEN: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MAX_RADIUS_ADDRESS_LEN: u32 = 41u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MINIPORT_DSM_NOTIFICATION_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MINIPORT_DSM_NOTIFICATION_VERSION_1: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MINIPORT_DSM_NOTIFY_FLAG_BEGIN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MINIPORT_DSM_NOTIFY_FLAG_END: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MINIPORT_DSM_PROFILE_CRASHDUMP_FILE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MINIPORT_DSM_PROFILE_HIBERNATION_FILE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MINIPORT_DSM_PROFILE_PAGE_FILE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MINIPORT_DSM_PROFILE_UNKNOWN: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MPIO_IOCTL_FLAG_INVOLVE_DSM: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MPIO_IOCTL_FLAG_USE_PATHID: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MPIO_IOCTL_FLAG_USE_SCSIADDRESS: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct MPIO_PASS_THROUGH_PATH {
@@ -1410,68 +1566,6 @@ impl ::core::clone::Clone for MP_DEVICE_DATA_SET_RANGE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub type MP_STORAGE_DIAGNOSTIC_LEVEL = i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MpStorageDiagnosticLevelDefault: MP_STORAGE_DIAGNOSTIC_LEVEL = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MpStorageDiagnosticLevelMax: MP_STORAGE_DIAGNOSTIC_LEVEL = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub type MP_STORAGE_DIAGNOSTIC_TARGET_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MpStorageDiagnosticTargetTypeUndefined: MP_STORAGE_DIAGNOSTIC_TARGET_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MpStorageDiagnosticTargetTypeMiniport: MP_STORAGE_DIAGNOSTIC_TARGET_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MpStorageDiagnosticTargetTypeHbaFirmware: MP_STORAGE_DIAGNOSTIC_TARGET_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const MpStorageDiagnosticTargetTypeMax: MP_STORAGE_DIAGNOSTIC_TARGET_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_ADD_LBAS_PINNED_SET: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_FLUSH_NVCACHE: u32 = 20u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_NVCACHE_INFO: u32 = 236u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_NVCACHE_POWER_MODE_RETURN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_NVCACHE_POWER_MODE_SET: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_NVSEPARATED_FLUSH: u32 = 193u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_NVSEPARATED_INFO: u32 = 192u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_NVSEPARATED_WB_DISABLE: u32 = 194u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_NVSEPARATED_WB_REVERT_DEFAULT: u32 = 195u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_PASS_HINT_PAYLOAD: u32 = 224u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_QUERY_ASCENDER_STATUS: u32 = 208u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_QUERY_CACHE_MISS: u32 = 19u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_QUERY_HYBRID_DISK_STATUS: u32 = 209u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_QUERY_PINNED_SET: u32 = 18u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_REMOVE_LBAS_PINNED_SET: u32 = 17u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_FUNCTION_SPINDLE_STATUS: u32 = 229u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_ILLEGAL_REQUEST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_INPUT_DATA_OVERRUN: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_INPUT_DATA_UNDERRUN: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_INVALID_PARAMETER: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_OUTPUT_DATA_OVERRUN: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_OUTPUT_DATA_UNDERRUN: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NRB_SUCCESS: u32 = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct NTSCSI_UNICODE_STRING {
@@ -1544,26 +1638,6 @@ impl ::core::clone::Clone for NVCACHE_REQUEST_BLOCK {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub type NVCACHE_STATUS = i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NvCacheStatusUnknown: NVCACHE_STATUS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NvCacheStatusDisabling: NVCACHE_STATUS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NvCacheStatusDisabled: NVCACHE_STATUS = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NvCacheStatusEnabled: NVCACHE_STATUS = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub type NVCACHE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NvCacheTypeUnknown: NVCACHE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NvCacheTypeNone: NVCACHE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NvCacheTypeWriteBack: NVCACHE_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NvCacheTypeWriteThrough: NVCACHE_TYPE = 3i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct NV_FEATURE_PARAMETER {
@@ -1623,22 +1697,6 @@ impl ::core::clone::Clone for NV_SEP_CACHE_PARAMETER_0_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NV_SEP_CACHE_PARAMETER_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NV_SEP_CACHE_PARAMETER_VERSION_1: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub type NV_SEP_WRITE_CACHE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NVSEPWriteCacheTypeUnknown: NV_SEP_WRITE_CACHE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NVSEPWriteCacheTypeNone: NV_SEP_WRITE_CACHE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NVSEPWriteCacheTypeWriteBack: NV_SEP_WRITE_CACHE_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const NVSEPWriteCacheTypeWriteThrough: NV_SEP_WRITE_CACHE_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub type PDUMP_DEVICE_POWERON_ROUTINE = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void) -> i32>;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1741,14 +1799,6 @@ impl ::core::clone::Clone for SCSI_INQUIRY_DATA {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const SCSI_IOCTL_DATA_BIDIRECTIONAL: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const SCSI_IOCTL_DATA_IN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const SCSI_IOCTL_DATA_OUT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const SCSI_IOCTL_DATA_UNSPECIFIED: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct SCSI_LUN_LIST {
@@ -2003,20 +2053,6 @@ impl ::core::clone::Clone for STORAGE_DIAGNOSTIC_MP_REQUEST {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_DIAGNOSTIC_STATUS_BUFFER_TOO_SMALL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_DIAGNOSTIC_STATUS_INVALID_PARAMETER: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_DIAGNOSTIC_STATUS_INVALID_SIGNATURE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_DIAGNOSTIC_STATUS_INVALID_TARGET_TYPE: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_DIAGNOSTIC_STATUS_MORE_DATA: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_DIAGNOSTIC_STATUS_SUCCESS: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_DIAGNOSTIC_STATUS_UNSUPPORTED_VERSION: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct STORAGE_ENDURANCE_DATA_DESCRIPTOR {
@@ -2071,8 +2107,6 @@ impl ::core::clone::Clone for STORAGE_FIRMWARE_ACTIVATE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_FIRMWARE_ACTIVATE_STRUCTURE_VERSION: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct STORAGE_FIRMWARE_DOWNLOAD {
@@ -2088,10 +2122,6 @@ impl ::core::clone::Clone for STORAGE_FIRMWARE_DOWNLOAD {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_FIRMWARE_DOWNLOAD_STRUCTURE_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_FIRMWARE_DOWNLOAD_STRUCTURE_VERSION_V2: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
 pub struct STORAGE_FIRMWARE_DOWNLOAD_V2 {
@@ -2131,12 +2161,6 @@ impl ::core::clone::Clone for STORAGE_FIRMWARE_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_FIRMWARE_INFO_INVALID_SLOT: u32 = 255u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_FIRMWARE_INFO_STRUCTURE_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_FIRMWARE_INFO_STRUCTURE_VERSION_V2: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -2210,31 +2234,7 @@ impl ::core::clone::Clone for STORAGE_FIRMWARE_SLOT_INFO_V2 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const STORAGE_FIRMWARE_SLOT_INFO_V2_REVISION_LENGTH: u32 = 16u32;
-pub const ScsiRawInterfaceGuid: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1408590601, data2: 46783, data3: 4560, data4: [148, 242, 0, 160, 201, 30, 251, 139] };
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub type TARGETPROTOCOLTYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ISCSI_TCP_PROTOCOL_TYPE: TARGETPROTOCOLTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub type TARGET_INFORMATION_CLASS = i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const ProtocolType: TARGET_INFORMATION_CLASS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const TargetAlias: TARGET_INFORMATION_CLASS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const DiscoveryMechanisms: TARGET_INFORMATION_CLASS = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const PortalGroups: TARGET_INFORMATION_CLASS = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const PersistentTargetMappings: TARGET_INFORMATION_CLASS = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const InitiatorName: TARGET_INFORMATION_CLASS = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const TargetFlags: TARGET_INFORMATION_CLASS = 6i32;
-#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
-pub const LoginOptions: TARGET_INFORMATION_CLASS = 7i32;
-pub const WmiScsiAddressGuid: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1408590607, data2: 46783, data3: 4560, data4: [148, 242, 0, 160, 201, 30, 251, 139] };
 #[repr(C)]
 pub struct _ADAPTER_OBJECT(pub u8);
+#[doc = "*Required features: `\"Win32_Storage_IscsiDisc\"`*"]
+pub type PDUMP_DEVICE_POWERON_ROUTINE = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void) -> i32>;

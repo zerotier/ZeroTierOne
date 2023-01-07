@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
@@ -50,10 +50,10 @@ extern "system" {
     pub fn ImmEnumRegisterWordW(param0: super::super::TextServices::HKL, param1: REGISTERWORDENUMPROCW, lpszreading: ::windows_sys::core::PCWSTR, param3: u32, lpszregister: ::windows_sys::core::PCWSTR, param5: *mut ::core::ffi::c_void) -> u32;
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`, `\"Win32_UI_TextServices\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_UI_TextServices"))]
-    pub fn ImmEscapeA(param0: super::super::TextServices::HKL, param1: super::super::super::Globalization::HIMC, param2: u32, param3: *mut ::core::ffi::c_void) -> super::super::super::Foundation::LRESULT;
+    pub fn ImmEscapeA(param0: super::super::TextServices::HKL, param1: super::super::super::Globalization::HIMC, param2: IME_ESCAPE, param3: *mut ::core::ffi::c_void) -> super::super::super::Foundation::LRESULT;
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`, `\"Win32_UI_TextServices\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_UI_TextServices"))]
-    pub fn ImmEscapeW(param0: super::super::TextServices::HKL, param1: super::super::super::Globalization::HIMC, param2: u32, param3: *mut ::core::ffi::c_void) -> super::super::super::Foundation::LRESULT;
+    pub fn ImmEscapeW(param0: super::super::TextServices::HKL, param1: super::super::super::Globalization::HIMC, param2: IME_ESCAPE, param3: *mut ::core::ffi::c_void) -> super::super::super::Foundation::LRESULT;
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
     pub fn ImmGenerateMessage(param0: super::super::super::Globalization::HIMC) -> super::super::super::Foundation::BOOL;
@@ -80,10 +80,10 @@ extern "system" {
     pub fn ImmGetCompositionFontW(param0: super::super::super::Globalization::HIMC, lplf: *mut super::super::super::Graphics::Gdi::LOGFONTW) -> super::super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Globalization\"`*"]
     #[cfg(feature = "Win32_Globalization")]
-    pub fn ImmGetCompositionStringA(param0: super::super::super::Globalization::HIMC, param1: u32, lpbuf: *mut ::core::ffi::c_void, dwbuflen: u32) -> i32;
+    pub fn ImmGetCompositionStringA(param0: super::super::super::Globalization::HIMC, param1: IME_COMPOSITION_STRING, lpbuf: *mut ::core::ffi::c_void, dwbuflen: u32) -> i32;
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Globalization\"`*"]
     #[cfg(feature = "Win32_Globalization")]
-    pub fn ImmGetCompositionStringW(param0: super::super::super::Globalization::HIMC, param1: u32, lpbuf: *mut ::core::ffi::c_void, dwbuflen: u32) -> i32;
+    pub fn ImmGetCompositionStringW(param0: super::super::super::Globalization::HIMC, param1: IME_COMPOSITION_STRING, lpbuf: *mut ::core::ffi::c_void, dwbuflen: u32) -> i32;
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
     pub fn ImmGetCompositionWindow(param0: super::super::super::Globalization::HIMC, lpcompform: *mut COMPOSITIONFORM) -> super::super::super::Foundation::BOOL;
@@ -98,7 +98,7 @@ extern "system" {
     pub fn ImmGetConversionListW(param0: super::super::TextServices::HKL, param1: super::super::super::Globalization::HIMC, lpsrc: ::windows_sys::core::PCWSTR, lpdst: *mut CANDIDATELIST, dwbuflen: u32, uflag: GET_CONVERSION_LIST_FLAG) -> u32;
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
-    pub fn ImmGetConversionStatus(param0: super::super::super::Globalization::HIMC, lpfdwconversion: *mut u32, lpfdwsentence: *mut u32) -> super::super::super::Foundation::BOOL;
+    pub fn ImmGetConversionStatus(param0: super::super::super::Globalization::HIMC, lpfdwconversion: *mut IME_CONVERSION_MODE, lpfdwsentence: *mut IME_SENTENCE_MODE) -> super::super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn ImmGetDefaultIMEWnd(param0: super::super::super::Foundation::HWND) -> super::super::super::Foundation::HWND;
@@ -218,7 +218,7 @@ extern "system" {
     pub fn ImmSetCompositionWindow(param0: super::super::super::Globalization::HIMC, lpcompform: *const COMPOSITIONFORM) -> super::super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
-    pub fn ImmSetConversionStatus(param0: super::super::super::Globalization::HIMC, param1: u32, param2: u32) -> super::super::super::Foundation::BOOL;
+    pub fn ImmSetConversionStatus(param0: super::super::super::Globalization::HIMC, param1: IME_CONVERSION_MODE, param2: IME_SENTENCE_MODE) -> super::super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_UI_TextServices\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_TextServices"))]
     pub fn ImmSetHotKey(param0: u32, param1: u32, param2: u32, param3: super::super::TextServices::HKL) -> super::super::super::Foundation::BOOL;
@@ -233,7 +233,7 @@ extern "system" {
     pub fn ImmShowSoftKeyboard(param0: super::super::super::Foundation::HWND, param1: i32) -> super::super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn ImmSimulateHotKey(param0: super::super::super::Foundation::HWND, param1: u32) -> super::super::super::Foundation::BOOL;
+    pub fn ImmSimulateHotKey(param0: super::super::super::Foundation::HWND, param1: IME_HOTKEY_IDENTIFIER) -> super::super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
     pub fn ImmUnlockIMC(param0: super::super::super::Globalization::HIMC) -> super::super::super::Foundation::BOOL;
@@ -247,32 +247,23 @@ extern "system" {
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_TextServices"))]
     pub fn ImmUnregisterWordW(param0: super::super::TextServices::HKL, lpszreading: ::windows_sys::core::PCWSTR, param2: u32, lpszunregister: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL;
 }
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct APPLETIDLIST {
-    pub count: i32,
-    pub pIIDList: *mut ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for APPLETIDLIST {}
-impl ::core::clone::Clone for APPLETIDLIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct APPLYCANDEXPARAM {
-    pub dwSize: u32,
-    pub lpwstrDisplay: ::windows_sys::core::PWSTR,
-    pub lpwstrReading: ::windows_sys::core::PWSTR,
-    pub dwReserved: u32,
-}
-impl ::core::marker::Copy for APPLYCANDEXPARAM {}
-impl ::core::clone::Clone for APPLYCANDEXPARAM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub type IActiveIME = *mut ::core::ffi::c_void;
+pub type IActiveIME2 = *mut ::core::ffi::c_void;
+pub type IActiveIMMApp = *mut ::core::ffi::c_void;
+pub type IActiveIMMIME = *mut ::core::ffi::c_void;
+pub type IActiveIMMMessagePumpOwner = *mut ::core::ffi::c_void;
+pub type IActiveIMMRegistrar = *mut ::core::ffi::c_void;
+pub type IEnumInputContext = *mut ::core::ffi::c_void;
+pub type IEnumRegisterWordA = *mut ::core::ffi::c_void;
+pub type IEnumRegisterWordW = *mut ::core::ffi::c_void;
+pub type IFEClassFactory = *mut ::core::ffi::c_void;
+pub type IFECommon = *mut ::core::ffi::c_void;
+pub type IFEDictionary = *mut ::core::ffi::c_void;
+pub type IFELanguage = *mut ::core::ffi::c_void;
+pub type IImePad = *mut ::core::ffi::c_void;
+pub type IImePadApplet = *mut ::core::ffi::c_void;
+pub type IImePlugInDictDictionaryList = *mut ::core::ffi::c_void;
+pub type IImeSpecifyApplets = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const ATTR_CONVERTED: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -285,55 +276,6 @@ pub const ATTR_INPUT_ERROR: u32 = 4u32;
 pub const ATTR_TARGET_CONVERTED: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const ATTR_TARGET_NOTCONVERTED: u32 = 3u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CANDIDATEFORM {
-    pub dwIndex: u32,
-    pub dwStyle: u32,
-    pub ptCurrentPos: super::super::super::Foundation::POINT,
-    pub rcArea: super::super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CANDIDATEFORM {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CANDIDATEFORM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct CANDIDATEINFO {
-    pub dwSize: u32,
-    pub dwCount: u32,
-    pub dwOffset: [u32; 32],
-    pub dwPrivateSize: u32,
-    pub dwPrivateOffset: u32,
-}
-impl ::core::marker::Copy for CANDIDATEINFO {}
-impl ::core::clone::Clone for CANDIDATEINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct CANDIDATELIST {
-    pub dwSize: u32,
-    pub dwStyle: u32,
-    pub dwCount: u32,
-    pub dwSelection: u32,
-    pub dwPageStart: u32,
-    pub dwPageSize: u32,
-    pub dwOffset: [u32; 1],
-}
-impl ::core::marker::Copy for CANDIDATELIST {}
-impl ::core::clone::Clone for CANDIDATELIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub const CATID_MSIME_IImePadApplet: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1969670865, data2: 20169, data3: 17528, data4: [159, 233, 142, 215, 102, 97, 158, 223] };
 pub const CATID_MSIME_IImePadApplet1000: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3766608342, data2: 9097, data3: 17355, data4: [182, 111, 96, 159, 130, 61, 159, 156] };
 pub const CATID_MSIME_IImePadApplet1200: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2759833084, data2: 32021, data3: 16931, data4: [167, 137, 183, 129, 191, 154, 230, 103] };
@@ -363,57 +305,6 @@ pub const CHARINFO_FEID_MASK: u32 = 15728640u32;
 pub const CLSID_ImePlugInDictDictionaryList_CHS: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2079330971, data2: 23535, data3: 19940, data4: [155, 11, 94, 219, 102, 172, 47, 166] };
 pub const CLSID_ImePlugInDictDictionaryList_JPN: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1340241771, data2: 45305, data3: 17302, data4: [181, 252, 233, 212, 207, 30, 193, 149] };
 pub const CLSID_VERSION_DEPENDENT_MSIME_JAPANESE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1787888286, data2: 43593, data3: 18203, data4: [174, 231, 125, 51, 39, 133, 102, 13] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct COMPOSITIONFORM {
-    pub dwStyle: u32,
-    pub ptCurrentPos: super::super::super::Foundation::POINT,
-    pub rcArea: super::super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for COMPOSITIONFORM {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for COMPOSITIONFORM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct COMPOSITIONSTRING {
-    pub dwSize: u32,
-    pub dwCompReadAttrLen: u32,
-    pub dwCompReadAttrOffset: u32,
-    pub dwCompReadClauseLen: u32,
-    pub dwCompReadClauseOffset: u32,
-    pub dwCompReadStrLen: u32,
-    pub dwCompReadStrOffset: u32,
-    pub dwCompAttrLen: u32,
-    pub dwCompAttrOffset: u32,
-    pub dwCompClauseLen: u32,
-    pub dwCompClauseOffset: u32,
-    pub dwCompStrLen: u32,
-    pub dwCompStrOffset: u32,
-    pub dwCursorPos: u32,
-    pub dwDeltaStart: u32,
-    pub dwResultReadClauseLen: u32,
-    pub dwResultReadClauseOffset: u32,
-    pub dwResultReadStrLen: u32,
-    pub dwResultReadStrOffset: u32,
-    pub dwResultClauseLen: u32,
-    pub dwResultClauseOffset: u32,
-    pub dwResultStrLen: u32,
-    pub dwResultStrOffset: u32,
-    pub dwPrivateSize: u32,
-    pub dwPrivateOffset: u32,
-}
-impl ::core::marker::Copy for COMPOSITIONSTRING {}
-impl ::core::clone::Clone for COMPOSITIONSTRING {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const CS_INSERTCHAR: u32 = 8192u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -539,48 +430,6 @@ pub const FID_RECONVERT_VERSION: u32 = 268435456u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const GCSEX_CANCELRECONVERT: u32 = 268435456u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCS_COMPATTR: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCS_COMPCLAUSE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCS_COMPREADATTR: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCS_COMPREADCLAUSE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCS_COMPREADSTR: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCS_COMPSTR: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCS_CURSORPOS: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCS_DELTASTART: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCS_RESULTCLAUSE: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCS_RESULTREADCLAUSE: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCS_RESULTREADSTR: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCS_RESULTSTR: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub type GET_CONVERSION_LIST_FLAG = u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCL_CONVERSION: GET_CONVERSION_LIST_FLAG = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCL_REVERSECONVERSION: GET_CONVERSION_LIST_FLAG = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GCL_REVERSE_LENGTH: GET_CONVERSION_LIST_FLAG = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub type GET_GUIDE_LINE_TYPE = u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GGL_LEVEL: GET_GUIDE_LINE_TYPE = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GGL_INDEX: GET_GUIDE_LINE_TYPE = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GGL_STRING: GET_GUIDE_LINE_TYPE = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const GGL_PRIVATE: GET_GUIDE_LINE_TYPE = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const GL_ID_CANNOTSAVE: u32 = 17u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const GL_ID_CHOOSECANDIDATE: u32 = 40u32;
@@ -622,42 +471,14 @@ pub const GL_LEVEL_INFORMATION: u32 = 4u32;
 pub const GL_LEVEL_NOGUIDELINE: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const GL_LEVEL_WARNING: u32 = 3u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct GUIDELINE {
-    pub dwSize: u32,
-    pub dwLevel: u32,
-    pub dwIndex: u32,
-    pub dwStrLen: u32,
-    pub dwStrOffset: u32,
-    pub dwPrivateSize: u32,
-    pub dwPrivateOffset: u32,
-}
-impl ::core::marker::Copy for GUIDELINE {}
-impl ::core::clone::Clone for GUIDELINE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IACE_CHILDREN: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IACE_DEFAULT: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IACE_IGNORENOCONTEXT: u32 = 32u32;
-pub type IActiveIME = *mut ::core::ffi::c_void;
-pub type IActiveIME2 = *mut ::core::ffi::c_void;
-pub type IActiveIMMApp = *mut ::core::ffi::c_void;
-pub type IActiveIMMIME = *mut ::core::ffi::c_void;
-pub type IActiveIMMMessagePumpOwner = *mut ::core::ffi::c_void;
-pub type IActiveIMMRegistrar = *mut ::core::ffi::c_void;
-pub type IEnumInputContext = *mut ::core::ffi::c_void;
-pub type IEnumRegisterWordA = *mut ::core::ffi::c_void;
-pub type IEnumRegisterWordW = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IFEC_S_ALREADY_DEFAULT: ::windows_sys::core::HRESULT = 291840i32;
-pub type IFEClassFactory = *mut ::core::ffi::c_void;
-pub type IFECommon = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IFED_E_INVALID_FORMAT: ::windows_sys::core::HRESULT = -2147192063i32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -770,8 +591,6 @@ pub const IFED_TYPE_NONE: u32 = 0u32;
 pub const IFED_TYPE_REVERSE: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IFED_TYPE_SPEECH: u32 = 4u32;
-pub type IFEDictionary = *mut ::core::ffi::c_void;
-pub type IFELanguage = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IGIMIF_RIGHTMENU: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -788,13 +607,6 @@ pub const IGIMII_OTHER: u32 = 32u32;
 pub const IGIMII_SMODE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IGIMII_TOOLS: u32 = 8u32;
-pub type IImePad = *mut ::core::ffi::c_void;
-pub type IImePadApplet = *mut ::core::ffi::c_void;
-pub type IImePlugInDictDictionaryList = *mut ::core::ffi::c_void;
-pub type IImeSpecifyApplets = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
-pub type IMCENUMPROC = ::core::option::Option<unsafe extern "system" fn(param0: super::super::super::Globalization::HIMC, param1: super::super::super::Foundation::LPARAM) -> super::super::super::Foundation::BOOL>;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IMC_CLOSESTATUSWINDOW: u32 = 33u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -835,127 +647,6 @@ pub const IMC_SETSOFTKBDPOS: u32 = 20u32;
 pub const IMC_SETSOFTKBDSUBTYPE: u32 = 22u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IMC_SETSTATUSWINDOWPOS: u32 = 16u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub struct IMEAPPLETCFG {
-    pub dwConfig: u32,
-    pub wchTitle: [u16; 64],
-    pub wchTitleFontFace: [u16; 32],
-    pub dwCharSet: u32,
-    pub iCategory: i32,
-    pub hIcon: super::super::WindowsAndMessaging::HICON,
-    pub langID: u16,
-    pub dummy: u16,
-    pub lReserved1: super::super::super::Foundation::LPARAM,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for IMEAPPLETCFG {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for IMEAPPLETCFG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct IMEAPPLETUI {
-    pub hwnd: super::super::super::Foundation::HWND,
-    pub dwStyle: u32,
-    pub width: i32,
-    pub height: i32,
-    pub minWidth: i32,
-    pub minHeight: i32,
-    pub maxWidth: i32,
-    pub maxHeight: i32,
-    pub lReserved1: super::super::super::Foundation::LPARAM,
-    pub lReserved2: super::super::super::Foundation::LPARAM,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for IMEAPPLETUI {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for IMEAPPLETUI {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct IMECHARINFO {
-    pub wch: u16,
-    pub dwCharInfo: u32,
-}
-impl ::core::marker::Copy for IMECHARINFO {}
-impl ::core::clone::Clone for IMECHARINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct IMECHARPOSITION {
-    pub dwSize: u32,
-    pub dwCharPos: u32,
-    pub pt: super::super::super::Foundation::POINT,
-    pub cLineHeight: u32,
-    pub rcDocument: super::super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for IMECHARPOSITION {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for IMECHARPOSITION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct IMECOMPOSITIONSTRINGINFO {
-    pub iCompStrLen: i32,
-    pub iCaretPos: i32,
-    pub iEditStart: i32,
-    pub iEditLen: i32,
-    pub iTargetStart: i32,
-    pub iTargetLen: i32,
-}
-impl ::core::marker::Copy for IMECOMPOSITIONSTRINGINFO {}
-impl ::core::clone::Clone for IMECOMPOSITIONSTRINGINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct IMEDLG {
-    pub cbIMEDLG: i32,
-    pub hwnd: super::super::super::Foundation::HWND,
-    pub lpwstrWord: ::windows_sys::core::PWSTR,
-    pub nTabId: i32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for IMEDLG {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for IMEDLG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct IMEDP {
-    pub wrdModifier: IMEWRD,
-    pub wrdModifiee: IMEWRD,
-    pub relID: IMEREL,
-}
-impl ::core::marker::Copy for IMEDP {}
-impl ::core::clone::Clone for IMEDP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IMEFAREASTINFO_TYPE_COMMENT: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -964,104 +655,6 @@ pub const IMEFAREASTINFO_TYPE_COSTTIME: u32 = 3u32;
 pub const IMEFAREASTINFO_TYPE_DEFAULT: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IMEFAREASTINFO_TYPE_READING: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub type IMEFMT = i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_UNKNOWN: IMEFMT = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME2_BIN_SYSTEM: IMEFMT = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME2_BIN_USER: IMEFMT = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME2_TEXT_USER: IMEFMT = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME95_BIN_SYSTEM: IMEFMT = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME95_BIN_USER: IMEFMT = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME95_TEXT_USER: IMEFMT = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME97_BIN_SYSTEM: IMEFMT = 7i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME97_BIN_USER: IMEFMT = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME97_TEXT_USER: IMEFMT = 9i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME98_BIN_SYSTEM: IMEFMT = 10i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME98_BIN_USER: IMEFMT = 11i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME98_TEXT_USER: IMEFMT = 12i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_ACTIVE_DICT: IMEFMT = 13i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_ATOK9: IMEFMT = 14i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_ATOK10: IMEFMT = 15i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_NEC_AI_: IMEFMT = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_WX_II: IMEFMT = 17i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_WX_III: IMEFMT = 18i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_VJE_20: IMEFMT = 19i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME98_SYSTEM_CE: IMEFMT = 20i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME_BIN_SYSTEM: IMEFMT = 21i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME_BIN_USER: IMEFMT = 22i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_MSIME_TEXT_USER: IMEFMT = 23i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_PIME2_BIN_USER: IMEFMT = 24i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_PIME2_BIN_SYSTEM: IMEFMT = 25i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_PIME2_BIN_STANDARD_SYSTEM: IMEFMT = 26i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct IMEINFO {
-    pub dwPrivateDataSize: u32,
-    pub fdwProperty: u32,
-    pub fdwConversionCaps: u32,
-    pub fdwSentenceCaps: u32,
-    pub fdwUICaps: u32,
-    pub fdwSCSCaps: u32,
-    pub fdwSelectCaps: u32,
-}
-impl ::core::marker::Copy for IMEINFO {}
-impl ::core::clone::Clone for IMEINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct IMEITEM {
-    pub cbSize: i32,
-    pub iType: i32,
-    pub lpItemData: *mut ::core::ffi::c_void,
-}
-impl ::core::marker::Copy for IMEITEM {}
-impl ::core::clone::Clone for IMEITEM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct IMEITEMCANDIDATE {
-    pub uCount: u32,
-    pub imeItem: [IMEITEM; 1],
-}
-impl ::core::marker::Copy for IMEITEMCANDIDATE {}
-impl ::core::clone::Clone for IMEITEMCANDIDATE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IMEKEYCTRLMASK_ALT: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -1072,143 +665,6 @@ pub const IMEKEYCTRLMASK_SHIFT: u32 = 4u32;
 pub const IMEKEYCTRL_DOWN: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IMEKEYCTRL_UP: u32 = 1u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Globalization\"`*"]
-#[cfg(feature = "Win32_Globalization")]
-pub struct IMEKMS {
-    pub cbSize: i32,
-    pub hIMC: super::super::super::Globalization::HIMC,
-    pub cKeyList: u32,
-    pub pKeyList: *mut IMEKMSKEY,
-}
-#[cfg(feature = "Win32_Globalization")]
-impl ::core::marker::Copy for IMEKMS {}
-#[cfg(feature = "Win32_Globalization")]
-impl ::core::clone::Clone for IMEKMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct IMEKMSFUNCDESC {
-    pub cbSize: i32,
-    pub idLang: u16,
-    pub dwControl: u32,
-    pub pwszDescription: [u16; 128],
-}
-impl ::core::marker::Copy for IMEKMSFUNCDESC {}
-impl ::core::clone::Clone for IMEKMSFUNCDESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct IMEKMSINIT {
-    pub cbSize: i32,
-    pub hWnd: super::super::super::Foundation::HWND,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for IMEKMSINIT {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for IMEKMSINIT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Globalization\"`*"]
-#[cfg(feature = "Win32_Globalization")]
-pub struct IMEKMSINVK {
-    pub cbSize: i32,
-    pub hIMC: super::super::super::Globalization::HIMC,
-    pub dwControl: u32,
-}
-#[cfg(feature = "Win32_Globalization")]
-impl ::core::marker::Copy for IMEKMSINVK {}
-#[cfg(feature = "Win32_Globalization")]
-impl ::core::clone::Clone for IMEKMSINVK {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct IMEKMSKEY {
-    pub dwStatus: u32,
-    pub dwCompStatus: u32,
-    pub dwVKEY: u32,
-    pub Anonymous1: IMEKMSKEY_0,
-    pub Anonymous2: IMEKMSKEY_1,
-}
-impl ::core::marker::Copy for IMEKMSKEY {}
-impl ::core::clone::Clone for IMEKMSKEY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub union IMEKMSKEY_0 {
-    pub dwControl: u32,
-    pub dwNotUsed: u32,
-}
-impl ::core::marker::Copy for IMEKMSKEY_0 {}
-impl ::core::clone::Clone for IMEKMSKEY_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub union IMEKMSKEY_1 {
-    pub pwszDscr: [u16; 31],
-    pub pwszNoUse: [u16; 31],
-}
-impl ::core::marker::Copy for IMEKMSKEY_1 {}
-impl ::core::clone::Clone for IMEKMSKEY_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Globalization\"`*"]
-#[cfg(feature = "Win32_Globalization")]
-pub struct IMEKMSKMP {
-    pub cbSize: i32,
-    pub hIMC: super::super::super::Globalization::HIMC,
-    pub idLang: u16,
-    pub wVKStart: u16,
-    pub wVKEnd: u16,
-    pub cKeyList: i32,
-    pub pKeyList: *mut IMEKMSKEY,
-}
-#[cfg(feature = "Win32_Globalization")]
-impl ::core::marker::Copy for IMEKMSKMP {}
-#[cfg(feature = "Win32_Globalization")]
-impl ::core::clone::Clone for IMEKMSKMP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
-pub struct IMEKMSNTFY {
-    pub cbSize: i32,
-    pub hIMC: super::super::super::Globalization::HIMC,
-    pub fSelect: super::super::super::Foundation::BOOL,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
-impl ::core::marker::Copy for IMEKMSNTFY {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
-impl ::core::clone::Clone for IMEKMSNTFY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IMEKMS_2NDLEVEL: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -1225,50 +681,6 @@ pub const IMEKMS_NOCOMPOSITION: u32 = 0u32;
 pub const IMEKMS_SELECTION: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IMEKMS_TYPECAND: u32 = 7u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-pub struct IMEMENUITEMINFOA {
-    pub cbSize: u32,
-    pub fType: u32,
-    pub fState: u32,
-    pub wID: u32,
-    pub hbmpChecked: super::super::super::Graphics::Gdi::HBITMAP,
-    pub hbmpUnchecked: super::super::super::Graphics::Gdi::HBITMAP,
-    pub dwItemData: u32,
-    pub szString: [super::super::super::Foundation::CHAR; 80],
-    pub hbmpItem: super::super::super::Graphics::Gdi::HBITMAP,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::marker::Copy for IMEMENUITEMINFOA {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::clone::Clone for IMEMENUITEMINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct IMEMENUITEMINFOW {
-    pub cbSize: u32,
-    pub fType: u32,
-    pub fState: u32,
-    pub wID: u32,
-    pub hbmpChecked: super::super::super::Graphics::Gdi::HBITMAP,
-    pub hbmpUnchecked: super::super::super::Graphics::Gdi::HBITMAP,
-    pub dwItemData: u32,
-    pub szString: [u16; 80],
-    pub hbmpItem: super::super::super::Graphics::Gdi::HBITMAP,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for IMEMENUITEMINFOW {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for IMEMENUITEMINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IMEMENUITEM_STRING_SIZE: u32 = 80u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -1384,168 +796,9 @@ pub const IMEPN_SIZECHANGING: u32 = 262u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IMEPN_USER: u32 = 356u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub type IMEREG = i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REG_HEAD: IMEREG = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REG_TAIL: IMEREG = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REG_DEL: IMEREG = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub type IMEREL = i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_NONE: IMEREL = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_NO: IMEREL = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_GA: IMEREL = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_WO: IMEREL = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_NI: IMEREL = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_DE: IMEREL = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_YORI: IMEREL = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_KARA: IMEREL = 7i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_MADE: IMEREL = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_HE: IMEREL = 9i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_TO: IMEREL = 10i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_IDEOM: IMEREL = 11i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_FUKU_YOUGEN: IMEREL = 12i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_KEIYOU_YOUGEN: IMEREL = 13i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_KEIDOU1_YOUGEN: IMEREL = 14i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_KEIDOU2_YOUGEN: IMEREL = 15i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_TAIGEN: IMEREL = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_YOUGEN: IMEREL = 17i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_RENTAI_MEI: IMEREL = 18i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_RENSOU: IMEREL = 19i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_KEIYOU_TO_YOUGEN: IMEREL = 20i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_KEIYOU_TARU_YOUGEN: IMEREL = 21i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_UNKNOWN1: IMEREL = 22i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_UNKNOWN2: IMEREL = 23i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_REL_ALL: IMEREL = 24i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct IMESHF {
-    pub cbShf: u16,
-    pub verDic: u16,
-    pub szTitle: [super::super::super::Foundation::CHAR; 48],
-    pub szDescription: [super::super::super::Foundation::CHAR; 256],
-    pub szCopyright: [super::super::super::Foundation::CHAR; 128],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for IMESHF {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for IMESHF {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct IMESTRINGCANDIDATE {
-    pub uCount: u32,
-    pub lpwstr: [::windows_sys::core::PWSTR; 1],
-}
-impl ::core::marker::Copy for IMESTRINGCANDIDATE {}
-impl ::core::clone::Clone for IMESTRINGCANDIDATE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct IMESTRINGCANDIDATEINFO {
-    pub dwFarEastId: u32,
-    pub lpFarEastInfo: *mut tabIMEFAREASTINFO,
-    pub fInfoMask: u32,
-    pub iSelIndex: i32,
-    pub uCount: u32,
-    pub lpwstr: [::windows_sys::core::PWSTR; 1],
-}
-impl ::core::marker::Copy for IMESTRINGCANDIDATEINFO {}
-impl ::core::clone::Clone for IMESTRINGCANDIDATEINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub type IMEUCT = i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_UCT_NONE: IMEUCT = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_UCT_STRING_SJIS: IMEUCT = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_UCT_STRING_UNICODE: IMEUCT = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_UCT_USER_DEFINED: IMEUCT = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IFED_UCT_MAX: IMEUCT = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IMEVER_0310: u32 = 196618u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IMEVER_0400: u32 = 262144u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct IMEWRD {
-    pub pwchReading: ::windows_sys::core::PWSTR,
-    pub pwchDisplay: ::windows_sys::core::PWSTR,
-    pub Anonymous: IMEWRD_0,
-    pub rgulAttrs: [u32; 2],
-    pub cbComment: i32,
-    pub uct: IMEUCT,
-    pub pvComment: *mut ::core::ffi::c_void,
-}
-impl ::core::marker::Copy for IMEWRD {}
-impl ::core::clone::Clone for IMEWRD {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub union IMEWRD_0 {
-    pub ulPos: u32,
-    pub Anonymous: IMEWRD_0_0,
-}
-impl ::core::marker::Copy for IMEWRD_0 {}
-impl ::core::clone::Clone for IMEWRD_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct IMEWRD_0_0 {
-    pub nPos1: u16,
-    pub nPos2: u16,
-}
-impl ::core::marker::Copy for IMEWRD_0_0 {}
-impl ::core::clone::Clone for IMEWRD_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_CAND_CODE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -1559,61 +812,13 @@ pub const IME_CAND_STROKE: u32 = 5u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_CAND_UNKNOWN: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_CHOTKEY_IME_NONIME_TOGGLE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_CHOTKEY_SHAPE_TOGGLE: u32 = 17u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_CHOTKEY_SYMBOL_TOGGLE: u32 = 18u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_CMODE_EUDC: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_CMODE_FIXED: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_CMODE_NOCONVERSION: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_CMODE_RESERVED: u32 = 4026531840u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_CMODE_SOFTKBD: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_CMODE_SYMBOL: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_CONFIG_GENERAL: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_CONFIG_REGISTERWORD: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_CONFIG_SELECTDICTIONARY: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_AUTOMATA: u32 = 4105u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_GETHELPFILENAME: u32 = 4107u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_GET_EUDC_DICTIONARY: u32 = 4099u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_HANJA_MODE: u32 = 4104u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_IME_NAME: u32 = 4102u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_MAX_KEY: u32 = 4101u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_PRIVATE_FIRST: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_PRIVATE_HOTKEY: u32 = 4106u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_PRIVATE_LAST: u32 = 4095u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_QUERY_SUPPORT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_RESERVED_FIRST: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_RESERVED_LAST: u32 = 2047u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_SEQUENCE_TO_INTERNAL: u32 = 4097u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_SET_EUDC_DICTIONARY: u32 = 4100u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_ESC_STRING_BUFFER_SIZE: u32 = 80u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ESC_SYNC_HOTKEY: u32 = 4103u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_HOTKEY_DSWITCH_FIRST: u32 = 256u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -1622,62 +827,6 @@ pub const IME_HOTKEY_DSWITCH_LAST: u32 = 287u32;
 pub const IME_HOTKEY_PRIVATE_FIRST: u32 = 512u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_HOTKEY_PRIVATE_LAST: u32 = 543u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ITHOTKEY_PREVIOUS_COMPOSITION: u32 = 513u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ITHOTKEY_RECONVERTSTRING: u32 = 515u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ITHOTKEY_RESEND_RESULTSTR: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_ITHOTKEY_UISTYLE_TOGGLE: u32 = 514u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_JHOTKEY_CLOSE_OPEN: u32 = 48u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_KHOTKEY_ENGLISH: u32 = 82u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_KHOTKEY_HANJACONVERT: u32 = 81u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_KHOTKEY_SHAPE_TOGGLE: u32 = 80u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub type IME_PAD_REQUEST_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_INSERTSTRING: IME_PAD_REQUEST_FLAGS = 4097u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_SENDCONTROL: IME_PAD_REQUEST_FLAGS = 4100u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_SETAPPLETSIZE: IME_PAD_REQUEST_FLAGS = 4104u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_GETCOMPOSITIONSTRING: IME_PAD_REQUEST_FLAGS = 4102u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_GETCOMPOSITIONSTRINGINFO: IME_PAD_REQUEST_FLAGS = 4108u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_DELETESTRING: IME_PAD_REQUEST_FLAGS = 4112u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_CHANGESTRING: IME_PAD_REQUEST_FLAGS = 4113u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_GETAPPLHWND: IME_PAD_REQUEST_FLAGS = 4116u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_FORCEIMEPADWINDOWSHOW: IME_PAD_REQUEST_FLAGS = 4117u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_POSTMODALNOTIFY: IME_PAD_REQUEST_FLAGS = 4118u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_GETDEFAULTUILANGID: IME_PAD_REQUEST_FLAGS = 4119u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_GETAPPLETUISTYLE: IME_PAD_REQUEST_FLAGS = 4121u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_SETAPPLETUISTYLE: IME_PAD_REQUEST_FLAGS = 4122u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_ISAPPLETACTIVE: IME_PAD_REQUEST_FLAGS = 4123u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_ISIMEPADWINDOWVISIBLE: IME_PAD_REQUEST_FLAGS = 4124u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_SETAPPLETMINMAXSIZE: IME_PAD_REQUEST_FLAGS = 4125u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_GETCONVERSIONSTATUS: IME_PAD_REQUEST_FLAGS = 4126u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_GETVERSION: IME_PAD_REQUEST_FLAGS = 4127u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IMEPADREQ_GETCURRENTIMEINFO: IME_PAD_REQUEST_FLAGS = 4128u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_PROP_ACCEPT_WIDE_VKEY: u32 = 32u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -1707,29 +856,9 @@ pub const IME_REGWORD_STYLE_USER_FIRST: u32 = 2147483648u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_REGWORD_STYLE_USER_LAST: u32 = 4294967295u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_SMODE_AUTOMATIC: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_SMODE_CONVERSATION: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_SMODE_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_SMODE_PHRASEPREDICT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_SMODE_PLAURALCLAUSE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_SMODE_RESERVED: u32 = 61440u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_SMODE_SINGLECONVERT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_SYSINFO_WINLOGON: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_SYSINFO_WOW16: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_THOTKEY_IME_NONIME_TOGGLE: u32 = 112u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_THOTKEY_SHAPE_TOGGLE: u32 = 113u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const IME_THOTKEY_SYMBOL_TOGGLE: u32 = 114u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IME_UI_CLASS_NAME_SIZE: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -1816,51 +945,6 @@ pub const INIT_SENTENCE: u32 = 4u32;
 pub const INIT_SOFTKBDPOS: u32 = 32u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const INIT_STATUSWNDPOS: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_Graphics_Gdi"))]
-pub struct INPUTCONTEXT {
-    pub hWnd: super::super::super::Foundation::HWND,
-    pub fOpen: super::super::super::Foundation::BOOL,
-    pub ptStatusWndPos: super::super::super::Foundation::POINT,
-    pub ptSoftKbdPos: super::super::super::Foundation::POINT,
-    pub fdwConversion: u32,
-    pub fdwSentence: u32,
-    pub lfFont: INPUTCONTEXT_0,
-    pub cfCompForm: COMPOSITIONFORM,
-    pub cfCandForm: [CANDIDATEFORM; 4],
-    pub hCompStr: super::super::super::Globalization::HIMCC,
-    pub hCandInfo: super::super::super::Globalization::HIMCC,
-    pub hGuideLine: super::super::super::Globalization::HIMCC,
-    pub hPrivate: super::super::super::Globalization::HIMCC,
-    pub dwNumMsgBuf: u32,
-    pub hMsgBuf: super::super::super::Globalization::HIMCC,
-    pub fdwInit: u32,
-    pub dwReserve: [u32; 3],
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_Graphics_Gdi"))]
-impl ::core::marker::Copy for INPUTCONTEXT {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_Graphics_Gdi"))]
-impl ::core::clone::Clone for INPUTCONTEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_Graphics_Gdi"))]
-pub union INPUTCONTEXT_0 {
-    pub A: super::super::super::Graphics::Gdi::LOGFONTA,
-    pub W: super::super::super::Graphics::Gdi::LOGFONTW,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_Graphics_Gdi"))]
-impl ::core::marker::Copy for INPUTCONTEXT_0 {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_Graphics_Gdi"))]
-impl ::core::clone::Clone for INPUTCONTEXT_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const IPACFG_CATEGORY: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
@@ -2275,6 +1359,1116 @@ pub const MOD_LEFT: u32 = 32768u32;
 pub const MOD_ON_KEYUP: u32 = 2048u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub const MOD_RIGHT: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const NI_CONTEXTUPDATED: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const NI_FINALIZECONVERSIONRESULT: u32 = 20u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const POS_UNDEFINED: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RECONVOPT_NONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RECONVOPT_USECANCELNOTIFY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_CHGKEYMAP: &str = "MSIMEChangeKeyMap";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_DOCUMENTFEED: &str = "MSIMEDocumentFeed";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_KEYMAP: &str = "MSIMEKeyMap";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_MODEBIAS: &str = "MSIMEModeBias";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_MOUSE: &str = "MSIMEMouseOperation";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_NTFYKEYMAP: &str = "MSIMENotifyKeyMap";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_QUERYPOSITION: &str = "MSIMEQueryPosition";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_RECONVERT: &str = "MSIMEReconvert";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_RECONVERTOPTIONS: &str = "MSIMEReconvertOptions";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_RECONVERTREQUEST: &str = "MSIMEReconvertRequest";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_SERVICE: &str = "MSIMEService";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_SHOWIMEPAD: &str = "MSIMEShowImePad";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const RWM_UIREADY: &str = "MSIMEUIReady";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SCS_CAP_COMPSTR: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SCS_CAP_MAKEREAD: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SCS_CAP_SETRECONVERTSTRING: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SELECT_CAP_CONVERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SELECT_CAP_SENTENCE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SHOWIMEPAD_CATEGORY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SHOWIMEPAD_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SHOWIMEPAD_GUID: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SOFTKEYBOARD_TYPE_C1: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SOFTKEYBOARD_TYPE_T1: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const STYLE_DESCRIPTION_SIZE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const UI_CAP_2700: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const UI_CAP_ROT90: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const UI_CAP_ROTANY: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const UI_CAP_SOFTKBD: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const VERSION_DOCUMENTFEED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const VERSION_ID_CHINESE_SIMPLIFIED: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const VERSION_ID_CHINESE_TRADITIONAL: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const VERSION_ID_JAPANESE: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const VERSION_ID_KOREAN: u32 = 33554432u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const VERSION_MODEBIAS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const VERSION_MOUSE_OPERATION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const VERSION_QUERYPOSITION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const VERSION_RECONVERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const cbCommentMax: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const szImeChina: &str = "MSIME.China";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const szImeJapan: &str = "MSIME.Japan";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const szImeKorea: &str = "MSIME.Korea";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const szImeTaiwan: &str = "MSIME.Taiwan";
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const wchPrivate1: u32 = 57344u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type GET_CONVERSION_LIST_FLAG = u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCL_CONVERSION: GET_CONVERSION_LIST_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCL_REVERSECONVERSION: GET_CONVERSION_LIST_FLAG = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCL_REVERSE_LENGTH: GET_CONVERSION_LIST_FLAG = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type GET_GUIDE_LINE_TYPE = u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GGL_LEVEL: GET_GUIDE_LINE_TYPE = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GGL_INDEX: GET_GUIDE_LINE_TYPE = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GGL_STRING: GET_GUIDE_LINE_TYPE = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GGL_PRIVATE: GET_GUIDE_LINE_TYPE = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type IMEFMT = i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_UNKNOWN: IMEFMT = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME2_BIN_SYSTEM: IMEFMT = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME2_BIN_USER: IMEFMT = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME2_TEXT_USER: IMEFMT = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME95_BIN_SYSTEM: IMEFMT = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME95_BIN_USER: IMEFMT = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME95_TEXT_USER: IMEFMT = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME97_BIN_SYSTEM: IMEFMT = 7i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME97_BIN_USER: IMEFMT = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME97_TEXT_USER: IMEFMT = 9i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME98_BIN_SYSTEM: IMEFMT = 10i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME98_BIN_USER: IMEFMT = 11i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME98_TEXT_USER: IMEFMT = 12i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_ACTIVE_DICT: IMEFMT = 13i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_ATOK9: IMEFMT = 14i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_ATOK10: IMEFMT = 15i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_NEC_AI_: IMEFMT = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_WX_II: IMEFMT = 17i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_WX_III: IMEFMT = 18i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_VJE_20: IMEFMT = 19i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME98_SYSTEM_CE: IMEFMT = 20i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME_BIN_SYSTEM: IMEFMT = 21i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME_BIN_USER: IMEFMT = 22i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_MSIME_TEXT_USER: IMEFMT = 23i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_PIME2_BIN_USER: IMEFMT = 24i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_PIME2_BIN_SYSTEM: IMEFMT = 25i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_PIME2_BIN_STANDARD_SYSTEM: IMEFMT = 26i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type IMEREG = i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REG_HEAD: IMEREG = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REG_TAIL: IMEREG = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REG_DEL: IMEREG = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type IMEREL = i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_NONE: IMEREL = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_NO: IMEREL = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_GA: IMEREL = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_WO: IMEREL = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_NI: IMEREL = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_DE: IMEREL = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_YORI: IMEREL = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_KARA: IMEREL = 7i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_MADE: IMEREL = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_HE: IMEREL = 9i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_TO: IMEREL = 10i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_IDEOM: IMEREL = 11i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_FUKU_YOUGEN: IMEREL = 12i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_KEIYOU_YOUGEN: IMEREL = 13i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_KEIDOU1_YOUGEN: IMEREL = 14i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_KEIDOU2_YOUGEN: IMEREL = 15i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_TAIGEN: IMEREL = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_YOUGEN: IMEREL = 17i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_RENTAI_MEI: IMEREL = 18i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_RENSOU: IMEREL = 19i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_KEIYOU_TO_YOUGEN: IMEREL = 20i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_KEIYOU_TARU_YOUGEN: IMEREL = 21i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_UNKNOWN1: IMEREL = 22i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_UNKNOWN2: IMEREL = 23i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_REL_ALL: IMEREL = 24i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type IMEUCT = i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_UCT_NONE: IMEUCT = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_UCT_STRING_SJIS: IMEUCT = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_UCT_STRING_UNICODE: IMEUCT = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_UCT_USER_DEFINED: IMEUCT = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IFED_UCT_MAX: IMEUCT = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type IME_COMPOSITION_STRING = u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCS_COMPREADSTR: IME_COMPOSITION_STRING = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCS_COMPREADATTR: IME_COMPOSITION_STRING = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCS_COMPREADCLAUSE: IME_COMPOSITION_STRING = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCS_COMPSTR: IME_COMPOSITION_STRING = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCS_COMPATTR: IME_COMPOSITION_STRING = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCS_COMPCLAUSE: IME_COMPOSITION_STRING = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCS_CURSORPOS: IME_COMPOSITION_STRING = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCS_DELTASTART: IME_COMPOSITION_STRING = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCS_RESULTREADSTR: IME_COMPOSITION_STRING = 512u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCS_RESULTREADCLAUSE: IME_COMPOSITION_STRING = 1024u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCS_RESULTSTR: IME_COMPOSITION_STRING = 2048u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const GCS_RESULTCLAUSE: IME_COMPOSITION_STRING = 4096u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type IME_CONVERSION_MODE = u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_ALPHANUMERIC: IME_CONVERSION_MODE = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_NATIVE: IME_CONVERSION_MODE = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_CHINESE: IME_CONVERSION_MODE = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_HANGUL: IME_CONVERSION_MODE = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_JAPANESE: IME_CONVERSION_MODE = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_KATAKANA: IME_CONVERSION_MODE = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_LANGUAGE: IME_CONVERSION_MODE = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_FULLSHAPE: IME_CONVERSION_MODE = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_ROMAN: IME_CONVERSION_MODE = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_CHARCODE: IME_CONVERSION_MODE = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_HANJACONVERT: IME_CONVERSION_MODE = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_NATIVESYMBOL: IME_CONVERSION_MODE = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_HANGEUL: IME_CONVERSION_MODE = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_SOFTKBD: IME_CONVERSION_MODE = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_NOCONVERSION: IME_CONVERSION_MODE = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_EUDC: IME_CONVERSION_MODE = 512u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_SYMBOL: IME_CONVERSION_MODE = 1024u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_FIXED: IME_CONVERSION_MODE = 2048u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CMODE_RESERVED: IME_CONVERSION_MODE = 4026531840u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type IME_ESCAPE = u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_QUERY_SUPPORT: IME_ESCAPE = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_RESERVED_FIRST: IME_ESCAPE = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_RESERVED_LAST: IME_ESCAPE = 2047u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_PRIVATE_FIRST: IME_ESCAPE = 2048u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_PRIVATE_LAST: IME_ESCAPE = 4095u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_SEQUENCE_TO_INTERNAL: IME_ESCAPE = 4097u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_GET_EUDC_DICTIONARY: IME_ESCAPE = 4099u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_SET_EUDC_DICTIONARY: IME_ESCAPE = 4100u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_MAX_KEY: IME_ESCAPE = 4101u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_IME_NAME: IME_ESCAPE = 4102u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_SYNC_HOTKEY: IME_ESCAPE = 4103u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_HANJA_MODE: IME_ESCAPE = 4104u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_AUTOMATA: IME_ESCAPE = 4105u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_PRIVATE_HOTKEY: IME_ESCAPE = 4106u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ESC_GETHELPFILENAME: IME_ESCAPE = 4107u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type IME_HOTKEY_IDENTIFIER = u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CHOTKEY_IME_NONIME_TOGGLE: IME_HOTKEY_IDENTIFIER = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CHOTKEY_SHAPE_TOGGLE: IME_HOTKEY_IDENTIFIER = 17u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_CHOTKEY_SYMBOL_TOGGLE: IME_HOTKEY_IDENTIFIER = 18u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_JHOTKEY_CLOSE_OPEN: IME_HOTKEY_IDENTIFIER = 48u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_KHOTKEY_SHAPE_TOGGLE: IME_HOTKEY_IDENTIFIER = 80u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_KHOTKEY_HANJACONVERT: IME_HOTKEY_IDENTIFIER = 81u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_KHOTKEY_ENGLISH: IME_HOTKEY_IDENTIFIER = 82u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_THOTKEY_IME_NONIME_TOGGLE: IME_HOTKEY_IDENTIFIER = 112u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_THOTKEY_SHAPE_TOGGLE: IME_HOTKEY_IDENTIFIER = 113u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_THOTKEY_SYMBOL_TOGGLE: IME_HOTKEY_IDENTIFIER = 114u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ITHOTKEY_RESEND_RESULTSTR: IME_HOTKEY_IDENTIFIER = 512u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ITHOTKEY_PREVIOUS_COMPOSITION: IME_HOTKEY_IDENTIFIER = 513u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ITHOTKEY_UISTYLE_TOGGLE: IME_HOTKEY_IDENTIFIER = 514u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_ITHOTKEY_RECONVERTSTRING: IME_HOTKEY_IDENTIFIER = 515u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type IME_PAD_REQUEST_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_INSERTSTRING: IME_PAD_REQUEST_FLAGS = 4097u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_SENDCONTROL: IME_PAD_REQUEST_FLAGS = 4100u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_SETAPPLETSIZE: IME_PAD_REQUEST_FLAGS = 4104u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_GETCOMPOSITIONSTRING: IME_PAD_REQUEST_FLAGS = 4102u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_GETCOMPOSITIONSTRINGINFO: IME_PAD_REQUEST_FLAGS = 4108u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_DELETESTRING: IME_PAD_REQUEST_FLAGS = 4112u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_CHANGESTRING: IME_PAD_REQUEST_FLAGS = 4113u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_GETAPPLHWND: IME_PAD_REQUEST_FLAGS = 4116u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_FORCEIMEPADWINDOWSHOW: IME_PAD_REQUEST_FLAGS = 4117u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_POSTMODALNOTIFY: IME_PAD_REQUEST_FLAGS = 4118u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_GETDEFAULTUILANGID: IME_PAD_REQUEST_FLAGS = 4119u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_GETAPPLETUISTYLE: IME_PAD_REQUEST_FLAGS = 4121u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_SETAPPLETUISTYLE: IME_PAD_REQUEST_FLAGS = 4122u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_ISAPPLETACTIVE: IME_PAD_REQUEST_FLAGS = 4123u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_ISIMEPADWINDOWVISIBLE: IME_PAD_REQUEST_FLAGS = 4124u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_SETAPPLETMINMAXSIZE: IME_PAD_REQUEST_FLAGS = 4125u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_GETCONVERSIONSTATUS: IME_PAD_REQUEST_FLAGS = 4126u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_GETVERSION: IME_PAD_REQUEST_FLAGS = 4127u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IMEPADREQ_GETCURRENTIMEINFO: IME_PAD_REQUEST_FLAGS = 4128u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type IME_SENTENCE_MODE = u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_SMODE_NONE: IME_SENTENCE_MODE = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_SMODE_PLAURALCLAUSE: IME_SENTENCE_MODE = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_SMODE_SINGLECONVERT: IME_SENTENCE_MODE = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_SMODE_AUTOMATIC: IME_SENTENCE_MODE = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_SMODE_PHRASEPREDICT: IME_SENTENCE_MODE = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_SMODE_CONVERSATION: IME_SENTENCE_MODE = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const IME_SMODE_RESERVED: IME_SENTENCE_MODE = 61440u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type NOTIFY_IME_ACTION = u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const NI_CHANGECANDIDATELIST: NOTIFY_IME_ACTION = 19u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const NI_CLOSECANDIDATE: NOTIFY_IME_ACTION = 17u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const NI_COMPOSITIONSTR: NOTIFY_IME_ACTION = 21u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const NI_IMEMENUSELECTED: NOTIFY_IME_ACTION = 24u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const NI_OPENCANDIDATE: NOTIFY_IME_ACTION = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const NI_SELECTCANDIDATESTR: NOTIFY_IME_ACTION = 18u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const NI_SETCANDIDATE_PAGESIZE: NOTIFY_IME_ACTION = 23u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const NI_SETCANDIDATE_PAGESTART: NOTIFY_IME_ACTION = 22u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type NOTIFY_IME_INDEX = u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const CPS_CANCEL: NOTIFY_IME_INDEX = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const CPS_COMPLETE: NOTIFY_IME_INDEX = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const CPS_CONVERT: NOTIFY_IME_INDEX = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const CPS_REVERT: NOTIFY_IME_INDEX = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type SET_COMPOSITION_STRING_TYPE = u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SCS_SETSTR: SET_COMPOSITION_STRING_TYPE = 9u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SCS_CHANGEATTR: SET_COMPOSITION_STRING_TYPE = 18u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SCS_CHANGECLAUSE: SET_COMPOSITION_STRING_TYPE = 36u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SCS_SETRECONVERTSTRING: SET_COMPOSITION_STRING_TYPE = 65536u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub const SCS_QUERYRECONVERTSTRING: SET_COMPOSITION_STRING_TYPE = 131072u32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct APPLETIDLIST {
+    pub count: i32,
+    pub pIIDList: *mut ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for APPLETIDLIST {}
+impl ::core::clone::Clone for APPLETIDLIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct APPLYCANDEXPARAM {
+    pub dwSize: u32,
+    pub lpwstrDisplay: ::windows_sys::core::PWSTR,
+    pub lpwstrReading: ::windows_sys::core::PWSTR,
+    pub dwReserved: u32,
+}
+impl ::core::marker::Copy for APPLYCANDEXPARAM {}
+impl ::core::clone::Clone for APPLYCANDEXPARAM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct CANDIDATEFORM {
+    pub dwIndex: u32,
+    pub dwStyle: u32,
+    pub ptCurrentPos: super::super::super::Foundation::POINT,
+    pub rcArea: super::super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CANDIDATEFORM {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CANDIDATEFORM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct CANDIDATEINFO {
+    pub dwSize: u32,
+    pub dwCount: u32,
+    pub dwOffset: [u32; 32],
+    pub dwPrivateSize: u32,
+    pub dwPrivateOffset: u32,
+}
+impl ::core::marker::Copy for CANDIDATEINFO {}
+impl ::core::clone::Clone for CANDIDATEINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct CANDIDATELIST {
+    pub dwSize: u32,
+    pub dwStyle: u32,
+    pub dwCount: u32,
+    pub dwSelection: u32,
+    pub dwPageStart: u32,
+    pub dwPageSize: u32,
+    pub dwOffset: [u32; 1],
+}
+impl ::core::marker::Copy for CANDIDATELIST {}
+impl ::core::clone::Clone for CANDIDATELIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct COMPOSITIONFORM {
+    pub dwStyle: u32,
+    pub ptCurrentPos: super::super::super::Foundation::POINT,
+    pub rcArea: super::super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for COMPOSITIONFORM {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for COMPOSITIONFORM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct COMPOSITIONSTRING {
+    pub dwSize: u32,
+    pub dwCompReadAttrLen: u32,
+    pub dwCompReadAttrOffset: u32,
+    pub dwCompReadClauseLen: u32,
+    pub dwCompReadClauseOffset: u32,
+    pub dwCompReadStrLen: u32,
+    pub dwCompReadStrOffset: u32,
+    pub dwCompAttrLen: u32,
+    pub dwCompAttrOffset: u32,
+    pub dwCompClauseLen: u32,
+    pub dwCompClauseOffset: u32,
+    pub dwCompStrLen: u32,
+    pub dwCompStrOffset: u32,
+    pub dwCursorPos: u32,
+    pub dwDeltaStart: u32,
+    pub dwResultReadClauseLen: u32,
+    pub dwResultReadClauseOffset: u32,
+    pub dwResultReadStrLen: u32,
+    pub dwResultReadStrOffset: u32,
+    pub dwResultClauseLen: u32,
+    pub dwResultClauseOffset: u32,
+    pub dwResultStrLen: u32,
+    pub dwResultStrOffset: u32,
+    pub dwPrivateSize: u32,
+    pub dwPrivateOffset: u32,
+}
+impl ::core::marker::Copy for COMPOSITIONSTRING {}
+impl ::core::clone::Clone for COMPOSITIONSTRING {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct GUIDELINE {
+    pub dwSize: u32,
+    pub dwLevel: u32,
+    pub dwIndex: u32,
+    pub dwStrLen: u32,
+    pub dwStrOffset: u32,
+    pub dwPrivateSize: u32,
+    pub dwPrivateOffset: u32,
+}
+impl ::core::marker::Copy for GUIDELINE {}
+impl ::core::clone::Clone for GUIDELINE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub struct IMEAPPLETCFG {
+    pub dwConfig: u32,
+    pub wchTitle: [u16; 64],
+    pub wchTitleFontFace: [u16; 32],
+    pub dwCharSet: u32,
+    pub iCategory: i32,
+    pub hIcon: super::super::WindowsAndMessaging::HICON,
+    pub langID: u16,
+    pub dummy: u16,
+    pub lReserved1: super::super::super::Foundation::LPARAM,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for IMEAPPLETCFG {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for IMEAPPLETCFG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct IMEAPPLETUI {
+    pub hwnd: super::super::super::Foundation::HWND,
+    pub dwStyle: u32,
+    pub width: i32,
+    pub height: i32,
+    pub minWidth: i32,
+    pub minHeight: i32,
+    pub maxWidth: i32,
+    pub maxHeight: i32,
+    pub lReserved1: super::super::super::Foundation::LPARAM,
+    pub lReserved2: super::super::super::Foundation::LPARAM,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for IMEAPPLETUI {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for IMEAPPLETUI {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMECHARINFO {
+    pub wch: u16,
+    pub dwCharInfo: u32,
+}
+impl ::core::marker::Copy for IMECHARINFO {}
+impl ::core::clone::Clone for IMECHARINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct IMECHARPOSITION {
+    pub dwSize: u32,
+    pub dwCharPos: u32,
+    pub pt: super::super::super::Foundation::POINT,
+    pub cLineHeight: u32,
+    pub rcDocument: super::super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for IMECHARPOSITION {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for IMECHARPOSITION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMECOMPOSITIONSTRINGINFO {
+    pub iCompStrLen: i32,
+    pub iCaretPos: i32,
+    pub iEditStart: i32,
+    pub iEditLen: i32,
+    pub iTargetStart: i32,
+    pub iTargetLen: i32,
+}
+impl ::core::marker::Copy for IMECOMPOSITIONSTRINGINFO {}
+impl ::core::clone::Clone for IMECOMPOSITIONSTRINGINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct IMEDLG {
+    pub cbIMEDLG: i32,
+    pub hwnd: super::super::super::Foundation::HWND,
+    pub lpwstrWord: ::windows_sys::core::PWSTR,
+    pub nTabId: i32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for IMEDLG {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for IMEDLG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMEDP {
+    pub wrdModifier: IMEWRD,
+    pub wrdModifiee: IMEWRD,
+    pub relID: IMEREL,
+}
+impl ::core::marker::Copy for IMEDP {}
+impl ::core::clone::Clone for IMEDP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMEFAREASTINFO {
+    pub dwSize: u32,
+    pub dwType: u32,
+    pub dwData: [u32; 1],
+}
+impl ::core::marker::Copy for IMEFAREASTINFO {}
+impl ::core::clone::Clone for IMEFAREASTINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMEINFO {
+    pub dwPrivateDataSize: u32,
+    pub fdwProperty: u32,
+    pub fdwConversionCaps: u32,
+    pub fdwSentenceCaps: u32,
+    pub fdwUICaps: u32,
+    pub fdwSCSCaps: u32,
+    pub fdwSelectCaps: u32,
+}
+impl ::core::marker::Copy for IMEINFO {}
+impl ::core::clone::Clone for IMEINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMEITEM {
+    pub cbSize: i32,
+    pub iType: i32,
+    pub lpItemData: *mut ::core::ffi::c_void,
+}
+impl ::core::marker::Copy for IMEITEM {}
+impl ::core::clone::Clone for IMEITEM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMEITEMCANDIDATE {
+    pub uCount: u32,
+    pub imeItem: [IMEITEM; 1],
+}
+impl ::core::marker::Copy for IMEITEMCANDIDATE {}
+impl ::core::clone::Clone for IMEITEMCANDIDATE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Globalization\"`*"]
+#[cfg(feature = "Win32_Globalization")]
+pub struct IMEKMS {
+    pub cbSize: i32,
+    pub hIMC: super::super::super::Globalization::HIMC,
+    pub cKeyList: u32,
+    pub pKeyList: *mut IMEKMSKEY,
+}
+#[cfg(feature = "Win32_Globalization")]
+impl ::core::marker::Copy for IMEKMS {}
+#[cfg(feature = "Win32_Globalization")]
+impl ::core::clone::Clone for IMEKMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMEKMSFUNCDESC {
+    pub cbSize: i32,
+    pub idLang: u16,
+    pub dwControl: u32,
+    pub pwszDescription: [u16; 128],
+}
+impl ::core::marker::Copy for IMEKMSFUNCDESC {}
+impl ::core::clone::Clone for IMEKMSFUNCDESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct IMEKMSINIT {
+    pub cbSize: i32,
+    pub hWnd: super::super::super::Foundation::HWND,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for IMEKMSINIT {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for IMEKMSINIT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Globalization\"`*"]
+#[cfg(feature = "Win32_Globalization")]
+pub struct IMEKMSINVK {
+    pub cbSize: i32,
+    pub hIMC: super::super::super::Globalization::HIMC,
+    pub dwControl: u32,
+}
+#[cfg(feature = "Win32_Globalization")]
+impl ::core::marker::Copy for IMEKMSINVK {}
+#[cfg(feature = "Win32_Globalization")]
+impl ::core::clone::Clone for IMEKMSINVK {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMEKMSKEY {
+    pub dwStatus: u32,
+    pub dwCompStatus: u32,
+    pub dwVKEY: u32,
+    pub Anonymous1: IMEKMSKEY_0,
+    pub Anonymous2: IMEKMSKEY_1,
+}
+impl ::core::marker::Copy for IMEKMSKEY {}
+impl ::core::clone::Clone for IMEKMSKEY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub union IMEKMSKEY_0 {
+    pub dwControl: u32,
+    pub dwNotUsed: u32,
+}
+impl ::core::marker::Copy for IMEKMSKEY_0 {}
+impl ::core::clone::Clone for IMEKMSKEY_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub union IMEKMSKEY_1 {
+    pub pwszDscr: [u16; 31],
+    pub pwszNoUse: [u16; 31],
+}
+impl ::core::marker::Copy for IMEKMSKEY_1 {}
+impl ::core::clone::Clone for IMEKMSKEY_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Globalization\"`*"]
+#[cfg(feature = "Win32_Globalization")]
+pub struct IMEKMSKMP {
+    pub cbSize: i32,
+    pub hIMC: super::super::super::Globalization::HIMC,
+    pub idLang: u16,
+    pub wVKStart: u16,
+    pub wVKEnd: u16,
+    pub cKeyList: i32,
+    pub pKeyList: *mut IMEKMSKEY,
+}
+#[cfg(feature = "Win32_Globalization")]
+impl ::core::marker::Copy for IMEKMSKMP {}
+#[cfg(feature = "Win32_Globalization")]
+impl ::core::clone::Clone for IMEKMSKMP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
+pub struct IMEKMSNTFY {
+    pub cbSize: i32,
+    pub hIMC: super::super::super::Globalization::HIMC,
+    pub fSelect: super::super::super::Foundation::BOOL,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
+impl ::core::marker::Copy for IMEKMSNTFY {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
+impl ::core::clone::Clone for IMEKMSNTFY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct IMEMENUITEMINFOA {
+    pub cbSize: u32,
+    pub fType: u32,
+    pub fState: u32,
+    pub wID: u32,
+    pub hbmpChecked: super::super::super::Graphics::Gdi::HBITMAP,
+    pub hbmpUnchecked: super::super::super::Graphics::Gdi::HBITMAP,
+    pub dwItemData: u32,
+    pub szString: [super::super::super::Foundation::CHAR; 80],
+    pub hbmpItem: super::super::super::Graphics::Gdi::HBITMAP,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for IMEMENUITEMINFOA {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for IMEMENUITEMINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct IMEMENUITEMINFOW {
+    pub cbSize: u32,
+    pub fType: u32,
+    pub fState: u32,
+    pub wID: u32,
+    pub hbmpChecked: super::super::super::Graphics::Gdi::HBITMAP,
+    pub hbmpUnchecked: super::super::super::Graphics::Gdi::HBITMAP,
+    pub dwItemData: u32,
+    pub szString: [u16; 80],
+    pub hbmpItem: super::super::super::Graphics::Gdi::HBITMAP,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for IMEMENUITEMINFOW {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for IMEMENUITEMINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct IMESHF {
+    pub cbShf: u16,
+    pub verDic: u16,
+    pub szTitle: [super::super::super::Foundation::CHAR; 48],
+    pub szDescription: [super::super::super::Foundation::CHAR; 256],
+    pub szCopyright: [super::super::super::Foundation::CHAR; 128],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for IMESHF {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for IMESHF {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMESTRINGCANDIDATE {
+    pub uCount: u32,
+    pub lpwstr: [::windows_sys::core::PWSTR; 1],
+}
+impl ::core::marker::Copy for IMESTRINGCANDIDATE {}
+impl ::core::clone::Clone for IMESTRINGCANDIDATE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMESTRINGCANDIDATEINFO {
+    pub dwFarEastId: u32,
+    pub lpFarEastInfo: *mut IMEFAREASTINFO,
+    pub fInfoMask: u32,
+    pub iSelIndex: i32,
+    pub uCount: u32,
+    pub lpwstr: [::windows_sys::core::PWSTR; 1],
+}
+impl ::core::marker::Copy for IMESTRINGCANDIDATEINFO {}
+impl ::core::clone::Clone for IMESTRINGCANDIDATEINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMESTRINGINFO {
+    pub dwFarEastId: u32,
+    pub lpwstr: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for IMESTRINGINFO {}
+impl ::core::clone::Clone for IMESTRINGINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMEWRD {
+    pub pwchReading: ::windows_sys::core::PWSTR,
+    pub pwchDisplay: ::windows_sys::core::PWSTR,
+    pub Anonymous: IMEWRD_0,
+    pub rgulAttrs: [u32; 2],
+    pub cbComment: i32,
+    pub uct: IMEUCT,
+    pub pvComment: *mut ::core::ffi::c_void,
+}
+impl ::core::marker::Copy for IMEWRD {}
+impl ::core::clone::Clone for IMEWRD {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub union IMEWRD_0 {
+    pub ulPos: u32,
+    pub Anonymous: IMEWRD_0_0,
+}
+impl ::core::marker::Copy for IMEWRD_0 {}
+impl ::core::clone::Clone for IMEWRD_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub struct IMEWRD_0_0 {
+    pub nPos1: u16,
+    pub nPos2: u16,
+}
+impl ::core::marker::Copy for IMEWRD_0_0 {}
+impl ::core::clone::Clone for IMEWRD_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_Graphics_Gdi"))]
+pub struct INPUTCONTEXT {
+    pub hWnd: super::super::super::Foundation::HWND,
+    pub fOpen: super::super::super::Foundation::BOOL,
+    pub ptStatusWndPos: super::super::super::Foundation::POINT,
+    pub ptSoftKbdPos: super::super::super::Foundation::POINT,
+    pub fdwConversion: u32,
+    pub fdwSentence: u32,
+    pub lfFont: INPUTCONTEXT_0,
+    pub cfCompForm: COMPOSITIONFORM,
+    pub cfCandForm: [CANDIDATEFORM; 4],
+    pub hCompStr: super::super::super::Globalization::HIMCC,
+    pub hCandInfo: super::super::super::Globalization::HIMCC,
+    pub hGuideLine: super::super::super::Globalization::HIMCC,
+    pub hPrivate: super::super::super::Globalization::HIMCC,
+    pub dwNumMsgBuf: u32,
+    pub hMsgBuf: super::super::super::Globalization::HIMCC,
+    pub fdwInit: u32,
+    pub dwReserve: [u32; 3],
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for INPUTCONTEXT {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for INPUTCONTEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_Graphics_Gdi"))]
+pub union INPUTCONTEXT_0 {
+    pub A: super::super::super::Graphics::Gdi::LOGFONTA,
+    pub W: super::super::super::Graphics::Gdi::LOGFONTW,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for INPUTCONTEXT_0 {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for INPUTCONTEXT_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub struct MORRSLT {
@@ -2334,41 +2528,6 @@ impl ::core::clone::Clone for MORRSLT_2 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const NI_CONTEXTUPDATED: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const NI_FINALIZECONVERSIONRESULT: u32 = 20u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub type NOTIFY_IME_ACTION = u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const NI_CHANGECANDIDATELIST: NOTIFY_IME_ACTION = 19u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const NI_CLOSECANDIDATE: NOTIFY_IME_ACTION = 17u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const NI_COMPOSITIONSTR: NOTIFY_IME_ACTION = 21u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const NI_IMEMENUSELECTED: NOTIFY_IME_ACTION = 24u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const NI_OPENCANDIDATE: NOTIFY_IME_ACTION = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const NI_SELECTCANDIDATESTR: NOTIFY_IME_ACTION = 18u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const NI_SETCANDIDATE_PAGESIZE: NOTIFY_IME_ACTION = 23u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const NI_SETCANDIDATE_PAGESTART: NOTIFY_IME_ACTION = 22u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub type NOTIFY_IME_INDEX = u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const CPS_CANCEL: NOTIFY_IME_INDEX = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const CPS_COMPLETE: NOTIFY_IME_INDEX = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const CPS_CONVERT: NOTIFY_IME_INDEX = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const CPS_REVERT: NOTIFY_IME_INDEX = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFNLOG = ::core::option::Option<unsafe extern "system" fn(param0: *mut IMEDP, param1: ::windows_sys::core::HRESULT) -> super::super::super::Foundation::BOOL>;
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub struct POSTBL {
@@ -2381,8 +2540,6 @@ impl ::core::clone::Clone for POSTBL {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const POS_UNDEFINED: u32 = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub struct RECONVERTSTRING {
@@ -2401,10 +2558,6 @@ impl ::core::clone::Clone for RECONVERTSTRING {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RECONVOPT_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RECONVOPT_USECANCELNOTIFY: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub struct REGISTERWORDA {
@@ -2417,10 +2570,6 @@ impl ::core::clone::Clone for REGISTERWORDA {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub type REGISTERWORDENUMPROCA = ::core::option::Option<unsafe extern "system" fn(lpszreading: ::windows_sys::core::PCSTR, param1: u32, lpszstring: ::windows_sys::core::PCSTR, param3: *mut ::core::ffi::c_void) -> i32>;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub type REGISTERWORDENUMPROCW = ::core::option::Option<unsafe extern "system" fn(lpszreading: ::windows_sys::core::PCWSTR, param1: u32, lpszstring: ::windows_sys::core::PCWSTR, param3: *mut ::core::ffi::c_void) -> i32>;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub struct REGISTERWORDW {
@@ -2433,60 +2582,6 @@ impl ::core::clone::Clone for REGISTERWORDW {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_CHGKEYMAP: &str = "MSIMEChangeKeyMap";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_DOCUMENTFEED: &str = "MSIMEDocumentFeed";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_KEYMAP: &str = "MSIMEKeyMap";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_MODEBIAS: &str = "MSIMEModeBias";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_MOUSE: &str = "MSIMEMouseOperation";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_NTFYKEYMAP: &str = "MSIMENotifyKeyMap";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_QUERYPOSITION: &str = "MSIMEQueryPosition";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_RECONVERT: &str = "MSIMEReconvert";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_RECONVERTOPTIONS: &str = "MSIMEReconvertOptions";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_RECONVERTREQUEST: &str = "MSIMEReconvertRequest";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_SERVICE: &str = "MSIMEService";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_SHOWIMEPAD: &str = "MSIMEShowImePad";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const RWM_UIREADY: &str = "MSIMEUIReady";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SCS_CAP_COMPSTR: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SCS_CAP_MAKEREAD: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SCS_CAP_SETRECONVERTSTRING: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SELECT_CAP_CONVERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SELECT_CAP_SENTENCE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub type SET_COMPOSITION_STRING_TYPE = u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SCS_SETSTR: SET_COMPOSITION_STRING_TYPE = 9u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SCS_CHANGEATTR: SET_COMPOSITION_STRING_TYPE = 18u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SCS_CHANGECLAUSE: SET_COMPOSITION_STRING_TYPE = 36u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SCS_SETRECONVERTSTRING: SET_COMPOSITION_STRING_TYPE = 65536u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SCS_QUERYRECONVERTSTRING: SET_COMPOSITION_STRING_TYPE = 131072u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SHOWIMEPAD_CATEGORY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SHOWIMEPAD_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SHOWIMEPAD_GUID: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub struct SOFTKBDDATA {
@@ -2499,10 +2594,6 @@ impl ::core::clone::Clone for SOFTKBDDATA {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SOFTKEYBOARD_TYPE_C1: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const SOFTKEYBOARD_TYPE_T1: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -2530,8 +2621,6 @@ impl ::core::clone::Clone for STYLEBUFW {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const STYLE_DESCRIPTION_SIZE: u32 = 32u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -2563,32 +2652,6 @@ impl ::core::clone::Clone for TRANSMSGLIST {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const UI_CAP_2700: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const UI_CAP_ROT90: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const UI_CAP_ROTANY: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const UI_CAP_SOFTKBD: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const VERSION_DOCUMENTFEED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const VERSION_ID_CHINESE_SIMPLIFIED: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const VERSION_ID_CHINESE_TRADITIONAL: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const VERSION_ID_JAPANESE: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const VERSION_ID_KOREAN: u32 = 33554432u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const VERSION_MODEBIAS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const VERSION_MOUSE_OPERATION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const VERSION_QUERYPOSITION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const VERSION_RECONVERSION: u32 = 1u32;
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub struct WDD {
@@ -2631,46 +2694,19 @@ impl ::core::clone::Clone for WDD_1 {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`, `\"Win32_Globalization\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Globalization"))]
+pub type IMCENUMPROC = ::core::option::Option<unsafe extern "system" fn(param0: super::super::super::Globalization::HIMC, param1: super::super::super::Foundation::LPARAM) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFNLOG = ::core::option::Option<unsafe extern "system" fn(param0: *mut IMEDP, param1: ::windows_sys::core::HRESULT) -> super::super::super::Foundation::BOOL>;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const cbCommentMax: u32 = 256u32;
+pub type REGISTERWORDENUMPROCA = ::core::option::Option<unsafe extern "system" fn(lpszreading: ::windows_sys::core::PCSTR, param1: u32, lpszstring: ::windows_sys::core::PCSTR, param3: *mut ::core::ffi::c_void) -> i32>;
+#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
+pub type REGISTERWORDENUMPROCW = ::core::option::Option<unsafe extern "system" fn(lpszreading: ::windows_sys::core::PCWSTR, param1: u32, lpszstring: ::windows_sys::core::PCWSTR, param3: *mut ::core::ffi::c_void) -> i32>;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub type fpCreateIFECommonInstanceType = ::core::option::Option<unsafe extern "system" fn(ppvobj: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub type fpCreateIFEDictionaryInstanceType = ::core::option::Option<unsafe extern "system" fn(ppvobj: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
 pub type fpCreateIFELanguageInstanceType = ::core::option::Option<unsafe extern "system" fn(clsid: *const ::windows_sys::core::GUID, ppvobj: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const szImeChina: &str = "MSIME.China";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const szImeJapan: &str = "MSIME.Japan";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const szImeKorea: &str = "MSIME.Korea";
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const szImeTaiwan: &str = "MSIME.Taiwan";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct tabIMEFAREASTINFO {
-    pub dwSize: u32,
-    pub dwType: u32,
-    pub dwData: [u32; 1],
-}
-impl ::core::marker::Copy for tabIMEFAREASTINFO {}
-impl ::core::clone::Clone for tabIMEFAREASTINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub struct tabIMESTRINGINFO {
-    pub dwFarEastId: u32,
-    pub lpwstr: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for tabIMESTRINGINFO {}
-impl ::core::clone::Clone for tabIMESTRINGINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Input_Ime\"`*"]
-pub const wchPrivate1: u32 = 57344u32;

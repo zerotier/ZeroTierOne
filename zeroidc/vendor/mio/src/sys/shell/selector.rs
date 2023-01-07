@@ -11,7 +11,6 @@ pub type Events = Vec<Event>;
 pub struct Selector {}
 
 impl Selector {
-    #[cfg(not(target_os = "wasi"))]
     pub fn try_clone(&self) -> io::Result<Selector> {
         os_required!();
     }

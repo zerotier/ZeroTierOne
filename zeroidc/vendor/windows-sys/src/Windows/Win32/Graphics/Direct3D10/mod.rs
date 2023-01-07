@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Direct3D\"`*"]
     #[cfg(feature = "Win32_Graphics_Direct3D")]
@@ -74,6 +74,61 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
     pub fn D3D10StateBlockMaskUnion(pa: *const D3D10_STATE_BLOCK_MASK, pb: *const D3D10_STATE_BLOCK_MASK, presult: *mut D3D10_STATE_BLOCK_MASK) -> ::windows_sys::core::HRESULT;
 }
+pub type ID3D10Asynchronous = *mut ::core::ffi::c_void;
+pub type ID3D10BlendState = *mut ::core::ffi::c_void;
+pub type ID3D10BlendState1 = *mut ::core::ffi::c_void;
+pub type ID3D10Buffer = *mut ::core::ffi::c_void;
+pub type ID3D10Counter = *mut ::core::ffi::c_void;
+pub type ID3D10Debug = *mut ::core::ffi::c_void;
+pub type ID3D10DepthStencilState = *mut ::core::ffi::c_void;
+pub type ID3D10DepthStencilView = *mut ::core::ffi::c_void;
+pub type ID3D10Device = *mut ::core::ffi::c_void;
+pub type ID3D10Device1 = *mut ::core::ffi::c_void;
+pub type ID3D10DeviceChild = *mut ::core::ffi::c_void;
+pub type ID3D10Effect = *mut ::core::ffi::c_void;
+pub type ID3D10EffectBlendVariable = *mut ::core::ffi::c_void;
+pub type ID3D10EffectConstantBuffer = *mut ::core::ffi::c_void;
+pub type ID3D10EffectDepthStencilVariable = *mut ::core::ffi::c_void;
+pub type ID3D10EffectDepthStencilViewVariable = *mut ::core::ffi::c_void;
+pub type ID3D10EffectMatrixVariable = *mut ::core::ffi::c_void;
+pub type ID3D10EffectPass = *mut ::core::ffi::c_void;
+pub type ID3D10EffectPool = *mut ::core::ffi::c_void;
+pub type ID3D10EffectRasterizerVariable = *mut ::core::ffi::c_void;
+pub type ID3D10EffectRenderTargetViewVariable = *mut ::core::ffi::c_void;
+pub type ID3D10EffectSamplerVariable = *mut ::core::ffi::c_void;
+pub type ID3D10EffectScalarVariable = *mut ::core::ffi::c_void;
+pub type ID3D10EffectShaderResourceVariable = *mut ::core::ffi::c_void;
+pub type ID3D10EffectShaderVariable = *mut ::core::ffi::c_void;
+pub type ID3D10EffectStringVariable = *mut ::core::ffi::c_void;
+pub type ID3D10EffectTechnique = *mut ::core::ffi::c_void;
+pub type ID3D10EffectType = *mut ::core::ffi::c_void;
+pub type ID3D10EffectVariable = *mut ::core::ffi::c_void;
+pub type ID3D10EffectVectorVariable = *mut ::core::ffi::c_void;
+pub type ID3D10GeometryShader = *mut ::core::ffi::c_void;
+pub type ID3D10InfoQueue = *mut ::core::ffi::c_void;
+pub type ID3D10InputLayout = *mut ::core::ffi::c_void;
+pub type ID3D10Multithread = *mut ::core::ffi::c_void;
+pub type ID3D10PixelShader = *mut ::core::ffi::c_void;
+pub type ID3D10Predicate = *mut ::core::ffi::c_void;
+pub type ID3D10Query = *mut ::core::ffi::c_void;
+pub type ID3D10RasterizerState = *mut ::core::ffi::c_void;
+pub type ID3D10RenderTargetView = *mut ::core::ffi::c_void;
+pub type ID3D10Resource = *mut ::core::ffi::c_void;
+pub type ID3D10SamplerState = *mut ::core::ffi::c_void;
+pub type ID3D10ShaderReflection = *mut ::core::ffi::c_void;
+pub type ID3D10ShaderReflection1 = *mut ::core::ffi::c_void;
+pub type ID3D10ShaderReflectionConstantBuffer = *mut ::core::ffi::c_void;
+pub type ID3D10ShaderReflectionType = *mut ::core::ffi::c_void;
+pub type ID3D10ShaderReflectionVariable = *mut ::core::ffi::c_void;
+pub type ID3D10ShaderResourceView = *mut ::core::ffi::c_void;
+pub type ID3D10ShaderResourceView1 = *mut ::core::ffi::c_void;
+pub type ID3D10StateBlock = *mut ::core::ffi::c_void;
+pub type ID3D10SwitchToRef = *mut ::core::ffi::c_void;
+pub type ID3D10Texture1D = *mut ::core::ffi::c_void;
+pub type ID3D10Texture2D = *mut ::core::ffi::c_void;
+pub type ID3D10Texture3D = *mut ::core::ffi::c_void;
+pub type ID3D10VertexShader = *mut ::core::ffi::c_void;
+pub type ID3D10View = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_16BIT_INDEX_STRIP_CUT_VALUE: u32 = 65535u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
@@ -135,128 +190,6 @@ pub const D3D10_APPSIZE_STRING: &str = "Size";
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_ARRAY_AXIS_ADDRESS_RANGE_BIT_COUNT: u32 = 9u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_ASYNC_GETDATA_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_ASYNC_GETDATA_DONOTFLUSH: D3D10_ASYNC_GETDATA_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_BIND_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BIND_VERTEX_BUFFER: D3D10_BIND_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BIND_INDEX_BUFFER: D3D10_BIND_FLAG = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BIND_CONSTANT_BUFFER: D3D10_BIND_FLAG = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BIND_SHADER_RESOURCE: D3D10_BIND_FLAG = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BIND_STREAM_OUTPUT: D3D10_BIND_FLAG = 16i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BIND_RENDER_TARGET: D3D10_BIND_FLAG = 32i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BIND_DEPTH_STENCIL: D3D10_BIND_FLAG = 64i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_BLEND = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_ZERO: D3D10_BLEND = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_ONE: D3D10_BLEND = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_SRC_COLOR: D3D10_BLEND = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_INV_SRC_COLOR: D3D10_BLEND = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_SRC_ALPHA: D3D10_BLEND = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_INV_SRC_ALPHA: D3D10_BLEND = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_DEST_ALPHA: D3D10_BLEND = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_INV_DEST_ALPHA: D3D10_BLEND = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_DEST_COLOR: D3D10_BLEND = 9i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_INV_DEST_COLOR: D3D10_BLEND = 10i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_SRC_ALPHA_SAT: D3D10_BLEND = 11i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_BLEND_FACTOR: D3D10_BLEND = 14i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_INV_BLEND_FACTOR: D3D10_BLEND = 15i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_SRC1_COLOR: D3D10_BLEND = 16i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_INV_SRC1_COLOR: D3D10_BLEND = 17i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_SRC1_ALPHA: D3D10_BLEND = 18i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_INV_SRC1_ALPHA: D3D10_BLEND = 19i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D10_BLEND_DESC {
-    pub AlphaToCoverageEnable: super::super::Foundation::BOOL,
-    pub BlendEnable: [super::super::Foundation::BOOL; 8],
-    pub SrcBlend: D3D10_BLEND,
-    pub DestBlend: D3D10_BLEND,
-    pub BlendOp: D3D10_BLEND_OP,
-    pub SrcBlendAlpha: D3D10_BLEND,
-    pub DestBlendAlpha: D3D10_BLEND,
-    pub BlendOpAlpha: D3D10_BLEND_OP,
-    pub RenderTargetWriteMask: [u8; 8],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D10_BLEND_DESC {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D10_BLEND_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D10_BLEND_DESC1 {
-    pub AlphaToCoverageEnable: super::super::Foundation::BOOL,
-    pub IndependentBlendEnable: super::super::Foundation::BOOL,
-    pub RenderTarget: [D3D10_RENDER_TARGET_BLEND_DESC1; 8],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D10_BLEND_DESC1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D10_BLEND_DESC1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_BLEND_OP = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_OP_ADD: D3D10_BLEND_OP = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_OP_SUBTRACT: D3D10_BLEND_OP = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_OP_REV_SUBTRACT: D3D10_BLEND_OP = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_OP_MIN: D3D10_BLEND_OP = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_BLEND_OP_MAX: D3D10_BLEND_OP = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_BOX {
-    pub left: u32,
-    pub top: u32,
-    pub front: u32,
-    pub right: u32,
-    pub bottom: u32,
-    pub back: u32,
-}
-impl ::core::marker::Copy for D3D10_BOX {}
-impl ::core::clone::Clone for D3D10_BOX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_BREAKON_CATEGORY: &str = "BreakOn_CATEGORY_%s";
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_BREAKON_ID_DECIMAL: &str = "BreakOn_ID_%d";
@@ -264,115 +197,10 @@ pub const D3D10_BREAKON_ID_DECIMAL: &str = "BreakOn_ID_%d";
 pub const D3D10_BREAKON_ID_STRING: &str = "BreakOn_ID_%s";
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_BREAKON_SEVERITY: &str = "BreakOn_SEVERITY_%s";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_BUFFER_DESC {
-    pub ByteWidth: u32,
-    pub Usage: D3D10_USAGE,
-    pub BindFlags: u32,
-    pub CPUAccessFlags: u32,
-    pub MiscFlags: u32,
-}
-impl ::core::marker::Copy for D3D10_BUFFER_DESC {}
-impl ::core::clone::Clone for D3D10_BUFFER_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_BUFFER_RTV {
-    pub Anonymous1: D3D10_BUFFER_RTV_0,
-    pub Anonymous2: D3D10_BUFFER_RTV_1,
-}
-impl ::core::marker::Copy for D3D10_BUFFER_RTV {}
-impl ::core::clone::Clone for D3D10_BUFFER_RTV {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub union D3D10_BUFFER_RTV_0 {
-    pub FirstElement: u32,
-    pub ElementOffset: u32,
-}
-impl ::core::marker::Copy for D3D10_BUFFER_RTV_0 {}
-impl ::core::clone::Clone for D3D10_BUFFER_RTV_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub union D3D10_BUFFER_RTV_1 {
-    pub NumElements: u32,
-    pub ElementWidth: u32,
-}
-impl ::core::marker::Copy for D3D10_BUFFER_RTV_1 {}
-impl ::core::clone::Clone for D3D10_BUFFER_RTV_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_BUFFER_SRV {
-    pub Anonymous1: D3D10_BUFFER_SRV_0,
-    pub Anonymous2: D3D10_BUFFER_SRV_1,
-}
-impl ::core::marker::Copy for D3D10_BUFFER_SRV {}
-impl ::core::clone::Clone for D3D10_BUFFER_SRV {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub union D3D10_BUFFER_SRV_0 {
-    pub FirstElement: u32,
-    pub ElementOffset: u32,
-}
-impl ::core::marker::Copy for D3D10_BUFFER_SRV_0 {}
-impl ::core::clone::Clone for D3D10_BUFFER_SRV_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub union D3D10_BUFFER_SRV_1 {
-    pub NumElements: u32,
-    pub ElementWidth: u32,
-}
-impl ::core::marker::Copy for D3D10_BUFFER_SRV_1 {}
-impl ::core::clone::Clone for D3D10_BUFFER_SRV_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_CLEAR_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CLEAR_DEPTH: D3D10_CLEAR_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CLEAR_STENCIL: D3D10_CLEAR_FLAG = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_CLIP_OR_CULL_DISTANCE_COUNT: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_CLIP_OR_CULL_DISTANCE_ELEMENT_COUNT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_COLOR_WRITE_ENABLE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COLOR_WRITE_ENABLE_RED: D3D10_COLOR_WRITE_ENABLE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COLOR_WRITE_ENABLE_GREEN: D3D10_COLOR_WRITE_ENABLE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COLOR_WRITE_ENABLE_BLUE: D3D10_COLOR_WRITE_ENABLE = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COLOR_WRITE_ENABLE_ALPHA: D3D10_COLOR_WRITE_ENABLE = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COLOR_WRITE_ENABLE_ALL: D3D10_COLOR_WRITE_ENABLE = 15i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT: u32 = 14u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
@@ -444,133 +272,6 @@ pub const D3D10_COMMONSHADER_TEXEL_OFFSET_MAX_POSITIVE: u32 = 7u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_COMPARISON_FILTERING_BIT: u32 = 128u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_COMPARISON_FUNC = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COMPARISON_NEVER: D3D10_COMPARISON_FUNC = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COMPARISON_LESS: D3D10_COMPARISON_FUNC = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COMPARISON_EQUAL: D3D10_COMPARISON_FUNC = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COMPARISON_LESS_EQUAL: D3D10_COMPARISON_FUNC = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COMPARISON_GREATER: D3D10_COMPARISON_FUNC = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COMPARISON_NOT_EQUAL: D3D10_COMPARISON_FUNC = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COMPARISON_GREATER_EQUAL: D3D10_COMPARISON_FUNC = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COMPARISON_ALWAYS: D3D10_COMPARISON_FUNC = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_COUNTER = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_GPU_IDLE: D3D10_COUNTER = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_VERTEX_PROCESSING: D3D10_COUNTER = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_GEOMETRY_PROCESSING: D3D10_COUNTER = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_PIXEL_PROCESSING: D3D10_COUNTER = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_OTHER_GPU_PROCESSING: D3D10_COUNTER = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_HOST_ADAPTER_BANDWIDTH_UTILIZATION: D3D10_COUNTER = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_LOCAL_VIDMEM_BANDWIDTH_UTILIZATION: D3D10_COUNTER = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_VERTEX_THROUGHPUT_UTILIZATION: D3D10_COUNTER = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_TRIANGLE_SETUP_THROUGHPUT_UTILIZATION: D3D10_COUNTER = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_FILLRATE_THROUGHPUT_UTILIZATION: D3D10_COUNTER = 9i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_VS_MEMORY_LIMITED: D3D10_COUNTER = 10i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_VS_COMPUTATION_LIMITED: D3D10_COUNTER = 11i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_GS_MEMORY_LIMITED: D3D10_COUNTER = 12i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_GS_COMPUTATION_LIMITED: D3D10_COUNTER = 13i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_PS_MEMORY_LIMITED: D3D10_COUNTER = 14i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_PS_COMPUTATION_LIMITED: D3D10_COUNTER = 15i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_POST_TRANSFORM_CACHE_HIT_RATE: D3D10_COUNTER = 16i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_TEXTURE_CACHE_HIT_RATE: D3D10_COUNTER = 17i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_DEVICE_DEPENDENT_0: D3D10_COUNTER = 1073741824i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_COUNTER_DESC {
-    pub Counter: D3D10_COUNTER,
-    pub MiscFlags: u32,
-}
-impl ::core::marker::Copy for D3D10_COUNTER_DESC {}
-impl ::core::clone::Clone for D3D10_COUNTER_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_COUNTER_INFO {
-    pub LastDeviceDependentCounter: D3D10_COUNTER,
-    pub NumSimultaneousCounters: u32,
-    pub NumDetectableParallelUnits: u8,
-}
-impl ::core::marker::Copy for D3D10_COUNTER_INFO {}
-impl ::core::clone::Clone for D3D10_COUNTER_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_COUNTER_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_TYPE_FLOAT32: D3D10_COUNTER_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_TYPE_UINT16: D3D10_COUNTER_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_TYPE_UINT32: D3D10_COUNTER_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_COUNTER_TYPE_UINT64: D3D10_COUNTER_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_CPU_ACCESS_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CPU_ACCESS_WRITE: D3D10_CPU_ACCESS_FLAG = 65536i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CPU_ACCESS_READ: D3D10_CPU_ACCESS_FLAG = 131072i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_CREATE_DEVICE_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CREATE_DEVICE_SINGLETHREADED: D3D10_CREATE_DEVICE_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CREATE_DEVICE_DEBUG: D3D10_CREATE_DEVICE_FLAG = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CREATE_DEVICE_SWITCH_TO_REF: D3D10_CREATE_DEVICE_FLAG = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS: D3D10_CREATE_DEVICE_FLAG = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CREATE_DEVICE_ALLOW_NULL_FROM_MAP: D3D10_CREATE_DEVICE_FLAG = 16i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CREATE_DEVICE_BGRA_SUPPORT: D3D10_CREATE_DEVICE_FLAG = 32i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CREATE_DEVICE_PREVENT_ALTERING_LAYER_SETTINGS_FROM_REGISTRY: D3D10_CREATE_DEVICE_FLAG = 128i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CREATE_DEVICE_STRICT_VALIDATION: D3D10_CREATE_DEVICE_FLAG = 512i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CREATE_DEVICE_DEBUGGABLE: D3D10_CREATE_DEVICE_FLAG = 1024i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_CULL_MODE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CULL_NONE: D3D10_CULL_MODE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CULL_FRONT: D3D10_CULL_MODE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CULL_BACK: D3D10_CULL_MODE = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_DEBUG_FEATURE_FINISH_PER_RENDER_OP: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_DEBUG_FEATURE_FLUSH_PER_RENDER_OP: u32 = 1u32;
@@ -628,76 +329,594 @@ pub const D3D10_DEFAULT_VIEWPORT_TOPLEFTX: u32 = 0u32;
 pub const D3D10_DEFAULT_VIEWPORT_TOPLEFTY: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_DEFAULT_VIEWPORT_WIDTH: u32 = 0u32;
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_DEPTH_STENCILOP_DESC {
-    pub StencilFailOp: D3D10_STENCIL_OP,
-    pub StencilDepthFailOp: D3D10_STENCIL_OP,
-    pub StencilPassOp: D3D10_STENCIL_OP,
-    pub StencilFunc: D3D10_COMPARISON_FUNC,
-}
-impl ::core::marker::Copy for D3D10_DEPTH_STENCILOP_DESC {}
-impl ::core::clone::Clone for D3D10_DEPTH_STENCILOP_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D10_DEPTH_STENCIL_DESC {
-    pub DepthEnable: super::super::Foundation::BOOL,
-    pub DepthWriteMask: D3D10_DEPTH_WRITE_MASK,
-    pub DepthFunc: D3D10_COMPARISON_FUNC,
-    pub StencilEnable: super::super::Foundation::BOOL,
-    pub StencilReadMask: u8,
-    pub StencilWriteMask: u8,
-    pub FrontFace: D3D10_DEPTH_STENCILOP_DESC,
-    pub BackFace: D3D10_DEPTH_STENCILOP_DESC,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D10_DEPTH_STENCIL_DESC {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D10_DEPTH_STENCIL_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D10_DEPTH_STENCIL_VIEW_DESC {
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-    pub ViewDimension: D3D10_DSV_DIMENSION,
-    pub Anonymous: D3D10_DEPTH_STENCIL_VIEW_DESC_0,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D10_DEPTH_STENCIL_VIEW_DESC {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D10_DEPTH_STENCIL_VIEW_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub union D3D10_DEPTH_STENCIL_VIEW_DESC_0 {
-    pub Texture1D: D3D10_TEX1D_DSV,
-    pub Texture1DArray: D3D10_TEX1D_ARRAY_DSV,
-    pub Texture2D: D3D10_TEX2D_DSV,
-    pub Texture2DArray: D3D10_TEX2D_ARRAY_DSV,
-    pub Texture2DMS: D3D10_TEX2DMS_DSV,
-    pub Texture2DMSArray: D3D10_TEX2DMS_ARRAY_DSV,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D10_DEPTH_STENCIL_VIEW_DESC_0 {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D10_DEPTH_STENCIL_VIEW_DESC_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const D3D10_EFFECT_COMPILE_ALLOW_SLOW_OPS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_EFFECT_COMPILE_CHILD_EFFECT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_EFFECT_SINGLE_THREADED: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_EFFECT_VARIABLE_ANNOTATION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_EFFECT_VARIABLE_EXPLICIT_BIND_POINT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_EFFECT_VARIABLE_POOLED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_ENABLE_BREAK_ON_MESSAGE: &str = "EnableBreakOnMessage";
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FILTER_TYPE_MASK: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FLOAT16_FUSED_TOLERANCE_IN_ULP: f64 = 0.6f64;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FLOAT32_MAX: f32 = 340282350000000000000000000000000000000f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FLOAT32_TO_INTEGER_TOLERANCE_IN_ULP: f32 = 0.6f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FLOAT_TO_SRGB_EXPONENT_DENOMINATOR: f32 = 2.4f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FLOAT_TO_SRGB_EXPONENT_NUMERATOR: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FLOAT_TO_SRGB_OFFSET: f32 = 0.055f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FLOAT_TO_SRGB_SCALE_1: f32 = 12.92f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FLOAT_TO_SRGB_SCALE_2: f32 = 1.055f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FLOAT_TO_SRGB_THRESHOLD: f32 = 0.0031308f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FTOI_INSTRUCTION_MAX_INPUT: f32 = 2147483600f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FTOI_INSTRUCTION_MIN_INPUT: f32 = -2147483600f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FTOU_INSTRUCTION_MAX_INPUT: f32 = 4294967300f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_FTOU_INSTRUCTION_MIN_INPUT: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_INPUT_PRIM_CONST_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_INPUT_PRIM_CONST_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_INPUT_PRIM_CONST_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_INPUT_PRIM_CONST_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_INPUT_PRIM_CONST_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_INPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_INPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_INPUT_REGISTER_COUNT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_INPUT_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_INPUT_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_INPUT_REGISTER_VERTICES: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_OUTPUT_ELEMENTS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_GS_OUTPUT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_IA_DEFAULT_INDEX_BUFFER_OFFSET_IN_BYTES: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_IA_DEFAULT_PRIMITIVE_TOPOLOGY: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_IA_DEFAULT_VERTEX_BUFFER_OFFSET_IN_BYTES: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_IA_INDEX_INPUT_RESOURCE_SLOT_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_IA_INSTANCE_ID_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_IA_INTEGER_ARITHMETIC_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_IA_PRIMITIVE_ID_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_IA_VERTEX_ID_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_IA_VERTEX_INPUT_STRUCTURE_ELEMENTS_COMPONENTS: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_IA_VERTEX_INPUT_STRUCTURE_ELEMENT_COUNT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_INFOQUEUE_STORAGE_FILTER_OVERRIDE: &str = "InfoQueueStorageFilterOverride";
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_INFO_QUEUE_DEFAULT_MESSAGE_COUNT_LIMIT: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_INTEGER_DIVIDE_BY_ZERO_QUOTIENT: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_INTEGER_DIVIDE_BY_ZERO_REMAINDER: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_LINEAR_GAMMA: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MAG_FILTER_SHIFT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MAX_BORDER_COLOR_COMPONENT: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MAX_DEPTH: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MAX_MAXANISOTROPY: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MAX_MULTISAMPLE_SAMPLE_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MAX_POSITION_VALUE: f32 = 34028236000000000000000000000000000f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MAX_TEXTURE_DIMENSION_2_TO_EXP: u32 = 17u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MIN_BORDER_COLOR_COMPONENT: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MIN_DEPTH: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MIN_FILTER_SHIFT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MIN_MAXANISOTROPY: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MIP_FILTER_SHIFT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MIP_LOD_BIAS_MAX: f32 = 15.99f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MIP_LOD_BIAS_MIN: f32 = -16f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MIP_LOD_FRACTIONAL_BIT_COUNT: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MIP_LOD_RANGE_BIT_COUNT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MULTISAMPLE_ANTIALIAS_LINE_WIDTH: f32 = 1.4f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MUTE_CATEGORY: &str = "Mute_CATEGORY_%s";
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MUTE_DEBUG_OUTPUT: &str = "MuteDebugOutput";
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MUTE_ID_DECIMAL: &str = "Mute_ID_%d";
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MUTE_ID_STRING: &str = "Mute_ID_%s";
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_MUTE_SEVERITY: &str = "Mute_SEVERITY_%s";
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_NONSAMPLE_FETCH_OUT_OF_RANGE_ACCESS_RESULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PIXEL_ADDRESS_RANGE_BIT_COUNT: u32 = 13u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PRE_SCISSOR_PIXEL_ADDRESS_RANGE_BIT_COUNT: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_FRONTFACING_DEFAULT_VALUE: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_FRONTFACING_FALSE_VALUE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_FRONTFACING_TRUE_VALUE: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_INPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_INPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_INPUT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_INPUT_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_INPUT_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_LEGACY_PIXEL_CENTER_FRACTIONAL_COMPONENT: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_OUTPUT_DEPTH_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_OUTPUT_DEPTH_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_OUTPUT_DEPTH_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_OUTPUT_REGISTER_COUNT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_PS_PIXEL_CENTER_FRACTIONAL_COMPONENT: f32 = 0.5f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REGKEY_PATH: &str = "Software\\Microsoft\\Direct3D";
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_BLEND_OBJECT_COUNT_PER_CONTEXT: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_BUFFER_RESOURCE_TEXEL_COUNT_2_TO_EXP: u32 = 27u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_CONSTANT_BUFFER_ELEMENT_COUNT: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_DEPTH_STENCIL_OBJECT_COUNT_PER_CONTEXT: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_DRAW_VERTEX_COUNT_2_TO_EXP: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_FILTERING_HW_ADDRESSABLE_RESOURCE_DIMENSION: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_GS_INVOCATION_32BIT_OUTPUT_COMPONENT_LIMIT: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_IMMEDIATE_CONSTANT_BUFFER_ELEMENT_COUNT: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_MAXANISOTROPY: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_MIP_LEVELS: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_MULTI_ELEMENT_STRUCTURE_SIZE_IN_BYTES: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_RASTERIZER_OBJECT_COUNT_PER_CONTEXT: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_RENDER_TO_BUFFER_WINDOW_WIDTH: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_RESOURCE_SIZE_IN_MEGABYTES: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_RESOURCE_VIEW_COUNT_PER_CONTEXT_2_TO_EXP: u32 = 20u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_SAMPLER_OBJECT_COUNT_PER_CONTEXT: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_TEXTURE1D_U_DIMENSION: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_TEXTURE2D_U_OR_V_DIMENSION: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_TEXTURE3D_U_V_OR_W_DIMENSION: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_REQ_TEXTURECUBE_DIMENSION: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RESINFO_INSTRUCTION_MISSING_COMPONENT_RETVAL: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SDK_LAYERS_VERSION: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SDK_VERSION: u32 = 29u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_AVOID_FLOW_CONTROL: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_NAME_FOR_BINARY: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_NAME_FOR_SOURCE: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_ENABLE_BACKWARDS_COMPATIBILITY: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_ENABLE_STRICTNESS: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_FLAGS2_FORCE_ROOT_SIGNATURE_1_0: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_FLAGS2_FORCE_ROOT_SIGNATURE_1_1: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_FLAGS2_FORCE_ROOT_SIGNATURE_LATEST: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_FORCE_PS_SOFTWARE_NO_OPT: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_FORCE_VS_SOFTWARE_NO_OPT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_IEEE_STRICTNESS: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_MAJOR_VERSION: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_MINOR_VERSION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_NO_PRESHADER: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_OPTIMIZATION_LEVEL0: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_OPTIMIZATION_LEVEL1: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_OPTIMIZATION_LEVEL3: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_PACK_MATRIX_COLUMN_MAJOR: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_PACK_MATRIX_ROW_MAJOR: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_PARTIAL_PRECISION: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_PREFER_FLOW_CONTROL: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_RESOURCES_MAY_ALIAS: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_SKIP_OPTIMIZATION: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_SKIP_VALIDATION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_WARNINGS_ARE_ERRORS: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHIFT_INSTRUCTION_PAD_VALUE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHIFT_INSTRUCTION_SHIFT_VALUE_BIT_COUNT: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SIMULTANEOUS_RENDER_TARGET_COUNT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SO_BUFFER_MAX_STRIDE_IN_BYTES: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SO_BUFFER_MAX_WRITE_WINDOW_IN_BYTES: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SO_BUFFER_SLOT_COUNT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SO_DDI_REGISTER_INDEX_DENOTING_GAP: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SO_MULTIPLE_BUFFER_ELEMENTS_PER_BUFFER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SO_SINGLE_BUFFER_COMPONENT_LIMIT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SRGB_GAMMA: f32 = 2.2f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SRGB_TO_FLOAT_DENOMINATOR_1: f32 = 12.92f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SRGB_TO_FLOAT_DENOMINATOR_2: f32 = 1.055f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SRGB_TO_FLOAT_EXPONENT: f32 = 2.4f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SRGB_TO_FLOAT_OFFSET: f32 = 0.055f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SRGB_TO_FLOAT_THRESHOLD: f32 = 0.04045f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SRGB_TO_FLOAT_TOLERANCE_IN_ULP: f32 = 0.5f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STANDARD_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STANDARD_COMPONENT_BIT_COUNT_DOUBLED: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STANDARD_MAXIMUM_ELEMENT_ALIGNMENT_BYTE_MULTIPLE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STANDARD_PIXEL_COMPONENT_COUNT: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STANDARD_PIXEL_ELEMENT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STANDARD_VECTOR_SIZE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STANDARD_VERTEX_ELEMENT_COUNT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STANDARD_VERTEX_TOTAL_COMPONENT_COUNT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SUBPIXEL_FRACTIONAL_BIT_COUNT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SUBTEXEL_FRACTIONAL_BIT_COUNT: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXEL_ADDRESS_RANGE_BIT_COUNT: u32 = 18u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXT_1BIT_BIT: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_UNBOUND_MEMORY_ACCESS_RESULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_UNMUTE_SEVERITY_INFO: &str = "Unmute_SEVERITY_INFO";
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_VIEWPORT_AND_SCISSORRECT_MAX_INDEX: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_VIEWPORT_BOUNDS_MAX: u32 = 16383u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_VIEWPORT_BOUNDS_MIN: i32 = -16384i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_VS_INPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_VS_INPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_VS_INPUT_REGISTER_COUNT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_VS_INPUT_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_VS_INPUT_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_VS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_VS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_VS_OUTPUT_REGISTER_COUNT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_WHQL_CONTEXT_COUNT_FOR_RESOURCE_LIMIT: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_WHQL_DRAWINDEXED_INDEX_COUNT_2_TO_EXP: u32 = 25u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_WHQL_DRAW_VERTEX_COUNT_2_TO_EXP: u32 = 25u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D_MAJOR_VERSION: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D_MINOR_VERSION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D_SPEC_DATE_DAY: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D_SPEC_DATE_MONTH: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D_SPEC_DATE_YEAR: u32 = 2006u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D_SPEC_VERSION: f64 = 1.050005f64;
+pub const DXGI_DEBUG_D3D10: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 607865938, data2: 13830, data3: 19770, data4: [153, 215, 167, 231, 179, 62, 215, 6] };
+pub const GUID_DeviceType: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3609393997, data2: 31336, data3: 17274, data4: [178, 12, 88, 4, 238, 36, 148, 166] };
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const _FACD3D10: u32 = 2169u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_ASYNC_GETDATA_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_ASYNC_GETDATA_DONOTFLUSH: D3D10_ASYNC_GETDATA_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_BIND_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BIND_VERTEX_BUFFER: D3D10_BIND_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BIND_INDEX_BUFFER: D3D10_BIND_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BIND_CONSTANT_BUFFER: D3D10_BIND_FLAG = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BIND_SHADER_RESOURCE: D3D10_BIND_FLAG = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BIND_STREAM_OUTPUT: D3D10_BIND_FLAG = 16i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BIND_RENDER_TARGET: D3D10_BIND_FLAG = 32i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BIND_DEPTH_STENCIL: D3D10_BIND_FLAG = 64i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_BLEND = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_ZERO: D3D10_BLEND = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_ONE: D3D10_BLEND = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_SRC_COLOR: D3D10_BLEND = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_INV_SRC_COLOR: D3D10_BLEND = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_SRC_ALPHA: D3D10_BLEND = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_INV_SRC_ALPHA: D3D10_BLEND = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_DEST_ALPHA: D3D10_BLEND = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_INV_DEST_ALPHA: D3D10_BLEND = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_DEST_COLOR: D3D10_BLEND = 9i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_INV_DEST_COLOR: D3D10_BLEND = 10i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_SRC_ALPHA_SAT: D3D10_BLEND = 11i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_BLEND_FACTOR: D3D10_BLEND = 14i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_INV_BLEND_FACTOR: D3D10_BLEND = 15i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_SRC1_COLOR: D3D10_BLEND = 16i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_INV_SRC1_COLOR: D3D10_BLEND = 17i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_SRC1_ALPHA: D3D10_BLEND = 18i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_INV_SRC1_ALPHA: D3D10_BLEND = 19i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_BLEND_OP = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_OP_ADD: D3D10_BLEND_OP = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_OP_SUBTRACT: D3D10_BLEND_OP = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_OP_REV_SUBTRACT: D3D10_BLEND_OP = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_OP_MIN: D3D10_BLEND_OP = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_BLEND_OP_MAX: D3D10_BLEND_OP = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_CLEAR_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CLEAR_DEPTH: D3D10_CLEAR_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CLEAR_STENCIL: D3D10_CLEAR_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_COLOR_WRITE_ENABLE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COLOR_WRITE_ENABLE_RED: D3D10_COLOR_WRITE_ENABLE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COLOR_WRITE_ENABLE_GREEN: D3D10_COLOR_WRITE_ENABLE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COLOR_WRITE_ENABLE_BLUE: D3D10_COLOR_WRITE_ENABLE = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COLOR_WRITE_ENABLE_ALPHA: D3D10_COLOR_WRITE_ENABLE = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COLOR_WRITE_ENABLE_ALL: D3D10_COLOR_WRITE_ENABLE = 15i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_COMPARISON_FUNC = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COMPARISON_NEVER: D3D10_COMPARISON_FUNC = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COMPARISON_LESS: D3D10_COMPARISON_FUNC = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COMPARISON_EQUAL: D3D10_COMPARISON_FUNC = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COMPARISON_LESS_EQUAL: D3D10_COMPARISON_FUNC = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COMPARISON_GREATER: D3D10_COMPARISON_FUNC = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COMPARISON_NOT_EQUAL: D3D10_COMPARISON_FUNC = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COMPARISON_GREATER_EQUAL: D3D10_COMPARISON_FUNC = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COMPARISON_ALWAYS: D3D10_COMPARISON_FUNC = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_COUNTER = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_GPU_IDLE: D3D10_COUNTER = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_VERTEX_PROCESSING: D3D10_COUNTER = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_GEOMETRY_PROCESSING: D3D10_COUNTER = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_PIXEL_PROCESSING: D3D10_COUNTER = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_OTHER_GPU_PROCESSING: D3D10_COUNTER = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_HOST_ADAPTER_BANDWIDTH_UTILIZATION: D3D10_COUNTER = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_LOCAL_VIDMEM_BANDWIDTH_UTILIZATION: D3D10_COUNTER = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_VERTEX_THROUGHPUT_UTILIZATION: D3D10_COUNTER = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_TRIANGLE_SETUP_THROUGHPUT_UTILIZATION: D3D10_COUNTER = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_FILLRATE_THROUGHPUT_UTILIZATION: D3D10_COUNTER = 9i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_VS_MEMORY_LIMITED: D3D10_COUNTER = 10i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_VS_COMPUTATION_LIMITED: D3D10_COUNTER = 11i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_GS_MEMORY_LIMITED: D3D10_COUNTER = 12i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_GS_COMPUTATION_LIMITED: D3D10_COUNTER = 13i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_PS_MEMORY_LIMITED: D3D10_COUNTER = 14i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_PS_COMPUTATION_LIMITED: D3D10_COUNTER = 15i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_POST_TRANSFORM_CACHE_HIT_RATE: D3D10_COUNTER = 16i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_TEXTURE_CACHE_HIT_RATE: D3D10_COUNTER = 17i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_DEVICE_DEPENDENT_0: D3D10_COUNTER = 1073741824i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_COUNTER_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_TYPE_FLOAT32: D3D10_COUNTER_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_TYPE_UINT16: D3D10_COUNTER_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_TYPE_UINT32: D3D10_COUNTER_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_COUNTER_TYPE_UINT64: D3D10_COUNTER_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_CPU_ACCESS_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CPU_ACCESS_WRITE: D3D10_CPU_ACCESS_FLAG = 65536i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CPU_ACCESS_READ: D3D10_CPU_ACCESS_FLAG = 131072i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_CREATE_DEVICE_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CREATE_DEVICE_SINGLETHREADED: D3D10_CREATE_DEVICE_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CREATE_DEVICE_DEBUG: D3D10_CREATE_DEVICE_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CREATE_DEVICE_SWITCH_TO_REF: D3D10_CREATE_DEVICE_FLAG = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS: D3D10_CREATE_DEVICE_FLAG = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CREATE_DEVICE_ALLOW_NULL_FROM_MAP: D3D10_CREATE_DEVICE_FLAG = 16i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CREATE_DEVICE_BGRA_SUPPORT: D3D10_CREATE_DEVICE_FLAG = 32i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CREATE_DEVICE_PREVENT_ALTERING_LAYER_SETTINGS_FROM_REGISTRY: D3D10_CREATE_DEVICE_FLAG = 128i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CREATE_DEVICE_STRICT_VALIDATION: D3D10_CREATE_DEVICE_FLAG = 512i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CREATE_DEVICE_DEBUGGABLE: D3D10_CREATE_DEVICE_FLAG = 1024i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_CULL_MODE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CULL_NONE: D3D10_CULL_MODE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CULL_FRONT: D3D10_CULL_MODE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CULL_BACK: D3D10_CULL_MODE = 3i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub type D3D10_DEPTH_WRITE_MASK = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
@@ -783,100 +1002,6 @@ pub const D3D10_DSV_DIMENSION_TEXTURE2DMS: D3D10_DSV_DIMENSION = 5i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_DSV_DIMENSION_TEXTURE2DMSARRAY: D3D10_DSV_DIMENSION = 6i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_EFFECT_COMPILE_ALLOW_SLOW_OPS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_EFFECT_COMPILE_CHILD_EFFECT: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D10_EFFECT_DESC {
-    pub IsChildEffect: super::super::Foundation::BOOL,
-    pub ConstantBuffers: u32,
-    pub SharedConstantBuffers: u32,
-    pub GlobalVariables: u32,
-    pub SharedGlobalVariables: u32,
-    pub Techniques: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D10_EFFECT_DESC {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D10_EFFECT_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D10_EFFECT_SHADER_DESC {
-    pub pInputSignature: *const u8,
-    pub IsInline: super::super::Foundation::BOOL,
-    pub pBytecode: *const u8,
-    pub BytecodeLength: u32,
-    pub SODecl: ::windows_sys::core::PCSTR,
-    pub NumInputSignatureEntries: u32,
-    pub NumOutputSignatureEntries: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D10_EFFECT_SHADER_DESC {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D10_EFFECT_SHADER_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_EFFECT_SINGLE_THREADED: u32 = 8u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Direct3D\"`*"]
-#[cfg(feature = "Win32_Graphics_Direct3D")]
-pub struct D3D10_EFFECT_TYPE_DESC {
-    pub TypeName: ::windows_sys::core::PCSTR,
-    pub Class: super::Direct3D::D3D_SHADER_VARIABLE_CLASS,
-    pub Type: super::Direct3D::D3D_SHADER_VARIABLE_TYPE,
-    pub Elements: u32,
-    pub Members: u32,
-    pub Rows: u32,
-    pub Columns: u32,
-    pub PackedSize: u32,
-    pub UnpackedSize: u32,
-    pub Stride: u32,
-}
-#[cfg(feature = "Win32_Graphics_Direct3D")]
-impl ::core::marker::Copy for D3D10_EFFECT_TYPE_DESC {}
-#[cfg(feature = "Win32_Graphics_Direct3D")]
-impl ::core::clone::Clone for D3D10_EFFECT_TYPE_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_EFFECT_VARIABLE_ANNOTATION: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_EFFECT_VARIABLE_DESC {
-    pub Name: ::windows_sys::core::PCSTR,
-    pub Semantic: ::windows_sys::core::PCSTR,
-    pub Flags: u32,
-    pub Annotations: u32,
-    pub BufferOffset: u32,
-    pub ExplicitBindPoint: u32,
-}
-impl ::core::marker::Copy for D3D10_EFFECT_VARIABLE_DESC {}
-impl ::core::clone::Clone for D3D10_EFFECT_VARIABLE_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_EFFECT_VARIABLE_EXPLICIT_BIND_POINT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_EFFECT_VARIABLE_POOLED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_ENABLE_BREAK_ON_MESSAGE: &str = "EnableBreakOnMessage";
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub type D3D10_FEATURE_LEVEL1 = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_FEATURE_LEVEL_10_0: D3D10_FEATURE_LEVEL1 = 40960i32;
@@ -941,26 +1066,6 @@ pub const D3D10_FILTER_TYPE_POINT: D3D10_FILTER_TYPE = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_FILTER_TYPE_LINEAR: D3D10_FILTER_TYPE = 1i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FILTER_TYPE_MASK: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FLOAT16_FUSED_TOLERANCE_IN_ULP: f64 = 0.6f64;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FLOAT32_MAX: f32 = 340282350000000000000000000000000000000f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FLOAT32_TO_INTEGER_TOLERANCE_IN_ULP: f32 = 0.6f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FLOAT_TO_SRGB_EXPONENT_DENOMINATOR: f32 = 2.4f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FLOAT_TO_SRGB_EXPONENT_NUMERATOR: f32 = 1f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FLOAT_TO_SRGB_OFFSET: f32 = 0.055f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FLOAT_TO_SRGB_SCALE_1: f32 = 12.92f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FLOAT_TO_SRGB_SCALE_2: f32 = 1.055f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FLOAT_TO_SRGB_THRESHOLD: f32 = 0.0031308f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub type D3D10_FORMAT_SUPPORT = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_FORMAT_SUPPORT_BUFFER: D3D10_FORMAT_SUPPORT = 1i32;
@@ -1013,131 +1118,11 @@ pub const D3D10_FORMAT_SUPPORT_SHADER_GATHER: D3D10_FORMAT_SUPPORT = 8388608i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_FORMAT_SUPPORT_BACK_BUFFER_CAST: D3D10_FORMAT_SUPPORT = 16777216i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FTOI_INSTRUCTION_MAX_INPUT: f32 = 2147483600f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FTOI_INSTRUCTION_MIN_INPUT: f32 = -2147483600f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FTOU_INSTRUCTION_MAX_INPUT: f32 = 4294967300f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_FTOU_INSTRUCTION_MIN_INPUT: f32 = 0f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_INPUT_PRIM_CONST_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_INPUT_PRIM_CONST_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_INPUT_PRIM_CONST_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_INPUT_PRIM_CONST_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_INPUT_PRIM_CONST_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_INPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_INPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_INPUT_REGISTER_COUNT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_INPUT_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_INPUT_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_INPUT_REGISTER_VERTICES: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_OUTPUT_ELEMENTS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_GS_OUTPUT_REGISTER_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_IA_DEFAULT_INDEX_BUFFER_OFFSET_IN_BYTES: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_IA_DEFAULT_PRIMITIVE_TOPOLOGY: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_IA_DEFAULT_VERTEX_BUFFER_OFFSET_IN_BYTES: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_IA_INDEX_INPUT_RESOURCE_SLOT_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_IA_INSTANCE_ID_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_IA_INTEGER_ARITHMETIC_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_IA_PRIMITIVE_ID_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_IA_VERTEX_ID_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_IA_VERTEX_INPUT_STRUCTURE_ELEMENTS_COMPONENTS: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_IA_VERTEX_INPUT_STRUCTURE_ELEMENT_COUNT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_INFOQUEUE_STORAGE_FILTER_OVERRIDE: &str = "InfoQueueStorageFilterOverride";
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_INFO_QUEUE_DEFAULT_MESSAGE_COUNT_LIMIT: u32 = 1024u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_INFO_QUEUE_FILTER {
-    pub AllowList: D3D10_INFO_QUEUE_FILTER_DESC,
-    pub DenyList: D3D10_INFO_QUEUE_FILTER_DESC,
-}
-impl ::core::marker::Copy for D3D10_INFO_QUEUE_FILTER {}
-impl ::core::clone::Clone for D3D10_INFO_QUEUE_FILTER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_INFO_QUEUE_FILTER_DESC {
-    pub NumCategories: u32,
-    pub pCategoryList: *mut D3D10_MESSAGE_CATEGORY,
-    pub NumSeverities: u32,
-    pub pSeverityList: *mut D3D10_MESSAGE_SEVERITY,
-    pub NumIDs: u32,
-    pub pIDList: *mut D3D10_MESSAGE_ID,
-}
-impl ::core::marker::Copy for D3D10_INFO_QUEUE_FILTER_DESC {}
-impl ::core::clone::Clone for D3D10_INFO_QUEUE_FILTER_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub type D3D10_INPUT_CLASSIFICATION = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_INPUT_PER_VERTEX_DATA: D3D10_INPUT_CLASSIFICATION = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_INPUT_PER_INSTANCE_DATA: D3D10_INPUT_CLASSIFICATION = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D10_INPUT_ELEMENT_DESC {
-    pub SemanticName: ::windows_sys::core::PCSTR,
-    pub SemanticIndex: u32,
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-    pub InputSlot: u32,
-    pub AlignedByteOffset: u32,
-    pub InputSlotClass: D3D10_INPUT_CLASSIFICATION,
-    pub InstanceDataStepRate: u32,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D10_INPUT_ELEMENT_DESC {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D10_INPUT_ELEMENT_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_INTEGER_DIVIDE_BY_ZERO_QUOTIENT: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_INTEGER_DIVIDE_BY_ZERO_REMAINDER: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_LINEAR_GAMMA: f32 = 1f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MAG_FILTER_SHIFT: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub type D3D10_MAP = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
@@ -1150,62 +1135,10 @@ pub const D3D10_MAP_READ_WRITE: D3D10_MAP = 3i32;
 pub const D3D10_MAP_WRITE_DISCARD: D3D10_MAP = 4i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_MAP_WRITE_NO_OVERWRITE: D3D10_MAP = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_MAPPED_TEXTURE2D {
-    pub pData: *mut ::core::ffi::c_void,
-    pub RowPitch: u32,
-}
-impl ::core::marker::Copy for D3D10_MAPPED_TEXTURE2D {}
-impl ::core::clone::Clone for D3D10_MAPPED_TEXTURE2D {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_MAPPED_TEXTURE3D {
-    pub pData: *mut ::core::ffi::c_void,
-    pub RowPitch: u32,
-    pub DepthPitch: u32,
-}
-impl ::core::marker::Copy for D3D10_MAPPED_TEXTURE3D {}
-impl ::core::clone::Clone for D3D10_MAPPED_TEXTURE3D {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub type D3D10_MAP_FLAG = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_MAP_FLAG_DO_NOT_WAIT: D3D10_MAP_FLAG = 1048576i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MAX_BORDER_COLOR_COMPONENT: f32 = 1f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MAX_DEPTH: f32 = 1f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MAX_MAXANISOTROPY: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MAX_MULTISAMPLE_SAMPLE_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MAX_POSITION_VALUE: f32 = 34028236000000000000000000000000000f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MAX_TEXTURE_DIMENSION_2_TO_EXP: u32 = 17u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub struct D3D10_MESSAGE {
-    pub Category: D3D10_MESSAGE_CATEGORY,
-    pub Severity: D3D10_MESSAGE_SEVERITY,
-    pub ID: D3D10_MESSAGE_ID,
-    pub pDescription: *const u8,
-    pub DescriptionByteLength: usize,
-}
-impl ::core::marker::Copy for D3D10_MESSAGE {}
-impl ::core::clone::Clone for D3D10_MESSAGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub type D3D10_MESSAGE_CATEGORY = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
@@ -2259,37 +2192,595 @@ pub const D3D10_MESSAGE_SEVERITY_INFO: D3D10_MESSAGE_SEVERITY = 3i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub const D3D10_MESSAGE_SEVERITY_MESSAGE: D3D10_MESSAGE_SEVERITY = 4i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MIN_BORDER_COLOR_COMPONENT: f32 = 0f32;
+pub type D3D10_QUERY = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MIN_DEPTH: f32 = 0f32;
+pub const D3D10_QUERY_EVENT: D3D10_QUERY = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MIN_FILTER_SHIFT: u32 = 4u32;
+pub const D3D10_QUERY_OCCLUSION: D3D10_QUERY = 1i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MIN_MAXANISOTROPY: u32 = 0u32;
+pub const D3D10_QUERY_TIMESTAMP: D3D10_QUERY = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MIP_FILTER_SHIFT: u32 = 0u32;
+pub const D3D10_QUERY_TIMESTAMP_DISJOINT: D3D10_QUERY = 3i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MIP_LOD_BIAS_MAX: f32 = 15.99f32;
+pub const D3D10_QUERY_PIPELINE_STATISTICS: D3D10_QUERY = 4i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MIP_LOD_BIAS_MIN: f32 = -16f32;
+pub const D3D10_QUERY_OCCLUSION_PREDICATE: D3D10_QUERY = 5i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MIP_LOD_FRACTIONAL_BIT_COUNT: u32 = 6u32;
+pub const D3D10_QUERY_SO_STATISTICS: D3D10_QUERY = 6i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MIP_LOD_RANGE_BIT_COUNT: u32 = 8u32;
+pub const D3D10_QUERY_SO_OVERFLOW_PREDICATE: D3D10_QUERY = 7i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MULTISAMPLE_ANTIALIAS_LINE_WIDTH: f32 = 1.4f32;
+pub type D3D10_QUERY_MISC_FLAG = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MUTE_CATEGORY: &str = "Mute_CATEGORY_%s";
+pub const D3D10_QUERY_MISC_PREDICATEHINT: D3D10_QUERY_MISC_FLAG = 1i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MUTE_DEBUG_OUTPUT: &str = "MuteDebugOutput";
+pub type D3D10_RAISE_FLAG = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MUTE_ID_DECIMAL: &str = "Mute_ID_%d";
+pub const D3D10_RAISE_FLAG_DRIVER_INTERNAL_ERROR: D3D10_RAISE_FLAG = 1i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MUTE_ID_STRING: &str = "Mute_ID_%s";
+pub type D3D10_RESOURCE_DIMENSION = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_MUTE_SEVERITY: &str = "Mute_SEVERITY_%s";
+pub const D3D10_RESOURCE_DIMENSION_UNKNOWN: D3D10_RESOURCE_DIMENSION = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_NONSAMPLE_FETCH_OUT_OF_RANGE_ACCESS_RESULT: u32 = 0u32;
+pub const D3D10_RESOURCE_DIMENSION_BUFFER: D3D10_RESOURCE_DIMENSION = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RESOURCE_DIMENSION_TEXTURE1D: D3D10_RESOURCE_DIMENSION = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RESOURCE_DIMENSION_TEXTURE2D: D3D10_RESOURCE_DIMENSION = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RESOURCE_DIMENSION_TEXTURE3D: D3D10_RESOURCE_DIMENSION = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_RESOURCE_MISC_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RESOURCE_MISC_GENERATE_MIPS: D3D10_RESOURCE_MISC_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RESOURCE_MISC_SHARED: D3D10_RESOURCE_MISC_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RESOURCE_MISC_TEXTURECUBE: D3D10_RESOURCE_MISC_FLAG = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RESOURCE_MISC_SHARED_KEYEDMUTEX: D3D10_RESOURCE_MISC_FLAG = 16i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RESOURCE_MISC_GDI_COMPATIBLE: D3D10_RESOURCE_MISC_FLAG = 32i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_RTV_DIMENSION = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RTV_DIMENSION_UNKNOWN: D3D10_RTV_DIMENSION = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RTV_DIMENSION_BUFFER: D3D10_RTV_DIMENSION = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RTV_DIMENSION_TEXTURE1D: D3D10_RTV_DIMENSION = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RTV_DIMENSION_TEXTURE1DARRAY: D3D10_RTV_DIMENSION = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RTV_DIMENSION_TEXTURE2D: D3D10_RTV_DIMENSION = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RTV_DIMENSION_TEXTURE2DARRAY: D3D10_RTV_DIMENSION = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RTV_DIMENSION_TEXTURE2DMS: D3D10_RTV_DIMENSION = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RTV_DIMENSION_TEXTURE2DMSARRAY: D3D10_RTV_DIMENSION = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_RTV_DIMENSION_TEXTURE3D: D3D10_RTV_DIMENSION = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_SHADER_DEBUG_REGTYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_REG_INPUT: D3D10_SHADER_DEBUG_REGTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_REG_OUTPUT: D3D10_SHADER_DEBUG_REGTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_REG_CBUFFER: D3D10_SHADER_DEBUG_REGTYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_REG_TBUFFER: D3D10_SHADER_DEBUG_REGTYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_REG_TEMP: D3D10_SHADER_DEBUG_REGTYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_REG_TEMPARRAY: D3D10_SHADER_DEBUG_REGTYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_REG_TEXTURE: D3D10_SHADER_DEBUG_REGTYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_REG_SAMPLER: D3D10_SHADER_DEBUG_REGTYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_REG_IMMEDIATECBUFFER: D3D10_SHADER_DEBUG_REGTYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_REG_LITERAL: D3D10_SHADER_DEBUG_REGTYPE = 9i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_REG_UNUSED: D3D10_SHADER_DEBUG_REGTYPE = 10i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D11_SHADER_DEBUG_REG_INTERFACE_POINTERS: D3D10_SHADER_DEBUG_REGTYPE = 11i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D11_SHADER_DEBUG_REG_UAV: D3D10_SHADER_DEBUG_REGTYPE = 12i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_REG_FORCE_DWORD: D3D10_SHADER_DEBUG_REGTYPE = 2147483647i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_SHADER_DEBUG_SCOPETYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_SCOPE_GLOBAL: D3D10_SHADER_DEBUG_SCOPETYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_SCOPE_BLOCK: D3D10_SHADER_DEBUG_SCOPETYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_SCOPE_FORLOOP: D3D10_SHADER_DEBUG_SCOPETYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_SCOPE_STRUCT: D3D10_SHADER_DEBUG_SCOPETYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_SCOPE_FUNC_PARAMS: D3D10_SHADER_DEBUG_SCOPETYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_SCOPE_STATEBLOCK: D3D10_SHADER_DEBUG_SCOPETYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_SCOPE_NAMESPACE: D3D10_SHADER_DEBUG_SCOPETYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_SCOPE_ANNOTATION: D3D10_SHADER_DEBUG_SCOPETYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_SCOPE_FORCE_DWORD: D3D10_SHADER_DEBUG_SCOPETYPE = 2147483647i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_SHADER_DEBUG_VARTYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_VAR_VARIABLE: D3D10_SHADER_DEBUG_VARTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_VAR_FUNCTION: D3D10_SHADER_DEBUG_VARTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_SHADER_DEBUG_VAR_FORCE_DWORD: D3D10_SHADER_DEBUG_VARTYPE = 2147483647i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_STANDARD_MULTISAMPLE_QUALITY_LEVELS = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STANDARD_MULTISAMPLE_PATTERN: D3D10_STANDARD_MULTISAMPLE_QUALITY_LEVELS = -1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_CENTER_MULTISAMPLE_PATTERN: D3D10_STANDARD_MULTISAMPLE_QUALITY_LEVELS = -2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_STENCIL_OP = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STENCIL_OP_KEEP: D3D10_STENCIL_OP = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STENCIL_OP_ZERO: D3D10_STENCIL_OP = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STENCIL_OP_REPLACE: D3D10_STENCIL_OP = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STENCIL_OP_INCR_SAT: D3D10_STENCIL_OP = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STENCIL_OP_DECR_SAT: D3D10_STENCIL_OP = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STENCIL_OP_INVERT: D3D10_STENCIL_OP = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STENCIL_OP_INCR: D3D10_STENCIL_OP = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_STENCIL_OP_DECR: D3D10_STENCIL_OP = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_TEXTURECUBE_FACE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXTURECUBE_FACE_POSITIVE_X: D3D10_TEXTURECUBE_FACE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXTURECUBE_FACE_NEGATIVE_X: D3D10_TEXTURECUBE_FACE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXTURECUBE_FACE_POSITIVE_Y: D3D10_TEXTURECUBE_FACE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXTURECUBE_FACE_NEGATIVE_Y: D3D10_TEXTURECUBE_FACE = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXTURECUBE_FACE_POSITIVE_Z: D3D10_TEXTURECUBE_FACE = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXTURECUBE_FACE_NEGATIVE_Z: D3D10_TEXTURECUBE_FACE = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_TEXTURE_ADDRESS_MODE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXTURE_ADDRESS_WRAP: D3D10_TEXTURE_ADDRESS_MODE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXTURE_ADDRESS_MIRROR: D3D10_TEXTURE_ADDRESS_MODE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXTURE_ADDRESS_CLAMP: D3D10_TEXTURE_ADDRESS_MODE = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXTURE_ADDRESS_BORDER: D3D10_TEXTURE_ADDRESS_MODE = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_TEXTURE_ADDRESS_MIRROR_ONCE: D3D10_TEXTURE_ADDRESS_MODE = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub type D3D10_USAGE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_USAGE_DEFAULT: D3D10_USAGE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_USAGE_IMMUTABLE: D3D10_USAGE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_USAGE_DYNAMIC: D3D10_USAGE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub const D3D10_USAGE_STAGING: D3D10_USAGE = 3i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D10_BLEND_DESC {
+    pub AlphaToCoverageEnable: super::super::Foundation::BOOL,
+    pub BlendEnable: [super::super::Foundation::BOOL; 8],
+    pub SrcBlend: D3D10_BLEND,
+    pub DestBlend: D3D10_BLEND,
+    pub BlendOp: D3D10_BLEND_OP,
+    pub SrcBlendAlpha: D3D10_BLEND,
+    pub DestBlendAlpha: D3D10_BLEND,
+    pub BlendOpAlpha: D3D10_BLEND_OP,
+    pub RenderTargetWriteMask: [u8; 8],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D10_BLEND_DESC {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D10_BLEND_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D10_BLEND_DESC1 {
+    pub AlphaToCoverageEnable: super::super::Foundation::BOOL,
+    pub IndependentBlendEnable: super::super::Foundation::BOOL,
+    pub RenderTarget: [D3D10_RENDER_TARGET_BLEND_DESC1; 8],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D10_BLEND_DESC1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D10_BLEND_DESC1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_BOX {
+    pub left: u32,
+    pub top: u32,
+    pub front: u32,
+    pub right: u32,
+    pub bottom: u32,
+    pub back: u32,
+}
+impl ::core::marker::Copy for D3D10_BOX {}
+impl ::core::clone::Clone for D3D10_BOX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_BUFFER_DESC {
+    pub ByteWidth: u32,
+    pub Usage: D3D10_USAGE,
+    pub BindFlags: u32,
+    pub CPUAccessFlags: u32,
+    pub MiscFlags: u32,
+}
+impl ::core::marker::Copy for D3D10_BUFFER_DESC {}
+impl ::core::clone::Clone for D3D10_BUFFER_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_BUFFER_RTV {
+    pub Anonymous1: D3D10_BUFFER_RTV_0,
+    pub Anonymous2: D3D10_BUFFER_RTV_1,
+}
+impl ::core::marker::Copy for D3D10_BUFFER_RTV {}
+impl ::core::clone::Clone for D3D10_BUFFER_RTV {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub union D3D10_BUFFER_RTV_0 {
+    pub FirstElement: u32,
+    pub ElementOffset: u32,
+}
+impl ::core::marker::Copy for D3D10_BUFFER_RTV_0 {}
+impl ::core::clone::Clone for D3D10_BUFFER_RTV_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub union D3D10_BUFFER_RTV_1 {
+    pub NumElements: u32,
+    pub ElementWidth: u32,
+}
+impl ::core::marker::Copy for D3D10_BUFFER_RTV_1 {}
+impl ::core::clone::Clone for D3D10_BUFFER_RTV_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_BUFFER_SRV {
+    pub Anonymous1: D3D10_BUFFER_SRV_0,
+    pub Anonymous2: D3D10_BUFFER_SRV_1,
+}
+impl ::core::marker::Copy for D3D10_BUFFER_SRV {}
+impl ::core::clone::Clone for D3D10_BUFFER_SRV {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub union D3D10_BUFFER_SRV_0 {
+    pub FirstElement: u32,
+    pub ElementOffset: u32,
+}
+impl ::core::marker::Copy for D3D10_BUFFER_SRV_0 {}
+impl ::core::clone::Clone for D3D10_BUFFER_SRV_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub union D3D10_BUFFER_SRV_1 {
+    pub NumElements: u32,
+    pub ElementWidth: u32,
+}
+impl ::core::marker::Copy for D3D10_BUFFER_SRV_1 {}
+impl ::core::clone::Clone for D3D10_BUFFER_SRV_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_COUNTER_DESC {
+    pub Counter: D3D10_COUNTER,
+    pub MiscFlags: u32,
+}
+impl ::core::marker::Copy for D3D10_COUNTER_DESC {}
+impl ::core::clone::Clone for D3D10_COUNTER_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_COUNTER_INFO {
+    pub LastDeviceDependentCounter: D3D10_COUNTER,
+    pub NumSimultaneousCounters: u32,
+    pub NumDetectableParallelUnits: u8,
+}
+impl ::core::marker::Copy for D3D10_COUNTER_INFO {}
+impl ::core::clone::Clone for D3D10_COUNTER_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_DEPTH_STENCILOP_DESC {
+    pub StencilFailOp: D3D10_STENCIL_OP,
+    pub StencilDepthFailOp: D3D10_STENCIL_OP,
+    pub StencilPassOp: D3D10_STENCIL_OP,
+    pub StencilFunc: D3D10_COMPARISON_FUNC,
+}
+impl ::core::marker::Copy for D3D10_DEPTH_STENCILOP_DESC {}
+impl ::core::clone::Clone for D3D10_DEPTH_STENCILOP_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D10_DEPTH_STENCIL_DESC {
+    pub DepthEnable: super::super::Foundation::BOOL,
+    pub DepthWriteMask: D3D10_DEPTH_WRITE_MASK,
+    pub DepthFunc: D3D10_COMPARISON_FUNC,
+    pub StencilEnable: super::super::Foundation::BOOL,
+    pub StencilReadMask: u8,
+    pub StencilWriteMask: u8,
+    pub FrontFace: D3D10_DEPTH_STENCILOP_DESC,
+    pub BackFace: D3D10_DEPTH_STENCILOP_DESC,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D10_DEPTH_STENCIL_DESC {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D10_DEPTH_STENCIL_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D10_DEPTH_STENCIL_VIEW_DESC {
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+    pub ViewDimension: D3D10_DSV_DIMENSION,
+    pub Anonymous: D3D10_DEPTH_STENCIL_VIEW_DESC_0,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D10_DEPTH_STENCIL_VIEW_DESC {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D10_DEPTH_STENCIL_VIEW_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub union D3D10_DEPTH_STENCIL_VIEW_DESC_0 {
+    pub Texture1D: D3D10_TEX1D_DSV,
+    pub Texture1DArray: D3D10_TEX1D_ARRAY_DSV,
+    pub Texture2D: D3D10_TEX2D_DSV,
+    pub Texture2DArray: D3D10_TEX2D_ARRAY_DSV,
+    pub Texture2DMS: D3D10_TEX2DMS_DSV,
+    pub Texture2DMSArray: D3D10_TEX2DMS_ARRAY_DSV,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D10_DEPTH_STENCIL_VIEW_DESC_0 {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D10_DEPTH_STENCIL_VIEW_DESC_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D10_EFFECT_DESC {
+    pub IsChildEffect: super::super::Foundation::BOOL,
+    pub ConstantBuffers: u32,
+    pub SharedConstantBuffers: u32,
+    pub GlobalVariables: u32,
+    pub SharedGlobalVariables: u32,
+    pub Techniques: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D10_EFFECT_DESC {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D10_EFFECT_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D10_EFFECT_SHADER_DESC {
+    pub pInputSignature: *const u8,
+    pub IsInline: super::super::Foundation::BOOL,
+    pub pBytecode: *const u8,
+    pub BytecodeLength: u32,
+    pub SODecl: ::windows_sys::core::PCSTR,
+    pub NumInputSignatureEntries: u32,
+    pub NumOutputSignatureEntries: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D10_EFFECT_SHADER_DESC {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D10_EFFECT_SHADER_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Direct3D\"`*"]
+#[cfg(feature = "Win32_Graphics_Direct3D")]
+pub struct D3D10_EFFECT_TYPE_DESC {
+    pub TypeName: ::windows_sys::core::PCSTR,
+    pub Class: super::Direct3D::D3D_SHADER_VARIABLE_CLASS,
+    pub Type: super::Direct3D::D3D_SHADER_VARIABLE_TYPE,
+    pub Elements: u32,
+    pub Members: u32,
+    pub Rows: u32,
+    pub Columns: u32,
+    pub PackedSize: u32,
+    pub UnpackedSize: u32,
+    pub Stride: u32,
+}
+#[cfg(feature = "Win32_Graphics_Direct3D")]
+impl ::core::marker::Copy for D3D10_EFFECT_TYPE_DESC {}
+#[cfg(feature = "Win32_Graphics_Direct3D")]
+impl ::core::clone::Clone for D3D10_EFFECT_TYPE_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_EFFECT_VARIABLE_DESC {
+    pub Name: ::windows_sys::core::PCSTR,
+    pub Semantic: ::windows_sys::core::PCSTR,
+    pub Flags: u32,
+    pub Annotations: u32,
+    pub BufferOffset: u32,
+    pub ExplicitBindPoint: u32,
+}
+impl ::core::marker::Copy for D3D10_EFFECT_VARIABLE_DESC {}
+impl ::core::clone::Clone for D3D10_EFFECT_VARIABLE_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_INFO_QUEUE_FILTER {
+    pub AllowList: D3D10_INFO_QUEUE_FILTER_DESC,
+    pub DenyList: D3D10_INFO_QUEUE_FILTER_DESC,
+}
+impl ::core::marker::Copy for D3D10_INFO_QUEUE_FILTER {}
+impl ::core::clone::Clone for D3D10_INFO_QUEUE_FILTER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_INFO_QUEUE_FILTER_DESC {
+    pub NumCategories: u32,
+    pub pCategoryList: *mut D3D10_MESSAGE_CATEGORY,
+    pub NumSeverities: u32,
+    pub pSeverityList: *mut D3D10_MESSAGE_SEVERITY,
+    pub NumIDs: u32,
+    pub pIDList: *mut D3D10_MESSAGE_ID,
+}
+impl ::core::marker::Copy for D3D10_INFO_QUEUE_FILTER_DESC {}
+impl ::core::clone::Clone for D3D10_INFO_QUEUE_FILTER_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D10_INPUT_ELEMENT_DESC {
+    pub SemanticName: ::windows_sys::core::PCSTR,
+    pub SemanticIndex: u32,
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+    pub InputSlot: u32,
+    pub AlignedByteOffset: u32,
+    pub InputSlotClass: D3D10_INPUT_CLASSIFICATION,
+    pub InstanceDataStepRate: u32,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D10_INPUT_ELEMENT_DESC {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D10_INPUT_ELEMENT_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_MAPPED_TEXTURE2D {
+    pub pData: *mut ::core::ffi::c_void,
+    pub RowPitch: u32,
+}
+impl ::core::marker::Copy for D3D10_MAPPED_TEXTURE2D {}
+impl ::core::clone::Clone for D3D10_MAPPED_TEXTURE2D {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_MAPPED_TEXTURE3D {
+    pub pData: *mut ::core::ffi::c_void,
+    pub RowPitch: u32,
+    pub DepthPitch: u32,
+}
+impl ::core::marker::Copy for D3D10_MAPPED_TEXTURE3D {}
+impl ::core::clone::Clone for D3D10_MAPPED_TEXTURE3D {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
+pub struct D3D10_MESSAGE {
+    pub Category: D3D10_MESSAGE_CATEGORY,
+    pub Severity: D3D10_MESSAGE_SEVERITY,
+    pub ID: D3D10_MESSAGE_ID,
+    pub pDescription: *const u8,
+    pub DescriptionByteLength: usize,
+}
+impl ::core::marker::Copy for D3D10_MESSAGE {}
+impl ::core::clone::Clone for D3D10_MESSAGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub struct D3D10_PASS_DESC {
@@ -2319,60 +2810,6 @@ impl ::core::clone::Clone for D3D10_PASS_SHADER_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PIXEL_ADDRESS_RANGE_BIT_COUNT: u32 = 13u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PRE_SCISSOR_PIXEL_ADDRESS_RANGE_BIT_COUNT: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_FRONTFACING_DEFAULT_VALUE: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_FRONTFACING_FALSE_VALUE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_FRONTFACING_TRUE_VALUE: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_INPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_INPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_INPUT_REGISTER_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_INPUT_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_INPUT_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_LEGACY_PIXEL_CENTER_FRACTIONAL_COMPONENT: f32 = 0f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_OUTPUT_DEPTH_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_OUTPUT_DEPTH_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_OUTPUT_DEPTH_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_OUTPUT_REGISTER_COUNT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_PS_PIXEL_CENTER_FRACTIONAL_COMPONENT: f32 = 0.5f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_QUERY = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_QUERY_EVENT: D3D10_QUERY = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_QUERY_OCCLUSION: D3D10_QUERY = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_QUERY_TIMESTAMP: D3D10_QUERY = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_QUERY_TIMESTAMP_DISJOINT: D3D10_QUERY = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_QUERY_PIPELINE_STATISTICS: D3D10_QUERY = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_QUERY_OCCLUSION_PREDICATE: D3D10_QUERY = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_QUERY_SO_STATISTICS: D3D10_QUERY = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_QUERY_SO_OVERFLOW_PREDICATE: D3D10_QUERY = 7i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub struct D3D10_QUERY_DATA_PIPELINE_STATISTICS {
@@ -2430,14 +2867,6 @@ impl ::core::clone::Clone for D3D10_QUERY_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_QUERY_MISC_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_QUERY_MISC_PREDICATEHINT: D3D10_QUERY_MISC_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_RAISE_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RAISE_FLAG_DRIVER_INTERNAL_ERROR: D3D10_RAISE_FLAG = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -2461,8 +2890,6 @@ impl ::core::clone::Clone for D3D10_RASTERIZER_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REGKEY_PATH: &str = "Software\\Microsoft\\Direct3D";
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -2521,98 +2948,6 @@ impl ::core::clone::Clone for D3D10_RENDER_TARGET_VIEW_DESC_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_BLEND_OBJECT_COUNT_PER_CONTEXT: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_BUFFER_RESOURCE_TEXEL_COUNT_2_TO_EXP: u32 = 27u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_CONSTANT_BUFFER_ELEMENT_COUNT: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_DEPTH_STENCIL_OBJECT_COUNT_PER_CONTEXT: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_DRAW_VERTEX_COUNT_2_TO_EXP: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_FILTERING_HW_ADDRESSABLE_RESOURCE_DIMENSION: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_GS_INVOCATION_32BIT_OUTPUT_COMPONENT_LIMIT: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_IMMEDIATE_CONSTANT_BUFFER_ELEMENT_COUNT: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_MAXANISOTROPY: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_MIP_LEVELS: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_MULTI_ELEMENT_STRUCTURE_SIZE_IN_BYTES: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_RASTERIZER_OBJECT_COUNT_PER_CONTEXT: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_RENDER_TO_BUFFER_WINDOW_WIDTH: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_RESOURCE_SIZE_IN_MEGABYTES: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_RESOURCE_VIEW_COUNT_PER_CONTEXT_2_TO_EXP: u32 = 20u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_SAMPLER_OBJECT_COUNT_PER_CONTEXT: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_TEXTURE1D_U_DIMENSION: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_TEXTURE2D_U_OR_V_DIMENSION: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_TEXTURE3D_U_V_OR_W_DIMENSION: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_REQ_TEXTURECUBE_DIMENSION: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RESINFO_INSTRUCTION_MISSING_COMPONENT_RETVAL: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_RESOURCE_DIMENSION = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RESOURCE_DIMENSION_UNKNOWN: D3D10_RESOURCE_DIMENSION = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RESOURCE_DIMENSION_BUFFER: D3D10_RESOURCE_DIMENSION = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RESOURCE_DIMENSION_TEXTURE1D: D3D10_RESOURCE_DIMENSION = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RESOURCE_DIMENSION_TEXTURE2D: D3D10_RESOURCE_DIMENSION = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RESOURCE_DIMENSION_TEXTURE3D: D3D10_RESOURCE_DIMENSION = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_RESOURCE_MISC_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RESOURCE_MISC_GENERATE_MIPS: D3D10_RESOURCE_MISC_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RESOURCE_MISC_SHARED: D3D10_RESOURCE_MISC_FLAG = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RESOURCE_MISC_TEXTURECUBE: D3D10_RESOURCE_MISC_FLAG = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RESOURCE_MISC_SHARED_KEYEDMUTEX: D3D10_RESOURCE_MISC_FLAG = 16i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RESOURCE_MISC_GDI_COMPATIBLE: D3D10_RESOURCE_MISC_FLAG = 32i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_RTV_DIMENSION = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RTV_DIMENSION_UNKNOWN: D3D10_RTV_DIMENSION = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RTV_DIMENSION_BUFFER: D3D10_RTV_DIMENSION = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RTV_DIMENSION_TEXTURE1D: D3D10_RTV_DIMENSION = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RTV_DIMENSION_TEXTURE1DARRAY: D3D10_RTV_DIMENSION = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RTV_DIMENSION_TEXTURE2D: D3D10_RTV_DIMENSION = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RTV_DIMENSION_TEXTURE2DARRAY: D3D10_RTV_DIMENSION = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RTV_DIMENSION_TEXTURE2DMS: D3D10_RTV_DIMENSION = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RTV_DIMENSION_TEXTURE2DMSARRAY: D3D10_RTV_DIMENSION = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_RTV_DIMENSION_TEXTURE3D: D3D10_RTV_DIMENSION = 8i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub struct D3D10_SAMPLER_DESC {
@@ -2633,12 +2968,6 @@ impl ::core::clone::Clone for D3D10_SAMPLER_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SDK_LAYERS_VERSION: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SDK_VERSION: u32 = 29u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_AVOID_FLOW_CONTROL: u32 = 512u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Direct3D\"`*"]
 #[cfg(feature = "Win32_Graphics_Direct3D")]
@@ -2657,8 +2986,6 @@ impl ::core::clone::Clone for D3D10_SHADER_BUFFER_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub struct D3D10_SHADER_DEBUG_FILE_INFO {
@@ -2743,10 +3070,6 @@ impl ::core::clone::Clone for D3D10_SHADER_DEBUG_INST_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_NAME_FOR_BINARY: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_NAME_FOR_SOURCE: u32 = 4194304u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -2789,56 +3112,6 @@ impl ::core::clone::Clone for D3D10_SHADER_DEBUG_OUTPUTVAR {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_SHADER_DEBUG_REGTYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_REG_INPUT: D3D10_SHADER_DEBUG_REGTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_REG_OUTPUT: D3D10_SHADER_DEBUG_REGTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_REG_CBUFFER: D3D10_SHADER_DEBUG_REGTYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_REG_TBUFFER: D3D10_SHADER_DEBUG_REGTYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_REG_TEMP: D3D10_SHADER_DEBUG_REGTYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_REG_TEMPARRAY: D3D10_SHADER_DEBUG_REGTYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_REG_TEXTURE: D3D10_SHADER_DEBUG_REGTYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_REG_SAMPLER: D3D10_SHADER_DEBUG_REGTYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_REG_IMMEDIATECBUFFER: D3D10_SHADER_DEBUG_REGTYPE = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_REG_LITERAL: D3D10_SHADER_DEBUG_REGTYPE = 9i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_REG_UNUSED: D3D10_SHADER_DEBUG_REGTYPE = 10i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D11_SHADER_DEBUG_REG_INTERFACE_POINTERS: D3D10_SHADER_DEBUG_REGTYPE = 11i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D11_SHADER_DEBUG_REG_UAV: D3D10_SHADER_DEBUG_REGTYPE = 12i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_REG_FORCE_DWORD: D3D10_SHADER_DEBUG_REGTYPE = 2147483647i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_SHADER_DEBUG_SCOPETYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_SCOPE_GLOBAL: D3D10_SHADER_DEBUG_SCOPETYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_SCOPE_BLOCK: D3D10_SHADER_DEBUG_SCOPETYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_SCOPE_FORLOOP: D3D10_SHADER_DEBUG_SCOPETYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_SCOPE_STRUCT: D3D10_SHADER_DEBUG_SCOPETYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_SCOPE_FUNC_PARAMS: D3D10_SHADER_DEBUG_SCOPETYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_SCOPE_STATEBLOCK: D3D10_SHADER_DEBUG_SCOPETYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_SCOPE_NAMESPACE: D3D10_SHADER_DEBUG_SCOPETYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_SCOPE_ANNOTATION: D3D10_SHADER_DEBUG_SCOPETYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_SCOPE_FORCE_DWORD: D3D10_SHADER_DEBUG_SCOPETYPE = 2147483647i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Direct3D\"`*"]
 #[cfg(feature = "Win32_Graphics_Direct3D")]
@@ -2893,14 +3166,6 @@ impl ::core::clone::Clone for D3D10_SHADER_DEBUG_TOKEN_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_SHADER_DEBUG_VARTYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_VAR_VARIABLE: D3D10_SHADER_DEBUG_VARTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_VAR_FUNCTION: D3D10_SHADER_DEBUG_VARTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_DEBUG_VAR_FORCE_DWORD: D3D10_SHADER_DEBUG_VARTYPE = 2147483647i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Direct3D\"`*"]
 #[cfg(feature = "Win32_Graphics_Direct3D")]
@@ -2961,22 +3226,6 @@ impl ::core::clone::Clone for D3D10_SHADER_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_ENABLE_BACKWARDS_COMPATIBILITY: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_ENABLE_STRICTNESS: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_FLAGS2_FORCE_ROOT_SIGNATURE_1_0: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_FLAGS2_FORCE_ROOT_SIGNATURE_1_1: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_FLAGS2_FORCE_ROOT_SIGNATURE_LATEST: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_FORCE_PS_SOFTWARE_NO_OPT: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_FORCE_VS_SOFTWARE_NO_OPT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_IEEE_STRICTNESS: u32 = 8192u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Direct3D\"`*"]
 #[cfg(feature = "Win32_Graphics_Direct3D")]
@@ -2998,28 +3247,6 @@ impl ::core::clone::Clone for D3D10_SHADER_INPUT_BIND_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_MAJOR_VERSION: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_MINOR_VERSION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_NO_PRESHADER: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_OPTIMIZATION_LEVEL0: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_OPTIMIZATION_LEVEL1: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_OPTIMIZATION_LEVEL3: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_PACK_MATRIX_COLUMN_MAJOR: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_PACK_MATRIX_ROW_MAJOR: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_PARTIAL_PRECISION: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_PREFER_FLOW_CONTROL: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_RESOURCES_MAY_ALIAS: u32 = 524288u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Direct3D\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
 #[cfg(all(feature = "Win32_Graphics_Direct3D", feature = "Win32_Graphics_Dxgi_Common"))]
@@ -3097,10 +3324,6 @@ impl ::core::clone::Clone for D3D10_SHADER_RESOURCE_VIEW_DESC1_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_SKIP_OPTIMIZATION: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_SKIP_VALIDATION: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Direct3D\"`*"]
 #[cfg(feature = "Win32_Graphics_Direct3D")]
@@ -3136,12 +3359,6 @@ impl ::core::clone::Clone for D3D10_SHADER_VARIABLE_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHADER_WARNINGS_ARE_ERRORS: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHIFT_INSTRUCTION_PAD_VALUE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SHIFT_INSTRUCTION_SHIFT_VALUE_BIT_COUNT: u32 = 5u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Direct3D\"`*"]
 #[cfg(feature = "Win32_Graphics_Direct3D")]
@@ -3162,16 +3379,6 @@ impl ::core::clone::Clone for D3D10_SIGNATURE_PARAMETER_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SIMULTANEOUS_RENDER_TARGET_COUNT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SO_BUFFER_MAX_STRIDE_IN_BYTES: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SO_BUFFER_MAX_WRITE_WINDOW_IN_BYTES: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SO_BUFFER_SLOT_COUNT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SO_DDI_REGISTER_INDEX_DENOTING_GAP: u32 = 4294967295u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub struct D3D10_SO_DECLARATION_ENTRY {
@@ -3187,46 +3394,6 @@ impl ::core::clone::Clone for D3D10_SO_DECLARATION_ENTRY {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SO_MULTIPLE_BUFFER_ELEMENTS_PER_BUFFER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SO_SINGLE_BUFFER_COMPONENT_LIMIT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SRGB_GAMMA: f32 = 2.2f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SRGB_TO_FLOAT_DENOMINATOR_1: f32 = 12.92f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SRGB_TO_FLOAT_DENOMINATOR_2: f32 = 1.055f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SRGB_TO_FLOAT_EXPONENT: f32 = 2.4f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SRGB_TO_FLOAT_OFFSET: f32 = 0.055f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SRGB_TO_FLOAT_THRESHOLD: f32 = 0.04045f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SRGB_TO_FLOAT_TOLERANCE_IN_ULP: f32 = 0.5f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STANDARD_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STANDARD_COMPONENT_BIT_COUNT_DOUBLED: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STANDARD_MAXIMUM_ELEMENT_ALIGNMENT_BYTE_MULTIPLE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_STANDARD_MULTISAMPLE_QUALITY_LEVELS = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STANDARD_MULTISAMPLE_PATTERN: D3D10_STANDARD_MULTISAMPLE_QUALITY_LEVELS = -1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_CENTER_MULTISAMPLE_PATTERN: D3D10_STANDARD_MULTISAMPLE_QUALITY_LEVELS = -2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STANDARD_PIXEL_COMPONENT_COUNT: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STANDARD_PIXEL_ELEMENT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STANDARD_VECTOR_SIZE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STANDARD_VERTEX_ELEMENT_COUNT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STANDARD_VERTEX_TOTAL_COMPONENT_COUNT: u32 = 64u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub struct D3D10_STATE_BLOCK_MASK {
@@ -3261,26 +3428,6 @@ impl ::core::clone::Clone for D3D10_STATE_BLOCK_MASK {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_STENCIL_OP = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STENCIL_OP_KEEP: D3D10_STENCIL_OP = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STENCIL_OP_ZERO: D3D10_STENCIL_OP = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STENCIL_OP_REPLACE: D3D10_STENCIL_OP = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STENCIL_OP_INCR_SAT: D3D10_STENCIL_OP = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STENCIL_OP_DECR_SAT: D3D10_STENCIL_OP = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STENCIL_OP_INVERT: D3D10_STENCIL_OP = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STENCIL_OP_INCR: D3D10_STENCIL_OP = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_STENCIL_OP_DECR: D3D10_STENCIL_OP = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SUBPIXEL_FRACTIONAL_BIT_COUNT: u32 = 8u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub struct D3D10_SUBRESOURCE_DATA {
@@ -3294,8 +3441,6 @@ impl ::core::clone::Clone for D3D10_SUBRESOURCE_DATA {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_SUBTEXEL_FRACTIONAL_BIT_COUNT: u32 = 6u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub struct D3D10_TECHNIQUE_DESC {
@@ -3577,8 +3722,6 @@ impl ::core::clone::Clone for D3D10_TEXCUBE_SRV {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXEL_ADDRESS_RANGE_BIT_COUNT: u32 = 18u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
 #[cfg(feature = "Win32_Graphics_Dxgi_Common")]
@@ -3645,48 +3788,6 @@ impl ::core::clone::Clone for D3D10_TEXTURE3D_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_TEXTURECUBE_FACE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXTURECUBE_FACE_POSITIVE_X: D3D10_TEXTURECUBE_FACE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXTURECUBE_FACE_NEGATIVE_X: D3D10_TEXTURECUBE_FACE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXTURECUBE_FACE_POSITIVE_Y: D3D10_TEXTURECUBE_FACE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXTURECUBE_FACE_NEGATIVE_Y: D3D10_TEXTURECUBE_FACE = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXTURECUBE_FACE_POSITIVE_Z: D3D10_TEXTURECUBE_FACE = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXTURECUBE_FACE_NEGATIVE_Z: D3D10_TEXTURECUBE_FACE = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_TEXTURE_ADDRESS_MODE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXTURE_ADDRESS_WRAP: D3D10_TEXTURE_ADDRESS_MODE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXTURE_ADDRESS_MIRROR: D3D10_TEXTURE_ADDRESS_MODE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXTURE_ADDRESS_CLAMP: D3D10_TEXTURE_ADDRESS_MODE = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXTURE_ADDRESS_BORDER: D3D10_TEXTURE_ADDRESS_MODE = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXTURE_ADDRESS_MIRROR_ONCE: D3D10_TEXTURE_ADDRESS_MODE = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_TEXT_1BIT_BIT: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_UNBOUND_MEMORY_ACCESS_RESULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_UNMUTE_SEVERITY_INFO: &str = "Unmute_SEVERITY_INFO";
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub type D3D10_USAGE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_USAGE_DEFAULT: D3D10_USAGE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_USAGE_IMMUTABLE: D3D10_USAGE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_USAGE_DYNAMIC: D3D10_USAGE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_USAGE_STAGING: D3D10_USAGE = 3i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
 pub struct D3D10_VIEWPORT {
@@ -3703,110 +3804,9 @@ impl ::core::clone::Clone for D3D10_VIEWPORT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_VIEWPORT_AND_SCISSORRECT_MAX_INDEX: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_VIEWPORT_BOUNDS_MAX: u32 = 16383u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_VIEWPORT_BOUNDS_MIN: i32 = -16384i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_VS_INPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_VS_INPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_VS_INPUT_REGISTER_COUNT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_VS_INPUT_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_VS_INPUT_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_VS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_VS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_VS_OUTPUT_REGISTER_COUNT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_WHQL_CONTEXT_COUNT_FOR_RESOURCE_LIMIT: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_WHQL_DRAWINDEXED_INDEX_COUNT_2_TO_EXP: u32 = 25u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D10_WHQL_DRAW_VERTEX_COUNT_2_TO_EXP: u32 = 25u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D_MAJOR_VERSION: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D_MINOR_VERSION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D_SPEC_DATE_DAY: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D_SPEC_DATE_MONTH: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D_SPEC_DATE_YEAR: u32 = 2006u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const D3D_SPEC_VERSION: f64 = 1.050005f64;
-pub const DXGI_DEBUG_D3D10: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 607865938, data2: 13830, data3: 19770, data4: [153, 215, 167, 231, 179, 62, 215, 6] };
-pub const GUID_DeviceType: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3609393997, data2: 31336, data3: 17274, data4: [178, 12, 88, 4, 238, 36, 148, 166] };
-pub type ID3D10Asynchronous = *mut ::core::ffi::c_void;
-pub type ID3D10BlendState = *mut ::core::ffi::c_void;
-pub type ID3D10BlendState1 = *mut ::core::ffi::c_void;
-pub type ID3D10Buffer = *mut ::core::ffi::c_void;
-pub type ID3D10Counter = *mut ::core::ffi::c_void;
-pub type ID3D10Debug = *mut ::core::ffi::c_void;
-pub type ID3D10DepthStencilState = *mut ::core::ffi::c_void;
-pub type ID3D10DepthStencilView = *mut ::core::ffi::c_void;
-pub type ID3D10Device = *mut ::core::ffi::c_void;
-pub type ID3D10Device1 = *mut ::core::ffi::c_void;
-pub type ID3D10DeviceChild = *mut ::core::ffi::c_void;
-pub type ID3D10Effect = *mut ::core::ffi::c_void;
-pub type ID3D10EffectBlendVariable = *mut ::core::ffi::c_void;
-pub type ID3D10EffectConstantBuffer = *mut ::core::ffi::c_void;
-pub type ID3D10EffectDepthStencilVariable = *mut ::core::ffi::c_void;
-pub type ID3D10EffectDepthStencilViewVariable = *mut ::core::ffi::c_void;
-pub type ID3D10EffectMatrixVariable = *mut ::core::ffi::c_void;
-pub type ID3D10EffectPass = *mut ::core::ffi::c_void;
-pub type ID3D10EffectPool = *mut ::core::ffi::c_void;
-pub type ID3D10EffectRasterizerVariable = *mut ::core::ffi::c_void;
-pub type ID3D10EffectRenderTargetViewVariable = *mut ::core::ffi::c_void;
-pub type ID3D10EffectSamplerVariable = *mut ::core::ffi::c_void;
-pub type ID3D10EffectScalarVariable = *mut ::core::ffi::c_void;
-pub type ID3D10EffectShaderResourceVariable = *mut ::core::ffi::c_void;
-pub type ID3D10EffectShaderVariable = *mut ::core::ffi::c_void;
-pub type ID3D10EffectStringVariable = *mut ::core::ffi::c_void;
-pub type ID3D10EffectTechnique = *mut ::core::ffi::c_void;
-pub type ID3D10EffectType = *mut ::core::ffi::c_void;
-pub type ID3D10EffectVariable = *mut ::core::ffi::c_void;
-pub type ID3D10EffectVectorVariable = *mut ::core::ffi::c_void;
-pub type ID3D10GeometryShader = *mut ::core::ffi::c_void;
-pub type ID3D10InfoQueue = *mut ::core::ffi::c_void;
-pub type ID3D10InputLayout = *mut ::core::ffi::c_void;
-pub type ID3D10Multithread = *mut ::core::ffi::c_void;
-pub type ID3D10PixelShader = *mut ::core::ffi::c_void;
-pub type ID3D10Predicate = *mut ::core::ffi::c_void;
-pub type ID3D10Query = *mut ::core::ffi::c_void;
-pub type ID3D10RasterizerState = *mut ::core::ffi::c_void;
-pub type ID3D10RenderTargetView = *mut ::core::ffi::c_void;
-pub type ID3D10Resource = *mut ::core::ffi::c_void;
-pub type ID3D10SamplerState = *mut ::core::ffi::c_void;
-pub type ID3D10ShaderReflection = *mut ::core::ffi::c_void;
-pub type ID3D10ShaderReflection1 = *mut ::core::ffi::c_void;
-pub type ID3D10ShaderReflectionConstantBuffer = *mut ::core::ffi::c_void;
-pub type ID3D10ShaderReflectionType = *mut ::core::ffi::c_void;
-pub type ID3D10ShaderReflectionVariable = *mut ::core::ffi::c_void;
-pub type ID3D10ShaderResourceView = *mut ::core::ffi::c_void;
-pub type ID3D10ShaderResourceView1 = *mut ::core::ffi::c_void;
-pub type ID3D10StateBlock = *mut ::core::ffi::c_void;
-pub type ID3D10SwitchToRef = *mut ::core::ffi::c_void;
-pub type ID3D10Texture1D = *mut ::core::ffi::c_void;
-pub type ID3D10Texture2D = *mut ::core::ffi::c_void;
-pub type ID3D10Texture3D = *mut ::core::ffi::c_void;
-pub type ID3D10VertexShader = *mut ::core::ffi::c_void;
-pub type ID3D10View = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi"))]
 pub type PFN_D3D10_CREATE_DEVICE1 = ::core::option::Option<unsafe extern "system" fn(param0: super::Dxgi::IDXGIAdapter, param1: D3D10_DRIVER_TYPE, param2: super::super::Foundation::HINSTANCE, param3: u32, param4: D3D10_FEATURE_LEVEL1, param5: u32, param6: *mut ID3D10Device1) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
 pub type PFN_D3D10_CREATE_DEVICE_AND_SWAP_CHAIN1 = ::core::option::Option<unsafe extern "system" fn(param0: super::Dxgi::IDXGIAdapter, param1: D3D10_DRIVER_TYPE, param2: super::super::Foundation::HINSTANCE, param3: u32, param4: D3D10_FEATURE_LEVEL1, param5: u32, param6: *mut super::Dxgi::DXGI_SWAP_CHAIN_DESC, param7: *mut super::Dxgi::IDXGISwapChain, param8: *mut ID3D10Device1) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D10\"`*"]
-pub const _FACD3D10: u32 = 2169u32;

@@ -1,6 +1,6 @@
 #[cfg(feature = "Win32_Graphics_Dxgi_Common")]
 pub mod Common;
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
     pub fn CreateDXGIFactory(riid: *const ::windows_sys::core::GUID, ppfactory: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
@@ -13,139 +13,53 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
     pub fn DXGIGetDebugInterface1(flags: u32, riid: *const ::windows_sys::core::GUID, pdebug: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
 }
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DXGI_ADAPTER_DESC {
-    pub Description: [u16; 128],
-    pub VendorId: u32,
-    pub DeviceId: u32,
-    pub SubSysId: u32,
-    pub Revision: u32,
-    pub DedicatedVideoMemory: usize,
-    pub DedicatedSystemMemory: usize,
-    pub SharedSystemMemory: usize,
-    pub AdapterLuid: super::super::Foundation::LUID,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DXGI_ADAPTER_DESC {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DXGI_ADAPTER_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DXGI_ADAPTER_DESC1 {
-    pub Description: [u16; 128],
-    pub VendorId: u32,
-    pub DeviceId: u32,
-    pub SubSysId: u32,
-    pub Revision: u32,
-    pub DedicatedVideoMemory: usize,
-    pub DedicatedSystemMemory: usize,
-    pub SharedSystemMemory: usize,
-    pub AdapterLuid: super::super::Foundation::LUID,
-    pub Flags: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DXGI_ADAPTER_DESC1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DXGI_ADAPTER_DESC1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DXGI_ADAPTER_DESC2 {
-    pub Description: [u16; 128],
-    pub VendorId: u32,
-    pub DeviceId: u32,
-    pub SubSysId: u32,
-    pub Revision: u32,
-    pub DedicatedVideoMemory: usize,
-    pub DedicatedSystemMemory: usize,
-    pub SharedSystemMemory: usize,
-    pub AdapterLuid: super::super::Foundation::LUID,
-    pub Flags: u32,
-    pub GraphicsPreemptionGranularity: DXGI_GRAPHICS_PREEMPTION_GRANULARITY,
-    pub ComputePreemptionGranularity: DXGI_COMPUTE_PREEMPTION_GRANULARITY,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DXGI_ADAPTER_DESC2 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DXGI_ADAPTER_DESC2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DXGI_ADAPTER_DESC3 {
-    pub Description: [u16; 128],
-    pub VendorId: u32,
-    pub DeviceId: u32,
-    pub SubSysId: u32,
-    pub Revision: u32,
-    pub DedicatedVideoMemory: usize,
-    pub DedicatedSystemMemory: usize,
-    pub SharedSystemMemory: usize,
-    pub AdapterLuid: super::super::Foundation::LUID,
-    pub Flags: DXGI_ADAPTER_FLAG3,
-    pub GraphicsPreemptionGranularity: DXGI_GRAPHICS_PREEMPTION_GRANULARITY,
-    pub ComputePreemptionGranularity: DXGI_COMPUTE_PREEMPTION_GRANULARITY,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DXGI_ADAPTER_DESC3 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DXGI_ADAPTER_DESC3 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_ADAPTER_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_ADAPTER_FLAG_NONE: DXGI_ADAPTER_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_ADAPTER_FLAG_REMOTE: DXGI_ADAPTER_FLAG = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_ADAPTER_FLAG_SOFTWARE: DXGI_ADAPTER_FLAG = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_ADAPTER_FLAG3 = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_ADAPTER_FLAG3_NONE: DXGI_ADAPTER_FLAG3 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_ADAPTER_FLAG3_REMOTE: DXGI_ADAPTER_FLAG3 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_ADAPTER_FLAG3_SOFTWARE: DXGI_ADAPTER_FLAG3 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_ADAPTER_FLAG3_ACG_COMPATIBLE: DXGI_ADAPTER_FLAG3 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_ADAPTER_FLAG3_SUPPORT_MONITORED_FENCES: DXGI_ADAPTER_FLAG3 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_ADAPTER_FLAG3_SUPPORT_NON_MONITORED_FENCES: DXGI_ADAPTER_FLAG3 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_ADAPTER_FLAG3_KEYED_MUTEX_CONFORMANCE: DXGI_ADAPTER_FLAG3 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_ADAPTER_FLAG3_FORCE_DWORD: DXGI_ADAPTER_FLAG3 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_COMPUTE_PREEMPTION_GRANULARITY = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_COMPUTE_PREEMPTION_DMA_BUFFER_BOUNDARY: DXGI_COMPUTE_PREEMPTION_GRANULARITY = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_COMPUTE_PREEMPTION_DISPATCH_BOUNDARY: DXGI_COMPUTE_PREEMPTION_GRANULARITY = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_COMPUTE_PREEMPTION_THREAD_GROUP_BOUNDARY: DXGI_COMPUTE_PREEMPTION_GRANULARITY = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_COMPUTE_PREEMPTION_THREAD_BOUNDARY: DXGI_COMPUTE_PREEMPTION_GRANULARITY = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_COMPUTE_PREEMPTION_INSTRUCTION_BOUNDARY: DXGI_COMPUTE_PREEMPTION_GRANULARITY = 4i32;
+pub type IDXGIAdapter = *mut ::core::ffi::c_void;
+pub type IDXGIAdapter1 = *mut ::core::ffi::c_void;
+pub type IDXGIAdapter2 = *mut ::core::ffi::c_void;
+pub type IDXGIAdapter3 = *mut ::core::ffi::c_void;
+pub type IDXGIAdapter4 = *mut ::core::ffi::c_void;
+pub type IDXGIDebug = *mut ::core::ffi::c_void;
+pub type IDXGIDebug1 = *mut ::core::ffi::c_void;
+pub type IDXGIDecodeSwapChain = *mut ::core::ffi::c_void;
+pub type IDXGIDevice = *mut ::core::ffi::c_void;
+pub type IDXGIDevice1 = *mut ::core::ffi::c_void;
+pub type IDXGIDevice2 = *mut ::core::ffi::c_void;
+pub type IDXGIDevice3 = *mut ::core::ffi::c_void;
+pub type IDXGIDevice4 = *mut ::core::ffi::c_void;
+pub type IDXGIDeviceSubObject = *mut ::core::ffi::c_void;
+pub type IDXGIDisplayControl = *mut ::core::ffi::c_void;
+pub type IDXGIFactory = *mut ::core::ffi::c_void;
+pub type IDXGIFactory1 = *mut ::core::ffi::c_void;
+pub type IDXGIFactory2 = *mut ::core::ffi::c_void;
+pub type IDXGIFactory3 = *mut ::core::ffi::c_void;
+pub type IDXGIFactory4 = *mut ::core::ffi::c_void;
+pub type IDXGIFactory5 = *mut ::core::ffi::c_void;
+pub type IDXGIFactory6 = *mut ::core::ffi::c_void;
+pub type IDXGIFactory7 = *mut ::core::ffi::c_void;
+pub type IDXGIFactoryMedia = *mut ::core::ffi::c_void;
+pub type IDXGIInfoQueue = *mut ::core::ffi::c_void;
+pub type IDXGIKeyedMutex = *mut ::core::ffi::c_void;
+pub type IDXGIObject = *mut ::core::ffi::c_void;
+pub type IDXGIOutput = *mut ::core::ffi::c_void;
+pub type IDXGIOutput1 = *mut ::core::ffi::c_void;
+pub type IDXGIOutput2 = *mut ::core::ffi::c_void;
+pub type IDXGIOutput3 = *mut ::core::ffi::c_void;
+pub type IDXGIOutput4 = *mut ::core::ffi::c_void;
+pub type IDXGIOutput5 = *mut ::core::ffi::c_void;
+pub type IDXGIOutput6 = *mut ::core::ffi::c_void;
+pub type IDXGIOutputDuplication = *mut ::core::ffi::c_void;
+pub type IDXGIResource = *mut ::core::ffi::c_void;
+pub type IDXGIResource1 = *mut ::core::ffi::c_void;
+pub type IDXGISurface = *mut ::core::ffi::c_void;
+pub type IDXGISurface1 = *mut ::core::ffi::c_void;
+pub type IDXGISurface2 = *mut ::core::ffi::c_void;
+pub type IDXGISwapChain = *mut ::core::ffi::c_void;
+pub type IDXGISwapChain1 = *mut ::core::ffi::c_void;
+pub type IDXGISwapChain2 = *mut ::core::ffi::c_void;
+pub type IDXGISwapChain3 = *mut ::core::ffi::c_void;
+pub type IDXGISwapChain4 = *mut ::core::ffi::c_void;
+pub type IDXGISwapChainMedia = *mut ::core::ffi::c_void;
+pub type IDXGraphicsAnalysis = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_CREATE_FACTORY_DEBUG: u32 = 1u32;
 pub const DXGI_DEBUG_ALL: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3834307203, data2: 55936, data3: 18699, data4: [135, 230, 67, 233, 169, 207, 218, 8] };
@@ -154,39 +68,6 @@ pub const DXGI_DEBUG_APP: ::windows_sys::core::GUID = ::windows_sys::core::GUID 
 pub const DXGI_DEBUG_BINARY_VERSION: u32 = 1u32;
 pub const DXGI_DEBUG_DX: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 902682620, data2: 5042, data3: 16925, data4: [165, 215, 126, 68, 81, 40, 125, 100] };
 pub const DXGI_DEBUG_DXGI: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 634247844, data2: 45510, data3: 18401, data4: [172, 62, 152, 135, 91, 90, 46, 42] };
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_DEBUG_RLO_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_DEBUG_RLO_SUMMARY: DXGI_DEBUG_RLO_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_DEBUG_RLO_DETAIL: DXGI_DEBUG_RLO_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_DEBUG_RLO_IGNORE_INTERNAL: DXGI_DEBUG_RLO_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_DEBUG_RLO_ALL: DXGI_DEBUG_RLO_FLAGS = 7u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub struct DXGI_DECODE_SWAP_CHAIN_DESC {
-    pub Flags: u32,
-}
-impl ::core::marker::Copy for DXGI_DECODE_SWAP_CHAIN_DESC {}
-impl ::core::clone::Clone for DXGI_DECODE_SWAP_CHAIN_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub struct DXGI_DISPLAY_COLOR_SPACE {
-    pub PrimaryCoordinates: [f32; 16],
-    pub WhitePoints: [f32; 32],
-}
-impl ::core::marker::Copy for DXGI_DISPLAY_COLOR_SPACE {}
-impl ::core::clone::Clone for DXGI_DISPLAY_COLOR_SPACE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_ENUM_MODES_DISABLED_STEREO: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
@@ -260,6 +141,110 @@ pub const DXGI_ERROR_WAIT_TIMEOUT: ::windows_sys::core::HRESULT = -2005270489i32
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_ERROR_WAS_STILL_DRAWING: ::windows_sys::core::HRESULT = -2005270518i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_INFO_QUEUE_DEFAULT_MESSAGE_COUNT_LIMIT: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_INFO_QUEUE_MESSAGE_ID_STRING_FROM_APPLICATION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_MAP_DISCARD: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_MAP_READ: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_MAP_WRITE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_MAX_SWAP_CHAIN_BUFFERS: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_MWA_NO_ALT_ENTER: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_MWA_NO_PRINT_SCREEN: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_MWA_NO_WINDOW_CHANGES: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_MWA_VALID: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_PRESENT_ALLOW_TEARING: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_PRESENT_DO_NOT_SEQUENCE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_PRESENT_DO_NOT_WAIT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_PRESENT_RESTART: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_PRESENT_RESTRICT_TO_OUTPUT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_PRESENT_STEREO_PREFER_RIGHT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_PRESENT_STEREO_TEMPORARY_MONO: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_PRESENT_TEST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_PRESENT_USE_DURATION: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SHARED_RESOURCE_READ: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SHARED_RESOURCE_WRITE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_USAGE_BACK_BUFFER: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_USAGE_DISCARD_ON_PRESENT: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_USAGE_READ_ONLY: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_USAGE_RENDER_TARGET_OUTPUT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_USAGE_SHADER_INPUT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_USAGE_SHARED: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_USAGE_UNORDERED_ACCESS: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_ADAPTER_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_ADAPTER_FLAG_NONE: DXGI_ADAPTER_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_ADAPTER_FLAG_REMOTE: DXGI_ADAPTER_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_ADAPTER_FLAG_SOFTWARE: DXGI_ADAPTER_FLAG = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_ADAPTER_FLAG3 = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_ADAPTER_FLAG3_NONE: DXGI_ADAPTER_FLAG3 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_ADAPTER_FLAG3_REMOTE: DXGI_ADAPTER_FLAG3 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_ADAPTER_FLAG3_SOFTWARE: DXGI_ADAPTER_FLAG3 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_ADAPTER_FLAG3_ACG_COMPATIBLE: DXGI_ADAPTER_FLAG3 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_ADAPTER_FLAG3_SUPPORT_MONITORED_FENCES: DXGI_ADAPTER_FLAG3 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_ADAPTER_FLAG3_SUPPORT_NON_MONITORED_FENCES: DXGI_ADAPTER_FLAG3 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_ADAPTER_FLAG3_KEYED_MUTEX_CONFORMANCE: DXGI_ADAPTER_FLAG3 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_ADAPTER_FLAG3_FORCE_DWORD: DXGI_ADAPTER_FLAG3 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_COMPUTE_PREEMPTION_GRANULARITY = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_COMPUTE_PREEMPTION_DMA_BUFFER_BOUNDARY: DXGI_COMPUTE_PREEMPTION_GRANULARITY = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_COMPUTE_PREEMPTION_DISPATCH_BOUNDARY: DXGI_COMPUTE_PREEMPTION_GRANULARITY = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_COMPUTE_PREEMPTION_THREAD_GROUP_BOUNDARY: DXGI_COMPUTE_PREEMPTION_GRANULARITY = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_COMPUTE_PREEMPTION_THREAD_BOUNDARY: DXGI_COMPUTE_PREEMPTION_GRANULARITY = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_COMPUTE_PREEMPTION_INSTRUCTION_BOUNDARY: DXGI_COMPUTE_PREEMPTION_GRANULARITY = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_DEBUG_RLO_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_DEBUG_RLO_SUMMARY: DXGI_DEBUG_RLO_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_DEBUG_RLO_DETAIL: DXGI_DEBUG_RLO_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_DEBUG_RLO_IGNORE_INTERNAL: DXGI_DEBUG_RLO_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_DEBUG_RLO_ALL: DXGI_DEBUG_RLO_FLAGS = 7u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub type DXGI_FEATURE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_FEATURE_PRESENT_ALLOW_TEARING: DXGI_FEATURE = 0i32;
@@ -273,38 +258,6 @@ pub const DXGI_FRAME_PRESENTATION_MODE_OVERLAY: DXGI_FRAME_PRESENTATION_MODE = 1
 pub const DXGI_FRAME_PRESENTATION_MODE_NONE: DXGI_FRAME_PRESENTATION_MODE = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_FRAME_PRESENTATION_MODE_COMPOSITION_FAILURE: DXGI_FRAME_PRESENTATION_MODE = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub struct DXGI_FRAME_STATISTICS {
-    pub PresentCount: u32,
-    pub PresentRefreshCount: u32,
-    pub SyncRefreshCount: u32,
-    pub SyncQPCTime: i64,
-    pub SyncGPUTime: i64,
-}
-impl ::core::marker::Copy for DXGI_FRAME_STATISTICS {}
-impl ::core::clone::Clone for DXGI_FRAME_STATISTICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub struct DXGI_FRAME_STATISTICS_MEDIA {
-    pub PresentCount: u32,
-    pub PresentRefreshCount: u32,
-    pub SyncRefreshCount: u32,
-    pub SyncQPCTime: i64,
-    pub SyncGPUTime: i64,
-    pub CompositionMode: DXGI_FRAME_PRESENTATION_MODE,
-    pub ApprovedPresentDuration: u32,
-}
-impl ::core::marker::Copy for DXGI_FRAME_STATISTICS_MEDIA {}
-impl ::core::clone::Clone for DXGI_FRAME_STATISTICS_MEDIA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub type DXGI_GPU_PREFERENCE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
@@ -333,35 +286,6 @@ pub const DXGI_HARDWARE_COMPOSITION_SUPPORT_FLAG_FULLSCREEN: DXGI_HARDWARE_COMPO
 pub const DXGI_HARDWARE_COMPOSITION_SUPPORT_FLAG_WINDOWED: DXGI_HARDWARE_COMPOSITION_SUPPORT_FLAGS = 2u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_HARDWARE_COMPOSITION_SUPPORT_FLAG_CURSOR_STRETCHED: DXGI_HARDWARE_COMPOSITION_SUPPORT_FLAGS = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub struct DXGI_HDR_METADATA_HDR10 {
-    pub RedPrimary: [u16; 2],
-    pub GreenPrimary: [u16; 2],
-    pub BluePrimary: [u16; 2],
-    pub WhitePoint: [u16; 2],
-    pub MaxMasteringLuminance: u32,
-    pub MinMasteringLuminance: u32,
-    pub MaxContentLightLevel: u16,
-    pub MaxFrameAverageLightLevel: u16,
-}
-impl ::core::marker::Copy for DXGI_HDR_METADATA_HDR10 {}
-impl ::core::clone::Clone for DXGI_HDR_METADATA_HDR10 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub struct DXGI_HDR_METADATA_HDR10PLUS {
-    pub Data: [u8; 72],
-}
-impl ::core::marker::Copy for DXGI_HDR_METADATA_HDR10PLUS {}
-impl ::core::clone::Clone for DXGI_HDR_METADATA_HDR10PLUS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub type DXGI_HDR_METADATA_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
@@ -370,52 +294,6 @@ pub const DXGI_HDR_METADATA_TYPE_NONE: DXGI_HDR_METADATA_TYPE = 0i32;
 pub const DXGI_HDR_METADATA_TYPE_HDR10: DXGI_HDR_METADATA_TYPE = 1i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_HDR_METADATA_TYPE_HDR10PLUS: DXGI_HDR_METADATA_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_INFO_QUEUE_DEFAULT_MESSAGE_COUNT_LIMIT: u32 = 1024u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub struct DXGI_INFO_QUEUE_FILTER {
-    pub AllowList: DXGI_INFO_QUEUE_FILTER_DESC,
-    pub DenyList: DXGI_INFO_QUEUE_FILTER_DESC,
-}
-impl ::core::marker::Copy for DXGI_INFO_QUEUE_FILTER {}
-impl ::core::clone::Clone for DXGI_INFO_QUEUE_FILTER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub struct DXGI_INFO_QUEUE_FILTER_DESC {
-    pub NumCategories: u32,
-    pub pCategoryList: *mut DXGI_INFO_QUEUE_MESSAGE_CATEGORY,
-    pub NumSeverities: u32,
-    pub pSeverityList: *mut DXGI_INFO_QUEUE_MESSAGE_SEVERITY,
-    pub NumIDs: u32,
-    pub pIDList: *mut i32,
-}
-impl ::core::marker::Copy for DXGI_INFO_QUEUE_FILTER_DESC {}
-impl ::core::clone::Clone for DXGI_INFO_QUEUE_FILTER_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub struct DXGI_INFO_QUEUE_MESSAGE {
-    pub Producer: ::windows_sys::core::GUID,
-    pub Category: DXGI_INFO_QUEUE_MESSAGE_CATEGORY,
-    pub Severity: DXGI_INFO_QUEUE_MESSAGE_SEVERITY,
-    pub ID: i32,
-    pub pDescription: *const u8,
-    pub DescriptionByteLength: usize,
-}
-impl ::core::marker::Copy for DXGI_INFO_QUEUE_MESSAGE {}
-impl ::core::clone::Clone for DXGI_INFO_QUEUE_MESSAGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub type DXGI_INFO_QUEUE_MESSAGE_CATEGORY = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
@@ -441,8 +319,6 @@ pub const DXGI_INFO_QUEUE_MESSAGE_CATEGORY_EXECUTION: DXGI_INFO_QUEUE_MESSAGE_CA
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_INFO_QUEUE_MESSAGE_CATEGORY_SHADER: DXGI_INFO_QUEUE_MESSAGE_CATEGORY = 10i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_INFO_QUEUE_MESSAGE_ID_STRING_FROM_APPLICATION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub type DXGI_INFO_QUEUE_MESSAGE_SEVERITY = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION: DXGI_INFO_QUEUE_MESSAGE_SEVERITY = 0i32;
@@ -454,68 +330,12 @@ pub const DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING: DXGI_INFO_QUEUE_MESSAGE_SEVE
 pub const DXGI_INFO_QUEUE_MESSAGE_SEVERITY_INFO: DXGI_INFO_QUEUE_MESSAGE_SEVERITY = 3i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_INFO_QUEUE_MESSAGE_SEVERITY_MESSAGE: DXGI_INFO_QUEUE_MESSAGE_SEVERITY = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub struct DXGI_MAPPED_RECT {
-    pub Pitch: i32,
-    pub pBits: *mut u8,
-}
-impl ::core::marker::Copy for DXGI_MAPPED_RECT {}
-impl ::core::clone::Clone for DXGI_MAPPED_RECT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_MAP_DISCARD: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_MAP_READ: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_MAP_WRITE: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub struct DXGI_MATRIX_3X2_F {
-    pub _11: f32,
-    pub _12: f32,
-    pub _21: f32,
-    pub _22: f32,
-    pub _31: f32,
-    pub _32: f32,
-}
-impl ::core::marker::Copy for DXGI_MATRIX_3X2_F {}
-impl ::core::clone::Clone for DXGI_MATRIX_3X2_F {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_MAX_SWAP_CHAIN_BUFFERS: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub type DXGI_MEMORY_SEGMENT_GROUP = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_MEMORY_SEGMENT_GROUP_LOCAL: DXGI_MEMORY_SEGMENT_GROUP = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_MEMORY_SEGMENT_GROUP_NON_LOCAL: DXGI_MEMORY_SEGMENT_GROUP = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-pub struct DXGI_MODE_DESC1 {
-    pub Width: u32,
-    pub Height: u32,
-    pub RefreshRate: Common::DXGI_RATIONAL,
-    pub Format: Common::DXGI_FORMAT,
-    pub ScanlineOrdering: Common::DXGI_MODE_SCANLINE_ORDER,
-    pub Scaling: Common::DXGI_MODE_SCALING,
-    pub Stereo: super::super::Foundation::BOOL,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::marker::Copy for DXGI_MODE_DESC1 {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::clone::Clone for DXGI_MODE_DESC1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub type DXGI_MULTIPLANE_OVERLAY_YCbCr_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
@@ -524,14 +344,6 @@ pub const DXGI_MULTIPLANE_OVERLAY_YCbCr_FLAG_NOMINAL_RANGE: DXGI_MULTIPLANE_OVER
 pub const DXGI_MULTIPLANE_OVERLAY_YCbCr_FLAG_BT709: DXGI_MULTIPLANE_OVERLAY_YCbCr_FLAGS = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_MULTIPLANE_OVERLAY_YCbCr_FLAG_xvYCC: DXGI_MULTIPLANE_OVERLAY_YCbCr_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_MWA_NO_ALT_ENTER: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_MWA_NO_PRINT_SCREEN: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_MWA_NO_WINDOW_CHANGES: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_MWA_VALID: u32 = 7u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub type DXGI_Message_Id = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
@@ -1208,6 +1020,379 @@ pub const DXGI_OFFER_RESOURCE_PRIORITY_LOW: DXGI_OFFER_RESOURCE_PRIORITY = 1i32;
 pub const DXGI_OFFER_RESOURCE_PRIORITY_NORMAL: DXGI_OFFER_RESOURCE_PRIORITY = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub const DXGI_OFFER_RESOURCE_PRIORITY_HIGH: DXGI_OFFER_RESOURCE_PRIORITY = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_OUTDUPL_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_OUTDUPL_COMPOSITED_UI_CAPTURE_ONLY: DXGI_OUTDUPL_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_OUTDUPL_POINTER_SHAPE_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME: DXGI_OUTDUPL_POINTER_SHAPE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR: DXGI_OUTDUPL_POINTER_SHAPE_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR: DXGI_OUTDUPL_POINTER_SHAPE_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_OVERLAY_COLOR_SPACE_SUPPORT_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_OVERLAY_COLOR_SPACE_SUPPORT_FLAG_PRESENT: DXGI_OVERLAY_COLOR_SPACE_SUPPORT_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_OVERLAY_SUPPORT_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_OVERLAY_SUPPORT_FLAG_DIRECT: DXGI_OVERLAY_SUPPORT_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_OVERLAY_SUPPORT_FLAG_SCALING: DXGI_OVERLAY_SUPPORT_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_RECLAIM_RESOURCE_RESULTS = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_RECLAIM_RESOURCE_RESULT_OK: DXGI_RECLAIM_RESOURCE_RESULTS = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_RECLAIM_RESOURCE_RESULT_DISCARDED: DXGI_RECLAIM_RESOURCE_RESULTS = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_RECLAIM_RESOURCE_RESULT_NOT_COMMITTED: DXGI_RECLAIM_RESOURCE_RESULTS = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_RESIDENCY = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_RESIDENCY_FULLY_RESIDENT: DXGI_RESIDENCY = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_RESIDENCY_RESIDENT_IN_SHARED_MEMORY: DXGI_RESIDENCY = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_RESIDENCY_EVICTED_TO_DISK: DXGI_RESIDENCY = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_RESOURCE_PRIORITY = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_RESOURCE_PRIORITY_MINIMUM: DXGI_RESOURCE_PRIORITY = 671088640u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_RESOURCE_PRIORITY_LOW: DXGI_RESOURCE_PRIORITY = 1342177280u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_RESOURCE_PRIORITY_NORMAL: DXGI_RESOURCE_PRIORITY = 2013265920u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_RESOURCE_PRIORITY_HIGH: DXGI_RESOURCE_PRIORITY = 2684354560u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_RESOURCE_PRIORITY_MAXIMUM: DXGI_RESOURCE_PRIORITY = 3355443200u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_SCALING = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SCALING_STRETCH: DXGI_SCALING = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SCALING_NONE: DXGI_SCALING = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SCALING_ASPECT_RATIO_STRETCH: DXGI_SCALING = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT: DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_OVERLAY_PRESENT: DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_SWAP_CHAIN_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_NONPREROTATED: DXGI_SWAP_CHAIN_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH: DXGI_SWAP_CHAIN_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE: DXGI_SWAP_CHAIN_FLAG = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_RESTRICTED_CONTENT: DXGI_SWAP_CHAIN_FLAG = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_RESTRICT_SHARED_RESOURCE_DRIVER: DXGI_SWAP_CHAIN_FLAG = 16i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_DISPLAY_ONLY: DXGI_SWAP_CHAIN_FLAG = 32i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT: DXGI_SWAP_CHAIN_FLAG = 64i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_FOREGROUND_LAYER: DXGI_SWAP_CHAIN_FLAG = 128i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_FULLSCREEN_VIDEO: DXGI_SWAP_CHAIN_FLAG = 256i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_YUV_VIDEO: DXGI_SWAP_CHAIN_FLAG = 512i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_HW_PROTECTED: DXGI_SWAP_CHAIN_FLAG = 1024i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING: DXGI_SWAP_CHAIN_FLAG = 2048i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_CHAIN_FLAG_RESTRICTED_TO_ALL_HOLOGRAPHIC_DISPLAYS: DXGI_SWAP_CHAIN_FLAG = 4096i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub type DXGI_SWAP_EFFECT = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_EFFECT_DISCARD: DXGI_SWAP_EFFECT = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_EFFECT_SEQUENTIAL: DXGI_SWAP_EFFECT = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL: DXGI_SWAP_EFFECT = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub const DXGI_SWAP_EFFECT_FLIP_DISCARD: DXGI_SWAP_EFFECT = 4i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DXGI_ADAPTER_DESC {
+    pub Description: [u16; 128],
+    pub VendorId: u32,
+    pub DeviceId: u32,
+    pub SubSysId: u32,
+    pub Revision: u32,
+    pub DedicatedVideoMemory: usize,
+    pub DedicatedSystemMemory: usize,
+    pub SharedSystemMemory: usize,
+    pub AdapterLuid: super::super::Foundation::LUID,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DXGI_ADAPTER_DESC {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DXGI_ADAPTER_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DXGI_ADAPTER_DESC1 {
+    pub Description: [u16; 128],
+    pub VendorId: u32,
+    pub DeviceId: u32,
+    pub SubSysId: u32,
+    pub Revision: u32,
+    pub DedicatedVideoMemory: usize,
+    pub DedicatedSystemMemory: usize,
+    pub SharedSystemMemory: usize,
+    pub AdapterLuid: super::super::Foundation::LUID,
+    pub Flags: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DXGI_ADAPTER_DESC1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DXGI_ADAPTER_DESC1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DXGI_ADAPTER_DESC2 {
+    pub Description: [u16; 128],
+    pub VendorId: u32,
+    pub DeviceId: u32,
+    pub SubSysId: u32,
+    pub Revision: u32,
+    pub DedicatedVideoMemory: usize,
+    pub DedicatedSystemMemory: usize,
+    pub SharedSystemMemory: usize,
+    pub AdapterLuid: super::super::Foundation::LUID,
+    pub Flags: u32,
+    pub GraphicsPreemptionGranularity: DXGI_GRAPHICS_PREEMPTION_GRANULARITY,
+    pub ComputePreemptionGranularity: DXGI_COMPUTE_PREEMPTION_GRANULARITY,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DXGI_ADAPTER_DESC2 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DXGI_ADAPTER_DESC2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DXGI_ADAPTER_DESC3 {
+    pub Description: [u16; 128],
+    pub VendorId: u32,
+    pub DeviceId: u32,
+    pub SubSysId: u32,
+    pub Revision: u32,
+    pub DedicatedVideoMemory: usize,
+    pub DedicatedSystemMemory: usize,
+    pub SharedSystemMemory: usize,
+    pub AdapterLuid: super::super::Foundation::LUID,
+    pub Flags: DXGI_ADAPTER_FLAG3,
+    pub GraphicsPreemptionGranularity: DXGI_GRAPHICS_PREEMPTION_GRANULARITY,
+    pub ComputePreemptionGranularity: DXGI_COMPUTE_PREEMPTION_GRANULARITY,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DXGI_ADAPTER_DESC3 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DXGI_ADAPTER_DESC3 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub struct DXGI_DECODE_SWAP_CHAIN_DESC {
+    pub Flags: u32,
+}
+impl ::core::marker::Copy for DXGI_DECODE_SWAP_CHAIN_DESC {}
+impl ::core::clone::Clone for DXGI_DECODE_SWAP_CHAIN_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub struct DXGI_DISPLAY_COLOR_SPACE {
+    pub PrimaryCoordinates: [f32; 16],
+    pub WhitePoints: [f32; 32],
+}
+impl ::core::marker::Copy for DXGI_DISPLAY_COLOR_SPACE {}
+impl ::core::clone::Clone for DXGI_DISPLAY_COLOR_SPACE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub struct DXGI_FRAME_STATISTICS {
+    pub PresentCount: u32,
+    pub PresentRefreshCount: u32,
+    pub SyncRefreshCount: u32,
+    pub SyncQPCTime: i64,
+    pub SyncGPUTime: i64,
+}
+impl ::core::marker::Copy for DXGI_FRAME_STATISTICS {}
+impl ::core::clone::Clone for DXGI_FRAME_STATISTICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub struct DXGI_FRAME_STATISTICS_MEDIA {
+    pub PresentCount: u32,
+    pub PresentRefreshCount: u32,
+    pub SyncRefreshCount: u32,
+    pub SyncQPCTime: i64,
+    pub SyncGPUTime: i64,
+    pub CompositionMode: DXGI_FRAME_PRESENTATION_MODE,
+    pub ApprovedPresentDuration: u32,
+}
+impl ::core::marker::Copy for DXGI_FRAME_STATISTICS_MEDIA {}
+impl ::core::clone::Clone for DXGI_FRAME_STATISTICS_MEDIA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub struct DXGI_HDR_METADATA_HDR10 {
+    pub RedPrimary: [u16; 2],
+    pub GreenPrimary: [u16; 2],
+    pub BluePrimary: [u16; 2],
+    pub WhitePoint: [u16; 2],
+    pub MaxMasteringLuminance: u32,
+    pub MinMasteringLuminance: u32,
+    pub MaxContentLightLevel: u16,
+    pub MaxFrameAverageLightLevel: u16,
+}
+impl ::core::marker::Copy for DXGI_HDR_METADATA_HDR10 {}
+impl ::core::clone::Clone for DXGI_HDR_METADATA_HDR10 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub struct DXGI_HDR_METADATA_HDR10PLUS {
+    pub Data: [u8; 72],
+}
+impl ::core::marker::Copy for DXGI_HDR_METADATA_HDR10PLUS {}
+impl ::core::clone::Clone for DXGI_HDR_METADATA_HDR10PLUS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub struct DXGI_INFO_QUEUE_FILTER {
+    pub AllowList: DXGI_INFO_QUEUE_FILTER_DESC,
+    pub DenyList: DXGI_INFO_QUEUE_FILTER_DESC,
+}
+impl ::core::marker::Copy for DXGI_INFO_QUEUE_FILTER {}
+impl ::core::clone::Clone for DXGI_INFO_QUEUE_FILTER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub struct DXGI_INFO_QUEUE_FILTER_DESC {
+    pub NumCategories: u32,
+    pub pCategoryList: *mut DXGI_INFO_QUEUE_MESSAGE_CATEGORY,
+    pub NumSeverities: u32,
+    pub pSeverityList: *mut DXGI_INFO_QUEUE_MESSAGE_SEVERITY,
+    pub NumIDs: u32,
+    pub pIDList: *mut i32,
+}
+impl ::core::marker::Copy for DXGI_INFO_QUEUE_FILTER_DESC {}
+impl ::core::clone::Clone for DXGI_INFO_QUEUE_FILTER_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub struct DXGI_INFO_QUEUE_MESSAGE {
+    pub Producer: ::windows_sys::core::GUID,
+    pub Category: DXGI_INFO_QUEUE_MESSAGE_CATEGORY,
+    pub Severity: DXGI_INFO_QUEUE_MESSAGE_SEVERITY,
+    pub ID: i32,
+    pub pDescription: *const u8,
+    pub DescriptionByteLength: usize,
+}
+impl ::core::marker::Copy for DXGI_INFO_QUEUE_MESSAGE {}
+impl ::core::clone::Clone for DXGI_INFO_QUEUE_MESSAGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub struct DXGI_MAPPED_RECT {
+    pub Pitch: i32,
+    pub pBits: *mut u8,
+}
+impl ::core::marker::Copy for DXGI_MAPPED_RECT {}
+impl ::core::clone::Clone for DXGI_MAPPED_RECT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
+pub struct DXGI_MATRIX_3X2_F {
+    pub _11: f32,
+    pub _12: f32,
+    pub _21: f32,
+    pub _22: f32,
+    pub _31: f32,
+    pub _32: f32,
+}
+impl ::core::marker::Copy for DXGI_MATRIX_3X2_F {}
+impl ::core::clone::Clone for DXGI_MATRIX_3X2_F {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+pub struct DXGI_MODE_DESC1 {
+    pub Width: u32,
+    pub Height: u32,
+    pub RefreshRate: Common::DXGI_RATIONAL,
+    pub Format: Common::DXGI_FORMAT,
+    pub ScanlineOrdering: Common::DXGI_MODE_SCANLINE_ORDER,
+    pub Scaling: Common::DXGI_MODE_SCALING,
+    pub Stereo: super::super::Foundation::BOOL,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::marker::Copy for DXGI_MODE_DESC1 {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::clone::Clone for DXGI_MODE_DESC1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
@@ -1224,10 +1409,6 @@ impl ::core::clone::Clone for DXGI_OUTDUPL_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_OUTDUPL_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_OUTDUPL_COMPOSITED_UI_CAPTURE_ONLY: DXGI_OUTDUPL_FLAG = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1297,14 +1478,6 @@ impl ::core::clone::Clone for DXGI_OUTDUPL_POINTER_SHAPE_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_OUTDUPL_POINTER_SHAPE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MONOCHROME: DXGI_OUTDUPL_POINTER_SHAPE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_OUTDUPL_POINTER_SHAPE_TYPE_COLOR: DXGI_OUTDUPL_POINTER_SHAPE_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_OUTDUPL_POINTER_SHAPE_TYPE_MASKED_COLOR: DXGI_OUTDUPL_POINTER_SHAPE_TYPE = 4i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`, `\"Win32_Graphics_Gdi\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common", feature = "Win32_Graphics_Gdi"))]
@@ -1350,22 +1523,6 @@ impl ::core::clone::Clone for DXGI_OUTPUT_DESC1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_OVERLAY_COLOR_SPACE_SUPPORT_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_OVERLAY_COLOR_SPACE_SUPPORT_FLAG_PRESENT: DXGI_OVERLAY_COLOR_SPACE_SUPPORT_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_OVERLAY_SUPPORT_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_OVERLAY_SUPPORT_FLAG_DIRECT: DXGI_OVERLAY_SUPPORT_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_OVERLAY_SUPPORT_FLAG_SCALING: DXGI_OVERLAY_SUPPORT_FLAG = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_PRESENT_ALLOW_TEARING: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_PRESENT_DO_NOT_SEQUENCE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_PRESENT_DO_NOT_WAIT: u32 = 8u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1383,18 +1540,6 @@ impl ::core::clone::Clone for DXGI_PRESENT_PARAMETERS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_PRESENT_RESTART: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_PRESENT_RESTRICT_TO_OUTPUT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_PRESENT_STEREO_PREFER_RIGHT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_PRESENT_STEREO_TEMPORARY_MONO: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_PRESENT_TEST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_PRESENT_USE_DURATION: u32 = 256u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub struct DXGI_QUERY_VIDEO_MEMORY_INFO {
@@ -1409,34 +1554,6 @@ impl ::core::clone::Clone for DXGI_QUERY_VIDEO_MEMORY_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_RECLAIM_RESOURCE_RESULTS = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_RECLAIM_RESOURCE_RESULT_OK: DXGI_RECLAIM_RESOURCE_RESULTS = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_RECLAIM_RESOURCE_RESULT_DISCARDED: DXGI_RECLAIM_RESOURCE_RESULTS = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_RECLAIM_RESOURCE_RESULT_NOT_COMMITTED: DXGI_RECLAIM_RESOURCE_RESULTS = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_RESIDENCY = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_RESIDENCY_FULLY_RESIDENT: DXGI_RESIDENCY = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_RESIDENCY_RESIDENT_IN_SHARED_MEMORY: DXGI_RESIDENCY = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_RESIDENCY_EVICTED_TO_DISK: DXGI_RESIDENCY = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_RESOURCE_PRIORITY = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_RESOURCE_PRIORITY_MINIMUM: DXGI_RESOURCE_PRIORITY = 671088640u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_RESOURCE_PRIORITY_LOW: DXGI_RESOURCE_PRIORITY = 1342177280u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_RESOURCE_PRIORITY_NORMAL: DXGI_RESOURCE_PRIORITY = 2013265920u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_RESOURCE_PRIORITY_HIGH: DXGI_RESOURCE_PRIORITY = 2684354560u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_RESOURCE_PRIORITY_MAXIMUM: DXGI_RESOURCE_PRIORITY = 3355443200u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
 pub struct DXGI_RGBA {
@@ -1451,14 +1568,6 @@ impl ::core::clone::Clone for DXGI_RGBA {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_SCALING = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SCALING_STRETCH: DXGI_SCALING = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SCALING_NONE: DXGI_SCALING = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SCALING_ASPECT_RATIO_STRETCH: DXGI_SCALING = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1473,10 +1582,6 @@ impl ::core::clone::Clone for DXGI_SHARED_RESOURCE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SHARED_RESOURCE_READ: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SHARED_RESOURCE_WRITE: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
 #[cfg(feature = "Win32_Graphics_Dxgi_Common")]
@@ -1494,12 +1599,6 @@ impl ::core::clone::Clone for DXGI_SURFACE_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT: DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_OVERLAY_PRESENT: DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
@@ -1545,34 +1644,6 @@ impl ::core::clone::Clone for DXGI_SWAP_CHAIN_DESC1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_SWAP_CHAIN_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_NONPREROTATED: DXGI_SWAP_CHAIN_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH: DXGI_SWAP_CHAIN_FLAG = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE: DXGI_SWAP_CHAIN_FLAG = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_RESTRICTED_CONTENT: DXGI_SWAP_CHAIN_FLAG = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_RESTRICT_SHARED_RESOURCE_DRIVER: DXGI_SWAP_CHAIN_FLAG = 16i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_DISPLAY_ONLY: DXGI_SWAP_CHAIN_FLAG = 32i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT: DXGI_SWAP_CHAIN_FLAG = 64i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_FOREGROUND_LAYER: DXGI_SWAP_CHAIN_FLAG = 128i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_FULLSCREEN_VIDEO: DXGI_SWAP_CHAIN_FLAG = 256i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_YUV_VIDEO: DXGI_SWAP_CHAIN_FLAG = 512i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_HW_PROTECTED: DXGI_SWAP_CHAIN_FLAG = 1024i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING: DXGI_SWAP_CHAIN_FLAG = 2048i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_CHAIN_FLAG_RESTRICTED_TO_ALL_HOLOGRAPHIC_DISPLAYS: DXGI_SWAP_CHAIN_FLAG = 4096i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
@@ -1590,74 +1661,3 @@ impl ::core::clone::Clone for DXGI_SWAP_CHAIN_FULLSCREEN_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub type DXGI_SWAP_EFFECT = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_EFFECT_DISCARD: DXGI_SWAP_EFFECT = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_EFFECT_SEQUENTIAL: DXGI_SWAP_EFFECT = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL: DXGI_SWAP_EFFECT = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_SWAP_EFFECT_FLIP_DISCARD: DXGI_SWAP_EFFECT = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_USAGE_BACK_BUFFER: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_USAGE_DISCARD_ON_PRESENT: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_USAGE_READ_ONLY: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_USAGE_RENDER_TARGET_OUTPUT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_USAGE_SHADER_INPUT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_USAGE_SHARED: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi\"`*"]
-pub const DXGI_USAGE_UNORDERED_ACCESS: u32 = 1024u32;
-pub type IDXGIAdapter = *mut ::core::ffi::c_void;
-pub type IDXGIAdapter1 = *mut ::core::ffi::c_void;
-pub type IDXGIAdapter2 = *mut ::core::ffi::c_void;
-pub type IDXGIAdapter3 = *mut ::core::ffi::c_void;
-pub type IDXGIAdapter4 = *mut ::core::ffi::c_void;
-pub type IDXGIDebug = *mut ::core::ffi::c_void;
-pub type IDXGIDebug1 = *mut ::core::ffi::c_void;
-pub type IDXGIDecodeSwapChain = *mut ::core::ffi::c_void;
-pub type IDXGIDevice = *mut ::core::ffi::c_void;
-pub type IDXGIDevice1 = *mut ::core::ffi::c_void;
-pub type IDXGIDevice2 = *mut ::core::ffi::c_void;
-pub type IDXGIDevice3 = *mut ::core::ffi::c_void;
-pub type IDXGIDevice4 = *mut ::core::ffi::c_void;
-pub type IDXGIDeviceSubObject = *mut ::core::ffi::c_void;
-pub type IDXGIDisplayControl = *mut ::core::ffi::c_void;
-pub type IDXGIFactory = *mut ::core::ffi::c_void;
-pub type IDXGIFactory1 = *mut ::core::ffi::c_void;
-pub type IDXGIFactory2 = *mut ::core::ffi::c_void;
-pub type IDXGIFactory3 = *mut ::core::ffi::c_void;
-pub type IDXGIFactory4 = *mut ::core::ffi::c_void;
-pub type IDXGIFactory5 = *mut ::core::ffi::c_void;
-pub type IDXGIFactory6 = *mut ::core::ffi::c_void;
-pub type IDXGIFactory7 = *mut ::core::ffi::c_void;
-pub type IDXGIFactoryMedia = *mut ::core::ffi::c_void;
-pub type IDXGIInfoQueue = *mut ::core::ffi::c_void;
-pub type IDXGIKeyedMutex = *mut ::core::ffi::c_void;
-pub type IDXGIObject = *mut ::core::ffi::c_void;
-pub type IDXGIOutput = *mut ::core::ffi::c_void;
-pub type IDXGIOutput1 = *mut ::core::ffi::c_void;
-pub type IDXGIOutput2 = *mut ::core::ffi::c_void;
-pub type IDXGIOutput3 = *mut ::core::ffi::c_void;
-pub type IDXGIOutput4 = *mut ::core::ffi::c_void;
-pub type IDXGIOutput5 = *mut ::core::ffi::c_void;
-pub type IDXGIOutput6 = *mut ::core::ffi::c_void;
-pub type IDXGIOutputDuplication = *mut ::core::ffi::c_void;
-pub type IDXGIResource = *mut ::core::ffi::c_void;
-pub type IDXGIResource1 = *mut ::core::ffi::c_void;
-pub type IDXGISurface = *mut ::core::ffi::c_void;
-pub type IDXGISurface1 = *mut ::core::ffi::c_void;
-pub type IDXGISurface2 = *mut ::core::ffi::c_void;
-pub type IDXGISwapChain = *mut ::core::ffi::c_void;
-pub type IDXGISwapChain1 = *mut ::core::ffi::c_void;
-pub type IDXGISwapChain2 = *mut ::core::ffi::c_void;
-pub type IDXGISwapChain3 = *mut ::core::ffi::c_void;
-pub type IDXGISwapChain4 = *mut ::core::ffi::c_void;
-pub type IDXGISwapChainMedia = *mut ::core::ffi::c_void;
-pub type IDXGraphicsAnalysis = *mut ::core::ffi::c_void;

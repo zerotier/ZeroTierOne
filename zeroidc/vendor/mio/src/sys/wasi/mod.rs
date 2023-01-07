@@ -77,6 +77,12 @@ impl Selector {
         events.reserve(length);
 
         debug_assert!(events.capacity() >= length);
+        #[cfg(debug_assertions)]
+        if length == 0 {
+            log::warn!(
+                "calling mio::Poll::poll with empty subscriptions, this likely not what you want"
+            );
+        }
 
         let res = unsafe { wasi::poll_oneoff(subscriptions.as_ptr(), events.as_mut_ptr(), length) };
 
@@ -108,6 +114,14 @@ impl Selector {
             }
             Err(err) => Err(io_err(err)),
         }
+    }
+
+    pub(crate) fn try_clone(&self) -> io::Result<Selector> {
+        Ok(Selector {
+            #[cfg(all(debug_assertions, feature = "net"))]
+            id: self.id,
+            subscriptions: self.subscriptions.clone(),
+        })
     }
 
     #[cfg(feature = "net")]

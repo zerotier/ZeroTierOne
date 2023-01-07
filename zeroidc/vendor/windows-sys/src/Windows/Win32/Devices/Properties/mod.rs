@@ -388,53 +388,8 @@ pub const DEVPKEY_DrvPkg_Model: DEVPROPKEY = DEVPROPKEY { fmtid: ::windows_sys::
 pub const DEVPKEY_DrvPkg_VendorWebSite: DEVPROPKEY = DEVPROPKEY { fmtid: ::windows_sys::core::GUID { data1: 3480468305, data2: 15039, data3: 17570, data4: [133, 224, 154, 61, 199, 161, 33, 50] }, pid: 3u32 };
 #[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
 pub const DEVPKEY_NAME: DEVPROPKEY = DEVPROPKEY { fmtid: ::windows_sys::core::GUID { data1: 3072717104, data2: 18415, data3: 4122, data4: [165, 241, 2, 96, 140, 158, 235, 172] }, pid: 10u32 };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
-pub struct DEVPROPCOMPKEY {
-    pub Key: DEVPROPKEY,
-    pub Store: DEVPROPSTORE,
-    pub LocaleName: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for DEVPROPCOMPKEY {}
-impl ::core::clone::Clone for DEVPROPCOMPKEY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
-pub struct DEVPROPERTY {
-    pub CompKey: DEVPROPCOMPKEY,
-    pub Type: u32,
-    pub BufferSize: u32,
-    pub Buffer: *mut ::core::ffi::c_void,
-}
-impl ::core::marker::Copy for DEVPROPERTY {}
-impl ::core::clone::Clone for DEVPROPERTY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
 pub const DEVPROPID_FIRST_USABLE: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
-pub struct DEVPROPKEY {
-    pub fmtid: ::windows_sys::core::GUID,
-    pub pid: u32,
-}
-impl ::core::marker::Copy for DEVPROPKEY {}
-impl ::core::clone::Clone for DEVPROPKEY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
-pub type DEVPROPSTORE = i32;
-#[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
-pub const DEVPROP_STORE_SYSTEM: DEVPROPSTORE = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
-pub const DEVPROP_STORE_USER: DEVPROPSTORE = 1i32;
 #[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
 pub const DEVPROP_MASK_TYPE: u32 = 4095u32;
 #[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
@@ -499,3 +454,48 @@ pub const DEVPROP_TYPE_UINT64: u32 = 9u32;
 pub const MAX_DEVPROP_TYPE: u32 = 25u32;
 #[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
 pub const MAX_DEVPROP_TYPEMOD: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
+pub type DEVPROPSTORE = i32;
+#[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
+pub const DEVPROP_STORE_SYSTEM: DEVPROPSTORE = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
+pub const DEVPROP_STORE_USER: DEVPROPSTORE = 1i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
+pub struct DEVPROPCOMPKEY {
+    pub Key: DEVPROPKEY,
+    pub Store: DEVPROPSTORE,
+    pub LocaleName: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for DEVPROPCOMPKEY {}
+impl ::core::clone::Clone for DEVPROPCOMPKEY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
+pub struct DEVPROPERTY {
+    pub CompKey: DEVPROPCOMPKEY,
+    pub Type: u32,
+    pub BufferSize: u32,
+    pub Buffer: *mut ::core::ffi::c_void,
+}
+impl ::core::marker::Copy for DEVPROPERTY {}
+impl ::core::clone::Clone for DEVPROPERTY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Properties\"`*"]
+pub struct DEVPROPKEY {
+    pub fmtid: ::windows_sys::core::GUID,
+    pub pid: u32,
+}
+impl ::core::marker::Copy for DEVPROPKEY {}
+impl ::core::clone::Clone for DEVPROPKEY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}

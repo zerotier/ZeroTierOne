@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -89,6 +89,46 @@ extern "system" {
     pub fn DwmUpdateThumbnailProperties(hthumbnailid: isize, ptnproperties: *const DWM_THUMBNAIL_PROPERTIES) -> ::windows_sys::core::HRESULT;
 }
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWMWA_COLOR_DEFAULT: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWMWA_COLOR_NONE: u32 = 4294967294u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_BB_BLURREGION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_BB_ENABLE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_BB_TRANSITIONONMAXIMIZED: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_CLOAKED_APP: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_CLOAKED_INHERITED: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_CLOAKED_SHELL: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_EC_DISABLECOMPOSITION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_EC_ENABLECOMPOSITION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_FRAME_DURATION_DEFAULT: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_SIT_DISPLAYFRAME: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_TNP_OPACITY: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_TNP_RECTDESTINATION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_TNP_RECTSOURCE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_TNP_SOURCECLIENTAREAONLY: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWM_TNP_VISIBLE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const c_DwmMaxAdapters: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const c_DwmMaxMonitors: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const c_DwmMaxQueuedBuffers: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
 pub type DWMFLIP3DWINDOWPOLICY = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
 pub const DWMFLIP3D_DEFAULT: DWMFLIP3DWINDOWPOLICY = 0i32;
@@ -114,10 +154,6 @@ pub type DWMTRANSITION_OWNEDWINDOW_TARGET = i32;
 pub const DWMTRANSITION_OWNEDWINDOW_NULL: DWMTRANSITION_OWNEDWINDOW_TARGET = -1i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
 pub const DWMTRANSITION_OWNEDWINDOW_REPOSITION: DWMTRANSITION_OWNEDWINDOW_TARGET = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWMWA_COLOR_DEFAULT: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWMWA_COLOR_NONE: u32 = 4294967294u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
 pub type DWMWINDOWATTRIBUTE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
@@ -169,62 +205,6 @@ pub const DWMWA_VISIBLE_FRAME_BORDER_THICKNESS: DWMWINDOWATTRIBUTE = 37i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
 pub const DWMWA_LAST: DWMWINDOWATTRIBUTE = 38i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_BB_BLURREGION: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_BB_ENABLE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_BB_TRANSITIONONMAXIMIZED: u32 = 4u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-pub struct DWM_BLURBEHIND {
-    pub dwFlags: u32,
-    pub fEnable: super::super::Foundation::BOOL,
-    pub hRgnBlur: super::Gdi::HRGN,
-    pub fTransitionOnMaximized: super::super::Foundation::BOOL,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::marker::Copy for DWM_BLURBEHIND {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::clone::Clone for DWM_BLURBEHIND {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_CLOAKED_APP: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_CLOAKED_INHERITED: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_CLOAKED_SHELL: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_EC_DISABLECOMPOSITION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_EC_ENABLECOMPOSITION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_FRAME_DURATION_DEFAULT: i32 = -1i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DWM_PRESENT_PARAMETERS {
-    pub cbSize: u32,
-    pub fQueue: super::super::Foundation::BOOL,
-    pub cRefreshStart: u64,
-    pub cBuffer: u32,
-    pub fUseSourceRate: super::super::Foundation::BOOL,
-    pub rateSource: UNSIGNED_RATIO,
-    pub cRefreshesPerFrame: u32,
-    pub eSampling: DWM_SOURCE_FRAME_SAMPLING,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DWM_PRESENT_PARAMETERS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DWM_PRESENT_PARAMETERS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
 pub type DWM_SHOWCONTACT = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
 pub const DWMSC_DOWN: DWM_SHOWCONTACT = 1u32;
@@ -240,8 +220,6 @@ pub const DWMSC_PENBARREL: DWM_SHOWCONTACT = 16u32;
 pub const DWMSC_NONE: DWM_SHOWCONTACT = 0u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
 pub const DWMSC_ALL: DWM_SHOWCONTACT = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_SIT_DISPLAYFRAME: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
 pub type DWM_SOURCE_FRAME_SAMPLING = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
@@ -274,6 +252,78 @@ pub const DWMTWR_USER_POLICY: DWM_TAB_WINDOW_REQUIREMENTS = 128u32;
 pub const DWMTWR_GROUP_POLICY: DWM_TAB_WINDOW_REQUIREMENTS = 256u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
 pub const DWMTWR_APP_COMPAT: DWM_TAB_WINDOW_REQUIREMENTS = 512u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub type DWM_WINDOW_CORNER_PREFERENCE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWMWCP_DEFAULT: DWM_WINDOW_CORNER_PREFERENCE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWMWCP_DONOTROUND: DWM_WINDOW_CORNER_PREFERENCE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWMWCP_ROUND: DWM_WINDOW_CORNER_PREFERENCE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const DWMWCP_ROUNDSMALL: DWM_WINDOW_CORNER_PREFERENCE = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub type GESTURE_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const GT_PEN_TAP: GESTURE_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const GT_PEN_DOUBLETAP: GESTURE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const GT_PEN_RIGHTTAP: GESTURE_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const GT_PEN_PRESSANDHOLD: GESTURE_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const GT_PEN_PRESSANDHOLDABORT: GESTURE_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const GT_TOUCH_TAP: GESTURE_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const GT_TOUCH_DOUBLETAP: GESTURE_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const GT_TOUCH_RIGHTTAP: GESTURE_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const GT_TOUCH_PRESSANDHOLD: GESTURE_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const GT_TOUCH_PRESSANDHOLDABORT: GESTURE_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
+pub const GT_TOUCH_PRESSANDTAP: GESTURE_TYPE = 10i32;
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct DWM_BLURBEHIND {
+    pub dwFlags: u32,
+    pub fEnable: super::super::Foundation::BOOL,
+    pub hRgnBlur: super::Gdi::HRGN,
+    pub fTransitionOnMaximized: super::super::Foundation::BOOL,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for DWM_BLURBEHIND {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for DWM_BLURBEHIND {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DWM_PRESENT_PARAMETERS {
+    pub cbSize: u32,
+    pub fQueue: super::super::Foundation::BOOL,
+    pub cRefreshStart: u64,
+    pub cBuffer: u32,
+    pub fUseSourceRate: super::super::Foundation::BOOL,
+    pub rateSource: UNSIGNED_RATIO,
+    pub cRefreshesPerFrame: u32,
+    pub eSampling: DWM_SOURCE_FRAME_SAMPLING,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DWM_PRESENT_PARAMETERS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DWM_PRESENT_PARAMETERS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -343,50 +393,6 @@ impl ::core::clone::Clone for DWM_TIMING_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_TNP_OPACITY: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_TNP_RECTDESTINATION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_TNP_RECTSOURCE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_TNP_SOURCECLIENTAREAONLY: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWM_TNP_VISIBLE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub type DWM_WINDOW_CORNER_PREFERENCE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWMWCP_DEFAULT: DWM_WINDOW_CORNER_PREFERENCE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWMWCP_DONOTROUND: DWM_WINDOW_CORNER_PREFERENCE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWMWCP_ROUND: DWM_WINDOW_CORNER_PREFERENCE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const DWMWCP_ROUNDSMALL: DWM_WINDOW_CORNER_PREFERENCE = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub type GESTURE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const GT_PEN_TAP: GESTURE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const GT_PEN_DOUBLETAP: GESTURE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const GT_PEN_RIGHTTAP: GESTURE_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const GT_PEN_PRESSANDHOLD: GESTURE_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const GT_PEN_PRESSANDHOLDABORT: GESTURE_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const GT_TOUCH_TAP: GESTURE_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const GT_TOUCH_DOUBLETAP: GESTURE_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const GT_TOUCH_RIGHTTAP: GESTURE_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const GT_TOUCH_PRESSANDHOLD: GESTURE_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const GT_TOUCH_PRESSANDHOLDABORT: GESTURE_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const GT_TOUCH_PRESSANDTAP: GESTURE_TYPE = 10i32;
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
 pub struct MilMatrix3x2D {
@@ -415,9 +421,3 @@ impl ::core::clone::Clone for UNSIGNED_RATIO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const c_DwmMaxAdapters: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const c_DwmMaxMonitors: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dwm\"`*"]
-pub const c_DwmMaxQueuedBuffers: u32 = 8u32;

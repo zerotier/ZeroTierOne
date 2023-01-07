@@ -243,7 +243,7 @@
 //!
 //! #### unconstrained
 //!
-//! If necessary, [`task::unconstrained`] lets you opt out a future of Tokio's cooperative
+//! If necessary, [`task::unconstrained`] lets you opt a future out of of Tokio's cooperative
 //! scheduling. When a future is wrapped with `unconstrained`, it will never be forced to yield to
 //! Tokio. For example:
 //!
@@ -278,8 +278,10 @@
 cfg_rt! {
     pub use crate::runtime::task::{JoinError, JoinHandle};
 
-    mod blocking;
-    pub use blocking::spawn_blocking;
+    cfg_not_wasi! {
+        mod blocking;
+        pub use blocking::spawn_blocking;
+    }
 
     mod spawn;
     pub use spawn::spawn;
@@ -297,7 +299,7 @@ cfg_rt! {
     }
 
     mod local;
-    pub use local::{spawn_local, LocalSet};
+    pub use local::{spawn_local, LocalSet, LocalEnterGuard};
 
     mod task_local;
     pub use task_local::LocalKey;
@@ -305,11 +307,18 @@ cfg_rt! {
     mod unconstrained;
     pub use unconstrained::{unconstrained, Unconstrained};
 
+    #[doc(inline)]
+    pub use join_set::JoinSet;
+    pub use crate::runtime::task::AbortHandle;
+
+    // Uses #[cfg(...)] instead of macro since the macro adds docsrs annotations.
+    #[cfg(not(tokio_unstable))]
+    mod join_set;
+    #[cfg(tokio_unstable)]
+    pub mod join_set;
+
     cfg_unstable! {
-        pub mod join_set;
-        #[doc(inline)]
-        pub use join_set::JoinSet;
-        pub use crate::runtime::task::{Id, AbortHandle};
+        pub use crate::runtime::task::{Id, id, try_id};
     }
 
     cfg_trace! {

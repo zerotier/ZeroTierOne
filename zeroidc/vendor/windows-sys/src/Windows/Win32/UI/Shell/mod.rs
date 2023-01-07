@@ -2,7 +2,20 @@
 pub mod Common;
 #[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
 pub mod PropertiesSystem;
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
+extern "cdecl" {
+    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn ShellMessageBoxA(happinst: super::super::Foundation::HINSTANCE, hwnd: super::super::Foundation::HWND, lpctext: ::windows_sys::core::PCSTR, lpctitle: ::windows_sys::core::PCSTR, fustyle: u32) -> i32;
+    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn ShellMessageBoxW(happinst: super::super::Foundation::HINSTANCE, hwnd: super::super::Foundation::HWND, lpctext: ::windows_sys::core::PCWSTR, lpctitle: ::windows_sys::core::PCWSTR, fustyle: u32) -> i32;
+    #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+    pub fn wnsprintfA(pszdest: ::windows_sys::core::PSTR, cchdest: i32, pszfmt: ::windows_sys::core::PCSTR) -> i32;
+    #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+    pub fn wnsprintfW(pszdest: ::windows_sys::core::PWSTR, cchdest: i32, pszfmt: ::windows_sys::core::PCWSTR) -> i32;
+}
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
     pub fn AssocCreate(clsid: ::windows_sys::core::GUID, riid: *const ::windows_sys::core::GUID, ppv: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
@@ -48,11 +61,13 @@ extern "system" {
     pub fn ChrCmpIW(w1: u16, w2: u16) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn ColorAdjustLuma(clrrgb: u32, n: i32, fscale: super::super::Foundation::BOOL) -> u32;
-    #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-    pub fn ColorHLSToRGB(whue: u16, wluminance: u16, wsaturation: u16) -> u32;
-    #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-    pub fn ColorRGBToHLS(clrrgb: u32, pwhue: *mut u16, pwluminance: *mut u16, pwsaturation: *mut u16);
+    pub fn ColorAdjustLuma(clrrgb: super::super::Foundation::COLORREF, n: i32, fscale: super::super::Foundation::BOOL) -> super::super::Foundation::COLORREF;
+    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn ColorHLSToRGB(whue: u16, wluminance: u16, wsaturation: u16) -> super::super::Foundation::COLORREF;
+    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn ColorRGBToHLS(clrrgb: super::super::Foundation::COLORREF, pwhue: *mut u16, pwluminance: *mut u16, pwsaturation: *mut u16);
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
     pub fn CommandLineToArgvW(lpcmdline: ::windows_sys::core::PCWSTR, pnumargs: *mut i32) -> *mut ::windows_sys::core::PWSTR;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
@@ -442,9 +457,9 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn PathAddExtensionW(pszpath: ::windows_sys::core::PWSTR, pszext: ::windows_sys::core::PCWSTR) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-    pub fn PathAllocCanonicalize(pszpathin: ::windows_sys::core::PCWSTR, dwflags: u32, ppszpathout: *mut ::windows_sys::core::PWSTR) -> ::windows_sys::core::HRESULT;
+    pub fn PathAllocCanonicalize(pszpathin: ::windows_sys::core::PCWSTR, dwflags: PATHCCH_OPTIONS, ppszpathout: *mut ::windows_sys::core::PWSTR) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-    pub fn PathAllocCombine(pszpathin: ::windows_sys::core::PCWSTR, pszmore: ::windows_sys::core::PCWSTR, dwflags: u32, ppszpathout: *mut ::windows_sys::core::PWSTR) -> ::windows_sys::core::HRESULT;
+    pub fn PathAllocCombine(pszpathin: ::windows_sys::core::PCWSTR, pszmore: ::windows_sys::core::PCWSTR, dwflags: PATHCCH_OPTIONS, ppszpathout: *mut ::windows_sys::core::PWSTR) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn PathAppendA(pszpath: ::windows_sys::core::PSTR, pszmore: ::windows_sys::core::PCSTR) -> super::super::Foundation::BOOL;
@@ -470,15 +485,15 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
     pub fn PathCchAppend(pszpath: ::windows_sys::core::PWSTR, cchpath: usize, pszmore: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-    pub fn PathCchAppendEx(pszpath: ::windows_sys::core::PWSTR, cchpath: usize, pszmore: ::windows_sys::core::PCWSTR, dwflags: u32) -> ::windows_sys::core::HRESULT;
+    pub fn PathCchAppendEx(pszpath: ::windows_sys::core::PWSTR, cchpath: usize, pszmore: ::windows_sys::core::PCWSTR, dwflags: PATHCCH_OPTIONS) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
     pub fn PathCchCanonicalize(pszpathout: ::windows_sys::core::PWSTR, cchpathout: usize, pszpathin: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-    pub fn PathCchCanonicalizeEx(pszpathout: ::windows_sys::core::PWSTR, cchpathout: usize, pszpathin: ::windows_sys::core::PCWSTR, dwflags: u32) -> ::windows_sys::core::HRESULT;
+    pub fn PathCchCanonicalizeEx(pszpathout: ::windows_sys::core::PWSTR, cchpathout: usize, pszpathin: ::windows_sys::core::PCWSTR, dwflags: PATHCCH_OPTIONS) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
     pub fn PathCchCombine(pszpathout: ::windows_sys::core::PWSTR, cchpathout: usize, pszpathin: ::windows_sys::core::PCWSTR, pszmore: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-    pub fn PathCchCombineEx(pszpathout: ::windows_sys::core::PWSTR, cchpathout: usize, pszpathin: ::windows_sys::core::PCWSTR, pszmore: ::windows_sys::core::PCWSTR, dwflags: u32) -> ::windows_sys::core::HRESULT;
+    pub fn PathCchCombineEx(pszpathout: ::windows_sys::core::PWSTR, cchpathout: usize, pszpathin: ::windows_sys::core::PCWSTR, pszmore: ::windows_sys::core::PCWSTR, dwflags: PATHCCH_OPTIONS) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
     pub fn PathCchFindExtension(pszpath: ::windows_sys::core::PCWSTR, cchpath: usize, ppszext: *mut ::windows_sys::core::PWSTR) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
@@ -853,7 +868,7 @@ extern "system" {
     pub fn SHAssocEnumHandlersForProtocolByApplication(protocol: ::windows_sys::core::PCWSTR, riid: *const ::windows_sys::core::GUID, enumhandlers: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn SHAutoComplete(hwndedit: super::super::Foundation::HWND, dwflags: u32) -> ::windows_sys::core::HRESULT;
+    pub fn SHAutoComplete(hwndedit: super::super::Foundation::HWND, dwflags: SHELL_AUTOCOMPLETE_FLAGS) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
     #[cfg(feature = "Win32_UI_Shell_Common")]
     pub fn SHBindToFolderIDListParent(psfroot: IShellFolder, pidl: *const Common::ITEMIDLIST, riid: *const ::windows_sys::core::GUID, ppv: *mut *mut ::core::ffi::c_void, ppidllast: *mut *mut Common::ITEMIDLIST) -> ::windows_sys::core::HRESULT;
@@ -1021,7 +1036,7 @@ extern "system" {
     pub fn SHDestroyPropSheetExtArray(hpsxa: HPSXA);
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-    pub fn SHDoDragDrop(hwnd: super::super::Foundation::HWND, pdata: super::super::System::Com::IDataObject, pdsrc: super::super::System::Ole::IDropSource, dweffect: u32, pdweffect: *mut u32) -> ::windows_sys::core::HRESULT;
+    pub fn SHDoDragDrop(hwnd: super::super::Foundation::HWND, pdata: super::super::System::Com::IDataObject, pdsrc: super::super::System::Ole::IDropSource, dweffect: super::super::System::Ole::DROPEFFECT, pdweffect: *mut super::super::System::Ole::DROPEFFECT) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn SHEmptyRecycleBinA(hwnd: super::super::Foundation::HWND, pszrootpath: ::windows_sys::core::PCSTR, dwflags: u32) -> ::windows_sys::core::HRESULT;
@@ -1142,7 +1157,7 @@ extern "system" {
     pub fn SHGetKnownFolderItem(rfid: *const ::windows_sys::core::GUID, flags: KNOWN_FOLDER_FLAG, htoken: super::super::Foundation::HANDLE, riid: *const ::windows_sys::core::GUID, ppv: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn SHGetKnownFolderPath(rfid: *const ::windows_sys::core::GUID, dwflags: u32, htoken: super::super::Foundation::HANDLE, ppszpath: *mut ::windows_sys::core::PWSTR) -> ::windows_sys::core::HRESULT;
+    pub fn SHGetKnownFolderPath(rfid: *const ::windows_sys::core::GUID, dwflags: KNOWN_FOLDER_FLAG, htoken: super::super::Foundation::HANDLE, ppszpath: *mut ::windows_sys::core::PWSTR) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
     pub fn SHGetLocalizedName(pszpath: ::windows_sys::core::PCWSTR, pszresmodule: ::windows_sys::core::PWSTR, cch: u32, pidsres: *mut i32) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_System_Com\"`*"]
@@ -1162,7 +1177,7 @@ extern "system" {
     pub fn SHGetPathFromIDListA(pidl: *const Common::ITEMIDLIST, pszpath: ::windows_sys::core::PSTR) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-    pub fn SHGetPathFromIDListEx(pidl: *const Common::ITEMIDLIST, pszpath: ::windows_sys::core::PWSTR, cchpath: u32, uopts: i32) -> super::super::Foundation::BOOL;
+    pub fn SHGetPathFromIDListEx(pidl: *const Common::ITEMIDLIST, pszpath: ::windows_sys::core::PWSTR, cchpath: u32, uopts: GPFIDL_FLAGS) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
     pub fn SHGetPathFromIDListW(pidl: *const Common::ITEMIDLIST, pszpath: ::windows_sys::core::PWSTR) -> super::super::Foundation::BOOL;
@@ -1324,9 +1339,9 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn SHRegDeleteUSValueW(huskey: isize, pwzvalue: ::windows_sys::core::PCWSTR, delregflags: SHREGDEL_FLAGS) -> super::super::Foundation::WIN32_ERROR;
-    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-    pub fn SHRegDuplicateHKey(hkey: super::super::System::Registry::HKEY) -> super::super::Foundation::WIN32_ERROR;
+    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_System_Registry\"`*"]
+    #[cfg(feature = "Win32_System_Registry")]
+    pub fn SHRegDuplicateHKey(hkey: super::super::System::Registry::HKEY) -> super::super::System::Registry::HKEY;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn SHRegEnumUSKeyA(huskey: isize, dwindex: u32, pszname: ::windows_sys::core::PSTR, pcchname: *mut u32, enumregflags: SHREGENUM_FLAGS) -> super::super::Foundation::WIN32_ERROR;
@@ -1341,10 +1356,10 @@ extern "system" {
     pub fn SHRegEnumUSValueW(huskey: isize, dwindex: u32, pszvaluename: ::windows_sys::core::PWSTR, pcchvaluename: *mut u32, pdwtype: *mut u32, pvdata: *mut ::core::ffi::c_void, pcbdata: *mut u32, enumregflags: SHREGENUM_FLAGS) -> super::super::Foundation::WIN32_ERROR;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn SHRegGetBoolUSValueA(pszsubkey: ::windows_sys::core::PCSTR, pszvalue: ::windows_sys::core::PCSTR, fignorehkcu: super::super::Foundation::BOOL, fdefault: super::super::Foundation::BOOL) -> super::super::Foundation::WIN32_ERROR;
+    pub fn SHRegGetBoolUSValueA(pszsubkey: ::windows_sys::core::PCSTR, pszvalue: ::windows_sys::core::PCSTR, fignorehkcu: super::super::Foundation::BOOL, fdefault: super::super::Foundation::BOOL) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn SHRegGetBoolUSValueW(pszsubkey: ::windows_sys::core::PCWSTR, pszvalue: ::windows_sys::core::PCWSTR, fignorehkcu: super::super::Foundation::BOOL, fdefault: super::super::Foundation::BOOL) -> super::super::Foundation::WIN32_ERROR;
+    pub fn SHRegGetBoolUSValueW(pszsubkey: ::windows_sys::core::PCWSTR, pszvalue: ::windows_sys::core::PCWSTR, fignorehkcu: super::super::Foundation::BOOL, fdefault: super::super::Foundation::BOOL) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
     pub fn SHRegGetIntW(hk: super::super::System::Registry::HKEY, pwzkey: ::windows_sys::core::PCWSTR, idefault: i32) -> super::super::Foundation::WIN32_ERROR;
@@ -1509,24 +1524,18 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
     pub fn ShellAboutW(hwnd: super::super::Foundation::HWND, szapp: ::windows_sys::core::PCWSTR, szotherstuff: ::windows_sys::core::PCWSTR, hicon: super::WindowsAndMessaging::HICON) -> i32;
-    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn ShellExecuteA(hwnd: super::super::Foundation::HWND, lpoperation: ::windows_sys::core::PCSTR, lpfile: ::windows_sys::core::PCSTR, lpparameters: ::windows_sys::core::PCSTR, lpdirectory: ::windows_sys::core::PCSTR, nshowcmd: i32) -> super::super::Foundation::HINSTANCE;
+    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+    pub fn ShellExecuteA(hwnd: super::super::Foundation::HWND, lpoperation: ::windows_sys::core::PCSTR, lpfile: ::windows_sys::core::PCSTR, lpparameters: ::windows_sys::core::PCSTR, lpdirectory: ::windows_sys::core::PCSTR, nshowcmd: super::WindowsAndMessaging::SHOW_WINDOW_CMD) -> super::super::Foundation::HINSTANCE;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
     pub fn ShellExecuteExA(pexecinfo: *mut SHELLEXECUTEINFOA) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
     pub fn ShellExecuteExW(pexecinfo: *mut SHELLEXECUTEINFOW) -> super::super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn ShellExecuteW(hwnd: super::super::Foundation::HWND, lpoperation: ::windows_sys::core::PCWSTR, lpfile: ::windows_sys::core::PCWSTR, lpparameters: ::windows_sys::core::PCWSTR, lpdirectory: ::windows_sys::core::PCWSTR, nshowcmd: i32) -> super::super::Foundation::HINSTANCE;
-    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn ShellMessageBoxA(happinst: super::super::Foundation::HINSTANCE, hwnd: super::super::Foundation::HWND, lpctext: ::windows_sys::core::PCSTR, lpctitle: ::windows_sys::core::PCSTR, fustyle: u32) -> i32;
-    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn ShellMessageBoxW(happinst: super::super::Foundation::HINSTANCE, hwnd: super::super::Foundation::HWND, lpctext: ::windows_sys::core::PCWSTR, lpctitle: ::windows_sys::core::PCWSTR, fustyle: u32) -> i32;
+    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+    pub fn ShellExecuteW(hwnd: super::super::Foundation::HWND, lpoperation: ::windows_sys::core::PCWSTR, lpfile: ::windows_sys::core::PCWSTR, lpparameters: ::windows_sys::core::PCWSTR, lpdirectory: ::windows_sys::core::PCWSTR, nshowcmd: super::WindowsAndMessaging::SHOW_WINDOW_CMD) -> super::super::Foundation::HINSTANCE;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
     pub fn Shell_GetCachedImageIndex(pwsziconpath: ::windows_sys::core::PCWSTR, iiconindex: i32, uiconflags: u32) -> i32;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -1665,9 +1674,9 @@ extern "system" {
     pub fn StrRStrIA(pszsource: ::windows_sys::core::PCSTR, pszlast: ::windows_sys::core::PCSTR, pszsrch: ::windows_sys::core::PCSTR) -> ::windows_sys::core::PSTR;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
     pub fn StrRStrIW(pszsource: ::windows_sys::core::PCWSTR, pszlast: ::windows_sys::core::PCWSTR, pszsrch: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::PWSTR;
-    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-    pub fn StrRetToBSTR(pstr: *mut Common::STRRET, pidl: *const Common::ITEMIDLIST, pbstr: *mut super::super::Foundation::BSTR) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
+    #[cfg(feature = "Win32_UI_Shell_Common")]
+    pub fn StrRetToBSTR(pstr: *mut Common::STRRET, pidl: *const Common::ITEMIDLIST, pbstr: *mut ::windows_sys::core::BSTR) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
     #[cfg(feature = "Win32_UI_Shell_Common")]
     pub fn StrRetToBufA(pstr: *mut Common::STRRET, pidl: *const Common::ITEMIDLIST, pszbuf: ::windows_sys::core::PSTR, cchbuf: u32) -> ::windows_sys::core::HRESULT;
@@ -1804,42 +1813,426 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn WriteCabinetState(pcs: *const CABINETSTATE) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-    pub fn wnsprintfA(pszdest: ::windows_sys::core::PSTR, cchdest: i32, pszfmt: ::windows_sys::core::PCSTR) -> i32;
-    #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-    pub fn wnsprintfW(pszdest: ::windows_sys::core::PWSTR, cchdest: i32, pszfmt: ::windows_sys::core::PCWSTR) -> i32;
-    #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
     pub fn wvnsprintfA(pszdest: ::windows_sys::core::PSTR, cchdest: i32, pszfmt: ::windows_sys::core::PCSTR, arglist: *const i8) -> i32;
     #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
     pub fn wvnsprintfW(pszdest: ::windows_sys::core::PWSTR, cchdest: i32, pszfmt: ::windows_sys::core::PCWSTR, arglist: *const i8) -> i32;
 }
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct AASHELLMENUFILENAME {
-    pub cbTotal: i16,
-    pub rgbReserved: [u8; 12],
-    pub szFileName: [u16; 1],
-}
-impl ::core::marker::Copy for AASHELLMENUFILENAME {}
-impl ::core::clone::Clone for AASHELLMENUFILENAME {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct AASHELLMENUITEM {
-    pub lpReserved1: *mut ::core::ffi::c_void,
-    pub iReserved: i32,
-    pub uiReserved: u32,
-    pub lpName: *mut AASHELLMENUFILENAME,
-    pub psz: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for AASHELLMENUITEM {}
-impl ::core::clone::Clone for AASHELLMENUITEM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub type CIE4ConnectionPoint = *mut ::core::ffi::c_void;
+pub type DFConstraint = *mut ::core::ffi::c_void;
+pub type DShellFolderViewEvents = *mut ::core::ffi::c_void;
+pub type DShellNameSpaceEvents = *mut ::core::ffi::c_void;
+pub type DShellWindowsEvents = *mut ::core::ffi::c_void;
+pub type DWebBrowserEvents = *mut ::core::ffi::c_void;
+pub type DWebBrowserEvents2 = *mut ::core::ffi::c_void;
+pub type Folder = *mut ::core::ffi::c_void;
+pub type Folder2 = *mut ::core::ffi::c_void;
+pub type Folder3 = *mut ::core::ffi::c_void;
+pub type FolderItem = *mut ::core::ffi::c_void;
+pub type FolderItem2 = *mut ::core::ffi::c_void;
+pub type FolderItemVerb = *mut ::core::ffi::c_void;
+pub type FolderItemVerbs = *mut ::core::ffi::c_void;
+pub type FolderItems = *mut ::core::ffi::c_void;
+pub type FolderItems2 = *mut ::core::ffi::c_void;
+pub type FolderItems3 = *mut ::core::ffi::c_void;
+pub type IACList = *mut ::core::ffi::c_void;
+pub type IACList2 = *mut ::core::ffi::c_void;
+pub type IAccessibilityDockingService = *mut ::core::ffi::c_void;
+pub type IAccessibilityDockingServiceCallback = *mut ::core::ffi::c_void;
+pub type IAccessibleObject = *mut ::core::ffi::c_void;
+pub type IActionProgress = *mut ::core::ffi::c_void;
+pub type IActionProgressDialog = *mut ::core::ffi::c_void;
+pub type IAppActivationUIInfo = *mut ::core::ffi::c_void;
+pub type IAppPublisher = *mut ::core::ffi::c_void;
+pub type IAppVisibility = *mut ::core::ffi::c_void;
+pub type IAppVisibilityEvents = *mut ::core::ffi::c_void;
+pub type IApplicationActivationManager = *mut ::core::ffi::c_void;
+pub type IApplicationAssociationRegistration = *mut ::core::ffi::c_void;
+pub type IApplicationAssociationRegistrationUI = *mut ::core::ffi::c_void;
+pub type IApplicationDesignModeSettings = *mut ::core::ffi::c_void;
+pub type IApplicationDesignModeSettings2 = *mut ::core::ffi::c_void;
+pub type IApplicationDestinations = *mut ::core::ffi::c_void;
+pub type IApplicationDocumentLists = *mut ::core::ffi::c_void;
+pub type IAssocHandler = *mut ::core::ffi::c_void;
+pub type IAssocHandlerInvoker = *mut ::core::ffi::c_void;
+pub type IAttachmentExecute = *mut ::core::ffi::c_void;
+pub type IAutoComplete = *mut ::core::ffi::c_void;
+pub type IAutoComplete2 = *mut ::core::ffi::c_void;
+pub type IAutoCompleteDropDown = *mut ::core::ffi::c_void;
+pub type IBandHost = *mut ::core::ffi::c_void;
+pub type IBandSite = *mut ::core::ffi::c_void;
+pub type IBannerNotificationHandler = *mut ::core::ffi::c_void;
+pub type IBanneredBar = *mut ::core::ffi::c_void;
+pub type IBrowserFrameOptions = *mut ::core::ffi::c_void;
+pub type IBrowserService = *mut ::core::ffi::c_void;
+pub type IBrowserService2 = *mut ::core::ffi::c_void;
+pub type IBrowserService3 = *mut ::core::ffi::c_void;
+pub type IBrowserService4 = *mut ::core::ffi::c_void;
+pub type ICDBurn = *mut ::core::ffi::c_void;
+pub type ICDBurnExt = *mut ::core::ffi::c_void;
+pub type ICategorizer = *mut ::core::ffi::c_void;
+pub type ICategoryProvider = *mut ::core::ffi::c_void;
+pub type IColumnManager = *mut ::core::ffi::c_void;
+pub type IColumnProvider = *mut ::core::ffi::c_void;
+pub type ICommDlgBrowser = *mut ::core::ffi::c_void;
+pub type ICommDlgBrowser2 = *mut ::core::ffi::c_void;
+pub type ICommDlgBrowser3 = *mut ::core::ffi::c_void;
+pub type IComputerInfoChangeNotify = *mut ::core::ffi::c_void;
+pub type IConnectableCredentialProviderCredential = *mut ::core::ffi::c_void;
+pub type IContactManagerInterop = *mut ::core::ffi::c_void;
+pub type IContextMenu = *mut ::core::ffi::c_void;
+pub type IContextMenu2 = *mut ::core::ffi::c_void;
+pub type IContextMenu3 = *mut ::core::ffi::c_void;
+pub type IContextMenuCB = *mut ::core::ffi::c_void;
+pub type IContextMenuSite = *mut ::core::ffi::c_void;
+pub type ICopyHookA = *mut ::core::ffi::c_void;
+pub type ICopyHookW = *mut ::core::ffi::c_void;
+pub type ICreateProcessInputs = *mut ::core::ffi::c_void;
+pub type ICreatingProcess = *mut ::core::ffi::c_void;
+pub type ICredentialProvider = *mut ::core::ffi::c_void;
+pub type ICredentialProviderCredential = *mut ::core::ffi::c_void;
+pub type ICredentialProviderCredential2 = *mut ::core::ffi::c_void;
+pub type ICredentialProviderCredentialEvents = *mut ::core::ffi::c_void;
+pub type ICredentialProviderCredentialEvents2 = *mut ::core::ffi::c_void;
+pub type ICredentialProviderCredentialWithFieldOptions = *mut ::core::ffi::c_void;
+pub type ICredentialProviderEvents = *mut ::core::ffi::c_void;
+pub type ICredentialProviderFilter = *mut ::core::ffi::c_void;
+pub type ICredentialProviderSetUserArray = *mut ::core::ffi::c_void;
+pub type ICredentialProviderUser = *mut ::core::ffi::c_void;
+pub type ICredentialProviderUserArray = *mut ::core::ffi::c_void;
+pub type ICurrentItem = *mut ::core::ffi::c_void;
+pub type ICurrentWorkingDirectory = *mut ::core::ffi::c_void;
+pub type ICustomDestinationList = *mut ::core::ffi::c_void;
+pub type IDataObjectAsyncCapability = *mut ::core::ffi::c_void;
+pub type IDataObjectProvider = *mut ::core::ffi::c_void;
+pub type IDataTransferManagerInterop = *mut ::core::ffi::c_void;
+pub type IDefaultExtractIconInit = *mut ::core::ffi::c_void;
+pub type IDefaultFolderMenuInitialize = *mut ::core::ffi::c_void;
+pub type IDelegateFolder = *mut ::core::ffi::c_void;
+pub type IDelegateItem = *mut ::core::ffi::c_void;
+pub type IDeskBand = *mut ::core::ffi::c_void;
+pub type IDeskBand2 = *mut ::core::ffi::c_void;
+pub type IDeskBandInfo = *mut ::core::ffi::c_void;
+pub type IDeskBar = *mut ::core::ffi::c_void;
+pub type IDeskBarClient = *mut ::core::ffi::c_void;
+pub type IDesktopGadget = *mut ::core::ffi::c_void;
+pub type IDesktopWallpaper = *mut ::core::ffi::c_void;
+pub type IDestinationStreamFactory = *mut ::core::ffi::c_void;
+pub type IDisplayItem = *mut ::core::ffi::c_void;
+pub type IDocViewSite = *mut ::core::ffi::c_void;
+pub type IDockingWindow = *mut ::core::ffi::c_void;
+pub type IDockingWindowFrame = *mut ::core::ffi::c_void;
+pub type IDockingWindowSite = *mut ::core::ffi::c_void;
+pub type IDragSourceHelper = *mut ::core::ffi::c_void;
+pub type IDragSourceHelper2 = *mut ::core::ffi::c_void;
+pub type IDropTargetHelper = *mut ::core::ffi::c_void;
+pub type IDynamicHWHandler = *mut ::core::ffi::c_void;
+pub type IEnumACString = *mut ::core::ffi::c_void;
+pub type IEnumAssocHandlers = *mut ::core::ffi::c_void;
+pub type IEnumExplorerCommand = *mut ::core::ffi::c_void;
+pub type IEnumExtraSearch = *mut ::core::ffi::c_void;
+pub type IEnumFullIDList = *mut ::core::ffi::c_void;
+pub type IEnumHLITEM = *mut ::core::ffi::c_void;
+pub type IEnumIDList = *mut ::core::ffi::c_void;
+pub type IEnumObjects = *mut ::core::ffi::c_void;
+pub type IEnumPublishedApps = *mut ::core::ffi::c_void;
+pub type IEnumReadyCallback = *mut ::core::ffi::c_void;
+pub type IEnumResources = *mut ::core::ffi::c_void;
+pub type IEnumShellItems = *mut ::core::ffi::c_void;
+pub type IEnumSyncMgrConflict = *mut ::core::ffi::c_void;
+pub type IEnumSyncMgrEvents = *mut ::core::ffi::c_void;
+pub type IEnumSyncMgrSyncItems = *mut ::core::ffi::c_void;
+pub type IEnumTravelLogEntry = *mut ::core::ffi::c_void;
+pub type IEnumerableView = *mut ::core::ffi::c_void;
+pub type IExecuteCommand = *mut ::core::ffi::c_void;
+pub type IExecuteCommandApplicationHostEnvironment = *mut ::core::ffi::c_void;
+pub type IExecuteCommandHost = *mut ::core::ffi::c_void;
+pub type IExpDispSupport = *mut ::core::ffi::c_void;
+pub type IExpDispSupportXP = *mut ::core::ffi::c_void;
+pub type IExplorerBrowser = *mut ::core::ffi::c_void;
+pub type IExplorerBrowserEvents = *mut ::core::ffi::c_void;
+pub type IExplorerCommand = *mut ::core::ffi::c_void;
+pub type IExplorerCommandProvider = *mut ::core::ffi::c_void;
+pub type IExplorerCommandState = *mut ::core::ffi::c_void;
+pub type IExplorerPaneVisibility = *mut ::core::ffi::c_void;
+pub type IExtensionServices = *mut ::core::ffi::c_void;
+pub type IExtractIconA = *mut ::core::ffi::c_void;
+pub type IExtractIconW = *mut ::core::ffi::c_void;
+pub type IExtractImage = *mut ::core::ffi::c_void;
+pub type IExtractImage2 = *mut ::core::ffi::c_void;
+pub type IFileDialog = *mut ::core::ffi::c_void;
+pub type IFileDialog2 = *mut ::core::ffi::c_void;
+pub type IFileDialogControlEvents = *mut ::core::ffi::c_void;
+pub type IFileDialogCustomize = *mut ::core::ffi::c_void;
+pub type IFileDialogEvents = *mut ::core::ffi::c_void;
+pub type IFileIsInUse = *mut ::core::ffi::c_void;
+pub type IFileOpenDialog = *mut ::core::ffi::c_void;
+pub type IFileOperation = *mut ::core::ffi::c_void;
+pub type IFileOperation2 = *mut ::core::ffi::c_void;
+pub type IFileOperationProgressSink = *mut ::core::ffi::c_void;
+pub type IFileSaveDialog = *mut ::core::ffi::c_void;
+pub type IFileSearchBand = *mut ::core::ffi::c_void;
+pub type IFileSyncMergeHandler = *mut ::core::ffi::c_void;
+pub type IFileSystemBindData = *mut ::core::ffi::c_void;
+pub type IFileSystemBindData2 = *mut ::core::ffi::c_void;
+pub type IFolderBandPriv = *mut ::core::ffi::c_void;
+pub type IFolderFilter = *mut ::core::ffi::c_void;
+pub type IFolderFilterSite = *mut ::core::ffi::c_void;
+pub type IFolderView = *mut ::core::ffi::c_void;
+pub type IFolderView2 = *mut ::core::ffi::c_void;
+pub type IFolderViewHost = *mut ::core::ffi::c_void;
+pub type IFolderViewOC = *mut ::core::ffi::c_void;
+pub type IFolderViewOptions = *mut ::core::ffi::c_void;
+pub type IFolderViewSettings = *mut ::core::ffi::c_void;
+pub type IFrameworkInputPane = *mut ::core::ffi::c_void;
+pub type IFrameworkInputPaneHandler = *mut ::core::ffi::c_void;
+pub type IGetServiceIds = *mut ::core::ffi::c_void;
+pub type IHWEventHandler = *mut ::core::ffi::c_void;
+pub type IHWEventHandler2 = *mut ::core::ffi::c_void;
+pub type IHandlerActivationHost = *mut ::core::ffi::c_void;
+pub type IHandlerInfo = *mut ::core::ffi::c_void;
+pub type IHandlerInfo2 = *mut ::core::ffi::c_void;
+pub type IHlink = *mut ::core::ffi::c_void;
+pub type IHlinkBrowseContext = *mut ::core::ffi::c_void;
+pub type IHlinkFrame = *mut ::core::ffi::c_void;
+pub type IHlinkSite = *mut ::core::ffi::c_void;
+pub type IHlinkTarget = *mut ::core::ffi::c_void;
+pub type IHomeGroup = *mut ::core::ffi::c_void;
+pub type IIOCancelInformation = *mut ::core::ffi::c_void;
+pub type IIdentityName = *mut ::core::ffi::c_void;
+pub type IImageRecompress = *mut ::core::ffi::c_void;
+pub type IInitializeCommand = *mut ::core::ffi::c_void;
+pub type IInitializeNetworkFolder = *mut ::core::ffi::c_void;
+pub type IInitializeObject = *mut ::core::ffi::c_void;
+pub type IInitializeWithBindCtx = *mut ::core::ffi::c_void;
+pub type IInitializeWithItem = *mut ::core::ffi::c_void;
+pub type IInitializeWithPropertyStore = *mut ::core::ffi::c_void;
+pub type IInitializeWithWindow = *mut ::core::ffi::c_void;
+pub type IInputObject = *mut ::core::ffi::c_void;
+pub type IInputObject2 = *mut ::core::ffi::c_void;
+pub type IInputObjectSite = *mut ::core::ffi::c_void;
+pub type IInputPaneAnimationCoordinator = *mut ::core::ffi::c_void;
+pub type IInputPanelConfiguration = *mut ::core::ffi::c_void;
+pub type IInputPanelInvocationConfiguration = *mut ::core::ffi::c_void;
+pub type IInsertItem = *mut ::core::ffi::c_void;
+pub type IItemNameLimits = *mut ::core::ffi::c_void;
+pub type IKnownFolder = *mut ::core::ffi::c_void;
+pub type IKnownFolderManager = *mut ::core::ffi::c_void;
+pub type ILaunchSourceAppUserModelId = *mut ::core::ffi::c_void;
+pub type ILaunchSourceViewSizePreference = *mut ::core::ffi::c_void;
+pub type ILaunchTargetMonitor = *mut ::core::ffi::c_void;
+pub type ILaunchTargetViewSizePreference = *mut ::core::ffi::c_void;
+pub type ILaunchUIContext = *mut ::core::ffi::c_void;
+pub type ILaunchUIContextProvider = *mut ::core::ffi::c_void;
+pub type IMenuBand = *mut ::core::ffi::c_void;
+pub type IMenuPopup = *mut ::core::ffi::c_void;
+pub type IModalWindow = *mut ::core::ffi::c_void;
+pub type INameSpaceTreeAccessible = *mut ::core::ffi::c_void;
+pub type INameSpaceTreeControl = *mut ::core::ffi::c_void;
+pub type INameSpaceTreeControl2 = *mut ::core::ffi::c_void;
+pub type INameSpaceTreeControlCustomDraw = *mut ::core::ffi::c_void;
+pub type INameSpaceTreeControlDropHandler = *mut ::core::ffi::c_void;
+pub type INameSpaceTreeControlEvents = *mut ::core::ffi::c_void;
+pub type INameSpaceTreeControlFolderCapabilities = *mut ::core::ffi::c_void;
+pub type INamedPropertyBag = *mut ::core::ffi::c_void;
+pub type INamespaceWalk = *mut ::core::ffi::c_void;
+pub type INamespaceWalkCB = *mut ::core::ffi::c_void;
+pub type INamespaceWalkCB2 = *mut ::core::ffi::c_void;
+pub type INetworkFolderInternal = *mut ::core::ffi::c_void;
+pub type INewMenuClient = *mut ::core::ffi::c_void;
+pub type INewShortcutHookA = *mut ::core::ffi::c_void;
+pub type INewShortcutHookW = *mut ::core::ffi::c_void;
+pub type INewWDEvents = *mut ::core::ffi::c_void;
+pub type INewWindowManager = *mut ::core::ffi::c_void;
+pub type INotifyReplica = *mut ::core::ffi::c_void;
+pub type IObjMgr = *mut ::core::ffi::c_void;
+pub type IObjectProvider = *mut ::core::ffi::c_void;
+pub type IObjectWithAppUserModelID = *mut ::core::ffi::c_void;
+pub type IObjectWithBackReferences = *mut ::core::ffi::c_void;
+pub type IObjectWithCancelEvent = *mut ::core::ffi::c_void;
+pub type IObjectWithFolderEnumMode = *mut ::core::ffi::c_void;
+pub type IObjectWithProgID = *mut ::core::ffi::c_void;
+pub type IObjectWithSelection = *mut ::core::ffi::c_void;
+pub type IOpenControlPanel = *mut ::core::ffi::c_void;
+pub type IOpenSearchSource = *mut ::core::ffi::c_void;
+pub type IOperationsProgressDialog = *mut ::core::ffi::c_void;
+pub type IPackageDebugSettings = *mut ::core::ffi::c_void;
+pub type IPackageDebugSettings2 = *mut ::core::ffi::c_void;
+pub type IPackageExecutionStateChangeNotification = *mut ::core::ffi::c_void;
+pub type IParentAndItem = *mut ::core::ffi::c_void;
+pub type IParseAndCreateItem = *mut ::core::ffi::c_void;
+pub type IPersistFolder = *mut ::core::ffi::c_void;
+pub type IPersistFolder2 = *mut ::core::ffi::c_void;
+pub type IPersistFolder3 = *mut ::core::ffi::c_void;
+pub type IPersistIDList = *mut ::core::ffi::c_void;
+pub type IPreviewHandler = *mut ::core::ffi::c_void;
+pub type IPreviewHandlerFrame = *mut ::core::ffi::c_void;
+pub type IPreviewHandlerVisuals = *mut ::core::ffi::c_void;
+pub type IPreviewItem = *mut ::core::ffi::c_void;
+pub type IPreviousVersionsInfo = *mut ::core::ffi::c_void;
+pub type IProfferService = *mut ::core::ffi::c_void;
+pub type IProgressDialog = *mut ::core::ffi::c_void;
+pub type IPropertyKeyStore = *mut ::core::ffi::c_void;
+pub type IPublishedApp = *mut ::core::ffi::c_void;
+pub type IPublishedApp2 = *mut ::core::ffi::c_void;
+pub type IPublishingWizard = *mut ::core::ffi::c_void;
+pub type IQueryAssociations = *mut ::core::ffi::c_void;
+pub type IQueryCancelAutoPlay = *mut ::core::ffi::c_void;
+pub type IQueryCodePage = *mut ::core::ffi::c_void;
+pub type IQueryContinue = *mut ::core::ffi::c_void;
+pub type IQueryContinueWithStatus = *mut ::core::ffi::c_void;
+pub type IQueryInfo = *mut ::core::ffi::c_void;
+pub type IRegTreeItem = *mut ::core::ffi::c_void;
+pub type IRelatedItem = *mut ::core::ffi::c_void;
+pub type IRemoteComputer = *mut ::core::ffi::c_void;
+pub type IResolveShellLink = *mut ::core::ffi::c_void;
+pub type IResultsFolder = *mut ::core::ffi::c_void;
+pub type IRunnableTask = *mut ::core::ffi::c_void;
+pub type IScriptErrorList = *mut ::core::ffi::c_void;
+pub type ISearchBoxInfo = *mut ::core::ffi::c_void;
+pub type ISearchContext = *mut ::core::ffi::c_void;
+pub type ISearchFolderItemFactory = *mut ::core::ffi::c_void;
+pub type ISharedBitmap = *mut ::core::ffi::c_void;
+pub type ISharingConfigurationManager = *mut ::core::ffi::c_void;
+pub type IShellApp = *mut ::core::ffi::c_void;
+pub type IShellBrowser = *mut ::core::ffi::c_void;
+pub type IShellChangeNotify = *mut ::core::ffi::c_void;
+pub type IShellDetails = *mut ::core::ffi::c_void;
+pub type IShellDispatch = *mut ::core::ffi::c_void;
+pub type IShellDispatch2 = *mut ::core::ffi::c_void;
+pub type IShellDispatch3 = *mut ::core::ffi::c_void;
+pub type IShellDispatch4 = *mut ::core::ffi::c_void;
+pub type IShellDispatch5 = *mut ::core::ffi::c_void;
+pub type IShellDispatch6 = *mut ::core::ffi::c_void;
+pub type IShellExtInit = *mut ::core::ffi::c_void;
+pub type IShellFavoritesNameSpace = *mut ::core::ffi::c_void;
+pub type IShellFolder = *mut ::core::ffi::c_void;
+pub type IShellFolder2 = *mut ::core::ffi::c_void;
+pub type IShellFolderBand = *mut ::core::ffi::c_void;
+pub type IShellFolderView = *mut ::core::ffi::c_void;
+pub type IShellFolderViewCB = *mut ::core::ffi::c_void;
+pub type IShellFolderViewDual = *mut ::core::ffi::c_void;
+pub type IShellFolderViewDual2 = *mut ::core::ffi::c_void;
+pub type IShellFolderViewDual3 = *mut ::core::ffi::c_void;
+pub type IShellIcon = *mut ::core::ffi::c_void;
+pub type IShellIconOverlay = *mut ::core::ffi::c_void;
+pub type IShellIconOverlayIdentifier = *mut ::core::ffi::c_void;
+pub type IShellIconOverlayManager = *mut ::core::ffi::c_void;
+pub type IShellImageData = *mut ::core::ffi::c_void;
+pub type IShellImageDataAbort = *mut ::core::ffi::c_void;
+pub type IShellImageDataFactory = *mut ::core::ffi::c_void;
+pub type IShellItem = *mut ::core::ffi::c_void;
+pub type IShellItem2 = *mut ::core::ffi::c_void;
+pub type IShellItemArray = *mut ::core::ffi::c_void;
+pub type IShellItemFilter = *mut ::core::ffi::c_void;
+pub type IShellItemImageFactory = *mut ::core::ffi::c_void;
+pub type IShellItemResources = *mut ::core::ffi::c_void;
+pub type IShellLibrary = *mut ::core::ffi::c_void;
+pub type IShellLinkA = *mut ::core::ffi::c_void;
+pub type IShellLinkDataList = *mut ::core::ffi::c_void;
+pub type IShellLinkDual = *mut ::core::ffi::c_void;
+pub type IShellLinkDual2 = *mut ::core::ffi::c_void;
+pub type IShellLinkW = *mut ::core::ffi::c_void;
+pub type IShellMenu = *mut ::core::ffi::c_void;
+pub type IShellMenuCallback = *mut ::core::ffi::c_void;
+pub type IShellNameSpace = *mut ::core::ffi::c_void;
+pub type IShellPropSheetExt = *mut ::core::ffi::c_void;
+pub type IShellRunDll = *mut ::core::ffi::c_void;
+pub type IShellService = *mut ::core::ffi::c_void;
+pub type IShellTaskScheduler = *mut ::core::ffi::c_void;
+pub type IShellUIHelper = *mut ::core::ffi::c_void;
+pub type IShellUIHelper2 = *mut ::core::ffi::c_void;
+pub type IShellUIHelper3 = *mut ::core::ffi::c_void;
+pub type IShellUIHelper4 = *mut ::core::ffi::c_void;
+pub type IShellUIHelper5 = *mut ::core::ffi::c_void;
+pub type IShellUIHelper6 = *mut ::core::ffi::c_void;
+pub type IShellUIHelper7 = *mut ::core::ffi::c_void;
+pub type IShellUIHelper8 = *mut ::core::ffi::c_void;
+pub type IShellUIHelper9 = *mut ::core::ffi::c_void;
+pub type IShellView = *mut ::core::ffi::c_void;
+pub type IShellView2 = *mut ::core::ffi::c_void;
+pub type IShellView3 = *mut ::core::ffi::c_void;
+pub type IShellWindows = *mut ::core::ffi::c_void;
+pub type ISortColumnArray = *mut ::core::ffi::c_void;
+pub type IStartMenuPinnedList = *mut ::core::ffi::c_void;
+pub type IStorageProviderBanners = *mut ::core::ffi::c_void;
+pub type IStorageProviderCopyHook = *mut ::core::ffi::c_void;
+pub type IStorageProviderHandler = *mut ::core::ffi::c_void;
+pub type IStorageProviderPropertyHandler = *mut ::core::ffi::c_void;
+pub type IStreamAsync = *mut ::core::ffi::c_void;
+pub type IStreamUnbufferedInfo = *mut ::core::ffi::c_void;
+pub type ISuspensionDependencyManager = *mut ::core::ffi::c_void;
+pub type ISyncMgrConflict = *mut ::core::ffi::c_void;
+pub type ISyncMgrConflictFolder = *mut ::core::ffi::c_void;
+pub type ISyncMgrConflictItems = *mut ::core::ffi::c_void;
+pub type ISyncMgrConflictPresenter = *mut ::core::ffi::c_void;
+pub type ISyncMgrConflictResolutionItems = *mut ::core::ffi::c_void;
+pub type ISyncMgrConflictResolveInfo = *mut ::core::ffi::c_void;
+pub type ISyncMgrConflictStore = *mut ::core::ffi::c_void;
+pub type ISyncMgrControl = *mut ::core::ffi::c_void;
+pub type ISyncMgrEnumItems = *mut ::core::ffi::c_void;
+pub type ISyncMgrEvent = *mut ::core::ffi::c_void;
+pub type ISyncMgrEventLinkUIOperation = *mut ::core::ffi::c_void;
+pub type ISyncMgrEventStore = *mut ::core::ffi::c_void;
+pub type ISyncMgrHandler = *mut ::core::ffi::c_void;
+pub type ISyncMgrHandlerCollection = *mut ::core::ffi::c_void;
+pub type ISyncMgrHandlerInfo = *mut ::core::ffi::c_void;
+pub type ISyncMgrRegister = *mut ::core::ffi::c_void;
+pub type ISyncMgrResolutionHandler = *mut ::core::ffi::c_void;
+pub type ISyncMgrScheduleWizardUIOperation = *mut ::core::ffi::c_void;
+pub type ISyncMgrSessionCreator = *mut ::core::ffi::c_void;
+pub type ISyncMgrSyncCallback = *mut ::core::ffi::c_void;
+pub type ISyncMgrSyncItem = *mut ::core::ffi::c_void;
+pub type ISyncMgrSyncItemContainer = *mut ::core::ffi::c_void;
+pub type ISyncMgrSyncItemInfo = *mut ::core::ffi::c_void;
+pub type ISyncMgrSyncResult = *mut ::core::ffi::c_void;
+pub type ISyncMgrSynchronize = *mut ::core::ffi::c_void;
+pub type ISyncMgrSynchronizeCallback = *mut ::core::ffi::c_void;
+pub type ISyncMgrSynchronizeInvoke = *mut ::core::ffi::c_void;
+pub type ISyncMgrUIOperation = *mut ::core::ffi::c_void;
+pub type ITaskbarList = *mut ::core::ffi::c_void;
+pub type ITaskbarList2 = *mut ::core::ffi::c_void;
+pub type ITaskbarList3 = *mut ::core::ffi::c_void;
+pub type ITaskbarList4 = *mut ::core::ffi::c_void;
+pub type IThumbnailCache = *mut ::core::ffi::c_void;
+pub type IThumbnailCachePrimer = *mut ::core::ffi::c_void;
+pub type IThumbnailCapture = *mut ::core::ffi::c_void;
+pub type IThumbnailHandlerFactory = *mut ::core::ffi::c_void;
+pub type IThumbnailProvider = *mut ::core::ffi::c_void;
+pub type IThumbnailSettings = *mut ::core::ffi::c_void;
+pub type IThumbnailStreamCache = *mut ::core::ffi::c_void;
+pub type ITrackShellMenu = *mut ::core::ffi::c_void;
+pub type ITranscodeImage = *mut ::core::ffi::c_void;
+pub type ITransferAdviseSink = *mut ::core::ffi::c_void;
+pub type ITransferDestination = *mut ::core::ffi::c_void;
+pub type ITransferMediumItem = *mut ::core::ffi::c_void;
+pub type ITransferSource = *mut ::core::ffi::c_void;
+pub type ITravelEntry = *mut ::core::ffi::c_void;
+pub type ITravelLog = *mut ::core::ffi::c_void;
+pub type ITravelLogClient = *mut ::core::ffi::c_void;
+pub type ITravelLogEntry = *mut ::core::ffi::c_void;
+pub type ITravelLogStg = *mut ::core::ffi::c_void;
+pub type ITrayDeskBand = *mut ::core::ffi::c_void;
+pub type IURLSearchHook = *mut ::core::ffi::c_void;
+pub type IURLSearchHook2 = *mut ::core::ffi::c_void;
+pub type IUniformResourceLocatorA = *mut ::core::ffi::c_void;
+pub type IUniformResourceLocatorW = *mut ::core::ffi::c_void;
+pub type IUpdateIDList = *mut ::core::ffi::c_void;
+pub type IUseToBrowseItem = *mut ::core::ffi::c_void;
+pub type IUserAccountChangeCallback = *mut ::core::ffi::c_void;
+pub type IUserNotification = *mut ::core::ffi::c_void;
+pub type IUserNotification2 = *mut ::core::ffi::c_void;
+pub type IUserNotificationCallback = *mut ::core::ffi::c_void;
+pub type IViewStateIdentityItem = *mut ::core::ffi::c_void;
+pub type IVirtualDesktopManager = *mut ::core::ffi::c_void;
+pub type IVisualProperties = *mut ::core::ffi::c_void;
+pub type IWebBrowser = *mut ::core::ffi::c_void;
+pub type IWebBrowser2 = *mut ::core::ffi::c_void;
+pub type IWebBrowserApp = *mut ::core::ffi::c_void;
+pub type IWebWizardExtension = *mut ::core::ffi::c_void;
+pub type IWebWizardHost = *mut ::core::ffi::c_void;
+pub type IWebWizardHost2 = *mut ::core::ffi::c_void;
+pub type IWizardExtension = *mut ::core::ffi::c_void;
+pub type IWizardSite = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ABE_BOTTOM: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -1889,35 +2282,7 @@ pub const ABS_AUTOHIDE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ACDD_VISIBLE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ACENUMOPTION = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACEO_NONE: ACENUMOPTION = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACEO_MOSTRECENTFIRST: ACENUMOPTION = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACEO_FIRSTUNUSED: ACENUMOPTION = 65536i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ACTIVATEOPTIONS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AO_NONE: ACTIVATEOPTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AO_DESIGNMODE: ACTIVATEOPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AO_NOERRORUI: ACTIVATEOPTIONS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AO_NOSPLASHSCREEN: ACTIVATEOPTIONS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AO_PRELAUNCH: ACTIVATEOPTIONS = 33554432i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ADDURL_SILENT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ADJACENT_DISPLAY_EDGES = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ADE_NONE: ADJACENT_DISPLAY_EDGES = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ADE_LEFT: ADJACENT_DISPLAY_EDGES = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ADE_RIGHT: ADJACENT_DISPLAY_EDGES = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const AD_APPLY_BUFFERED_REFRESH: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -1936,236 +2301,6 @@ pub const AD_GETWP_BMP: u32 = 0u32;
 pub const AD_GETWP_IMAGE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const AD_GETWP_LAST_APPLIED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type AHE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AHE_DESKTOP: AHE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AHE_IMMERSIVE: AHE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type AHTYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AHTYPE_UNDEFINED: AHTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AHTYPE_USER_APPLICATION: AHTYPE = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AHTYPE_ANY_APPLICATION: AHTYPE = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AHTYPE_MACHINEDEFAULT: AHTYPE = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AHTYPE_PROGID: AHTYPE = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AHTYPE_APPLICATION: AHTYPE = 128i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AHTYPE_CLASS_APPLICATION: AHTYPE = 256i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AHTYPE_ANY_PROGID: AHTYPE = 512i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type APPACTIONFLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const APPACTION_INSTALL: APPACTIONFLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const APPACTION_UNINSTALL: APPACTIONFLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const APPACTION_MODIFY: APPACTIONFLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const APPACTION_REPAIR: APPACTIONFLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const APPACTION_UPGRADE: APPACTIONFLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const APPACTION_CANGETSIZE: APPACTIONFLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const APPACTION_MODIFYREMOVE: APPACTIONFLAGS = 128i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const APPACTION_ADDLATER: APPACTIONFLAGS = 256i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const APPACTION_UNSCHEDULE: APPACTIONFLAGS = 512i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct APPBARDATA {
-    pub cbSize: u32,
-    pub hWnd: super::super::Foundation::HWND,
-    pub uCallbackMessage: u32,
-    pub uEdge: u32,
-    pub rc: super::super::Foundation::RECT,
-    pub lParam: super::super::Foundation::LPARAM,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for APPBARDATA {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for APPBARDATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct APPBARDATA {
-    pub cbSize: u32,
-    pub hWnd: super::super::Foundation::HWND,
-    pub uCallbackMessage: u32,
-    pub uEdge: u32,
-    pub rc: super::super::Foundation::RECT,
-    pub lParam: super::super::Foundation::LPARAM,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for APPBARDATA {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for APPBARDATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct APPCATEGORYINFO {
-    pub Locale: u32,
-    pub pszDescription: ::windows_sys::core::PWSTR,
-    pub AppCategoryId: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for APPCATEGORYINFO {}
-impl ::core::clone::Clone for APPCATEGORYINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct APPCATEGORYINFOLIST {
-    pub cCategory: u32,
-    pub pCategoryInfo: *mut APPCATEGORYINFO,
-}
-impl ::core::marker::Copy for APPCATEGORYINFOLIST {}
-impl ::core::clone::Clone for APPCATEGORYINFOLIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type APPDOCLISTTYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ADLT_RECENT: APPDOCLISTTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ADLT_FREQUENT: APPDOCLISTTYPE = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct APPINFODATA {
-    pub cbSize: u32,
-    pub dwMask: u32,
-    pub pszDisplayName: ::windows_sys::core::PWSTR,
-    pub pszVersion: ::windows_sys::core::PWSTR,
-    pub pszPublisher: ::windows_sys::core::PWSTR,
-    pub pszProductID: ::windows_sys::core::PWSTR,
-    pub pszRegisteredOwner: ::windows_sys::core::PWSTR,
-    pub pszRegisteredCompany: ::windows_sys::core::PWSTR,
-    pub pszLanguage: ::windows_sys::core::PWSTR,
-    pub pszSupportUrl: ::windows_sys::core::PWSTR,
-    pub pszSupportTelephone: ::windows_sys::core::PWSTR,
-    pub pszHelpLink: ::windows_sys::core::PWSTR,
-    pub pszInstallLocation: ::windows_sys::core::PWSTR,
-    pub pszInstallSource: ::windows_sys::core::PWSTR,
-    pub pszInstallDate: ::windows_sys::core::PWSTR,
-    pub pszContact: ::windows_sys::core::PWSTR,
-    pub pszComments: ::windows_sys::core::PWSTR,
-    pub pszImage: ::windows_sys::core::PWSTR,
-    pub pszReadmeUrl: ::windows_sys::core::PWSTR,
-    pub pszUpdateInfoUrl: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for APPINFODATA {}
-impl ::core::clone::Clone for APPINFODATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type APPINFODATAFLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_DISPLAYNAME: APPINFODATAFLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_VERSION: APPINFODATAFLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_PUBLISHER: APPINFODATAFLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_PRODUCTID: APPINFODATAFLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_REGISTEREDOWNER: APPINFODATAFLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_REGISTEREDCOMPANY: APPINFODATAFLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_LANGUAGE: APPINFODATAFLAGS = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_SUPPORTURL: APPINFODATAFLAGS = 128i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_SUPPORTTELEPHONE: APPINFODATAFLAGS = 256i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_HELPLINK: APPINFODATAFLAGS = 512i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_INSTALLLOCATION: APPINFODATAFLAGS = 1024i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_INSTALLSOURCE: APPINFODATAFLAGS = 2048i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_INSTALLDATE: APPINFODATAFLAGS = 4096i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_CONTACT: APPINFODATAFLAGS = 16384i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_COMMENTS: APPINFODATAFLAGS = 32768i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_IMAGE: APPINFODATAFLAGS = 131072i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_READMEURL: APPINFODATAFLAGS = 262144i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AIM_UPDATEINFOURL: APPINFODATAFLAGS = 524288i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type APPLET_PROC = ::core::option::Option<unsafe extern "system" fn(hwndcpl: super::super::Foundation::HWND, msg: u32, lparam1: super::super::Foundation::LPARAM, lparam2: super::super::Foundation::LPARAM) -> i32>;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type APPLICATION_VIEW_MIN_WIDTH = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVMW_DEFAULT: APPLICATION_VIEW_MIN_WIDTH = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVMW_320: APPLICATION_VIEW_MIN_WIDTH = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVMW_500: APPLICATION_VIEW_MIN_WIDTH = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type APPLICATION_VIEW_ORIENTATION = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVO_LANDSCAPE: APPLICATION_VIEW_ORIENTATION = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVO_PORTRAIT: APPLICATION_VIEW_ORIENTATION = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type APPLICATION_VIEW_SIZE_PREFERENCE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVSP_DEFAULT: APPLICATION_VIEW_SIZE_PREFERENCE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVSP_USE_LESS: APPLICATION_VIEW_SIZE_PREFERENCE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVSP_USE_HALF: APPLICATION_VIEW_SIZE_PREFERENCE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVSP_USE_MORE: APPLICATION_VIEW_SIZE_PREFERENCE = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVSP_USE_MINIMUM: APPLICATION_VIEW_SIZE_PREFERENCE = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVSP_USE_NONE: APPLICATION_VIEW_SIZE_PREFERENCE = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVSP_CUSTOM: APPLICATION_VIEW_SIZE_PREFERENCE = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type APPLICATION_VIEW_STATE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVS_FULLSCREEN_LANDSCAPE: APPLICATION_VIEW_STATE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVS_FILLED: APPLICATION_VIEW_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVS_SNAPPED: APPLICATION_VIEW_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AVS_FULLSCREEN_PORTRAIT: APPLICATION_VIEW_STATE = 3i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const APPNAMEBUFFERLEN: u32 = 40u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -2215,52 +2350,6 @@ pub const ARCONTENT_UNKNOWNCONTENT: u32 = 64u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ARCONTENT_VCD: u32 = 1024u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ASSOCCLASS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCCLASS_SHELL_KEY: ASSOCCLASS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCCLASS_PROGID_KEY: ASSOCCLASS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCCLASS_PROGID_STR: ASSOCCLASS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCCLASS_CLSID_KEY: ASSOCCLASS = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCCLASS_CLSID_STR: ASSOCCLASS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCCLASS_APP_KEY: ASSOCCLASS = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCCLASS_APP_STR: ASSOCCLASS = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCCLASS_SYSTEM_STR: ASSOCCLASS = 7i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCCLASS_FOLDER: ASSOCCLASS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCCLASS_STAR: ASSOCCLASS = 9i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCCLASS_FIXED_PROGID_STR: ASSOCCLASS = 10i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCCLASS_PROTOCOL_STR: ASSOCCLASS = 11i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ASSOCDATA = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCDATA_MSIDESCRIPTOR: ASSOCDATA = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCDATA_NOACTIVATEHANDLER: ASSOCDATA = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCDATA_UNUSED1: ASSOCDATA = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCDATA_HASPERUSERASSOC: ASSOCDATA = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCDATA_EDITFLAGS: ASSOCDATA = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCDATA_VALUE: ASSOCDATA = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCDATA_MAX: ASSOCDATA = 7i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ASSOCENUM = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCENUM_NONE: ASSOCENUM = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ASSOCF_APP_TO_APP: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ASSOCF_IGNOREBASECLASS: i32 = 512i32;
@@ -2298,206 +2387,6 @@ pub const ASSOCF_PER_MACHINE_ONLY: i32 = 32768i32;
 pub const ASSOCF_REMAPRUNDLL: i32 = 128i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ASSOCF_VERIFY: i32 = 64i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_System_Registry\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Registry")]
-pub struct ASSOCIATIONELEMENT {
-    pub ac: ASSOCCLASS,
-    pub hkClass: super::super::System::Registry::HKEY,
-    pub pszClass: ::windows_sys::core::PCWSTR,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Registry")]
-impl ::core::marker::Copy for ASSOCIATIONELEMENT {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Registry")]
-impl ::core::clone::Clone for ASSOCIATIONELEMENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_System_Registry\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Registry")]
-pub struct ASSOCIATIONELEMENT {
-    pub ac: ASSOCCLASS,
-    pub hkClass: super::super::System::Registry::HKEY,
-    pub pszClass: ::windows_sys::core::PCWSTR,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Registry")]
-impl ::core::marker::Copy for ASSOCIATIONELEMENT {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Registry")]
-impl ::core::clone::Clone for ASSOCIATIONELEMENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ASSOCIATIONLEVEL = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AL_MACHINE: ASSOCIATIONLEVEL = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AL_EFFECTIVE: ASSOCIATIONLEVEL = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AL_USER: ASSOCIATIONLEVEL = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ASSOCIATIONTYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AT_FILEEXTENSION: ASSOCIATIONTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AT_URLPROTOCOL: ASSOCIATIONTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AT_STARTMENUCLIENT: ASSOCIATIONTYPE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const AT_MIMETYPE: ASSOCIATIONTYPE = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ASSOCKEY = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCKEY_SHELLEXECCLASS: ASSOCKEY = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCKEY_APP: ASSOCKEY = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCKEY_CLASS: ASSOCKEY = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCKEY_BASECLASS: ASSOCKEY = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCKEY_MAX: ASSOCKEY = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ASSOCSTR = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_COMMAND: ASSOCSTR = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_EXECUTABLE: ASSOCSTR = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_FRIENDLYDOCNAME: ASSOCSTR = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_FRIENDLYAPPNAME: ASSOCSTR = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_NOOPEN: ASSOCSTR = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_SHELLNEWVALUE: ASSOCSTR = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_DDECOMMAND: ASSOCSTR = 7i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_DDEIFEXEC: ASSOCSTR = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_DDEAPPLICATION: ASSOCSTR = 9i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_DDETOPIC: ASSOCSTR = 10i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_INFOTIP: ASSOCSTR = 11i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_QUICKTIP: ASSOCSTR = 12i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_TILEINFO: ASSOCSTR = 13i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_CONTENTTYPE: ASSOCSTR = 14i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_DEFAULTICON: ASSOCSTR = 15i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_SHELLEXTENSION: ASSOCSTR = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_DROPTARGET: ASSOCSTR = 17i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_DELEGATEEXECUTE: ASSOCSTR = 18i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_SUPPORTED_URI_PROTOCOLS: ASSOCSTR = 19i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_PROGID: ASSOCSTR = 20i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_APPID: ASSOCSTR = 21i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_APPPUBLISHER: ASSOCSTR = 22i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_APPICONREFERENCE: ASSOCSTR = 23i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOCSTR_MAX: ASSOCSTR = 24i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ASSOC_FILTER = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOC_FILTER_NONE: ASSOC_FILTER = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ASSOC_FILTER_RECOMMENDED: ASSOC_FILTER = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ATTACHMENT_ACTION = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ATTACHMENT_ACTION_CANCEL: ATTACHMENT_ACTION = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ATTACHMENT_ACTION_SAVE: ATTACHMENT_ACTION = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ATTACHMENT_ACTION_EXEC: ATTACHMENT_ACTION = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type ATTACHMENT_PROMPT = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ATTACHMENT_PROMPT_NONE: ATTACHMENT_PROMPT = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ATTACHMENT_PROMPT_SAVE: ATTACHMENT_PROMPT = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ATTACHMENT_PROMPT_EXEC: ATTACHMENT_PROMPT = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ATTACHMENT_PROMPT_EXEC_OR_SAVE: ATTACHMENT_PROMPT = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type AUTOCOMPLETELISTOPTIONS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACLO_NONE: AUTOCOMPLETELISTOPTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACLO_CURRENTDIR: AUTOCOMPLETELISTOPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACLO_MYCOMPUTER: AUTOCOMPLETELISTOPTIONS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACLO_DESKTOP: AUTOCOMPLETELISTOPTIONS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACLO_FAVORITES: AUTOCOMPLETELISTOPTIONS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACLO_FILESYSONLY: AUTOCOMPLETELISTOPTIONS = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACLO_FILESYSDIRS: AUTOCOMPLETELISTOPTIONS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACLO_VIRTUALNAMESPACE: AUTOCOMPLETELISTOPTIONS = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type AUTOCOMPLETEOPTIONS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACO_NONE: AUTOCOMPLETEOPTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACO_AUTOSUGGEST: AUTOCOMPLETEOPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACO_AUTOAPPEND: AUTOCOMPLETEOPTIONS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACO_SEARCH: AUTOCOMPLETEOPTIONS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACO_FILTERPREFIXES: AUTOCOMPLETEOPTIONS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACO_USETAB: AUTOCOMPLETEOPTIONS = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACO_UPDOWNKEYDROPSLIST: AUTOCOMPLETEOPTIONS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACO_RTLREADING: AUTOCOMPLETEOPTIONS = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACO_WORD_FILTER: AUTOCOMPLETEOPTIONS = 128i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ACO_NOPREFIXFILTERING: AUTOCOMPLETEOPTIONS = 256i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct AUTO_SCROLL_DATA {
-    pub iNextSample: i32,
-    pub dwLastScroll: u32,
-    pub bFull: super::super::Foundation::BOOL,
-    pub pts: [super::super::Foundation::POINT; 3],
-    pub dwTimes: [u32; 3],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for AUTO_SCROLL_DATA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for AUTO_SCROLL_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub const AccessibilityDockingService: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 701373766, data2: 46209, data3: 19104, data4: [160, 138, 211, 235, 200, 172, 164, 2] };
 pub const AlphabeticalCategorizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1009145030, data2: 29554, data3: 20331, data4: [179, 16, 85, 214, 18, 143, 73, 210] };
 pub const AppShellVerbHandler: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1322493721, data2: 52904, data3: 19417, data4: [145, 13, 226, 82, 249, 151, 175, 194] };
@@ -2510,157 +2399,6 @@ pub const ApplicationDesignModeSettings: ::windows_sys::core::GUID = ::windows_s
 pub const ApplicationDestinations: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2260811779, data2: 19819, data3: 20211, data4: [167, 180, 5, 6, 102, 59, 46, 104] };
 pub const ApplicationDocumentLists: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2260648482, data2: 12530, data3: 18400, data4: [159, 37, 96, 209, 28, 215, 92, 40] };
 pub const AttachmentServices: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1093000598, data2: 57402, data3: 16643, data4: [143, 112, 224, 89, 125, 128, 59, 156] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(feature = "Win32_UI_Shell_Common")]
-pub struct BANDINFOSFB {
-    pub dwMask: u32,
-    pub dwStateMask: u32,
-    pub dwState: u32,
-    pub crBkgnd: u32,
-    pub crBtnLt: u32,
-    pub crBtnDk: u32,
-    pub wViewMode: u16,
-    pub wAlign: u16,
-    pub psf: IShellFolder,
-    pub pidl: *mut Common::ITEMIDLIST,
-}
-#[cfg(feature = "Win32_UI_Shell_Common")]
-impl ::core::marker::Copy for BANDINFOSFB {}
-#[cfg(feature = "Win32_UI_Shell_Common")]
-impl ::core::clone::Clone for BANDINFOSFB {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type BANDSITECID = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const BSID_BANDADDED: BANDSITECID = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const BSID_BANDREMOVED: BANDSITECID = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct BANDSITEINFO {
-    pub dwMask: u32,
-    pub dwState: u32,
-    pub dwStyle: u32,
-}
-impl ::core::marker::Copy for BANDSITEINFO {}
-impl ::core::clone::Clone for BANDSITEINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct BANNER_NOTIFICATION {
-    pub event: BANNER_NOTIFICATION_EVENT,
-    pub providerIdentity: ::windows_sys::core::PCWSTR,
-    pub contentId: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for BANNER_NOTIFICATION {}
-impl ::core::clone::Clone for BANNER_NOTIFICATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type BANNER_NOTIFICATION_EVENT = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const BNE_Rendered: BANNER_NOTIFICATION_EVENT = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const BNE_Hovered: BANNER_NOTIFICATION_EVENT = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const BNE_Closed: BANNER_NOTIFICATION_EVENT = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const BNE_Dismissed: BANNER_NOTIFICATION_EVENT = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const BNE_Button1Clicked: BANNER_NOTIFICATION_EVENT = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const BNE_Button2Clicked: BANNER_NOTIFICATION_EVENT = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
-pub struct BASEBROWSERDATALH {
-    pub _hwnd: super::super::Foundation::HWND,
-    pub _ptl: ITravelLog,
-    pub _phlf: IHlinkFrame,
-    pub _pautoWB2: IWebBrowser2,
-    pub _pautoEDS: IExpDispSupport,
-    pub _pautoSS: IShellService,
-    pub _eSecureLockIcon: i32,
-    pub _bitfield: u32,
-    pub _uActivateState: u32,
-    pub _pidlViewState: *mut Common::ITEMIDLIST,
-    pub _pctView: super::super::System::Ole::IOleCommandTarget,
-    pub _pidlCur: *mut Common::ITEMIDLIST,
-    pub _psv: IShellView,
-    pub _psf: IShellFolder,
-    pub _hwndView: super::super::Foundation::HWND,
-    pub _pszTitleCur: ::windows_sys::core::PWSTR,
-    pub _pidlPending: *mut Common::ITEMIDLIST,
-    pub _psvPending: IShellView,
-    pub _psfPending: IShellFolder,
-    pub _hwndViewPending: super::super::Foundation::HWND,
-    pub _pszTitlePending: ::windows_sys::core::PWSTR,
-    pub _fIsViewMSHTML: super::super::Foundation::BOOL,
-    pub _fPrivacyImpacted: super::super::Foundation::BOOL,
-    pub _clsidView: ::windows_sys::core::GUID,
-    pub _clsidViewPending: ::windows_sys::core::GUID,
-    pub _hwndFrame: super::super::Foundation::HWND,
-    pub _lPhishingFilterStatus: i32,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
-impl ::core::marker::Copy for BASEBROWSERDATALH {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
-impl ::core::clone::Clone for BASEBROWSERDATALH {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
-pub struct BASEBROWSERDATAXP {
-    pub _hwnd: super::super::Foundation::HWND,
-    pub _ptl: ITravelLog,
-    pub _phlf: IHlinkFrame,
-    pub _pautoWB2: IWebBrowser2,
-    pub _pautoEDS: IExpDispSupportXP,
-    pub _pautoSS: IShellService,
-    pub _eSecureLockIcon: i32,
-    pub _bitfield: u32,
-    pub _uActivateState: u32,
-    pub _pidlViewState: *mut Common::ITEMIDLIST,
-    pub _pctView: super::super::System::Ole::IOleCommandTarget,
-    pub _pidlCur: *mut Common::ITEMIDLIST,
-    pub _psv: IShellView,
-    pub _psf: IShellFolder,
-    pub _hwndView: super::super::Foundation::HWND,
-    pub _pszTitleCur: ::windows_sys::core::PWSTR,
-    pub _pidlPending: *mut Common::ITEMIDLIST,
-    pub _psvPending: IShellView,
-    pub _psfPending: IShellFolder,
-    pub _hwndViewPending: super::super::Foundation::HWND,
-    pub _pszTitlePending: ::windows_sys::core::PWSTR,
-    pub _fIsViewMSHTML: super::super::Foundation::BOOL,
-    pub _fPrivacyImpacted: super::super::Foundation::BOOL,
-    pub _clsidView: ::windows_sys::core::GUID,
-    pub _clsidViewPending: ::windows_sys::core::GUID,
-    pub _hwndFrame: super::super::Foundation::HWND,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
-impl ::core::marker::Copy for BASEBROWSERDATAXP {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
-impl ::core::clone::Clone for BASEBROWSERDATAXP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type BFFCALLBACK = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, umsg: u32, lparam: super::super::Foundation::LPARAM, lpdata: super::super::Foundation::LPARAM) -> i32>;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const BFFM_ENABLEOK: u32 = 1125u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -2748,56 +2486,6 @@ pub const BMICON_LARGE: i32 = 0i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const BMICON_SMALL: i32 = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type BNSTATE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const BNS_NORMAL: BNSTATE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const BNS_BEGIN_NAVIGATE: BNSTATE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const BNS_NAVIGATE: BNSTATE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-pub struct BROWSEINFOA {
-    pub hwndOwner: super::super::Foundation::HWND,
-    pub pidlRoot: *mut Common::ITEMIDLIST,
-    pub pszDisplayName: ::windows_sys::core::PSTR,
-    pub lpszTitle: ::windows_sys::core::PCSTR,
-    pub ulFlags: u32,
-    pub lpfn: BFFCALLBACK,
-    pub lParam: super::super::Foundation::LPARAM,
-    pub iImage: i32,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-impl ::core::marker::Copy for BROWSEINFOA {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-impl ::core::clone::Clone for BROWSEINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-pub struct BROWSEINFOW {
-    pub hwndOwner: super::super::Foundation::HWND,
-    pub pidlRoot: *mut Common::ITEMIDLIST,
-    pub pszDisplayName: ::windows_sys::core::PWSTR,
-    pub lpszTitle: ::windows_sys::core::PCWSTR,
-    pub ulFlags: u32,
-    pub lpfn: BFFCALLBACK,
-    pub lParam: super::super::Foundation::LPARAM,
-    pub iImage: i32,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-impl ::core::marker::Copy for BROWSEINFOW {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-impl ::core::clone::Clone for BROWSEINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const BSF_CANMAXIMIZE: u32 = 1024u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const BSF_DELEGATEDNAVIGATION: u32 = 65536u32;
@@ -2866,123 +2554,9 @@ pub const BSSF_VISIBLE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const BUFFLEN: u32 = 255u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type BrowserNavConstants = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navOpenInNewWindow: BrowserNavConstants = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navNoHistory: BrowserNavConstants = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navNoReadFromCache: BrowserNavConstants = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navNoWriteToCache: BrowserNavConstants = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navAllowAutosearch: BrowserNavConstants = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navBrowserBar: BrowserNavConstants = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navHyperlink: BrowserNavConstants = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navEnforceRestricted: BrowserNavConstants = 128i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navNewWindowsManaged: BrowserNavConstants = 256i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navUntrustedForDownload: BrowserNavConstants = 512i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navTrustedForActiveX: BrowserNavConstants = 1024i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navOpenInNewTab: BrowserNavConstants = 2048i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navOpenInBackgroundTab: BrowserNavConstants = 4096i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navKeepWordWheelText: BrowserNavConstants = 8192i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navVirtualTab: BrowserNavConstants = 16384i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navBlockRedirectsXDomain: BrowserNavConstants = 32768i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navOpenNewForegroundTab: BrowserNavConstants = 65536i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navTravelLogScreenshot: BrowserNavConstants = 131072i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navDeferUnload: BrowserNavConstants = 262144i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navSpeculative: BrowserNavConstants = 524288i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navSuggestNewWindow: BrowserNavConstants = 1048576i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navSuggestNewTab: BrowserNavConstants = 2097152i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navReserved1: BrowserNavConstants = 4194304i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navHomepageNavigate: BrowserNavConstants = 8388608i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navRefresh: BrowserNavConstants = 16777216i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navHostNavigation: BrowserNavConstants = 33554432i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navReserved2: BrowserNavConstants = 67108864i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navReserved3: BrowserNavConstants = 134217728i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navReserved4: BrowserNavConstants = 268435456i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navReserved5: BrowserNavConstants = 536870912i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navReserved6: BrowserNavConstants = 1073741824i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const navReserved7: BrowserNavConstants = -2147483648i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct CABINETSTATE {
-    pub cLength: u16,
-    pub nVersion: u16,
-    pub _bitfield: i32,
-    pub fMenuEnumFilter: u32,
-}
-impl ::core::marker::Copy for CABINETSTATE {}
-impl ::core::clone::Clone for CABINETSTATE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CABINETSTATE_VERSION: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CAMERAROLL_E_NO_DOWNSAMPLING_REQUIRED: ::windows_sys::core::HRESULT = -2144927456i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CATEGORYINFO_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CATINFO_NORMAL: CATEGORYINFO_FLAGS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CATINFO_COLLAPSED: CATEGORYINFO_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CATINFO_HIDDEN: CATEGORYINFO_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CATINFO_EXPANDED: CATEGORYINFO_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CATINFO_NOHEADER: CATEGORYINFO_FLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CATINFO_NOTCOLLAPSIBLE: CATEGORYINFO_FLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CATINFO_NOHEADERCOUNT: CATEGORYINFO_FLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CATINFO_SUBSETTED: CATEGORYINFO_FLAGS = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CATINFO_SEPARATE_IMAGES: CATEGORYINFO_FLAGS = 128i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CATINFO_SHOWEMPTY: CATEGORYINFO_FLAGS = 256i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct CATEGORY_INFO {
-    pub cif: CATEGORYINFO_FLAGS,
-    pub wszName: [u16; 260],
-}
-impl ::core::marker::Copy for CATEGORY_INFO {}
-impl ::core::clone::Clone for CATEGORY_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub const CATID_BrowsableShellExt: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 136336, data2: 0, data3: 0, data4: [192, 0, 0, 0, 0, 0, 0, 70] };
 pub const CATID_BrowseInPlace: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 136337, data2: 0, data3: 0, data4: [192, 0, 0, 0, 0, 0, 0, 70] };
 pub const CATID_CommBand: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 136340, data2: 0, data3: 0, data4: [192, 0, 0, 0, 0, 0, 0, 70] };
@@ -2992,12 +2566,6 @@ pub const CATID_InfoBand: ::windows_sys::core::GUID = ::windows_sys::core::GUID 
 pub const CATID_LocationFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2522631505, data2: 35702, data3: 20055, data4: [128, 183, 86, 77, 46, 164, 181, 94] };
 pub const CATID_LocationProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 456959092, data2: 9748, data3: 16715, data4: [184, 19, 26, 206, 202, 62, 61, 216] };
 pub const CATID_SearchableApplication: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 913058090, data2: 55731, data3: 19903, data4: [187, 112, 230, 46, 195, 208, 187, 191] };
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CATSORT_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CATSORT_DEFAULT: CATSORT_FLAGS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CATSORT_NAME: CATSORT_FLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CDB2GVF_ADDSHIELD: u32 = 64u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -3026,25 +2594,7 @@ pub const CDBOSC_SELCHANGE: u32 = 2u32;
 pub const CDBOSC_SETFOCUS: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CDBOSC_STATECHANGE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CDBURNINGEXTENSIONRET = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CDBE_RET_DEFAULT: CDBURNINGEXTENSIONRET = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CDBE_RET_DONTRUNOTHEREXTS: CDBURNINGEXTENSIONRET = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CDBE_RET_STOPWIZARD: CDBURNINGEXTENSIONRET = 2i32;
 pub const CDBurn: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4226517509, data2: 48878, data3: 17474, data4: [128, 78, 64, 157, 108, 69, 21, 233] };
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CDCONTROLSTATEF = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CDCS_INACTIVE: CDCONTROLSTATEF = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CDCS_ENABLED: CDCONTROLSTATEF = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CDCS_VISIBLE: CDCONTROLSTATEF = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CDCS_ENABLEDVISIBLE: CDCONTROLSTATEF = 3i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CFSTR_AUTOPLAY_SHELLIDLISTS: &str = "Autoplay Enumerated IDList Array";
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -3118,19 +2668,6 @@ pub const CGID_MENUDESKBAR: ::windows_sys::core::GUID = ::windows_sys::core::GUI
 pub const CGID_ShellDocView: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 136401, data2: 0, data3: 0, data4: [192, 0, 0, 0, 0, 0, 0, 70] };
 pub const CGID_ShellServiceObject: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 136402, data2: 0, data3: 0, data4: [192, 0, 0, 0, 0, 0, 0, 70] };
 pub const CGID_ShortCut: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2477164368, data2: 38170, data3: 4561, data4: [148, 111, 0, 0, 0, 0, 0, 0] };
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct CIDA {
-    pub cidl: u32,
-    pub aoffset: [u32; 1],
-}
-impl ::core::marker::Copy for CIDA {}
-impl ::core::clone::Clone for CIDA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type CIE4ConnectionPoint = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CLOSEPROPS_DISCARD: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -3237,138 +2774,6 @@ pub const CMIC_MASK_CONTROL_DOWN: u32 = 1073741824u32;
 pub const CMIC_MASK_PTINVOKE: u32 = 536870912u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CMIC_MASK_SHIFT_DOWN: u32 = 268435456u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CMINVOKECOMMANDINFO {
-    pub cbSize: u32,
-    pub fMask: u32,
-    pub hwnd: super::super::Foundation::HWND,
-    pub lpVerb: ::windows_sys::core::PCSTR,
-    pub lpParameters: ::windows_sys::core::PCSTR,
-    pub lpDirectory: ::windows_sys::core::PCSTR,
-    pub nShow: i32,
-    pub dwHotKey: u32,
-    pub hIcon: super::super::Foundation::HANDLE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CMINVOKECOMMANDINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CMINVOKECOMMANDINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CMINVOKECOMMANDINFOEX {
-    pub cbSize: u32,
-    pub fMask: u32,
-    pub hwnd: super::super::Foundation::HWND,
-    pub lpVerb: ::windows_sys::core::PCSTR,
-    pub lpParameters: ::windows_sys::core::PCSTR,
-    pub lpDirectory: ::windows_sys::core::PCSTR,
-    pub nShow: i32,
-    pub dwHotKey: u32,
-    pub hIcon: super::super::Foundation::HANDLE,
-    pub lpTitle: ::windows_sys::core::PCSTR,
-    pub lpVerbW: ::windows_sys::core::PCWSTR,
-    pub lpParametersW: ::windows_sys::core::PCWSTR,
-    pub lpDirectoryW: ::windows_sys::core::PCWSTR,
-    pub lpTitleW: ::windows_sys::core::PCWSTR,
-    pub ptInvoke: super::super::Foundation::POINT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CMINVOKECOMMANDINFOEX {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CMINVOKECOMMANDINFOEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CMINVOKECOMMANDINFOEX_REMOTE {
-    pub cbSize: u32,
-    pub fMask: u32,
-    pub hwnd: super::super::Foundation::HWND,
-    pub lpVerbString: ::windows_sys::core::PCSTR,
-    pub lpParameters: ::windows_sys::core::PCSTR,
-    pub lpDirectory: ::windows_sys::core::PCSTR,
-    pub nShow: i32,
-    pub dwHotKey: u32,
-    pub lpTitle: ::windows_sys::core::PCSTR,
-    pub lpVerbWString: ::windows_sys::core::PCWSTR,
-    pub lpParametersW: ::windows_sys::core::PCWSTR,
-    pub lpDirectoryW: ::windows_sys::core::PCWSTR,
-    pub lpTitleW: ::windows_sys::core::PCWSTR,
-    pub ptInvoke: super::super::Foundation::POINT,
-    pub lpVerbInt: u32,
-    pub lpVerbWInt: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CMINVOKECOMMANDINFOEX_REMOTE {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CMINVOKECOMMANDINFOEX_REMOTE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct CM_COLUMNINFO {
-    pub cbSize: u32,
-    pub dwMask: u32,
-    pub dwState: u32,
-    pub uWidth: u32,
-    pub uDefaultWidth: u32,
-    pub uIdealWidth: u32,
-    pub wszName: [u16; 80],
-}
-impl ::core::marker::Copy for CM_COLUMNINFO {}
-impl ::core::clone::Clone for CM_COLUMNINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CM_ENUM_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_ENUM_ALL: CM_ENUM_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_ENUM_VISIBLE: CM_ENUM_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CM_MASK = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_MASK_WIDTH: CM_MASK = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_MASK_DEFAULTWIDTH: CM_MASK = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_MASK_IDEALWIDTH: CM_MASK = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_MASK_NAME: CM_MASK = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_MASK_STATE: CM_MASK = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CM_SET_WIDTH_VALUE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_WIDTH_USEDEFAULT: CM_SET_WIDTH_VALUE = -1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_WIDTH_AUTOSIZE: CM_SET_WIDTH_VALUE = -2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CM_STATE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_STATE_NONE: CM_STATE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_STATE_VISIBLE: CM_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_STATE_FIXEDWIDTH: CM_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_STATE_NOSORTBYFOLDERNESS: CM_STATE = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CM_STATE_ALWAYSVISIBLE: CM_STATE = 8i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const COMPONENT_DEFAULT_LEFT: u32 = 65535u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -3417,34 +2822,6 @@ pub const COMP_TYPE_MAX: u32 = 4u32;
 pub const COMP_TYPE_PICTURE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const COMP_TYPE_WEBSITE: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct CONFIRM_CONFLICT_ITEM {
-    pub pShellItem: IShellItem2,
-    pub pszOriginalName: ::windows_sys::core::PWSTR,
-    pub pszAlternateName: ::windows_sys::core::PWSTR,
-    pub pszLocationShort: ::windows_sys::core::PWSTR,
-    pub pszLocationFull: ::windows_sys::core::PWSTR,
-    pub nType: SYNCMGR_CONFLICT_ITEM_TYPE,
-}
-impl ::core::marker::Copy for CONFIRM_CONFLICT_ITEM {}
-impl ::core::clone::Clone for CONFIRM_CONFLICT_ITEM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct CONFIRM_CONFLICT_RESULT_INFO {
-    pub pszNewName: ::windows_sys::core::PWSTR,
-    pub iItemIndex: u32,
-}
-impl ::core::marker::Copy for CONFIRM_CONFLICT_RESULT_INFO {}
-impl ::core::clone::Clone for CONFIRM_CONFLICT_RESULT_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CONFLICT_RESOLUTION_CLSID_KEY: &str = "ConflictResolutionCLSID";
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -3633,20 +3010,6 @@ pub const CPFG_SMARTCARD_PIN: ::windows_sys::core::GUID = ::windows_sys::core::G
 pub const CPFG_SMARTCARD_USERNAME: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1042206569, data2: 22156, data3: 19862, data4: [157, 89, 70, 68, 65, 116, 226, 214] };
 pub const CPFG_STANDALONE_SUBMIT_BUTTON: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 192613080, data2: 52278, data3: 19801, data4: [128, 43, 130, 247, 20, 250, 112, 34] };
 pub const CPFG_STYLE_LINK_AS_BUTTON: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 143631624, data2: 38054, data3: 17456, data4: [164, 203, 111, 198, 227, 192, 185, 226] };
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct CPLINFO {
-    pub idIcon: i32,
-    pub idName: i32,
-    pub idInfo: i32,
-    pub lData: isize,
-}
-impl ::core::marker::Copy for CPLINFO {}
-impl ::core::clone::Clone for CPLINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CPLPAGE_DISPLAY_BACKGROUND: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -3684,163 +3047,7 @@ pub const CPL_STARTWPARMSW: u32 = 10u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CPL_STOP: u32 = 6u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CPVIEW = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPVIEW_CLASSIC: CPVIEW = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPVIEW_ALLITEMS: CPVIEW = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPVIEW_CATEGORY: CPVIEW = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPVIEW_HOME: CPVIEW = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CREDENTIAL_PROVIDER_ACCOUNT_OPTIONS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPAO_NONE: CREDENTIAL_PROVIDER_ACCOUNT_OPTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPAO_EMPTY_LOCAL: CREDENTIAL_PROVIDER_ACCOUNT_OPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPAO_EMPTY_CONNECTED: CREDENTIAL_PROVIDER_ACCOUNT_OPTIONS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPCFO_NONE: CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPCFO_ENABLE_PASSWORD_REVEAL: CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPCFO_IS_EMAIL_ADDRESS: CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPCFO_ENABLE_TOUCH_KEYBOARD_AUTO_INVOKE: CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPCFO_NUMBERS_ONLY: CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPCFO_SHOW_ENGLISH_KEYBOARD: CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = 16i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION {
-    pub ulAuthenticationPackage: u32,
-    pub clsidCredentialProvider: ::windows_sys::core::GUID,
-    pub cbSerialization: u32,
-    pub rgbSerialization: *mut u8,
-}
-impl ::core::marker::Copy for CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION {}
-impl ::core::clone::Clone for CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR {
-    pub dwFieldID: u32,
-    pub cpft: CREDENTIAL_PROVIDER_FIELD_TYPE,
-    pub pszLabel: ::windows_sys::core::PWSTR,
-    pub guidFieldType: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR {}
-impl ::core::clone::Clone for CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CREDENTIAL_PROVIDER_FIELD_INTERACTIVE_STATE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFIS_NONE: CREDENTIAL_PROVIDER_FIELD_INTERACTIVE_STATE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFIS_READONLY: CREDENTIAL_PROVIDER_FIELD_INTERACTIVE_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFIS_DISABLED: CREDENTIAL_PROVIDER_FIELD_INTERACTIVE_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFIS_FOCUSED: CREDENTIAL_PROVIDER_FIELD_INTERACTIVE_STATE = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CREDENTIAL_PROVIDER_FIELD_STATE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFS_HIDDEN: CREDENTIAL_PROVIDER_FIELD_STATE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFS_DISPLAY_IN_SELECTED_TILE: CREDENTIAL_PROVIDER_FIELD_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFS_DISPLAY_IN_DESELECTED_TILE: CREDENTIAL_PROVIDER_FIELD_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFS_DISPLAY_IN_BOTH: CREDENTIAL_PROVIDER_FIELD_STATE = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CREDENTIAL_PROVIDER_FIELD_TYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFT_INVALID: CREDENTIAL_PROVIDER_FIELD_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFT_LARGE_TEXT: CREDENTIAL_PROVIDER_FIELD_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFT_SMALL_TEXT: CREDENTIAL_PROVIDER_FIELD_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFT_COMMAND_LINK: CREDENTIAL_PROVIDER_FIELD_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFT_EDIT_TEXT: CREDENTIAL_PROVIDER_FIELD_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFT_PASSWORD_TEXT: CREDENTIAL_PROVIDER_FIELD_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFT_TILE_IMAGE: CREDENTIAL_PROVIDER_FIELD_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFT_CHECKBOX: CREDENTIAL_PROVIDER_FIELD_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFT_COMBOBOX: CREDENTIAL_PROVIDER_FIELD_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPFT_SUBMIT_BUTTON: CREDENTIAL_PROVIDER_FIELD_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPGSR_NO_CREDENTIAL_NOT_FINISHED: CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPGSR_NO_CREDENTIAL_FINISHED: CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPGSR_RETURN_CREDENTIAL_FINISHED: CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPGSR_RETURN_NO_CREDENTIAL_FINISHED: CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CREDENTIAL_PROVIDER_NO_DEFAULT: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CREDENTIAL_PROVIDER_STATUS_ICON = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPSI_NONE: CREDENTIAL_PROVIDER_STATUS_ICON = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPSI_ERROR: CREDENTIAL_PROVIDER_STATUS_ICON = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPSI_WARNING: CREDENTIAL_PROVIDER_STATUS_ICON = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPSI_SUCCESS: CREDENTIAL_PROVIDER_STATUS_ICON = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CREDENTIAL_PROVIDER_USAGE_SCENARIO = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPUS_INVALID: CREDENTIAL_PROVIDER_USAGE_SCENARIO = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPUS_LOGON: CREDENTIAL_PROVIDER_USAGE_SCENARIO = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPUS_UNLOCK_WORKSTATION: CREDENTIAL_PROVIDER_USAGE_SCENARIO = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPUS_CHANGE_PASSWORD: CREDENTIAL_PROVIDER_USAGE_SCENARIO = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPUS_CREDUI: CREDENTIAL_PROVIDER_USAGE_SCENARIO = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CPUS_PLAP: CREDENTIAL_PROVIDER_USAGE_SCENARIO = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Ole\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
-pub struct CSFV {
-    pub cbSize: u32,
-    pub pshf: IShellFolder,
-    pub psvOuter: IShellView,
-    pub pidl: *mut Common::ITEMIDLIST,
-    pub lEvents: i32,
-    pub pfnCallback: LPFNVIEWCALLBACK,
-    pub fvm: FOLDERVIEWMODE,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
-impl ::core::marker::Copy for CSFV {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
-impl ::core::clone::Clone for CSFV {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CSIDL_ADMINTOOLS: u32 = 48u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -4000,39 +3207,7 @@ pub const CTF_UNUSED: i32 = 128i32;
 pub const CTF_WAIT_ALLOWCOM: i32 = 64i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const CTF_WAIT_NO_REENTRANCY: i32 = 512i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type CommandStateChangeConstants = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CSC_UPDATECOMMANDS: CommandStateChangeConstants = -1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CSC_NAVIGATEFORWARD: CommandStateChangeConstants = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const CSC_NAVIGATEBACK: CommandStateChangeConstants = 2i32;
 pub const ConflictFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 681146540, data2: 41217, data3: 17217, data4: [168, 23, 33, 235, 167, 253, 4, 109] };
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct DATABLOCK_HEADER {
-    pub cbSize: u32,
-    pub dwSignature: u32,
-}
-impl ::core::marker::Copy for DATABLOCK_HEADER {}
-impl ::core::clone::Clone for DATABLOCK_HEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DATAOBJ_GET_ITEM_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DOGIF_DEFAULT: DATAOBJ_GET_ITEM_FLAGS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DOGIF_TRAVERSE_LINK: DATAOBJ_GET_ITEM_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DOGIF_NO_HDROP: DATAOBJ_GET_ITEM_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DOGIF_NO_URL: DATAOBJ_GET_ITEM_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DOGIF_ONLY_IF_ONE: DATAOBJ_GET_ITEM_FLAGS = 8i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const DBCID_CLSIDOFBAR: i32 = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -4107,252 +3282,6 @@ pub const DBIM_MODEFLAGS: u32 = 32u32;
 pub const DBIM_TITLE: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const DBPC_SELECTFIRST: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DEFAULTSAVEFOLDERTYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DSFT_DETECT: DEFAULTSAVEFOLDERTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DSFT_PRIVATE: DEFAULTSAVEFOLDERTYPE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DSFT_PUBLIC: DEFAULTSAVEFOLDERTYPE = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DEFAULT_FOLDER_MENU_RESTRICTIONS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFMR_DEFAULT: DEFAULT_FOLDER_MENU_RESTRICTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFMR_NO_STATIC_VERBS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFMR_STATIC_VERBS_ONLY: DEFAULT_FOLDER_MENU_RESTRICTIONS = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFMR_NO_RESOURCE_VERBS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFMR_OPTIN_HANDLERS_ONLY: DEFAULT_FOLDER_MENU_RESTRICTIONS = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFMR_RESOURCE_AND_FOLDER_VERBS_ONLY: DEFAULT_FOLDER_MENU_RESTRICTIONS = 128i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFMR_USE_SPECIFIED_HANDLERS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 256i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFMR_USE_SPECIFIED_VERBS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 512i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFMR_NO_ASYNC_VERBS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 1024i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFMR_NO_NATIVECPU_VERBS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 2048i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFMR_NO_NONWOW_VERBS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 4096i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry", feature = "Win32_UI_Shell_Common"))]
-pub struct DEFCONTEXTMENU {
-    pub hwnd: super::super::Foundation::HWND,
-    pub pcmcb: IContextMenuCB,
-    pub pidlFolder: *mut Common::ITEMIDLIST,
-    pub psf: IShellFolder,
-    pub cidl: u32,
-    pub apidl: *mut *mut Common::ITEMIDLIST,
-    pub punkAssociationInfo: ::windows_sys::core::IUnknown,
-    pub cKeys: u32,
-    pub aKeys: *const super::super::System::Registry::HKEY,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry", feature = "Win32_UI_Shell_Common"))]
-impl ::core::marker::Copy for DEFCONTEXTMENU {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry", feature = "Win32_UI_Shell_Common"))]
-impl ::core::clone::Clone for DEFCONTEXTMENU {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DEF_SHARE_ID = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DEFSHAREID_USERS: DEF_SHARE_ID = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DEFSHAREID_PUBLIC: DEF_SHARE_ID = 2i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct DELEGATEITEMID {
-    pub cbSize: u16,
-    pub wOuter: u16,
-    pub cbInner: u16,
-    pub rgb: [u8; 1],
-}
-impl ::core::marker::Copy for DELEGATEITEMID {}
-impl ::core::clone::Clone for DELEGATEITEMID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DESKBANDCID = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DBID_BANDINFOCHANGED: DESKBANDCID = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DBID_SHOWONLY: DESKBANDCID = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DBID_MAXIMIZEBAND: DESKBANDCID = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DBID_PUSHCHEVRON: DESKBANDCID = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DBID_DELAYINIT: DESKBANDCID = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DBID_FINISHINIT: DESKBANDCID = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DBID_SETWINDOWTHEME: DESKBANDCID = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DBID_PERMITAUTOHIDE: DESKBANDCID = 7i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DESKBANDINFO {
-    pub dwMask: u32,
-    pub ptMinSize: super::super::Foundation::POINTL,
-    pub ptMaxSize: super::super::Foundation::POINTL,
-    pub ptIntegral: super::super::Foundation::POINTL,
-    pub ptActual: super::super::Foundation::POINTL,
-    pub wszTitle: [u16; 256],
-    pub dwModeFlags: u32,
-    pub crBkgnd: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DESKBANDINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DESKBANDINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DESKTOP_SLIDESHOW_DIRECTION = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DSD_FORWARD: DESKTOP_SLIDESHOW_DIRECTION = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DSD_BACKWARD: DESKTOP_SLIDESHOW_DIRECTION = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DESKTOP_SLIDESHOW_OPTIONS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DSO_SHUFFLEIMAGES: DESKTOP_SLIDESHOW_OPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DESKTOP_SLIDESHOW_STATE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DSS_ENABLED: DESKTOP_SLIDESHOW_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DSS_SLIDESHOW: DESKTOP_SLIDESHOW_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DSS_DISABLED_BY_REMOTE_SESSION: DESKTOP_SLIDESHOW_STATE = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DESKTOP_WALLPAPER_POSITION = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DWPOS_CENTER: DESKTOP_WALLPAPER_POSITION = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DWPOS_TILE: DESKTOP_WALLPAPER_POSITION = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DWPOS_STRETCH: DESKTOP_WALLPAPER_POSITION = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DWPOS_FIT: DESKTOP_WALLPAPER_POSITION = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DWPOS_FILL: DESKTOP_WALLPAPER_POSITION = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DWPOS_SPAN: DESKTOP_WALLPAPER_POSITION = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(feature = "Win32_UI_Shell_Common")]
-pub struct DETAILSINFO {
-    pub pidl: *mut Common::ITEMIDLIST,
-    pub fmt: i32,
-    pub cxChar: i32,
-    pub str: Common::STRRET,
-    pub iImage: i32,
-}
-#[cfg(feature = "Win32_UI_Shell_Common")]
-impl ::core::marker::Copy for DETAILSINFO {}
-#[cfg(feature = "Win32_UI_Shell_Common")]
-impl ::core::clone::Clone for DETAILSINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type DFConstraint = *mut ::core::ffi::c_void;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DFMICS {
-    pub cbSize: u32,
-    pub fMask: u32,
-    pub lParam: super::super::Foundation::LPARAM,
-    pub idCmdFirst: u32,
-    pub idDefMax: u32,
-    pub pici: *mut CMINVOKECOMMANDINFO,
-    pub punkSite: ::windows_sys::core::IUnknown,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DFMICS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DFMICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DFM_CMD = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_DELETE: DFM_CMD = -1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_MOVE: DFM_CMD = -2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_COPY: DFM_CMD = -3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_LINK: DFM_CMD = -4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_PROPERTIES: DFM_CMD = -5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_NEWFOLDER: DFM_CMD = -6i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_PASTE: DFM_CMD = -7i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_VIEWLIST: DFM_CMD = -8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_VIEWDETAILS: DFM_CMD = -9i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_PASTELINK: DFM_CMD = -10i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_PASTESPECIAL: DFM_CMD = -11i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_MODALPROP: DFM_CMD = -12i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_CMD_RENAME: DFM_CMD = -13i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DFM_MESSAGE_ID = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_MERGECONTEXTMENU: DFM_MESSAGE_ID = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_INVOKECOMMAND: DFM_MESSAGE_ID = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_GETHELPTEXT: DFM_MESSAGE_ID = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_WM_MEASUREITEM: DFM_MESSAGE_ID = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_WM_DRAWITEM: DFM_MESSAGE_ID = 7i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_WM_INITMENUPOPUP: DFM_MESSAGE_ID = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_VALIDATECMD: DFM_MESSAGE_ID = 9i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_MERGECONTEXTMENU_TOP: DFM_MESSAGE_ID = 10i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_GETHELPTEXTW: DFM_MESSAGE_ID = 11i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_INVOKECOMMANDEX: DFM_MESSAGE_ID = 12i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_MAPCOMMANDNAME: DFM_MESSAGE_ID = 13i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_GETDEFSTATICID: DFM_MESSAGE_ID = 14i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_GETVERBW: DFM_MESSAGE_ID = 15i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_GETVERBA: DFM_MESSAGE_ID = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_MERGECONTEXTMENU_BOTTOM: DFM_MESSAGE_ID = 17i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DFM_MODIFYQCMFLAGS: DFM_MESSAGE_ID = 18i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const DISPID_BEGINDRAG: u32 = 204u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -4432,45 +3361,9 @@ pub const DISPID_VIEWPAINTDONE: u32 = 211u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const DISPID_WORDWHEELEDITED: u32 = 219u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DISPLAY_DEVICE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DEVICE_PRIMARY: DISPLAY_DEVICE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DEVICE_IMMERSIVE: DISPLAY_DEVICE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const DI_GETDRAGIMAGE: &str = "ShellGetDragImage";
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const DLG_SCRNSAVECONFIGURE: u32 = 2003u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DLLGETVERSIONPROC = ::core::option::Option<unsafe extern "system" fn(param0: *mut DLLVERSIONINFO) -> ::windows_sys::core::HRESULT>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct DLLVERSIONINFO {
-    pub cbSize: u32,
-    pub dwMajorVersion: u32,
-    pub dwMinorVersion: u32,
-    pub dwBuildNumber: u32,
-    pub dwPlatformID: u32,
-}
-impl ::core::marker::Copy for DLLVERSIONINFO {}
-impl ::core::clone::Clone for DLLVERSIONINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct DLLVERSIONINFO2 {
-    pub info1: DLLVERSIONINFO,
-    pub dwFlags: u32,
-    pub ullVersion: u64,
-}
-impl ::core::marker::Copy for DLLVERSIONINFO2 {}
-impl ::core::clone::Clone for DLLVERSIONINFO2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const DLLVER_BUILD_MASK: u64 = 4294901760u64;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -4483,145 +3376,6 @@ pub const DLLVER_PLATFORM_NT: u32 = 2u32;
 pub const DLLVER_PLATFORM_WINDOWS: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const DLLVER_QFE_MASK: u64 = 65535u64;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DRAGINFOA {
-    pub uSize: u32,
-    pub pt: super::super::Foundation::POINT,
-    pub fNC: super::super::Foundation::BOOL,
-    pub lpFileList: ::windows_sys::core::PSTR,
-    pub grfKeyState: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DRAGINFOA {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DRAGINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DRAGINFOA {
-    pub uSize: u32,
-    pub pt: super::super::Foundation::POINT,
-    pub fNC: super::super::Foundation::BOOL,
-    pub lpFileList: ::windows_sys::core::PSTR,
-    pub grfKeyState: u32,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DRAGINFOA {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DRAGINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DRAGINFOW {
-    pub uSize: u32,
-    pub pt: super::super::Foundation::POINT,
-    pub fNC: super::super::Foundation::BOOL,
-    pub lpFileList: ::windows_sys::core::PWSTR,
-    pub grfKeyState: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DRAGINFOW {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DRAGINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DRAGINFOW {
-    pub uSize: u32,
-    pub pt: super::super::Foundation::POINT,
-    pub fNC: super::super::Foundation::BOOL,
-    pub lpFileList: ::windows_sys::core::PWSTR,
-    pub grfKeyState: u32,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DRAGINFOW {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DRAGINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct DROPDESCRIPTION {
-    pub r#type: DROPIMAGETYPE,
-    pub szMessage: [u16; 260],
-    pub szInsert: [u16; 260],
-}
-impl ::core::marker::Copy for DROPDESCRIPTION {}
-impl ::core::clone::Clone for DROPDESCRIPTION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DROPFILES {
-    pub pFiles: u32,
-    pub pt: super::super::Foundation::POINT,
-    pub fNC: super::super::Foundation::BOOL,
-    pub fWide: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DROPFILES {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DROPFILES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DROPIMAGETYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DROPIMAGE_INVALID: DROPIMAGETYPE = -1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DROPIMAGE_NONE: DROPIMAGETYPE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DROPIMAGE_COPY: DROPIMAGETYPE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DROPIMAGE_MOVE: DROPIMAGETYPE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DROPIMAGE_LINK: DROPIMAGETYPE = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DROPIMAGE_LABEL: DROPIMAGETYPE = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DROPIMAGE_WARNING: DROPIMAGETYPE = 7i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DROPIMAGE_NOIMAGE: DROPIMAGETYPE = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type DSH_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const DSH_ALLOWDROPDESCRIPTIONTEXT: DSH_FLAGS = 1i32;
-pub type DShellFolderViewEvents = *mut ::core::ffi::c_void;
-pub type DShellNameSpaceEvents = *mut ::core::ffi::c_void;
-pub type DShellWindowsEvents = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const DVASPECT_COPY: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -4640,8 +3394,6 @@ pub const DWFAF_HIDDEN: u32 = 1u32;
 pub const DWFRF_DELETECONFIGDATA: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const DWFRF_NORMAL: u32 = 0u32;
-pub type DWebBrowserEvents = *mut ::core::ffi::c_void;
-pub type DWebBrowserEvents2 = *mut ::core::ffi::c_void;
 pub const DefFolderMenu: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3325264574, data2: 31027, data3: 18640, data4: [154, 200, 133, 251, 70, 190, 47, 221] };
 pub const DesktopGadget: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2454506523, data2: 25954, data3: 19589, data4: [134, 87, 209, 119, 146, 82, 34, 182] };
 pub const DesktopWallpaper: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3268358416, data2: 17934, data3: 20417, data4: [185, 208, 138, 28, 12, 156, 196, 189] };
@@ -4649,22 +3401,6 @@ pub const DestinationList: ::windows_sys::core::GUID = ::windows_sys::core::GUID
 pub const DocPropShellExtension: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2285073347, data2: 49033, data3: 4561, data4: [190, 53, 8, 0, 54, 177, 26, 3] };
 pub const DriveSizeCategorizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2486532947, data2: 51753, data3: 19320, data4: [131, 174, 232, 254, 116, 9, 19, 79] };
 pub const DriveTypeCategorizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2963862479, data2: 17203, data3: 19371, data4: [136, 115, 28, 203, 28, 173, 164, 139] };
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type EC_HOST_UI_MODE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ECHUIM_DESKTOP: EC_HOST_UI_MODE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ECHUIM_IMMERSIVE: EC_HOST_UI_MODE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const ECHUIM_SYSTEM_LAUNCHER: EC_HOST_UI_MODE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type EDGE_GESTURE_KIND = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EGK_TOUCH: EDGE_GESTURE_KIND = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EGK_KEYBOARD: EDGE_GESTURE_KIND = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EGK_MOUSE: EDGE_GESTURE_KIND = 2i32;
 pub const EP_AdvQueryPane: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3035224971, data2: 13498, data3: 19513, data4: [181, 204, 22, 161, 189, 44, 65, 28] };
 pub const EP_Commands: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3648280680, data2: 51807, data3: 19062, data4: [145, 205, 245, 161, 41, 251, 176, 118] };
 pub const EP_Commands_Organize: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1927812864, data2: 58348, data3: 18016, data4: [191, 36, 60, 59, 123, 100, 136, 6] };
@@ -4678,116 +3414,15 @@ pub const EP_StatusBar: ::windows_sys::core::GUID = ::windows_sys::core::GUID { 
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const EXECUTE_E_LAUNCH_APPLICATION: ::windows_sys::core::HRESULT = -2144927487i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type EXPLORER_BROWSER_FILL_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EBF_NONE: EXPLORER_BROWSER_FILL_FLAGS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EBF_SELECTFROMDATAOBJECT: EXPLORER_BROWSER_FILL_FLAGS = 256i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EBF_NODROPTARGET: EXPLORER_BROWSER_FILL_FLAGS = 512i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type EXPLORER_BROWSER_OPTIONS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EBO_NONE: EXPLORER_BROWSER_OPTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EBO_NAVIGATEONCE: EXPLORER_BROWSER_OPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EBO_SHOWFRAMES: EXPLORER_BROWSER_OPTIONS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EBO_ALWAYSNAVIGATE: EXPLORER_BROWSER_OPTIONS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EBO_NOTRAVELLOG: EXPLORER_BROWSER_OPTIONS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EBO_NOWRAPPERWINDOW: EXPLORER_BROWSER_OPTIONS = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EBO_HTMLSHAREPOINTVIEW: EXPLORER_BROWSER_OPTIONS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EBO_NOBORDER: EXPLORER_BROWSER_OPTIONS = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const EBO_NOPERSISTVIEWSTATE: EXPLORER_BROWSER_OPTIONS = 128i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const EXP_DARWIN_ID_SIG: u32 = 2684354566u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct EXP_DARWIN_LINK {
-    pub dbh: DATABLOCK_HEADER,
-    pub szDarwinID: [super::super::Foundation::CHAR; 260],
-    pub szwDarwinID: [u16; 260],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for EXP_DARWIN_LINK {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for EXP_DARWIN_LINK {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct EXP_PROPERTYSTORAGE {
-    pub cbSize: u32,
-    pub dwSignature: u32,
-    pub abPropertyStorage: [u8; 1],
-}
-impl ::core::marker::Copy for EXP_PROPERTYSTORAGE {}
-impl ::core::clone::Clone for EXP_PROPERTYSTORAGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const EXP_PROPERTYSTORAGE_SIG: u32 = 2684354569u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct EXP_SPECIAL_FOLDER {
-    pub cbSize: u32,
-    pub dwSignature: u32,
-    pub idSpecialFolder: u32,
-    pub cbOffset: u32,
-}
-impl ::core::marker::Copy for EXP_SPECIAL_FOLDER {}
-impl ::core::clone::Clone for EXP_SPECIAL_FOLDER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const EXP_SPECIAL_FOLDER_SIG: u32 = 2684354565u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const EXP_SZ_ICON_SIG: u32 = 2684354567u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct EXP_SZ_LINK {
-    pub cbSize: u32,
-    pub dwSignature: u32,
-    pub szTarget: [super::super::Foundation::CHAR; 260],
-    pub swzTarget: [u16; 260],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for EXP_SZ_LINK {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for EXP_SZ_LINK {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const EXP_SZ_LINK_SIG: u32 = 2684354561u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct EXTRASEARCH {
-    pub guidSearch: ::windows_sys::core::GUID,
-    pub wszFriendlyName: [u16; 80],
-    pub wszUrl: [u16; 2084],
-}
-impl ::core::marker::Copy for EXTRASEARCH {}
-impl ::core::clone::Clone for EXTRASEARCH {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const E_ACTIVATIONDENIED_SHELLERROR: ::windows_sys::core::HRESULT = -2144927439i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -4911,28 +3546,6 @@ pub const FCW_TOOLBAR: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const FCW_TREE: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FDAP = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FDAP_BOTTOM: FDAP = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FDAP_TOP: FDAP = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FDE_OVERWRITE_RESPONSE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FDEOR_DEFAULT: FDE_OVERWRITE_RESPONSE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FDEOR_ACCEPT: FDE_OVERWRITE_RESPONSE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FDEOR_REFUSE: FDE_OVERWRITE_RESPONSE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FDE_SHAREVIOLATION_RESPONSE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FDESVR_DEFAULT: FDE_SHAREVIOLATION_RESPONSE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FDESVR_ACCEPT: FDE_SHAREVIOLATION_RESPONSE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FDESVR_REFUSE: FDE_SHAREVIOLATION_RESPONSE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const FDTF_LONGDATE: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const FDTF_LONGTIME: u32 = 8u32;
@@ -4948,244 +3561,6 @@ pub const FDTF_RTLDATE: u32 = 512u32;
 pub const FDTF_SHORTDATE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const FDTF_SHORTTIME: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FD_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FD_CLSID: FD_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FD_SIZEPOINT: FD_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FD_ATTRIBUTES: FD_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FD_CREATETIME: FD_FLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FD_ACCESSTIME: FD_FLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FD_WRITESTIME: FD_FLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FD_FILESIZE: FD_FLAGS = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FD_PROGRESSUI: FD_FLAGS = 16384i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FD_LINKUI: FD_FLAGS = 32768i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FD_UNICODE: FD_FLAGS = -2147483648i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FFFP_MODE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FFFP_EXACTMATCH: FFFP_MODE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FFFP_NEARESTPARENTMATCH: FFFP_MODE = 1i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FILEDESCRIPTORA {
-    pub dwFlags: u32,
-    pub clsid: ::windows_sys::core::GUID,
-    pub sizel: super::super::Foundation::SIZE,
-    pub pointl: super::super::Foundation::POINTL,
-    pub dwFileAttributes: u32,
-    pub ftCreationTime: super::super::Foundation::FILETIME,
-    pub ftLastAccessTime: super::super::Foundation::FILETIME,
-    pub ftLastWriteTime: super::super::Foundation::FILETIME,
-    pub nFileSizeHigh: u32,
-    pub nFileSizeLow: u32,
-    pub cFileName: [super::super::Foundation::CHAR; 260],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FILEDESCRIPTORA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FILEDESCRIPTORA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FILEDESCRIPTORW {
-    pub dwFlags: u32,
-    pub clsid: ::windows_sys::core::GUID,
-    pub sizel: super::super::Foundation::SIZE,
-    pub pointl: super::super::Foundation::POINTL,
-    pub dwFileAttributes: u32,
-    pub ftCreationTime: super::super::Foundation::FILETIME,
-    pub ftLastAccessTime: super::super::Foundation::FILETIME,
-    pub ftLastWriteTime: super::super::Foundation::FILETIME,
-    pub nFileSizeHigh: u32,
-    pub nFileSizeLow: u32,
-    pub cFileName: [u16; 260],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FILEDESCRIPTORW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FILEDESCRIPTORW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FILEGROUPDESCRIPTORA {
-    pub cItems: u32,
-    pub fgd: [FILEDESCRIPTORA; 1],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FILEGROUPDESCRIPTORA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FILEGROUPDESCRIPTORA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FILEGROUPDESCRIPTORW {
-    pub cItems: u32,
-    pub fgd: [FILEDESCRIPTORW; 1],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FILEGROUPDESCRIPTORW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FILEGROUPDESCRIPTORW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FILEOPENDIALOGOPTIONS = u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_OVERWRITEPROMPT: FILEOPENDIALOGOPTIONS = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_STRICTFILETYPES: FILEOPENDIALOGOPTIONS = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_NOCHANGEDIR: FILEOPENDIALOGOPTIONS = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_PICKFOLDERS: FILEOPENDIALOGOPTIONS = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_FORCEFILESYSTEM: FILEOPENDIALOGOPTIONS = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_ALLNONSTORAGEITEMS: FILEOPENDIALOGOPTIONS = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_NOVALIDATE: FILEOPENDIALOGOPTIONS = 256u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_ALLOWMULTISELECT: FILEOPENDIALOGOPTIONS = 512u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_PATHMUSTEXIST: FILEOPENDIALOGOPTIONS = 2048u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_FILEMUSTEXIST: FILEOPENDIALOGOPTIONS = 4096u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_CREATEPROMPT: FILEOPENDIALOGOPTIONS = 8192u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_SHAREAWARE: FILEOPENDIALOGOPTIONS = 16384u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_NOREADONLYRETURN: FILEOPENDIALOGOPTIONS = 32768u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_NOTESTFILECREATE: FILEOPENDIALOGOPTIONS = 65536u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_HIDEMRUPLACES: FILEOPENDIALOGOPTIONS = 131072u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_HIDEPINNEDPLACES: FILEOPENDIALOGOPTIONS = 262144u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_NODEREFERENCELINKS: FILEOPENDIALOGOPTIONS = 1048576u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_OKBUTTONNEEDSINTERACTION: FILEOPENDIALOGOPTIONS = 2097152u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_DONTADDTORECENT: FILEOPENDIALOGOPTIONS = 33554432u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_FORCESHOWHIDDEN: FILEOPENDIALOGOPTIONS = 268435456u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_DEFAULTNOMINIMODE: FILEOPENDIALOGOPTIONS = 536870912u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_FORCEPREVIEWPANEON: FILEOPENDIALOGOPTIONS = 1073741824u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOS_SUPPORTSTREAMABLEITEMS: FILEOPENDIALOGOPTIONS = 2147483648u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FILETYPEATTRIBUTEFLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_None: FILETYPEATTRIBUTEFLAGS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_Exclude: FILETYPEATTRIBUTEFLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_Show: FILETYPEATTRIBUTEFLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_HasExtension: FILETYPEATTRIBUTEFLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoEdit: FILETYPEATTRIBUTEFLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoRemove: FILETYPEATTRIBUTEFLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoNewVerb: FILETYPEATTRIBUTEFLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoEditVerb: FILETYPEATTRIBUTEFLAGS = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoRemoveVerb: FILETYPEATTRIBUTEFLAGS = 128i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoEditDesc: FILETYPEATTRIBUTEFLAGS = 256i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoEditIcon: FILETYPEATTRIBUTEFLAGS = 512i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoEditDflt: FILETYPEATTRIBUTEFLAGS = 1024i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoEditVerbCmd: FILETYPEATTRIBUTEFLAGS = 2048i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoEditVerbExe: FILETYPEATTRIBUTEFLAGS = 4096i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoDDE: FILETYPEATTRIBUTEFLAGS = 8192i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoEditMIME: FILETYPEATTRIBUTEFLAGS = 32768i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_OpenIsSafe: FILETYPEATTRIBUTEFLAGS = 65536i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_AlwaysUnsafe: FILETYPEATTRIBUTEFLAGS = 131072i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_NoRecentDocs: FILETYPEATTRIBUTEFLAGS = 1048576i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_SafeForElevation: FILETYPEATTRIBUTEFLAGS = 2097152i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FTA_AlwaysUseDirectInvoke: FILETYPEATTRIBUTEFLAGS = 4194304i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct FILE_ATTRIBUTES_ARRAY {
-    pub cItems: u32,
-    pub dwSumFileAttributes: u32,
-    pub dwProductFileAttributes: u32,
-    pub rgdwFileAttributes: [u32; 1],
-}
-impl ::core::marker::Copy for FILE_ATTRIBUTES_ARRAY {}
-impl ::core::clone::Clone for FILE_ATTRIBUTES_ARRAY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FILE_OPERATION_FLAGS2 = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOF2_NONE: FILE_OPERATION_FLAGS2 = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FOF2_MERGEFOLDERSONCOLLISION: FILE_OPERATION_FLAGS2 = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FILE_USAGE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FUT_PLAYING: FILE_USAGE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FUT_EDITING: FILE_USAGE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FUT_GENERIC: FILE_USAGE_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FLYOUT_PLACEMENT = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FP_DEFAULT: FLYOUT_PLACEMENT = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FP_ABOVE: FLYOUT_PLACEMENT = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FP_BELOW: FLYOUT_PLACEMENT = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FP_LEFT: FLYOUT_PLACEMENT = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FP_RIGHT: FLYOUT_PLACEMENT = 4i32;
 pub const FMTID_Briefcase: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 848136993, data2: 30505, data3: 19452, data4: [149, 76, 144, 43, 50, 157, 86, 176] };
 pub const FMTID_CustomImageProperties: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2127399694, data2: 49462, data3: 19099, data4: [148, 17, 78, 189, 102, 115, 204, 195] };
 pub const FMTID_DRM: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2930514404, data2: 35246, data3: 17672, data4: [185, 183, 187, 134, 122, 190, 226, 237] };
@@ -5265,74 +3640,6 @@ pub const FOF_SIMPLEPROGRESS: u32 = 256u32;
 pub const FOF_WANTMAPPINGHANDLE: u32 = 32u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const FOF_WANTNUKEWARNING: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FOLDERFLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NONE: FOLDERFLAGS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_AUTOARRANGE: FOLDERFLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_ABBREVIATEDNAMES: FOLDERFLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_SNAPTOGRID: FOLDERFLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_OWNERDATA: FOLDERFLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_BESTFITWINDOW: FOLDERFLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_DESKTOP: FOLDERFLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_SINGLESEL: FOLDERFLAGS = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NOSUBFOLDERS: FOLDERFLAGS = 128i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_TRANSPARENT: FOLDERFLAGS = 256i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NOCLIENTEDGE: FOLDERFLAGS = 512i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NOSCROLL: FOLDERFLAGS = 1024i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_ALIGNLEFT: FOLDERFLAGS = 2048i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NOICONS: FOLDERFLAGS = 4096i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_SHOWSELALWAYS: FOLDERFLAGS = 8192i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NOVISIBLE: FOLDERFLAGS = 16384i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_SINGLECLICKACTIVATE: FOLDERFLAGS = 32768i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NOWEBVIEW: FOLDERFLAGS = 65536i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_HIDEFILENAMES: FOLDERFLAGS = 131072i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_CHECKSELECT: FOLDERFLAGS = 262144i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NOENUMREFRESH: FOLDERFLAGS = 524288i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NOGROUPING: FOLDERFLAGS = 1048576i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_FULLROWSELECT: FOLDERFLAGS = 2097152i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NOFILTERS: FOLDERFLAGS = 4194304i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NOCOLUMNHEADER: FOLDERFLAGS = 8388608i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NOHEADERINALLVIEWS: FOLDERFLAGS = 16777216i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_EXTENDEDTILES: FOLDERFLAGS = 33554432i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_TRICHECKSELECT: FOLDERFLAGS = 67108864i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_AUTOCHECKSELECT: FOLDERFLAGS = 134217728i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_NOBROWSERVIEWSTATE: FOLDERFLAGS = 268435456i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_SUBSETGROUPS: FOLDERFLAGS = 536870912i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_USESEARCHFOLDER: FOLDERFLAGS = 1073741824i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FWF_ALLOWRTLREADING: FOLDERFLAGS = -2147483648i32;
 pub const FOLDERID_AccountPictures: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 9216177, data2: 21940, data3: 19542, data4: [184, 168, 77, 228, 178, 153, 211, 190] };
 pub const FOLDERID_AddNewPrograms: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3730954609, data2: 24252, data3: 20226, data4: [163, 169, 108, 130, 137, 94, 92, 4] };
 pub const FOLDERID_AdminTools: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1917776240, data2: 42029, data3: 20463, data4: [159, 38, 182, 14, 132, 111, 186, 79] };
@@ -5475,49 +3782,6 @@ pub const FOLDERID_UsersLibraries: ::windows_sys::core::GUID = ::windows_sys::co
 pub const FOLDERID_Videos: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 412654365, data2: 39349, data3: 17755, data4: [132, 28, 171, 124, 116, 228, 221, 252] };
 pub const FOLDERID_VideosLibrary: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1226740271, data2: 22083, data3: 19188, data4: [167, 235, 78, 122, 19, 141, 129, 116] };
 pub const FOLDERID_Windows: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4086035460, data2: 7491, data3: 17138, data4: [147, 5, 103, 222, 11, 40, 252, 35] };
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FOLDERLOGICALVIEWMODE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FLVM_UNSPECIFIED: FOLDERLOGICALVIEWMODE = -1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FLVM_FIRST: FOLDERLOGICALVIEWMODE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FLVM_DETAILS: FOLDERLOGICALVIEWMODE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FLVM_TILES: FOLDERLOGICALVIEWMODE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FLVM_ICONS: FOLDERLOGICALVIEWMODE = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FLVM_LIST: FOLDERLOGICALVIEWMODE = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FLVM_CONTENT: FOLDERLOGICALVIEWMODE = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FLVM_LAST: FOLDERLOGICALVIEWMODE = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct FOLDERSETDATA {
-    pub _fs: FOLDERSETTINGS,
-    pub _vidRestore: ::windows_sys::core::GUID,
-    pub _dwViewPriority: u32,
-}
-impl ::core::marker::Copy for FOLDERSETDATA {}
-impl ::core::clone::Clone for FOLDERSETDATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct FOLDERSETTINGS {
-    pub ViewMode: u32,
-    pub fFlags: u32,
-}
-impl ::core::marker::Copy for FOLDERSETTINGS {}
-impl ::core::clone::Clone for FOLDERSETTINGS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub const FOLDERTYPEID_AccountPictures: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3676986767, data2: 1766, data3: 16391, data4: [171, 166, 175, 135, 125, 82, 110, 166] };
 pub const FOLDERTYPEID_Communications: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2437373925, data2: 22635, data3: 20154, data4: [141, 117, 209, 116, 52, 184, 205, 246] };
 pub const FOLDERTYPEID_CompressedFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2149662338, data2: 48381, data3: 19535, data4: [136, 23, 187, 39, 96, 18, 103, 169] };
@@ -5555,52 +3819,6 @@ pub const FOLDERTYPEID_UserFiles: ::windows_sys::core::GUID = ::windows_sys::cor
 pub const FOLDERTYPEID_UsersLibraries: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3302592265, data2: 24868, data3: 20448, data4: [153, 66, 130, 100, 22, 8, 45, 169] };
 pub const FOLDERTYPEID_Videos: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1604936711, data2: 32375, data3: 18492, data4: [172, 147, 105, 29, 5, 133, 13, 232] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FOLDERVIEWMODE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVM_AUTO: FOLDERVIEWMODE = -1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVM_FIRST: FOLDERVIEWMODE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVM_ICON: FOLDERVIEWMODE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVM_SMALLICON: FOLDERVIEWMODE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVM_LIST: FOLDERVIEWMODE = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVM_DETAILS: FOLDERVIEWMODE = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVM_THUMBNAIL: FOLDERVIEWMODE = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVM_TILE: FOLDERVIEWMODE = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVM_THUMBSTRIP: FOLDERVIEWMODE = 7i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVM_CONTENT: FOLDERVIEWMODE = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVM_LAST: FOLDERVIEWMODE = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FOLDERVIEWOPTIONS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVO_DEFAULT: FOLDERVIEWOPTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVO_VISTALAYOUT: FOLDERVIEWOPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVO_CUSTOMPOSITION: FOLDERVIEWOPTIONS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVO_CUSTOMORDERING: FOLDERVIEWOPTIONS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVO_SUPPORTHYPERLINKS: FOLDERVIEWOPTIONS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVO_NOANIMATIONS: FOLDERVIEWOPTIONS = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVO_NOSCROLLTIPS: FOLDERVIEWOPTIONS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FOLDER_ENUM_MODE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FEM_VIEWRESULT: FOLDER_ENUM_MODE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FEM_NAVIGATION: FOLDER_ENUM_MODE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const FO_COPY: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const FO_DELETE: u32 = 3u32;
@@ -5619,24 +3837,10 @@ pub const FVSIF_NEWFILE: u32 = 2147483648u32;
 pub const FVSIF_PINNED: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const FVSIF_RECT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type FVTEXTTYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const FVST_EMPTYTEXT: FVTEXTTYPE = 0i32;
 pub const FileOpenDialog: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3692845724, data2: 59530, data3: 19934, data4: [165, 161, 96, 248, 42, 32, 174, 247] };
 pub const FileOperation: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 986731893, data2: 34903, data3: 18512, data4: [146, 119, 17, 184, 91, 219, 142, 9] };
 pub const FileSaveDialog: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3233080051, data2: 47649, data3: 18291, data4: [141, 186, 51, 94, 201, 70, 235, 139] };
 pub const FileSearchBand: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3303944691, data2: 18280, data3: 4562, data4: [190, 92, 0, 160, 201, 168, 61, 161] };
-pub type Folder = *mut ::core::ffi::c_void;
-pub type Folder2 = *mut ::core::ffi::c_void;
-pub type Folder3 = *mut ::core::ffi::c_void;
-pub type FolderItem = *mut ::core::ffi::c_void;
-pub type FolderItem2 = *mut ::core::ffi::c_void;
-pub type FolderItemVerb = *mut ::core::ffi::c_void;
-pub type FolderItemVerbs = *mut ::core::ffi::c_void;
-pub type FolderItems = *mut ::core::ffi::c_void;
-pub type FolderItems2 = *mut ::core::ffi::c_void;
-pub type FolderItems3 = *mut ::core::ffi::c_void;
 pub const FolderViewHost: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 548522787, data2: 26984, data3: 20153, data4: [183, 212, 166, 109, 0, 208, 124, 238] };
 pub const FrameworkInputPane: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3574729379, data2: 18106, data3: 17605, data4: [130, 45, 202, 128, 146, 193, 252, 114] };
 pub const FreeSpaceCategorizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3042998163, data2: 9388, data3: 17607, data4: [130, 226, 131, 23, 38, 170, 108, 183] };
@@ -5702,184 +3906,13 @@ pub const GIL_PERINSTANCE: u32 = 2u32;
 pub const GIL_SHIELD: u32 = 512u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const GIL_SIMULATEDOC: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const GPFIDL_ALTNAME: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const GPFIDL_DEFAULT: i32 = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const GPFIDL_UNCPRINTER: i32 = 2i32;
 pub const GenericCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 634108310, data2: 37613, data3: 17790, data4: [178, 140, 71, 116, 8, 75, 213, 98] };
-pub type HDROP = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct HELPINFO {
-    pub cbSize: u32,
-    pub iContextType: i32,
-    pub iCtrlId: i32,
-    pub hItemHandle: super::super::Foundation::HANDLE,
-    pub dwContextId: usize,
-    pub MousePos: super::super::Foundation::POINT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for HELPINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for HELPINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct HELPWININFOA {
-    pub wStructSize: i32,
-    pub x: i32,
-    pub y: i32,
-    pub dx: i32,
-    pub dy: i32,
-    pub wMax: i32,
-    pub rgchMember: [super::super::Foundation::CHAR; 2],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for HELPWININFOA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for HELPWININFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct HELPWININFOW {
-    pub wStructSize: i32,
-    pub x: i32,
-    pub y: i32,
-    pub dx: i32,
-    pub dy: i32,
-    pub wMax: i32,
-    pub rgchMember: [u16; 2],
-}
-impl ::core::marker::Copy for HELPWININFOW {}
-impl ::core::clone::Clone for HELPWININFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type HLBWIF_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLBWIF_HASFRAMEWNDINFO: HLBWIF_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLBWIF_HASDOCWNDINFO: HLBWIF_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLBWIF_FRAMEWNDMAXIMIZED: HLBWIF_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLBWIF_DOCWNDMAXIMIZED: HLBWIF_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLBWIF_HASWEBTOOLBARINFO: HLBWIF_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLBWIF_WEBTOOLBARHIDDEN: HLBWIF_FLAGS = 32u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct HLBWINFO {
-    pub cbSize: u32,
-    pub grfHLBWIF: u32,
-    pub rcFramePos: super::super::Foundation::RECT,
-    pub rcDocPos: super::super::Foundation::RECT,
-    pub hltbinfo: HLTBINFO,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for HLBWINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for HLBWINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type HLFNAMEF = u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLFNAMEF_DEFAULT: HLFNAMEF = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLFNAMEF_TRYCACHE: HLFNAMEF = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLFNAMEF_TRYPRETTYTARGET: HLFNAMEF = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLFNAMEF_TRYFULLTARGET: HLFNAMEF = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLFNAMEF_TRYWIN95SHORTCUT: HLFNAMEF = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type HLID_INFO = u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLID_INVALID: HLID_INFO = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLID_PREVIOUS: HLID_INFO = 4294967295u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLID_NEXT: HLID_INFO = 4294967294u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLID_CURRENT: HLID_INFO = 4294967293u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLID_STACKBOTTOM: HLID_INFO = 4294967292u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLID_STACKTOP: HLID_INFO = 4294967291u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type HLINKGETREF = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLINKGETREF_DEFAULT: HLINKGETREF = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLINKGETREF_ABSOLUTE: HLINKGETREF = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLINKGETREF_RELATIVE: HLINKGETREF = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type HLINKMISC = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLINKMISC_RELATIVE: HLINKMISC = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type HLINKSETF = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLINKSETF_TARGET: HLINKSETF = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLINKSETF_LOCATION: HLINKSETF = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type HLINKWHICHMK = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLINKWHICHMK_CONTAINER: HLINKWHICHMK = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLINKWHICHMK_BASE: HLINKWHICHMK = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const HLINK_E_FIRST: ::windows_sys::core::HRESULT = -2147221248i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const HLINK_S_DONTHIDE: i32 = 262400i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const HLINK_S_FIRST: ::windows_sys::core::HRESULT = 262400i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct HLITEM {
-    pub uHLID: u32,
-    pub pwzFriendlyName: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for HLITEM {}
-impl ::core::clone::Clone for HLITEM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type HLNF = u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLNF_INTERNALJUMP: HLNF = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLNF_OPENINNEWWINDOW: HLNF = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLNF_NAVIGATINGBACK: HLNF = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLNF_NAVIGATINGFORWARD: HLNF = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLNF_NAVIGATINGTOSTACKITEM: HLNF = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLNF_CREATENOHISTORY: HLNF = 32u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const HLNF_ALLOW_AUTONAVIGATE: u32 = 536870912u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -5897,127 +3930,11 @@ pub const HLNF_TRUSTFIRSTDOWNLOAD: u32 = 16777216u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const HLNF_UNTRUSTEDFORDOWNLOAD: u32 = 33554432u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type HLQF_INFO = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLQF_ISVALID: HLQF_INFO = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLQF_ISCURRENT: HLQF_INFO = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct HLTBINFO {
-    pub uDockType: u32,
-    pub rcTbPos: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for HLTBINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for HLTBINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type HLTB_INFO = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLTB_DOCKEDLEFT: HLTB_INFO = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLTB_DOCKEDTOP: HLTB_INFO = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLTB_DOCKEDRIGHT: HLTB_INFO = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLTB_DOCKEDBOTTOM: HLTB_INFO = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLTB_FLOATING: HLTB_INFO = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type HOMEGROUPSHARINGCHOICES = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HGSC_NONE: HOMEGROUPSHARINGCHOICES = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HGSC_MUSICLIBRARY: HOMEGROUPSHARINGCHOICES = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HGSC_PICTURESLIBRARY: HOMEGROUPSHARINGCHOICES = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HGSC_VIDEOSLIBRARY: HOMEGROUPSHARINGCHOICES = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HGSC_DOCUMENTSLIBRARY: HOMEGROUPSHARINGCHOICES = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HGSC_PRINTERS: HOMEGROUPSHARINGCHOICES = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const HOMEGROUP_SECURITY_GROUP: &str = "HomeUsers";
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const HOMEGROUP_SECURITY_GROUP_MULTI: &str = "HUG";
-pub type HPSXA = isize;
 pub const HideInputPaneAnimationCoordinator: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 944194225, data2: 10871, data3: 19635, data4: [140, 248, 17, 54, 245, 225, 126, 89] };
 pub const HomeGroup: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3732388356, data2: 15506, data3: 19729, data4: [161, 165, 66, 53, 42, 83, 224, 227] };
-pub type IACList = *mut ::core::ffi::c_void;
-pub type IACList2 = *mut ::core::ffi::c_void;
-pub type IAccessibilityDockingService = *mut ::core::ffi::c_void;
-pub type IAccessibilityDockingServiceCallback = *mut ::core::ffi::c_void;
-pub type IAccessibleObject = *mut ::core::ffi::c_void;
-pub type IActionProgress = *mut ::core::ffi::c_void;
-pub type IActionProgressDialog = *mut ::core::ffi::c_void;
-pub type IAppActivationUIInfo = *mut ::core::ffi::c_void;
-pub type IAppPublisher = *mut ::core::ffi::c_void;
-pub type IAppVisibility = *mut ::core::ffi::c_void;
-pub type IAppVisibilityEvents = *mut ::core::ffi::c_void;
-pub type IApplicationActivationManager = *mut ::core::ffi::c_void;
-pub type IApplicationAssociationRegistration = *mut ::core::ffi::c_void;
-pub type IApplicationAssociationRegistrationUI = *mut ::core::ffi::c_void;
-pub type IApplicationDesignModeSettings = *mut ::core::ffi::c_void;
-pub type IApplicationDesignModeSettings2 = *mut ::core::ffi::c_void;
-pub type IApplicationDestinations = *mut ::core::ffi::c_void;
-pub type IApplicationDocumentLists = *mut ::core::ffi::c_void;
-pub type IAssocHandler = *mut ::core::ffi::c_void;
-pub type IAssocHandlerInvoker = *mut ::core::ffi::c_void;
-pub type IAttachmentExecute = *mut ::core::ffi::c_void;
-pub type IAutoComplete = *mut ::core::ffi::c_void;
-pub type IAutoComplete2 = *mut ::core::ffi::c_void;
-pub type IAutoCompleteDropDown = *mut ::core::ffi::c_void;
-pub type IBandHost = *mut ::core::ffi::c_void;
-pub type IBandSite = *mut ::core::ffi::c_void;
-pub type IBannerNotificationHandler = *mut ::core::ffi::c_void;
-pub type IBanneredBar = *mut ::core::ffi::c_void;
-pub type IBrowserFrameOptions = *mut ::core::ffi::c_void;
-pub type IBrowserService = *mut ::core::ffi::c_void;
-pub type IBrowserService2 = *mut ::core::ffi::c_void;
-pub type IBrowserService3 = *mut ::core::ffi::c_void;
-pub type IBrowserService4 = *mut ::core::ffi::c_void;
-pub type ICDBurn = *mut ::core::ffi::c_void;
-pub type ICDBurnExt = *mut ::core::ffi::c_void;
-pub type ICategorizer = *mut ::core::ffi::c_void;
-pub type ICategoryProvider = *mut ::core::ffi::c_void;
-pub type IColumnManager = *mut ::core::ffi::c_void;
-pub type IColumnProvider = *mut ::core::ffi::c_void;
-pub type ICommDlgBrowser = *mut ::core::ffi::c_void;
-pub type ICommDlgBrowser2 = *mut ::core::ffi::c_void;
-pub type ICommDlgBrowser3 = *mut ::core::ffi::c_void;
-pub type IComputerInfoChangeNotify = *mut ::core::ffi::c_void;
-pub type IConnectableCredentialProviderCredential = *mut ::core::ffi::c_void;
-pub type IContactManagerInterop = *mut ::core::ffi::c_void;
-pub type IContextMenu = *mut ::core::ffi::c_void;
-pub type IContextMenu2 = *mut ::core::ffi::c_void;
-pub type IContextMenu3 = *mut ::core::ffi::c_void;
-pub type IContextMenuCB = *mut ::core::ffi::c_void;
-pub type IContextMenuSite = *mut ::core::ffi::c_void;
-pub type ICopyHookA = *mut ::core::ffi::c_void;
-pub type ICopyHookW = *mut ::core::ffi::c_void;
-pub type ICreateProcessInputs = *mut ::core::ffi::c_void;
-pub type ICreatingProcess = *mut ::core::ffi::c_void;
-pub type ICredentialProvider = *mut ::core::ffi::c_void;
-pub type ICredentialProviderCredential = *mut ::core::ffi::c_void;
-pub type ICredentialProviderCredential2 = *mut ::core::ffi::c_void;
-pub type ICredentialProviderCredentialEvents = *mut ::core::ffi::c_void;
-pub type ICredentialProviderCredentialEvents2 = *mut ::core::ffi::c_void;
-pub type ICredentialProviderCredentialWithFieldOptions = *mut ::core::ffi::c_void;
-pub type ICredentialProviderEvents = *mut ::core::ffi::c_void;
-pub type ICredentialProviderFilter = *mut ::core::ffi::c_void;
-pub type ICredentialProviderSetUserArray = *mut ::core::ffi::c_void;
-pub type ICredentialProviderUser = *mut ::core::ffi::c_void;
-pub type ICredentialProviderUserArray = *mut ::core::ffi::c_void;
-pub type ICurrentItem = *mut ::core::ffi::c_void;
-pub type ICurrentWorkingDirectory = *mut ::core::ffi::c_void;
-pub type ICustomDestinationList = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const IDC_OFFLINE_HAND: u32 = 103u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -6040,30 +3957,6 @@ pub const IDO_SHGIOI_SLOWFILE: u64 = 4294967293u64;
 pub const IDS_DESCRIPTION: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ID_APP: u32 = 100u32;
-pub type IDataObjectAsyncCapability = *mut ::core::ffi::c_void;
-pub type IDataObjectProvider = *mut ::core::ffi::c_void;
-pub type IDataTransferManagerInterop = *mut ::core::ffi::c_void;
-pub type IDefaultExtractIconInit = *mut ::core::ffi::c_void;
-pub type IDefaultFolderMenuInitialize = *mut ::core::ffi::c_void;
-pub type IDelegateFolder = *mut ::core::ffi::c_void;
-pub type IDelegateItem = *mut ::core::ffi::c_void;
-pub type IDeskBand = *mut ::core::ffi::c_void;
-pub type IDeskBand2 = *mut ::core::ffi::c_void;
-pub type IDeskBandInfo = *mut ::core::ffi::c_void;
-pub type IDeskBar = *mut ::core::ffi::c_void;
-pub type IDeskBarClient = *mut ::core::ffi::c_void;
-pub type IDesktopGadget = *mut ::core::ffi::c_void;
-pub type IDesktopWallpaper = *mut ::core::ffi::c_void;
-pub type IDestinationStreamFactory = *mut ::core::ffi::c_void;
-pub type IDisplayItem = *mut ::core::ffi::c_void;
-pub type IDocViewSite = *mut ::core::ffi::c_void;
-pub type IDockingWindow = *mut ::core::ffi::c_void;
-pub type IDockingWindowFrame = *mut ::core::ffi::c_void;
-pub type IDockingWindowSite = *mut ::core::ffi::c_void;
-pub type IDragSourceHelper = *mut ::core::ffi::c_void;
-pub type IDragSourceHelper2 = *mut ::core::ffi::c_void;
-pub type IDropTargetHelper = *mut ::core::ffi::c_void;
-pub type IDynamicHWHandler = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const IEIFLAG_ASPECT: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -6094,186 +3987,17 @@ pub const IEI_PRIORITY_MAX: u32 = 2147483647u32;
 pub const IEI_PRIORITY_MIN: u32 = 0u32;
 pub const IENamespaceTreeControl: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2900700419, data2: 58829, data3: 19232, data4: [130, 255, 231, 27, 17, 190, 174, 29] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type IEPDNFLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const IEPDN_BINDINGUI: IEPDNFLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type IESHORTCUTFLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const IESHORTCUT_NEWBROWSER: IESHORTCUTFLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const IESHORTCUT_OPENNEWTAB: IESHORTCUTFLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const IESHORTCUT_FORCENAVIGATE: IESHORTCUTFLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const IESHORTCUT_BACKGROUNDTAB: IESHORTCUTFLAGS = 8i32;
-pub type IEnumACString = *mut ::core::ffi::c_void;
-pub type IEnumAssocHandlers = *mut ::core::ffi::c_void;
-pub type IEnumExplorerCommand = *mut ::core::ffi::c_void;
-pub type IEnumExtraSearch = *mut ::core::ffi::c_void;
-pub type IEnumFullIDList = *mut ::core::ffi::c_void;
-pub type IEnumHLITEM = *mut ::core::ffi::c_void;
-pub type IEnumIDList = *mut ::core::ffi::c_void;
-pub type IEnumObjects = *mut ::core::ffi::c_void;
-pub type IEnumPublishedApps = *mut ::core::ffi::c_void;
-pub type IEnumReadyCallback = *mut ::core::ffi::c_void;
-pub type IEnumResources = *mut ::core::ffi::c_void;
-pub type IEnumShellItems = *mut ::core::ffi::c_void;
-pub type IEnumSyncMgrConflict = *mut ::core::ffi::c_void;
-pub type IEnumSyncMgrEvents = *mut ::core::ffi::c_void;
-pub type IEnumSyncMgrSyncItems = *mut ::core::ffi::c_void;
-pub type IEnumTravelLogEntry = *mut ::core::ffi::c_void;
-pub type IEnumerableView = *mut ::core::ffi::c_void;
-pub type IExecuteCommand = *mut ::core::ffi::c_void;
-pub type IExecuteCommandApplicationHostEnvironment = *mut ::core::ffi::c_void;
-pub type IExecuteCommandHost = *mut ::core::ffi::c_void;
-pub type IExpDispSupport = *mut ::core::ffi::c_void;
-pub type IExpDispSupportXP = *mut ::core::ffi::c_void;
-pub type IExplorerBrowser = *mut ::core::ffi::c_void;
-pub type IExplorerBrowserEvents = *mut ::core::ffi::c_void;
-pub type IExplorerCommand = *mut ::core::ffi::c_void;
-pub type IExplorerCommandProvider = *mut ::core::ffi::c_void;
-pub type IExplorerCommandState = *mut ::core::ffi::c_void;
-pub type IExplorerPaneVisibility = *mut ::core::ffi::c_void;
-pub type IExtensionServices = *mut ::core::ffi::c_void;
-pub type IExtractIconA = *mut ::core::ffi::c_void;
-pub type IExtractIconW = *mut ::core::ffi::c_void;
-pub type IExtractImage = *mut ::core::ffi::c_void;
-pub type IExtractImage2 = *mut ::core::ffi::c_void;
-pub type IFileDialog = *mut ::core::ffi::c_void;
-pub type IFileDialog2 = *mut ::core::ffi::c_void;
-pub type IFileDialogControlEvents = *mut ::core::ffi::c_void;
-pub type IFileDialogCustomize = *mut ::core::ffi::c_void;
-pub type IFileDialogEvents = *mut ::core::ffi::c_void;
-pub type IFileIsInUse = *mut ::core::ffi::c_void;
-pub type IFileOpenDialog = *mut ::core::ffi::c_void;
-pub type IFileOperation = *mut ::core::ffi::c_void;
-pub type IFileOperation2 = *mut ::core::ffi::c_void;
-pub type IFileOperationProgressSink = *mut ::core::ffi::c_void;
-pub type IFileSaveDialog = *mut ::core::ffi::c_void;
-pub type IFileSearchBand = *mut ::core::ffi::c_void;
-pub type IFileSyncMergeHandler = *mut ::core::ffi::c_void;
-pub type IFileSystemBindData = *mut ::core::ffi::c_void;
-pub type IFileSystemBindData2 = *mut ::core::ffi::c_void;
-pub type IFolderBandPriv = *mut ::core::ffi::c_void;
-pub type IFolderFilter = *mut ::core::ffi::c_void;
-pub type IFolderFilterSite = *mut ::core::ffi::c_void;
-pub type IFolderView = *mut ::core::ffi::c_void;
-pub type IFolderView2 = *mut ::core::ffi::c_void;
-pub type IFolderViewHost = *mut ::core::ffi::c_void;
-pub type IFolderViewOC = *mut ::core::ffi::c_void;
-pub type IFolderViewOptions = *mut ::core::ffi::c_void;
-pub type IFolderViewSettings = *mut ::core::ffi::c_void;
-pub type IFrameworkInputPane = *mut ::core::ffi::c_void;
-pub type IFrameworkInputPaneHandler = *mut ::core::ffi::c_void;
-pub type IGetServiceIds = *mut ::core::ffi::c_void;
-pub type IHWEventHandler = *mut ::core::ffi::c_void;
-pub type IHWEventHandler2 = *mut ::core::ffi::c_void;
-pub type IHandlerActivationHost = *mut ::core::ffi::c_void;
-pub type IHandlerInfo = *mut ::core::ffi::c_void;
-pub type IHandlerInfo2 = *mut ::core::ffi::c_void;
-pub type IHlink = *mut ::core::ffi::c_void;
-pub type IHlinkBrowseContext = *mut ::core::ffi::c_void;
-pub type IHlinkFrame = *mut ::core::ffi::c_void;
-pub type IHlinkSite = *mut ::core::ffi::c_void;
-pub type IHlinkTarget = *mut ::core::ffi::c_void;
-pub type IHomeGroup = *mut ::core::ffi::c_void;
-pub type IIOCancelInformation = *mut ::core::ffi::c_void;
-pub type IIdentityName = *mut ::core::ffi::c_void;
-pub type IImageRecompress = *mut ::core::ffi::c_void;
-pub type IInitializeCommand = *mut ::core::ffi::c_void;
-pub type IInitializeNetworkFolder = *mut ::core::ffi::c_void;
-pub type IInitializeObject = *mut ::core::ffi::c_void;
-pub type IInitializeWithBindCtx = *mut ::core::ffi::c_void;
-pub type IInitializeWithItem = *mut ::core::ffi::c_void;
-pub type IInitializeWithPropertyStore = *mut ::core::ffi::c_void;
-pub type IInitializeWithWindow = *mut ::core::ffi::c_void;
-pub type IInputObject = *mut ::core::ffi::c_void;
-pub type IInputObject2 = *mut ::core::ffi::c_void;
-pub type IInputObjectSite = *mut ::core::ffi::c_void;
-pub type IInputPaneAnimationCoordinator = *mut ::core::ffi::c_void;
-pub type IInputPanelConfiguration = *mut ::core::ffi::c_void;
-pub type IInputPanelInvocationConfiguration = *mut ::core::ffi::c_void;
-pub type IInsertItem = *mut ::core::ffi::c_void;
-pub type IItemNameLimits = *mut ::core::ffi::c_void;
-pub type IKnownFolder = *mut ::core::ffi::c_void;
-pub type IKnownFolderManager = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ILMM_IE4: u32 = 0u32;
-pub type ILaunchSourceAppUserModelId = *mut ::core::ffi::c_void;
-pub type ILaunchSourceViewSizePreference = *mut ::core::ffi::c_void;
-pub type ILaunchTargetMonitor = *mut ::core::ffi::c_void;
-pub type ILaunchTargetViewSizePreference = *mut ::core::ffi::c_void;
-pub type ILaunchUIContext = *mut ::core::ffi::c_void;
-pub type ILaunchUIContextProvider = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const IMM_ACC_DOCKING_E_DOCKOCCUPIED: ::windows_sys::core::HRESULT = -2144927183i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const IMM_ACC_DOCKING_E_INSUFFICIENTHEIGHT: ::windows_sys::core::HRESULT = -2144927184i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const IMSC_E_SHELL_COMPONENT_STARTUP_FAILURE: ::windows_sys::core::HRESULT = -2144927181i32;
-pub type IMenuBand = *mut ::core::ffi::c_void;
-pub type IMenuPopup = *mut ::core::ffi::c_void;
-pub type IModalWindow = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const INTERNET_MAX_PATH_LENGTH: u32 = 2048u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const INTERNET_MAX_SCHEME_LENGTH: u32 = 32u32;
-pub type INameSpaceTreeAccessible = *mut ::core::ffi::c_void;
-pub type INameSpaceTreeControl = *mut ::core::ffi::c_void;
-pub type INameSpaceTreeControl2 = *mut ::core::ffi::c_void;
-pub type INameSpaceTreeControlCustomDraw = *mut ::core::ffi::c_void;
-pub type INameSpaceTreeControlDropHandler = *mut ::core::ffi::c_void;
-pub type INameSpaceTreeControlEvents = *mut ::core::ffi::c_void;
-pub type INameSpaceTreeControlFolderCapabilities = *mut ::core::ffi::c_void;
-pub type INamedPropertyBag = *mut ::core::ffi::c_void;
-pub type INamespaceWalk = *mut ::core::ffi::c_void;
-pub type INamespaceWalkCB = *mut ::core::ffi::c_void;
-pub type INamespaceWalkCB2 = *mut ::core::ffi::c_void;
-pub type INetworkFolderInternal = *mut ::core::ffi::c_void;
-pub type INewMenuClient = *mut ::core::ffi::c_void;
-pub type INewShortcutHookA = *mut ::core::ffi::c_void;
-pub type INewShortcutHookW = *mut ::core::ffi::c_void;
-pub type INewWDEvents = *mut ::core::ffi::c_void;
-pub type INewWindowManager = *mut ::core::ffi::c_void;
-pub type INotifyReplica = *mut ::core::ffi::c_void;
-pub type IObjMgr = *mut ::core::ffi::c_void;
-pub type IObjectProvider = *mut ::core::ffi::c_void;
-pub type IObjectWithAppUserModelID = *mut ::core::ffi::c_void;
-pub type IObjectWithBackReferences = *mut ::core::ffi::c_void;
-pub type IObjectWithCancelEvent = *mut ::core::ffi::c_void;
-pub type IObjectWithFolderEnumMode = *mut ::core::ffi::c_void;
-pub type IObjectWithProgID = *mut ::core::ffi::c_void;
-pub type IObjectWithSelection = *mut ::core::ffi::c_void;
-pub type IOpenControlPanel = *mut ::core::ffi::c_void;
-pub type IOpenSearchSource = *mut ::core::ffi::c_void;
-pub type IOperationsProgressDialog = *mut ::core::ffi::c_void;
-pub type IPackageDebugSettings = *mut ::core::ffi::c_void;
-pub type IPackageDebugSettings2 = *mut ::core::ffi::c_void;
-pub type IPackageExecutionStateChangeNotification = *mut ::core::ffi::c_void;
-pub type IParentAndItem = *mut ::core::ffi::c_void;
-pub type IParseAndCreateItem = *mut ::core::ffi::c_void;
-pub type IPersistFolder = *mut ::core::ffi::c_void;
-pub type IPersistFolder2 = *mut ::core::ffi::c_void;
-pub type IPersistFolder3 = *mut ::core::ffi::c_void;
-pub type IPersistIDList = *mut ::core::ffi::c_void;
-pub type IPreviewHandler = *mut ::core::ffi::c_void;
-pub type IPreviewHandlerFrame = *mut ::core::ffi::c_void;
-pub type IPreviewHandlerVisuals = *mut ::core::ffi::c_void;
-pub type IPreviewItem = *mut ::core::ffi::c_void;
-pub type IPreviousVersionsInfo = *mut ::core::ffi::c_void;
-pub type IProfferService = *mut ::core::ffi::c_void;
-pub type IProgressDialog = *mut ::core::ffi::c_void;
-pub type IPropertyKeyStore = *mut ::core::ffi::c_void;
-pub type IPublishedApp = *mut ::core::ffi::c_void;
-pub type IPublishedApp2 = *mut ::core::ffi::c_void;
-pub type IPublishingWizard = *mut ::core::ffi::c_void;
-pub type IQueryAssociations = *mut ::core::ffi::c_void;
-pub type IQueryCancelAutoPlay = *mut ::core::ffi::c_void;
-pub type IQueryCodePage = *mut ::core::ffi::c_void;
-pub type IQueryContinue = *mut ::core::ffi::c_void;
-pub type IQueryContinueWithStatus = *mut ::core::ffi::c_void;
-pub type IQueryInfo = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const IRTIR_TASK_FINISHED: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -6284,12 +4008,6 @@ pub const IRTIR_TASK_PENDING: u32 = 3u32;
 pub const IRTIR_TASK_RUNNING: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const IRTIR_TASK_SUSPENDED: u32 = 2u32;
-pub type IRegTreeItem = *mut ::core::ffi::c_void;
-pub type IRelatedItem = *mut ::core::ffi::c_void;
-pub type IRemoteComputer = *mut ::core::ffi::c_void;
-pub type IResolveShellLink = *mut ::core::ffi::c_void;
-pub type IResultsFolder = *mut ::core::ffi::c_void;
-pub type IRunnableTask = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ISFBVIEWMODE_LARGEICONS: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -6346,122 +4064,6 @@ pub const IS_FULLSCREEN: u32 = 2u32;
 pub const IS_NORMAL: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const IS_SPLIT: u32 = 4u32;
-pub type IScriptErrorList = *mut ::core::ffi::c_void;
-pub type ISearchBoxInfo = *mut ::core::ffi::c_void;
-pub type ISearchContext = *mut ::core::ffi::c_void;
-pub type ISearchFolderItemFactory = *mut ::core::ffi::c_void;
-pub type ISharedBitmap = *mut ::core::ffi::c_void;
-pub type ISharingConfigurationManager = *mut ::core::ffi::c_void;
-pub type IShellApp = *mut ::core::ffi::c_void;
-pub type IShellBrowser = *mut ::core::ffi::c_void;
-pub type IShellChangeNotify = *mut ::core::ffi::c_void;
-pub type IShellDetails = *mut ::core::ffi::c_void;
-pub type IShellDispatch = *mut ::core::ffi::c_void;
-pub type IShellDispatch2 = *mut ::core::ffi::c_void;
-pub type IShellDispatch3 = *mut ::core::ffi::c_void;
-pub type IShellDispatch4 = *mut ::core::ffi::c_void;
-pub type IShellDispatch5 = *mut ::core::ffi::c_void;
-pub type IShellDispatch6 = *mut ::core::ffi::c_void;
-pub type IShellExtInit = *mut ::core::ffi::c_void;
-pub type IShellFavoritesNameSpace = *mut ::core::ffi::c_void;
-pub type IShellFolder = *mut ::core::ffi::c_void;
-pub type IShellFolder2 = *mut ::core::ffi::c_void;
-pub type IShellFolderBand = *mut ::core::ffi::c_void;
-pub type IShellFolderView = *mut ::core::ffi::c_void;
-pub type IShellFolderViewCB = *mut ::core::ffi::c_void;
-pub type IShellFolderViewDual = *mut ::core::ffi::c_void;
-pub type IShellFolderViewDual2 = *mut ::core::ffi::c_void;
-pub type IShellFolderViewDual3 = *mut ::core::ffi::c_void;
-pub type IShellIcon = *mut ::core::ffi::c_void;
-pub type IShellIconOverlay = *mut ::core::ffi::c_void;
-pub type IShellIconOverlayIdentifier = *mut ::core::ffi::c_void;
-pub type IShellIconOverlayManager = *mut ::core::ffi::c_void;
-pub type IShellImageData = *mut ::core::ffi::c_void;
-pub type IShellImageDataAbort = *mut ::core::ffi::c_void;
-pub type IShellImageDataFactory = *mut ::core::ffi::c_void;
-pub type IShellItem = *mut ::core::ffi::c_void;
-pub type IShellItem2 = *mut ::core::ffi::c_void;
-pub type IShellItemArray = *mut ::core::ffi::c_void;
-pub type IShellItemFilter = *mut ::core::ffi::c_void;
-pub type IShellItemImageFactory = *mut ::core::ffi::c_void;
-pub type IShellItemResources = *mut ::core::ffi::c_void;
-pub type IShellLibrary = *mut ::core::ffi::c_void;
-pub type IShellLinkA = *mut ::core::ffi::c_void;
-pub type IShellLinkDataList = *mut ::core::ffi::c_void;
-pub type IShellLinkDual = *mut ::core::ffi::c_void;
-pub type IShellLinkDual2 = *mut ::core::ffi::c_void;
-pub type IShellLinkW = *mut ::core::ffi::c_void;
-pub type IShellMenu = *mut ::core::ffi::c_void;
-pub type IShellMenuCallback = *mut ::core::ffi::c_void;
-pub type IShellNameSpace = *mut ::core::ffi::c_void;
-pub type IShellPropSheetExt = *mut ::core::ffi::c_void;
-pub type IShellRunDll = *mut ::core::ffi::c_void;
-pub type IShellService = *mut ::core::ffi::c_void;
-pub type IShellTaskScheduler = *mut ::core::ffi::c_void;
-pub type IShellUIHelper = *mut ::core::ffi::c_void;
-pub type IShellUIHelper2 = *mut ::core::ffi::c_void;
-pub type IShellUIHelper3 = *mut ::core::ffi::c_void;
-pub type IShellUIHelper4 = *mut ::core::ffi::c_void;
-pub type IShellUIHelper5 = *mut ::core::ffi::c_void;
-pub type IShellUIHelper6 = *mut ::core::ffi::c_void;
-pub type IShellUIHelper7 = *mut ::core::ffi::c_void;
-pub type IShellUIHelper8 = *mut ::core::ffi::c_void;
-pub type IShellUIHelper9 = *mut ::core::ffi::c_void;
-pub type IShellView = *mut ::core::ffi::c_void;
-pub type IShellView2 = *mut ::core::ffi::c_void;
-pub type IShellView3 = *mut ::core::ffi::c_void;
-pub type IShellWindows = *mut ::core::ffi::c_void;
-pub type ISortColumnArray = *mut ::core::ffi::c_void;
-pub type IStartMenuPinnedList = *mut ::core::ffi::c_void;
-pub type IStorageProviderBanners = *mut ::core::ffi::c_void;
-pub type IStorageProviderCopyHook = *mut ::core::ffi::c_void;
-pub type IStorageProviderHandler = *mut ::core::ffi::c_void;
-pub type IStorageProviderPropertyHandler = *mut ::core::ffi::c_void;
-pub type IStreamAsync = *mut ::core::ffi::c_void;
-pub type IStreamUnbufferedInfo = *mut ::core::ffi::c_void;
-pub type ISuspensionDependencyManager = *mut ::core::ffi::c_void;
-pub type ISyncMgrConflict = *mut ::core::ffi::c_void;
-pub type ISyncMgrConflictFolder = *mut ::core::ffi::c_void;
-pub type ISyncMgrConflictItems = *mut ::core::ffi::c_void;
-pub type ISyncMgrConflictPresenter = *mut ::core::ffi::c_void;
-pub type ISyncMgrConflictResolutionItems = *mut ::core::ffi::c_void;
-pub type ISyncMgrConflictResolveInfo = *mut ::core::ffi::c_void;
-pub type ISyncMgrConflictStore = *mut ::core::ffi::c_void;
-pub type ISyncMgrControl = *mut ::core::ffi::c_void;
-pub type ISyncMgrEnumItems = *mut ::core::ffi::c_void;
-pub type ISyncMgrEvent = *mut ::core::ffi::c_void;
-pub type ISyncMgrEventLinkUIOperation = *mut ::core::ffi::c_void;
-pub type ISyncMgrEventStore = *mut ::core::ffi::c_void;
-pub type ISyncMgrHandler = *mut ::core::ffi::c_void;
-pub type ISyncMgrHandlerCollection = *mut ::core::ffi::c_void;
-pub type ISyncMgrHandlerInfo = *mut ::core::ffi::c_void;
-pub type ISyncMgrRegister = *mut ::core::ffi::c_void;
-pub type ISyncMgrResolutionHandler = *mut ::core::ffi::c_void;
-pub type ISyncMgrScheduleWizardUIOperation = *mut ::core::ffi::c_void;
-pub type ISyncMgrSessionCreator = *mut ::core::ffi::c_void;
-pub type ISyncMgrSyncCallback = *mut ::core::ffi::c_void;
-pub type ISyncMgrSyncItem = *mut ::core::ffi::c_void;
-pub type ISyncMgrSyncItemContainer = *mut ::core::ffi::c_void;
-pub type ISyncMgrSyncItemInfo = *mut ::core::ffi::c_void;
-pub type ISyncMgrSyncResult = *mut ::core::ffi::c_void;
-pub type ISyncMgrSynchronize = *mut ::core::ffi::c_void;
-pub type ISyncMgrSynchronizeCallback = *mut ::core::ffi::c_void;
-pub type ISyncMgrSynchronizeInvoke = *mut ::core::ffi::c_void;
-pub type ISyncMgrUIOperation = *mut ::core::ffi::c_void;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct ITEMSPACING {
-    pub cxSmall: i32,
-    pub cySmall: i32,
-    pub cxLarge: i32,
-    pub cyLarge: i32,
-}
-impl ::core::marker::Copy for ITEMSPACING {}
-impl ::core::clone::Clone for ITEMSPACING {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ITSAT_DEFAULT_PRIORITY: u32 = 268435456u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -6474,50 +4076,6 @@ pub const ITSSFLAG_COMPLETE_ON_DESTROY: u32 = 0u32;
 pub const ITSSFLAG_FLAGS_MASK: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ITSSFLAG_KILL_ON_DESTROY: u32 = 1u32;
-pub type ITaskbarList = *mut ::core::ffi::c_void;
-pub type ITaskbarList2 = *mut ::core::ffi::c_void;
-pub type ITaskbarList3 = *mut ::core::ffi::c_void;
-pub type ITaskbarList4 = *mut ::core::ffi::c_void;
-pub type IThumbnailCache = *mut ::core::ffi::c_void;
-pub type IThumbnailCachePrimer = *mut ::core::ffi::c_void;
-pub type IThumbnailCapture = *mut ::core::ffi::c_void;
-pub type IThumbnailHandlerFactory = *mut ::core::ffi::c_void;
-pub type IThumbnailProvider = *mut ::core::ffi::c_void;
-pub type IThumbnailSettings = *mut ::core::ffi::c_void;
-pub type IThumbnailStreamCache = *mut ::core::ffi::c_void;
-pub type ITrackShellMenu = *mut ::core::ffi::c_void;
-pub type ITranscodeImage = *mut ::core::ffi::c_void;
-pub type ITransferAdviseSink = *mut ::core::ffi::c_void;
-pub type ITransferDestination = *mut ::core::ffi::c_void;
-pub type ITransferMediumItem = *mut ::core::ffi::c_void;
-pub type ITransferSource = *mut ::core::ffi::c_void;
-pub type ITravelEntry = *mut ::core::ffi::c_void;
-pub type ITravelLog = *mut ::core::ffi::c_void;
-pub type ITravelLogClient = *mut ::core::ffi::c_void;
-pub type ITravelLogEntry = *mut ::core::ffi::c_void;
-pub type ITravelLogStg = *mut ::core::ffi::c_void;
-pub type ITrayDeskBand = *mut ::core::ffi::c_void;
-pub type IURLSearchHook = *mut ::core::ffi::c_void;
-pub type IURLSearchHook2 = *mut ::core::ffi::c_void;
-pub type IUniformResourceLocatorA = *mut ::core::ffi::c_void;
-pub type IUniformResourceLocatorW = *mut ::core::ffi::c_void;
-pub type IUpdateIDList = *mut ::core::ffi::c_void;
-pub type IUseToBrowseItem = *mut ::core::ffi::c_void;
-pub type IUserAccountChangeCallback = *mut ::core::ffi::c_void;
-pub type IUserNotification = *mut ::core::ffi::c_void;
-pub type IUserNotification2 = *mut ::core::ffi::c_void;
-pub type IUserNotificationCallback = *mut ::core::ffi::c_void;
-pub type IViewStateIdentityItem = *mut ::core::ffi::c_void;
-pub type IVirtualDesktopManager = *mut ::core::ffi::c_void;
-pub type IVisualProperties = *mut ::core::ffi::c_void;
-pub type IWebBrowser = *mut ::core::ffi::c_void;
-pub type IWebBrowser2 = *mut ::core::ffi::c_void;
-pub type IWebBrowserApp = *mut ::core::ffi::c_void;
-pub type IWebWizardExtension = *mut ::core::ffi::c_void;
-pub type IWebWizardHost = *mut ::core::ffi::c_void;
-pub type IWebWizardHost2 = *mut ::core::ffi::c_void;
-pub type IWizardExtension = *mut ::core::ffi::c_void;
-pub type IWizardSite = *mut ::core::ffi::c_void;
 pub const Identity_LocalUserProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2711114395, data2: 29455, data3: 16521, data4: [182, 70, 161, 37, 87, 245, 102, 94] };
 pub const ImageProperties: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2058842311, data2: 3619, data3: 19834, data4: [138, 162, 25, 191, 173, 71, 152, 41] };
 pub const ImageRecompress: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1848838428, data2: 54008, data3: 18240, data4: [181, 94, 46, 17, 209, 71, 122, 44] };
@@ -6528,6 +4086,2555 @@ pub const InternetExplorerMedium: ::windows_sys::core::GUID = ::windows_sys::cor
 pub const InternetPrintOrdering: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2916313768, data2: 29978, data3: 17785, data4: [162, 102, 214, 111, 82, 2, 204, 187] };
 pub const ItemCount_Property_GUID: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2881444933, data2: 23756, data3: 18359, data4: [187, 78, 135, 203, 135, 187, 209, 98] };
 pub const ItemIndex_Property_GUID: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2459980762, data2: 10601, data3: 16417, data4: [191, 39, 81, 76, 252, 46, 74, 105] };
+pub const KnownFolderManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1307625264, data2: 57245, data3: 19171, data4: [145, 83, 170, 107, 130, 233, 121, 90] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const LIBRARY_E_NO_ACCESSIBLE_LOCATION: ::windows_sys::core::HRESULT = -2144927231i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const LIBRARY_E_NO_SAVE_LOCATION: ::windows_sys::core::HRESULT = -2144927232i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const LINK_E_DELETE: ::windows_sys::core::HRESULT = -2144927485i32;
+pub const LocalThumbnailCache: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1357858116, data2: 44191, data3: 19086, data4: [178, 27, 138, 38, 24, 13, 177, 63] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const MAXFILELEN: u32 = 13u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const MAX_COLUMN_DESC_LEN: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const MAX_COLUMN_NAME_LEN: u32 = 80u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const MAX_SYNCMGRHANDLERNAME: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const MAX_SYNCMGRITEMNAME: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const MAX_SYNCMGR_ID: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const MAX_SYNCMGR_NAME: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const MAX_SYNCMGR_PROGRESSTEXT: u32 = 260u32;
+pub const MailRecipient: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2656484960, data2: 50447, data3: 4559, data4: [154, 44, 0, 160, 201, 10, 144, 206] };
+pub const MergedCategorizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2390916113, data2: 13287, data3: 19393, data4: [178, 66, 140, 217, 161, 194, 179, 4] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NCM_DISPLAYERRORTIP: u32 = 1028u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NCM_GETADDRESS: u32 = 1025u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NCM_GETALLOWTYPE: u32 = 1027u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NCM_SETALLOWTYPE: u32 = 1026u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NETCACHE_E_NEGATIVE_CACHE: ::windows_sys::core::HRESULT = -2144927488i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NINF_KEY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIN_BALLOONHIDE: u32 = 1027u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIN_BALLOONSHOW: u32 = 1026u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIN_BALLOONTIMEOUT: u32 = 1028u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIN_BALLOONUSERCLICK: u32 = 1029u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIN_POPUPCLOSE: u32 = 1031u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIN_POPUPOPEN: u32 = 1030u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIN_SELECT: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NOTIFYICON_VERSION: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NOTIFYICON_VERSION_4: u32 = 4u32;
+pub const NPCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1037483712, data2: 33171, data3: 20478, data4: [174, 37, 224, 142, 57, 234, 64, 99] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NSTCDHPOS_ONTOP: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NT_CONSOLE_PROPS_SIG: u32 = 2684354562u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NT_FE_CONSOLE_PROPS_SIG: u32 = 2684354564u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NUM_POINTS: u32 = 3u32;
+pub const NamespaceTreeControl: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2919580178, data2: 13621, data3: 17456, data4: [131, 237, 213, 1, 170, 102, 128, 230] };
+pub const NamespaceWalker: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1928028640, data2: 34418, data3: 17155, data4: [145, 117, 242, 228, 198, 139, 46, 124] };
+pub const NetworkConnections: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1879551175, data2: 12802, data3: 4561, data4: [170, 210, 0, 128, 95, 193, 39, 14] };
+pub const NetworkExplorerFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4029422093, data2: 48673, data3: 17232, data4: [136, 176, 115, 103, 252, 150, 239, 60] };
+pub const NetworkPlaces: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 546122848, data2: 15082, data3: 4201, data4: [162, 215, 8, 0, 43, 48, 48, 157] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const OFASI_EDIT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const OFASI_OPENDESKTOP: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const OFFLINE_STATUS_INCOMPLETE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const OFFLINE_STATUS_LOCAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const OFFLINE_STATUS_REMOTE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const OF_CAP_CANCLOSE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const OF_CAP_CANSWITCHTO: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const OI_ASYNC: u32 = 4294962926u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const OI_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const OPENPROPS_INHIBITPIF: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const OPENPROPS_NONE: u32 = 0u32;
+pub const OnexCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 128583814, data2: 52365, data3: 19993, data4: [164, 16, 28, 117, 175, 104, 110, 98] };
+pub const OnexPlapSmartcardCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 868773078, data2: 28767, data3: 19361, data4: [154, 219, 103, 7, 11, 131, 119, 117] };
+pub const OpenControlPanel: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 107097477, data2: 26710, data3: 17504, data4: [141, 225, 168, 25, 33, 180, 28, 75] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PANE_NAVIGATION: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PANE_NONE: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PANE_OFFLINE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PANE_PRINTER: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PANE_PRIVACY: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PANE_PROGRESS: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PANE_SSL: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PANE_ZONE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PATHCCH_MAX_CCH: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PDTIMER_PAUSE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PDTIMER_RESET: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PDTIMER_RESUME: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDASI_AVG_DATA_RATE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDASI_CHANNEL_COUNT: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDASI_COMPRESSION: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDASI_FORMAT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDASI_SAMPLE_RATE: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDASI_SAMPLE_SIZE: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDASI_STREAM_NAME: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDASI_STREAM_NUMBER: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDASI_TIMELENGTH: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDDRSI_DESCRIPTION: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDDRSI_PLAYCOUNT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDDRSI_PLAYEXPIRES: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDDRSI_PLAYSTARTS: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDDRSI_PROTECTED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDSI_ALBUM: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDSI_ARTIST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDSI_COMMENT: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDSI_GENRE: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDSI_LYRICS: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDSI_SONGTITLE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDSI_TRACK: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDSI_YEAR: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDVSI_COMPRESSION: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDVSI_DATA_RATE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDVSI_FRAME_COUNT: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDVSI_FRAME_HEIGHT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDVSI_FRAME_RATE: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDVSI_FRAME_WIDTH: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDVSI_SAMPLE_SIZE: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDVSI_STREAM_NAME: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDVSI_STREAM_NUMBER: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIDVSI_TIMELENGTH: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_COMPUTERNAME: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_CONTROLPANEL_CATEGORY: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_DESCRIPTIONID: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_DISPLACED_DATE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_DISPLACED_FROM: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_DISPLAY_PROPERTIES: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_FINDDATA: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_HTMLINFOTIPFILE: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_INTROTEXT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_LINK_TARGET: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_LINK_TARGET_TYPE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_MISC_ACCESSCOUNT: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_MISC_OWNER: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_MISC_PICS: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_MISC_STATUS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_NETRESOURCE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_NETWORKLOCATION: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_QUERY_RANK: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_SHARE_CSC_STATUS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_SYNC_COPY_IN: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_VOLUME_CAPACITY: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_VOLUME_FILESYSTEM: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_VOLUME_FREE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PID_WHICHFOLDER: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIFDEFFILESIZE: u32 = 80u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIFDEFPATHSIZE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIFMAXFILEPATH: u32 = 260u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIFNAMESIZE: u32 = 30u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIFPARAMSSIZE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIFSHDATASIZE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIFSHPROGSIZE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PIFSTARTLOCSIZE: u32 = 63u32;
+pub const PINLogonCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3414354450, data2: 40817, data3: 17517, data4: [137, 225, 141, 9, 36, 225, 37, 110] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PLATFORM_BROWSERONLY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PLATFORM_IE3: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PLATFORM_INTEGRATED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PLATFORM_UNKNOWN: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PMSF_DONT_STRIP_SPACES: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PMSF_MULTIPLE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PMSF_NORMAL: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PO_DELETE: u32 = 19u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PO_PORTCHANGE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PO_RENAME: u32 = 20u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PO_REN_PORT: u32 = 52u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PPCF_ADDARGUMENTS: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PPCF_ADDQUOTES: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PPCF_FORCEQUALIFY: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PPCF_LONGESTPOSSIBLE: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PPCF_NODIRECTORIES: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PRINTACTION_DOCUMENTDEFAULTS: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PRINTACTION_NETINSTALL: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PRINTACTION_NETINSTALLLINK: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PRINTACTION_OPEN: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PRINTACTION_OPENNETPRN: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PRINTACTION_PROPERTIES: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PRINTACTION_SERVERPROPERTIES: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PRINTACTION_TESTPAGE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PRINT_PROP_FORCE_NAME: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PROGDLG_AUTOTIME: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PROGDLG_MARQUEEPROGRESS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PROGDLG_MODAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PROGDLG_NOCANCEL: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PROGDLG_NOMINIMIZE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PROGDLG_NOPROGRESSBAR: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PROGDLG_NORMAL: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PROGDLG_NOTIME: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PROPSTR_EXTENSIONCOMPLETIONSTATE: &str = "ExtensionCompletionState";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const PROP_CONTRACT_DELEGATE: &str = "ContractDelegate";
+pub const PackageDebugSettings: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2981020015, data2: 9091, data3: 18514, data4: [176, 233, 143, 11, 29, 198, 107, 77] };
+pub const PasswordCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1622642312, data2: 60120, data3: 17500, data4: [156, 253, 11, 135, 247, 78, 166, 205] };
+pub const PreviousVersions: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1500164194, data2: 46290, data3: 16917, data4: [159, 116, 233, 16, 155, 10, 129, 83] };
+pub const PropertiesUI: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3641899215, data2: 918, data3: 18709, data4: [136, 78, 251, 66, 93, 50, 148, 59] };
+pub const PublishDropTarget: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3429822459, data2: 17398, data3: 18117, data4: [150, 25, 81, 213, 113, 150, 127, 125] };
+pub const PublishingWizard: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1798510140, data2: 30373, data3: 19308, data4: [191, 33, 69, 222, 156, 213, 3, 161] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const QCMINFO_PLACE_AFTER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const QCMINFO_PLACE_BEFORE: u32 = 0u32;
+pub const QueryCancelAutoPlay: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 857675624, data2: 1449, data3: 19933, data4: [184, 110, 218, 227, 77, 220, 153, 138] };
+pub const RASProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1429725827, data2: 45543, data3: 20216, data4: [156, 110, 122, 176, 175, 229, 5, 109] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_ABSOLUTE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_ACTIVATE_NOFOCUS: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_ALLOW_AUTONAVIGATE: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_CALLERUNTRUSTED: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_CREATENOHISTORY: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_DEFBROWSER: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_DEFMODE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_EXPLOREMODE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_FEEDNAVIGATION: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_HELPMODE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_INITIATEDBYHLINKFRAME: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_KEEPSAMETEMPLATE: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_KEEPWORDWHEELTEXT: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_NAVIGATEBACK: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_NAVIGATEFORWARD: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_NEWBROWSER: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_NOAUTOSELECT: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_NOTRANSFERHIST: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_OPENMODE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_PARENT: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_PLAYNOSOUND: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_REDIRECT: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_RELATIVE: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_SAMEBROWSER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_TRUSTEDFORACTIVEX: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_TRUSTFIRSTDOWNLOAD: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_UNTRUSTEDFORDOWNLOAD: u32 = 33554432u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SBSP_WRITENOHISTORY: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SCHEME_CREATE: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SCHEME_DISPLAY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SCHEME_DONOTUSE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SCHEME_EDIT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SCHEME_GLOBAL: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SCHEME_LOCAL: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SCHEME_REFRESH: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SCHEME_UPDATE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SCRM_VERIFYPW: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_ASYNCOK: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_CLASSKEY: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_CLASSNAME: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_CONNECTNETDRV: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_DOENVSUBST: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_FLAG_DDEWAIT: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_FLAG_HINST_IS_SITE: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_FLAG_LOG_USAGE: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_FLAG_NO_UI: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_HMONITOR: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_HOTKEY: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_ICON: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_IDLIST: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_INVOKEIDLIST: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_NOASYNC: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_NOCLOSEPROCESS: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_NOQUERYCLASSSTORE: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_NOZONECHECKS: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_NO_CONSOLE: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_UNICODE: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SEE_MASK_WAITFORINPUTIDLE: u32 = 33554432u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SETPROPS_NONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SE_ERR_ACCESSDENIED: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SE_ERR_ASSOCINCOMPLETE: u32 = 27u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SE_ERR_DDEBUSY: u32 = 30u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SE_ERR_DDEFAIL: u32 = 29u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SE_ERR_DDETIMEOUT: u32 = 28u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SE_ERR_DLLNOTFOUND: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SE_ERR_FNF: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SE_ERR_NOASSOC: u32 = 31u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SE_ERR_OOM: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SE_ERR_PNF: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SE_ERR_SHARE: u32 = 26u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SFBID_PIDLCHANGED: i32 = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SFVM_ADDOBJECT: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SFVM_GETSELECTEDOBJECTS: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SFVM_REARRANGE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SFVM_REMOVEOBJECT: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SFVM_SETCLIPBOARD: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SFVM_SETITEMPOS: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SFVM_SETPOINTS: u32 = 23u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SFVM_UPDATEOBJECT: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SFVSOC_INVALIDATE_ALL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SFVSOC_NOSCROLL: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHCDF_UPDATEITEM: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHCIDS_ALLFIELDS: i32 = -2147483648i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHCIDS_BITMASK: i32 = -65536i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHCIDS_CANONICALONLY: i32 = 268435456i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHCIDS_COLUMNMASK: i32 = 65535i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHCNEE_MSI_CHANGE: i32 = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHCNEE_MSI_UNINSTALL: i32 = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHCNEE_ORDERCHANGED: i32 = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHC_E_SHELL_COMPONENT_STARTUP_FAILURE: ::windows_sys::core::HRESULT = -2144927180i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHELLSTATEVERSION_IE4: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHELLSTATEVERSION_WIN2K: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHELL_E_WRONG_BITDEPTH: ::windows_sys::core::HRESULT = -2144927486i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHERB_NOCONFIRMATION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHERB_NOPROGRESSUI: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHERB_NOSOUND: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGNLI_NOLNK: u64 = 8u64;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGNLI_NOLOCNAME: u64 = 16u64;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGNLI_NOUNIQUE: u64 = 4u64;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGNLI_PIDL: u64 = 1u64;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGNLI_PREFIXNAME: u64 = 2u64;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGNLI_USEURLEXT: u64 = 32u64;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGSI_ICONLOCATION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGVSPB_ALLFOLDERS: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGVSPB_ALLUSERS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGVSPB_INHERIT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGVSPB_NOAUTODEFAULTS: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGVSPB_PERFOLDER: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGVSPB_PERUSER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGVSPB_ROAM: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHHLNF_NOAUTOSELECT: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHHLNF_WRITENOHISTORY: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIL_EXTRALARGE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIL_JUMBO: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIL_LARGE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIL_LAST: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIL_SMALL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIL_SYSSMALL: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIMGDEC_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIMGDEC_LOADFULL: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIMGDEC_THUMBNAIL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIMGKEY_QUALITY: &str = "Compression";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIMGKEY_RAWFORMAT: &str = "RawDataFormat";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIMSTCAPFLAG_LOCKABLE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHIMSTCAPFLAG_PURGEABLE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHPPFW_ASKDIRCREATE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHPPFW_DIRCREATE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHPPFW_IGNOREFILENAME: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHPPFW_MEDIACHECKONLY: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHPPFW_NONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHPPFW_NOWRITECHECK: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHPWHF_ANYLOCATION: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHPWHF_NOFILESELECTOR: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHPWHF_NONETPLACECREATE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHPWHF_NORECOMPRESS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHPWHF_USEMRU: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHPWHF_VALIDATEVIAWEBFOLDERS: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHREGSET_FORCE_HKCU: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHREGSET_FORCE_HKLM: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHREGSET_HKCU: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHREGSET_HKLM: u32 = 4u32;
+pub const SID_CommandsPropertyBag: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1845768784, data2: 17430, data3: 18524, data4: [177, 67, 230, 42, 118, 13, 159, 229] };
+pub const SID_CtxQueryAssociations: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4205706304, data2: 46967, data3: 19305, data4: [170, 129, 119, 3, 94, 240, 230, 232] };
+pub const SID_DefView: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1829961344, data2: 30993, data3: 4559, data4: [149, 52, 0, 0, 192, 91, 174, 11] };
+pub const SID_LaunchSourceAppUserModelId: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 753369104, data2: 29915, data3: 18620, data4: [156, 106, 16, 243, 114, 73, 87, 35] };
+pub const SID_LaunchSourceViewSizePreference: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2153796754, data2: 26585, data3: 16719, data4: [175, 137, 161, 205, 241, 36, 43, 193] };
+pub const SID_LaunchTargetViewSizePreference: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 651895922, data2: 47031, data3: 16491, data4: [151, 2, 115, 10, 78, 32, 211, 191] };
+pub const SID_MenuShellFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2797698740, data2: 11621, data3: 4562, data4: [131, 143, 0, 192, 79, 217, 24, 208] };
+pub const SID_SCommDlgBrowser: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2163409459, data2: 47071, data3: 4562, data4: [163, 59, 0, 96, 151, 223, 91, 212] };
+pub const SID_SCommandBarState: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3114183260, data2: 14416, data3: 17408, data4: [188, 51, 44, 229, 52, 4, 139, 248] };
+pub const SID_SGetViewFromViewDual: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2291831645, data2: 38686, data3: 19218, data4: [185, 12, 36, 223, 201, 225, 229, 232] };
+pub const SID_SInPlaceBrowser: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 489349163, data2: 13909, data3: 18124, data4: [182, 58, 40, 89, 136, 21, 59, 202] };
+pub const SID_SMenuBandBKContextMenu: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 374062470, data2: 7437, data3: 19936, data4: [154, 59, 217, 114, 150, 71, 194, 184] };
+pub const SID_SMenuBandBottom: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1950131812, data2: 3563, data3: 4561, data4: [152, 37, 0, 192, 79, 217, 25, 114] };
+pub const SID_SMenuBandBottomSelected: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 375306996, data2: 27985, data3: 4562, data4: [131, 173, 0, 192, 79, 217, 24, 208] };
+pub const SID_SMenuBandChild: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3986472992, data2: 2233, data3: 4561, data4: [152, 35, 0, 192, 79, 217, 25, 114] };
+pub const SID_SMenuBandContextMenuModifier: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 961828980, data2: 29026, data3: 18014, data4: [183, 131, 42, 161, 135, 79, 239, 129] };
+pub const SID_SMenuBandParent: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2351402732, data2: 16043, data3: 4561, data4: [140, 176, 0, 192, 79, 217, 24, 208] };
+pub const SID_SMenuBandTop: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2492704784, data2: 60472, data3: 4560, data4: [188, 70, 0, 170, 0, 108, 226, 245] };
+pub const SID_SMenuPopup: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3521621995, data2: 27182, data3: 4560, data4: [140, 120, 0, 192, 79, 217, 24, 180] };
+pub const SID_SSearchBoxInfo: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 338537057, data2: 20843, data3: 18195, data4: [180, 156, 251, 152, 94, 248, 41, 152] };
+pub const SID_STopLevelBrowser: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1284947520, data2: 37212, data3: 4559, data4: [153, 211, 0, 170, 0, 74, 232, 55] };
+pub const SID_STopWindow: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1239528704, data2: 17974, data3: 4563, data4: [151, 247, 0, 192, 79, 69, 208, 179] };
+pub const SID_ShellExecuteNamedPropertyStore: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3951340962, data2: 255, data3: 18834, data4: [131, 36, 237, 92, 224, 97, 203, 41] };
+pub const SID_URLExecutionContext: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4217343676, data2: 48054, data3: 19728, data4: [164, 97, 119, 114, 145, 160, 144, 48] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SIOM_ICONINDEX: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SIOM_OVERLAYINDEX: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SIOM_RESERVED_DEFAULT: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SIOM_RESERVED_LINK: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SIOM_RESERVED_SHARED: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SIOM_RESERVED_SLOWFILE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMAE_CONTRACTED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMAE_EXPANDED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMAE_USER: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMAE_VALID: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_AUTOEXPANDCHANGE: u32 = 66u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_CHEVRONEXPAND: u32 = 25u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_CHEVRONGETTIP: u32 = 47u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_CREATE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_DEFAULTICON: u32 = 22u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_DEMOTE: u32 = 17u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_DISPLAYCHEVRONTIP: u32 = 42u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_EXITMENU: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_GETAUTOEXPANDSTATE: u32 = 65u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_GETBKCONTEXTMENU: u32 = 68u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_GETCONTEXTMENUMODIFIER: u32 = 67u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_GETINFO: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_GETOBJECT: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_GETSFINFO: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_GETSFOBJECT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_INITMENU: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_NEWITEM: u32 = 23u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_OPEN: u32 = 69u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_PROMOTE: u32 = 18u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_REFRESH: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_SETSFOBJECT: u32 = 45u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_SFDDRESTRICTED: u32 = 48u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_SFEXEC: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_SFEXEC_MIDDLE: u32 = 49u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_SFSELECTITEM: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMC_SHCHANGENOTIFY: u32 = 46u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMDM_HMENU: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMDM_SHELLFOLDER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMDM_TOOLBAR: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMINIT_AUTOEXPAND: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMINIT_AUTOTOOLTIP: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMINIT_CACHED: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMINIT_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMINIT_DROPONCONTAINER: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMINIT_HORIZONTAL: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMINIT_RESTRICT_DRAGDROP: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMINIT_TOPLEVEL: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMINIT_VERTICAL: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMINV_ID: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMINV_REFRESH: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMSET_BOTTOM: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMSET_DONTOWN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SMSET_TOP: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_BROWSER: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_DBMON: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_DEBUGBREAK: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_DEBUGOUT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_EVENT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_EVENTTRACE: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_FLUSH: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_FORMATTEXT: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_MEMWATCH: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_MSGTRACE: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_MSVM: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_MULTISTOP: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_PERFTAGS: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_PROFILE: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_SHELL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SPMODE_TEST: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_NOEXPAND: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_NOVIRT: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_RM_ANY: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_RM_NORMAL: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_RM_SAFE: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_RM_SAFENETWORK: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_RT_ANY: u32 = 65535u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_RT_REG_BINARY: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_RT_REG_DWORD: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_RT_REG_EXPAND_SZ: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_RT_REG_MULTI_SZ: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_RT_REG_NONE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_RT_REG_QWORD: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_RT_REG_SZ: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SRRF_ZEROONFAILURE: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SSM_CLEAR: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SSM_REFRESH: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SSM_SET: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SSM_UPDATE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STIF_DEFAULT: i32 = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STIF_SUPPORT_HEX: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STORE_E_NEWER_VERSION_AVAILABLE: ::windows_sys::core::HRESULT = -2144927484i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_AVOID_DRIVE_RESTRICTION_POLICY: &str = "Avoid Drive Restriction Policy";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_BIND_DELEGATE_CREATE_OBJECT: &str = "Delegate Object Creation";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_BIND_FOLDERS_READ_ONLY: &str = "Folders As Read Only";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_BIND_FOLDER_ENUM_MODE: &str = "Folder Enum Mode";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_BIND_FORCE_FOLDER_SHORTCUT_RESOLVE: &str = "Force Folder Shortcut Resolve";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_DONT_PARSE_RELATIVE: &str = "Don\'t Parse Relative";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_DONT_RESOLVE_LINK: &str = "Don\'t Resolve Link";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_ENUM_ITEMS_FLAGS: &str = "SHCONTF";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_FILE_SYS_BIND_DATA: &str = "File System Bind Data";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_FILE_SYS_BIND_DATA_WIN7_FORMAT: &str = "Win7FileSystemIdList";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_GET_ASYNC_HANDLER: &str = "GetAsyncHandler";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_GPS_BESTEFFORT: &str = "GPS_BESTEFFORT";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_GPS_DELAYCREATION: &str = "GPS_DELAYCREATION";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_GPS_FASTPROPERTIESONLY: &str = "GPS_FASTPROPERTIESONLY";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_GPS_HANDLERPROPERTIESONLY: &str = "GPS_HANDLERPROPERTIESONLY";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_GPS_NO_OPLOCK: &str = "GPS_NO_OPLOCK";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_GPS_OPENSLOWITEM: &str = "GPS_OPENSLOWITEM";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_INTERNAL_NAVIGATE: &str = "Internal Navigation";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_INTERNETFOLDER_PARSE_ONLY_URLMON_BINDABLE: &str = "Validate URL";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_ITEM_CACHE_CONTEXT: &str = "ItemCacheContext";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_MYDOCS_CLSID: &str = "{450D8FBA-AD25-11D0-98A8-0800361B1103}";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_NO_VALIDATE_FILENAME_CHARS: &str = "NoValidateFilenameChars";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_ALLOW_INTERNET_SHELL_FOLDERS: &str = "Allow binding to Internet shell folder handlers and negate STR_PARSE_PREFER_WEB_BROWSING";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_AND_CREATE_ITEM: &str = "ParseAndCreateItem";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_DONT_REQUIRE_VALIDATED_URLS: &str = "Do not require validated URLs";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_EXPLICIT_ASSOCIATION_SUCCESSFUL: &str = "ExplicitAssociationSuccessful";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_PARTIAL_IDLIST: &str = "ParseOriginalItem";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_PREFER_FOLDER_BROWSING: &str = "Parse Prefer Folder Browsing";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_PREFER_WEB_BROWSING: &str = "Do not bind to Internet shell folder handlers";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_PROPERTYSTORE: &str = "DelegateNamedProperties";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_SHELL_PROTOCOL_TO_FILE_OBJECTS: &str = "Parse Shell Protocol To File Objects";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_SHOW_NET_DIAGNOSTICS_UI: &str = "Show network diagnostics UI";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_SKIP_NET_CACHE: &str = "Skip Net Resource Cache";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_TRANSLATE_ALIASES: &str = "Parse Translate Aliases";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_WITH_EXPLICIT_ASSOCAPP: &str = "ExplicitAssociationApp";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_WITH_EXPLICIT_PROGID: &str = "ExplicitProgid";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PARSE_WITH_PROPERTIES: &str = "ParseWithProperties";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_PROPERTYBAG_PARAM: &str = "SHBindCtxPropertyBag";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_REFERRER_IDENTIFIER: &str = "Referrer Identifier";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_SKIP_BINDING_CLSID: &str = "Skip Binding CLSID";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_STORAGEITEM_CREATION_FLAGS: &str = "SHGETSTORAGEITEM";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_TAB_REUSE_IDENTIFIER: &str = "Tab Reuse Identifier";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const STR_TRACK_CLSID: &str = "Track the CLSID";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SYNCMGRHANDLERFLAG_MASK: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SYNCMGRITEM_ITEMFLAGMASK: u32 = 127u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SYNCMGRLOGERROR_ERRORFLAGS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SYNCMGRLOGERROR_ERRORID: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SYNCMGRLOGERROR_ITEMID: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SYNCMGRPROGRESSITEM_MAXVALUE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SYNCMGRPROGRESSITEM_PROGVALUE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SYNCMGRPROGRESSITEM_STATUSTEXT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SYNCMGRPROGRESSITEM_STATUSTYPE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SYNCMGRREGISTERFLAGS_MASK: u32 = 7u32;
+pub const SYNCMGR_OBJECTID_BrowseContent: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1472968068, data2: 59828, data3: 18350, data4: [161, 32, 196, 223, 51, 53, 222, 226] };
+pub const SYNCMGR_OBJECTID_ConflictStore: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3615588852, data2: 9097, data3: 18404, data4: [169, 96, 96, 188, 194, 237, 147, 11] };
+pub const SYNCMGR_OBJECTID_EventLinkClick: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 570670529, data2: 6897, data3: 16514, data4: [140, 48, 40, 57, 159, 65, 56, 76] };
+pub const SYNCMGR_OBJECTID_EventStore: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1273967801, data2: 42886, data3: 16501, data4: [186, 136, 12, 43, 157, 137, 169, 143] };
+pub const SYNCMGR_OBJECTID_Icon: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1841071555, data2: 23815, data3: 19570, data4: [167, 119, 127, 236, 120, 7, 44, 6] };
+pub const SYNCMGR_OBJECTID_QueryBeforeActivate: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3632453643, data2: 59306, data3: 18925, data4: [134, 183, 230, 225, 247, 20, 205, 254] };
+pub const SYNCMGR_OBJECTID_QueryBeforeDeactivate: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2700067458, data2: 24800, data3: 17934, data4: [147, 116, 234, 136, 81, 60, 252, 128] };
+pub const SYNCMGR_OBJECTID_QueryBeforeDelete: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4151063447, data2: 44979, data3: 17879, data4: [165, 159, 90, 73, 233, 5, 67, 126] };
+pub const SYNCMGR_OBJECTID_QueryBeforeDisable: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3143591082, data2: 61444, data3: 20149, data4: [142, 77, 38, 117, 25, 102, 52, 76] };
+pub const SYNCMGR_OBJECTID_QueryBeforeEnable: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 80476144, data2: 23531, data3: 19937, data4: [188, 144, 144, 131, 69, 196, 128, 246] };
+pub const SYNCMGR_OBJECTID_ShowSchedule: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3989238755, data2: 33857, data3: 16649, data4: [173, 243, 108, 28, 160, 183, 222, 71] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SZ_CONTENTTYPE_CDF: &str = "application/x-cdf";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SZ_CONTENTTYPE_CDFA: &str = "application/x-cdf";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SZ_CONTENTTYPE_CDFW: &str = "application/x-cdf";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SZ_CONTENTTYPE_HTML: &str = "text/html";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SZ_CONTENTTYPE_HTMLA: &str = "text/html";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SZ_CONTENTTYPE_HTMLW: &str = "text/html";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const S_SYNCMGR_CANCELALL: ::windows_sys::core::HRESULT = 262660i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const S_SYNCMGR_CANCELITEM: ::windows_sys::core::HRESULT = 262659i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const S_SYNCMGR_ENUMITEMS: ::windows_sys::core::HRESULT = 262673i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const S_SYNCMGR_ITEMDELETED: ::windows_sys::core::HRESULT = 262672i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const S_SYNCMGR_MISSINGITEMS: ::windows_sys::core::HRESULT = 262657i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const S_SYNCMGR_RETRYSYNC: ::windows_sys::core::HRESULT = 262658i32;
+pub const ScheduledTasks: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3592911248, data2: 19562, data3: 4559, data4: [141, 135, 0, 170, 0, 96, 245, 191] };
+pub const SearchFolderItemFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 335613442, data2: 48061, data3: 16880, data4: [136, 227, 237, 163, 113, 33, 101, 132] };
+pub const SelectedItemCount_Property_GUID: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2414024402, data2: 3666, data3: 17930, data4: [156, 30, 72, 242, 115, 212, 112, 163] };
+pub const SharedBitmap: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1303536758, data2: 26503, data3: 16454, data4: [184, 54, 232, 65, 42, 158, 138, 39] };
+pub const SharingConfigurationManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1240691169, data2: 35932, data3: 19868, data4: [154, 59, 84, 166, 130, 127, 81, 60] };
+pub const Shell: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 326145568, data2: 49785, data3: 4558, data4: [164, 158, 68, 69, 83, 84, 0, 0] };
+pub const ShellBrowserWindow: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3230334352, data2: 62113, data3: 4561, data4: [132, 85, 0, 160, 201, 31, 56, 128] };
+pub const ShellDesktop: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 136192, data2: 0, data3: 0, data4: [192, 0, 0, 0, 0, 0, 0, 70] };
+pub const ShellDispatchInproc: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 176793696, data2: 55217, data3: 4558, data4: [131, 80, 68, 69, 83, 84, 0, 0] };
+pub const ShellFSFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4080421792, data2: 26041, data3: 4558, data4: [169, 186, 0, 170, 0, 74, 232, 55] };
+pub const ShellFolderItem: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 803427050, data2: 64799, data3: 4562, data4: [177, 244, 0, 192, 79, 142, 235, 62] };
+pub const ShellFolderView: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1645292193, data2: 60388, data3: 4559, data4: [165, 251, 0, 32, 175, 231, 41, 45] };
+pub const ShellFolderViewOC: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2610977137, data2: 63144, data3: 4559, data4: [164, 66, 0, 160, 201, 10, 143, 57] };
+pub const ShellImageDataFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1726276859, data2: 62341, data3: 19920, data4: [141, 116, 162, 239, 209, 188, 97, 120] };
+pub const ShellItem: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2596928481, data2: 57506, data3: 19158, data4: [180, 238, 226, 18, 1, 62, 169, 23] };
+pub const ShellLibrary: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3652395293, data2: 58751, data3: 17446, data4: [170, 239, 48, 168, 6, 173, 211, 151] };
+pub const ShellLink: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 136193, data2: 0, data3: 0, data4: [192, 0, 0, 0, 0, 0, 0, 70] };
+pub const ShellLinkObject: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 287413280, data2: 5992, data3: 4561, data4: [149, 190, 0, 96, 151, 151, 234, 79] };
+pub const ShellNameSpace: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1427335173, data2: 45790, data3: 4561, data4: [185, 242, 0, 160, 201, 139, 197, 71] };
+pub const ShellUIHelper: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1688947639, data2: 4382, data3: 4561, data4: [143, 121, 0, 192, 79, 194, 251, 225] };
+pub const ShellWindows: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2610977138, data2: 63144, data3: 4559, data4: [164, 66, 0, 160, 201, 10, 143, 57] };
+pub const ShowInputPaneAnimationCoordinator: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 520383167, data2: 12802, data3: 19905, data4: [140, 181, 60, 103, 97, 124, 225, 250] };
+pub const SimpleConflictPresenter: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2047830711, data2: 60804, data3: 18102, data4: [180, 126, 2, 170, 21, 154, 21, 43] };
+pub const SizeCategorizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1440200786, data2: 63185, data3: 17138, data4: [170, 117, 135, 40, 161, 178, 210, 100] };
+pub const SmartcardCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2413289884, data2: 15351, data3: 18587, data4: [167, 44, 132, 106, 179, 103, 140, 150] };
+pub const SmartcardPinProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2488888446, data2: 14148, data3: 16846, data4: [137, 62, 187, 240, 145, 34, 247, 106] };
+pub const SmartcardReaderSelectionProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 455620705, data2: 30031, data3: 16418, data4: [173, 71, 165, 234, 170, 97, 136, 148] };
+pub const SmartcardWinRTProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 518468479, data2: 34220, data3: 17890, data4: [162, 60, 55, 199, 83, 32, 151, 105] };
+pub const StartMenuPin: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2729006173, data2: 41154, data3: 17076, data4: [151, 8, 160, 178, 186, 221, 119, 200] };
+pub const StorageProviderBanners: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2093873652, data2: 58742, data3: 17754, data4: [139, 199, 246, 236, 104, 214, 240, 99] };
+pub const SuspensionDependencyManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1797734341, data2: 25085, data3: 18712, data4: [149, 162, 195, 181, 233, 215, 245, 129] };
+pub const SyncMgr: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1653989159, data2: 13806, data3: 4561, data4: [135, 7, 0, 192, 79, 217, 51, 39] };
+pub const SyncMgrClient: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 302177120, data2: 7596, data3: 17093, data4: [174, 213, 26, 189, 212, 50, 36, 142] };
+pub const SyncMgrControl: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 438256134, data2: 1672, data3: 20095, data4: [190, 3, 216, 46, 198, 157, 249, 165] };
+pub const SyncMgrFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2624845285, data2: 31463, data3: 20018, data4: [168, 232, 141, 35, 184, 82, 85, 191] };
+pub const SyncMgrScheduleWizard: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2374733360, data2: 50257, data3: 16923, data4: [133, 83, 210, 151, 106, 250, 100, 140] };
+pub const SyncResultsFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1910084708, data2: 15211, data3: 18268, data4: [178, 65, 225, 88, 131, 32, 117, 41] };
+pub const SyncSetupFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 782129600, data2: 46135, data3: 18817, data4: [166, 71, 156, 52, 185, 185, 8, 145] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TBIF_APPEND: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TBIF_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TBIF_INTERNETBAR: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TBIF_NOTOOLBAR: u32 = 196608u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TBIF_PREPEND: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TBIF_REPLACE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TBIF_STANDARDTOOLBAR: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const THBN_CLICKED: u32 = 6144u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TITLEBARNAMELEN: u32 = 40u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TLMENUF_BACK: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TLMENUF_FORE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TLMENUF_INCLUDECURRENT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TLOG_BACK: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TLOG_CURRENT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const TLOG_FORE: u32 = 1u32;
+pub const TaskbarList: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1459483460, data2: 64877, data3: 4560, data4: [149, 138, 0, 96, 151, 201, 160, 144] };
+pub const ThumbnailStreamCache: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3420520147, data2: 19345, data3: 20112, data4: [131, 84, 138, 140, 132, 236, 104, 114] };
+pub const TimeCategorizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1001656719, data2: 56829, data3: 19760, data4: [163, 72, 159, 181, 214, 191, 26, 254] };
+pub const TrackShellMenu: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2188966193, data2: 10814, data3: 4562, data4: [131, 143, 0, 192, 79, 217, 24, 208] };
+pub const TrayBandSiteService: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4127903904, data2: 58849, data3: 17867, data4: [181, 26, 225, 91, 159, 139, 41, 52] };
+pub const TrayDeskBand: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3863225399, data2: 27752, data3: 20306, data4: [148, 221, 44, 254, 210, 103, 239, 185] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_APPLY_DEFAULT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_APPLY_FORCEAPPLY: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_APPLY_GUESSFILE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_APPLY_GUESSSCHEME: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_BROWSER_MODE: u32 = 33554432u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_CONVERT_IF_DOSPATH: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_DONT_ESCAPE_EXTRA_INFO: u32 = 33554432u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_DONT_SIMPLIFY: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_DONT_UNESCAPE: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_DONT_UNESCAPE_EXTRA_INFO: u32 = 33554432u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_ESCAPE_ASCII_URI_COMPONENT: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_ESCAPE_AS_UTF8: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_ESCAPE_PERCENT: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_ESCAPE_SEGMENT_ONLY: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_ESCAPE_SPACES_ONLY: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_ESCAPE_UNSAFE: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_E_INVALID_SYNTAX: ::windows_sys::core::HRESULT = -2147217407i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_E_UNREGISTERED_PROTOCOL: ::windows_sys::core::HRESULT = -2147217406i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_FILE_USE_PATHURL: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_INTERNAL_PATH: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_NO_META: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_PARTFLAG_KEEPSCHEME: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_PLUGGABLE_PROTOCOL: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_UNESCAPE: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_UNESCAPE_AS_UTF8: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_UNESCAPE_HIGH_ANSI_ONLY: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_UNESCAPE_INPLACE: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_UNESCAPE_URI_COMPONENT: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URL_WININET_COMPATIBILITY: u32 = 2147483648u32;
+pub const UserNotification: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1083662, data2: 34697, data3: 16700, data4: [173, 188, 72, 245, 181, 17, 179, 175] };
+pub const V1PasswordCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1866849310, data2: 21380, data3: 17786, data4: [188, 19, 44, 216, 27, 13, 40, 237] };
+pub const V1SmartcardCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2348394768, data2: 43263, data3: 17791, data4: [153, 159, 165, 202, 16, 180, 168, 133] };
+pub const V1WinBioCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2889531977, data2: 59424, data3: 17219, data4: [166, 91, 55, 122, 198, 52, 220, 9] };
+pub const VID_Content: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 818070580, data2: 2185, data3: 19597, data4: [152, 93, 169, 247, 24, 48, 176, 169] };
+pub const VID_Details: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 327055104, data2: 13683, data3: 4559, data4: [174, 105, 8, 0, 43, 46, 18, 98] };
+pub const VID_LargeIcons: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 5755104, data2: 13683, data3: 4559, data4: [174, 105, 8, 0, 43, 46, 18, 98] };
+pub const VID_List: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 236955104, data2: 13683, data3: 4559, data4: [174, 105, 8, 0, 43, 46, 18, 98] };
+pub const VID_SmallIcons: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 143655104, data2: 13683, data3: 4559, data4: [174, 105, 8, 0, 43, 46, 18, 98] };
+pub const VID_ThumbStrip: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2398070308, data2: 53737, data3: 17499, data4: [148, 183, 116, 251, 206, 46, 161, 26] };
+pub const VID_Thumbnails: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2347479696, data2: 21200, data3: 4560, data4: [183, 244, 0, 192, 79, 215, 6, 236] };
+pub const VID_Tile: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1710302693, data2: 31713, data3: 18448, data4: [186, 157, 210, 113, 200, 67, 44, 227] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const VIEW_PRIORITY_CACHEHIT: u32 = 80u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const VIEW_PRIORITY_CACHEMISS: u32 = 48u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const VIEW_PRIORITY_DESPERATE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const VIEW_PRIORITY_INHERIT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const VIEW_PRIORITY_NONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const VIEW_PRIORITY_RESTRICTED: u32 = 112u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const VIEW_PRIORITY_SHELLEXT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const VIEW_PRIORITY_SHELLEXT_ASBACKUP: u32 = 21u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const VIEW_PRIORITY_STALECACHEHIT: u32 = 69u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const VIEW_PRIORITY_USEASDEFAULT: u32 = 67u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const VOLUME_PREFIX: &str = "\\\\?\\Volume";
+pub const VaultProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1345796560, data2: 19550, data3: 19709, data4: [179, 186, 216, 129, 51, 79, 13, 242] };
+pub const VirtualDesktopManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2857406598, data2: 23721, data3: 19493, data4: [143, 149, 88, 157, 60, 7, 180, 138] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WC_NETADDRESS: &str = "msctls_netaddress";
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WM_CPL_LAUNCH: u32 = 2024u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WM_CPL_LAUNCHED: u32 = 2025u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WPSTYLE_CENTER: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WPSTYLE_CROPTOFIT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WPSTYLE_KEEPASPECT: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WPSTYLE_MAX: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WPSTYLE_SPAN: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WPSTYLE_STRETCH: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WPSTYLE_TILE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WTS_E_DATAFILEUNAVAILABLE: ::windows_sys::core::HRESULT = -2147175932i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WTS_E_EXTRACTIONBLOCKED: ::windows_sys::core::HRESULT = -2147175930i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WTS_E_EXTRACTIONPENDING: ::windows_sys::core::HRESULT = -2147175931i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WTS_E_EXTRACTIONTIMEDOUT: ::windows_sys::core::HRESULT = -2147175935i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WTS_E_FAILEDEXTRACTION: ::windows_sys::core::HRESULT = -2147175936i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WTS_E_FASTEXTRACTIONNOTSUPPORTED: ::windows_sys::core::HRESULT = -2147175933i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WTS_E_NOSTORAGEPROVIDERTHUMBNAILHANDLER: ::windows_sys::core::HRESULT = -2147175929i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const WTS_E_SURROGATEUNAVAILABLE: ::windows_sys::core::HRESULT = -2147175934i32;
+pub const WebBrowser: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2287401313, data2: 13322, data3: 4560, data4: [169, 107, 0, 192, 79, 215, 5, 162] };
+pub const WebBrowser_V1: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3937544899, data2: 12481, data3: 4559, data4: [167, 235, 0, 0, 192, 91, 174, 11] };
+pub const WebWizardHost: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3358060873, data2: 21953, data3: 19752, data4: [147, 94, 87, 228, 124, 174, 217, 115] };
+pub const WinBioCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3200291363, data2: 45080, data3: 16749, data4: [160, 172, 82, 57, 113, 182, 57, 245] };
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const idsAppName: u32 = 1007u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const idsBadOldPW: u32 = 1006u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const idsChangePW: u32 = 1005u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const idsDefKeyword: u32 = 1010u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const idsDifferentPW: u32 = 1004u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const idsHelpFile: u32 = 1009u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const idsIniFile: u32 = 1001u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const idsIsPassword: u32 = 1000u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const idsNoHelpMemory: u32 = 1008u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const idsPassword: u32 = 1003u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const idsScreenSaver: u32 = 1002u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ACENUMOPTION = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACEO_NONE: ACENUMOPTION = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACEO_MOSTRECENTFIRST: ACENUMOPTION = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACEO_FIRSTUNUSED: ACENUMOPTION = 65536i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ACTIVATEOPTIONS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AO_NONE: ACTIVATEOPTIONS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AO_DESIGNMODE: ACTIVATEOPTIONS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AO_NOERRORUI: ACTIVATEOPTIONS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AO_NOSPLASHSCREEN: ACTIVATEOPTIONS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AO_PRELAUNCH: ACTIVATEOPTIONS = 33554432i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ADJACENT_DISPLAY_EDGES = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ADE_NONE: ADJACENT_DISPLAY_EDGES = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ADE_LEFT: ADJACENT_DISPLAY_EDGES = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ADE_RIGHT: ADJACENT_DISPLAY_EDGES = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type AHE_TYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AHE_DESKTOP: AHE_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AHE_IMMERSIVE: AHE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type AHTYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AHTYPE_UNDEFINED: AHTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AHTYPE_USER_APPLICATION: AHTYPE = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AHTYPE_ANY_APPLICATION: AHTYPE = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AHTYPE_MACHINEDEFAULT: AHTYPE = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AHTYPE_PROGID: AHTYPE = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AHTYPE_APPLICATION: AHTYPE = 128i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AHTYPE_CLASS_APPLICATION: AHTYPE = 256i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AHTYPE_ANY_PROGID: AHTYPE = 512i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type APPACTIONFLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const APPACTION_INSTALL: APPACTIONFLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const APPACTION_UNINSTALL: APPACTIONFLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const APPACTION_MODIFY: APPACTIONFLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const APPACTION_REPAIR: APPACTIONFLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const APPACTION_UPGRADE: APPACTIONFLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const APPACTION_CANGETSIZE: APPACTIONFLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const APPACTION_MODIFYREMOVE: APPACTIONFLAGS = 128i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const APPACTION_ADDLATER: APPACTIONFLAGS = 256i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const APPACTION_UNSCHEDULE: APPACTIONFLAGS = 512i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type APPDOCLISTTYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ADLT_RECENT: APPDOCLISTTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ADLT_FREQUENT: APPDOCLISTTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type APPINFODATAFLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_DISPLAYNAME: APPINFODATAFLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_VERSION: APPINFODATAFLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_PUBLISHER: APPINFODATAFLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_PRODUCTID: APPINFODATAFLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_REGISTEREDOWNER: APPINFODATAFLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_REGISTEREDCOMPANY: APPINFODATAFLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_LANGUAGE: APPINFODATAFLAGS = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_SUPPORTURL: APPINFODATAFLAGS = 128i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_SUPPORTTELEPHONE: APPINFODATAFLAGS = 256i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_HELPLINK: APPINFODATAFLAGS = 512i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_INSTALLLOCATION: APPINFODATAFLAGS = 1024i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_INSTALLSOURCE: APPINFODATAFLAGS = 2048i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_INSTALLDATE: APPINFODATAFLAGS = 4096i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_CONTACT: APPINFODATAFLAGS = 16384i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_COMMENTS: APPINFODATAFLAGS = 32768i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_IMAGE: APPINFODATAFLAGS = 131072i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_READMEURL: APPINFODATAFLAGS = 262144i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AIM_UPDATEINFOURL: APPINFODATAFLAGS = 524288i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type APPLICATION_VIEW_MIN_WIDTH = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVMW_DEFAULT: APPLICATION_VIEW_MIN_WIDTH = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVMW_320: APPLICATION_VIEW_MIN_WIDTH = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVMW_500: APPLICATION_VIEW_MIN_WIDTH = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type APPLICATION_VIEW_ORIENTATION = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVO_LANDSCAPE: APPLICATION_VIEW_ORIENTATION = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVO_PORTRAIT: APPLICATION_VIEW_ORIENTATION = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type APPLICATION_VIEW_SIZE_PREFERENCE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVSP_DEFAULT: APPLICATION_VIEW_SIZE_PREFERENCE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVSP_USE_LESS: APPLICATION_VIEW_SIZE_PREFERENCE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVSP_USE_HALF: APPLICATION_VIEW_SIZE_PREFERENCE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVSP_USE_MORE: APPLICATION_VIEW_SIZE_PREFERENCE = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVSP_USE_MINIMUM: APPLICATION_VIEW_SIZE_PREFERENCE = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVSP_USE_NONE: APPLICATION_VIEW_SIZE_PREFERENCE = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVSP_CUSTOM: APPLICATION_VIEW_SIZE_PREFERENCE = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type APPLICATION_VIEW_STATE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVS_FULLSCREEN_LANDSCAPE: APPLICATION_VIEW_STATE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVS_FILLED: APPLICATION_VIEW_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVS_SNAPPED: APPLICATION_VIEW_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AVS_FULLSCREEN_PORTRAIT: APPLICATION_VIEW_STATE = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ASSOCCLASS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCCLASS_SHELL_KEY: ASSOCCLASS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCCLASS_PROGID_KEY: ASSOCCLASS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCCLASS_PROGID_STR: ASSOCCLASS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCCLASS_CLSID_KEY: ASSOCCLASS = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCCLASS_CLSID_STR: ASSOCCLASS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCCLASS_APP_KEY: ASSOCCLASS = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCCLASS_APP_STR: ASSOCCLASS = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCCLASS_SYSTEM_STR: ASSOCCLASS = 7i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCCLASS_FOLDER: ASSOCCLASS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCCLASS_STAR: ASSOCCLASS = 9i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCCLASS_FIXED_PROGID_STR: ASSOCCLASS = 10i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCCLASS_PROTOCOL_STR: ASSOCCLASS = 11i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ASSOCDATA = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCDATA_MSIDESCRIPTOR: ASSOCDATA = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCDATA_NOACTIVATEHANDLER: ASSOCDATA = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCDATA_UNUSED1: ASSOCDATA = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCDATA_HASPERUSERASSOC: ASSOCDATA = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCDATA_EDITFLAGS: ASSOCDATA = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCDATA_VALUE: ASSOCDATA = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCDATA_MAX: ASSOCDATA = 7i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ASSOCENUM = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCENUM_NONE: ASSOCENUM = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ASSOCIATIONLEVEL = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AL_MACHINE: ASSOCIATIONLEVEL = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AL_EFFECTIVE: ASSOCIATIONLEVEL = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AL_USER: ASSOCIATIONLEVEL = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ASSOCIATIONTYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AT_FILEEXTENSION: ASSOCIATIONTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AT_URLPROTOCOL: ASSOCIATIONTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AT_STARTMENUCLIENT: ASSOCIATIONTYPE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const AT_MIMETYPE: ASSOCIATIONTYPE = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ASSOCKEY = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCKEY_SHELLEXECCLASS: ASSOCKEY = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCKEY_APP: ASSOCKEY = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCKEY_CLASS: ASSOCKEY = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCKEY_BASECLASS: ASSOCKEY = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCKEY_MAX: ASSOCKEY = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ASSOCSTR = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_COMMAND: ASSOCSTR = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_EXECUTABLE: ASSOCSTR = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_FRIENDLYDOCNAME: ASSOCSTR = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_FRIENDLYAPPNAME: ASSOCSTR = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_NOOPEN: ASSOCSTR = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_SHELLNEWVALUE: ASSOCSTR = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_DDECOMMAND: ASSOCSTR = 7i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_DDEIFEXEC: ASSOCSTR = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_DDEAPPLICATION: ASSOCSTR = 9i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_DDETOPIC: ASSOCSTR = 10i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_INFOTIP: ASSOCSTR = 11i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_QUICKTIP: ASSOCSTR = 12i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_TILEINFO: ASSOCSTR = 13i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_CONTENTTYPE: ASSOCSTR = 14i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_DEFAULTICON: ASSOCSTR = 15i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_SHELLEXTENSION: ASSOCSTR = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_DROPTARGET: ASSOCSTR = 17i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_DELEGATEEXECUTE: ASSOCSTR = 18i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_SUPPORTED_URI_PROTOCOLS: ASSOCSTR = 19i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_PROGID: ASSOCSTR = 20i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_APPID: ASSOCSTR = 21i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_APPPUBLISHER: ASSOCSTR = 22i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_APPICONREFERENCE: ASSOCSTR = 23i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOCSTR_MAX: ASSOCSTR = 24i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ASSOC_FILTER = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOC_FILTER_NONE: ASSOC_FILTER = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ASSOC_FILTER_RECOMMENDED: ASSOC_FILTER = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ATTACHMENT_ACTION = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ATTACHMENT_ACTION_CANCEL: ATTACHMENT_ACTION = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ATTACHMENT_ACTION_SAVE: ATTACHMENT_ACTION = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ATTACHMENT_ACTION_EXEC: ATTACHMENT_ACTION = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type ATTACHMENT_PROMPT = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ATTACHMENT_PROMPT_NONE: ATTACHMENT_PROMPT = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ATTACHMENT_PROMPT_SAVE: ATTACHMENT_PROMPT = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ATTACHMENT_PROMPT_EXEC: ATTACHMENT_PROMPT = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ATTACHMENT_PROMPT_EXEC_OR_SAVE: ATTACHMENT_PROMPT = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type AUTOCOMPLETELISTOPTIONS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACLO_NONE: AUTOCOMPLETELISTOPTIONS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACLO_CURRENTDIR: AUTOCOMPLETELISTOPTIONS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACLO_MYCOMPUTER: AUTOCOMPLETELISTOPTIONS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACLO_DESKTOP: AUTOCOMPLETELISTOPTIONS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACLO_FAVORITES: AUTOCOMPLETELISTOPTIONS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACLO_FILESYSONLY: AUTOCOMPLETELISTOPTIONS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACLO_FILESYSDIRS: AUTOCOMPLETELISTOPTIONS = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACLO_VIRTUALNAMESPACE: AUTOCOMPLETELISTOPTIONS = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type AUTOCOMPLETEOPTIONS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACO_NONE: AUTOCOMPLETEOPTIONS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACO_AUTOSUGGEST: AUTOCOMPLETEOPTIONS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACO_AUTOAPPEND: AUTOCOMPLETEOPTIONS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACO_SEARCH: AUTOCOMPLETEOPTIONS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACO_FILTERPREFIXES: AUTOCOMPLETEOPTIONS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACO_USETAB: AUTOCOMPLETEOPTIONS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACO_UPDOWNKEYDROPSLIST: AUTOCOMPLETEOPTIONS = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACO_RTLREADING: AUTOCOMPLETEOPTIONS = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACO_WORD_FILTER: AUTOCOMPLETEOPTIONS = 128i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ACO_NOPREFIXFILTERING: AUTOCOMPLETEOPTIONS = 256i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type BANDSITECID = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const BSID_BANDADDED: BANDSITECID = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const BSID_BANDREMOVED: BANDSITECID = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type BANNER_NOTIFICATION_EVENT = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const BNE_Rendered: BANNER_NOTIFICATION_EVENT = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const BNE_Hovered: BANNER_NOTIFICATION_EVENT = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const BNE_Closed: BANNER_NOTIFICATION_EVENT = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const BNE_Dismissed: BANNER_NOTIFICATION_EVENT = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const BNE_Button1Clicked: BANNER_NOTIFICATION_EVENT = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const BNE_Button2Clicked: BANNER_NOTIFICATION_EVENT = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type BNSTATE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const BNS_NORMAL: BNSTATE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const BNS_BEGIN_NAVIGATE: BNSTATE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const BNS_NAVIGATE: BNSTATE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type BrowserNavConstants = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navOpenInNewWindow: BrowserNavConstants = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navNoHistory: BrowserNavConstants = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navNoReadFromCache: BrowserNavConstants = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navNoWriteToCache: BrowserNavConstants = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navAllowAutosearch: BrowserNavConstants = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navBrowserBar: BrowserNavConstants = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navHyperlink: BrowserNavConstants = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navEnforceRestricted: BrowserNavConstants = 128i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navNewWindowsManaged: BrowserNavConstants = 256i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navUntrustedForDownload: BrowserNavConstants = 512i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navTrustedForActiveX: BrowserNavConstants = 1024i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navOpenInNewTab: BrowserNavConstants = 2048i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navOpenInBackgroundTab: BrowserNavConstants = 4096i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navKeepWordWheelText: BrowserNavConstants = 8192i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navVirtualTab: BrowserNavConstants = 16384i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navBlockRedirectsXDomain: BrowserNavConstants = 32768i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navOpenNewForegroundTab: BrowserNavConstants = 65536i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navTravelLogScreenshot: BrowserNavConstants = 131072i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navDeferUnload: BrowserNavConstants = 262144i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navSpeculative: BrowserNavConstants = 524288i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navSuggestNewWindow: BrowserNavConstants = 1048576i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navSuggestNewTab: BrowserNavConstants = 2097152i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navReserved1: BrowserNavConstants = 4194304i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navHomepageNavigate: BrowserNavConstants = 8388608i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navRefresh: BrowserNavConstants = 16777216i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navHostNavigation: BrowserNavConstants = 33554432i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navReserved2: BrowserNavConstants = 67108864i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navReserved3: BrowserNavConstants = 134217728i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navReserved4: BrowserNavConstants = 268435456i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navReserved5: BrowserNavConstants = 536870912i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navReserved6: BrowserNavConstants = 1073741824i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const navReserved7: BrowserNavConstants = -2147483648i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CATEGORYINFO_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CATINFO_NORMAL: CATEGORYINFO_FLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CATINFO_COLLAPSED: CATEGORYINFO_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CATINFO_HIDDEN: CATEGORYINFO_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CATINFO_EXPANDED: CATEGORYINFO_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CATINFO_NOHEADER: CATEGORYINFO_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CATINFO_NOTCOLLAPSIBLE: CATEGORYINFO_FLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CATINFO_NOHEADERCOUNT: CATEGORYINFO_FLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CATINFO_SUBSETTED: CATEGORYINFO_FLAGS = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CATINFO_SEPARATE_IMAGES: CATEGORYINFO_FLAGS = 128i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CATINFO_SHOWEMPTY: CATEGORYINFO_FLAGS = 256i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CATSORT_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CATSORT_DEFAULT: CATSORT_FLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CATSORT_NAME: CATSORT_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CDBURNINGEXTENSIONRET = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CDBE_RET_DEFAULT: CDBURNINGEXTENSIONRET = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CDBE_RET_DONTRUNOTHEREXTS: CDBURNINGEXTENSIONRET = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CDBE_RET_STOPWIZARD: CDBURNINGEXTENSIONRET = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CDCONTROLSTATEF = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CDCS_INACTIVE: CDCONTROLSTATEF = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CDCS_ENABLED: CDCONTROLSTATEF = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CDCS_VISIBLE: CDCONTROLSTATEF = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CDCS_ENABLEDVISIBLE: CDCONTROLSTATEF = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CM_ENUM_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_ENUM_ALL: CM_ENUM_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_ENUM_VISIBLE: CM_ENUM_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CM_MASK = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_MASK_WIDTH: CM_MASK = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_MASK_DEFAULTWIDTH: CM_MASK = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_MASK_IDEALWIDTH: CM_MASK = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_MASK_NAME: CM_MASK = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_MASK_STATE: CM_MASK = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CM_SET_WIDTH_VALUE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_WIDTH_USEDEFAULT: CM_SET_WIDTH_VALUE = -1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_WIDTH_AUTOSIZE: CM_SET_WIDTH_VALUE = -2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CM_STATE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_STATE_NONE: CM_STATE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_STATE_VISIBLE: CM_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_STATE_FIXEDWIDTH: CM_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_STATE_NOSORTBYFOLDERNESS: CM_STATE = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CM_STATE_ALWAYSVISIBLE: CM_STATE = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CPVIEW = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPVIEW_CLASSIC: CPVIEW = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPVIEW_ALLITEMS: CPVIEW = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPVIEW_CATEGORY: CPVIEW = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPVIEW_HOME: CPVIEW = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CREDENTIAL_PROVIDER_ACCOUNT_OPTIONS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPAO_NONE: CREDENTIAL_PROVIDER_ACCOUNT_OPTIONS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPAO_EMPTY_LOCAL: CREDENTIAL_PROVIDER_ACCOUNT_OPTIONS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPAO_EMPTY_CONNECTED: CREDENTIAL_PROVIDER_ACCOUNT_OPTIONS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPCFO_NONE: CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPCFO_ENABLE_PASSWORD_REVEAL: CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPCFO_IS_EMAIL_ADDRESS: CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPCFO_ENABLE_TOUCH_KEYBOARD_AUTO_INVOKE: CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPCFO_NUMBERS_ONLY: CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPCFO_SHOW_ENGLISH_KEYBOARD: CREDENTIAL_PROVIDER_CREDENTIAL_FIELD_OPTIONS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CREDENTIAL_PROVIDER_FIELD_INTERACTIVE_STATE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFIS_NONE: CREDENTIAL_PROVIDER_FIELD_INTERACTIVE_STATE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFIS_READONLY: CREDENTIAL_PROVIDER_FIELD_INTERACTIVE_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFIS_DISABLED: CREDENTIAL_PROVIDER_FIELD_INTERACTIVE_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFIS_FOCUSED: CREDENTIAL_PROVIDER_FIELD_INTERACTIVE_STATE = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CREDENTIAL_PROVIDER_FIELD_STATE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFS_HIDDEN: CREDENTIAL_PROVIDER_FIELD_STATE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFS_DISPLAY_IN_SELECTED_TILE: CREDENTIAL_PROVIDER_FIELD_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFS_DISPLAY_IN_DESELECTED_TILE: CREDENTIAL_PROVIDER_FIELD_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFS_DISPLAY_IN_BOTH: CREDENTIAL_PROVIDER_FIELD_STATE = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CREDENTIAL_PROVIDER_FIELD_TYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFT_INVALID: CREDENTIAL_PROVIDER_FIELD_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFT_LARGE_TEXT: CREDENTIAL_PROVIDER_FIELD_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFT_SMALL_TEXT: CREDENTIAL_PROVIDER_FIELD_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFT_COMMAND_LINK: CREDENTIAL_PROVIDER_FIELD_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFT_EDIT_TEXT: CREDENTIAL_PROVIDER_FIELD_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFT_PASSWORD_TEXT: CREDENTIAL_PROVIDER_FIELD_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFT_TILE_IMAGE: CREDENTIAL_PROVIDER_FIELD_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFT_CHECKBOX: CREDENTIAL_PROVIDER_FIELD_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFT_COMBOBOX: CREDENTIAL_PROVIDER_FIELD_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPFT_SUBMIT_BUTTON: CREDENTIAL_PROVIDER_FIELD_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPGSR_NO_CREDENTIAL_NOT_FINISHED: CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPGSR_NO_CREDENTIAL_FINISHED: CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPGSR_RETURN_CREDENTIAL_FINISHED: CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPGSR_RETURN_NO_CREDENTIAL_FINISHED: CREDENTIAL_PROVIDER_GET_SERIALIZATION_RESPONSE = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CREDENTIAL_PROVIDER_STATUS_ICON = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPSI_NONE: CREDENTIAL_PROVIDER_STATUS_ICON = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPSI_ERROR: CREDENTIAL_PROVIDER_STATUS_ICON = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPSI_WARNING: CREDENTIAL_PROVIDER_STATUS_ICON = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPSI_SUCCESS: CREDENTIAL_PROVIDER_STATUS_ICON = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CREDENTIAL_PROVIDER_USAGE_SCENARIO = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPUS_INVALID: CREDENTIAL_PROVIDER_USAGE_SCENARIO = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPUS_LOGON: CREDENTIAL_PROVIDER_USAGE_SCENARIO = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPUS_UNLOCK_WORKSTATION: CREDENTIAL_PROVIDER_USAGE_SCENARIO = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPUS_CHANGE_PASSWORD: CREDENTIAL_PROVIDER_USAGE_SCENARIO = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPUS_CREDUI: CREDENTIAL_PROVIDER_USAGE_SCENARIO = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CPUS_PLAP: CREDENTIAL_PROVIDER_USAGE_SCENARIO = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type CommandStateChangeConstants = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CSC_UPDATECOMMANDS: CommandStateChangeConstants = -1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CSC_NAVIGATEFORWARD: CommandStateChangeConstants = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const CSC_NAVIGATEBACK: CommandStateChangeConstants = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DATAOBJ_GET_ITEM_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DOGIF_DEFAULT: DATAOBJ_GET_ITEM_FLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DOGIF_TRAVERSE_LINK: DATAOBJ_GET_ITEM_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DOGIF_NO_HDROP: DATAOBJ_GET_ITEM_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DOGIF_NO_URL: DATAOBJ_GET_ITEM_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DOGIF_ONLY_IF_ONE: DATAOBJ_GET_ITEM_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DEFAULTSAVEFOLDERTYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DSFT_DETECT: DEFAULTSAVEFOLDERTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DSFT_PRIVATE: DEFAULTSAVEFOLDERTYPE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DSFT_PUBLIC: DEFAULTSAVEFOLDERTYPE = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DEFAULT_FOLDER_MENU_RESTRICTIONS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFMR_DEFAULT: DEFAULT_FOLDER_MENU_RESTRICTIONS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFMR_NO_STATIC_VERBS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFMR_STATIC_VERBS_ONLY: DEFAULT_FOLDER_MENU_RESTRICTIONS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFMR_NO_RESOURCE_VERBS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFMR_OPTIN_HANDLERS_ONLY: DEFAULT_FOLDER_MENU_RESTRICTIONS = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFMR_RESOURCE_AND_FOLDER_VERBS_ONLY: DEFAULT_FOLDER_MENU_RESTRICTIONS = 128i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFMR_USE_SPECIFIED_HANDLERS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 256i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFMR_USE_SPECIFIED_VERBS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 512i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFMR_NO_ASYNC_VERBS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 1024i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFMR_NO_NATIVECPU_VERBS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 2048i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFMR_NO_NONWOW_VERBS: DEFAULT_FOLDER_MENU_RESTRICTIONS = 4096i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DEF_SHARE_ID = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DEFSHAREID_USERS: DEF_SHARE_ID = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DEFSHAREID_PUBLIC: DEF_SHARE_ID = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DESKBANDCID = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DBID_BANDINFOCHANGED: DESKBANDCID = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DBID_SHOWONLY: DESKBANDCID = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DBID_MAXIMIZEBAND: DESKBANDCID = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DBID_PUSHCHEVRON: DESKBANDCID = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DBID_DELAYINIT: DESKBANDCID = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DBID_FINISHINIT: DESKBANDCID = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DBID_SETWINDOWTHEME: DESKBANDCID = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DBID_PERMITAUTOHIDE: DESKBANDCID = 7i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DESKTOP_SLIDESHOW_DIRECTION = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DSD_FORWARD: DESKTOP_SLIDESHOW_DIRECTION = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DSD_BACKWARD: DESKTOP_SLIDESHOW_DIRECTION = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DESKTOP_SLIDESHOW_OPTIONS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DSO_SHUFFLEIMAGES: DESKTOP_SLIDESHOW_OPTIONS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DESKTOP_SLIDESHOW_STATE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DSS_ENABLED: DESKTOP_SLIDESHOW_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DSS_SLIDESHOW: DESKTOP_SLIDESHOW_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DSS_DISABLED_BY_REMOTE_SESSION: DESKTOP_SLIDESHOW_STATE = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DESKTOP_WALLPAPER_POSITION = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DWPOS_CENTER: DESKTOP_WALLPAPER_POSITION = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DWPOS_TILE: DESKTOP_WALLPAPER_POSITION = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DWPOS_STRETCH: DESKTOP_WALLPAPER_POSITION = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DWPOS_FIT: DESKTOP_WALLPAPER_POSITION = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DWPOS_FILL: DESKTOP_WALLPAPER_POSITION = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DWPOS_SPAN: DESKTOP_WALLPAPER_POSITION = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DFM_CMD = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_DELETE: DFM_CMD = -1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_MOVE: DFM_CMD = -2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_COPY: DFM_CMD = -3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_LINK: DFM_CMD = -4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_PROPERTIES: DFM_CMD = -5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_NEWFOLDER: DFM_CMD = -6i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_PASTE: DFM_CMD = -7i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_VIEWLIST: DFM_CMD = -8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_VIEWDETAILS: DFM_CMD = -9i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_PASTELINK: DFM_CMD = -10i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_PASTESPECIAL: DFM_CMD = -11i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_MODALPROP: DFM_CMD = -12i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_CMD_RENAME: DFM_CMD = -13i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DFM_MESSAGE_ID = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_MERGECONTEXTMENU: DFM_MESSAGE_ID = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_INVOKECOMMAND: DFM_MESSAGE_ID = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_GETHELPTEXT: DFM_MESSAGE_ID = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_WM_MEASUREITEM: DFM_MESSAGE_ID = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_WM_DRAWITEM: DFM_MESSAGE_ID = 7i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_WM_INITMENUPOPUP: DFM_MESSAGE_ID = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_VALIDATECMD: DFM_MESSAGE_ID = 9i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_MERGECONTEXTMENU_TOP: DFM_MESSAGE_ID = 10i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_GETHELPTEXTW: DFM_MESSAGE_ID = 11i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_INVOKECOMMANDEX: DFM_MESSAGE_ID = 12i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_MAPCOMMANDNAME: DFM_MESSAGE_ID = 13i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_GETDEFSTATICID: DFM_MESSAGE_ID = 14i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_GETVERBW: DFM_MESSAGE_ID = 15i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_GETVERBA: DFM_MESSAGE_ID = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_MERGECONTEXTMENU_BOTTOM: DFM_MESSAGE_ID = 17i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DFM_MODIFYQCMFLAGS: DFM_MESSAGE_ID = 18i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DISPLAY_DEVICE_TYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DEVICE_PRIMARY: DISPLAY_DEVICE_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DEVICE_IMMERSIVE: DISPLAY_DEVICE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DROPIMAGETYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DROPIMAGE_INVALID: DROPIMAGETYPE = -1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DROPIMAGE_NONE: DROPIMAGETYPE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DROPIMAGE_COPY: DROPIMAGETYPE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DROPIMAGE_MOVE: DROPIMAGETYPE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DROPIMAGE_LINK: DROPIMAGETYPE = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DROPIMAGE_LABEL: DROPIMAGETYPE = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DROPIMAGE_WARNING: DROPIMAGETYPE = 7i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DROPIMAGE_NOIMAGE: DROPIMAGETYPE = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DSH_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const DSH_ALLOWDROPDESCRIPTIONTEXT: DSH_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type EC_HOST_UI_MODE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ECHUIM_DESKTOP: EC_HOST_UI_MODE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ECHUIM_IMMERSIVE: EC_HOST_UI_MODE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const ECHUIM_SYSTEM_LAUNCHER: EC_HOST_UI_MODE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type EDGE_GESTURE_KIND = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EGK_TOUCH: EDGE_GESTURE_KIND = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EGK_KEYBOARD: EDGE_GESTURE_KIND = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EGK_MOUSE: EDGE_GESTURE_KIND = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type EXPLORER_BROWSER_FILL_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EBF_NONE: EXPLORER_BROWSER_FILL_FLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EBF_SELECTFROMDATAOBJECT: EXPLORER_BROWSER_FILL_FLAGS = 256i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EBF_NODROPTARGET: EXPLORER_BROWSER_FILL_FLAGS = 512i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type EXPLORER_BROWSER_OPTIONS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EBO_NONE: EXPLORER_BROWSER_OPTIONS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EBO_NAVIGATEONCE: EXPLORER_BROWSER_OPTIONS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EBO_SHOWFRAMES: EXPLORER_BROWSER_OPTIONS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EBO_ALWAYSNAVIGATE: EXPLORER_BROWSER_OPTIONS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EBO_NOTRAVELLOG: EXPLORER_BROWSER_OPTIONS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EBO_NOWRAPPERWINDOW: EXPLORER_BROWSER_OPTIONS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EBO_HTMLSHAREPOINTVIEW: EXPLORER_BROWSER_OPTIONS = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EBO_NOBORDER: EXPLORER_BROWSER_OPTIONS = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const EBO_NOPERSISTVIEWSTATE: EXPLORER_BROWSER_OPTIONS = 128i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FDAP = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FDAP_BOTTOM: FDAP = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FDAP_TOP: FDAP = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FDE_OVERWRITE_RESPONSE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FDEOR_DEFAULT: FDE_OVERWRITE_RESPONSE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FDEOR_ACCEPT: FDE_OVERWRITE_RESPONSE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FDEOR_REFUSE: FDE_OVERWRITE_RESPONSE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FDE_SHAREVIOLATION_RESPONSE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FDESVR_DEFAULT: FDE_SHAREVIOLATION_RESPONSE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FDESVR_ACCEPT: FDE_SHAREVIOLATION_RESPONSE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FDESVR_REFUSE: FDE_SHAREVIOLATION_RESPONSE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FD_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FD_CLSID: FD_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FD_SIZEPOINT: FD_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FD_ATTRIBUTES: FD_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FD_CREATETIME: FD_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FD_ACCESSTIME: FD_FLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FD_WRITESTIME: FD_FLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FD_FILESIZE: FD_FLAGS = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FD_PROGRESSUI: FD_FLAGS = 16384i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FD_LINKUI: FD_FLAGS = 32768i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FD_UNICODE: FD_FLAGS = -2147483648i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FFFP_MODE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FFFP_EXACTMATCH: FFFP_MODE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FFFP_NEARESTPARENTMATCH: FFFP_MODE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FILEOPENDIALOGOPTIONS = u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_OVERWRITEPROMPT: FILEOPENDIALOGOPTIONS = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_STRICTFILETYPES: FILEOPENDIALOGOPTIONS = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_NOCHANGEDIR: FILEOPENDIALOGOPTIONS = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_PICKFOLDERS: FILEOPENDIALOGOPTIONS = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_FORCEFILESYSTEM: FILEOPENDIALOGOPTIONS = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_ALLNONSTORAGEITEMS: FILEOPENDIALOGOPTIONS = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_NOVALIDATE: FILEOPENDIALOGOPTIONS = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_ALLOWMULTISELECT: FILEOPENDIALOGOPTIONS = 512u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_PATHMUSTEXIST: FILEOPENDIALOGOPTIONS = 2048u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_FILEMUSTEXIST: FILEOPENDIALOGOPTIONS = 4096u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_CREATEPROMPT: FILEOPENDIALOGOPTIONS = 8192u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_SHAREAWARE: FILEOPENDIALOGOPTIONS = 16384u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_NOREADONLYRETURN: FILEOPENDIALOGOPTIONS = 32768u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_NOTESTFILECREATE: FILEOPENDIALOGOPTIONS = 65536u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_HIDEMRUPLACES: FILEOPENDIALOGOPTIONS = 131072u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_HIDEPINNEDPLACES: FILEOPENDIALOGOPTIONS = 262144u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_NODEREFERENCELINKS: FILEOPENDIALOGOPTIONS = 1048576u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_OKBUTTONNEEDSINTERACTION: FILEOPENDIALOGOPTIONS = 2097152u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_DONTADDTORECENT: FILEOPENDIALOGOPTIONS = 33554432u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_FORCESHOWHIDDEN: FILEOPENDIALOGOPTIONS = 268435456u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_DEFAULTNOMINIMODE: FILEOPENDIALOGOPTIONS = 536870912u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_FORCEPREVIEWPANEON: FILEOPENDIALOGOPTIONS = 1073741824u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOS_SUPPORTSTREAMABLEITEMS: FILEOPENDIALOGOPTIONS = 2147483648u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FILETYPEATTRIBUTEFLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_None: FILETYPEATTRIBUTEFLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_Exclude: FILETYPEATTRIBUTEFLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_Show: FILETYPEATTRIBUTEFLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_HasExtension: FILETYPEATTRIBUTEFLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoEdit: FILETYPEATTRIBUTEFLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoRemove: FILETYPEATTRIBUTEFLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoNewVerb: FILETYPEATTRIBUTEFLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoEditVerb: FILETYPEATTRIBUTEFLAGS = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoRemoveVerb: FILETYPEATTRIBUTEFLAGS = 128i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoEditDesc: FILETYPEATTRIBUTEFLAGS = 256i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoEditIcon: FILETYPEATTRIBUTEFLAGS = 512i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoEditDflt: FILETYPEATTRIBUTEFLAGS = 1024i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoEditVerbCmd: FILETYPEATTRIBUTEFLAGS = 2048i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoEditVerbExe: FILETYPEATTRIBUTEFLAGS = 4096i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoDDE: FILETYPEATTRIBUTEFLAGS = 8192i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoEditMIME: FILETYPEATTRIBUTEFLAGS = 32768i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_OpenIsSafe: FILETYPEATTRIBUTEFLAGS = 65536i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_AlwaysUnsafe: FILETYPEATTRIBUTEFLAGS = 131072i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_NoRecentDocs: FILETYPEATTRIBUTEFLAGS = 1048576i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_SafeForElevation: FILETYPEATTRIBUTEFLAGS = 2097152i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FTA_AlwaysUseDirectInvoke: FILETYPEATTRIBUTEFLAGS = 4194304i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FILE_OPERATION_FLAGS2 = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOF2_NONE: FILE_OPERATION_FLAGS2 = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FOF2_MERGEFOLDERSONCOLLISION: FILE_OPERATION_FLAGS2 = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FILE_USAGE_TYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FUT_PLAYING: FILE_USAGE_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FUT_EDITING: FILE_USAGE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FUT_GENERIC: FILE_USAGE_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FLYOUT_PLACEMENT = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FP_DEFAULT: FLYOUT_PLACEMENT = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FP_ABOVE: FLYOUT_PLACEMENT = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FP_BELOW: FLYOUT_PLACEMENT = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FP_LEFT: FLYOUT_PLACEMENT = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FP_RIGHT: FLYOUT_PLACEMENT = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FOLDERFLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NONE: FOLDERFLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_AUTOARRANGE: FOLDERFLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_ABBREVIATEDNAMES: FOLDERFLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_SNAPTOGRID: FOLDERFLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_OWNERDATA: FOLDERFLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_BESTFITWINDOW: FOLDERFLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_DESKTOP: FOLDERFLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_SINGLESEL: FOLDERFLAGS = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NOSUBFOLDERS: FOLDERFLAGS = 128i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_TRANSPARENT: FOLDERFLAGS = 256i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NOCLIENTEDGE: FOLDERFLAGS = 512i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NOSCROLL: FOLDERFLAGS = 1024i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_ALIGNLEFT: FOLDERFLAGS = 2048i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NOICONS: FOLDERFLAGS = 4096i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_SHOWSELALWAYS: FOLDERFLAGS = 8192i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NOVISIBLE: FOLDERFLAGS = 16384i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_SINGLECLICKACTIVATE: FOLDERFLAGS = 32768i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NOWEBVIEW: FOLDERFLAGS = 65536i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_HIDEFILENAMES: FOLDERFLAGS = 131072i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_CHECKSELECT: FOLDERFLAGS = 262144i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NOENUMREFRESH: FOLDERFLAGS = 524288i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NOGROUPING: FOLDERFLAGS = 1048576i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_FULLROWSELECT: FOLDERFLAGS = 2097152i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NOFILTERS: FOLDERFLAGS = 4194304i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NOCOLUMNHEADER: FOLDERFLAGS = 8388608i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NOHEADERINALLVIEWS: FOLDERFLAGS = 16777216i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_EXTENDEDTILES: FOLDERFLAGS = 33554432i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_TRICHECKSELECT: FOLDERFLAGS = 67108864i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_AUTOCHECKSELECT: FOLDERFLAGS = 134217728i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_NOBROWSERVIEWSTATE: FOLDERFLAGS = 268435456i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_SUBSETGROUPS: FOLDERFLAGS = 536870912i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_USESEARCHFOLDER: FOLDERFLAGS = 1073741824i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FWF_ALLOWRTLREADING: FOLDERFLAGS = -2147483648i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FOLDERLOGICALVIEWMODE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FLVM_UNSPECIFIED: FOLDERLOGICALVIEWMODE = -1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FLVM_FIRST: FOLDERLOGICALVIEWMODE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FLVM_DETAILS: FOLDERLOGICALVIEWMODE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FLVM_TILES: FOLDERLOGICALVIEWMODE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FLVM_ICONS: FOLDERLOGICALVIEWMODE = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FLVM_LIST: FOLDERLOGICALVIEWMODE = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FLVM_CONTENT: FOLDERLOGICALVIEWMODE = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FLVM_LAST: FOLDERLOGICALVIEWMODE = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FOLDERVIEWMODE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVM_AUTO: FOLDERVIEWMODE = -1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVM_FIRST: FOLDERVIEWMODE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVM_ICON: FOLDERVIEWMODE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVM_SMALLICON: FOLDERVIEWMODE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVM_LIST: FOLDERVIEWMODE = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVM_DETAILS: FOLDERVIEWMODE = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVM_THUMBNAIL: FOLDERVIEWMODE = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVM_TILE: FOLDERVIEWMODE = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVM_THUMBSTRIP: FOLDERVIEWMODE = 7i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVM_CONTENT: FOLDERVIEWMODE = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVM_LAST: FOLDERVIEWMODE = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FOLDERVIEWOPTIONS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVO_DEFAULT: FOLDERVIEWOPTIONS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVO_VISTALAYOUT: FOLDERVIEWOPTIONS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVO_CUSTOMPOSITION: FOLDERVIEWOPTIONS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVO_CUSTOMORDERING: FOLDERVIEWOPTIONS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVO_SUPPORTHYPERLINKS: FOLDERVIEWOPTIONS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVO_NOANIMATIONS: FOLDERVIEWOPTIONS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVO_NOSCROLLTIPS: FOLDERVIEWOPTIONS = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FOLDER_ENUM_MODE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FEM_VIEWRESULT: FOLDER_ENUM_MODE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FEM_NAVIGATION: FOLDER_ENUM_MODE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type FVTEXTTYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const FVST_EMPTYTEXT: FVTEXTTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type GPFIDL_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const GPFIDL_DEFAULT: GPFIDL_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const GPFIDL_ALTNAME: GPFIDL_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const GPFIDL_UNCPRINTER: GPFIDL_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HELP_INFO_TYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HELPINFO_WINDOW: HELP_INFO_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HELPINFO_MENUITEM: HELP_INFO_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLBWIF_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLBWIF_HASFRAMEWNDINFO: HLBWIF_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLBWIF_HASDOCWNDINFO: HLBWIF_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLBWIF_FRAMEWNDMAXIMIZED: HLBWIF_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLBWIF_DOCWNDMAXIMIZED: HLBWIF_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLBWIF_HASWEBTOOLBARINFO: HLBWIF_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLBWIF_WEBTOOLBARHIDDEN: HLBWIF_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLFNAMEF = u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLFNAMEF_DEFAULT: HLFNAMEF = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLFNAMEF_TRYCACHE: HLFNAMEF = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLFNAMEF_TRYPRETTYTARGET: HLFNAMEF = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLFNAMEF_TRYFULLTARGET: HLFNAMEF = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLFNAMEF_TRYWIN95SHORTCUT: HLFNAMEF = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLID_INFO = u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLID_INVALID: HLID_INFO = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLID_PREVIOUS: HLID_INFO = 4294967295u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLID_NEXT: HLID_INFO = 4294967294u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLID_CURRENT: HLID_INFO = 4294967293u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLID_STACKBOTTOM: HLID_INFO = 4294967292u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLID_STACKTOP: HLID_INFO = 4294967291u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLINKGETREF = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLINKGETREF_DEFAULT: HLINKGETREF = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLINKGETREF_ABSOLUTE: HLINKGETREF = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLINKGETREF_RELATIVE: HLINKGETREF = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLINKMISC = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLINKMISC_RELATIVE: HLINKMISC = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLINKSETF = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLINKSETF_TARGET: HLINKSETF = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLINKSETF_LOCATION: HLINKSETF = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLINKWHICHMK = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLINKWHICHMK_CONTAINER: HLINKWHICHMK = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLINKWHICHMK_BASE: HLINKWHICHMK = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLNF = u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLNF_INTERNALJUMP: HLNF = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLNF_OPENINNEWWINDOW: HLNF = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLNF_NAVIGATINGBACK: HLNF = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLNF_NAVIGATINGFORWARD: HLNF = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLNF_NAVIGATINGTOSTACKITEM: HLNF = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLNF_CREATENOHISTORY: HLNF = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLQF_INFO = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLQF_ISVALID: HLQF_INFO = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLQF_ISCURRENT: HLQF_INFO = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLSHORTCUTF = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLSHORTCUTF_DEFAULT: HLSHORTCUTF = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLSHORTCUTF_DONTACTUALLYCREATE: HLSHORTCUTF = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLSHORTCUTF_USEFILENAMEFROMFRIENDLYNAME: HLSHORTCUTF = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLSHORTCUTF_USEUNIQUEFILENAME: HLSHORTCUTF = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLSHORTCUTF_MAYUSEEXISTINGSHORTCUT: HLSHORTCUTF = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLSR = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLSR_HOME: HLSR = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLSR_SEARCHPAGE: HLSR = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLSR_HISTORYFOLDER: HLSR = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLTB_INFO = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLTB_DOCKEDLEFT: HLTB_INFO = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLTB_DOCKEDTOP: HLTB_INFO = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLTB_DOCKEDRIGHT: HLTB_INFO = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLTB_DOCKEDBOTTOM: HLTB_INFO = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLTB_FLOATING: HLTB_INFO = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HLTRANSLATEF = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLTRANSLATEF_DEFAULT: HLTRANSLATEF = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HLTRANSLATEF_DONTAPPLYDEFAULTPREFIX: HLTRANSLATEF = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type HOMEGROUPSHARINGCHOICES = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HGSC_NONE: HOMEGROUPSHARINGCHOICES = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HGSC_MUSICLIBRARY: HOMEGROUPSHARINGCHOICES = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HGSC_PICTURESLIBRARY: HOMEGROUPSHARINGCHOICES = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HGSC_VIDEOSLIBRARY: HOMEGROUPSHARINGCHOICES = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HGSC_DOCUMENTSLIBRARY: HOMEGROUPSHARINGCHOICES = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const HGSC_PRINTERS: HOMEGROUPSHARINGCHOICES = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type IEPDNFLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const IEPDN_BINDINGUI: IEPDNFLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type IESHORTCUTFLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const IESHORTCUT_NEWBROWSER: IESHORTCUTFLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const IESHORTCUT_OPENNEWTAB: IESHORTCUTFLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const IESHORTCUT_FORCENAVIGATE: IESHORTCUTFLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const IESHORTCUT_BACKGROUNDTAB: IESHORTCUTFLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type IURL_INVOKECOMMAND_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const IURL_INVOKECOMMAND_FL_ALLOW_UI: IURL_INVOKECOMMAND_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const IURL_INVOKECOMMAND_FL_USE_DEFAULT_VERB: IURL_INVOKECOMMAND_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const IURL_INVOKECOMMAND_FL_DDEWAIT: IURL_INVOKECOMMAND_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const IURL_INVOKECOMMAND_FL_ASYNCOK: IURL_INVOKECOMMAND_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const IURL_INVOKECOMMAND_FL_LOG_USAGE: IURL_INVOKECOMMAND_FLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type IURL_SETURL_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const IURL_SETURL_FL_GUESS_PROTOCOL: IURL_SETURL_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const IURL_SETURL_FL_USE_DEFAULT_PROTOCOL: IURL_SETURL_FLAGS = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type KF_CATEGORY = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -6544,29 +6651,6 @@ pub type KNOWNDESTCATEGORY = i32;
 pub const KDC_FREQUENT: KNOWNDESTCATEGORY = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const KDC_RECENT: KNOWNDESTCATEGORY = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct KNOWNFOLDER_DEFINITION {
-    pub category: KF_CATEGORY,
-    pub pszName: ::windows_sys::core::PWSTR,
-    pub pszDescription: ::windows_sys::core::PWSTR,
-    pub fidParent: ::windows_sys::core::GUID,
-    pub pszRelativePath: ::windows_sys::core::PWSTR,
-    pub pszParsingName: ::windows_sys::core::PWSTR,
-    pub pszTooltip: ::windows_sys::core::PWSTR,
-    pub pszLocalizedName: ::windows_sys::core::PWSTR,
-    pub pszIcon: ::windows_sys::core::PWSTR,
-    pub pszSecurity: ::windows_sys::core::PWSTR,
-    pub dwAttributes: u32,
-    pub kfdFlags: u32,
-    pub ftidType: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for KNOWNFOLDER_DEFINITION {}
-impl ::core::clone::Clone for KNOWNFOLDER_DEFINITION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type KNOWN_FOLDER_FLAG = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -6601,7 +6685,6 @@ pub const KF_FLAG_NOT_PARENT_RELATIVE: KNOWN_FOLDER_FLAG = 512i32;
 pub const KF_FLAG_SIMPLE_IDLIST: KNOWN_FOLDER_FLAG = 256i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const KF_FLAG_ALIAS_ONLY: KNOWN_FOLDER_FLAG = -2147483648i32;
-pub const KnownFolderManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1307625264, data2: 57245, data3: 19171, data4: [145, 83, 170, 107, 130, 233, 121, 90] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type LIBRARYFOLDERFILTER = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -6632,35 +6715,6 @@ pub const LSF_FAILIFTHERE: LIBRARYSAVEFLAGS = 0i32;
 pub const LSF_OVERRIDEEXISTING: LIBRARYSAVEFLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const LSF_MAKEUNIQUENAME: LIBRARYSAVEFLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const LIBRARY_E_NO_ACCESSIBLE_LOCATION: ::windows_sys::core::HRESULT = -2144927231i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const LIBRARY_E_NO_SAVE_LOCATION: ::windows_sys::core::HRESULT = -2144927232i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const LINK_E_DELETE: ::windows_sys::core::HRESULT = -2144927485i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
-pub type LPFNDFMCALLBACK = ::core::option::Option<unsafe extern "system" fn(psf: IShellFolder, hwnd: super::super::Foundation::HWND, pdtobj: super::super::System::Com::IDataObject, umsg: u32, wparam: super::super::Foundation::WPARAM, lparam: super::super::Foundation::LPARAM) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole"))]
-pub type LPFNVIEWCALLBACK = ::core::option::Option<unsafe extern "system" fn(psvouter: IShellView, psf: IShellFolder, hwndmain: super::super::Foundation::HWND, umsg: u32, wparam: super::super::Foundation::WPARAM, lparam: super::super::Foundation::LPARAM) -> ::windows_sys::core::HRESULT>;
-pub const LocalThumbnailCache: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1357858116, data2: 44191, data3: 19086, data4: [178, 27, 138, 38, 24, 13, 177, 63] };
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const MAXFILELEN: u32 = 13u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const MAX_COLUMN_DESC_LEN: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const MAX_COLUMN_NAME_LEN: u32 = 80u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const MAX_SYNCMGRHANDLERNAME: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const MAX_SYNCMGRITEMNAME: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const MAX_SYNCMGR_ID: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const MAX_SYNCMGR_NAME: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const MAX_SYNCMGR_PROGRESSTEXT: u32 = 260u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type MENUBANDHANDLERCID = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -6718,6 +6772,10 @@ pub const MUS_USERINPUTNEEDED: MERGE_UPDATE_STATUS = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const MUS_FAILED: MERGE_UPDATE_STATUS = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type MIMEASSOCIATIONDIALOG_IN_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const MIMEASSOCDLG_FL_REGISTER_ASSOC: MIMEASSOCIATIONDIALOG_IN_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type MM_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const MM_ADDSEPARATOR: MM_FLAGS = 1u32;
@@ -6733,37 +6791,6 @@ pub const MAV_UNKNOWN: MONITOR_APP_VISIBILITY = 0i32;
 pub const MAV_NO_APP_VISIBLE: MONITOR_APP_VISIBILITY = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const MAV_APP_VISIBLE: MONITOR_APP_VISIBILITY = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MULTIKEYHELPA {
-    pub mkSize: u32,
-    pub mkKeylist: super::super::Foundation::CHAR,
-    pub szKeyphrase: [super::super::Foundation::CHAR; 1],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MULTIKEYHELPA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MULTIKEYHELPA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct MULTIKEYHELPW {
-    pub mkSize: u32,
-    pub mkKeylist: u16,
-    pub szKeyphrase: [u16; 1],
-}
-impl ::core::marker::Copy for MULTIKEYHELPW {}
-impl ::core::clone::Clone for MULTIKEYHELPW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub const MailRecipient: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2656484960, data2: 50447, data3: 4559, data4: [154, 44, 0, 160, 201, 10, 144, 206] };
-pub const MergedCategorizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2390916113, data2: 13287, data3: 19393, data4: [178, 66, 140, 217, 161, 194, 179, 4] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type NAMESPACEWALKFLAG = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -6807,351 +6834,6 @@ pub const NDO_LANDSCAPE: NATIVE_DISPLAY_ORIENTATION = 0i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const NDO_PORTRAIT: NATIVE_DISPLAY_ORIENTATION = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NCM_DISPLAYERRORTIP: u32 = 1028u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NCM_GETADDRESS: u32 = 1025u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NCM_GETALLOWTYPE: u32 = 1027u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NCM_SETALLOWTYPE: u32 = 1026u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct NC_ADDRESS {
-    pub pAddrInfo: *mut NC_ADDRESS_0,
-    pub PortNumber: u16,
-    pub PrefixLength: u8,
-}
-impl ::core::marker::Copy for NC_ADDRESS {}
-impl ::core::clone::Clone for NC_ADDRESS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-pub struct NC_ADDRESS_0(pub u8);
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NETCACHE_E_NEGATIVE_CACHE: ::windows_sys::core::HRESULT = -2144927488i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub struct NEWCPLINFOA {
-    pub dwSize: u32,
-    pub dwFlags: u32,
-    pub dwHelpContext: u32,
-    pub lData: isize,
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub szName: [super::super::Foundation::CHAR; 32],
-    pub szInfo: [super::super::Foundation::CHAR; 64],
-    pub szHelpFile: [super::super::Foundation::CHAR; 128],
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for NEWCPLINFOA {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for NEWCPLINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-pub struct NEWCPLINFOW {
-    pub dwSize: u32,
-    pub dwFlags: u32,
-    pub dwHelpContext: u32,
-    pub lData: isize,
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub szName: [u16; 32],
-    pub szInfo: [u16; 64],
-    pub szHelpFile: [u16; 128],
-}
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::marker::Copy for NEWCPLINFOW {}
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::clone::Clone for NEWCPLINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIIF_ERROR: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIIF_ICON_MASK: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIIF_INFO: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIIF_LARGE_ICON: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIIF_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIIF_NOSOUND: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIIF_RESPECT_QUIET_TIME: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIIF_USER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIIF_WARNING: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NINF_KEY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIN_BALLOONHIDE: u32 = 1027u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIN_BALLOONSHOW: u32 = 1026u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIN_BALLOONTIMEOUT: u32 = 1028u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIN_BALLOONUSERCLICK: u32 = 1029u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIN_POPUPCLOSE: u32 = 1031u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIN_POPUPOPEN: u32 = 1030u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIN_SELECT: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIS_HIDDEN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NIS_SHAREDICON: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub struct NOTIFYICONDATAA {
-    pub cbSize: u32,
-    pub hWnd: super::super::Foundation::HWND,
-    pub uID: u32,
-    pub uFlags: NOTIFY_ICON_DATA_FLAGS,
-    pub uCallbackMessage: u32,
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub szTip: [super::super::Foundation::CHAR; 128],
-    pub dwState: u32,
-    pub dwStateMask: u32,
-    pub szInfo: [super::super::Foundation::CHAR; 256],
-    pub Anonymous: NOTIFYICONDATAA_0,
-    pub szInfoTitle: [super::super::Foundation::CHAR; 64],
-    pub dwInfoFlags: u32,
-    pub guidItem: ::windows_sys::core::GUID,
-    pub hBalloonIcon: super::WindowsAndMessaging::HICON,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for NOTIFYICONDATAA {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for NOTIFYICONDATAA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub union NOTIFYICONDATAA_0 {
-    pub uTimeout: u32,
-    pub uVersion: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for NOTIFYICONDATAA_0 {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for NOTIFYICONDATAA_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub struct NOTIFYICONDATAA {
-    pub cbSize: u32,
-    pub hWnd: super::super::Foundation::HWND,
-    pub uID: u32,
-    pub uFlags: NOTIFY_ICON_DATA_FLAGS,
-    pub uCallbackMessage: u32,
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub szTip: [super::super::Foundation::CHAR; 128],
-    pub dwState: u32,
-    pub dwStateMask: u32,
-    pub szInfo: [super::super::Foundation::CHAR; 256],
-    pub Anonymous: NOTIFYICONDATAA_0,
-    pub szInfoTitle: [super::super::Foundation::CHAR; 64],
-    pub dwInfoFlags: u32,
-    pub guidItem: ::windows_sys::core::GUID,
-    pub hBalloonIcon: super::WindowsAndMessaging::HICON,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for NOTIFYICONDATAA {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for NOTIFYICONDATAA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub union NOTIFYICONDATAA_0 {
-    pub uTimeout: u32,
-    pub uVersion: u32,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for NOTIFYICONDATAA_0 {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for NOTIFYICONDATAA_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub struct NOTIFYICONDATAW {
-    pub cbSize: u32,
-    pub hWnd: super::super::Foundation::HWND,
-    pub uID: u32,
-    pub uFlags: NOTIFY_ICON_DATA_FLAGS,
-    pub uCallbackMessage: u32,
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub szTip: [u16; 128],
-    pub dwState: u32,
-    pub dwStateMask: u32,
-    pub szInfo: [u16; 256],
-    pub Anonymous: NOTIFYICONDATAW_0,
-    pub szInfoTitle: [u16; 64],
-    pub dwInfoFlags: u32,
-    pub guidItem: ::windows_sys::core::GUID,
-    pub hBalloonIcon: super::WindowsAndMessaging::HICON,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for NOTIFYICONDATAW {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for NOTIFYICONDATAW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub union NOTIFYICONDATAW_0 {
-    pub uTimeout: u32,
-    pub uVersion: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for NOTIFYICONDATAW_0 {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for NOTIFYICONDATAW_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub struct NOTIFYICONDATAW {
-    pub cbSize: u32,
-    pub hWnd: super::super::Foundation::HWND,
-    pub uID: u32,
-    pub uFlags: NOTIFY_ICON_DATA_FLAGS,
-    pub uCallbackMessage: u32,
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub szTip: [u16; 128],
-    pub dwState: u32,
-    pub dwStateMask: u32,
-    pub szInfo: [u16; 256],
-    pub Anonymous: NOTIFYICONDATAW_0,
-    pub szInfoTitle: [u16; 64],
-    pub dwInfoFlags: u32,
-    pub guidItem: ::windows_sys::core::GUID,
-    pub hBalloonIcon: super::WindowsAndMessaging::HICON,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for NOTIFYICONDATAW {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for NOTIFYICONDATAW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub union NOTIFYICONDATAW_0 {
-    pub uTimeout: u32,
-    pub uVersion: u32,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for NOTIFYICONDATAW_0 {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for NOTIFYICONDATAW_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct NOTIFYICONIDENTIFIER {
-    pub cbSize: u32,
-    pub hWnd: super::super::Foundation::HWND,
-    pub uID: u32,
-    pub guidItem: ::windows_sys::core::GUID,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for NOTIFYICONIDENTIFIER {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for NOTIFYICONIDENTIFIER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct NOTIFYICONIDENTIFIER {
-    pub cbSize: u32,
-    pub hWnd: super::super::Foundation::HWND,
-    pub uID: u32,
-    pub guidItem: ::windows_sys::core::GUID,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for NOTIFYICONIDENTIFIER {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for NOTIFYICONIDENTIFIER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NOTIFYICON_VERSION: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NOTIFYICON_VERSION_4: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type NOTIFY_ICON_DATA_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const NIF_MESSAGE: NOTIFY_ICON_DATA_FLAGS = 1u32;
@@ -7170,6 +6852,26 @@ pub const NIF_REALTIME: NOTIFY_ICON_DATA_FLAGS = 64u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const NIF_SHOWTIP: NOTIFY_ICON_DATA_FLAGS = 128u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type NOTIFY_ICON_INFOTIP_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIIF_NONE: NOTIFY_ICON_INFOTIP_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIIF_INFO: NOTIFY_ICON_INFOTIP_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIIF_WARNING: NOTIFY_ICON_INFOTIP_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIIF_ERROR: NOTIFY_ICON_INFOTIP_FLAGS = 3u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIIF_USER: NOTIFY_ICON_INFOTIP_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIIF_ICON_MASK: NOTIFY_ICON_INFOTIP_FLAGS = 15u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIIF_NOSOUND: NOTIFY_ICON_INFOTIP_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIIF_LARGE_ICON: NOTIFY_ICON_INFOTIP_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIIF_RESPECT_QUIET_TIME: NOTIFY_ICON_INFOTIP_FLAGS = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type NOTIFY_ICON_MESSAGE = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const NIM_ADD: NOTIFY_ICON_MESSAGE = 0u32;
@@ -7181,45 +6883,12 @@ pub const NIM_DELETE: NOTIFY_ICON_MESSAGE = 2u32;
 pub const NIM_SETFOCUS: NOTIFY_ICON_MESSAGE = 3u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const NIM_SETVERSION: NOTIFY_ICON_MESSAGE = 4u32;
-pub const NPCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1037483712, data2: 33171, data3: 20478, data4: [174, 37, 224, 142, 57, 234, 64, 99] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_NetworkManagement_WNet\"`*"]
-#[cfg(feature = "Win32_NetworkManagement_WNet")]
-pub struct NRESARRAY {
-    pub cItems: u32,
-    pub nr: [super::super::NetworkManagement::WNet::NETRESOURCEA; 1],
-}
-#[cfg(feature = "Win32_NetworkManagement_WNet")]
-impl ::core::marker::Copy for NRESARRAY {}
-#[cfg(feature = "Win32_NetworkManagement_WNet")]
-impl ::core::clone::Clone for NRESARRAY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Controls\"`*"]
-#[cfg(feature = "Win32_UI_Controls")]
-pub struct NSTCCUSTOMDRAW {
-    pub psi: IShellItem,
-    pub uItemState: u32,
-    pub nstcis: u32,
-    pub pszText: ::windows_sys::core::PCWSTR,
-    pub iImage: i32,
-    pub himl: super::Controls::HIMAGELIST,
-    pub iLevel: i32,
-    pub iIndent: i32,
-}
-#[cfg(feature = "Win32_UI_Controls")]
-impl ::core::marker::Copy for NSTCCUSTOMDRAW {}
-#[cfg(feature = "Win32_UI_Controls")]
-impl ::core::clone::Clone for NSTCCUSTOMDRAW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NSTCDHPOS_ONTOP: i32 = -1i32;
+pub type NOTIFY_ICON_STATE = u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIS_HIDDEN: NOTIFY_ICON_STATE = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const NIS_SHAREDICON: NOTIFY_ICON_STATE = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type NSTCFOLDERCAPABILITIES = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -7262,58 +6931,6 @@ pub const NSTCS2_DISPLAYPINNEDONLY: NSTCSTYLE2 = 8i32;
 pub const NTSCS2_NOSINGLETONAUTOEXPAND: NSTCSTYLE2 = 16i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const NTSCS2_NEVERINSERTNONENUMERATED: NSTCSTYLE2 = 32i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Console\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Console"))]
-pub struct NT_CONSOLE_PROPS {
-    pub dbh: DATABLOCK_HEADER,
-    pub wFillAttribute: u16,
-    pub wPopupFillAttribute: u16,
-    pub dwScreenBufferSize: super::super::System::Console::COORD,
-    pub dwWindowSize: super::super::System::Console::COORD,
-    pub dwWindowOrigin: super::super::System::Console::COORD,
-    pub nFont: u32,
-    pub nInputBufferSize: u32,
-    pub dwFontSize: super::super::System::Console::COORD,
-    pub uFontFamily: u32,
-    pub uFontWeight: u32,
-    pub FaceName: [u16; 32],
-    pub uCursorSize: u32,
-    pub bFullScreen: super::super::Foundation::BOOL,
-    pub bQuickEdit: super::super::Foundation::BOOL,
-    pub bInsertMode: super::super::Foundation::BOOL,
-    pub bAutoPosition: super::super::Foundation::BOOL,
-    pub uHistoryBufferSize: u32,
-    pub uNumberOfHistoryBuffers: u32,
-    pub bHistoryNoDup: super::super::Foundation::BOOL,
-    pub ColorTable: [u32; 16],
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Console"))]
-impl ::core::marker::Copy for NT_CONSOLE_PROPS {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Console"))]
-impl ::core::clone::Clone for NT_CONSOLE_PROPS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NT_CONSOLE_PROPS_SIG: u32 = 2684354562u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct NT_FE_CONSOLE_PROPS {
-    pub dbh: DATABLOCK_HEADER,
-    pub uCodePage: u32,
-}
-impl ::core::marker::Copy for NT_FE_CONSOLE_PROPS {}
-impl ::core::clone::Clone for NT_FE_CONSOLE_PROPS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NT_FE_CONSOLE_PROPS_SIG: u32 = 2684354564u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const NUM_POINTS: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type NWMF = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -7344,50 +6961,10 @@ pub const NWMF_SUGGESTWINDOW: NWMF = 262144i32;
 pub const NWMF_SUGGESTTAB: NWMF = 524288i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const NWMF_INACTIVETAB: NWMF = 1048576i32;
-pub const NamespaceTreeControl: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2919580178, data2: 13621, data3: 17456, data4: [131, 237, 213, 1, 170, 102, 128, 230] };
-pub const NamespaceWalker: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1928028640, data2: 34418, data3: 17155, data4: [145, 117, 242, 228, 198, 139, 46, 124] };
-pub const NetworkConnections: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1879551175, data2: 12802, data3: 4561, data4: [170, 210, 0, 128, 95, 193, 39, 14] };
-pub const NetworkExplorerFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4029422093, data2: 48673, data3: 17232, data4: [136, 176, 115, 103, 252, 150, 239, 60] };
-pub const NetworkPlaces: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 546122848, data2: 15082, data3: 4201, data4: [162, 215, 8, 0, 43, 48, 48, 157] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type NewProcessCauseConstants = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ProtectedModeRedirect: NewProcessCauseConstants = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const OFASI_EDIT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const OFASI_OPENDESKTOP: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const OFFLINE_STATUS_INCOMPLETE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const OFFLINE_STATUS_LOCAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const OFFLINE_STATUS_REMOTE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const OF_CAP_CANCLOSE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const OF_CAP_CANSWITCHTO: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const OI_ASYNC: u32 = 4294962926u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const OI_DEFAULT: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct OPENASINFO {
-    pub pcszFile: ::windows_sys::core::PCWSTR,
-    pub pcszClass: ::windows_sys::core::PCWSTR,
-    pub oaifInFlags: OPEN_AS_INFO_FLAGS,
-}
-impl ::core::marker::Copy for OPENASINFO {}
-impl ::core::clone::Clone for OPENASINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const OPENPROPS_INHIBITPIF: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const OPENPROPS_NONE: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type OPEN_AS_INFO_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -7404,90 +6981,6 @@ pub const OAIF_HIDE_REGISTRATION: OPEN_AS_INFO_FLAGS = 32u32;
 pub const OAIF_URL_PROTOCOL: OPEN_AS_INFO_FLAGS = 64u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const OAIF_FILE_IS_URI: OPEN_AS_INFO_FLAGS = 128u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct OPEN_PRINTER_PROPS_INFOA {
-    pub dwSize: u32,
-    pub pszSheetName: ::windows_sys::core::PSTR,
-    pub uSheetIndex: u32,
-    pub dwFlags: u32,
-    pub bModal: super::super::Foundation::BOOL,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for OPEN_PRINTER_PROPS_INFOA {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for OPEN_PRINTER_PROPS_INFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct OPEN_PRINTER_PROPS_INFOA {
-    pub dwSize: u32,
-    pub pszSheetName: ::windows_sys::core::PSTR,
-    pub uSheetIndex: u32,
-    pub dwFlags: u32,
-    pub bModal: super::super::Foundation::BOOL,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for OPEN_PRINTER_PROPS_INFOA {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for OPEN_PRINTER_PROPS_INFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct OPEN_PRINTER_PROPS_INFOW {
-    pub dwSize: u32,
-    pub pszSheetName: ::windows_sys::core::PWSTR,
-    pub uSheetIndex: u32,
-    pub dwFlags: u32,
-    pub bModal: super::super::Foundation::BOOL,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for OPEN_PRINTER_PROPS_INFOW {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for OPEN_PRINTER_PROPS_INFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct OPEN_PRINTER_PROPS_INFOW {
-    pub dwSize: u32,
-    pub pszSheetName: ::windows_sys::core::PWSTR,
-    pub uSheetIndex: u32,
-    pub dwFlags: u32,
-    pub bModal: super::super::Foundation::BOOL,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for OPEN_PRINTER_PROPS_INFOW {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for OPEN_PRINTER_PROPS_INFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type OS = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -7574,9 +7067,6 @@ pub const OFS_OFFLINE: OfflineFolderStatus = 1i32;
 pub const OFS_SERVERBACK: OfflineFolderStatus = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const OFS_DIRTYCACHE: OfflineFolderStatus = 3i32;
-pub const OnexCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 128583814, data2: 52365, data3: 19993, data4: [164, 16, 28, 117, 175, 104, 110, 98] };
-pub const OnexPlapSmartcardCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 868773078, data2: 28767, data3: 19361, data4: [154, 219, 103, 7, 11, 131, 119, 117] };
-pub const OpenControlPanel: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 107097477, data2: 26710, data3: 17504, data4: [141, 225, 168, 25, 33, 180, 28, 75] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type PACKAGE_EXECUTION_STATE = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -7590,79 +7080,23 @@ pub const PES_SUSPENDED: PACKAGE_EXECUTION_STATE = 3i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const PES_TERMINATED: PACKAGE_EXECUTION_STATE = 4i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PANE_NAVIGATION: u32 = 5u32;
+pub type PATHCCH_OPTIONS = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PANE_NONE: u32 = 4294967295u32;
+pub const PATHCCH_NONE: PATHCCH_OPTIONS = 0u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PANE_OFFLINE: u32 = 2u32;
+pub const PATHCCH_ALLOW_LONG_PATHS: PATHCCH_OPTIONS = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PANE_PRINTER: u32 = 3u32;
+pub const PATHCCH_FORCE_ENABLE_LONG_NAME_PROCESS: PATHCCH_OPTIONS = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PANE_PRIVACY: u32 = 7u32;
+pub const PATHCCH_FORCE_DISABLE_LONG_NAME_PROCESS: PATHCCH_OPTIONS = 4u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PANE_PROGRESS: u32 = 6u32;
+pub const PATHCCH_DO_NOT_NORMALIZE_SEGMENTS: PATHCCH_OPTIONS = 8u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PANE_SSL: u32 = 4u32;
+pub const PATHCCH_ENSURE_IS_EXTENDED_LENGTH_PATH: PATHCCH_OPTIONS = 16u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PANE_ZONE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PAPPCONSTRAIN_CHANGE_ROUTINE = ::core::option::Option<unsafe extern "system" fn(constrained: super::super::Foundation::BOOLEAN, context: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PAPPSTATE_CHANGE_ROUTINE = ::core::option::Option<unsafe extern "system" fn(quiesced: super::super::Foundation::BOOLEAN, context: *const ::core::ffi::c_void)>;
-#[repr(C)]
+pub const PATHCCH_ENSURE_TRAILING_SLASH: PATHCCH_OPTIONS = 32u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct PARSEDURLA {
-    pub cbSize: u32,
-    pub pszProtocol: ::windows_sys::core::PCSTR,
-    pub cchProtocol: u32,
-    pub pszSuffix: ::windows_sys::core::PCSTR,
-    pub cchSuffix: u32,
-    pub nScheme: u32,
-}
-impl ::core::marker::Copy for PARSEDURLA {}
-impl ::core::clone::Clone for PARSEDURLA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct PARSEDURLW {
-    pub cbSize: u32,
-    pub pszProtocol: ::windows_sys::core::PCWSTR,
-    pub cchProtocol: u32,
-    pub pszSuffix: ::windows_sys::core::PCWSTR,
-    pub cchSuffix: u32,
-    pub nScheme: u32,
-}
-impl ::core::marker::Copy for PARSEDURLW {}
-impl ::core::clone::Clone for PARSEDURLW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PATHCCH_MAX_CCH: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type PATHCCH_OPTIONS = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PATHCCH_NONE: PATHCCH_OPTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PATHCCH_ALLOW_LONG_PATHS: PATHCCH_OPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PATHCCH_FORCE_ENABLE_LONG_NAME_PROCESS: PATHCCH_OPTIONS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PATHCCH_FORCE_DISABLE_LONG_NAME_PROCESS: PATHCCH_OPTIONS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PATHCCH_DO_NOT_NORMALIZE_SEGMENTS: PATHCCH_OPTIONS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PATHCCH_ENSURE_IS_EXTENDED_LENGTH_PATH: PATHCCH_OPTIONS = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PATHCCH_ENSURE_TRAILING_SLASH: PATHCCH_OPTIONS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PATHCCH_CANONICALIZE_SLASHES: PATHCCH_OPTIONS = 64i32;
+pub const PATHCCH_CANONICALIZE_SLASHES: PATHCCH_OPTIONS = 64u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type PCS_RET = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -7675,63 +7109,6 @@ pub const PCS_REMOVEDCHAR: PCS_RET = 2u32;
 pub const PCS_TRUNCATED: PCS_RET = 4u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const PCS_PATHTOOLONG: PCS_RET = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PDTIMER_PAUSE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PDTIMER_RESET: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PDTIMER_RESUME: u32 = 3u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(feature = "Win32_UI_Shell_Common")]
-pub struct PERSIST_FOLDER_TARGET_INFO {
-    pub pidlTargetFolder: *mut Common::ITEMIDLIST,
-    pub szTargetParsingName: [u16; 260],
-    pub szNetworkProvider: [u16; 260],
-    pub dwAttributes: u32,
-    pub csidl: i32,
-}
-#[cfg(feature = "Win32_UI_Shell_Common")]
-impl ::core::marker::Copy for PERSIST_FOLDER_TARGET_INFO {}
-#[cfg(feature = "Win32_UI_Shell_Common")]
-impl ::core::clone::Clone for PERSIST_FOLDER_TARGET_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type PFNCANSHAREFOLDERW = ::core::option::Option<unsafe extern "system" fn(pszpath: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFNSHOWSHAREFOLDERUIW = ::core::option::Option<unsafe extern "system" fn(hwndparent: super::super::Foundation::HWND, pszpath: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDASI_AVG_DATA_RATE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDASI_CHANNEL_COUNT: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDASI_COMPRESSION: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDASI_FORMAT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDASI_SAMPLE_RATE: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDASI_SAMPLE_SIZE: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDASI_STREAM_NAME: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDASI_STREAM_NUMBER: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDASI_TIMELENGTH: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDDRSI_DESCRIPTION: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDDRSI_PLAYCOUNT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDDRSI_PLAYEXPIRES: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDDRSI_PLAYSTARTS: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDDRSI_PROTECTED: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type PIDISF_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -7760,60 +7137,6 @@ pub const PIDISR_NEEDS_ADD: PIDISR_INFO = 1i32;
 pub const PIDISR_NEEDS_UPDATE: PIDISR_INFO = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const PIDISR_NEEDS_DELETE: PIDISR_INFO = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDSI_ALBUM: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDSI_ARTIST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDSI_COMMENT: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDSI_GENRE: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDSI_LYRICS: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDSI_SONGTITLE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDSI_TRACK: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDSI_YEAR: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDVSI_COMPRESSION: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDVSI_DATA_RATE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDVSI_FRAME_COUNT: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDVSI_FRAME_HEIGHT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDVSI_FRAME_RATE: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDVSI_FRAME_WIDTH: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDVSI_SAMPLE_SIZE: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDVSI_STREAM_NAME: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDVSI_STREAM_NUMBER: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIDVSI_TIMELENGTH: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_COMPUTERNAME: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_CONTROLPANEL_CATEGORY: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_DESCRIPTIONID: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_DISPLACED_DATE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_DISPLACED_FROM: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_DISPLAY_PROPERTIES: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_FINDDATA: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_HTMLINFOTIPFILE: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_INTROTEXT: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type PID_INTSITE = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -7883,100 +7206,6 @@ pub const PID_IS_COMMENT: PID_IS = 13i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const PID_IS_ROAMED: PID_IS = 15i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_LINK_TARGET: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_LINK_TARGET_TYPE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_MISC_ACCESSCOUNT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_MISC_OWNER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_MISC_PICS: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_MISC_STATUS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_NETRESOURCE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_NETWORKLOCATION: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_QUERY_RANK: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_SHARE_CSC_STATUS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_SYNC_COPY_IN: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_VOLUME_CAPACITY: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_VOLUME_FILESYSTEM: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_VOLUME_FREE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PID_WHICHFOLDER: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIFDEFFILESIZE: u32 = 80u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIFDEFPATHSIZE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIFMAXFILEPATH: u32 = 260u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIFNAMESIZE: u32 = 30u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIFPARAMSSIZE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIFSHDATASIZE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIFSHPROGSIZE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PIFSTARTLOCSIZE: u32 = 63u32;
-pub const PINLogonCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3414354450, data2: 40817, data3: 17517, data4: [137, 225, 141, 9, 36, 225, 37, 110] };
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PLATFORM_BROWSERONLY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PLATFORM_IE3: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PLATFORM_INTEGRATED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PLATFORM_UNKNOWN: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PMSF_DONT_STRIP_SPACES: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PMSF_MULTIPLE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PMSF_NORMAL: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PO_DELETE: u32 = 19u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PO_PORTCHANGE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PO_RENAME: u32 = 20u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PO_REN_PORT: u32 = 52u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PPCF_ADDARGUMENTS: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PPCF_ADDQUOTES: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PPCF_FORCEQUALIFY: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PPCF_LONGESTPOSSIBLE: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PPCF_NODIRECTORIES: u32 = 16u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-pub struct PREVIEWHANDLERFRAMEINFO {
-    pub haccel: super::WindowsAndMessaging::HACCEL,
-    pub cAccelEntries: u32,
-}
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::marker::Copy for PREVIEWHANDLERFRAMEINFO {}
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::clone::Clone for PREVIEWHANDLERFRAMEINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type PRF_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const PRF_VERIFYEXISTS: PRF_FLAGS = 1i32;
@@ -7989,106 +7218,6 @@ pub const PRF_DONTFINDLNK: PRF_FLAGS = 8i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const PRF_REQUIREABSOLUTE: PRF_FLAGS = 16i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PRINTACTION_DOCUMENTDEFAULTS: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PRINTACTION_NETINSTALL: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PRINTACTION_NETINSTALLLINK: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PRINTACTION_OPEN: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PRINTACTION_OPENNETPRN: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PRINTACTION_PROPERTIES: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PRINTACTION_SERVERPROPERTIES: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PRINTACTION_TESTPAGE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PRINT_PROP_FORCE_NAME: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PROFILEINFOA {
-    pub dwSize: u32,
-    pub dwFlags: u32,
-    pub lpUserName: ::windows_sys::core::PSTR,
-    pub lpProfilePath: ::windows_sys::core::PSTR,
-    pub lpDefaultPath: ::windows_sys::core::PSTR,
-    pub lpServerName: ::windows_sys::core::PSTR,
-    pub lpPolicyPath: ::windows_sys::core::PSTR,
-    pub hProfile: super::super::Foundation::HANDLE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PROFILEINFOA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PROFILEINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PROFILEINFOW {
-    pub dwSize: u32,
-    pub dwFlags: u32,
-    pub lpUserName: ::windows_sys::core::PWSTR,
-    pub lpProfilePath: ::windows_sys::core::PWSTR,
-    pub lpDefaultPath: ::windows_sys::core::PWSTR,
-    pub lpServerName: ::windows_sys::core::PWSTR,
-    pub lpPolicyPath: ::windows_sys::core::PWSTR,
-    pub hProfile: super::super::Foundation::HANDLE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PROFILEINFOW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PROFILEINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PROGDLG_AUTOTIME: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PROGDLG_MARQUEEPROGRESS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PROGDLG_MODAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PROGDLG_NOCANCEL: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PROGDLG_NOMINIMIZE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PROGDLG_NOPROGRESSBAR: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PROGDLG_NORMAL: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PROGDLG_NOTIME: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PROPSTR_EXTENSIONCOMPLETIONSTATE: &str = "ExtensionCompletionState";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const PROP_CONTRACT_DELEGATE: &str = "ContractDelegate";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PUBAPPINFO {
-    pub cbSize: u32,
-    pub dwMask: u32,
-    pub pszSource: ::windows_sys::core::PWSTR,
-    pub stAssigned: super::super::Foundation::SYSTEMTIME,
-    pub stPublished: super::super::Foundation::SYSTEMTIME,
-    pub stScheduled: super::super::Foundation::SYSTEMTIME,
-    pub stExpire: super::super::Foundation::SYSTEMTIME,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PUBAPPINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PUBAPPINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type PUBAPPINFOFLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const PAI_SOURCE: PUBAPPINFOFLAGS = 1i32;
@@ -8100,70 +7229,6 @@ pub const PAI_PUBLISHEDTIME: PUBAPPINFOFLAGS = 4i32;
 pub const PAI_SCHEDULEDTIME: PUBAPPINFOFLAGS = 8i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const PAI_EXPIRETIME: PUBAPPINFOFLAGS = 16i32;
-pub const PackageDebugSettings: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2981020015, data2: 9091, data3: 18514, data4: [176, 233, 143, 11, 29, 198, 107, 77] };
-pub const PasswordCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1622642312, data2: 60120, data3: 17500, data4: [156, 253, 11, 135, 247, 78, 166, 205] };
-pub const PreviousVersions: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1500164194, data2: 46290, data3: 16917, data4: [159, 116, 233, 16, 155, 10, 129, 83] };
-pub const PropertiesUI: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3641899215, data2: 918, data3: 18709, data4: [136, 78, 251, 66, 93, 50, 148, 59] };
-pub const PublishDropTarget: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3429822459, data2: 17398, data3: 18117, data4: [150, 25, 81, 213, 113, 150, 127, 125] };
-pub const PublishingWizard: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1798510140, data2: 30373, data3: 19308, data4: [191, 33, 69, 222, 156, 213, 3, 161] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-pub struct QCMINFO {
-    pub hmenu: super::WindowsAndMessaging::HMENU,
-    pub indexMenu: u32,
-    pub idCmdFirst: u32,
-    pub idCmdLast: u32,
-    pub pIdMap: *const QCMINFO_IDMAP,
-}
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::marker::Copy for QCMINFO {}
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::clone::Clone for QCMINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct QCMINFO_IDMAP {
-    pub nMaxIds: u32,
-    pub pIdList: [QCMINFO_IDMAP_PLACEMENT; 1],
-}
-impl ::core::marker::Copy for QCMINFO_IDMAP {}
-impl ::core::clone::Clone for QCMINFO_IDMAP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct QCMINFO_IDMAP_PLACEMENT {
-    pub id: u32,
-    pub fFlags: u32,
-}
-impl ::core::marker::Copy for QCMINFO_IDMAP_PLACEMENT {}
-impl ::core::clone::Clone for QCMINFO_IDMAP_PLACEMENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const QCMINFO_PLACE_AFTER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const QCMINFO_PLACE_BEFORE: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct QITAB {
-    pub piid: *const ::windows_sys::core::GUID,
-    pub dwOffset: u32,
-}
-impl ::core::marker::Copy for QITAB {}
-impl ::core::clone::Clone for QITAB {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type QITIPF_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -8198,8 +7263,6 @@ pub const QUNS_ACCEPTS_NOTIFICATIONS: QUERY_USER_NOTIFICATION_STATE = 5i32;
 pub const QUNS_QUIET_TIME: QUERY_USER_NOTIFICATION_STATE = 6i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const QUNS_APP: QUERY_USER_NOTIFICATION_STATE = 7i32;
-pub const QueryCancelAutoPlay: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 857675624, data2: 1449, data3: 19933, data4: [184, 110, 218, 227, 77, 220, 153, 138] };
-pub const RASProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1429725827, data2: 45543, data3: 20216, data4: [156, 110, 122, 176, 175, 229, 5, 109] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type RESTRICTIONS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -8539,62 +7602,6 @@ pub const REFRESH_IFEXPIRED: RefreshConstants = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const REFRESH_COMPLETELY: RefreshConstants = 3i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_ABSOLUTE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_ACTIVATE_NOFOCUS: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_ALLOW_AUTONAVIGATE: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_CALLERUNTRUSTED: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_CREATENOHISTORY: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_DEFBROWSER: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_DEFMODE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_EXPLOREMODE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_FEEDNAVIGATION: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_HELPMODE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_INITIATEDBYHLINKFRAME: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_KEEPSAMETEMPLATE: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_KEEPWORDWHEELTEXT: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_NAVIGATEBACK: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_NAVIGATEFORWARD: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_NEWBROWSER: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_NOAUTOSELECT: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_NOTRANSFERHIST: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_OPENMODE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_PARENT: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_PLAYNOSOUND: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_REDIRECT: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_RELATIVE: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_SAMEBROWSER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_TRUSTEDFORACTIVEX: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_TRUSTFIRSTDOWNLOAD: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_UNTRUSTEDFORDOWNLOAD: u32 = 33554432u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SBSP_WRITENOHISTORY: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SCALE_CHANGE_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SCF_VALUE_NONE: SCALE_CHANGE_FLAGS = 0u32;
@@ -8603,29 +7610,11 @@ pub const SCF_SCALE: SCALE_CHANGE_FLAGS = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SCF_PHYSICAL: SCALE_CHANGE_FLAGS = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SCHEME_CREATE: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SCHEME_DISPLAY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SCHEME_DONOTUSE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SCHEME_EDIT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SCHEME_GLOBAL: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SCHEME_LOCAL: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SCHEME_REFRESH: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SCHEME_UPDATE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SCNRT_STATUS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SCNRT_ENABLE: SCNRT_STATUS = 0i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SCNRT_DISABLE: SCNRT_STATUS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SCRM_VERIFYPW: u32 = 32768u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SECURELOCKCODE = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -8661,169 +7650,11 @@ pub const SECURELOCK_SUGGEST_FORTEZZA: SECURELOCKCODE = 12i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SECURELOCK_SUGGEST_SECURE128BIT: SECURELOCKCODE = 13i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_ASYNCOK: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_CLASSKEY: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_CLASSNAME: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_CONNECTNETDRV: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_DOENVSUBST: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_FLAG_DDEWAIT: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_FLAG_HINST_IS_SITE: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_FLAG_LOG_USAGE: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_FLAG_NO_UI: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_HMONITOR: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_HOTKEY: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_ICON: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_IDLIST: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_INVOKEIDLIST: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_NOASYNC: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_NOCLOSEPROCESS: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_NOQUERYCLASSSTORE: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_NOZONECHECKS: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_NO_CONSOLE: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_UNICODE: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SEE_MASK_WAITFORINPUTIDLE: u32 = 33554432u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SETPROPS_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SE_ERR_ACCESSDENIED: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SE_ERR_ASSOCINCOMPLETE: u32 = 27u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SE_ERR_DDEBUSY: u32 = 30u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SE_ERR_DDEFAIL: u32 = 29u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SE_ERR_DDETIMEOUT: u32 = 28u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SE_ERR_DLLNOTFOUND: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SE_ERR_FNF: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SE_ERR_NOASSOC: u32 = 31u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SE_ERR_OOM: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SE_ERR_PNF: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SE_ERR_SHARE: u32 = 26u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFBID_PIDLCHANGED: i32 = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SFBS_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SFBS_FLAGS_ROUND_TO_NEAREST_DISPLAYED_DIGIT: SFBS_FLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SFBS_FLAGS_TRUNCATE_UNDISPLAYED_DECIMAL_DIGITS: SFBS_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_BROWSABLE: i32 = 134217728i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_CANCOPY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_CANDELETE: i32 = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_CANLINK: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_CANMONIKER: i32 = 4194304i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_CANMOVE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_CANRENAME: i32 = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_CAPABILITYMASK: i32 = 375i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_COMPRESSED: i32 = 67108864i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_CONTENTSMASK: i32 = -2147483648i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_DISPLAYATTRMASK: i32 = 1032192i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_DROPTARGET: i32 = 256i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_ENCRYPTED: i32 = 8192i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_FILESYSANCESTOR: i32 = 268435456i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_FILESYSTEM: i32 = 1073741824i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_FOLDER: i32 = 536870912i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_GHOSTED: i32 = 32768i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_HASPROPSHEET: i32 = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_HASSTORAGE: i32 = 4194304i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_HASSUBFOLDER: i32 = -2147483648i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_HIDDEN: i32 = 524288i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_ISSLOW: i32 = 16384i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_LINK: i32 = 65536i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_NEWCONTENT: i32 = 2097152i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_NONENUMERATED: i32 = 1048576i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_PKEYSFGAOMASK: i32 = -2130427904i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_PLACEHOLDER: i32 = 2048i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_READONLY: i32 = 262144i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_REMOVABLE: i32 = 33554432i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_SHARE: i32 = 131072i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_STORAGE: i32 = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_STORAGEANCESTOR: i32 = 8388608i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_STORAGECAPMASK: i32 = 1891958792i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_STREAM: i32 = 4194304i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_SYSTEM: i32 = 4096i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFGAO_VALIDATE: i32 = 16777216i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFVM_ADDOBJECT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFVM_GETSELECTEDOBJECTS: u32 = 9u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SFVM_HELPTOPIC_DATA {
-    pub wszHelpFile: [u16; 260],
-    pub wszHelpTopic: [u16; 260],
-}
-impl ::core::marker::Copy for SFVM_HELPTOPIC_DATA {}
-impl ::core::clone::Clone for SFVM_HELPTOPIC_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SFVM_MESSAGE_ID = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -8884,38 +7715,6 @@ pub const SFVM_GETPANE: SFVM_MESSAGE_ID = 59i32;
 pub const SFVM_GETHELPTOPIC: SFVM_MESSAGE_ID = 63i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SFVM_GETANIMATION: SFVM_MESSAGE_ID = 68i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Controls\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Controls"))]
-pub struct SFVM_PROPPAGE_DATA {
-    pub dwReserved: u32,
-    pub pfn: super::Controls::LPFNSVADDPROPSHEETPAGE,
-    pub lParam: super::super::Foundation::LPARAM,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Controls"))]
-impl ::core::marker::Copy for SFVM_PROPPAGE_DATA {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Controls"))]
-impl ::core::clone::Clone for SFVM_PROPPAGE_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFVM_REARRANGE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFVM_REMOVEOBJECT: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFVM_SETCLIPBOARD: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFVM_SETITEMPOS: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFVM_SETPOINTS: u32 = 23u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFVM_UPDATEOBJECT: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFVSOC_INVALIDATE_ALL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SFVSOC_NOSCROLL: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SFVS_SELECT = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -8924,62 +7723,6 @@ pub const SFVS_SELECT_NONE: SFVS_SELECT = 0i32;
 pub const SFVS_SELECT_ALLITEMS: SFVS_SELECT = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SFVS_SELECT_INVERT: SFVS_SELECT = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(feature = "Win32_System_Ole")]
-pub struct SFV_CREATE {
-    pub cbSize: u32,
-    pub pshf: IShellFolder,
-    pub psvOuter: IShellView,
-    pub psfvcb: IShellFolderViewCB,
-}
-#[cfg(feature = "Win32_System_Ole")]
-impl ::core::marker::Copy for SFV_CREATE {}
-#[cfg(feature = "Win32_System_Ole")]
-impl ::core::clone::Clone for SFV_CREATE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-pub struct SFV_SETITEMPOS {
-    pub pidl: *mut Common::ITEMIDLIST,
-    pub pt: super::super::Foundation::POINT,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-impl ::core::marker::Copy for SFV_SETITEMPOS {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-impl ::core::clone::Clone for SFV_SETITEMPOS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHACF_AUTOAPPEND_FORCE_OFF: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHACF_AUTOAPPEND_FORCE_ON: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHACF_AUTOSUGGEST_FORCE_OFF: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHACF_AUTOSUGGEST_FORCE_ON: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHACF_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHACF_FILESYSTEM: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHACF_FILESYS_DIRS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHACF_FILESYS_ONLY: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHACF_URLHISTORY: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHACF_URLMRU: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHACF_USETAB: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHACF_VIRTUAL_NAMESPACE: u32 = 64u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SHARD = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -8998,45 +7741,6 @@ pub const SHARD_LINK: SHARD = 6i32;
 pub const SHARD_APPIDINFOLINK: SHARD = 7i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SHARD_SHELLITEM: SHARD = 8i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHARDAPPIDINFO {
-    pub psi: IShellItem,
-    pub pszAppID: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for SHARDAPPIDINFO {}
-impl ::core::clone::Clone for SHARDAPPIDINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(feature = "Win32_UI_Shell_Common")]
-pub struct SHARDAPPIDINFOIDLIST {
-    pub pidl: *mut Common::ITEMIDLIST,
-    pub pszAppID: ::windows_sys::core::PCWSTR,
-}
-#[cfg(feature = "Win32_UI_Shell_Common")]
-impl ::core::marker::Copy for SHARDAPPIDINFOIDLIST {}
-#[cfg(feature = "Win32_UI_Shell_Common")]
-impl ::core::clone::Clone for SHARDAPPIDINFOIDLIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHARDAPPIDINFOLINK {
-    pub psl: IShellLinkA,
-    pub pszAppID: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for SHARDAPPIDINFOLINK {}
-impl ::core::clone::Clone for SHARDAPPIDINFOLINK {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SHARE_ROLE = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -9053,22 +7757,6 @@ pub const SHARE_ROLE_OWNER: SHARE_ROLE = 3i32;
 pub const SHARE_ROLE_CUSTOM: SHARE_ROLE = 4i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SHARE_ROLE_MIXED: SHARE_ROLE = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHCDF_UPDATEITEM: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHCIDS_ALLFIELDS: i32 = -2147483648i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHCIDS_BITMASK: i32 = -65536i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHCIDS_CANONICALONLY: i32 = 268435456i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHCIDS_COLUMNMASK: i32 = 65535i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHCNEE_MSI_CHANGE: i32 = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHCNEE_MSI_UNINSTALL: i32 = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHCNEE_ORDERCHANGED: i32 = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SHCNE_ID = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -9157,185 +7845,6 @@ pub const SHCNRF_ShellLevel: SHCNRF_SOURCE = 2i32;
 pub const SHCNRF_RecursiveInterrupt: SHCNRF_SOURCE = 4096i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SHCNRF_NewDelivery: SHCNRF_SOURCE = 32768i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHCOLUMNDATA {
-    pub dwFlags: u32,
-    pub dwFileAttributes: u32,
-    pub dwReserved: u32,
-    pub pwszExt: ::windows_sys::core::PWSTR,
-    pub wszFile: [u16; 260],
-}
-impl ::core::marker::Copy for SHCOLUMNDATA {}
-impl ::core::clone::Clone for SHCOLUMNDATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
-#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
-pub struct SHCOLUMNINFO {
-    pub scid: PropertiesSystem::PROPERTYKEY,
-    pub vt: u16,
-    pub fmt: u32,
-    pub cChars: u32,
-    pub csFlags: u32,
-    pub wszTitle: [u16; 80],
-    pub wszDescription: [u16; 128],
-}
-#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
-impl ::core::marker::Copy for SHCOLUMNINFO {}
-#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
-impl ::core::clone::Clone for SHCOLUMNINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHCOLUMNINIT {
-    pub dwFlags: u32,
-    pub dwReserved: u32,
-    pub wszFolder: [u16; 260],
-}
-impl ::core::marker::Copy for SHCOLUMNINIT {}
-impl ::core::clone::Clone for SHCOLUMNINIT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_Security\"`, `\"Win32_System_Threading\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security", feature = "Win32_System_Threading"))]
-pub struct SHCREATEPROCESSINFOW {
-    pub cbSize: u32,
-    pub fMask: u32,
-    pub hwnd: super::super::Foundation::HWND,
-    pub pszFile: ::windows_sys::core::PCWSTR,
-    pub pszParameters: ::windows_sys::core::PCWSTR,
-    pub pszCurrentDirectory: ::windows_sys::core::PCWSTR,
-    pub hUserToken: super::super::Foundation::HANDLE,
-    pub lpProcessAttributes: *mut super::super::Security::SECURITY_ATTRIBUTES,
-    pub lpThreadAttributes: *mut super::super::Security::SECURITY_ATTRIBUTES,
-    pub bInheritHandles: super::super::Foundation::BOOL,
-    pub dwCreationFlags: u32,
-    pub lpStartupInfo: *mut super::super::System::Threading::STARTUPINFOW,
-    pub lpProcessInformation: *mut super::super::System::Threading::PROCESS_INFORMATION,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security", feature = "Win32_System_Threading"))]
-impl ::core::marker::Copy for SHCREATEPROCESSINFOW {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security", feature = "Win32_System_Threading"))]
-impl ::core::clone::Clone for SHCREATEPROCESSINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_Security\"`, `\"Win32_System_Threading\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security", feature = "Win32_System_Threading"))]
-pub struct SHCREATEPROCESSINFOW {
-    pub cbSize: u32,
-    pub fMask: u32,
-    pub hwnd: super::super::Foundation::HWND,
-    pub pszFile: ::windows_sys::core::PCWSTR,
-    pub pszParameters: ::windows_sys::core::PCWSTR,
-    pub pszCurrentDirectory: ::windows_sys::core::PCWSTR,
-    pub hUserToken: super::super::Foundation::HANDLE,
-    pub lpProcessAttributes: *mut super::super::Security::SECURITY_ATTRIBUTES,
-    pub lpThreadAttributes: *mut super::super::Security::SECURITY_ATTRIBUTES,
-    pub bInheritHandles: super::super::Foundation::BOOL,
-    pub dwCreationFlags: u32,
-    pub lpStartupInfo: *mut super::super::System::Threading::STARTUPINFOW,
-    pub lpProcessInformation: *mut super::super::System::Threading::PROCESS_INFORMATION,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security", feature = "Win32_System_Threading"))]
-impl ::core::marker::Copy for SHCREATEPROCESSINFOW {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security", feature = "Win32_System_Threading"))]
-impl ::core::clone::Clone for SHCREATEPROCESSINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHC_E_SHELL_COMPONENT_STARTUP_FAILURE: ::windows_sys::core::HRESULT = -2144927180i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHChangeDWORDAsIDList {
-    pub cb: u16,
-    pub dwItem1: u32,
-    pub dwItem2: u32,
-    pub cbZero: u16,
-}
-impl ::core::marker::Copy for SHChangeDWORDAsIDList {}
-impl ::core::clone::Clone for SHChangeDWORDAsIDList {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-pub struct SHChangeNotifyEntry {
-    pub pidl: *mut Common::ITEMIDLIST,
-    pub fRecursive: super::super::Foundation::BOOL,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-impl ::core::marker::Copy for SHChangeNotifyEntry {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
-impl ::core::clone::Clone for SHChangeNotifyEntry {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHChangeProductKeyAsIDList {
-    pub cb: u16,
-    pub wszProductKey: [u16; 39],
-    pub cbZero: u16,
-}
-impl ::core::marker::Copy for SHChangeProductKeyAsIDList {}
-impl ::core::clone::Clone for SHChangeProductKeyAsIDList {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHChangeUpdateImageIDList {
-    pub cb: u16,
-    pub iIconIndex: i32,
-    pub iCurIndex: i32,
-    pub uFlags: u32,
-    pub dwProcessID: u32,
-    pub szName: [u16; 260],
-    pub cbZero: u16,
-}
-impl ::core::marker::Copy for SHChangeUpdateImageIDList {}
-impl ::core::clone::Clone for SHChangeUpdateImageIDList {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHDESCRIPTIONID {
-    pub dwDescriptionId: SHDID_ID,
-    pub clsid: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for SHDESCRIPTIONID {}
-impl ::core::clone::Clone for SHDESCRIPTIONID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SHDID_ID = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -9382,23 +7891,6 @@ pub const SHDID_COMPUTER_SHAREDDOCS: SHDID_ID = 20i32;
 pub const SHDID_MOBILE_DEVICE: SHDID_ID = 21i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SHDID_REMOTE_DESKTOP_DRIVE: SHDID_ID = 22i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-pub struct SHDRAGIMAGE {
-    pub sizeDragImage: super::super::Foundation::SIZE,
-    pub ptOffset: super::super::Foundation::POINT,
-    pub hbmpDragImage: super::super::Graphics::Gdi::HBITMAP,
-    pub crColorKey: u32,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::marker::Copy for SHDRAGIMAGE {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::clone::Clone for SHDRAGIMAGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SHELLBROWSERSHOWCONTROL = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -9409,267 +7901,34 @@ pub const SBSC_SHOW: SHELLBROWSERSHOWCONTROL = 1i32;
 pub const SBSC_TOGGLE: SHELLBROWSERSHOWCONTROL = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SBSC_QUERY: SHELLBROWSERSHOWCONTROL = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-pub struct SHELLEXECUTEINFOA {
-    pub cbSize: u32,
-    pub fMask: u32,
-    pub hwnd: super::super::Foundation::HWND,
-    pub lpVerb: ::windows_sys::core::PCSTR,
-    pub lpFile: ::windows_sys::core::PCSTR,
-    pub lpParameters: ::windows_sys::core::PCSTR,
-    pub lpDirectory: ::windows_sys::core::PCSTR,
-    pub nShow: i32,
-    pub hInstApp: super::super::Foundation::HINSTANCE,
-    pub lpIDList: *mut ::core::ffi::c_void,
-    pub lpClass: ::windows_sys::core::PCSTR,
-    pub hkeyClass: super::super::System::Registry::HKEY,
-    pub dwHotKey: u32,
-    pub Anonymous: SHELLEXECUTEINFOA_0,
-    pub hProcess: super::super::Foundation::HANDLE,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::marker::Copy for SHELLEXECUTEINFOA {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::clone::Clone for SHELLEXECUTEINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-pub union SHELLEXECUTEINFOA_0 {
-    pub hIcon: super::super::Foundation::HANDLE,
-    pub hMonitor: super::super::Foundation::HANDLE,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::marker::Copy for SHELLEXECUTEINFOA_0 {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::clone::Clone for SHELLEXECUTEINFOA_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-pub struct SHELLEXECUTEINFOA {
-    pub cbSize: u32,
-    pub fMask: u32,
-    pub hwnd: super::super::Foundation::HWND,
-    pub lpVerb: ::windows_sys::core::PCSTR,
-    pub lpFile: ::windows_sys::core::PCSTR,
-    pub lpParameters: ::windows_sys::core::PCSTR,
-    pub lpDirectory: ::windows_sys::core::PCSTR,
-    pub nShow: i32,
-    pub hInstApp: super::super::Foundation::HINSTANCE,
-    pub lpIDList: *mut ::core::ffi::c_void,
-    pub lpClass: ::windows_sys::core::PCSTR,
-    pub hkeyClass: super::super::System::Registry::HKEY,
-    pub dwHotKey: u32,
-    pub Anonymous: SHELLEXECUTEINFOA_0,
-    pub hProcess: super::super::Foundation::HANDLE,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::marker::Copy for SHELLEXECUTEINFOA {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::clone::Clone for SHELLEXECUTEINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-pub union SHELLEXECUTEINFOA_0 {
-    pub hIcon: super::super::Foundation::HANDLE,
-    pub hMonitor: super::super::Foundation::HANDLE,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::marker::Copy for SHELLEXECUTEINFOA_0 {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::clone::Clone for SHELLEXECUTEINFOA_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-pub struct SHELLEXECUTEINFOW {
-    pub cbSize: u32,
-    pub fMask: u32,
-    pub hwnd: super::super::Foundation::HWND,
-    pub lpVerb: ::windows_sys::core::PCWSTR,
-    pub lpFile: ::windows_sys::core::PCWSTR,
-    pub lpParameters: ::windows_sys::core::PCWSTR,
-    pub lpDirectory: ::windows_sys::core::PCWSTR,
-    pub nShow: i32,
-    pub hInstApp: super::super::Foundation::HINSTANCE,
-    pub lpIDList: *mut ::core::ffi::c_void,
-    pub lpClass: ::windows_sys::core::PCWSTR,
-    pub hkeyClass: super::super::System::Registry::HKEY,
-    pub dwHotKey: u32,
-    pub Anonymous: SHELLEXECUTEINFOW_0,
-    pub hProcess: super::super::Foundation::HANDLE,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::marker::Copy for SHELLEXECUTEINFOW {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::clone::Clone for SHELLEXECUTEINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-pub union SHELLEXECUTEINFOW_0 {
-    pub hIcon: super::super::Foundation::HANDLE,
-    pub hMonitor: super::super::Foundation::HANDLE,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::marker::Copy for SHELLEXECUTEINFOW_0 {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::clone::Clone for SHELLEXECUTEINFOW_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-pub struct SHELLEXECUTEINFOW {
-    pub cbSize: u32,
-    pub fMask: u32,
-    pub hwnd: super::super::Foundation::HWND,
-    pub lpVerb: ::windows_sys::core::PCWSTR,
-    pub lpFile: ::windows_sys::core::PCWSTR,
-    pub lpParameters: ::windows_sys::core::PCWSTR,
-    pub lpDirectory: ::windows_sys::core::PCWSTR,
-    pub nShow: i32,
-    pub hInstApp: super::super::Foundation::HINSTANCE,
-    pub lpIDList: *mut ::core::ffi::c_void,
-    pub lpClass: ::windows_sys::core::PCWSTR,
-    pub hkeyClass: super::super::System::Registry::HKEY,
-    pub dwHotKey: u32,
-    pub Anonymous: SHELLEXECUTEINFOW_0,
-    pub hProcess: super::super::Foundation::HANDLE,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::marker::Copy for SHELLEXECUTEINFOW {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::clone::Clone for SHELLEXECUTEINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-pub union SHELLEXECUTEINFOW_0 {
-    pub hIcon: super::super::Foundation::HANDLE,
-    pub hMonitor: super::super::Foundation::HANDLE,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::marker::Copy for SHELLEXECUTEINFOW_0 {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
-impl ::core::clone::Clone for SHELLEXECUTEINFOW_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHELLFLAGSTATE {
-    pub _bitfield: i32,
-}
-impl ::core::marker::Copy for SHELLFLAGSTATE {}
-impl ::core::clone::Clone for SHELLFLAGSTATE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
+pub type SHELL_AUTOCOMPLETE_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHELLSTATEA {
-    pub _bitfield1: i32,
-    pub dwWin95Unused: u32,
-    pub uWin95Unused: u32,
-    pub lParamSort: i32,
-    pub iSortDirection: i32,
-    pub version: u32,
-    pub uNotUsed: u32,
-    pub _bitfield2: i32,
-}
-impl ::core::marker::Copy for SHELLSTATEA {}
-impl ::core::clone::Clone for SHELLSTATEA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const SHACF_DEFAULT: SHELL_AUTOCOMPLETE_FLAGS = 0u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHELLSTATEVERSION_IE4: u32 = 9u32;
+pub const SHACF_FILESYSTEM: SHELL_AUTOCOMPLETE_FLAGS = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHELLSTATEVERSION_WIN2K: u32 = 10u32;
-#[repr(C, packed(1))]
+pub const SHACF_URLALL: SHELL_AUTOCOMPLETE_FLAGS = 6u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHELLSTATEW {
-    pub _bitfield1: i32,
-    pub dwWin95Unused: u32,
-    pub uWin95Unused: u32,
-    pub lParamSort: i32,
-    pub iSortDirection: i32,
-    pub version: u32,
-    pub uNotUsed: u32,
-    pub _bitfield2: i32,
-}
-impl ::core::marker::Copy for SHELLSTATEW {}
-impl ::core::clone::Clone for SHELLSTATEW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const SHACF_URLHISTORY: SHELL_AUTOCOMPLETE_FLAGS = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHELL_E_WRONG_BITDEPTH: ::windows_sys::core::HRESULT = -2144927486i32;
-#[repr(C)]
+pub const SHACF_URLMRU: SHELL_AUTOCOMPLETE_FLAGS = 4u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHELL_ITEM_RESOURCE {
-    pub guidType: ::windows_sys::core::GUID,
-    pub szName: [u16; 260],
-}
-impl ::core::marker::Copy for SHELL_ITEM_RESOURCE {}
-impl ::core::clone::Clone for SHELL_ITEM_RESOURCE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const SHACF_USETAB: SHELL_AUTOCOMPLETE_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHACF_FILESYS_ONLY: SHELL_AUTOCOMPLETE_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHACF_FILESYS_DIRS: SHELL_AUTOCOMPLETE_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHACF_VIRTUAL_NAMESPACE: SHELL_AUTOCOMPLETE_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHACF_AUTOSUGGEST_FORCE_ON: SHELL_AUTOCOMPLETE_FLAGS = 268435456u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHACF_AUTOSUGGEST_FORCE_OFF: SHELL_AUTOCOMPLETE_FLAGS = 536870912u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHACF_AUTOAPPEND_FORCE_ON: SHELL_AUTOCOMPLETE_FLAGS = 1073741824u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHACF_AUTOAPPEND_FORCE_OFF: SHELL_AUTOCOMPLETE_FLAGS = 2147483648u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SHELL_LINK_DATA_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -9741,192 +8000,6 @@ pub const SHELL_UI_COMPONENT_NOTIFICATIONAREA: SHELL_UI_COMPONENT = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SHELL_UI_COMPONENT_DESKBAND: SHELL_UI_COMPONENT = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHERB_NOCONFIRMATION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHERB_NOPROGRESSUI: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHERB_NOSOUND: u32 = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub struct SHFILEINFOA {
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub iIcon: i32,
-    pub dwAttributes: u32,
-    pub szDisplayName: [super::super::Foundation::CHAR; 260],
-    pub szTypeName: [super::super::Foundation::CHAR; 80],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for SHFILEINFOA {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for SHFILEINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub struct SHFILEINFOA {
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub iIcon: i32,
-    pub dwAttributes: u32,
-    pub szDisplayName: [super::super::Foundation::CHAR; 260],
-    pub szTypeName: [super::super::Foundation::CHAR; 80],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for SHFILEINFOA {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for SHFILEINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-pub struct SHFILEINFOW {
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub iIcon: i32,
-    pub dwAttributes: u32,
-    pub szDisplayName: [u16; 260],
-    pub szTypeName: [u16; 80],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::marker::Copy for SHFILEINFOW {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::clone::Clone for SHFILEINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-pub struct SHFILEINFOW {
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub iIcon: i32,
-    pub dwAttributes: u32,
-    pub szDisplayName: [u16; 260],
-    pub szTypeName: [u16; 80],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::marker::Copy for SHFILEINFOW {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::clone::Clone for SHFILEINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SHFILEOPSTRUCTA {
-    pub hwnd: super::super::Foundation::HWND,
-    pub wFunc: u32,
-    pub pFrom: *mut i8,
-    pub pTo: *mut i8,
-    pub fFlags: u16,
-    pub fAnyOperationsAborted: super::super::Foundation::BOOL,
-    pub hNameMappings: *mut ::core::ffi::c_void,
-    pub lpszProgressTitle: ::windows_sys::core::PCSTR,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SHFILEOPSTRUCTA {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SHFILEOPSTRUCTA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SHFILEOPSTRUCTA {
-    pub hwnd: super::super::Foundation::HWND,
-    pub wFunc: u32,
-    pub pFrom: *mut i8,
-    pub pTo: *mut i8,
-    pub fFlags: u16,
-    pub fAnyOperationsAborted: super::super::Foundation::BOOL,
-    pub hNameMappings: *mut ::core::ffi::c_void,
-    pub lpszProgressTitle: ::windows_sys::core::PCSTR,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SHFILEOPSTRUCTA {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SHFILEOPSTRUCTA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SHFILEOPSTRUCTW {
-    pub hwnd: super::super::Foundation::HWND,
-    pub wFunc: u32,
-    pub pFrom: ::windows_sys::core::PCWSTR,
-    pub pTo: ::windows_sys::core::PCWSTR,
-    pub fFlags: u16,
-    pub fAnyOperationsAborted: super::super::Foundation::BOOL,
-    pub hNameMappings: *mut ::core::ffi::c_void,
-    pub lpszProgressTitle: ::windows_sys::core::PCWSTR,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SHFILEOPSTRUCTW {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SHFILEOPSTRUCTW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SHFILEOPSTRUCTW {
-    pub hwnd: super::super::Foundation::HWND,
-    pub wFunc: u32,
-    pub pFrom: ::windows_sys::core::PCWSTR,
-    pub pTo: ::windows_sys::core::PCWSTR,
-    pub fFlags: u16,
-    pub fAnyOperationsAborted: super::super::Foundation::BOOL,
-    pub hNameMappings: *mut ::core::ffi::c_void,
-    pub lpszProgressTitle: ::windows_sys::core::PCWSTR,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SHFILEOPSTRUCTW {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SHFILEOPSTRUCTW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SHFMT_ID = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SHFMT_ID_DEFAULT: SHFMT_ID = 65535u32;
@@ -9946,31 +8019,6 @@ pub const SHFMT_ERROR: SHFMT_RET = 4294967295u32;
 pub const SHFMT_CANCEL: SHFMT_RET = 4294967294u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SHFMT_NOFORMAT: SHFMT_RET = 4294967293u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SHFOLDERCUSTOMSETTINGS {
-    pub dwSize: u32,
-    pub dwMask: u32,
-    pub pvid: *mut ::windows_sys::core::GUID,
-    pub pszWebViewTemplate: ::windows_sys::core::PWSTR,
-    pub cchWebViewTemplate: u32,
-    pub pszWebViewTemplateVersion: ::windows_sys::core::PWSTR,
-    pub pszInfoTip: ::windows_sys::core::PWSTR,
-    pub cchInfoTip: u32,
-    pub pclsid: *mut ::windows_sys::core::GUID,
-    pub dwFlags: u32,
-    pub pszIconFile: ::windows_sys::core::PWSTR,
-    pub cchIconFile: u32,
-    pub iIconIndex: i32,
-    pub pszLogo: ::windows_sys::core::PWSTR,
-    pub cchLogo: u32,
-}
-impl ::core::marker::Copy for SHFOLDERCUSTOMSETTINGS {}
-impl ::core::clone::Clone for SHFOLDERCUSTOMSETTINGS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SHGDFIL_FORMAT = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -9979,6 +8027,18 @@ pub const SHGDFIL_FINDDATA: SHGDFIL_FORMAT = 1i32;
 pub const SHGDFIL_NETRESOURCE: SHGDFIL_FORMAT = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SHGDFIL_DESCRIPTIONID: SHGDFIL_FORMAT = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type SHGDNF = u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGDN_NORMAL: SHGDNF = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGDN_INFOLDER: SHGDNF = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGDN_FOREDITING: SHGDNF = 4096u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGDN_FORADDRESSBAR: SHGDNF = 16384u32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const SHGDN_FORPARSING: SHGDNF = 32768u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SHGFI_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -10146,132 +8206,6 @@ pub const GLOBALCOUNTER_BANNERS_DATAMODEL_CACHE_MACHINEWIDE: SHGLOBALCOUNTER = 5
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const GLOBALCOUNTER_MAXIMUMVALUE: SHGLOBALCOUNTER = 59i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGNLI_NOLNK: u64 = 8u64;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGNLI_NOLOCNAME: u64 = 16u64;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGNLI_NOUNIQUE: u64 = 4u64;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGNLI_PIDL: u64 = 1u64;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGNLI_PREFIXNAME: u64 = 2u64;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGNLI_USEURLEXT: u64 = 32u64;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGSI_ICONLOCATION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGVSPB_ALLFOLDERS: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGVSPB_ALLUSERS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGVSPB_INHERIT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGVSPB_NOAUTODEFAULTS: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGVSPB_PERFOLDER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGVSPB_PERUSER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGVSPB_ROAM: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHHLNF_NOAUTOSELECT: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHHLNF_WRITENOHISTORY: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIL_EXTRALARGE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIL_JUMBO: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIL_LARGE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIL_LAST: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIL_SMALL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIL_SYSSMALL: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIMGDEC_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIMGDEC_LOADFULL: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIMGDEC_THUMBNAIL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIMGKEY_QUALITY: &str = "Compression";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIMGKEY_RAWFORMAT: &str = "RawDataFormat";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIMSTCAPFLAG_LOCKABLE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHIMSTCAPFLAG_PURGEABLE: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SHNAMEMAPPINGA {
-    pub pszOldPath: ::windows_sys::core::PSTR,
-    pub pszNewPath: ::windows_sys::core::PSTR,
-    pub cchOldPath: i32,
-    pub cchNewPath: i32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SHNAMEMAPPINGA {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SHNAMEMAPPINGA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SHNAMEMAPPINGA {
-    pub pszOldPath: ::windows_sys::core::PSTR,
-    pub pszNewPath: ::windows_sys::core::PSTR,
-    pub cchOldPath: i32,
-    pub cchNewPath: i32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SHNAMEMAPPINGA {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SHNAMEMAPPINGA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SHNAMEMAPPINGW {
-    pub pszOldPath: ::windows_sys::core::PWSTR,
-    pub pszNewPath: ::windows_sys::core::PWSTR,
-    pub cchOldPath: i32,
-    pub cchNewPath: i32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SHNAMEMAPPINGW {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SHNAMEMAPPINGW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SHNAMEMAPPINGW {
-    pub pszOldPath: ::windows_sys::core::PWSTR,
-    pub pszNewPath: ::windows_sys::core::PWSTR,
-    pub cchOldPath: i32,
-    pub cchNewPath: i32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SHNAMEMAPPINGW {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SHNAMEMAPPINGW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SHOP_TYPE = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SHOP_PRINTERNAME: SHOP_TYPE = 1i32;
@@ -10279,62 +8213,6 @@ pub const SHOP_PRINTERNAME: SHOP_TYPE = 1i32;
 pub const SHOP_FILEPATH: SHOP_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SHOP_VOLUMEGUID: SHOP_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHPPFW_ASKDIRCREATE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHPPFW_DIRCREATE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHPPFW_IGNOREFILENAME: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHPPFW_MEDIACHECKONLY: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHPPFW_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHPPFW_NOWRITECHECK: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHPWHF_ANYLOCATION: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHPWHF_NOFILESELECTOR: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHPWHF_NONETPLACECREATE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHPWHF_NORECOMPRESS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHPWHF_USEMRU: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHPWHF_VALIDATEVIAWEBFOLDERS: u32 = 65536u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct SHQUERYRBINFO {
-    pub cbSize: u32,
-    pub i64Size: i64,
-    pub i64NumItems: i64,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for SHQUERYRBINFO {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for SHQUERYRBINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct SHQUERYRBINFO {
-    pub cbSize: u32,
-    pub i64Size: i64,
-    pub i64NumItems: i64,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for SHQUERYRBINFO {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for SHQUERYRBINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SHREGDEL_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -10355,14 +8233,6 @@ pub const SHREGENUM_HKCU: SHREGENUM_FLAGS = 1i32;
 pub const SHREGENUM_HKLM: SHREGENUM_FLAGS = 16i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SHREGENUM_BOTH: SHREGENUM_FLAGS = 17i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHREGSET_FORCE_HKCU: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHREGSET_FORCE_HKLM: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHREGSET_HKCU: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHREGSET_HKLM: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SHSTOCKICONID = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -10553,48 +8423,6 @@ pub const SIID_MEDIABDRE: SHSTOCKICONID = 139i32;
 pub const SIID_CLUSTEREDDRIVE: SHSTOCKICONID = 140i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SIID_MAX_ICONS: SHSTOCKICONID = 181i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-pub struct SHSTOCKICONINFO {
-    pub cbSize: u32,
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub iSysImageIndex: i32,
-    pub iIcon: i32,
-    pub szPath: [u16; 260],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::marker::Copy for SHSTOCKICONINFO {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::clone::Clone for SHSTOCKICONINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-pub struct SHSTOCKICONINFO {
-    pub cbSize: u32,
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub iSysImageIndex: i32,
-    pub iIcon: i32,
-    pub szPath: [u16; 260],
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::marker::Copy for SHSTOCKICONINFO {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::clone::Clone for SHSTOCKICONINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SIATTRIBFLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -10607,30 +8435,6 @@ pub const SIATTRIBFLAGS_APPCOMPAT: SIATTRIBFLAGS = 3i32;
 pub const SIATTRIBFLAGS_MASK: SIATTRIBFLAGS = 3i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SIATTRIBFLAGS_ALLITEMS: SIATTRIBFLAGS = 16384i32;
-pub const SID_CommandsPropertyBag: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1845768784, data2: 17430, data3: 18524, data4: [177, 67, 230, 42, 118, 13, 159, 229] };
-pub const SID_CtxQueryAssociations: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4205706304, data2: 46967, data3: 19305, data4: [170, 129, 119, 3, 94, 240, 230, 232] };
-pub const SID_DefView: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1829961344, data2: 30993, data3: 4559, data4: [149, 52, 0, 0, 192, 91, 174, 11] };
-pub const SID_LaunchSourceAppUserModelId: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 753369104, data2: 29915, data3: 18620, data4: [156, 106, 16, 243, 114, 73, 87, 35] };
-pub const SID_LaunchSourceViewSizePreference: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2153796754, data2: 26585, data3: 16719, data4: [175, 137, 161, 205, 241, 36, 43, 193] };
-pub const SID_LaunchTargetViewSizePreference: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 651895922, data2: 47031, data3: 16491, data4: [151, 2, 115, 10, 78, 32, 211, 191] };
-pub const SID_MenuShellFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2797698740, data2: 11621, data3: 4562, data4: [131, 143, 0, 192, 79, 217, 24, 208] };
-pub const SID_SCommDlgBrowser: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2163409459, data2: 47071, data3: 4562, data4: [163, 59, 0, 96, 151, 223, 91, 212] };
-pub const SID_SCommandBarState: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3114183260, data2: 14416, data3: 17408, data4: [188, 51, 44, 229, 52, 4, 139, 248] };
-pub const SID_SGetViewFromViewDual: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2291831645, data2: 38686, data3: 19218, data4: [185, 12, 36, 223, 201, 225, 229, 232] };
-pub const SID_SInPlaceBrowser: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 489349163, data2: 13909, data3: 18124, data4: [182, 58, 40, 89, 136, 21, 59, 202] };
-pub const SID_SMenuBandBKContextMenu: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 374062470, data2: 7437, data3: 19936, data4: [154, 59, 217, 114, 150, 71, 194, 184] };
-pub const SID_SMenuBandBottom: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1950131812, data2: 3563, data3: 4561, data4: [152, 37, 0, 192, 79, 217, 25, 114] };
-pub const SID_SMenuBandBottomSelected: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 375306996, data2: 27985, data3: 4562, data4: [131, 173, 0, 192, 79, 217, 24, 208] };
-pub const SID_SMenuBandChild: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3986472992, data2: 2233, data3: 4561, data4: [152, 35, 0, 192, 79, 217, 25, 114] };
-pub const SID_SMenuBandContextMenuModifier: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 961828980, data2: 29026, data3: 18014, data4: [183, 131, 42, 161, 135, 79, 239, 129] };
-pub const SID_SMenuBandParent: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2351402732, data2: 16043, data3: 4561, data4: [140, 176, 0, 192, 79, 217, 24, 208] };
-pub const SID_SMenuBandTop: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2492704784, data2: 60472, data3: 4560, data4: [188, 70, 0, 170, 0, 108, 226, 245] };
-pub const SID_SMenuPopup: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3521621995, data2: 27182, data3: 4560, data4: [140, 120, 0, 192, 79, 217, 24, 180] };
-pub const SID_SSearchBoxInfo: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 338537057, data2: 20843, data3: 18195, data4: [180, 156, 251, 152, 94, 248, 41, 152] };
-pub const SID_STopLevelBrowser: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1284947520, data2: 37212, data3: 4559, data4: [153, 211, 0, 170, 0, 74, 232, 55] };
-pub const SID_STopWindow: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1239528704, data2: 17974, data3: 4563, data4: [151, 247, 0, 192, 79, 69, 208, 179] };
-pub const SID_ShellExecuteNamedPropertyStore: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3951340962, data2: 255, data3: 18834, data4: [131, 36, 237, 92, 224, 97, 203, 41] };
-pub const SID_URLExecutionContext: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4217343676, data2: 48054, data3: 19728, data4: [164, 97, 119, 114, 145, 160, 144, 48] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SIGDN = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -10676,18 +8480,6 @@ pub const SIIGBF_ICONBACKGROUND: SIIGBF = 128i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SIIGBF_SCALEUP: SIIGBF = 256i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SIOM_ICONINDEX: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SIOM_OVERLAYINDEX: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SIOM_RESERVED_DEFAULT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SIOM_RESERVED_LINK: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SIOM_RESERVED_SHARED: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SIOM_RESERVED_SLOWFILE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SLGP_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SLGP_SHORTPATH: SLGP_FLAGS = 1i32;
@@ -10697,23 +8489,6 @@ pub const SLGP_UNCPRIORITY: SLGP_FLAGS = 2i32;
 pub const SLGP_RAWPATH: SLGP_FLAGS = 4i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SLGP_RELATIVEPRIORITY: SLGP_FLAGS = 8i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SLOWAPPINFO {
-    pub ullSize: u64,
-    pub ftLastUsed: super::super::Foundation::FILETIME,
-    pub iTimesUsed: i32,
-    pub pszImage: ::windows_sys::core::PWSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SLOWAPPINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SLOWAPPINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SLR_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -10746,127 +8521,6 @@ pub const SLR_MACHINE_IN_LOCAL_TARGET: SLR_FLAGS = 2048i32;
 pub const SLR_UPDATE_MACHINE_AND_SID: SLR_FLAGS = 4096i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SLR_NO_OBJECT_ID: SLR_FLAGS = 8192i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMAE_CONTRACTED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMAE_EXPANDED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMAE_USER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMAE_VALID: u32 = 7u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(feature = "Win32_UI_Shell_Common")]
-pub struct SMCSHCHANGENOTIFYSTRUCT {
-    pub lEvent: i32,
-    pub pidl1: *mut Common::ITEMIDLIST,
-    pub pidl2: *mut Common::ITEMIDLIST,
-}
-#[cfg(feature = "Win32_UI_Shell_Common")]
-impl ::core::marker::Copy for SMCSHCHANGENOTIFYSTRUCT {}
-#[cfg(feature = "Win32_UI_Shell_Common")]
-impl ::core::clone::Clone for SMCSHCHANGENOTIFYSTRUCT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_AUTOEXPANDCHANGE: u32 = 66u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_CHEVRONEXPAND: u32 = 25u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_CHEVRONGETTIP: u32 = 47u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_CREATE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_DEFAULTICON: u32 = 22u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_DEMOTE: u32 = 17u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_DISPLAYCHEVRONTIP: u32 = 42u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_EXITMENU: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_GETAUTOEXPANDSTATE: u32 = 65u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_GETBKCONTEXTMENU: u32 = 68u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_GETCONTEXTMENUMODIFIER: u32 = 67u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_GETINFO: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_GETOBJECT: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_GETSFINFO: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_GETSFOBJECT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_INITMENU: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_NEWITEM: u32 = 23u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_OPEN: u32 = 69u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_PROMOTE: u32 = 18u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_REFRESH: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_SETSFOBJECT: u32 = 45u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_SFDDRESTRICTED: u32 = 48u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_SFEXEC: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_SFEXEC_MIDDLE: u32 = 49u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_SFSELECTITEM: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMC_SHCHANGENOTIFY: u32 = 46u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common", feature = "Win32_UI_WindowsAndMessaging"))]
-pub struct SMDATA {
-    pub dwMask: u32,
-    pub dwFlags: u32,
-    pub hmenu: super::WindowsAndMessaging::HMENU,
-    pub hwnd: super::super::Foundation::HWND,
-    pub uId: u32,
-    pub uIdParent: u32,
-    pub uIdAncestor: u32,
-    pub punk: ::windows_sys::core::IUnknown,
-    pub pidlFolder: *mut Common::ITEMIDLIST,
-    pub pidlItem: *mut Common::ITEMIDLIST,
-    pub psf: IShellFolder,
-    pub pvUserData: *mut ::core::ffi::c_void,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for SMDATA {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for SMDATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMDM_HMENU: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMDM_SHELLFOLDER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMDM_TOOLBAR: u32 = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SMINFO {
-    pub dwMask: u32,
-    pub dwType: u32,
-    pub dwFlags: u32,
-    pub iIcon: i32,
-}
-impl ::core::marker::Copy for SMINFO {}
-impl ::core::clone::Clone for SMINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SMINFOFLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -10910,49 +8564,6 @@ pub const SMIT_SEPARATOR: SMINFOTYPE = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SMIT_STRING: SMINFOTYPE = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMINIT_AUTOEXPAND: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMINIT_AUTOTOOLTIP: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMINIT_CACHED: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMINIT_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMINIT_DROPONCONTAINER: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMINIT_HORIZONTAL: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMINIT_RESTRICT_DRAGDROP: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMINIT_TOPLEVEL: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMINIT_VERTICAL: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMINV_ID: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMINV_REFRESH: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMSET_BOTTOM: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMSET_DONTOWN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SMSET_TOP: u32 = 268435456u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
-#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
-pub struct SORTCOLUMN {
-    pub propkey: PropertiesSystem::PROPERTYKEY,
-    pub direction: SORTDIRECTION,
-}
-#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
-impl ::core::marker::Copy for SORTCOLUMN {}
-#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
-impl ::core::clone::Clone for SORTCOLUMN {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SORTDIRECTION = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SORT_DESCENDING: SORTDIRECTION = -1i32;
@@ -10995,73 +8606,11 @@ pub const SPACTION_FORMATTING: SPACTION = 12i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SPACTION_COPY_MOVING: SPACTION = 13i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_BROWSER: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_DBMON: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_DEBUGBREAK: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_DEBUGOUT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_EVENT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_EVENTTRACE: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_FLUSH: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_FORMATTEXT: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_MEMWATCH: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_MSGTRACE: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_MSVM: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_MULTISTOP: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_PERFTAGS: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_PROFILE: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_SHELL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SPMODE_TEST: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SPTEXT = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SPTEXT_ACTIONDESCRIPTION: SPTEXT = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SPTEXT_ACTIONDETAIL: SPTEXT = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_NOEXPAND: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_NOVIRT: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_RM_ANY: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_RM_NORMAL: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_RM_SAFE: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_RM_SAFENETWORK: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_RT_ANY: u32 = 65535u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_RT_REG_BINARY: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_RT_REG_DWORD: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_RT_REG_EXPAND_SZ: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_RT_REG_MULTI_SZ: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_RT_REG_NONE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_RT_REG_QWORD: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_RT_REG_SZ: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SRRF_ZEROONFAILURE: u32 = 536870912u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SSF_MASK = u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -11119,14 +8668,6 @@ pub const SSF_SHOWTYPEOVERLAY: SSF_MASK = 33554432u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SSF_SHOWSTATUSBAR: SSF_MASK = 67108864u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SSM_CLEAR: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SSM_REFRESH: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SSM_SET: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SSM_UPDATE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type STGOP = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const STGOP_MOVE: STGOP = 1i32;
@@ -11143,10 +8684,6 @@ pub const STGOP_APPLYPROPERTIES: STGOP = 8i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const STGOP_NEW: STGOP = 10i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STIF_DEFAULT: i32 = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STIF_SUPPORT_HEX: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type STORAGE_PROVIDER_FILE_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SPFF_NONE: STORAGE_PROVIDER_FILE_FLAGS = 0i32;
@@ -11154,8 +8691,6 @@ pub const SPFF_NONE: STORAGE_PROVIDER_FILE_FLAGS = 0i32;
 pub const SPFF_DOWNLOAD_BY_DEFAULT: STORAGE_PROVIDER_FILE_FLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SPFF_CREATED_ON_THIS_DEVICE: STORAGE_PROVIDER_FILE_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STORE_E_NEWER_VERSION_AVAILABLE: ::windows_sys::core::HRESULT = -2144927484i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type STPFLAG = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -11168,115 +8703,6 @@ pub const STPF_USEAPPTHUMBNAILWHENACTIVE: STPFLAG = 2i32;
 pub const STPF_USEAPPPEEKALWAYS: STPFLAG = 4i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const STPF_USEAPPPEEKWHENACTIVE: STPFLAG = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_AVOID_DRIVE_RESTRICTION_POLICY: &str = "Avoid Drive Restriction Policy";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_BIND_DELEGATE_CREATE_OBJECT: &str = "Delegate Object Creation";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_BIND_FOLDERS_READ_ONLY: &str = "Folders As Read Only";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_BIND_FOLDER_ENUM_MODE: &str = "Folder Enum Mode";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_BIND_FORCE_FOLDER_SHORTCUT_RESOLVE: &str = "Force Folder Shortcut Resolve";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_DONT_PARSE_RELATIVE: &str = "Don\'t Parse Relative";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_DONT_RESOLVE_LINK: &str = "Don\'t Resolve Link";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_ENUM_ITEMS_FLAGS: &str = "SHCONTF";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_FILE_SYS_BIND_DATA: &str = "File System Bind Data";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_FILE_SYS_BIND_DATA_WIN7_FORMAT: &str = "Win7FileSystemIdList";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_GET_ASYNC_HANDLER: &str = "GetAsyncHandler";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_GPS_BESTEFFORT: &str = "GPS_BESTEFFORT";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_GPS_DELAYCREATION: &str = "GPS_DELAYCREATION";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_GPS_FASTPROPERTIESONLY: &str = "GPS_FASTPROPERTIESONLY";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_GPS_HANDLERPROPERTIESONLY: &str = "GPS_HANDLERPROPERTIESONLY";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_GPS_NO_OPLOCK: &str = "GPS_NO_OPLOCK";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_GPS_OPENSLOWITEM: &str = "GPS_OPENSLOWITEM";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_INTERNAL_NAVIGATE: &str = "Internal Navigation";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_INTERNETFOLDER_PARSE_ONLY_URLMON_BINDABLE: &str = "Validate URL";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_ITEM_CACHE_CONTEXT: &str = "ItemCacheContext";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_MYDOCS_CLSID: &str = "{450D8FBA-AD25-11D0-98A8-0800361B1103}";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_NO_VALIDATE_FILENAME_CHARS: &str = "NoValidateFilenameChars";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_ALLOW_INTERNET_SHELL_FOLDERS: &str = "Allow binding to Internet shell folder handlers and negate STR_PARSE_PREFER_WEB_BROWSING";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_AND_CREATE_ITEM: &str = "ParseAndCreateItem";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_DONT_REQUIRE_VALIDATED_URLS: &str = "Do not require validated URLs";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_EXPLICIT_ASSOCIATION_SUCCESSFUL: &str = "ExplicitAssociationSuccessful";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_PARTIAL_IDLIST: &str = "ParseOriginalItem";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_PREFER_FOLDER_BROWSING: &str = "Parse Prefer Folder Browsing";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_PREFER_WEB_BROWSING: &str = "Do not bind to Internet shell folder handlers";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_PROPERTYSTORE: &str = "DelegateNamedProperties";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_SHELL_PROTOCOL_TO_FILE_OBJECTS: &str = "Parse Shell Protocol To File Objects";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_SHOW_NET_DIAGNOSTICS_UI: &str = "Show network diagnostics UI";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_SKIP_NET_CACHE: &str = "Skip Net Resource Cache";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_TRANSLATE_ALIASES: &str = "Parse Translate Aliases";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_WITH_EXPLICIT_ASSOCAPP: &str = "ExplicitAssociationApp";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_WITH_EXPLICIT_PROGID: &str = "ExplicitProgid";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PARSE_WITH_PROPERTIES: &str = "ParseWithProperties";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_PROPERTYBAG_PARAM: &str = "SHBindCtxPropertyBag";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_REFERRER_IDENTIFIER: &str = "Referrer Identifier";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_SKIP_BINDING_CLSID: &str = "Skip Binding CLSID";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_STORAGEITEM_CREATION_FLAGS: &str = "SHGETSTORAGEITEM";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_TAB_REUSE_IDENTIFIER: &str = "Tab Reuse Identifier";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const STR_TRACK_CLSID: &str = "Track the CLSID";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type SUBCLASSPROC = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, umsg: u32, wparam: super::super::Foundation::WPARAM, lparam: super::super::Foundation::LPARAM, uidsubclass: usize, dwrefdata: usize) -> super::super::Foundation::LRESULT>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole"))]
-pub struct SV2CVW2_PARAMS {
-    pub cbSize: u32,
-    pub psvPrev: IShellView,
-    pub pfs: *mut FOLDERSETTINGS,
-    pub psbOwner: IShellBrowser,
-    pub prcView: *mut super::super::Foundation::RECT,
-    pub pvid: *const ::windows_sys::core::GUID,
-    pub hwndView: super::super::Foundation::HWND,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for SV2CVW2_PARAMS {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for SV2CVW2_PARAMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SVUIA_STATUS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -11322,50 +8748,11 @@ pub const SYNCMGRHANDLER_ALWAYSLISTHANDLER: SYNCMGRHANDLERFLAGS = 4i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SYNCMGRHANDLER_HIDDEN: SYNCMGRHANDLERFLAGS = 8i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SYNCMGRHANDLERFLAG_MASK: u32 = 15u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-pub struct SYNCMGRHANDLERINFO {
-    pub cbSize: u32,
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub SyncMgrHandlerFlags: u32,
-    pub wszHandlerName: [u16; 32],
-}
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::marker::Copy for SYNCMGRHANDLERINFO {}
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::clone::Clone for SYNCMGRHANDLERINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SYNCMGRINVOKEFLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SYNCMGRINVOKE_STARTSYNC: SYNCMGRINVOKEFLAGS = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SYNCMGRINVOKE_MINIMIZED: SYNCMGRINVOKEFLAGS = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-pub struct SYNCMGRITEM {
-    pub cbSize: u32,
-    pub dwFlags: u32,
-    pub ItemID: ::windows_sys::core::GUID,
-    pub dwItemState: u32,
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub wszItemName: [u16; 128],
-    pub ftLastUpdate: super::super::Foundation::FILETIME,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::marker::Copy for SYNCMGRITEM {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
-impl ::core::clone::Clone for SYNCMGRITEM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SYNCMGRITEMFLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -11387,29 +8774,6 @@ pub const SYNCMGRITEMSTATE_UNCHECKED: SYNCMGRITEMSTATE = 0i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SYNCMGRITEMSTATE_CHECKED: SYNCMGRITEMSTATE = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SYNCMGRITEM_ITEMFLAGMASK: u32 = 127u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SYNCMGRLOGERRORINFO {
-    pub cbSize: u32,
-    pub mask: u32,
-    pub dwSyncMgrErrorFlags: u32,
-    pub ErrorID: ::windows_sys::core::GUID,
-    pub ItemID: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for SYNCMGRLOGERRORINFO {}
-impl ::core::clone::Clone for SYNCMGRLOGERRORINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SYNCMGRLOGERROR_ERRORFLAGS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SYNCMGRLOGERROR_ERRORID: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SYNCMGRLOGERROR_ITEMID: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SYNCMGRLOGLEVEL = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SYNCMGRLOGLEVEL_INFORMATION: SYNCMGRLOGLEVEL = 1i32;
@@ -11419,30 +8783,6 @@ pub const SYNCMGRLOGLEVEL_WARNING: SYNCMGRLOGLEVEL = 2i32;
 pub const SYNCMGRLOGLEVEL_ERROR: SYNCMGRLOGLEVEL = 3i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SYNCMGRLOGLEVEL_LOGLEVELMAX: SYNCMGRLOGLEVEL = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct SYNCMGRPROGRESSITEM {
-    pub cbSize: u32,
-    pub mask: u32,
-    pub lpcStatusText: ::windows_sys::core::PCWSTR,
-    pub dwStatusType: u32,
-    pub iProgValue: i32,
-    pub iMaxValue: i32,
-}
-impl ::core::marker::Copy for SYNCMGRPROGRESSITEM {}
-impl ::core::clone::Clone for SYNCMGRPROGRESSITEM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SYNCMGRPROGRESSITEM_MAXVALUE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SYNCMGRPROGRESSITEM_PROGVALUE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SYNCMGRPROGRESSITEM_STATUSTEXT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SYNCMGRPROGRESSITEM_STATUSTYPE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SYNCMGRREGISTERFLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -11451,8 +8791,6 @@ pub const SYNCMGRREGISTERFLAG_CONNECT: SYNCMGRREGISTERFLAGS = 1i32;
 pub const SYNCMGRREGISTERFLAG_PENDINGDISCONNECT: SYNCMGRREGISTERFLAGS = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SYNCMGRREGISTERFLAG_IDLE: SYNCMGRREGISTERFLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SYNCMGRREGISTERFLAGS_MASK: u32 = 7u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SYNCMGRSTATUS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -11485,21 +8823,6 @@ pub const SYNCMGR_CR_CANCEL_ITEM: SYNCMGR_CANCEL_REQUEST = 1i32;
 pub const SYNCMGR_CR_CANCEL_ALL: SYNCMGR_CANCEL_REQUEST = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SYNCMGR_CR_MAX: SYNCMGR_CANCEL_REQUEST = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_System_Com\"`*"]
-#[cfg(feature = "Win32_System_Com")]
-pub struct SYNCMGR_CONFLICT_ID_INFO {
-    pub pblobID: *mut super::super::System::Com::BYTE_BLOB,
-    pub pblobExtra: *mut super::super::System::Com::BYTE_BLOB,
-}
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::marker::Copy for SYNCMGR_CONFLICT_ID_INFO {}
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::clone::Clone for SYNCMGR_CONFLICT_ID_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SYNCMGR_CONFLICT_ITEM_TYPE = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -11662,17 +8985,6 @@ pub const SYNCMGR_IPM_DISABLE_DELETE: SYNCMGR_ITEM_POLICIES = 512i32;
 pub const SYNCMGR_IPM_HIDDEN_BY_DEFAULT: SYNCMGR_ITEM_POLICIES = 65536i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SYNCMGR_IPM_VALID_MASK: SYNCMGR_ITEM_POLICIES = 66303i32;
-pub const SYNCMGR_OBJECTID_BrowseContent: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1472968068, data2: 59828, data3: 18350, data4: [161, 32, 196, 223, 51, 53, 222, 226] };
-pub const SYNCMGR_OBJECTID_ConflictStore: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3615588852, data2: 9097, data3: 18404, data4: [169, 96, 96, 188, 194, 237, 147, 11] };
-pub const SYNCMGR_OBJECTID_EventLinkClick: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 570670529, data2: 6897, data3: 16514, data4: [140, 48, 40, 57, 159, 65, 56, 76] };
-pub const SYNCMGR_OBJECTID_EventStore: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1273967801, data2: 42886, data3: 16501, data4: [186, 136, 12, 43, 157, 137, 169, 143] };
-pub const SYNCMGR_OBJECTID_Icon: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1841071555, data2: 23815, data3: 19570, data4: [167, 119, 127, 236, 120, 7, 44, 6] };
-pub const SYNCMGR_OBJECTID_QueryBeforeActivate: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3632453643, data2: 59306, data3: 18925, data4: [134, 183, 230, 225, 247, 20, 205, 254] };
-pub const SYNCMGR_OBJECTID_QueryBeforeDeactivate: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2700067458, data2: 24800, data3: 17934, data4: [147, 116, 234, 136, 81, 60, 252, 128] };
-pub const SYNCMGR_OBJECTID_QueryBeforeDelete: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4151063447, data2: 44979, data3: 17879, data4: [165, 159, 90, 73, 233, 5, 67, 126] };
-pub const SYNCMGR_OBJECTID_QueryBeforeDisable: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3143591082, data2: 61444, data3: 20149, data4: [142, 77, 38, 117, 25, 102, 52, 76] };
-pub const SYNCMGR_OBJECTID_QueryBeforeEnable: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 80476144, data2: 23531, data3: 19937, data4: [188, 144, 144, 131, 69, 196, 128, 246] };
-pub const SYNCMGR_OBJECTID_ShowSchedule: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3989238755, data2: 33857, data3: 16649, data4: [173, 243, 108, 28, 160, 183, 222, 71] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SYNCMGR_PRESENTER_CHOICE = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -11752,32 +9064,6 @@ pub const SYNCMGR_UR_REMOVED: SYNCMGR_UPDATE_REASON = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SYNCMGR_UR_MAX: SYNCMGR_UPDATE_REASON = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SZ_CONTENTTYPE_CDF: &str = "application/x-cdf";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SZ_CONTENTTYPE_CDFA: &str = "application/x-cdf";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SZ_CONTENTTYPE_CDFW: &str = "application/x-cdf";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SZ_CONTENTTYPE_HTML: &str = "text/html";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SZ_CONTENTTYPE_HTMLA: &str = "text/html";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SZ_CONTENTTYPE_HTMLW: &str = "text/html";
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const S_SYNCMGR_CANCELALL: ::windows_sys::core::HRESULT = 262660i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const S_SYNCMGR_CANCELITEM: ::windows_sys::core::HRESULT = 262659i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const S_SYNCMGR_ENUMITEMS: ::windows_sys::core::HRESULT = 262673i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const S_SYNCMGR_ITEMDELETED: ::windows_sys::core::HRESULT = 262672i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const S_SYNCMGR_MISSINGITEMS: ::windows_sys::core::HRESULT = 262657i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const S_SYNCMGR_RETRYSYNC: ::windows_sys::core::HRESULT = 262658i32;
-pub const ScheduledTasks: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3592911248, data2: 19562, data3: 4559, data4: [141, 135, 0, 170, 0, 96, 245, 191] };
-pub const SearchFolderItemFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 335613442, data2: 48061, data3: 16880, data4: [136, 227, 237, 163, 113, 33, 101, 132] };
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type SecureLockIconConstants = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const secureLockIconUnsecure: SecureLockIconConstants = 0i32;
@@ -11793,18 +9079,6 @@ pub const secureLockIconSecure56Bit: SecureLockIconConstants = 4i32;
 pub const secureLockIconSecureFortezza: SecureLockIconConstants = 5i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const secureLockIconSecure128Bit: SecureLockIconConstants = 6i32;
-pub const SelectedItemCount_Property_GUID: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2414024402, data2: 3666, data3: 17930, data4: [156, 30, 72, 242, 115, 212, 112, 163] };
-pub type ShFindChangeNotificationHandle = isize;
-pub const SharedBitmap: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1303536758, data2: 26503, data3: 16454, data4: [184, 54, 232, 65, 42, 158, 138, 39] };
-pub const SharingConfigurationManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1240691169, data2: 35932, data3: 19868, data4: [154, 59, 84, 166, 130, 127, 81, 60] };
-pub const Shell: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 326145568, data2: 49785, data3: 4558, data4: [164, 158, 68, 69, 83, 84, 0, 0] };
-pub const ShellBrowserWindow: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3230334352, data2: 62113, data3: 4561, data4: [132, 85, 0, 160, 201, 31, 56, 128] };
-pub const ShellDesktop: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 136192, data2: 0, data3: 0, data4: [192, 0, 0, 0, 0, 0, 0, 70] };
-pub const ShellDispatchInproc: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 176793696, data2: 55217, data3: 4558, data4: [131, 80, 68, 69, 83, 84, 0, 0] };
-pub const ShellFSFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4080421792, data2: 26041, data3: 4558, data4: [169, 186, 0, 170, 0, 74, 232, 55] };
-pub const ShellFolderItem: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 803427050, data2: 64799, data3: 4562, data4: [177, 244, 0, 192, 79, 142, 235, 62] };
-pub const ShellFolderView: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1645292193, data2: 60388, data3: 4559, data4: [165, 251, 0, 32, 175, 231, 41, 45] };
-pub const ShellFolderViewOC: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2610977137, data2: 63144, data3: 4559, data4: [164, 66, 0, 160, 201, 10, 143, 57] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type ShellFolderViewOptions = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -11821,12 +9095,6 @@ pub const SFVVO_WIN95CLASSIC: ShellFolderViewOptions = 64i32;
 pub const SFVVO_DOUBLECLICKINWEBVIEW: ShellFolderViewOptions = 128i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SFVVO_DESKTOPHTML: ShellFolderViewOptions = 512i32;
-pub const ShellImageDataFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1726276859, data2: 62341, data3: 19920, data4: [141, 116, 162, 239, 209, 188, 97, 120] };
-pub const ShellItem: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2596928481, data2: 57506, data3: 19158, data4: [180, 238, 226, 18, 1, 62, 169, 23] };
-pub const ShellLibrary: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3652395293, data2: 58751, data3: 17446, data4: [170, 239, 48, 168, 6, 173, 211, 151] };
-pub const ShellLink: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 136193, data2: 0, data3: 0, data4: [192, 0, 0, 0, 0, 0, 0, 70] };
-pub const ShellLinkObject: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 287413280, data2: 5992, data3: 4561, data4: [149, 190, 0, 96, 151, 151, 234, 79] };
-pub const ShellNameSpace: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1427335173, data2: 45790, data3: 4561, data4: [185, 242, 0, 160, 201, 139, 197, 71] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type ShellSpecialFolderConstants = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -11905,7 +9173,6 @@ pub const ssfPROFILE: ShellSpecialFolderConstants = 40i32;
 pub const ssfSYSTEMx86: ShellSpecialFolderConstants = 41i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const ssfPROGRAMFILESx86: ShellSpecialFolderConstants = 48i32;
-pub const ShellUIHelper: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1688947639, data2: 4382, data3: 4561, data4: [143, 121, 0, 192, 79, 194, 251, 225] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type ShellWindowFindWindowOptions = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -11926,50 +9193,6 @@ pub const SWC_3RDPARTY: ShellWindowTypeConstants = 2i32;
 pub const SWC_CALLBACK: ShellWindowTypeConstants = 4i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SWC_DESKTOP: ShellWindowTypeConstants = 8i32;
-pub const ShellWindows: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2610977138, data2: 63144, data3: 4559, data4: [164, 66, 0, 160, 201, 10, 143, 57] };
-pub const ShowInputPaneAnimationCoordinator: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 520383167, data2: 12802, data3: 19905, data4: [140, 181, 60, 103, 97, 124, 225, 250] };
-pub const SimpleConflictPresenter: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2047830711, data2: 60804, data3: 18102, data4: [180, 126, 2, 170, 21, 154, 21, 43] };
-pub const SizeCategorizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1440200786, data2: 63185, data3: 17138, data4: [170, 117, 135, 40, 161, 178, 210, 100] };
-pub const SmartcardCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2413289884, data2: 15351, data3: 18587, data4: [167, 44, 132, 106, 179, 103, 140, 150] };
-pub const SmartcardPinProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2488888446, data2: 14148, data3: 16846, data4: [137, 62, 187, 240, 145, 34, 247, 106] };
-pub const SmartcardReaderSelectionProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 455620705, data2: 30031, data3: 16418, data4: [173, 71, 165, 234, 170, 97, 136, 148] };
-pub const SmartcardWinRTProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 518468479, data2: 34220, data3: 17890, data4: [162, 60, 55, 199, 83, 32, 151, 105] };
-pub const StartMenuPin: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2729006173, data2: 41154, data3: 17076, data4: [151, 8, 160, 178, 186, 221, 119, 200] };
-pub const StorageProviderBanners: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2093873652, data2: 58742, data3: 17754, data4: [139, 199, 246, 236, 104, 214, 240, 99] };
-pub const SuspensionDependencyManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1797734341, data2: 25085, data3: 18712, data4: [149, 162, 195, 181, 233, 215, 245, 129] };
-pub const SyncMgr: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1653989159, data2: 13806, data3: 4561, data4: [135, 7, 0, 192, 79, 217, 51, 39] };
-pub const SyncMgrClient: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 302177120, data2: 7596, data3: 17093, data4: [174, 213, 26, 189, 212, 50, 36, 142] };
-pub const SyncMgrControl: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 438256134, data2: 1672, data3: 20095, data4: [190, 3, 216, 46, 198, 157, 249, 165] };
-pub const SyncMgrFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2624845285, data2: 31463, data3: 20018, data4: [168, 232, 141, 35, 184, 82, 85, 191] };
-pub const SyncMgrScheduleWizard: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2374733360, data2: 50257, data3: 16923, data4: [133, 83, 210, 151, 106, 250, 100, 140] };
-pub const SyncResultsFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1910084708, data2: 15211, data3: 18268, data4: [178, 65, 225, 88, 131, 32, 117, 41] };
-pub const SyncSetupFolder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 782129600, data2: 46135, data3: 18817, data4: [166, 71, 156, 52, 185, 185, 8, 145] };
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TBIF_APPEND: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TBIF_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TBIF_INTERNETBAR: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TBIF_NOTOOLBAR: u32 = 196608u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TBIF_PREPEND: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TBIF_REPLACE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TBIF_STANDARDTOOLBAR: u32 = 131072u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct TBINFO {
-    pub cbuttons: u32,
-    pub uFlags: u32,
-}
-impl ::core::marker::Copy for TBINFO {}
-impl ::core::clone::Clone for TBINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type TBPFLAG = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -11982,27 +9205,6 @@ pub const TBPF_NORMAL: TBPFLAG = 2i32;
 pub const TBPF_ERROR: TBPFLAG = 4i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const TBPF_PAUSED: TBPFLAG = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const THBN_CLICKED: u32 = 6144u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-pub struct THUMBBUTTON {
-    pub dwMask: THUMBBUTTONMASK,
-    pub iId: u32,
-    pub iBitmap: u32,
-    pub hIcon: super::WindowsAndMessaging::HICON,
-    pub szTip: [u16; 260],
-    pub dwFlags: THUMBBUTTONFLAGS,
-}
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::marker::Copy for THUMBBUTTON {}
-#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
-impl ::core::clone::Clone for THUMBBUTTON {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type THUMBBUTTONFLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -12028,8 +9230,6 @@ pub const THB_TOOLTIP: THUMBBUTTONMASK = 4i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const THB_FLAGS: THUMBBUTTONMASK = 8i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TITLEBARNAMELEN: u32 = 40u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type TI_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const TI_BITMAP: TI_FLAGS = 1i32;
@@ -12052,37 +9252,11 @@ pub const TLEF_EXCLUDE_SUBFRAME_ENTRIES: TLENUMF = 128i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const TLEF_EXCLUDE_ABOUT_PAGES: TLENUMF = 256i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TLMENUF_BACK: u32 = 16u32;
+pub type TRANSLATEURL_IN_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TLMENUF_FORE: u32 = 32u32;
+pub const TRANSLATEURL_FL_GUESS_PROTOCOL: TRANSLATEURL_IN_FLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TLMENUF_INCLUDECURRENT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TLOG_BACK: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TLOG_CURRENT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TLOG_FORE: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi", feature = "Win32_System_Ole"))]
-pub struct TOOLBARITEM {
-    pub ptbar: IDockingWindow,
-    pub rcBorderTool: super::super::Foundation::RECT,
-    pub pwszItem: ::windows_sys::core::PWSTR,
-    pub fShow: super::super::Foundation::BOOL,
-    pub hMon: super::super::Graphics::Gdi::HMONITOR,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for TOOLBARITEM {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for TOOLBARITEM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub const TaskbarList: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1459483460, data2: 64877, data3: 4560, data4: [149, 138, 0, 96, 151, 201, 160, 144] };
-pub const ThumbnailStreamCache: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3420520147, data2: 19345, data3: 20112, data4: [131, 84, 138, 140, 132, 236, 104, 114] };
+pub const TRANSLATEURL_FL_USE_DEFAULT_PROTOCOL: TRANSLATEURL_IN_FLAGS = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type ThumbnailStreamCacheOptions = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -12093,16 +9267,18 @@ pub const ReturnOnlyIfCached: ThumbnailStreamCacheOptions = 1i32;
 pub const ResizeThumbnail: ThumbnailStreamCacheOptions = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const AllowSmallerSize: ThumbnailStreamCacheOptions = 4i32;
-pub const TimeCategorizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1001656719, data2: 56829, data3: 19760, data4: [163, 72, 159, 181, 214, 191, 26, 254] };
-pub const TrackShellMenu: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2188966193, data2: 10814, data3: 4562, data4: [131, 143, 0, 192, 79, 217, 24, 208] };
-pub const TrayBandSiteService: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4127903904, data2: 58849, data3: 17867, data4: [181, 26, 225, 91, 159, 139, 41, 52] };
-pub const TrayDeskBand: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3863225399, data2: 27752, data3: 20306, data4: [148, 221, 44, 254, 210, 103, 239, 185] };
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type UNDOCK_REASON = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const UR_RESOLUTION_CHANGE: UNDOCK_REASON = 0i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const UR_MONITOR_DISCONNECT: UNDOCK_REASON = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type URLASSOCIATIONDIALOG_IN_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URLASSOCDLG_FL_USE_DEFAULT_NAME: URLASSOCIATIONDIALOG_IN_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub const URLASSOCDLG_FL_REGISTER_ASSOC: URLASSOCIATIONDIALOG_IN_FLAGS = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type URLIS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -12120,48 +9296,6 @@ pub const URLIS_DIRECTORY: URLIS = 5i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const URLIS_HASQUERY: URLIS = 6i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_APPLY_DEFAULT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_APPLY_FORCEAPPLY: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_APPLY_GUESSFILE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_APPLY_GUESSSCHEME: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_BROWSER_MODE: u32 = 33554432u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_CONVERT_IF_DOSPATH: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_DONT_ESCAPE_EXTRA_INFO: u32 = 33554432u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_DONT_SIMPLIFY: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_DONT_UNESCAPE: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_DONT_UNESCAPE_EXTRA_INFO: u32 = 33554432u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_ESCAPE_ASCII_URI_COMPONENT: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_ESCAPE_AS_UTF8: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_ESCAPE_PERCENT: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_ESCAPE_SEGMENT_ONLY: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_ESCAPE_SPACES_ONLY: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_ESCAPE_UNSAFE: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_E_INVALID_SYNTAX: ::windows_sys::core::HRESULT = -2147217407i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_E_UNREGISTERED_PROTOCOL: ::windows_sys::core::HRESULT = -2147217406i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_FILE_USE_PATHURL: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_INTERNAL_PATH: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_NO_META: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type URL_PART = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const URL_PART_NONE: URL_PART = 0i32;
@@ -12177,10 +9311,6 @@ pub const URL_PART_PASSWORD: URL_PART = 4i32;
 pub const URL_PART_PORT: URL_PART = 5i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const URL_PART_QUERY: URL_PART = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_PARTFLAG_KEEPSCHEME: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_PLUGGABLE_PROTOCOL: u32 = 1073741824u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type URL_SCHEME = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -12242,22 +9372,6 @@ pub const URL_SCHEME_KNOWNFOLDER: URL_SCHEME = 26i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const URL_SCHEME_MAXVALUE: URL_SCHEME = 27i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_UNESCAPE: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_UNESCAPE_AS_UTF8: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_UNESCAPE_HIGH_ANSI_ONLY: u32 = 4194304u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_UNESCAPE_INPLACE: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_UNESCAPE_URI_COMPONENT: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URL_WININET_COMPATIBILITY: u32 = 2147483648u32;
-pub const UserNotification: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1083662, data2: 34697, data3: 16700, data4: [173, 188, 72, 245, 181, 17, 179, 175] };
-pub const V1PasswordCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1866849310, data2: 21380, data3: 17786, data4: [188, 19, 44, 216, 27, 13, 40, 237] };
-pub const V1SmartcardCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2348394768, data2: 43263, data3: 17791, data4: [153, 159, 165, 202, 16, 180, 168, 133] };
-pub const V1WinBioCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2889531977, data2: 59424, data3: 17219, data4: [166, 91, 55, 122, 198, 52, 220, 9] };
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type VALIDATEUNC_OPTION = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const VALIDATEUNC_CONNECT: VALIDATEUNC_OPTION = 1i32;
@@ -12269,36 +9383,6 @@ pub const VALIDATEUNC_PRINT: VALIDATEUNC_OPTION = 4i32;
 pub const VALIDATEUNC_PERSIST: VALIDATEUNC_OPTION = 8i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const VALIDATEUNC_VALID: VALIDATEUNC_OPTION = 15i32;
-pub const VID_Content: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 818070580, data2: 2185, data3: 19597, data4: [152, 93, 169, 247, 24, 48, 176, 169] };
-pub const VID_Details: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 327055104, data2: 13683, data3: 4559, data4: [174, 105, 8, 0, 43, 46, 18, 98] };
-pub const VID_LargeIcons: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 5755104, data2: 13683, data3: 4559, data4: [174, 105, 8, 0, 43, 46, 18, 98] };
-pub const VID_List: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 236955104, data2: 13683, data3: 4559, data4: [174, 105, 8, 0, 43, 46, 18, 98] };
-pub const VID_SmallIcons: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 143655104, data2: 13683, data3: 4559, data4: [174, 105, 8, 0, 43, 46, 18, 98] };
-pub const VID_ThumbStrip: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2398070308, data2: 53737, data3: 17499, data4: [148, 183, 116, 251, 206, 46, 161, 26] };
-pub const VID_Thumbnails: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2347479696, data2: 21200, data3: 4560, data4: [183, 244, 0, 192, 79, 215, 6, 236] };
-pub const VID_Tile: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1710302693, data2: 31713, data3: 18448, data4: [186, 157, 210, 113, 200, 67, 44, 227] };
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const VIEW_PRIORITY_CACHEHIT: u32 = 80u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const VIEW_PRIORITY_CACHEMISS: u32 = 48u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const VIEW_PRIORITY_DESPERATE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const VIEW_PRIORITY_INHERIT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const VIEW_PRIORITY_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const VIEW_PRIORITY_RESTRICTED: u32 = 112u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const VIEW_PRIORITY_SHELLEXT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const VIEW_PRIORITY_SHELLEXT_ASBACKUP: u32 = 21u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const VIEW_PRIORITY_STALECACHEHIT: u32 = 69u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const VIEW_PRIORITY_USEASDEFAULT: u32 = 67u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const VOLUME_PREFIX: &str = "\\\\?\\Volume";
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type VPCOLORFLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -12317,47 +9401,6 @@ pub type VPWATERMARKFLAGS = i32;
 pub const VPWF_DEFAULT: VPWATERMARKFLAGS = 0i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const VPWF_ALPHABLEND: VPWATERMARKFLAGS = 1i32;
-pub const VaultProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1345796560, data2: 19550, data3: 19709, data4: [179, 186, 216, 129, 51, 79, 13, 242] };
-pub const VirtualDesktopManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2857406598, data2: 23721, data3: 19493, data4: [143, 149, 88, 157, 60, 7, 180, 138] };
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WC_NETADDRESS: &str = "msctls_netaddress";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
-#[cfg(feature = "Win32_UI_Shell_Common")]
-pub struct WINDOWDATA {
-    pub dwWindowID: u32,
-    pub uiCP: u32,
-    pub pidl: *mut Common::ITEMIDLIST,
-    pub lpszUrl: ::windows_sys::core::PWSTR,
-    pub lpszUrlLocation: ::windows_sys::core::PWSTR,
-    pub lpszTitle: ::windows_sys::core::PWSTR,
-}
-#[cfg(feature = "Win32_UI_Shell_Common")]
-impl ::core::marker::Copy for WINDOWDATA {}
-#[cfg(feature = "Win32_UI_Shell_Common")]
-impl ::core::clone::Clone for WINDOWDATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WM_CPL_LAUNCH: u32 = 2024u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WM_CPL_LAUNCHED: u32 = 2025u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WPSTYLE_CENTER: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WPSTYLE_CROPTOFIT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WPSTYLE_KEEPASPECT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WPSTYLE_MAX: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WPSTYLE_SPAN: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WPSTYLE_STRETCH: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WPSTYLE_TILE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type WTS_ALPHATYPE = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -12386,22 +9429,6 @@ pub const WTSCF_SQUARE: WTS_CONTEXTFLAGS = 2i32;
 pub const WTSCF_WIDE: WTS_CONTEXTFLAGS = 4i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const WTSCF_FAST: WTS_CONTEXTFLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WTS_E_DATAFILEUNAVAILABLE: ::windows_sys::core::HRESULT = -2147175932i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WTS_E_EXTRACTIONBLOCKED: ::windows_sys::core::HRESULT = -2147175930i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WTS_E_EXTRACTIONPENDING: ::windows_sys::core::HRESULT = -2147175931i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WTS_E_EXTRACTIONTIMEDOUT: ::windows_sys::core::HRESULT = -2147175935i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WTS_E_FAILEDEXTRACTION: ::windows_sys::core::HRESULT = -2147175936i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WTS_E_FASTEXTRACTIONNOTSUPPORTED: ::windows_sys::core::HRESULT = -2147175933i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WTS_E_NOSTORAGEPROVIDERTHUMBNAILHANDLER: ::windows_sys::core::HRESULT = -2147175929i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const WTS_E_SURROGATEUNAVAILABLE: ::windows_sys::core::HRESULT = -2147175934i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type WTS_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -12438,25 +9465,6 @@ pub const WTS_WIDETHUMBNAILS: WTS_FLAGS = 16384i32;
 pub const WTS_IDEALCACHESIZEONLY: WTS_FLAGS = 32768i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const WTS_SCALEUP: WTS_FLAGS = 65536i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub struct WTS_THUMBNAILID {
-    pub rgbKey: [u8; 16],
-}
-impl ::core::marker::Copy for WTS_THUMBNAILID {}
-impl ::core::clone::Clone for WTS_THUMBNAILID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub const WebBrowser: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2287401313, data2: 13322, data3: 4560, data4: [169, 107, 0, 192, 79, 215, 5, 162] };
-pub const WebBrowser_V1: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3937544899, data2: 12481, data3: 4559, data4: [167, 235, 0, 0, 192, 91, 174, 11] };
-pub const WebWizardHost: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3358060873, data2: 21953, data3: 19752, data4: [147, 94, 87, 228, 124, 174, 217, 115] };
-pub const WinBioCredentialProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3200291363, data2: 45080, data3: 16749, data4: [160, 172, 82, 57, 113, 182, 57, 245] };
-#[repr(C)]
-pub struct _APPCONSTRAIN_REGISTRATION(pub u8);
-#[repr(C)]
-pub struct _APPSTATE_REGISTRATION(pub u8);
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type _BROWSERFRAMEOPTIONS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -12563,32 +9571,6 @@ pub const EPS_FORCE: _EXPLORERPANESTATE = 131072i32;
 pub type _EXPPS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const EXPPS_FILETYPES: _EXPPS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type _HLSHORTCUTF__NOREDEF10 = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLSHORTCUTF_DEFAULT: _HLSHORTCUTF__NOREDEF10 = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLSHORTCUTF_DONTACTUALLYCREATE: _HLSHORTCUTF__NOREDEF10 = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLSHORTCUTF_USEFILENAMEFROMFRIENDLYNAME: _HLSHORTCUTF__NOREDEF10 = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLSHORTCUTF_USEUNIQUEFILENAME: _HLSHORTCUTF__NOREDEF10 = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLSHORTCUTF_MAYUSEEXISTINGSHORTCUT: _HLSHORTCUTF__NOREDEF10 = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type _HLSR_NOREDEF10 = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLSR_HOME: _HLSR_NOREDEF10 = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLSR_SEARCHPAGE: _HLSR_NOREDEF10 = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLSR_HISTORYFOLDER: _HLSR_NOREDEF10 = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type _HLTRANSLATEF_NOREDEF10 = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLTRANSLATEF_DEFAULT: _HLTRANSLATEF_NOREDEF10 = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const HLTRANSLATEF_DONTAPPLYDEFAULTPREFIX: _HLTRANSLATEF_NOREDEF10 = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type _KF_DEFINITION_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
@@ -12830,18 +9812,6 @@ pub const SHCONTF_ENABLE_ASYNC: _SHCONTF = 32768i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SHCONTF_INCLUDESUPERHIDDEN: _SHCONTF = 65536i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type _SHGDNF = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGDN_NORMAL: _SHGDNF = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGDN_INFOLDER: _SHGDNF = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGDN_FOREDITING: _SHGDNF = 4096i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGDN_FORADDRESSBAR: _SHGDNF = 16384i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const SHGDN_FORPARSING: _SHGDNF = 32768i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub type _SICHINTF = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const SICHINT_DISPLAY: _SICHINTF = 0i32;
@@ -12963,75 +9933,2992 @@ pub const TSF_COPY_LOCALIZED_NAME: _TRANSFER_SOURCE_FLAGS = 512i32;
 pub const TSF_MOVE_AS_COPY_DELETE: _TRANSFER_SOURCE_FLAGS = 1024i32;
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
 pub const TSF_SUSPEND_SHELLEVENTS: _TRANSFER_SOURCE_FLAGS = 2048i32;
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const idsAppName: u32 = 1007u32;
+pub struct AASHELLMENUFILENAME {
+    pub cbTotal: i16,
+    pub rgbReserved: [u8; 12],
+    pub szFileName: [u16; 1],
+}
+impl ::core::marker::Copy for AASHELLMENUFILENAME {}
+impl ::core::clone::Clone for AASHELLMENUFILENAME {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const idsBadOldPW: u32 = 1006u32;
+pub struct AASHELLMENUITEM {
+    pub lpReserved1: *mut ::core::ffi::c_void,
+    pub iReserved: i32,
+    pub uiReserved: u32,
+    pub lpName: *mut AASHELLMENUFILENAME,
+    pub psz: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for AASHELLMENUITEM {}
+impl ::core::clone::Clone for AASHELLMENUITEM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct APPBARDATA {
+    pub cbSize: u32,
+    pub hWnd: super::super::Foundation::HWND,
+    pub uCallbackMessage: u32,
+    pub uEdge: u32,
+    pub rc: super::super::Foundation::RECT,
+    pub lParam: super::super::Foundation::LPARAM,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for APPBARDATA {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for APPBARDATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct APPBARDATA {
+    pub cbSize: u32,
+    pub hWnd: super::super::Foundation::HWND,
+    pub uCallbackMessage: u32,
+    pub uEdge: u32,
+    pub rc: super::super::Foundation::RECT,
+    pub lParam: super::super::Foundation::LPARAM,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for APPBARDATA {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for APPBARDATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const idsChangePW: u32 = 1005u32;
+pub struct APPCATEGORYINFO {
+    pub Locale: u32,
+    pub pszDescription: ::windows_sys::core::PWSTR,
+    pub AppCategoryId: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for APPCATEGORYINFO {}
+impl ::core::clone::Clone for APPCATEGORYINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const idsDefKeyword: u32 = 1010u32;
+pub struct APPCATEGORYINFOLIST {
+    pub cCategory: u32,
+    pub pCategoryInfo: *mut APPCATEGORYINFO,
+}
+impl ::core::marker::Copy for APPCATEGORYINFOLIST {}
+impl ::core::clone::Clone for APPCATEGORYINFOLIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const idsDifferentPW: u32 = 1004u32;
+pub struct APPINFODATA {
+    pub cbSize: u32,
+    pub dwMask: u32,
+    pub pszDisplayName: ::windows_sys::core::PWSTR,
+    pub pszVersion: ::windows_sys::core::PWSTR,
+    pub pszPublisher: ::windows_sys::core::PWSTR,
+    pub pszProductID: ::windows_sys::core::PWSTR,
+    pub pszRegisteredOwner: ::windows_sys::core::PWSTR,
+    pub pszRegisteredCompany: ::windows_sys::core::PWSTR,
+    pub pszLanguage: ::windows_sys::core::PWSTR,
+    pub pszSupportUrl: ::windows_sys::core::PWSTR,
+    pub pszSupportTelephone: ::windows_sys::core::PWSTR,
+    pub pszHelpLink: ::windows_sys::core::PWSTR,
+    pub pszInstallLocation: ::windows_sys::core::PWSTR,
+    pub pszInstallSource: ::windows_sys::core::PWSTR,
+    pub pszInstallDate: ::windows_sys::core::PWSTR,
+    pub pszContact: ::windows_sys::core::PWSTR,
+    pub pszComments: ::windows_sys::core::PWSTR,
+    pub pszImage: ::windows_sys::core::PWSTR,
+    pub pszReadmeUrl: ::windows_sys::core::PWSTR,
+    pub pszUpdateInfoUrl: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for APPINFODATA {}
+impl ::core::clone::Clone for APPINFODATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_System_Registry\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Registry")]
+pub struct ASSOCIATIONELEMENT {
+    pub ac: ASSOCCLASS,
+    pub hkClass: super::super::System::Registry::HKEY,
+    pub pszClass: ::windows_sys::core::PCWSTR,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Registry")]
+impl ::core::marker::Copy for ASSOCIATIONELEMENT {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Registry")]
+impl ::core::clone::Clone for ASSOCIATIONELEMENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_System_Registry\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Registry")]
+pub struct ASSOCIATIONELEMENT {
+    pub ac: ASSOCCLASS,
+    pub hkClass: super::super::System::Registry::HKEY,
+    pub pszClass: ::windows_sys::core::PCWSTR,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Registry")]
+impl ::core::marker::Copy for ASSOCIATIONELEMENT {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Registry")]
+impl ::core::clone::Clone for ASSOCIATIONELEMENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct AUTO_SCROLL_DATA {
+    pub iNextSample: i32,
+    pub dwLastScroll: u32,
+    pub bFull: super::super::Foundation::BOOL,
+    pub pts: [super::super::Foundation::POINT; 3],
+    pub dwTimes: [u32; 3],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for AUTO_SCROLL_DATA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for AUTO_SCROLL_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+pub struct BANDINFOSFB {
+    pub dwMask: u32,
+    pub dwStateMask: u32,
+    pub dwState: u32,
+    pub crBkgnd: super::super::Foundation::COLORREF,
+    pub crBtnLt: super::super::Foundation::COLORREF,
+    pub crBtnDk: super::super::Foundation::COLORREF,
+    pub wViewMode: u16,
+    pub wAlign: u16,
+    pub psf: IShellFolder,
+    pub pidl: *mut Common::ITEMIDLIST,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+impl ::core::marker::Copy for BANDINFOSFB {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+impl ::core::clone::Clone for BANDINFOSFB {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const idsHelpFile: u32 = 1009u32;
+pub struct BANDSITEINFO {
+    pub dwMask: u32,
+    pub dwState: u32,
+    pub dwStyle: u32,
+}
+impl ::core::marker::Copy for BANDSITEINFO {}
+impl ::core::clone::Clone for BANDSITEINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const idsIniFile: u32 = 1001u32;
+pub struct BANNER_NOTIFICATION {
+    pub event: BANNER_NOTIFICATION_EVENT,
+    pub providerIdentity: ::windows_sys::core::PCWSTR,
+    pub contentId: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for BANNER_NOTIFICATION {}
+impl ::core::clone::Clone for BANNER_NOTIFICATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
+pub struct BASEBROWSERDATALH {
+    pub _hwnd: super::super::Foundation::HWND,
+    pub _ptl: ITravelLog,
+    pub _phlf: IHlinkFrame,
+    pub _pautoWB2: IWebBrowser2,
+    pub _pautoEDS: IExpDispSupport,
+    pub _pautoSS: IShellService,
+    pub _eSecureLockIcon: i32,
+    pub _bitfield: u32,
+    pub _uActivateState: u32,
+    pub _pidlViewState: *mut Common::ITEMIDLIST,
+    pub _pctView: super::super::System::Ole::IOleCommandTarget,
+    pub _pidlCur: *mut Common::ITEMIDLIST,
+    pub _psv: IShellView,
+    pub _psf: IShellFolder,
+    pub _hwndView: super::super::Foundation::HWND,
+    pub _pszTitleCur: ::windows_sys::core::PWSTR,
+    pub _pidlPending: *mut Common::ITEMIDLIST,
+    pub _psvPending: IShellView,
+    pub _psfPending: IShellFolder,
+    pub _hwndViewPending: super::super::Foundation::HWND,
+    pub _pszTitlePending: ::windows_sys::core::PWSTR,
+    pub _fIsViewMSHTML: super::super::Foundation::BOOL,
+    pub _fPrivacyImpacted: super::super::Foundation::BOOL,
+    pub _clsidView: ::windows_sys::core::GUID,
+    pub _clsidViewPending: ::windows_sys::core::GUID,
+    pub _hwndFrame: super::super::Foundation::HWND,
+    pub _lPhishingFilterStatus: i32,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
+impl ::core::marker::Copy for BASEBROWSERDATALH {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
+impl ::core::clone::Clone for BASEBROWSERDATALH {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
+pub struct BASEBROWSERDATAXP {
+    pub _hwnd: super::super::Foundation::HWND,
+    pub _ptl: ITravelLog,
+    pub _phlf: IHlinkFrame,
+    pub _pautoWB2: IWebBrowser2,
+    pub _pautoEDS: IExpDispSupportXP,
+    pub _pautoSS: IShellService,
+    pub _eSecureLockIcon: i32,
+    pub _bitfield: u32,
+    pub _uActivateState: u32,
+    pub _pidlViewState: *mut Common::ITEMIDLIST,
+    pub _pctView: super::super::System::Ole::IOleCommandTarget,
+    pub _pidlCur: *mut Common::ITEMIDLIST,
+    pub _psv: IShellView,
+    pub _psf: IShellFolder,
+    pub _hwndView: super::super::Foundation::HWND,
+    pub _pszTitleCur: ::windows_sys::core::PWSTR,
+    pub _pidlPending: *mut Common::ITEMIDLIST,
+    pub _psvPending: IShellView,
+    pub _psfPending: IShellFolder,
+    pub _hwndViewPending: super::super::Foundation::HWND,
+    pub _pszTitlePending: ::windows_sys::core::PWSTR,
+    pub _fIsViewMSHTML: super::super::Foundation::BOOL,
+    pub _fPrivacyImpacted: super::super::Foundation::BOOL,
+    pub _clsidView: ::windows_sys::core::GUID,
+    pub _clsidViewPending: ::windows_sys::core::GUID,
+    pub _hwndFrame: super::super::Foundation::HWND,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
+impl ::core::marker::Copy for BASEBROWSERDATAXP {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
+impl ::core::clone::Clone for BASEBROWSERDATAXP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+pub struct BROWSEINFOA {
+    pub hwndOwner: super::super::Foundation::HWND,
+    pub pidlRoot: *mut Common::ITEMIDLIST,
+    pub pszDisplayName: ::windows_sys::core::PSTR,
+    pub lpszTitle: ::windows_sys::core::PCSTR,
+    pub ulFlags: u32,
+    pub lpfn: BFFCALLBACK,
+    pub lParam: super::super::Foundation::LPARAM,
+    pub iImage: i32,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+impl ::core::marker::Copy for BROWSEINFOA {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+impl ::core::clone::Clone for BROWSEINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+pub struct BROWSEINFOW {
+    pub hwndOwner: super::super::Foundation::HWND,
+    pub pidlRoot: *mut Common::ITEMIDLIST,
+    pub pszDisplayName: ::windows_sys::core::PWSTR,
+    pub lpszTitle: ::windows_sys::core::PCWSTR,
+    pub ulFlags: u32,
+    pub lpfn: BFFCALLBACK,
+    pub lParam: super::super::Foundation::LPARAM,
+    pub iImage: i32,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+impl ::core::marker::Copy for BROWSEINFOW {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+impl ::core::clone::Clone for BROWSEINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const idsIsPassword: u32 = 1000u32;
+pub struct CABINETSTATE {
+    pub cLength: u16,
+    pub nVersion: u16,
+    pub _bitfield: i32,
+    pub fMenuEnumFilter: u32,
+}
+impl ::core::marker::Copy for CABINETSTATE {}
+impl ::core::clone::Clone for CABINETSTATE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const idsNoHelpMemory: u32 = 1008u32;
+pub struct CATEGORY_INFO {
+    pub cif: CATEGORYINFO_FLAGS,
+    pub wszName: [u16; 260],
+}
+impl ::core::marker::Copy for CATEGORY_INFO {}
+impl ::core::clone::Clone for CATEGORY_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const idsPassword: u32 = 1003u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const idsScreenSaver: u32 = 1002u32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type iurl_invokecommand_flags = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const IURL_INVOKECOMMAND_FL_ALLOW_UI: iurl_invokecommand_flags = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const IURL_INVOKECOMMAND_FL_USE_DEFAULT_VERB: iurl_invokecommand_flags = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const IURL_INVOKECOMMAND_FL_DDEWAIT: iurl_invokecommand_flags = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const IURL_INVOKECOMMAND_FL_ASYNCOK: iurl_invokecommand_flags = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const IURL_INVOKECOMMAND_FL_LOG_USAGE: iurl_invokecommand_flags = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type iurl_seturl_flags = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const IURL_SETURL_FL_GUESS_PROTOCOL: iurl_seturl_flags = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const IURL_SETURL_FL_USE_DEFAULT_PROTOCOL: iurl_seturl_flags = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type mimeassociationdialog_in_flags = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const MIMEASSOCDLG_FL_REGISTER_ASSOC: mimeassociationdialog_in_flags = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type translateurl_in_flags = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TRANSLATEURL_FL_GUESS_PROTOCOL: translateurl_in_flags = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const TRANSLATEURL_FL_USE_DEFAULT_PROTOCOL: translateurl_in_flags = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub type urlassociationdialog_in_flags = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URLASSOCDLG_FL_USE_DEFAULT_NAME: urlassociationdialog_in_flags = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
-pub const URLASSOCDLG_FL_REGISTER_ASSOC: urlassociationdialog_in_flags = 2i32;
+pub struct CIDA {
+    pub cidl: u32,
+    pub aoffset: [u32; 1],
+}
+impl ::core::marker::Copy for CIDA {}
+impl ::core::clone::Clone for CIDA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
-pub struct urlinvokecommandinfoA {
+pub struct CMINVOKECOMMANDINFO {
+    pub cbSize: u32,
+    pub fMask: u32,
+    pub hwnd: super::super::Foundation::HWND,
+    pub lpVerb: ::windows_sys::core::PCSTR,
+    pub lpParameters: ::windows_sys::core::PCSTR,
+    pub lpDirectory: ::windows_sys::core::PCSTR,
+    pub nShow: i32,
+    pub dwHotKey: u32,
+    pub hIcon: super::super::Foundation::HANDLE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CMINVOKECOMMANDINFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CMINVOKECOMMANDINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct CMINVOKECOMMANDINFOEX {
+    pub cbSize: u32,
+    pub fMask: u32,
+    pub hwnd: super::super::Foundation::HWND,
+    pub lpVerb: ::windows_sys::core::PCSTR,
+    pub lpParameters: ::windows_sys::core::PCSTR,
+    pub lpDirectory: ::windows_sys::core::PCSTR,
+    pub nShow: i32,
+    pub dwHotKey: u32,
+    pub hIcon: super::super::Foundation::HANDLE,
+    pub lpTitle: ::windows_sys::core::PCSTR,
+    pub lpVerbW: ::windows_sys::core::PCWSTR,
+    pub lpParametersW: ::windows_sys::core::PCWSTR,
+    pub lpDirectoryW: ::windows_sys::core::PCWSTR,
+    pub lpTitleW: ::windows_sys::core::PCWSTR,
+    pub ptInvoke: super::super::Foundation::POINT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CMINVOKECOMMANDINFOEX {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CMINVOKECOMMANDINFOEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct CMINVOKECOMMANDINFOEX_REMOTE {
+    pub cbSize: u32,
+    pub fMask: u32,
+    pub hwnd: super::super::Foundation::HWND,
+    pub lpVerbString: ::windows_sys::core::PCSTR,
+    pub lpParameters: ::windows_sys::core::PCSTR,
+    pub lpDirectory: ::windows_sys::core::PCSTR,
+    pub nShow: i32,
+    pub dwHotKey: u32,
+    pub lpTitle: ::windows_sys::core::PCSTR,
+    pub lpVerbWString: ::windows_sys::core::PCWSTR,
+    pub lpParametersW: ::windows_sys::core::PCWSTR,
+    pub lpDirectoryW: ::windows_sys::core::PCWSTR,
+    pub lpTitleW: ::windows_sys::core::PCWSTR,
+    pub ptInvoke: super::super::Foundation::POINT,
+    pub lpVerbInt: u32,
+    pub lpVerbWInt: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CMINVOKECOMMANDINFOEX_REMOTE {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CMINVOKECOMMANDINFOEX_REMOTE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct CM_COLUMNINFO {
+    pub cbSize: u32,
+    pub dwMask: u32,
+    pub dwState: u32,
+    pub uWidth: u32,
+    pub uDefaultWidth: u32,
+    pub uIdealWidth: u32,
+    pub wszName: [u16; 80],
+}
+impl ::core::marker::Copy for CM_COLUMNINFO {}
+impl ::core::clone::Clone for CM_COLUMNINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct CONFIRM_CONFLICT_ITEM {
+    pub pShellItem: IShellItem2,
+    pub pszOriginalName: ::windows_sys::core::PWSTR,
+    pub pszAlternateName: ::windows_sys::core::PWSTR,
+    pub pszLocationShort: ::windows_sys::core::PWSTR,
+    pub pszLocationFull: ::windows_sys::core::PWSTR,
+    pub nType: SYNCMGR_CONFLICT_ITEM_TYPE,
+}
+impl ::core::marker::Copy for CONFIRM_CONFLICT_ITEM {}
+impl ::core::clone::Clone for CONFIRM_CONFLICT_ITEM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct CONFIRM_CONFLICT_RESULT_INFO {
+    pub pszNewName: ::windows_sys::core::PWSTR,
+    pub iItemIndex: u32,
+}
+impl ::core::marker::Copy for CONFIRM_CONFLICT_RESULT_INFO {}
+impl ::core::clone::Clone for CONFIRM_CONFLICT_RESULT_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct CPLINFO {
+    pub idIcon: i32,
+    pub idName: i32,
+    pub idInfo: i32,
+    pub lData: isize,
+}
+impl ::core::marker::Copy for CPLINFO {}
+impl ::core::clone::Clone for CPLINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION {
+    pub ulAuthenticationPackage: u32,
+    pub clsidCredentialProvider: ::windows_sys::core::GUID,
+    pub cbSerialization: u32,
+    pub rgbSerialization: *mut u8,
+}
+impl ::core::marker::Copy for CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION {}
+impl ::core::clone::Clone for CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR {
+    pub dwFieldID: u32,
+    pub cpft: CREDENTIAL_PROVIDER_FIELD_TYPE,
+    pub pszLabel: ::windows_sys::core::PWSTR,
+    pub guidFieldType: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR {}
+impl ::core::clone::Clone for CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Ole\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
+pub struct CSFV {
+    pub cbSize: u32,
+    pub pshf: IShellFolder,
+    pub psvOuter: IShellView,
+    pub pidl: *mut Common::ITEMIDLIST,
+    pub lEvents: i32,
+    pub pfnCallback: LPFNVIEWCALLBACK,
+    pub fvm: FOLDERVIEWMODE,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
+impl ::core::marker::Copy for CSFV {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole", feature = "Win32_UI_Shell_Common"))]
+impl ::core::clone::Clone for CSFV {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct DATABLOCK_HEADER {
+    pub cbSize: u32,
+    pub dwSignature: u32,
+}
+impl ::core::marker::Copy for DATABLOCK_HEADER {}
+impl ::core::clone::Clone for DATABLOCK_HEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry", feature = "Win32_UI_Shell_Common"))]
+pub struct DEFCONTEXTMENU {
+    pub hwnd: super::super::Foundation::HWND,
+    pub pcmcb: IContextMenuCB,
+    pub pidlFolder: *mut Common::ITEMIDLIST,
+    pub psf: IShellFolder,
+    pub cidl: u32,
+    pub apidl: *mut *mut Common::ITEMIDLIST,
+    pub punkAssociationInfo: ::windows_sys::core::IUnknown,
+    pub cKeys: u32,
+    pub aKeys: *const super::super::System::Registry::HKEY,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry", feature = "Win32_UI_Shell_Common"))]
+impl ::core::marker::Copy for DEFCONTEXTMENU {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry", feature = "Win32_UI_Shell_Common"))]
+impl ::core::clone::Clone for DEFCONTEXTMENU {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct DELEGATEITEMID {
+    pub cbSize: u16,
+    pub wOuter: u16,
+    pub cbInner: u16,
+    pub rgb: [u8; 1],
+}
+impl ::core::marker::Copy for DELEGATEITEMID {}
+impl ::core::clone::Clone for DELEGATEITEMID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DESKBANDINFO {
+    pub dwMask: u32,
+    pub ptMinSize: super::super::Foundation::POINTL,
+    pub ptMaxSize: super::super::Foundation::POINTL,
+    pub ptIntegral: super::super::Foundation::POINTL,
+    pub ptActual: super::super::Foundation::POINTL,
+    pub wszTitle: [u16; 256],
+    pub dwModeFlags: u32,
+    pub crBkgnd: super::super::Foundation::COLORREF,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DESKBANDINFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DESKBANDINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(feature = "Win32_UI_Shell_Common")]
+pub struct DETAILSINFO {
+    pub pidl: *mut Common::ITEMIDLIST,
+    pub fmt: i32,
+    pub cxChar: i32,
+    pub str: Common::STRRET,
+    pub iImage: i32,
+}
+#[cfg(feature = "Win32_UI_Shell_Common")]
+impl ::core::marker::Copy for DETAILSINFO {}
+#[cfg(feature = "Win32_UI_Shell_Common")]
+impl ::core::clone::Clone for DETAILSINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DFMICS {
+    pub cbSize: u32,
+    pub fMask: u32,
+    pub lParam: super::super::Foundation::LPARAM,
+    pub idCmdFirst: u32,
+    pub idDefMax: u32,
+    pub pici: *mut CMINVOKECOMMANDINFO,
+    pub punkSite: ::windows_sys::core::IUnknown,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DFMICS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DFMICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct DLLVERSIONINFO {
+    pub cbSize: u32,
+    pub dwMajorVersion: u32,
+    pub dwMinorVersion: u32,
+    pub dwBuildNumber: u32,
+    pub dwPlatformID: u32,
+}
+impl ::core::marker::Copy for DLLVERSIONINFO {}
+impl ::core::clone::Clone for DLLVERSIONINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct DLLVERSIONINFO2 {
+    pub info1: DLLVERSIONINFO,
+    pub dwFlags: u32,
+    pub ullVersion: u64,
+}
+impl ::core::marker::Copy for DLLVERSIONINFO2 {}
+impl ::core::clone::Clone for DLLVERSIONINFO2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DRAGINFOA {
+    pub uSize: u32,
+    pub pt: super::super::Foundation::POINT,
+    pub fNC: super::super::Foundation::BOOL,
+    pub lpFileList: ::windows_sys::core::PSTR,
+    pub grfKeyState: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DRAGINFOA {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DRAGINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DRAGINFOA {
+    pub uSize: u32,
+    pub pt: super::super::Foundation::POINT,
+    pub fNC: super::super::Foundation::BOOL,
+    pub lpFileList: ::windows_sys::core::PSTR,
+    pub grfKeyState: u32,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DRAGINFOA {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DRAGINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DRAGINFOW {
+    pub uSize: u32,
+    pub pt: super::super::Foundation::POINT,
+    pub fNC: super::super::Foundation::BOOL,
+    pub lpFileList: ::windows_sys::core::PWSTR,
+    pub grfKeyState: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DRAGINFOW {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DRAGINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DRAGINFOW {
+    pub uSize: u32,
+    pub pt: super::super::Foundation::POINT,
+    pub fNC: super::super::Foundation::BOOL,
+    pub lpFileList: ::windows_sys::core::PWSTR,
+    pub grfKeyState: u32,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DRAGINFOW {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DRAGINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct DROPDESCRIPTION {
+    pub r#type: DROPIMAGETYPE,
+    pub szMessage: [u16; 260],
+    pub szInsert: [u16; 260],
+}
+impl ::core::marker::Copy for DROPDESCRIPTION {}
+impl ::core::clone::Clone for DROPDESCRIPTION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DROPFILES {
+    pub pFiles: u32,
+    pub pt: super::super::Foundation::POINT,
+    pub fNC: super::super::Foundation::BOOL,
+    pub fWide: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DROPFILES {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DROPFILES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct EXP_DARWIN_LINK {
+    pub dbh: DATABLOCK_HEADER,
+    pub szDarwinID: [super::super::Foundation::CHAR; 260],
+    pub szwDarwinID: [u16; 260],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for EXP_DARWIN_LINK {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for EXP_DARWIN_LINK {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct EXP_PROPERTYSTORAGE {
+    pub cbSize: u32,
+    pub dwSignature: u32,
+    pub abPropertyStorage: [u8; 1],
+}
+impl ::core::marker::Copy for EXP_PROPERTYSTORAGE {}
+impl ::core::clone::Clone for EXP_PROPERTYSTORAGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct EXP_SPECIAL_FOLDER {
+    pub cbSize: u32,
+    pub dwSignature: u32,
+    pub idSpecialFolder: u32,
+    pub cbOffset: u32,
+}
+impl ::core::marker::Copy for EXP_SPECIAL_FOLDER {}
+impl ::core::clone::Clone for EXP_SPECIAL_FOLDER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct EXP_SZ_LINK {
+    pub cbSize: u32,
+    pub dwSignature: u32,
+    pub szTarget: [super::super::Foundation::CHAR; 260],
+    pub swzTarget: [u16; 260],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for EXP_SZ_LINK {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for EXP_SZ_LINK {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct EXTRASEARCH {
+    pub guidSearch: ::windows_sys::core::GUID,
+    pub wszFriendlyName: [u16; 80],
+    pub wszUrl: [u16; 2084],
+}
+impl ::core::marker::Copy for EXTRASEARCH {}
+impl ::core::clone::Clone for EXTRASEARCH {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FILEDESCRIPTORA {
+    pub dwFlags: u32,
+    pub clsid: ::windows_sys::core::GUID,
+    pub sizel: super::super::Foundation::SIZE,
+    pub pointl: super::super::Foundation::POINTL,
+    pub dwFileAttributes: u32,
+    pub ftCreationTime: super::super::Foundation::FILETIME,
+    pub ftLastAccessTime: super::super::Foundation::FILETIME,
+    pub ftLastWriteTime: super::super::Foundation::FILETIME,
+    pub nFileSizeHigh: u32,
+    pub nFileSizeLow: u32,
+    pub cFileName: [super::super::Foundation::CHAR; 260],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FILEDESCRIPTORA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FILEDESCRIPTORA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FILEDESCRIPTORW {
+    pub dwFlags: u32,
+    pub clsid: ::windows_sys::core::GUID,
+    pub sizel: super::super::Foundation::SIZE,
+    pub pointl: super::super::Foundation::POINTL,
+    pub dwFileAttributes: u32,
+    pub ftCreationTime: super::super::Foundation::FILETIME,
+    pub ftLastAccessTime: super::super::Foundation::FILETIME,
+    pub ftLastWriteTime: super::super::Foundation::FILETIME,
+    pub nFileSizeHigh: u32,
+    pub nFileSizeLow: u32,
+    pub cFileName: [u16; 260],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FILEDESCRIPTORW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FILEDESCRIPTORW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FILEGROUPDESCRIPTORA {
+    pub cItems: u32,
+    pub fgd: [FILEDESCRIPTORA; 1],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FILEGROUPDESCRIPTORA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FILEGROUPDESCRIPTORA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FILEGROUPDESCRIPTORW {
+    pub cItems: u32,
+    pub fgd: [FILEDESCRIPTORW; 1],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FILEGROUPDESCRIPTORW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FILEGROUPDESCRIPTORW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct FILE_ATTRIBUTES_ARRAY {
+    pub cItems: u32,
+    pub dwSumFileAttributes: u32,
+    pub dwProductFileAttributes: u32,
+    pub rgdwFileAttributes: [u32; 1],
+}
+impl ::core::marker::Copy for FILE_ATTRIBUTES_ARRAY {}
+impl ::core::clone::Clone for FILE_ATTRIBUTES_ARRAY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct FOLDERSETDATA {
+    pub _fs: FOLDERSETTINGS,
+    pub _vidRestore: ::windows_sys::core::GUID,
+    pub _dwViewPriority: u32,
+}
+impl ::core::marker::Copy for FOLDERSETDATA {}
+impl ::core::clone::Clone for FOLDERSETDATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct FOLDERSETTINGS {
+    pub ViewMode: u32,
+    pub fFlags: u32,
+}
+impl ::core::marker::Copy for FOLDERSETTINGS {}
+impl ::core::clone::Clone for FOLDERSETTINGS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type HDROP = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct HELPINFO {
+    pub cbSize: u32,
+    pub iContextType: HELP_INFO_TYPE,
+    pub iCtrlId: i32,
+    pub hItemHandle: super::super::Foundation::HANDLE,
+    pub dwContextId: usize,
+    pub MousePos: super::super::Foundation::POINT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for HELPINFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for HELPINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct HELPWININFOA {
+    pub wStructSize: i32,
+    pub x: i32,
+    pub y: i32,
+    pub dx: i32,
+    pub dy: i32,
+    pub wMax: i32,
+    pub rgchMember: [super::super::Foundation::CHAR; 2],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for HELPWININFOA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for HELPWININFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct HELPWININFOW {
+    pub wStructSize: i32,
+    pub x: i32,
+    pub y: i32,
+    pub dx: i32,
+    pub dy: i32,
+    pub wMax: i32,
+    pub rgchMember: [u16; 2],
+}
+impl ::core::marker::Copy for HELPWININFOW {}
+impl ::core::clone::Clone for HELPWININFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct HLBWINFO {
+    pub cbSize: u32,
+    pub grfHLBWIF: u32,
+    pub rcFramePos: super::super::Foundation::RECT,
+    pub rcDocPos: super::super::Foundation::RECT,
+    pub hltbinfo: HLTBINFO,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for HLBWINFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for HLBWINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct HLITEM {
+    pub uHLID: u32,
+    pub pwzFriendlyName: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for HLITEM {}
+impl ::core::clone::Clone for HLITEM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct HLTBINFO {
+    pub uDockType: u32,
+    pub rcTbPos: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for HLTBINFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for HLTBINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type HPSXA = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct ITEMSPACING {
+    pub cxSmall: i32,
+    pub cySmall: i32,
+    pub cxLarge: i32,
+    pub cyLarge: i32,
+}
+impl ::core::marker::Copy for ITEMSPACING {}
+impl ::core::clone::Clone for ITEMSPACING {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct KNOWNFOLDER_DEFINITION {
+    pub category: KF_CATEGORY,
+    pub pszName: ::windows_sys::core::PWSTR,
+    pub pszDescription: ::windows_sys::core::PWSTR,
+    pub fidParent: ::windows_sys::core::GUID,
+    pub pszRelativePath: ::windows_sys::core::PWSTR,
+    pub pszParsingName: ::windows_sys::core::PWSTR,
+    pub pszTooltip: ::windows_sys::core::PWSTR,
+    pub pszLocalizedName: ::windows_sys::core::PWSTR,
+    pub pszIcon: ::windows_sys::core::PWSTR,
+    pub pszSecurity: ::windows_sys::core::PWSTR,
+    pub dwAttributes: u32,
+    pub kfdFlags: u32,
+    pub ftidType: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for KNOWNFOLDER_DEFINITION {}
+impl ::core::clone::Clone for KNOWNFOLDER_DEFINITION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MULTIKEYHELPA {
+    pub mkSize: u32,
+    pub mkKeylist: super::super::Foundation::CHAR,
+    pub szKeyphrase: [super::super::Foundation::CHAR; 1],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MULTIKEYHELPA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MULTIKEYHELPA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct MULTIKEYHELPW {
+    pub mkSize: u32,
+    pub mkKeylist: u16,
+    pub szKeyphrase: [u16; 1],
+}
+impl ::core::marker::Copy for MULTIKEYHELPW {}
+impl ::core::clone::Clone for MULTIKEYHELPW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct NC_ADDRESS {
+    pub pAddrInfo: *mut NC_ADDRESS_0,
+    pub PortNumber: u16,
+    pub PrefixLength: u8,
+}
+impl ::core::marker::Copy for NC_ADDRESS {}
+impl ::core::clone::Clone for NC_ADDRESS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct NC_ADDRESS_0(pub u8);
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub struct NEWCPLINFOA {
+    pub dwSize: u32,
+    pub dwFlags: u32,
+    pub dwHelpContext: u32,
+    pub lData: isize,
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub szName: [super::super::Foundation::CHAR; 32],
+    pub szInfo: [super::super::Foundation::CHAR; 64],
+    pub szHelpFile: [super::super::Foundation::CHAR; 128],
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for NEWCPLINFOA {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for NEWCPLINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+pub struct NEWCPLINFOW {
+    pub dwSize: u32,
+    pub dwFlags: u32,
+    pub dwHelpContext: u32,
+    pub lData: isize,
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub szName: [u16; 32],
+    pub szInfo: [u16; 64],
+    pub szHelpFile: [u16; 128],
+}
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::marker::Copy for NEWCPLINFOW {}
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::clone::Clone for NEWCPLINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub struct NOTIFYICONDATAA {
+    pub cbSize: u32,
+    pub hWnd: super::super::Foundation::HWND,
+    pub uID: u32,
+    pub uFlags: NOTIFY_ICON_DATA_FLAGS,
+    pub uCallbackMessage: u32,
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub szTip: [super::super::Foundation::CHAR; 128],
+    pub dwState: NOTIFY_ICON_STATE,
+    pub dwStateMask: u32,
+    pub szInfo: [super::super::Foundation::CHAR; 256],
+    pub Anonymous: NOTIFYICONDATAA_0,
+    pub szInfoTitle: [super::super::Foundation::CHAR; 64],
+    pub dwInfoFlags: NOTIFY_ICON_INFOTIP_FLAGS,
+    pub guidItem: ::windows_sys::core::GUID,
+    pub hBalloonIcon: super::WindowsAndMessaging::HICON,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for NOTIFYICONDATAA {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for NOTIFYICONDATAA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub union NOTIFYICONDATAA_0 {
+    pub uTimeout: u32,
+    pub uVersion: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for NOTIFYICONDATAA_0 {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for NOTIFYICONDATAA_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub struct NOTIFYICONDATAA {
+    pub cbSize: u32,
+    pub hWnd: super::super::Foundation::HWND,
+    pub uID: u32,
+    pub uFlags: NOTIFY_ICON_DATA_FLAGS,
+    pub uCallbackMessage: u32,
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub szTip: [super::super::Foundation::CHAR; 128],
+    pub dwState: NOTIFY_ICON_STATE,
+    pub dwStateMask: u32,
+    pub szInfo: [super::super::Foundation::CHAR; 256],
+    pub Anonymous: NOTIFYICONDATAA_0,
+    pub szInfoTitle: [super::super::Foundation::CHAR; 64],
+    pub dwInfoFlags: NOTIFY_ICON_INFOTIP_FLAGS,
+    pub guidItem: ::windows_sys::core::GUID,
+    pub hBalloonIcon: super::WindowsAndMessaging::HICON,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for NOTIFYICONDATAA {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for NOTIFYICONDATAA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub union NOTIFYICONDATAA_0 {
+    pub uTimeout: u32,
+    pub uVersion: u32,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for NOTIFYICONDATAA_0 {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for NOTIFYICONDATAA_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub struct NOTIFYICONDATAW {
+    pub cbSize: u32,
+    pub hWnd: super::super::Foundation::HWND,
+    pub uID: u32,
+    pub uFlags: NOTIFY_ICON_DATA_FLAGS,
+    pub uCallbackMessage: u32,
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub szTip: [u16; 128],
+    pub dwState: NOTIFY_ICON_STATE,
+    pub dwStateMask: u32,
+    pub szInfo: [u16; 256],
+    pub Anonymous: NOTIFYICONDATAW_0,
+    pub szInfoTitle: [u16; 64],
+    pub dwInfoFlags: NOTIFY_ICON_INFOTIP_FLAGS,
+    pub guidItem: ::windows_sys::core::GUID,
+    pub hBalloonIcon: super::WindowsAndMessaging::HICON,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for NOTIFYICONDATAW {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for NOTIFYICONDATAW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub union NOTIFYICONDATAW_0 {
+    pub uTimeout: u32,
+    pub uVersion: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for NOTIFYICONDATAW_0 {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for NOTIFYICONDATAW_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub struct NOTIFYICONDATAW {
+    pub cbSize: u32,
+    pub hWnd: super::super::Foundation::HWND,
+    pub uID: u32,
+    pub uFlags: NOTIFY_ICON_DATA_FLAGS,
+    pub uCallbackMessage: u32,
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub szTip: [u16; 128],
+    pub dwState: NOTIFY_ICON_STATE,
+    pub dwStateMask: u32,
+    pub szInfo: [u16; 256],
+    pub Anonymous: NOTIFYICONDATAW_0,
+    pub szInfoTitle: [u16; 64],
+    pub dwInfoFlags: NOTIFY_ICON_INFOTIP_FLAGS,
+    pub guidItem: ::windows_sys::core::GUID,
+    pub hBalloonIcon: super::WindowsAndMessaging::HICON,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for NOTIFYICONDATAW {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for NOTIFYICONDATAW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub union NOTIFYICONDATAW_0 {
+    pub uTimeout: u32,
+    pub uVersion: u32,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for NOTIFYICONDATAW_0 {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for NOTIFYICONDATAW_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct NOTIFYICONIDENTIFIER {
+    pub cbSize: u32,
+    pub hWnd: super::super::Foundation::HWND,
+    pub uID: u32,
+    pub guidItem: ::windows_sys::core::GUID,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for NOTIFYICONIDENTIFIER {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for NOTIFYICONIDENTIFIER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct NOTIFYICONIDENTIFIER {
+    pub cbSize: u32,
+    pub hWnd: super::super::Foundation::HWND,
+    pub uID: u32,
+    pub guidItem: ::windows_sys::core::GUID,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for NOTIFYICONIDENTIFIER {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for NOTIFYICONIDENTIFIER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_NetworkManagement_WNet\"`*"]
+#[cfg(feature = "Win32_NetworkManagement_WNet")]
+pub struct NRESARRAY {
+    pub cItems: u32,
+    pub nr: [super::super::NetworkManagement::WNet::NETRESOURCEA; 1],
+}
+#[cfg(feature = "Win32_NetworkManagement_WNet")]
+impl ::core::marker::Copy for NRESARRAY {}
+#[cfg(feature = "Win32_NetworkManagement_WNet")]
+impl ::core::clone::Clone for NRESARRAY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Controls\"`*"]
+#[cfg(feature = "Win32_UI_Controls")]
+pub struct NSTCCUSTOMDRAW {
+    pub psi: IShellItem,
+    pub uItemState: u32,
+    pub nstcis: u32,
+    pub pszText: ::windows_sys::core::PCWSTR,
+    pub iImage: i32,
+    pub himl: super::Controls::HIMAGELIST,
+    pub iLevel: i32,
+    pub iIndent: i32,
+}
+#[cfg(feature = "Win32_UI_Controls")]
+impl ::core::marker::Copy for NSTCCUSTOMDRAW {}
+#[cfg(feature = "Win32_UI_Controls")]
+impl ::core::clone::Clone for NSTCCUSTOMDRAW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Console\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Console"))]
+pub struct NT_CONSOLE_PROPS {
+    pub dbh: DATABLOCK_HEADER,
+    pub wFillAttribute: u16,
+    pub wPopupFillAttribute: u16,
+    pub dwScreenBufferSize: super::super::System::Console::COORD,
+    pub dwWindowSize: super::super::System::Console::COORD,
+    pub dwWindowOrigin: super::super::System::Console::COORD,
+    pub nFont: u32,
+    pub nInputBufferSize: u32,
+    pub dwFontSize: super::super::System::Console::COORD,
+    pub uFontFamily: u32,
+    pub uFontWeight: u32,
+    pub FaceName: [u16; 32],
+    pub uCursorSize: u32,
+    pub bFullScreen: super::super::Foundation::BOOL,
+    pub bQuickEdit: super::super::Foundation::BOOL,
+    pub bInsertMode: super::super::Foundation::BOOL,
+    pub bAutoPosition: super::super::Foundation::BOOL,
+    pub uHistoryBufferSize: u32,
+    pub uNumberOfHistoryBuffers: u32,
+    pub bHistoryNoDup: super::super::Foundation::BOOL,
+    pub ColorTable: [super::super::Foundation::COLORREF; 16],
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Console"))]
+impl ::core::marker::Copy for NT_CONSOLE_PROPS {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Console"))]
+impl ::core::clone::Clone for NT_CONSOLE_PROPS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct NT_FE_CONSOLE_PROPS {
+    pub dbh: DATABLOCK_HEADER,
+    pub uCodePage: u32,
+}
+impl ::core::marker::Copy for NT_FE_CONSOLE_PROPS {}
+impl ::core::clone::Clone for NT_FE_CONSOLE_PROPS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct OPENASINFO {
+    pub pcszFile: ::windows_sys::core::PCWSTR,
+    pub pcszClass: ::windows_sys::core::PCWSTR,
+    pub oaifInFlags: OPEN_AS_INFO_FLAGS,
+}
+impl ::core::marker::Copy for OPENASINFO {}
+impl ::core::clone::Clone for OPENASINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct OPEN_PRINTER_PROPS_INFOA {
+    pub dwSize: u32,
+    pub pszSheetName: ::windows_sys::core::PSTR,
+    pub uSheetIndex: u32,
+    pub dwFlags: u32,
+    pub bModal: super::super::Foundation::BOOL,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for OPEN_PRINTER_PROPS_INFOA {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for OPEN_PRINTER_PROPS_INFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct OPEN_PRINTER_PROPS_INFOA {
+    pub dwSize: u32,
+    pub pszSheetName: ::windows_sys::core::PSTR,
+    pub uSheetIndex: u32,
+    pub dwFlags: u32,
+    pub bModal: super::super::Foundation::BOOL,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for OPEN_PRINTER_PROPS_INFOA {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for OPEN_PRINTER_PROPS_INFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct OPEN_PRINTER_PROPS_INFOW {
+    pub dwSize: u32,
+    pub pszSheetName: ::windows_sys::core::PWSTR,
+    pub uSheetIndex: u32,
+    pub dwFlags: u32,
+    pub bModal: super::super::Foundation::BOOL,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for OPEN_PRINTER_PROPS_INFOW {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for OPEN_PRINTER_PROPS_INFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct OPEN_PRINTER_PROPS_INFOW {
+    pub dwSize: u32,
+    pub pszSheetName: ::windows_sys::core::PWSTR,
+    pub uSheetIndex: u32,
+    pub dwFlags: u32,
+    pub bModal: super::super::Foundation::BOOL,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for OPEN_PRINTER_PROPS_INFOW {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for OPEN_PRINTER_PROPS_INFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct PARSEDURLA {
+    pub cbSize: u32,
+    pub pszProtocol: ::windows_sys::core::PCSTR,
+    pub cchProtocol: u32,
+    pub pszSuffix: ::windows_sys::core::PCSTR,
+    pub cchSuffix: u32,
+    pub nScheme: u32,
+}
+impl ::core::marker::Copy for PARSEDURLA {}
+impl ::core::clone::Clone for PARSEDURLA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct PARSEDURLW {
+    pub cbSize: u32,
+    pub pszProtocol: ::windows_sys::core::PCWSTR,
+    pub cchProtocol: u32,
+    pub pszSuffix: ::windows_sys::core::PCWSTR,
+    pub cchSuffix: u32,
+    pub nScheme: u32,
+}
+impl ::core::marker::Copy for PARSEDURLW {}
+impl ::core::clone::Clone for PARSEDURLW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(feature = "Win32_UI_Shell_Common")]
+pub struct PERSIST_FOLDER_TARGET_INFO {
+    pub pidlTargetFolder: *mut Common::ITEMIDLIST,
+    pub szTargetParsingName: [u16; 260],
+    pub szNetworkProvider: [u16; 260],
+    pub dwAttributes: u32,
+    pub csidl: i32,
+}
+#[cfg(feature = "Win32_UI_Shell_Common")]
+impl ::core::marker::Copy for PERSIST_FOLDER_TARGET_INFO {}
+#[cfg(feature = "Win32_UI_Shell_Common")]
+impl ::core::clone::Clone for PERSIST_FOLDER_TARGET_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+pub struct PREVIEWHANDLERFRAMEINFO {
+    pub haccel: super::WindowsAndMessaging::HACCEL,
+    pub cAccelEntries: u32,
+}
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::marker::Copy for PREVIEWHANDLERFRAMEINFO {}
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::clone::Clone for PREVIEWHANDLERFRAMEINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct PROFILEINFOA {
+    pub dwSize: u32,
+    pub dwFlags: u32,
+    pub lpUserName: ::windows_sys::core::PSTR,
+    pub lpProfilePath: ::windows_sys::core::PSTR,
+    pub lpDefaultPath: ::windows_sys::core::PSTR,
+    pub lpServerName: ::windows_sys::core::PSTR,
+    pub lpPolicyPath: ::windows_sys::core::PSTR,
+    pub hProfile: super::super::Foundation::HANDLE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for PROFILEINFOA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for PROFILEINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct PROFILEINFOW {
+    pub dwSize: u32,
+    pub dwFlags: u32,
+    pub lpUserName: ::windows_sys::core::PWSTR,
+    pub lpProfilePath: ::windows_sys::core::PWSTR,
+    pub lpDefaultPath: ::windows_sys::core::PWSTR,
+    pub lpServerName: ::windows_sys::core::PWSTR,
+    pub lpPolicyPath: ::windows_sys::core::PWSTR,
+    pub hProfile: super::super::Foundation::HANDLE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for PROFILEINFOW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for PROFILEINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct PUBAPPINFO {
+    pub cbSize: u32,
+    pub dwMask: u32,
+    pub pszSource: ::windows_sys::core::PWSTR,
+    pub stAssigned: super::super::Foundation::SYSTEMTIME,
+    pub stPublished: super::super::Foundation::SYSTEMTIME,
+    pub stScheduled: super::super::Foundation::SYSTEMTIME,
+    pub stExpire: super::super::Foundation::SYSTEMTIME,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for PUBAPPINFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for PUBAPPINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+pub struct QCMINFO {
+    pub hmenu: super::WindowsAndMessaging::HMENU,
+    pub indexMenu: u32,
+    pub idCmdFirst: u32,
+    pub idCmdLast: u32,
+    pub pIdMap: *const QCMINFO_IDMAP,
+}
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::marker::Copy for QCMINFO {}
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::clone::Clone for QCMINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct QCMINFO_IDMAP {
+    pub nMaxIds: u32,
+    pub pIdList: [QCMINFO_IDMAP_PLACEMENT; 1],
+}
+impl ::core::marker::Copy for QCMINFO_IDMAP {}
+impl ::core::clone::Clone for QCMINFO_IDMAP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct QCMINFO_IDMAP_PLACEMENT {
+    pub id: u32,
+    pub fFlags: u32,
+}
+impl ::core::marker::Copy for QCMINFO_IDMAP_PLACEMENT {}
+impl ::core::clone::Clone for QCMINFO_IDMAP_PLACEMENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct QITAB {
+    pub piid: *const ::windows_sys::core::GUID,
+    pub dwOffset: u32,
+}
+impl ::core::marker::Copy for QITAB {}
+impl ::core::clone::Clone for QITAB {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SFVM_HELPTOPIC_DATA {
+    pub wszHelpFile: [u16; 260],
+    pub wszHelpTopic: [u16; 260],
+}
+impl ::core::marker::Copy for SFVM_HELPTOPIC_DATA {}
+impl ::core::clone::Clone for SFVM_HELPTOPIC_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Controls\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Controls"))]
+pub struct SFVM_PROPPAGE_DATA {
+    pub dwReserved: u32,
+    pub pfn: super::Controls::LPFNSVADDPROPSHEETPAGE,
+    pub lParam: super::super::Foundation::LPARAM,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Controls"))]
+impl ::core::marker::Copy for SFVM_PROPPAGE_DATA {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Controls"))]
+impl ::core::clone::Clone for SFVM_PROPPAGE_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(feature = "Win32_System_Ole")]
+pub struct SFV_CREATE {
+    pub cbSize: u32,
+    pub pshf: IShellFolder,
+    pub psvOuter: IShellView,
+    pub psfvcb: IShellFolderViewCB,
+}
+#[cfg(feature = "Win32_System_Ole")]
+impl ::core::marker::Copy for SFV_CREATE {}
+#[cfg(feature = "Win32_System_Ole")]
+impl ::core::clone::Clone for SFV_CREATE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+pub struct SFV_SETITEMPOS {
+    pub pidl: *mut Common::ITEMIDLIST,
+    pub pt: super::super::Foundation::POINT,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+impl ::core::marker::Copy for SFV_SETITEMPOS {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+impl ::core::clone::Clone for SFV_SETITEMPOS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHARDAPPIDINFO {
+    pub psi: IShellItem,
+    pub pszAppID: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for SHARDAPPIDINFO {}
+impl ::core::clone::Clone for SHARDAPPIDINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(feature = "Win32_UI_Shell_Common")]
+pub struct SHARDAPPIDINFOIDLIST {
+    pub pidl: *mut Common::ITEMIDLIST,
+    pub pszAppID: ::windows_sys::core::PCWSTR,
+}
+#[cfg(feature = "Win32_UI_Shell_Common")]
+impl ::core::marker::Copy for SHARDAPPIDINFOIDLIST {}
+#[cfg(feature = "Win32_UI_Shell_Common")]
+impl ::core::clone::Clone for SHARDAPPIDINFOIDLIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHARDAPPIDINFOLINK {
+    pub psl: IShellLinkA,
+    pub pszAppID: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for SHARDAPPIDINFOLINK {}
+impl ::core::clone::Clone for SHARDAPPIDINFOLINK {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHCOLUMNDATA {
+    pub dwFlags: u32,
+    pub dwFileAttributes: u32,
+    pub dwReserved: u32,
+    pub pwszExt: ::windows_sys::core::PWSTR,
+    pub wszFile: [u16; 260],
+}
+impl ::core::marker::Copy for SHCOLUMNDATA {}
+impl ::core::clone::Clone for SHCOLUMNDATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_System_Com\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
+#[cfg(all(feature = "Win32_System_Com", feature = "Win32_UI_Shell_PropertiesSystem"))]
+pub struct SHCOLUMNINFO {
+    pub scid: PropertiesSystem::PROPERTYKEY,
+    pub vt: super::super::System::Com::VARENUM,
+    pub fmt: u32,
+    pub cChars: u32,
+    pub csFlags: u32,
+    pub wszTitle: [u16; 80],
+    pub wszDescription: [u16; 128],
+}
+#[cfg(all(feature = "Win32_System_Com", feature = "Win32_UI_Shell_PropertiesSystem"))]
+impl ::core::marker::Copy for SHCOLUMNINFO {}
+#[cfg(all(feature = "Win32_System_Com", feature = "Win32_UI_Shell_PropertiesSystem"))]
+impl ::core::clone::Clone for SHCOLUMNINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHCOLUMNINIT {
+    pub dwFlags: u32,
+    pub dwReserved: u32,
+    pub wszFolder: [u16; 260],
+}
+impl ::core::marker::Copy for SHCOLUMNINIT {}
+impl ::core::clone::Clone for SHCOLUMNINIT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_Security\"`, `\"Win32_System_Threading\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security", feature = "Win32_System_Threading"))]
+pub struct SHCREATEPROCESSINFOW {
+    pub cbSize: u32,
+    pub fMask: u32,
+    pub hwnd: super::super::Foundation::HWND,
+    pub pszFile: ::windows_sys::core::PCWSTR,
+    pub pszParameters: ::windows_sys::core::PCWSTR,
+    pub pszCurrentDirectory: ::windows_sys::core::PCWSTR,
+    pub hUserToken: super::super::Foundation::HANDLE,
+    pub lpProcessAttributes: *mut super::super::Security::SECURITY_ATTRIBUTES,
+    pub lpThreadAttributes: *mut super::super::Security::SECURITY_ATTRIBUTES,
+    pub bInheritHandles: super::super::Foundation::BOOL,
+    pub dwCreationFlags: u32,
+    pub lpStartupInfo: *mut super::super::System::Threading::STARTUPINFOW,
+    pub lpProcessInformation: *mut super::super::System::Threading::PROCESS_INFORMATION,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security", feature = "Win32_System_Threading"))]
+impl ::core::marker::Copy for SHCREATEPROCESSINFOW {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security", feature = "Win32_System_Threading"))]
+impl ::core::clone::Clone for SHCREATEPROCESSINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_Security\"`, `\"Win32_System_Threading\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security", feature = "Win32_System_Threading"))]
+pub struct SHCREATEPROCESSINFOW {
+    pub cbSize: u32,
+    pub fMask: u32,
+    pub hwnd: super::super::Foundation::HWND,
+    pub pszFile: ::windows_sys::core::PCWSTR,
+    pub pszParameters: ::windows_sys::core::PCWSTR,
+    pub pszCurrentDirectory: ::windows_sys::core::PCWSTR,
+    pub hUserToken: super::super::Foundation::HANDLE,
+    pub lpProcessAttributes: *mut super::super::Security::SECURITY_ATTRIBUTES,
+    pub lpThreadAttributes: *mut super::super::Security::SECURITY_ATTRIBUTES,
+    pub bInheritHandles: super::super::Foundation::BOOL,
+    pub dwCreationFlags: u32,
+    pub lpStartupInfo: *mut super::super::System::Threading::STARTUPINFOW,
+    pub lpProcessInformation: *mut super::super::System::Threading::PROCESS_INFORMATION,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security", feature = "Win32_System_Threading"))]
+impl ::core::marker::Copy for SHCREATEPROCESSINFOW {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security", feature = "Win32_System_Threading"))]
+impl ::core::clone::Clone for SHCREATEPROCESSINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHChangeDWORDAsIDList {
+    pub cb: u16,
+    pub dwItem1: u32,
+    pub dwItem2: u32,
+    pub cbZero: u16,
+}
+impl ::core::marker::Copy for SHChangeDWORDAsIDList {}
+impl ::core::clone::Clone for SHChangeDWORDAsIDList {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+pub struct SHChangeNotifyEntry {
+    pub pidl: *mut Common::ITEMIDLIST,
+    pub fRecursive: super::super::Foundation::BOOL,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+impl ::core::marker::Copy for SHChangeNotifyEntry {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common"))]
+impl ::core::clone::Clone for SHChangeNotifyEntry {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHChangeProductKeyAsIDList {
+    pub cb: u16,
+    pub wszProductKey: [u16; 39],
+    pub cbZero: u16,
+}
+impl ::core::marker::Copy for SHChangeProductKeyAsIDList {}
+impl ::core::clone::Clone for SHChangeProductKeyAsIDList {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHChangeUpdateImageIDList {
+    pub cb: u16,
+    pub iIconIndex: i32,
+    pub iCurIndex: i32,
+    pub uFlags: u32,
+    pub dwProcessID: u32,
+    pub szName: [u16; 260],
+    pub cbZero: u16,
+}
+impl ::core::marker::Copy for SHChangeUpdateImageIDList {}
+impl ::core::clone::Clone for SHChangeUpdateImageIDList {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHDESCRIPTIONID {
+    pub dwDescriptionId: SHDID_ID,
+    pub clsid: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for SHDESCRIPTIONID {}
+impl ::core::clone::Clone for SHDESCRIPTIONID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct SHDRAGIMAGE {
+    pub sizeDragImage: super::super::Foundation::SIZE,
+    pub ptOffset: super::super::Foundation::POINT,
+    pub hbmpDragImage: super::super::Graphics::Gdi::HBITMAP,
+    pub crColorKey: super::super::Foundation::COLORREF,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for SHDRAGIMAGE {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for SHDRAGIMAGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+pub struct SHELLEXECUTEINFOA {
+    pub cbSize: u32,
+    pub fMask: u32,
+    pub hwnd: super::super::Foundation::HWND,
+    pub lpVerb: ::windows_sys::core::PCSTR,
+    pub lpFile: ::windows_sys::core::PCSTR,
+    pub lpParameters: ::windows_sys::core::PCSTR,
+    pub lpDirectory: ::windows_sys::core::PCSTR,
+    pub nShow: i32,
+    pub hInstApp: super::super::Foundation::HINSTANCE,
+    pub lpIDList: *mut ::core::ffi::c_void,
+    pub lpClass: ::windows_sys::core::PCSTR,
+    pub hkeyClass: super::super::System::Registry::HKEY,
+    pub dwHotKey: u32,
+    pub Anonymous: SHELLEXECUTEINFOA_0,
+    pub hProcess: super::super::Foundation::HANDLE,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::marker::Copy for SHELLEXECUTEINFOA {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::clone::Clone for SHELLEXECUTEINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+pub union SHELLEXECUTEINFOA_0 {
+    pub hIcon: super::super::Foundation::HANDLE,
+    pub hMonitor: super::super::Foundation::HANDLE,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::marker::Copy for SHELLEXECUTEINFOA_0 {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::clone::Clone for SHELLEXECUTEINFOA_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+pub struct SHELLEXECUTEINFOA {
+    pub cbSize: u32,
+    pub fMask: u32,
+    pub hwnd: super::super::Foundation::HWND,
+    pub lpVerb: ::windows_sys::core::PCSTR,
+    pub lpFile: ::windows_sys::core::PCSTR,
+    pub lpParameters: ::windows_sys::core::PCSTR,
+    pub lpDirectory: ::windows_sys::core::PCSTR,
+    pub nShow: i32,
+    pub hInstApp: super::super::Foundation::HINSTANCE,
+    pub lpIDList: *mut ::core::ffi::c_void,
+    pub lpClass: ::windows_sys::core::PCSTR,
+    pub hkeyClass: super::super::System::Registry::HKEY,
+    pub dwHotKey: u32,
+    pub Anonymous: SHELLEXECUTEINFOA_0,
+    pub hProcess: super::super::Foundation::HANDLE,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::marker::Copy for SHELLEXECUTEINFOA {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::clone::Clone for SHELLEXECUTEINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+pub union SHELLEXECUTEINFOA_0 {
+    pub hIcon: super::super::Foundation::HANDLE,
+    pub hMonitor: super::super::Foundation::HANDLE,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::marker::Copy for SHELLEXECUTEINFOA_0 {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::clone::Clone for SHELLEXECUTEINFOA_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+pub struct SHELLEXECUTEINFOW {
+    pub cbSize: u32,
+    pub fMask: u32,
+    pub hwnd: super::super::Foundation::HWND,
+    pub lpVerb: ::windows_sys::core::PCWSTR,
+    pub lpFile: ::windows_sys::core::PCWSTR,
+    pub lpParameters: ::windows_sys::core::PCWSTR,
+    pub lpDirectory: ::windows_sys::core::PCWSTR,
+    pub nShow: i32,
+    pub hInstApp: super::super::Foundation::HINSTANCE,
+    pub lpIDList: *mut ::core::ffi::c_void,
+    pub lpClass: ::windows_sys::core::PCWSTR,
+    pub hkeyClass: super::super::System::Registry::HKEY,
+    pub dwHotKey: u32,
+    pub Anonymous: SHELLEXECUTEINFOW_0,
+    pub hProcess: super::super::Foundation::HANDLE,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::marker::Copy for SHELLEXECUTEINFOW {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::clone::Clone for SHELLEXECUTEINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+pub union SHELLEXECUTEINFOW_0 {
+    pub hIcon: super::super::Foundation::HANDLE,
+    pub hMonitor: super::super::Foundation::HANDLE,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::marker::Copy for SHELLEXECUTEINFOW_0 {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::clone::Clone for SHELLEXECUTEINFOW_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+pub struct SHELLEXECUTEINFOW {
+    pub cbSize: u32,
+    pub fMask: u32,
+    pub hwnd: super::super::Foundation::HWND,
+    pub lpVerb: ::windows_sys::core::PCWSTR,
+    pub lpFile: ::windows_sys::core::PCWSTR,
+    pub lpParameters: ::windows_sys::core::PCWSTR,
+    pub lpDirectory: ::windows_sys::core::PCWSTR,
+    pub nShow: i32,
+    pub hInstApp: super::super::Foundation::HINSTANCE,
+    pub lpIDList: *mut ::core::ffi::c_void,
+    pub lpClass: ::windows_sys::core::PCWSTR,
+    pub hkeyClass: super::super::System::Registry::HKEY,
+    pub dwHotKey: u32,
+    pub Anonymous: SHELLEXECUTEINFOW_0,
+    pub hProcess: super::super::Foundation::HANDLE,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::marker::Copy for SHELLEXECUTEINFOW {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::clone::Clone for SHELLEXECUTEINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Registry\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+pub union SHELLEXECUTEINFOW_0 {
+    pub hIcon: super::super::Foundation::HANDLE,
+    pub hMonitor: super::super::Foundation::HANDLE,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::marker::Copy for SHELLEXECUTEINFOW_0 {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Registry"))]
+impl ::core::clone::Clone for SHELLEXECUTEINFOW_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHELLFLAGSTATE {
+    pub _bitfield: i32,
+}
+impl ::core::marker::Copy for SHELLFLAGSTATE {}
+impl ::core::clone::Clone for SHELLFLAGSTATE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHELLSTATEA {
+    pub _bitfield1: i32,
+    pub dwWin95Unused: u32,
+    pub uWin95Unused: u32,
+    pub lParamSort: i32,
+    pub iSortDirection: i32,
+    pub version: u32,
+    pub uNotUsed: u32,
+    pub _bitfield2: i32,
+}
+impl ::core::marker::Copy for SHELLSTATEA {}
+impl ::core::clone::Clone for SHELLSTATEA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHELLSTATEW {
+    pub _bitfield1: i32,
+    pub dwWin95Unused: u32,
+    pub uWin95Unused: u32,
+    pub lParamSort: i32,
+    pub iSortDirection: i32,
+    pub version: u32,
+    pub uNotUsed: u32,
+    pub _bitfield2: i32,
+}
+impl ::core::marker::Copy for SHELLSTATEW {}
+impl ::core::clone::Clone for SHELLSTATEW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHELL_ITEM_RESOURCE {
+    pub guidType: ::windows_sys::core::GUID,
+    pub szName: [u16; 260],
+}
+impl ::core::marker::Copy for SHELL_ITEM_RESOURCE {}
+impl ::core::clone::Clone for SHELL_ITEM_RESOURCE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub struct SHFILEINFOA {
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub iIcon: i32,
+    pub dwAttributes: u32,
+    pub szDisplayName: [super::super::Foundation::CHAR; 260],
+    pub szTypeName: [super::super::Foundation::CHAR; 80],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for SHFILEINFOA {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for SHFILEINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub struct SHFILEINFOA {
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub iIcon: i32,
+    pub dwAttributes: u32,
+    pub szDisplayName: [super::super::Foundation::CHAR; 260],
+    pub szTypeName: [super::super::Foundation::CHAR; 80],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for SHFILEINFOA {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for SHFILEINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+pub struct SHFILEINFOW {
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub iIcon: i32,
+    pub dwAttributes: u32,
+    pub szDisplayName: [u16; 260],
+    pub szTypeName: [u16; 80],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::marker::Copy for SHFILEINFOW {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::clone::Clone for SHFILEINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+pub struct SHFILEINFOW {
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub iIcon: i32,
+    pub dwAttributes: u32,
+    pub szDisplayName: [u16; 260],
+    pub szTypeName: [u16; 80],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::marker::Copy for SHFILEINFOW {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::clone::Clone for SHFILEINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SHFILEOPSTRUCTA {
+    pub hwnd: super::super::Foundation::HWND,
+    pub wFunc: u32,
+    pub pFrom: *mut i8,
+    pub pTo: *mut i8,
+    pub fFlags: u16,
+    pub fAnyOperationsAborted: super::super::Foundation::BOOL,
+    pub hNameMappings: *mut ::core::ffi::c_void,
+    pub lpszProgressTitle: ::windows_sys::core::PCSTR,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SHFILEOPSTRUCTA {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SHFILEOPSTRUCTA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SHFILEOPSTRUCTA {
+    pub hwnd: super::super::Foundation::HWND,
+    pub wFunc: u32,
+    pub pFrom: *mut i8,
+    pub pTo: *mut i8,
+    pub fFlags: u16,
+    pub fAnyOperationsAborted: super::super::Foundation::BOOL,
+    pub hNameMappings: *mut ::core::ffi::c_void,
+    pub lpszProgressTitle: ::windows_sys::core::PCSTR,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SHFILEOPSTRUCTA {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SHFILEOPSTRUCTA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SHFILEOPSTRUCTW {
+    pub hwnd: super::super::Foundation::HWND,
+    pub wFunc: u32,
+    pub pFrom: ::windows_sys::core::PCWSTR,
+    pub pTo: ::windows_sys::core::PCWSTR,
+    pub fFlags: u16,
+    pub fAnyOperationsAborted: super::super::Foundation::BOOL,
+    pub hNameMappings: *mut ::core::ffi::c_void,
+    pub lpszProgressTitle: ::windows_sys::core::PCWSTR,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SHFILEOPSTRUCTW {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SHFILEOPSTRUCTW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SHFILEOPSTRUCTW {
+    pub hwnd: super::super::Foundation::HWND,
+    pub wFunc: u32,
+    pub pFrom: ::windows_sys::core::PCWSTR,
+    pub pTo: ::windows_sys::core::PCWSTR,
+    pub fFlags: u16,
+    pub fAnyOperationsAborted: super::super::Foundation::BOOL,
+    pub hNameMappings: *mut ::core::ffi::c_void,
+    pub lpszProgressTitle: ::windows_sys::core::PCWSTR,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SHFILEOPSTRUCTW {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SHFILEOPSTRUCTW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SHFOLDERCUSTOMSETTINGS {
+    pub dwSize: u32,
+    pub dwMask: u32,
+    pub pvid: *mut ::windows_sys::core::GUID,
+    pub pszWebViewTemplate: ::windows_sys::core::PWSTR,
+    pub cchWebViewTemplate: u32,
+    pub pszWebViewTemplateVersion: ::windows_sys::core::PWSTR,
+    pub pszInfoTip: ::windows_sys::core::PWSTR,
+    pub cchInfoTip: u32,
+    pub pclsid: *mut ::windows_sys::core::GUID,
+    pub dwFlags: u32,
+    pub pszIconFile: ::windows_sys::core::PWSTR,
+    pub cchIconFile: u32,
+    pub iIconIndex: i32,
+    pub pszLogo: ::windows_sys::core::PWSTR,
+    pub cchLogo: u32,
+}
+impl ::core::marker::Copy for SHFOLDERCUSTOMSETTINGS {}
+impl ::core::clone::Clone for SHFOLDERCUSTOMSETTINGS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SHNAMEMAPPINGA {
+    pub pszOldPath: ::windows_sys::core::PSTR,
+    pub pszNewPath: ::windows_sys::core::PSTR,
+    pub cchOldPath: i32,
+    pub cchNewPath: i32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SHNAMEMAPPINGA {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SHNAMEMAPPINGA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SHNAMEMAPPINGA {
+    pub pszOldPath: ::windows_sys::core::PSTR,
+    pub pszNewPath: ::windows_sys::core::PSTR,
+    pub cchOldPath: i32,
+    pub cchNewPath: i32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SHNAMEMAPPINGA {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SHNAMEMAPPINGA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SHNAMEMAPPINGW {
+    pub pszOldPath: ::windows_sys::core::PWSTR,
+    pub pszNewPath: ::windows_sys::core::PWSTR,
+    pub cchOldPath: i32,
+    pub cchNewPath: i32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SHNAMEMAPPINGW {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SHNAMEMAPPINGW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SHNAMEMAPPINGW {
+    pub pszOldPath: ::windows_sys::core::PWSTR,
+    pub pszNewPath: ::windows_sys::core::PWSTR,
+    pub cchOldPath: i32,
+    pub cchNewPath: i32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SHNAMEMAPPINGW {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SHNAMEMAPPINGW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct SHQUERYRBINFO {
+    pub cbSize: u32,
+    pub i64Size: i64,
+    pub i64NumItems: i64,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for SHQUERYRBINFO {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for SHQUERYRBINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct SHQUERYRBINFO {
+    pub cbSize: u32,
+    pub i64Size: i64,
+    pub i64NumItems: i64,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for SHQUERYRBINFO {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for SHQUERYRBINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+pub struct SHSTOCKICONINFO {
+    pub cbSize: u32,
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub iSysImageIndex: i32,
+    pub iIcon: i32,
+    pub szPath: [u16; 260],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::marker::Copy for SHSTOCKICONINFO {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::clone::Clone for SHSTOCKICONINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+pub struct SHSTOCKICONINFO {
+    pub cbSize: u32,
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub iSysImageIndex: i32,
+    pub iIcon: i32,
+    pub szPath: [u16; 260],
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::marker::Copy for SHSTOCKICONINFO {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::clone::Clone for SHSTOCKICONINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SLOWAPPINFO {
+    pub ullSize: u64,
+    pub ftLastUsed: super::super::Foundation::FILETIME,
+    pub iTimesUsed: i32,
+    pub pszImage: ::windows_sys::core::PWSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SLOWAPPINFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SLOWAPPINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(feature = "Win32_UI_Shell_Common")]
+pub struct SMCSHCHANGENOTIFYSTRUCT {
+    pub lEvent: i32,
+    pub pidl1: *mut Common::ITEMIDLIST,
+    pub pidl2: *mut Common::ITEMIDLIST,
+}
+#[cfg(feature = "Win32_UI_Shell_Common")]
+impl ::core::marker::Copy for SMCSHCHANGENOTIFYSTRUCT {}
+#[cfg(feature = "Win32_UI_Shell_Common")]
+impl ::core::clone::Clone for SMCSHCHANGENOTIFYSTRUCT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Shell_Common\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common", feature = "Win32_UI_WindowsAndMessaging"))]
+pub struct SMDATA {
+    pub dwMask: u32,
+    pub dwFlags: u32,
+    pub hmenu: super::WindowsAndMessaging::HMENU,
+    pub hwnd: super::super::Foundation::HWND,
+    pub uId: u32,
+    pub uIdParent: u32,
+    pub uIdAncestor: u32,
+    pub punk: ::windows_sys::core::IUnknown,
+    pub pidlFolder: *mut Common::ITEMIDLIST,
+    pub pidlItem: *mut Common::ITEMIDLIST,
+    pub psf: IShellFolder,
+    pub pvUserData: *mut ::core::ffi::c_void,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for SMDATA {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Shell_Common", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for SMDATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SMINFO {
+    pub dwMask: u32,
+    pub dwType: u32,
+    pub dwFlags: u32,
+    pub iIcon: i32,
+}
+impl ::core::marker::Copy for SMINFO {}
+impl ::core::clone::Clone for SMINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
+#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
+pub struct SORTCOLUMN {
+    pub propkey: PropertiesSystem::PROPERTYKEY,
+    pub direction: SORTDIRECTION,
+}
+#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
+impl ::core::marker::Copy for SORTCOLUMN {}
+#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
+impl ::core::clone::Clone for SORTCOLUMN {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole"))]
+pub struct SV2CVW2_PARAMS {
+    pub cbSize: u32,
+    pub psvPrev: IShellView,
+    pub pfs: *mut FOLDERSETTINGS,
+    pub psbOwner: IShellBrowser,
+    pub prcView: *mut super::super::Foundation::RECT,
+    pub pvid: *const ::windows_sys::core::GUID,
+    pub hwndView: super::super::Foundation::HWND,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for SV2CVW2_PARAMS {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for SV2CVW2_PARAMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+pub struct SYNCMGRHANDLERINFO {
+    pub cbSize: u32,
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub SyncMgrHandlerFlags: u32,
+    pub wszHandlerName: [u16; 32],
+}
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::marker::Copy for SYNCMGRHANDLERINFO {}
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::clone::Clone for SYNCMGRHANDLERINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+pub struct SYNCMGRITEM {
+    pub cbSize: u32,
+    pub dwFlags: u32,
+    pub ItemID: ::windows_sys::core::GUID,
+    pub dwItemState: u32,
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub wszItemName: [u16; 128],
+    pub ftLastUpdate: super::super::Foundation::FILETIME,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::marker::Copy for SYNCMGRITEM {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+impl ::core::clone::Clone for SYNCMGRITEM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SYNCMGRLOGERRORINFO {
+    pub cbSize: u32,
+    pub mask: u32,
+    pub dwSyncMgrErrorFlags: u32,
+    pub ErrorID: ::windows_sys::core::GUID,
+    pub ItemID: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for SYNCMGRLOGERRORINFO {}
+impl ::core::clone::Clone for SYNCMGRLOGERRORINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct SYNCMGRPROGRESSITEM {
+    pub cbSize: u32,
+    pub mask: u32,
+    pub lpcStatusText: ::windows_sys::core::PCWSTR,
+    pub dwStatusType: u32,
+    pub iProgValue: i32,
+    pub iMaxValue: i32,
+}
+impl ::core::marker::Copy for SYNCMGRPROGRESSITEM {}
+impl ::core::clone::Clone for SYNCMGRPROGRESSITEM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct SYNCMGR_CONFLICT_ID_INFO {
+    pub pblobID: *mut super::super::System::Com::BYTE_BLOB,
+    pub pblobExtra: *mut super::super::System::Com::BYTE_BLOB,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for SYNCMGR_CONFLICT_ID_INFO {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for SYNCMGR_CONFLICT_ID_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type ShFindChangeNotificationHandle = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct TBINFO {
+    pub cbuttons: u32,
+    pub uFlags: u32,
+}
+impl ::core::marker::Copy for TBINFO {}
+impl ::core::clone::Clone for TBINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+pub struct THUMBBUTTON {
+    pub dwMask: THUMBBUTTONMASK,
+    pub iId: u32,
+    pub iBitmap: u32,
+    pub hIcon: super::WindowsAndMessaging::HICON,
+    pub szTip: [u16; 260],
+    pub dwFlags: THUMBBUTTONFLAGS,
+}
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::marker::Copy for THUMBBUTTON {}
+#[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+impl ::core::clone::Clone for THUMBBUTTON {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi", feature = "Win32_System_Ole"))]
+pub struct TOOLBARITEM {
+    pub ptbar: IDockingWindow,
+    pub rcBorderTool: super::super::Foundation::RECT,
+    pub pwszItem: ::windows_sys::core::PWSTR,
+    pub fShow: super::super::Foundation::BOOL,
+    pub hMon: super::super::Graphics::Gdi::HMONITOR,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for TOOLBARITEM {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for TOOLBARITEM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct URLINVOKECOMMANDINFOA {
     pub dwcbSize: u32,
     pub dwFlags: u32,
     pub hwndParent: super::super::Foundation::HWND,
     pub pcszVerb: ::windows_sys::core::PCSTR,
 }
 #[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for urlinvokecommandinfoA {}
+impl ::core::marker::Copy for URLINVOKECOMMANDINFOA {}
 #[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for urlinvokecommandinfoA {
+impl ::core::clone::Clone for URLINVOKECOMMANDINFOA {
     fn clone(&self) -> Self {
         *self
     }
@@ -13039,17 +12926,79 @@ impl ::core::clone::Clone for urlinvokecommandinfoA {
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
-pub struct urlinvokecommandinfoW {
+pub struct URLINVOKECOMMANDINFOW {
     pub dwcbSize: u32,
     pub dwFlags: u32,
     pub hwndParent: super::super::Foundation::HWND,
     pub pcszVerb: ::windows_sys::core::PCWSTR,
 }
 #[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for urlinvokecommandinfoW {}
+impl ::core::marker::Copy for URLINVOKECOMMANDINFOW {}
 #[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for urlinvokecommandinfoW {
+impl ::core::clone::Clone for URLINVOKECOMMANDINFOW {
     fn clone(&self) -> Self {
         *self
     }
 }
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_UI_Shell_Common\"`*"]
+#[cfg(feature = "Win32_UI_Shell_Common")]
+pub struct WINDOWDATA {
+    pub dwWindowID: u32,
+    pub uiCP: u32,
+    pub pidl: *mut Common::ITEMIDLIST,
+    pub lpszUrl: ::windows_sys::core::PWSTR,
+    pub lpszUrlLocation: ::windows_sys::core::PWSTR,
+    pub lpszTitle: ::windows_sys::core::PWSTR,
+}
+#[cfg(feature = "Win32_UI_Shell_Common")]
+impl ::core::marker::Copy for WINDOWDATA {}
+#[cfg(feature = "Win32_UI_Shell_Common")]
+impl ::core::clone::Clone for WINDOWDATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub struct WTS_THUMBNAILID {
+    pub rgbKey: [u8; 16],
+}
+impl ::core::marker::Copy for WTS_THUMBNAILID {}
+impl ::core::clone::Clone for WTS_THUMBNAILID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct _APPCONSTRAIN_REGISTRATION(pub u8);
+#[repr(C)]
+pub struct _APPSTATE_REGISTRATION(pub u8);
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type APPLET_PROC = ::core::option::Option<unsafe extern "system" fn(hwndcpl: super::super::Foundation::HWND, msg: u32, lparam1: super::super::Foundation::LPARAM, lparam2: super::super::Foundation::LPARAM) -> i32>;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type BFFCALLBACK = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, umsg: u32, lparam: super::super::Foundation::LPARAM, lpdata: super::super::Foundation::LPARAM) -> i32>;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type DLLGETVERSIONPROC = ::core::option::Option<unsafe extern "system" fn(param0: *mut DLLVERSIONINFO) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
+pub type LPFNDFMCALLBACK = ::core::option::Option<unsafe extern "system" fn(psf: IShellFolder, hwnd: super::super::Foundation::HWND, pdtobj: super::super::System::Com::IDataObject, umsg: u32, wparam: super::super::Foundation::WPARAM, lparam: super::super::Foundation::LPARAM) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Ole"))]
+pub type LPFNVIEWCALLBACK = ::core::option::Option<unsafe extern "system" fn(psvouter: IShellView, psf: IShellFolder, hwndmain: super::super::Foundation::HWND, umsg: u32, wparam: super::super::Foundation::WPARAM, lparam: super::super::Foundation::LPARAM) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PAPPCONSTRAIN_CHANGE_ROUTINE = ::core::option::Option<unsafe extern "system" fn(constrained: super::super::Foundation::BOOLEAN, context: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PAPPSTATE_CHANGE_ROUTINE = ::core::option::Option<unsafe extern "system" fn(quiesced: super::super::Foundation::BOOLEAN, context: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`*"]
+pub type PFNCANSHAREFOLDERW = ::core::option::Option<unsafe extern "system" fn(pszpath: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFNSHOWSHAREFOLDERUIW = ::core::option::Option<unsafe extern "system" fn(hwndparent: super::super::Foundation::HWND, pszpath: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_UI_Shell\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type SUBCLASSPROC = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, umsg: u32, wparam: super::super::Foundation::WPARAM, lparam: super::super::Foundation::LPARAM, uidsubclass: usize, dwrefdata: usize) -> super::super::Foundation::LRESULT>;

@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_UI_HiDpi\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
@@ -36,8 +36,9 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_UI_HiDpi\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn GetSystemDpiForProcess(hprocess: super::super::Foundation::HANDLE) -> u32;
-    #[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
-    pub fn GetSystemMetricsForDpi(nindex: i32, dpi: u32) -> i32;
+    #[doc = "*Required features: `\"Win32_UI_HiDpi\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+    #[cfg(feature = "Win32_UI_WindowsAndMessaging")]
+    pub fn GetSystemMetricsForDpi(nindex: super::WindowsAndMessaging::SYSTEM_METRICS_INDEX, dpi: u32) -> i32;
     #[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
     pub fn GetThreadDpiAwarenessContext() -> DPI_AWARENESS_CONTEXT;
     #[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
@@ -80,6 +81,16 @@ extern "system" {
     pub fn SystemParametersInfoForDpi(uiaction: u32, uiparam: u32, pvparam: *mut ::core::ffi::c_void, fwinini: u32, dpi: u32) -> super::super::Foundation::BOOL;
 }
 #[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
+pub const DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE: DPI_AWARENESS_CONTEXT = -3i32 as _;
+#[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
+pub const DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2: DPI_AWARENESS_CONTEXT = -4i32 as _;
+#[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
+pub const DPI_AWARENESS_CONTEXT_SYSTEM_AWARE: DPI_AWARENESS_CONTEXT = -2i32 as _;
+#[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
+pub const DPI_AWARENESS_CONTEXT_UNAWARE: DPI_AWARENESS_CONTEXT = -1i32 as _;
+#[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
+pub const DPI_AWARENESS_CONTEXT_UNAWARE_GDISCALED: DPI_AWARENESS_CONTEXT = -5i32 as _;
+#[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
 pub type DIALOG_CONTROL_DPI_CHANGE_BEHAVIORS = u32;
 #[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
 pub const DCDC_DEFAULT: DIALOG_CONTROL_DPI_CHANGE_BEHAVIORS = 0u32;
@@ -107,17 +118,6 @@ pub const DPI_AWARENESS_UNAWARE: DPI_AWARENESS = 0i32;
 pub const DPI_AWARENESS_SYSTEM_AWARE: DPI_AWARENESS = 1i32;
 #[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
 pub const DPI_AWARENESS_PER_MONITOR_AWARE: DPI_AWARENESS = 2i32;
-pub type DPI_AWARENESS_CONTEXT = isize;
-#[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
-pub const DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE: DPI_AWARENESS_CONTEXT = -3i32 as _;
-#[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
-pub const DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2: DPI_AWARENESS_CONTEXT = -4i32 as _;
-#[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
-pub const DPI_AWARENESS_CONTEXT_SYSTEM_AWARE: DPI_AWARENESS_CONTEXT = -2i32 as _;
-#[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
-pub const DPI_AWARENESS_CONTEXT_UNAWARE: DPI_AWARENESS_CONTEXT = -1i32 as _;
-#[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
-pub const DPI_AWARENESS_CONTEXT_UNAWARE_GDISCALED: DPI_AWARENESS_CONTEXT = -5i32 as _;
 #[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
 pub type DPI_HOSTING_BEHAVIOR = i32;
 #[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
@@ -144,3 +144,4 @@ pub const PROCESS_DPI_UNAWARE: PROCESS_DPI_AWARENESS = 0i32;
 pub const PROCESS_SYSTEM_DPI_AWARE: PROCESS_DPI_AWARENESS = 1i32;
 #[doc = "*Required features: `\"Win32_UI_HiDpi\"`*"]
 pub const PROCESS_PER_MONITOR_DPI_AWARE: PROCESS_DPI_AWARENESS = 2i32;
+pub type DPI_AWARENESS_CONTEXT = isize;

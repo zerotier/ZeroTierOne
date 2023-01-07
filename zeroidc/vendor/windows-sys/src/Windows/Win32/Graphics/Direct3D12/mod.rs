@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Direct3D\"`*"]
     #[cfg(feature = "Win32_Graphics_Direct3D")]
@@ -20,13 +20,90 @@ extern "system" {
     #[cfg(feature = "Win32_Graphics_Direct3D")]
     pub fn D3D12SerializeVersionedRootSignature(prootsignature: *const D3D12_VERSIONED_ROOT_SIGNATURE_DESC, ppblob: *mut super::Direct3D::ID3DBlob, pperrorblob: *mut super::Direct3D::ID3DBlob) -> ::windows_sys::core::HRESULT;
 }
+pub type ID3D12CommandAllocator = *mut ::core::ffi::c_void;
+pub type ID3D12CommandList = *mut ::core::ffi::c_void;
+pub type ID3D12CommandQueue = *mut ::core::ffi::c_void;
+pub type ID3D12CommandSignature = *mut ::core::ffi::c_void;
+pub type ID3D12Debug = *mut ::core::ffi::c_void;
+pub type ID3D12Debug1 = *mut ::core::ffi::c_void;
+pub type ID3D12Debug2 = *mut ::core::ffi::c_void;
+pub type ID3D12Debug3 = *mut ::core::ffi::c_void;
+pub type ID3D12Debug4 = *mut ::core::ffi::c_void;
+pub type ID3D12Debug5 = *mut ::core::ffi::c_void;
+pub type ID3D12DebugCommandList = *mut ::core::ffi::c_void;
+pub type ID3D12DebugCommandList1 = *mut ::core::ffi::c_void;
+pub type ID3D12DebugCommandList2 = *mut ::core::ffi::c_void;
+pub type ID3D12DebugCommandQueue = *mut ::core::ffi::c_void;
+pub type ID3D12DebugDevice = *mut ::core::ffi::c_void;
+pub type ID3D12DebugDevice1 = *mut ::core::ffi::c_void;
+pub type ID3D12DebugDevice2 = *mut ::core::ffi::c_void;
+pub type ID3D12DescriptorHeap = *mut ::core::ffi::c_void;
+pub type ID3D12Device = *mut ::core::ffi::c_void;
+pub type ID3D12Device1 = *mut ::core::ffi::c_void;
+pub type ID3D12Device2 = *mut ::core::ffi::c_void;
+pub type ID3D12Device3 = *mut ::core::ffi::c_void;
+pub type ID3D12Device4 = *mut ::core::ffi::c_void;
+pub type ID3D12Device5 = *mut ::core::ffi::c_void;
+pub type ID3D12Device6 = *mut ::core::ffi::c_void;
+pub type ID3D12Device7 = *mut ::core::ffi::c_void;
+pub type ID3D12Device8 = *mut ::core::ffi::c_void;
+pub type ID3D12Device9 = *mut ::core::ffi::c_void;
+pub type ID3D12DeviceChild = *mut ::core::ffi::c_void;
+pub type ID3D12DeviceRemovedExtendedData = *mut ::core::ffi::c_void;
+pub type ID3D12DeviceRemovedExtendedData1 = *mut ::core::ffi::c_void;
+pub type ID3D12DeviceRemovedExtendedData2 = *mut ::core::ffi::c_void;
+pub type ID3D12DeviceRemovedExtendedDataSettings = *mut ::core::ffi::c_void;
+pub type ID3D12DeviceRemovedExtendedDataSettings1 = *mut ::core::ffi::c_void;
+pub type ID3D12Fence = *mut ::core::ffi::c_void;
+pub type ID3D12Fence1 = *mut ::core::ffi::c_void;
+pub type ID3D12FunctionParameterReflection = *mut ::core::ffi::c_void;
+pub type ID3D12FunctionReflection = *mut ::core::ffi::c_void;
+pub type ID3D12GraphicsCommandList = *mut ::core::ffi::c_void;
+pub type ID3D12GraphicsCommandList1 = *mut ::core::ffi::c_void;
+pub type ID3D12GraphicsCommandList2 = *mut ::core::ffi::c_void;
+pub type ID3D12GraphicsCommandList3 = *mut ::core::ffi::c_void;
+pub type ID3D12GraphicsCommandList4 = *mut ::core::ffi::c_void;
+pub type ID3D12GraphicsCommandList5 = *mut ::core::ffi::c_void;
+pub type ID3D12GraphicsCommandList6 = *mut ::core::ffi::c_void;
+pub type ID3D12Heap = *mut ::core::ffi::c_void;
+pub type ID3D12Heap1 = *mut ::core::ffi::c_void;
+pub type ID3D12InfoQueue = *mut ::core::ffi::c_void;
+pub type ID3D12InfoQueue1 = *mut ::core::ffi::c_void;
+pub type ID3D12LibraryReflection = *mut ::core::ffi::c_void;
+pub type ID3D12LifetimeOwner = *mut ::core::ffi::c_void;
+pub type ID3D12LifetimeTracker = *mut ::core::ffi::c_void;
+pub type ID3D12MetaCommand = *mut ::core::ffi::c_void;
+pub type ID3D12Object = *mut ::core::ffi::c_void;
+pub type ID3D12Pageable = *mut ::core::ffi::c_void;
+pub type ID3D12PipelineLibrary = *mut ::core::ffi::c_void;
+pub type ID3D12PipelineLibrary1 = *mut ::core::ffi::c_void;
+pub type ID3D12PipelineState = *mut ::core::ffi::c_void;
+pub type ID3D12ProtectedResourceSession = *mut ::core::ffi::c_void;
+pub type ID3D12ProtectedResourceSession1 = *mut ::core::ffi::c_void;
+pub type ID3D12ProtectedSession = *mut ::core::ffi::c_void;
+pub type ID3D12QueryHeap = *mut ::core::ffi::c_void;
+pub type ID3D12Resource = *mut ::core::ffi::c_void;
+pub type ID3D12Resource1 = *mut ::core::ffi::c_void;
+pub type ID3D12Resource2 = *mut ::core::ffi::c_void;
+pub type ID3D12RootSignature = *mut ::core::ffi::c_void;
+pub type ID3D12RootSignatureDeserializer = *mut ::core::ffi::c_void;
+pub type ID3D12SDKConfiguration = *mut ::core::ffi::c_void;
+pub type ID3D12ShaderCacheSession = *mut ::core::ffi::c_void;
+pub type ID3D12ShaderReflection = *mut ::core::ffi::c_void;
+pub type ID3D12ShaderReflectionConstantBuffer = *mut ::core::ffi::c_void;
+pub type ID3D12ShaderReflectionType = *mut ::core::ffi::c_void;
+pub type ID3D12ShaderReflectionVariable = *mut ::core::ffi::c_void;
+pub type ID3D12SharingContract = *mut ::core::ffi::c_void;
+pub type ID3D12StateObject = *mut ::core::ffi::c_void;
+pub type ID3D12StateObjectProperties = *mut ::core::ffi::c_void;
+pub type ID3D12SwapChainAssistant = *mut ::core::ffi::c_void;
+pub type ID3D12Tools = *mut ::core::ffi::c_void;
+pub type ID3D12VersionedRootSignatureDeserializer = *mut ::core::ffi::c_void;
 pub const CLSID_D3D12Debug: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4063570667, data2: 56708, data3: 18942, data4: [185, 123, 169, 220, 253, 204, 27, 79] };
 pub const CLSID_D3D12DeviceRemovedExtendedData: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1249229764, data2: 40948, data3: 19160, data4: [159, 24, 171, 174, 132, 220, 95, 242] };
 pub const CLSID_D3D12SDKConfiguration: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2094688970, data2: 41022, data3: 18888, data4: [148, 88, 3, 52, 210, 14, 7, 206] };
 pub const CLSID_D3D12Tools: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3816953521, data2: 15500, data3: 18483, data4: [170, 9, 10, 6, 182, 93, 150, 200] };
 pub const D3D12ExperimentalShaderModels: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1995790142, data2: 61754, data3: 16629, data4: [178, 151, 129, 206, 158, 24, 147, 63] };
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12MessageFunc = ::core::option::Option<unsafe extern "system" fn(category: D3D12_MESSAGE_CATEGORY, severity: D3D12_MESSAGE_SEVERITY, id: D3D12_MESSAGE_ID, pdescription: ::windows_sys::core::PCSTR, pcontext: *mut ::core::ffi::c_void)>;
 pub const D3D12MetaCommand: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3342125438, data2: 32887, data3: 18632, data4: [159, 220, 217, 209, 221, 49, 221, 119] };
 pub const D3D12TiledResourceTier4: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3385094751, data2: 43034, data3: 20310, data4: [140, 91, 197, 16, 57, 214, 148, 251] };
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -41,48 +118,907 @@ pub const D3D12_ANISOTROPIC_FILTERING_BIT: u32 = 64u32;
 pub const D3D12_APPEND_ALIGNED_ELEMENT: u32 = 4294967295u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_ARRAY_AXIS_ADDRESS_RANGE_BIT_COUNT: u32 = 9u32;
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_AUTO_BREADCRUMB_NODE {
-    pub pCommandListDebugNameA: *const u8,
-    pub pCommandListDebugNameW: ::windows_sys::core::PCWSTR,
-    pub pCommandQueueDebugNameA: *const u8,
-    pub pCommandQueueDebugNameW: ::windows_sys::core::PCWSTR,
-    pub pCommandList: ID3D12GraphicsCommandList,
-    pub pCommandQueue: ID3D12CommandQueue,
-    pub BreadcrumbCount: u32,
-    pub pLastBreadcrumbValue: *const u32,
-    pub pCommandHistory: *const D3D12_AUTO_BREADCRUMB_OP,
-    pub pNext: *const D3D12_AUTO_BREADCRUMB_NODE,
-}
-impl ::core::marker::Copy for D3D12_AUTO_BREADCRUMB_NODE {}
-impl ::core::clone::Clone for D3D12_AUTO_BREADCRUMB_NODE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub const D3D12_CLIP_OR_CULL_DISTANCE_COUNT: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_AUTO_BREADCRUMB_NODE1 {
-    pub pCommandListDebugNameA: *const u8,
-    pub pCommandListDebugNameW: ::windows_sys::core::PCWSTR,
-    pub pCommandQueueDebugNameA: *const u8,
-    pub pCommandQueueDebugNameW: ::windows_sys::core::PCWSTR,
-    pub pCommandList: ID3D12GraphicsCommandList,
-    pub pCommandQueue: ID3D12CommandQueue,
-    pub BreadcrumbCount: u32,
-    pub pLastBreadcrumbValue: *const u32,
-    pub pCommandHistory: *const D3D12_AUTO_BREADCRUMB_OP,
-    pub pNext: *const D3D12_AUTO_BREADCRUMB_NODE1,
-    pub BreadcrumbContextsCount: u32,
-    pub pBreadcrumbContexts: *mut D3D12_DRED_BREADCRUMB_CONTEXT,
-}
-impl ::core::marker::Copy for D3D12_AUTO_BREADCRUMB_NODE1 {}
-impl ::core::clone::Clone for D3D12_AUTO_BREADCRUMB_NODE1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const D3D12_CLIP_OR_CULL_DISTANCE_ELEMENT_COUNT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_HW_SLOT_COUNT: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_PARTIAL_UPDATE_EXTENTS_BYTE_ALIGNMENT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_REGISTER_COUNT: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_REGISTER_READS_PER_INST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_FLOWCONTROL_NESTING_LIMIT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_IMMEDIATE_CONSTANT_BUFFER_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_IMMEDIATE_CONSTANT_BUFFER_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_IMMEDIATE_CONSTANT_BUFFER_REGISTER_READS_PER_INST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_IMMEDIATE_CONSTANT_BUFFER_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_IMMEDIATE_VALUE_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_INPUT_RESOURCE_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_INPUT_RESOURCE_REGISTER_COUNT: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_INPUT_RESOURCE_REGISTER_READS_PER_INST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_INPUT_RESOURCE_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_SAMPLER_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_SAMPLER_REGISTER_COUNT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_SAMPLER_REGISTER_READS_PER_INST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_SAMPLER_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_SAMPLER_SLOT_COUNT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_SUBROUTINE_NESTING_LIMIT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_TEMP_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_TEMP_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_TEMP_REGISTER_COUNT: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_TEMP_REGISTER_READS_PER_INST: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_TEMP_REGISTER_READ_PORTS: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_TEXCOORD_RANGE_REDUCTION_MAX: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_TEXCOORD_RANGE_REDUCTION_MIN: i32 = -10i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_TEXEL_OFFSET_MAX_NEGATIVE: i32 = -8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_COMMONSHADER_TEXEL_OFFSET_MAX_POSITIVE: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET00_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET00_MAX_NUM_THREADS_PER_GROUP: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET01_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 240u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET01_MAX_NUM_THREADS_PER_GROUP: u32 = 68u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET02_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 224u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET02_MAX_NUM_THREADS_PER_GROUP: u32 = 72u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET03_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 208u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET03_MAX_NUM_THREADS_PER_GROUP: u32 = 76u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET04_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 192u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET04_MAX_NUM_THREADS_PER_GROUP: u32 = 84u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET05_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 176u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET05_MAX_NUM_THREADS_PER_GROUP: u32 = 92u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET06_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 160u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET06_MAX_NUM_THREADS_PER_GROUP: u32 = 100u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET07_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 144u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET07_MAX_NUM_THREADS_PER_GROUP: u32 = 112u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET08_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET08_MAX_NUM_THREADS_PER_GROUP: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET09_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 112u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET09_MAX_NUM_THREADS_PER_GROUP: u32 = 144u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET10_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 96u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET10_MAX_NUM_THREADS_PER_GROUP: u32 = 168u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET11_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 80u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET11_MAX_NUM_THREADS_PER_GROUP: u32 = 204u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET12_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET12_MAX_NUM_THREADS_PER_GROUP: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET13_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 48u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET13_MAX_NUM_THREADS_PER_GROUP: u32 = 340u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET14_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET14_MAX_NUM_THREADS_PER_GROUP: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET15_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_BUCKET15_MAX_NUM_THREADS_PER_GROUP: u32 = 768u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_DISPATCH_MAX_THREAD_GROUPS_IN_Z_DIMENSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_RAW_UAV_BYTE_ALIGNMENT: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_THREAD_GROUP_MAX_THREADS_PER_GROUP: u32 = 768u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_THREAD_GROUP_MAX_X: u32 = 768u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_THREAD_GROUP_MAX_Y: u32 = 768u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_4_X_UAV_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION: u32 = 65535u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_TGSM_REGISTER_COUNT: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_TGSM_REGISTER_READS_PER_INST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_TGSM_RESOURCE_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_TGSM_RESOURCE_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREADGROUPID_REGISTER_COMPONENTS: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREADGROUPID_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREADIDINGROUPFLATTENED_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREADIDINGROUPFLATTENED_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREADIDINGROUP_REGISTER_COMPONENTS: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREADIDINGROUP_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREADID_REGISTER_COMPONENTS: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREADID_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREAD_GROUP_MAX_X: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREAD_GROUP_MAX_Y: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREAD_GROUP_MAX_Z: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREAD_GROUP_MIN_X: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREAD_GROUP_MIN_Y: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREAD_GROUP_MIN_Z: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_CS_THREAD_LOCAL_TEMP_REGISTER_POOL: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_BLEND_FACTOR_ALPHA: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_BLEND_FACTOR_BLUE: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_BLEND_FACTOR_GREEN: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_BLEND_FACTOR_RED: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_BORDER_COLOR_COMPONENT: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_DEPTH_BIAS: i32 = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_DEPTH_BIAS_CLAMP: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_MAX_ANISOTROPY: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_MIP_LOD_BIAS: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_RENDER_TARGET_ARRAY_INDEX: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_SAMPLE_MASK: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_SCISSOR_ENDX: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_SCISSOR_ENDY: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_SCISSOR_STARTX: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_SCISSOR_STARTY: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING: u32 = 5768u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_STENCIL_READ_MASK: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_STENCIL_REFERENCE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_STENCIL_WRITE_MASK: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_VIEWPORT_AND_SCISSORRECT_INDEX: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_VIEWPORT_HEIGHT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_VIEWPORT_MAX_DEPTH: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_VIEWPORT_MIN_DEPTH: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_VIEWPORT_TOPLEFTX: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_VIEWPORT_TOPLEFTY: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DEFAULT_VIEWPORT_WIDTH: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DRIVER_RESERVED_REGISTER_SPACE_VALUES_END: u32 = 4294967287u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DRIVER_RESERVED_REGISTER_SPACE_VALUES_START: u32 = 4294967280u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_CONTROL_POINTS_MAX_TOTAL_SCALARS: u32 = 3968u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_CONTROL_POINT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_CONTROL_POINT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_CONTROL_POINT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_CONTROL_POINT_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_CONTROL_POINT_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_DOMAIN_POINT_REGISTER_COMPONENTS: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_DOMAIN_POINT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_DOMAIN_POINT_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_DOMAIN_POINT_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_DOMAIN_POINT_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_PATCH_CONSTANT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_PATCH_CONSTANT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_PATCH_CONSTANT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_PATCH_CONSTANT_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_PATCH_CONSTANT_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_PRIMITIVE_ID_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_PRIMITIVE_ID_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_PRIMITIVE_ID_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_PRIMITIVE_ID_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_INPUT_PRIMITIVE_ID_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_DS_OUTPUT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FILTER_REDUCTION_TYPE_MASK: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FILTER_REDUCTION_TYPE_SHIFT: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FILTER_TYPE_MASK: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FLOAT16_FUSED_TOLERANCE_IN_ULP: f64 = 0.6f64;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FLOAT32_MAX: f32 = 340282350000000000000000000000000000000f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FLOAT32_TO_INTEGER_TOLERANCE_IN_ULP: f32 = 0.6f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FLOAT_TO_SRGB_EXPONENT_DENOMINATOR: f32 = 2.4f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FLOAT_TO_SRGB_EXPONENT_NUMERATOR: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FLOAT_TO_SRGB_OFFSET: f32 = 0.055f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FLOAT_TO_SRGB_SCALE_1: f32 = 12.92f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FLOAT_TO_SRGB_SCALE_2: f32 = 1.055f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FLOAT_TO_SRGB_THRESHOLD: f32 = 0.0031308f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FTOI_INSTRUCTION_MAX_INPUT: f32 = 2147483600f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FTOI_INSTRUCTION_MIN_INPUT: f32 = -2147483600f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FTOU_INSTRUCTION_MAX_INPUT: f32 = 4294967300f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_FTOU_INSTRUCTION_MIN_INPUT: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_INSTANCE_ID_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_INSTANCE_ID_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_INSTANCE_ID_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_INSTANCE_ID_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_INSTANCE_ID_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_PRIM_CONST_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_PRIM_CONST_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_PRIM_CONST_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_PRIM_CONST_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_PRIM_CONST_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_INPUT_REGISTER_VERTICES: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_MAX_INSTANCE_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_MAX_OUTPUT_VERTEX_COUNT_ACROSS_INSTANCES: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_OUTPUT_ELEMENTS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_GS_OUTPUT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_CONTROL_POINT_PHASE_INPUT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_CONTROL_POINT_PHASE_OUTPUT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_CONTROL_POINT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_CONTROL_POINT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_CONTROL_POINT_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_CONTROL_POINT_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_FORK_PHASE_INSTANCE_COUNT_UPPER_BOUND: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_FORK_INSTANCE_ID_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_FORK_INSTANCE_ID_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_FORK_INSTANCE_ID_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_FORK_INSTANCE_ID_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_FORK_INSTANCE_ID_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_JOIN_INSTANCE_ID_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_JOIN_INSTANCE_ID_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_JOIN_INSTANCE_ID_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_JOIN_INSTANCE_ID_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_JOIN_INSTANCE_ID_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_PRIMITIVE_ID_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_PRIMITIVE_ID_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_PRIMITIVE_ID_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_PRIMITIVE_ID_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_INPUT_PRIMITIVE_ID_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_JOIN_PHASE_INSTANCE_COUNT_UPPER_BOUND: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_MAXTESSFACTOR_LOWER_BOUND: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_MAXTESSFACTOR_UPPER_BOUND: f32 = 64f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_OUTPUT_CONTROL_POINTS_MAX_TOTAL_SCALARS: u32 = 3968u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_OUTPUT_CONTROL_POINT_ID_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_OUTPUT_CONTROL_POINT_ID_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_OUTPUT_CONTROL_POINT_ID_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_OUTPUT_CONTROL_POINT_ID_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_OUTPUT_CONTROL_POINT_ID_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_OUTPUT_PATCH_CONSTANT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_OUTPUT_PATCH_CONSTANT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_OUTPUT_PATCH_CONSTANT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_OUTPUT_PATCH_CONSTANT_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_OUTPUT_PATCH_CONSTANT_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_HS_OUTPUT_PATCH_CONSTANT_REGISTER_SCALAR_COMPONENTS: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_IA_DEFAULT_INDEX_BUFFER_OFFSET_IN_BYTES: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_IA_DEFAULT_PRIMITIVE_TOPOLOGY: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_IA_DEFAULT_VERTEX_BUFFER_OFFSET_IN_BYTES: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_IA_INDEX_INPUT_RESOURCE_SLOT_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_IA_INSTANCE_ID_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_IA_INTEGER_ARITHMETIC_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_IA_PATCH_MAX_CONTROL_POINT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_IA_PRIMITIVE_ID_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_IA_VERTEX_ID_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_IA_VERTEX_INPUT_STRUCTURE_ELEMENTS_COMPONENTS: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_IA_VERTEX_INPUT_STRUCTURE_ELEMENT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_INFO_QUEUE_DEFAULT_MESSAGE_COUNT_LIMIT: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_INTEGER_DIVIDE_BY_ZERO_QUOTIENT: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_INTEGER_DIVIDE_BY_ZERO_REMAINDER: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_KEEP_UNORDERED_ACCESS_VIEWS: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_LINEAR_GAMMA: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAG_FILTER_SHIFT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAJOR_VERSION: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAX_BORDER_COLOR_COMPONENT: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAX_DEPTH: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAX_LIVE_STATIC_SAMPLERS: u32 = 2032u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAX_MAXANISOTROPY: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAX_POSITION_VALUE: f32 = 34028236000000000000000000000000000f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAX_ROOT_COST: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_1: u32 = 1000000u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_2: u32 = 1000000u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAX_TEXTURE_DIMENSION_2_TO_EXP: u32 = 17u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MAX_VIEW_INSTANCE_COUNT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MINOR_VERSION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MIN_BORDER_COLOR_COMPONENT: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MIN_DEPTH: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MIN_FILTER_SHIFT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MIN_MAXANISOTROPY: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MIP_FILTER_SHIFT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MIP_LOD_BIAS_MAX: f32 = 15.99f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MIP_LOD_BIAS_MIN: f32 = -16f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MIP_LOD_FRACTIONAL_BIT_COUNT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MIP_LOD_RANGE_BIT_COUNT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_MULTISAMPLE_ANTIALIAS_LINE_WIDTH: f32 = 1.4f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_NONSAMPLE_FETCH_OUT_OF_RANGE_ACCESS_RESULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_OS_RESERVED_REGISTER_SPACE_VALUES_END: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_OS_RESERVED_REGISTER_SPACE_VALUES_START: u32 = 4294967288u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PACKED_TILE: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PIXEL_ADDRESS_RANGE_BIT_COUNT: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PRE_SCISSOR_PIXEL_ADDRESS_RANGE_BIT_COUNT: u32 = 16u32;
+pub const D3D12_PROTECTED_RESOURCES_SESSION_HARDWARE_PROTECTED: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1655703630, data2: 50958, data3: 19882, data4: [161, 9, 48, 255, 141, 90, 4, 130] };
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_CS_UAV_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_CS_UAV_REGISTER_COUNT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_CS_UAV_REGISTER_READS_PER_INST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_CS_UAV_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_FRONTFACING_DEFAULT_VALUE: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_FRONTFACING_FALSE_VALUE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_FRONTFACING_TRUE_VALUE: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_INPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_INPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_INPUT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_INPUT_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_INPUT_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_LEGACY_PIXEL_CENTER_FRACTIONAL_COMPONENT: f32 = 0f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_OUTPUT_DEPTH_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_OUTPUT_DEPTH_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_OUTPUT_DEPTH_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_OUTPUT_MASK_REGISTER_COMPONENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_OUTPUT_MASK_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_OUTPUT_MASK_REGISTER_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_OUTPUT_REGISTER_COUNT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_PS_PIXEL_CENTER_FRACTIONAL_COMPONENT: f32 = 0.5f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_AABB_BYTE_ALIGNMENT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_INSTANCE_DESCS_BYTE_ALIGNMENT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH: u32 = 31u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RAYTRACING_TRANSFORM3X4_BYTE_ALIGNMENT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_BLEND_OBJECT_COUNT_PER_DEVICE: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_BUFFER_RESOURCE_TEXEL_COUNT_2_TO_EXP: u32 = 27u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_DEPTH_STENCIL_OBJECT_COUNT_PER_DEVICE: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_DRAW_VERTEX_COUNT_2_TO_EXP: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_FILTERING_HW_ADDRESSABLE_RESOURCE_DIMENSION: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_GS_INVOCATION_32BIT_OUTPUT_COMPONENT_LIMIT: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_IMMEDIATE_CONSTANT_BUFFER_ELEMENT_COUNT: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_MAXANISOTROPY: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_MIP_LEVELS: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_MULTI_ELEMENT_STRUCTURE_SIZE_IN_BYTES: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_RASTERIZER_OBJECT_COUNT_PER_DEVICE: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_RENDER_TO_BUFFER_WINDOW_WIDTH: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_B_TERM: f32 = 0.25f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_C_TERM: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_RESOURCE_VIEW_COUNT_PER_DEVICE_2_TO_EXP: u32 = 20u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_SAMPLER_OBJECT_COUNT_PER_DEVICE: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_SUBRESOURCES: u32 = 30720u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_TEXTURE1D_U_DIMENSION: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_REQ_TEXTURECUBE_DIMENSION: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RESINFO_INSTRUCTION_MISSING_COMPONENT_RETVAL: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RS_SET_SHADING_RATE_COMBINER_COUNT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SDK_VERSION: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_COMPONENT_MAPPING_ALWAYS_SET_BIT_AVOIDING_ZEROMEM_MISTAKES: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_COMPONENT_MAPPING_MASK: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_COMPONENT_MAPPING_SHIFT: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_MAJOR_VERSION: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_MAX_INSTANCES: u32 = 65535u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_MAX_INTERFACES: u32 = 253u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_MAX_INTERFACE_CALL_SITES: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_MAX_TYPES: u32 = 65535u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_MINOR_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_VALID_MASK: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_X_AXIS_SHIFT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHIFT_INSTRUCTION_PAD_VALUE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHIFT_INSTRUCTION_SHIFT_VALUE_BIT_COUNT: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SMALL_MSAA_RESOURCE_PLACEMENT_ALIGNMENT: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SO_BUFFER_MAX_STRIDE_IN_BYTES: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SO_BUFFER_MAX_WRITE_WINDOW_IN_BYTES: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SO_BUFFER_SLOT_COUNT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SO_DDI_REGISTER_INDEX_DENOTING_GAP: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SO_NO_RASTERIZED_STREAM: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SO_OUTPUT_COMPONENT_COUNT: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SO_STREAM_COUNT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SPEC_DATE_DAY: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SPEC_DATE_MONTH: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SPEC_DATE_YEAR: u32 = 2014u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SPEC_VERSION: f64 = 1.16f64;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRGB_GAMMA: f32 = 2.2f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRGB_TO_FLOAT_DENOMINATOR_1: f32 = 12.92f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRGB_TO_FLOAT_DENOMINATOR_2: f32 = 1.055f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRGB_TO_FLOAT_EXPONENT: f32 = 2.4f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRGB_TO_FLOAT_OFFSET: f32 = 0.055f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRGB_TO_FLOAT_THRESHOLD: f32 = 0.04045f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRGB_TO_FLOAT_TOLERANCE_IN_ULP: f32 = 0.5f32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STANDARD_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STANDARD_COMPONENT_BIT_COUNT_DOUBLED: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STANDARD_MAXIMUM_ELEMENT_ALIGNMENT_BYTE_MULTIPLE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STANDARD_PIXEL_COMPONENT_COUNT: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STANDARD_PIXEL_ELEMENT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STANDARD_VECTOR_SIZE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STANDARD_VERTEX_ELEMENT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STANDARD_VERTEX_TOTAL_COMPONENT_COUNT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SUBPIXEL_FRACTIONAL_BIT_COUNT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SUBTEXEL_FRACTIONAL_BIT_COUNT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SYSTEM_RESERVED_REGISTER_SPACE_VALUES_END: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SYSTEM_RESERVED_REGISTER_SPACE_VALUES_START: u32 = 4294967280u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TESSELLATOR_MAX_EVEN_TESSELLATION_FACTOR: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TESSELLATOR_MAX_ISOLINE_DENSITY_TESSELLATION_FACTOR: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TESSELLATOR_MAX_ODD_TESSELLATION_FACTOR: u32 = 63u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TESSELLATOR_MAX_TESSELLATION_FACTOR: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TESSELLATOR_MIN_EVEN_TESSELLATION_FACTOR: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TESSELLATOR_MIN_ISOLINE_DENSITY_TESSELLATION_FACTOR: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TESSELLATOR_MIN_ODD_TESSELLATION_FACTOR: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXEL_ADDRESS_RANGE_BIT_COUNT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_DATA_PITCH_ALIGNMENT: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TRACKED_WORKLOAD_MAX_INSTANCES: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_UAV_SLOT_COUNT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_UNBOUND_MEMORY_ACCESS_RESULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIDEO_DECODE_MAX_ARGUMENTS: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIDEO_DECODE_MAX_HISTOGRAM_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIDEO_DECODE_MIN_BITSTREAM_OFFSET_ALIGNMENT: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIDEO_DECODE_MIN_HISTOGRAM_OFFSET_ALIGNMENT: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIDEO_DECODE_STATUS_MACROBLOCKS_AFFECTED_UNKNOWN: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIDEO_PROCESS_MAX_FILTERS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIDEO_PROCESS_STEREO_VIEWS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIEWPORT_BOUNDS_MAX: u32 = 32767u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIEWPORT_BOUNDS_MIN: i32 = -32768i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VS_INPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VS_INPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VS_INPUT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VS_INPUT_REGISTER_READS_PER_INST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VS_INPUT_REGISTER_READ_PORTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VS_OUTPUT_REGISTER_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_WHQL_CONTEXT_COUNT_FOR_RESOURCE_LIMIT: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_WHQL_DRAWINDEXED_INDEX_COUNT_2_TO_EXP: u32 = 25u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_WHQL_DRAW_VERTEX_COUNT_2_TO_EXP: u32 = 25u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_ATOMIC_INT64_ON_DESCRIPTOR_HEAP_RESOURCE: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_ATOMIC_INT64_ON_GROUP_SHARED: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_ATOMIC_INT64_ON_TYPED_RESOURCE: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_BARYCENTRICS: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_DERIVATIVES_IN_MESH_AND_AMPLIFICATION_SHADERS: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_INNER_COVERAGE: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_INT64_OPS: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_NATIVE_16BIT_OPS: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_RAYTRACING_TIER_1_1: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_RESOURCE_DESCRIPTOR_HEAP_INDEXING: u32 = 33554432u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_ROVS: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_SAMPLER_DESCRIPTOR_HEAP_INDEXING: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_SAMPLER_FEEDBACK: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_SHADING_RATE: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_STENCIL_REF: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_TYPED_UAV_LOAD_ADDITIONAL_FORMATS: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_VIEWPORT_AND_RT_ARRAY_INDEX_FROM_ANY_SHADER_FEEDING_RASTERIZER: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_VIEW_ID: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_WAVE_MMA: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_REQUIRES_WAVE_OPS: u32 = 16384u32;
+pub const DXGI_DEBUG_D3D12: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3478759820, data2: 43344, data3: 17190, data4: [145, 239, 155, 186, 161, 123, 253, 149] };
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const LUID_DEFINED: u32 = 1u32;
+pub const WKPDID_D3DAutoDebugObjectNameW: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3566218806, data2: 30074, data3: 18754, data4: [149, 148, 182, 118, 154, 250, 67, 205] };
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_AUTO_BREADCRUMB_OP = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -229,22 +1165,6 @@ pub const D3D12_BLEND_INV_SRC1_COLOR: D3D12_BLEND = 17i32;
 pub const D3D12_BLEND_SRC1_ALPHA: D3D12_BLEND = 18i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_BLEND_INV_SRC1_ALPHA: D3D12_BLEND = 19i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_BLEND_DESC {
-    pub AlphaToCoverageEnable: super::super::Foundation::BOOL,
-    pub IndependentBlendEnable: super::super::Foundation::BOOL,
-    pub RenderTarget: [D3D12_RENDER_TARGET_BLEND_DESC; 8],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_BLEND_DESC {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_BLEND_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_BLEND_OP = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -257,190 +1177,24 @@ pub const D3D12_BLEND_OP_REV_SUBTRACT: D3D12_BLEND_OP = 3i32;
 pub const D3D12_BLEND_OP_MIN: D3D12_BLEND_OP = 4i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_BLEND_OP_MAX: D3D12_BLEND_OP = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_BOX {
-    pub left: u32,
-    pub top: u32,
-    pub front: u32,
-    pub right: u32,
-    pub bottom: u32,
-    pub back: u32,
-}
-impl ::core::marker::Copy for D3D12_BOX {}
-impl ::core::clone::Clone for D3D12_BOX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_BUFFER_RTV {
-    pub FirstElement: u64,
-    pub NumElements: u32,
-}
-impl ::core::marker::Copy for D3D12_BUFFER_RTV {}
-impl ::core::clone::Clone for D3D12_BUFFER_RTV {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_BUFFER_SRV {
-    pub FirstElement: u64,
-    pub NumElements: u32,
-    pub StructureByteStride: u32,
-    pub Flags: D3D12_BUFFER_SRV_FLAGS,
-}
-impl ::core::marker::Copy for D3D12_BUFFER_SRV {}
-impl ::core::clone::Clone for D3D12_BUFFER_SRV {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_BUFFER_SRV_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_BUFFER_SRV_FLAG_NONE: D3D12_BUFFER_SRV_FLAGS = 0u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_BUFFER_SRV_FLAG_RAW: D3D12_BUFFER_SRV_FLAGS = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_BUFFER_UAV {
-    pub FirstElement: u64,
-    pub NumElements: u32,
-    pub StructureByteStride: u32,
-    pub CounterOffsetInBytes: u64,
-    pub Flags: D3D12_BUFFER_UAV_FLAGS,
-}
-impl ::core::marker::Copy for D3D12_BUFFER_UAV {}
-impl ::core::clone::Clone for D3D12_BUFFER_UAV {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_BUFFER_UAV_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_BUFFER_UAV_FLAG_NONE: D3D12_BUFFER_UAV_FLAGS = 0u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_BUFFER_UAV_FLAG_RAW: D3D12_BUFFER_UAV_FLAGS = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC {
-    pub DestAccelerationStructureData: u64,
-    pub Inputs: D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS,
-    pub SourceAccelerationStructureData: u64,
-    pub ScratchAccelerationStructureData: u64,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS {
-    pub Type: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE,
-    pub Flags: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS,
-    pub NumDescs: u32,
-    pub DescsLayout: D3D12_ELEMENTS_LAYOUT,
-    pub Anonymous: D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_0,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub union D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_0 {
-    pub InstanceDescs: u64,
-    pub pGeometryDescs: *const D3D12_RAYTRACING_GEOMETRY_DESC,
-    pub ppGeometryDescs: *const *const D3D12_RAYTRACING_GEOMETRY_DESC,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_0 {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_TOOLS_VISUALIZATION_HEADER {
-    pub Type: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE,
-    pub NumDescs: u32,
-}
-impl ::core::marker::Copy for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_TOOLS_VISUALIZATION_HEADER {}
-impl ::core::clone::Clone for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_TOOLS_VISUALIZATION_HEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_CACHED_PIPELINE_STATE {
-    pub pCachedBlob: *const ::core::ffi::c_void,
-    pub CachedBlobSizeInBytes: usize,
-}
-impl ::core::marker::Copy for D3D12_CACHED_PIPELINE_STATE {}
-impl ::core::clone::Clone for D3D12_CACHED_PIPELINE_STATE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_CLEAR_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_CLEAR_FLAG_DEPTH: D3D12_CLEAR_FLAGS = 1u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_CLEAR_FLAG_STENCIL: D3D12_CLEAR_FLAGS = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_CLEAR_VALUE {
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-    pub Anonymous: D3D12_CLEAR_VALUE_0,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_CLEAR_VALUE {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_CLEAR_VALUE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub union D3D12_CLEAR_VALUE_0 {
-    pub Color: [f32; 4],
-    pub DepthStencil: D3D12_DEPTH_STENCIL_VALUE,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_CLEAR_VALUE_0 {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_CLEAR_VALUE_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CLIP_OR_CULL_DISTANCE_COUNT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CLIP_OR_CULL_DISTANCE_ELEMENT_COUNT: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_COLOR_WRITE_ENABLE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -495,20 +1249,6 @@ pub const D3D12_COMMAND_LIST_TYPE_VIDEO_ENCODE: D3D12_COMMAND_LIST_TYPE = 6i32;
 pub type D3D12_COMMAND_POOL_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_COMMAND_POOL_FLAG_NONE: D3D12_COMMAND_POOL_FLAGS = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_COMMAND_QUEUE_DESC {
-    pub Type: D3D12_COMMAND_LIST_TYPE,
-    pub Priority: i32,
-    pub Flags: D3D12_COMMAND_QUEUE_FLAGS,
-    pub NodeMask: u32,
-}
-impl ::core::marker::Copy for D3D12_COMMAND_QUEUE_DESC {}
-impl ::core::clone::Clone for D3D12_COMMAND_QUEUE_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_COMMAND_QUEUE_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -527,90 +1267,6 @@ pub const D3D12_COMMAND_QUEUE_PRIORITY_GLOBAL_REALTIME: D3D12_COMMAND_QUEUE_PRIO
 pub type D3D12_COMMAND_RECORDER_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_COMMAND_RECORDER_FLAG_NONE: D3D12_COMMAND_RECORDER_FLAGS = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_COMMAND_SIGNATURE_DESC {
-    pub ByteStride: u32,
-    pub NumArgumentDescs: u32,
-    pub pArgumentDescs: *const D3D12_INDIRECT_ARGUMENT_DESC,
-    pub NodeMask: u32,
-}
-impl ::core::marker::Copy for D3D12_COMMAND_SIGNATURE_DESC {}
-impl ::core::clone::Clone for D3D12_COMMAND_SIGNATURE_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_HW_SLOT_COUNT: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_PARTIAL_UPDATE_EXTENTS_BYTE_ALIGNMENT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_REGISTER_COUNT: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_REGISTER_READS_PER_INST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_CONSTANT_BUFFER_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_FLOWCONTROL_NESTING_LIMIT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_IMMEDIATE_CONSTANT_BUFFER_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_IMMEDIATE_CONSTANT_BUFFER_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_IMMEDIATE_CONSTANT_BUFFER_REGISTER_READS_PER_INST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_IMMEDIATE_CONSTANT_BUFFER_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_IMMEDIATE_VALUE_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_INPUT_RESOURCE_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_INPUT_RESOURCE_REGISTER_COUNT: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_INPUT_RESOURCE_REGISTER_READS_PER_INST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_INPUT_RESOURCE_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_SAMPLER_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_SAMPLER_REGISTER_COUNT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_SAMPLER_REGISTER_READS_PER_INST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_SAMPLER_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_SAMPLER_SLOT_COUNT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_SUBROUTINE_NESTING_LIMIT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_TEMP_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_TEMP_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_TEMP_REGISTER_COUNT: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_TEMP_REGISTER_READS_PER_INST: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_TEMP_REGISTER_READ_PORTS: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_TEXCOORD_RANGE_REDUCTION_MAX: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_TEXCOORD_RANGE_REDUCTION_MIN: i32 = -10i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_TEXEL_OFFSET_MAX_NEGATIVE: i32 = -8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_COMMONSHADER_TEXEL_OFFSET_MAX_POSITIVE: u32 = 7u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_COMPARISON_FUNC = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -629,21 +1285,6 @@ pub const D3D12_COMPARISON_FUNC_NOT_EQUAL: D3D12_COMPARISON_FUNC = 6i32;
 pub const D3D12_COMPARISON_FUNC_GREATER_EQUAL: D3D12_COMPARISON_FUNC = 7i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_COMPARISON_FUNC_ALWAYS: D3D12_COMPARISON_FUNC = 8i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_COMPUTE_PIPELINE_STATE_DESC {
-    pub pRootSignature: ID3D12RootSignature,
-    pub CS: D3D12_SHADER_BYTECODE,
-    pub NodeMask: u32,
-    pub CachedPSO: D3D12_CACHED_PIPELINE_STATE,
-    pub Flags: D3D12_PIPELINE_STATE_FLAGS,
-}
-impl ::core::marker::Copy for D3D12_COMPUTE_PIPELINE_STATE_DESC {}
-impl ::core::clone::Clone for D3D12_COMPUTE_PIPELINE_STATE_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_CONSERVATIVE_RASTERIZATION_MODE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -660,31 +1301,6 @@ pub const D3D12_CONSERVATIVE_RASTERIZATION_TIER_1: D3D12_CONSERVATIVE_RASTERIZAT
 pub const D3D12_CONSERVATIVE_RASTERIZATION_TIER_2: D3D12_CONSERVATIVE_RASTERIZATION_TIER = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_CONSERVATIVE_RASTERIZATION_TIER_3: D3D12_CONSERVATIVE_RASTERIZATION_TIER = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT: u32 = 256u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_CONSTANT_BUFFER_VIEW_DESC {
-    pub BufferLocation: u64,
-    pub SizeInBytes: u32,
-}
-impl ::core::marker::Copy for D3D12_CONSTANT_BUFFER_VIEW_DESC {}
-impl ::core::clone::Clone for D3D12_CONSTANT_BUFFER_VIEW_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_CPU_DESCRIPTOR_HANDLE {
-    pub ptr: usize,
-}
-impl ::core::marker::Copy for D3D12_CPU_DESCRIPTOR_HANDLE {}
-impl ::core::clone::Clone for D3D12_CPU_DESCRIPTOR_HANDLE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_CPU_PAGE_PROPERTY = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -708,124 +1324,6 @@ pub const D3D12_CROSS_NODE_SHARING_TIER_2: D3D12_CROSS_NODE_SHARING_TIER = 3i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_CROSS_NODE_SHARING_TIER_3: D3D12_CROSS_NODE_SHARING_TIER = 4i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET00_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET00_MAX_NUM_THREADS_PER_GROUP: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET01_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 240u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET01_MAX_NUM_THREADS_PER_GROUP: u32 = 68u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET02_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 224u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET02_MAX_NUM_THREADS_PER_GROUP: u32 = 72u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET03_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 208u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET03_MAX_NUM_THREADS_PER_GROUP: u32 = 76u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET04_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 192u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET04_MAX_NUM_THREADS_PER_GROUP: u32 = 84u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET05_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 176u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET05_MAX_NUM_THREADS_PER_GROUP: u32 = 92u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET06_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 160u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET06_MAX_NUM_THREADS_PER_GROUP: u32 = 100u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET07_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 144u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET07_MAX_NUM_THREADS_PER_GROUP: u32 = 112u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET08_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET08_MAX_NUM_THREADS_PER_GROUP: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET09_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 112u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET09_MAX_NUM_THREADS_PER_GROUP: u32 = 144u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET10_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 96u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET10_MAX_NUM_THREADS_PER_GROUP: u32 = 168u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET11_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 80u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET11_MAX_NUM_THREADS_PER_GROUP: u32 = 204u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET12_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET12_MAX_NUM_THREADS_PER_GROUP: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET13_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 48u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET13_MAX_NUM_THREADS_PER_GROUP: u32 = 340u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET14_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET14_MAX_NUM_THREADS_PER_GROUP: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET15_MAX_BYTES_TGSM_WRITABLE_PER_THREAD: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_BUCKET15_MAX_NUM_THREADS_PER_GROUP: u32 = 768u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_DISPATCH_MAX_THREAD_GROUPS_IN_Z_DIMENSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_RAW_UAV_BYTE_ALIGNMENT: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_THREAD_GROUP_MAX_THREADS_PER_GROUP: u32 = 768u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_THREAD_GROUP_MAX_X: u32 = 768u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_THREAD_GROUP_MAX_Y: u32 = 768u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_4_X_UAV_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION: u32 = 65535u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_TGSM_REGISTER_COUNT: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_TGSM_REGISTER_READS_PER_INST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_TGSM_RESOURCE_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_TGSM_RESOURCE_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREADGROUPID_REGISTER_COMPONENTS: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREADGROUPID_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREADIDINGROUPFLATTENED_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREADIDINGROUPFLATTENED_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREADIDINGROUP_REGISTER_COMPONENTS: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREADIDINGROUP_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREADID_REGISTER_COMPONENTS: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREADID_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREAD_GROUP_MAX_X: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREAD_GROUP_MAX_Y: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREAD_GROUP_MAX_Z: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREAD_GROUP_MIN_X: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREAD_GROUP_MIN_Y: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREAD_GROUP_MIN_Z: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_CS_THREAD_LOCAL_TEMP_REGISTER_POOL: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_CULL_MODE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_CULL_MODE_NONE: D3D12_CULL_MODE = 1i32;
@@ -833,45 +1331,10 @@ pub const D3D12_CULL_MODE_NONE: D3D12_CULL_MODE = 1i32;
 pub const D3D12_CULL_MODE_FRONT: D3D12_CULL_MODE = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_CULL_MODE_BACK: D3D12_CULL_MODE = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DEBUG_COMMAND_LIST_GPU_BASED_VALIDATION_SETTINGS {
-    pub ShaderPatchMode: D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE,
-}
-impl ::core::marker::Copy for D3D12_DEBUG_COMMAND_LIST_GPU_BASED_VALIDATION_SETTINGS {}
-impl ::core::clone::Clone for D3D12_DEBUG_COMMAND_LIST_GPU_BASED_VALIDATION_SETTINGS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_DEBUG_COMMAND_LIST_PARAMETER_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_DEBUG_COMMAND_LIST_PARAMETER_GPU_BASED_VALIDATION_SETTINGS: D3D12_DEBUG_COMMAND_LIST_PARAMETER_TYPE = 0i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DEBUG_DEVICE_GPU_BASED_VALIDATION_SETTINGS {
-    pub MaxMessagesPerCommandList: u32,
-    pub DefaultShaderPatchMode: D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE,
-    pub PipelineStateCreateFlags: D3D12_GPU_BASED_VALIDATION_PIPELINE_STATE_CREATE_FLAGS,
-}
-impl ::core::marker::Copy for D3D12_DEBUG_DEVICE_GPU_BASED_VALIDATION_SETTINGS {}
-impl ::core::clone::Clone for D3D12_DEBUG_DEVICE_GPU_BASED_VALIDATION_SETTINGS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DEBUG_DEVICE_GPU_SLOWDOWN_PERFORMANCE_FACTOR {
-    pub SlowdownFactor: f32,
-}
-impl ::core::marker::Copy for D3D12_DEBUG_DEVICE_GPU_SLOWDOWN_PERFORMANCE_FACTOR {}
-impl ::core::clone::Clone for D3D12_DEBUG_DEVICE_GPU_SLOWDOWN_PERFORMANCE_FACTOR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_DEBUG_DEVICE_PARAMETER_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -893,188 +1356,11 @@ pub const D3D12_DEBUG_FEATURE_DISABLE_VIRTUALIZED_BUNDLES_VALIDATION: D3D12_DEBU
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_DEBUG_FEATURE_EMULATE_WINDOWS7: D3D12_DEBUG_FEATURE = 8i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_BLEND_FACTOR_ALPHA: f32 = 1f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_BLEND_FACTOR_BLUE: f32 = 1f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_BLEND_FACTOR_GREEN: f32 = 1f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_BLEND_FACTOR_RED: f32 = 1f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_BORDER_COLOR_COMPONENT: f32 = 0f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_DEPTH_BIAS: i32 = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_DEPTH_BIAS_CLAMP: f32 = 0f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_MAX_ANISOTROPY: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_MIP_LOD_BIAS: f32 = 0f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT: u32 = 4194304u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_RENDER_TARGET_ARRAY_INDEX: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_SAMPLE_MASK: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_SCISSOR_ENDX: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_SCISSOR_ENDY: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_SCISSOR_STARTX: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_SCISSOR_STARTY: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING: u32 = 5768u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS: f32 = 0f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_STENCIL_READ_MASK: u32 = 255u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_STENCIL_REFERENCE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_STENCIL_WRITE_MASK: u32 = 255u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_VIEWPORT_AND_SCISSORRECT_INDEX: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_VIEWPORT_HEIGHT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_VIEWPORT_MAX_DEPTH: f32 = 0f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_VIEWPORT_MIN_DEPTH: f32 = 0f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_VIEWPORT_TOPLEFTX: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_VIEWPORT_TOPLEFTY: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DEFAULT_VIEWPORT_WIDTH: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DEPTH_STENCILOP_DESC {
-    pub StencilFailOp: D3D12_STENCIL_OP,
-    pub StencilDepthFailOp: D3D12_STENCIL_OP,
-    pub StencilPassOp: D3D12_STENCIL_OP,
-    pub StencilFunc: D3D12_COMPARISON_FUNC,
-}
-impl ::core::marker::Copy for D3D12_DEPTH_STENCILOP_DESC {}
-impl ::core::clone::Clone for D3D12_DEPTH_STENCILOP_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_DEPTH_STENCIL_DESC {
-    pub DepthEnable: super::super::Foundation::BOOL,
-    pub DepthWriteMask: D3D12_DEPTH_WRITE_MASK,
-    pub DepthFunc: D3D12_COMPARISON_FUNC,
-    pub StencilEnable: super::super::Foundation::BOOL,
-    pub StencilReadMask: u8,
-    pub StencilWriteMask: u8,
-    pub FrontFace: D3D12_DEPTH_STENCILOP_DESC,
-    pub BackFace: D3D12_DEPTH_STENCILOP_DESC,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_DEPTH_STENCIL_DESC {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_DEPTH_STENCIL_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_DEPTH_STENCIL_DESC1 {
-    pub DepthEnable: super::super::Foundation::BOOL,
-    pub DepthWriteMask: D3D12_DEPTH_WRITE_MASK,
-    pub DepthFunc: D3D12_COMPARISON_FUNC,
-    pub StencilEnable: super::super::Foundation::BOOL,
-    pub StencilReadMask: u8,
-    pub StencilWriteMask: u8,
-    pub FrontFace: D3D12_DEPTH_STENCILOP_DESC,
-    pub BackFace: D3D12_DEPTH_STENCILOP_DESC,
-    pub DepthBoundsTestEnable: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_DEPTH_STENCIL_DESC1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_DEPTH_STENCIL_DESC1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DEPTH_STENCIL_VALUE {
-    pub Depth: f32,
-    pub Stencil: u8,
-}
-impl ::core::marker::Copy for D3D12_DEPTH_STENCIL_VALUE {}
-impl ::core::clone::Clone for D3D12_DEPTH_STENCIL_VALUE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_DEPTH_STENCIL_VIEW_DESC {
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-    pub ViewDimension: D3D12_DSV_DIMENSION,
-    pub Flags: D3D12_DSV_FLAGS,
-    pub Anonymous: D3D12_DEPTH_STENCIL_VIEW_DESC_0,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_DEPTH_STENCIL_VIEW_DESC {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_DEPTH_STENCIL_VIEW_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub union D3D12_DEPTH_STENCIL_VIEW_DESC_0 {
-    pub Texture1D: D3D12_TEX1D_DSV,
-    pub Texture1DArray: D3D12_TEX1D_ARRAY_DSV,
-    pub Texture2D: D3D12_TEX2D_DSV,
-    pub Texture2DArray: D3D12_TEX2D_ARRAY_DSV,
-    pub Texture2DMS: D3D12_TEX2DMS_DSV,
-    pub Texture2DMSArray: D3D12_TEX2DMS_ARRAY_DSV,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_DEPTH_STENCIL_VIEW_DESC_0 {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_DEPTH_STENCIL_VIEW_DESC_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_DEPTH_WRITE_MASK = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_DEPTH_WRITE_MASK_ZERO: D3D12_DEPTH_WRITE_MASK = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_DEPTH_WRITE_MASK_ALL: D3D12_DEPTH_WRITE_MASK = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DESCRIPTOR_HEAP_DESC {
-    pub Type: D3D12_DESCRIPTOR_HEAP_TYPE,
-    pub NumDescriptors: u32,
-    pub Flags: D3D12_DESCRIPTOR_HEAP_FLAGS,
-    pub NodeMask: u32,
-}
-impl ::core::marker::Copy for D3D12_DESCRIPTOR_HEAP_DESC {}
-impl ::core::clone::Clone for D3D12_DESCRIPTOR_HEAP_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_DESCRIPTOR_HEAP_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -1093,37 +1379,6 @@ pub const D3D12_DESCRIPTOR_HEAP_TYPE_RTV: D3D12_DESCRIPTOR_HEAP_TYPE = 2i32;
 pub const D3D12_DESCRIPTOR_HEAP_TYPE_DSV: D3D12_DESCRIPTOR_HEAP_TYPE = 3i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES: D3D12_DESCRIPTOR_HEAP_TYPE = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DESCRIPTOR_RANGE {
-    pub RangeType: D3D12_DESCRIPTOR_RANGE_TYPE,
-    pub NumDescriptors: u32,
-    pub BaseShaderRegister: u32,
-    pub RegisterSpace: u32,
-    pub OffsetInDescriptorsFromTableStart: u32,
-}
-impl ::core::marker::Copy for D3D12_DESCRIPTOR_RANGE {}
-impl ::core::clone::Clone for D3D12_DESCRIPTOR_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DESCRIPTOR_RANGE1 {
-    pub RangeType: D3D12_DESCRIPTOR_RANGE_TYPE,
-    pub NumDescriptors: u32,
-    pub BaseShaderRegister: u32,
-    pub RegisterSpace: u32,
-    pub Flags: D3D12_DESCRIPTOR_RANGE_FLAGS,
-    pub OffsetInDescriptorsFromTableStart: u32,
-}
-impl ::core::marker::Copy for D3D12_DESCRIPTOR_RANGE1 {}
-impl ::core::clone::Clone for D3D12_DESCRIPTOR_RANGE1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_DESCRIPTOR_RANGE_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -1139,8 +1394,6 @@ pub const D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC: D3D12_DESCRIPTOR_RANGE_FLAGS 
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS: D3D12_DESCRIPTOR_RANGE_FLAGS = 65536u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_DESCRIPTOR_RANGE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_DESCRIPTOR_RANGE_TYPE_SRV: D3D12_DESCRIPTOR_RANGE_TYPE = 0i32;
@@ -1150,176 +1403,6 @@ pub const D3D12_DESCRIPTOR_RANGE_TYPE_UAV: D3D12_DESCRIPTOR_RANGE_TYPE = 1i32;
 pub const D3D12_DESCRIPTOR_RANGE_TYPE_CBV: D3D12_DESCRIPTOR_RANGE_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER: D3D12_DESCRIPTOR_RANGE_TYPE = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DEVICE_REMOVED_EXTENDED_DATA {
-    pub Flags: D3D12_DRED_FLAGS,
-    pub pHeadAutoBreadcrumbNode: *mut D3D12_AUTO_BREADCRUMB_NODE,
-}
-impl ::core::marker::Copy for D3D12_DEVICE_REMOVED_EXTENDED_DATA {}
-impl ::core::clone::Clone for D3D12_DEVICE_REMOVED_EXTENDED_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DEVICE_REMOVED_EXTENDED_DATA1 {
-    pub DeviceRemovedReason: ::windows_sys::core::HRESULT,
-    pub AutoBreadcrumbsOutput: D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT,
-    pub PageFaultOutput: D3D12_DRED_PAGE_FAULT_OUTPUT,
-}
-impl ::core::marker::Copy for D3D12_DEVICE_REMOVED_EXTENDED_DATA1 {}
-impl ::core::clone::Clone for D3D12_DEVICE_REMOVED_EXTENDED_DATA1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DEVICE_REMOVED_EXTENDED_DATA2 {
-    pub DeviceRemovedReason: ::windows_sys::core::HRESULT,
-    pub AutoBreadcrumbsOutput: D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1,
-    pub PageFaultOutput: D3D12_DRED_PAGE_FAULT_OUTPUT1,
-}
-impl ::core::marker::Copy for D3D12_DEVICE_REMOVED_EXTENDED_DATA2 {}
-impl ::core::clone::Clone for D3D12_DEVICE_REMOVED_EXTENDED_DATA2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DEVICE_REMOVED_EXTENDED_DATA3 {
-    pub DeviceRemovedReason: ::windows_sys::core::HRESULT,
-    pub AutoBreadcrumbsOutput: D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1,
-    pub PageFaultOutput: D3D12_DRED_PAGE_FAULT_OUTPUT2,
-    pub DeviceState: D3D12_DRED_DEVICE_STATE,
-}
-impl ::core::marker::Copy for D3D12_DEVICE_REMOVED_EXTENDED_DATA3 {}
-impl ::core::clone::Clone for D3D12_DEVICE_REMOVED_EXTENDED_DATA3 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_DISCARD_REGION {
-    pub NumRects: u32,
-    pub pRects: *const super::super::Foundation::RECT,
-    pub FirstSubresource: u32,
-    pub NumSubresources: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_DISCARD_REGION {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_DISCARD_REGION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DISPATCH_ARGUMENTS {
-    pub ThreadGroupCountX: u32,
-    pub ThreadGroupCountY: u32,
-    pub ThreadGroupCountZ: u32,
-}
-impl ::core::marker::Copy for D3D12_DISPATCH_ARGUMENTS {}
-impl ::core::clone::Clone for D3D12_DISPATCH_ARGUMENTS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DISPATCH_MESH_ARGUMENTS {
-    pub ThreadGroupCountX: u32,
-    pub ThreadGroupCountY: u32,
-    pub ThreadGroupCountZ: u32,
-}
-impl ::core::marker::Copy for D3D12_DISPATCH_MESH_ARGUMENTS {}
-impl ::core::clone::Clone for D3D12_DISPATCH_MESH_ARGUMENTS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DISPATCH_RAYS_DESC {
-    pub RayGenerationShaderRecord: D3D12_GPU_VIRTUAL_ADDRESS_RANGE,
-    pub MissShaderTable: D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE,
-    pub HitGroupTable: D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE,
-    pub CallableShaderTable: D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE,
-    pub Width: u32,
-    pub Height: u32,
-    pub Depth: u32,
-}
-impl ::core::marker::Copy for D3D12_DISPATCH_RAYS_DESC {}
-impl ::core::clone::Clone for D3D12_DISPATCH_RAYS_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DRAW_ARGUMENTS {
-    pub VertexCountPerInstance: u32,
-    pub InstanceCount: u32,
-    pub StartVertexLocation: u32,
-    pub StartInstanceLocation: u32,
-}
-impl ::core::marker::Copy for D3D12_DRAW_ARGUMENTS {}
-impl ::core::clone::Clone for D3D12_DRAW_ARGUMENTS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DRAW_INDEXED_ARGUMENTS {
-    pub IndexCountPerInstance: u32,
-    pub InstanceCount: u32,
-    pub StartIndexLocation: u32,
-    pub BaseVertexLocation: i32,
-    pub StartInstanceLocation: u32,
-}
-impl ::core::marker::Copy for D3D12_DRAW_INDEXED_ARGUMENTS {}
-impl ::core::clone::Clone for D3D12_DRAW_INDEXED_ARGUMENTS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DRED_ALLOCATION_NODE {
-    pub ObjectNameA: *const u8,
-    pub ObjectNameW: ::windows_sys::core::PCWSTR,
-    pub AllocationType: D3D12_DRED_ALLOCATION_TYPE,
-    pub pNext: *const D3D12_DRED_ALLOCATION_NODE,
-}
-impl ::core::marker::Copy for D3D12_DRED_ALLOCATION_NODE {}
-impl ::core::clone::Clone for D3D12_DRED_ALLOCATION_NODE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DRED_ALLOCATION_NODE1 {
-    pub ObjectNameA: *const u8,
-    pub ObjectNameW: ::windows_sys::core::PCWSTR,
-    pub AllocationType: D3D12_DRED_ALLOCATION_TYPE,
-    pub pNext: *const D3D12_DRED_ALLOCATION_NODE1,
-    pub pObject: ::windows_sys::core::IUnknown,
-}
-impl ::core::marker::Copy for D3D12_DRED_ALLOCATION_NODE1 {}
-impl ::core::clone::Clone for D3D12_DRED_ALLOCATION_NODE1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_DRED_ALLOCATION_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -1380,40 +1463,6 @@ pub const D3D12_DRED_ALLOCATION_TYPE_VIDEO_ENCODER: D3D12_DRED_ALLOCATION_TYPE =
 pub const D3D12_DRED_ALLOCATION_TYPE_VIDEO_ENCODER_HEAP: D3D12_DRED_ALLOCATION_TYPE = 49i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_DRED_ALLOCATION_TYPE_INVALID: D3D12_DRED_ALLOCATION_TYPE = -1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT {
-    pub pHeadAutoBreadcrumbNode: *const D3D12_AUTO_BREADCRUMB_NODE,
-}
-impl ::core::marker::Copy for D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT {}
-impl ::core::clone::Clone for D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 {
-    pub pHeadAutoBreadcrumbNode: *const D3D12_AUTO_BREADCRUMB_NODE1,
-}
-impl ::core::marker::Copy for D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 {}
-impl ::core::clone::Clone for D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DRED_BREADCRUMB_CONTEXT {
-    pub BreadcrumbIndex: u32,
-    pub pContextString: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for D3D12_DRED_BREADCRUMB_CONTEXT {}
-impl ::core::clone::Clone for D3D12_DRED_BREADCRUMB_CONTEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_DRED_DEVICE_STATE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -1444,46 +1493,6 @@ pub const D3D12_DRED_FLAG_DISABLE_AUTOBREADCRUMBS: D3D12_DRED_FLAGS = 2u32;
 pub type D3D12_DRED_PAGE_FAULT_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_DRED_PAGE_FAULT_FLAGS_NONE: D3D12_DRED_PAGE_FAULT_FLAGS = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DRED_PAGE_FAULT_OUTPUT {
-    pub PageFaultVA: u64,
-    pub pHeadExistingAllocationNode: *const D3D12_DRED_ALLOCATION_NODE,
-    pub pHeadRecentFreedAllocationNode: *const D3D12_DRED_ALLOCATION_NODE,
-}
-impl ::core::marker::Copy for D3D12_DRED_PAGE_FAULT_OUTPUT {}
-impl ::core::clone::Clone for D3D12_DRED_PAGE_FAULT_OUTPUT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DRED_PAGE_FAULT_OUTPUT1 {
-    pub PageFaultVA: u64,
-    pub pHeadExistingAllocationNode: *const D3D12_DRED_ALLOCATION_NODE1,
-    pub pHeadRecentFreedAllocationNode: *const D3D12_DRED_ALLOCATION_NODE1,
-}
-impl ::core::marker::Copy for D3D12_DRED_PAGE_FAULT_OUTPUT1 {}
-impl ::core::clone::Clone for D3D12_DRED_PAGE_FAULT_OUTPUT1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DRED_PAGE_FAULT_OUTPUT2 {
-    pub PageFaultVA: u64,
-    pub pHeadExistingAllocationNode: *const D3D12_DRED_ALLOCATION_NODE1,
-    pub pHeadRecentFreedAllocationNode: *const D3D12_DRED_ALLOCATION_NODE1,
-    pub PageFaultFlags: D3D12_DRED_PAGE_FAULT_FLAGS,
-}
-impl ::core::marker::Copy for D3D12_DRED_PAGE_FAULT_OUTPUT2 {}
-impl ::core::clone::Clone for D3D12_DRED_PAGE_FAULT_OUTPUT2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_DRED_VERSION = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -1506,10 +1515,6 @@ pub const D3D12_DRIVER_MATCHING_IDENTIFIER_UNRECOGNIZED: D3D12_DRIVER_MATCHING_I
 pub const D3D12_DRIVER_MATCHING_IDENTIFIER_INCOMPATIBLE_VERSION: D3D12_DRIVER_MATCHING_IDENTIFIER_STATUS = 3i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_DRIVER_MATCHING_IDENTIFIER_INCOMPATIBLE_TYPE: D3D12_DRIVER_MATCHING_IDENTIFIER_STATUS = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DRIVER_RESERVED_REGISTER_SPACE_VALUES_END: u32 = 4294967287u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DRIVER_RESERVED_REGISTER_SPACE_VALUES_START: u32 = 4294967280u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_DSV_DIMENSION = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -1535,111 +1540,11 @@ pub const D3D12_DSV_FLAG_READ_ONLY_DEPTH: D3D12_DSV_FLAGS = 1u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_DSV_FLAG_READ_ONLY_STENCIL: D3D12_DSV_FLAGS = 2u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_CONTROL_POINTS_MAX_TOTAL_SCALARS: u32 = 3968u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_CONTROL_POINT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_CONTROL_POINT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_CONTROL_POINT_REGISTER_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_CONTROL_POINT_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_CONTROL_POINT_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_DOMAIN_POINT_REGISTER_COMPONENTS: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_DOMAIN_POINT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_DOMAIN_POINT_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_DOMAIN_POINT_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_DOMAIN_POINT_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_PATCH_CONSTANT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_PATCH_CONSTANT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_PATCH_CONSTANT_REGISTER_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_PATCH_CONSTANT_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_PATCH_CONSTANT_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_PRIMITIVE_ID_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_PRIMITIVE_ID_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_PRIMITIVE_ID_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_PRIMITIVE_ID_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_INPUT_PRIMITIVE_ID_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_DS_OUTPUT_REGISTER_COUNT: u32 = 32u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DXIL_LIBRARY_DESC {
-    pub DXILLibrary: D3D12_SHADER_BYTECODE,
-    pub NumExports: u32,
-    pub pExports: *mut D3D12_EXPORT_DESC,
-}
-impl ::core::marker::Copy for D3D12_DXIL_LIBRARY_DESC {}
-impl ::core::clone::Clone for D3D12_DXIL_LIBRARY_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION {
-    pub SubobjectToAssociate: ::windows_sys::core::PCWSTR,
-    pub NumExports: u32,
-    pub pExports: *mut ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for D3D12_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION {}
-impl ::core::clone::Clone for D3D12_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_ELEMENTS_LAYOUT = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_ELEMENTS_LAYOUT_ARRAY: D3D12_ELEMENTS_LAYOUT = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS: D3D12_ELEMENTS_LAYOUT = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_EXISTING_COLLECTION_DESC {
-    pub pExistingCollection: ID3D12StateObject,
-    pub NumExports: u32,
-    pub pExports: *mut D3D12_EXPORT_DESC,
-}
-impl ::core::marker::Copy for D3D12_EXISTING_COLLECTION_DESC {}
-impl ::core::clone::Clone for D3D12_EXISTING_COLLECTION_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_EXPORT_DESC {
-    pub Name: ::windows_sys::core::PCWSTR,
-    pub ExportToRename: ::windows_sys::core::PCWSTR,
-    pub Flags: D3D12_EXPORT_FLAGS,
-}
-impl ::core::marker::Copy for D3D12_EXPORT_DESC {}
-impl ::core::clone::Clone for D3D12_EXPORT_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_EXPORT_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -1708,479 +1613,6 @@ pub const D3D12_FEATURE_D3D12_OPTIONS9: D3D12_FEATURE = 37i32;
 pub const D3D12_FEATURE_D3D12_OPTIONS10: D3D12_FEATURE = 39i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_FEATURE_D3D12_OPTIONS11: D3D12_FEATURE = 40i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_ARCHITECTURE {
-    pub NodeIndex: u32,
-    pub TileBasedRenderer: super::super::Foundation::BOOL,
-    pub UMA: super::super::Foundation::BOOL,
-    pub CacheCoherentUMA: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_ARCHITECTURE {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_ARCHITECTURE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_ARCHITECTURE1 {
-    pub NodeIndex: u32,
-    pub TileBasedRenderer: super::super::Foundation::BOOL,
-    pub UMA: super::super::Foundation::BOOL,
-    pub CacheCoherentUMA: super::super::Foundation::BOOL,
-    pub IsolatedMMU: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_ARCHITECTURE1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_ARCHITECTURE1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_COMMAND_QUEUE_PRIORITY {
-    pub CommandListType: D3D12_COMMAND_LIST_TYPE,
-    pub Priority: u32,
-    pub PriorityForTypeIsSupported: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_COMMAND_QUEUE_PRIORITY {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_COMMAND_QUEUE_PRIORITY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_CROSS_NODE {
-    pub SharingTier: D3D12_CROSS_NODE_SHARING_TIER,
-    pub AtomicShaderInstructions: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_CROSS_NODE {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_CROSS_NODE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS {
-    pub DoublePrecisionFloatShaderOps: super::super::Foundation::BOOL,
-    pub OutputMergerLogicOp: super::super::Foundation::BOOL,
-    pub MinPrecisionSupport: D3D12_SHADER_MIN_PRECISION_SUPPORT,
-    pub TiledResourcesTier: D3D12_TILED_RESOURCES_TIER,
-    pub ResourceBindingTier: D3D12_RESOURCE_BINDING_TIER,
-    pub PSSpecifiedStencilRefSupported: super::super::Foundation::BOOL,
-    pub TypedUAVLoadAdditionalFormats: super::super::Foundation::BOOL,
-    pub ROVsSupported: super::super::Foundation::BOOL,
-    pub ConservativeRasterizationTier: D3D12_CONSERVATIVE_RASTERIZATION_TIER,
-    pub MaxGPUVirtualAddressBitsPerResource: u32,
-    pub StandardSwizzle64KBSupported: super::super::Foundation::BOOL,
-    pub CrossNodeSharingTier: D3D12_CROSS_NODE_SHARING_TIER,
-    pub CrossAdapterRowMajorTextureSupported: super::super::Foundation::BOOL,
-    pub VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation: super::super::Foundation::BOOL,
-    pub ResourceHeapTier: D3D12_RESOURCE_HEAP_TIER,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS1 {
-    pub WaveOps: super::super::Foundation::BOOL,
-    pub WaveLaneCountMin: u32,
-    pub WaveLaneCountMax: u32,
-    pub TotalLaneCount: u32,
-    pub ExpandedComputeResourceStates: super::super::Foundation::BOOL,
-    pub Int64ShaderOps: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS10 {
-    pub VariableRateShadingSumCombinerSupported: super::super::Foundation::BOOL,
-    pub MeshShaderPerPrimitiveShadingRateSupported: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS10 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS10 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS11 {
-    pub AtomicInt64OnDescriptorHeapResourceSupported: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS11 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS11 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS2 {
-    pub DepthBoundsTestSupported: super::super::Foundation::BOOL,
-    pub ProgrammableSamplePositionsTier: D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS2 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS3 {
-    pub CopyQueueTimestampQueriesSupported: super::super::Foundation::BOOL,
-    pub CastingFullyTypedFormatSupported: super::super::Foundation::BOOL,
-    pub WriteBufferImmediateSupportFlags: D3D12_COMMAND_LIST_SUPPORT_FLAGS,
-    pub ViewInstancingTier: D3D12_VIEW_INSTANCING_TIER,
-    pub BarycentricsSupported: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS3 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS3 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS4 {
-    pub MSAA64KBAlignedTextureSupported: super::super::Foundation::BOOL,
-    pub SharedResourceCompatibilityTier: D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER,
-    pub Native16BitShaderOpsSupported: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS4 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS4 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS5 {
-    pub SRVOnlyTiledResourceTier3: super::super::Foundation::BOOL,
-    pub RenderPassesTier: D3D12_RENDER_PASS_TIER,
-    pub RaytracingTier: D3D12_RAYTRACING_TIER,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS5 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS5 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS6 {
-    pub AdditionalShadingRatesSupported: super::super::Foundation::BOOL,
-    pub PerPrimitiveShadingRateSupportedWithViewportIndexing: super::super::Foundation::BOOL,
-    pub VariableShadingRateTier: D3D12_VARIABLE_SHADING_RATE_TIER,
-    pub ShadingRateImageTileSize: u32,
-    pub BackgroundProcessingSupported: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS6 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS6 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS7 {
-    pub MeshShaderTier: D3D12_MESH_SHADER_TIER,
-    pub SamplerFeedbackTier: D3D12_SAMPLER_FEEDBACK_TIER,
-}
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS7 {}
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS7 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS8 {
-    pub UnalignedBlockTexturesSupported: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS8 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS8 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS9 {
-    pub MeshShaderPipelineStatsSupported: super::super::Foundation::BOOL,
-    pub MeshShaderSupportsFullRangeRenderTargetArrayIndex: super::super::Foundation::BOOL,
-    pub AtomicInt64OnTypedResourceSupported: super::super::Foundation::BOOL,
-    pub AtomicInt64OnGroupSharedSupported: super::super::Foundation::BOOL,
-    pub DerivativesInMeshAndAmplificationShadersSupported: super::super::Foundation::BOOL,
-    pub WaveMMATier: D3D12_WAVE_MMA_TIER,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS9 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS9 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_DISPLAYABLE {
-    pub DisplayableTexture: super::super::Foundation::BOOL,
-    pub SharedResourceCompatibilityTier: D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_DISPLAYABLE {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_DISPLAYABLE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_FEATURE_DATA_EXISTING_HEAPS {
-    pub Supported: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_EXISTING_HEAPS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_EXISTING_HEAPS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Direct3D\"`*"]
-#[cfg(feature = "Win32_Graphics_Direct3D")]
-pub struct D3D12_FEATURE_DATA_FEATURE_LEVELS {
-    pub NumFeatureLevels: u32,
-    pub pFeatureLevelsRequested: *const super::Direct3D::D3D_FEATURE_LEVEL,
-    pub MaxSupportedFeatureLevel: super::Direct3D::D3D_FEATURE_LEVEL,
-}
-#[cfg(feature = "Win32_Graphics_Direct3D")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_FEATURE_LEVELS {}
-#[cfg(feature = "Win32_Graphics_Direct3D")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_FEATURE_LEVELS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_FEATURE_DATA_FORMAT_INFO {
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-    pub PlaneCount: u8,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_FORMAT_INFO {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_FORMAT_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_FEATURE_DATA_FORMAT_SUPPORT {
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-    pub Support1: D3D12_FORMAT_SUPPORT1,
-    pub Support2: D3D12_FORMAT_SUPPORT2,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_FORMAT_SUPPORT {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_FORMAT_SUPPORT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT {
-    pub MaxGPUVirtualAddressBitsPerResource: u32,
-    pub MaxGPUVirtualAddressBitsPerProcess: u32,
-}
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT {}
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS {
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-    pub SampleCount: u32,
-    pub Flags: D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS,
-    pub NumQualityLevels: u32,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_SUPPORT {
-    pub NodeIndex: u32,
-    pub Support: D3D12_PROTECTED_RESOURCE_SESSION_SUPPORT_FLAGS,
-}
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_SUPPORT {}
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_SUPPORT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPES {
-    pub NodeIndex: u32,
-    pub Count: u32,
-    pub pTypes: *mut ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPES {}
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPE_COUNT {
-    pub NodeIndex: u32,
-    pub Count: u32,
-}
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPE_COUNT {}
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPE_COUNT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_FEATURE_DATA_QUERY_META_COMMAND {
-    pub CommandId: ::windows_sys::core::GUID,
-    pub NodeMask: u32,
-    pub pQueryInputData: *const ::core::ffi::c_void,
-    pub QueryInputDataSizeInBytes: usize,
-    pub pQueryOutputData: *mut ::core::ffi::c_void,
-    pub QueryOutputDataSizeInBytes: usize,
-}
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_QUERY_META_COMMAND {}
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_QUERY_META_COMMAND {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_FEATURE_DATA_ROOT_SIGNATURE {
-    pub HighestVersion: D3D_ROOT_SIGNATURE_VERSION,
-}
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_ROOT_SIGNATURE {}
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_ROOT_SIGNATURE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_FEATURE_DATA_SERIALIZATION {
-    pub NodeIndex: u32,
-    pub HeapSerializationTier: D3D12_HEAP_SERIALIZATION_TIER,
-}
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_SERIALIZATION {}
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_SERIALIZATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_FEATURE_DATA_SHADER_CACHE {
-    pub SupportFlags: D3D12_SHADER_CACHE_SUPPORT_FLAGS,
-}
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_SHADER_CACHE {}
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_SHADER_CACHE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_FEATURE_DATA_SHADER_MODEL {
-    pub HighestShaderModel: D3D_SHADER_MODEL,
-}
-impl ::core::marker::Copy for D3D12_FEATURE_DATA_SHADER_MODEL {}
-impl ::core::clone::Clone for D3D12_FEATURE_DATA_SHADER_MODEL {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_FENCE_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -2282,35 +1714,11 @@ pub const D3D12_FILTER_REDUCTION_TYPE_MINIMUM: D3D12_FILTER_REDUCTION_TYPE = 2i3
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_FILTER_REDUCTION_TYPE_MAXIMUM: D3D12_FILTER_REDUCTION_TYPE = 3i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FILTER_REDUCTION_TYPE_MASK: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FILTER_REDUCTION_TYPE_SHIFT: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_FILTER_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_FILTER_TYPE_POINT: D3D12_FILTER_TYPE = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_FILTER_TYPE_LINEAR: D3D12_FILTER_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FILTER_TYPE_MASK: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FLOAT16_FUSED_TOLERANCE_IN_ULP: f64 = 0.6f64;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FLOAT32_MAX: f32 = 340282350000000000000000000000000000000f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FLOAT32_TO_INTEGER_TOLERANCE_IN_ULP: f32 = 0.6f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FLOAT_TO_SRGB_EXPONENT_DENOMINATOR: f32 = 2.4f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FLOAT_TO_SRGB_EXPONENT_NUMERATOR: f32 = 1f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FLOAT_TO_SRGB_OFFSET: f32 = 0.055f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FLOAT_TO_SRGB_SCALE_1: f32 = 12.92f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FLOAT_TO_SRGB_SCALE_2: f32 = 1.055f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FLOAT_TO_SRGB_THRESHOLD: f32 = 0.0031308f32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_FORMAT_SUPPORT1 = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -2402,71 +1810,6 @@ pub const D3D12_FORMAT_SUPPORT2_MULTIPLANE_OVERLAY: D3D12_FORMAT_SUPPORT2 = 1638
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_FORMAT_SUPPORT2_SAMPLER_FEEDBACK: D3D12_FORMAT_SUPPORT2 = 32768u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FTOI_INSTRUCTION_MAX_INPUT: f32 = 2147483600f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FTOI_INSTRUCTION_MIN_INPUT: f32 = -2147483600f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FTOU_INSTRUCTION_MAX_INPUT: f32 = 4294967300f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_FTOU_INSTRUCTION_MIN_INPUT: f32 = 0f32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Direct3D\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Direct3D"))]
-pub struct D3D12_FUNCTION_DESC {
-    pub Version: u32,
-    pub Creator: ::windows_sys::core::PCSTR,
-    pub Flags: u32,
-    pub ConstantBuffers: u32,
-    pub BoundResources: u32,
-    pub InstructionCount: u32,
-    pub TempRegisterCount: u32,
-    pub TempArrayCount: u32,
-    pub DefCount: u32,
-    pub DclCount: u32,
-    pub TextureNormalInstructions: u32,
-    pub TextureLoadInstructions: u32,
-    pub TextureCompInstructions: u32,
-    pub TextureBiasInstructions: u32,
-    pub TextureGradientInstructions: u32,
-    pub FloatInstructionCount: u32,
-    pub IntInstructionCount: u32,
-    pub UintInstructionCount: u32,
-    pub StaticFlowControlCount: u32,
-    pub DynamicFlowControlCount: u32,
-    pub MacroInstructionCount: u32,
-    pub ArrayInstructionCount: u32,
-    pub MovInstructionCount: u32,
-    pub MovcInstructionCount: u32,
-    pub ConversionInstructionCount: u32,
-    pub BitwiseInstructionCount: u32,
-    pub MinFeatureLevel: super::Direct3D::D3D_FEATURE_LEVEL,
-    pub RequiredFeatureFlags: u64,
-    pub Name: ::windows_sys::core::PCSTR,
-    pub FunctionParameterCount: i32,
-    pub HasReturn: super::super::Foundation::BOOL,
-    pub Has10Level9VertexShader: super::super::Foundation::BOOL,
-    pub Has10Level9PixelShader: super::super::Foundation::BOOL,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Direct3D"))]
-impl ::core::marker::Copy for D3D12_FUNCTION_DESC {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Direct3D"))]
-impl ::core::clone::Clone for D3D12_FUNCTION_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_GLOBAL_ROOT_SIGNATURE {
-    pub pGlobalRootSignature: ID3D12RootSignature,
-}
-impl ::core::marker::Copy for D3D12_GLOBAL_ROOT_SIGNATURE {}
-impl ::core::clone::Clone for D3D12_GLOBAL_ROOT_SIGNATURE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_GPU_BASED_VALIDATION_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_GPU_BASED_VALIDATION_FLAGS_NONE: D3D12_GPU_BASED_VALIDATION_FLAGS = 0i32;
@@ -2496,88 +1839,6 @@ pub const D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE_UNGUARDED_VALIDATION: D3D
 pub const D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE_GUARDED_VALIDATION: D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE = 3i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const NUM_D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODES: D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_GPU_DESCRIPTOR_HANDLE {
-    pub ptr: u64,
-}
-impl ::core::marker::Copy for D3D12_GPU_DESCRIPTOR_HANDLE {}
-impl ::core::clone::Clone for D3D12_GPU_DESCRIPTOR_HANDLE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE {
-    pub StartAddress: u64,
-    pub StrideInBytes: u64,
-}
-impl ::core::marker::Copy for D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE {}
-impl ::core::clone::Clone for D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_GPU_VIRTUAL_ADDRESS_RANGE {
-    pub StartAddress: u64,
-    pub SizeInBytes: u64,
-}
-impl ::core::marker::Copy for D3D12_GPU_VIRTUAL_ADDRESS_RANGE {}
-impl ::core::clone::Clone for D3D12_GPU_VIRTUAL_ADDRESS_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE {
-    pub StartAddress: u64,
-    pub SizeInBytes: u64,
-    pub StrideInBytes: u64,
-}
-impl ::core::marker::Copy for D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE {}
-impl ::core::clone::Clone for D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-pub struct D3D12_GRAPHICS_PIPELINE_STATE_DESC {
-    pub pRootSignature: ID3D12RootSignature,
-    pub VS: D3D12_SHADER_BYTECODE,
-    pub PS: D3D12_SHADER_BYTECODE,
-    pub DS: D3D12_SHADER_BYTECODE,
-    pub HS: D3D12_SHADER_BYTECODE,
-    pub GS: D3D12_SHADER_BYTECODE,
-    pub StreamOutput: D3D12_STREAM_OUTPUT_DESC,
-    pub BlendState: D3D12_BLEND_DESC,
-    pub SampleMask: u32,
-    pub RasterizerState: D3D12_RASTERIZER_DESC,
-    pub DepthStencilState: D3D12_DEPTH_STENCIL_DESC,
-    pub InputLayout: D3D12_INPUT_LAYOUT_DESC,
-    pub IBStripCutValue: D3D12_INDEX_BUFFER_STRIP_CUT_VALUE,
-    pub PrimitiveTopologyType: D3D12_PRIMITIVE_TOPOLOGY_TYPE,
-    pub NumRenderTargets: u32,
-    pub RTVFormats: [super::Dxgi::Common::DXGI_FORMAT; 8],
-    pub DSVFormat: super::Dxgi::Common::DXGI_FORMAT,
-    pub SampleDesc: super::Dxgi::Common::DXGI_SAMPLE_DESC,
-    pub NodeMask: u32,
-    pub CachedPSO: D3D12_CACHED_PIPELINE_STATE,
-    pub Flags: D3D12_PIPELINE_STATE_FLAGS,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::marker::Copy for D3D12_GRAPHICS_PIPELINE_STATE_DESC {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::clone::Clone for D3D12_GRAPHICS_PIPELINE_STATE_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_GRAPHICS_STATES = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -2617,64 +1878,6 @@ pub const D3D12_GRAPHICS_STATE_SAMPLE_POSITIONS: D3D12_GRAPHICS_STATES = 32768u3
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_GRAPHICS_STATE_VIEW_INSTANCE_MASK: D3D12_GRAPHICS_STATES = 65536u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_INSTANCE_ID_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_INSTANCE_ID_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_INSTANCE_ID_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_INSTANCE_ID_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_INSTANCE_ID_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_PRIM_CONST_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_PRIM_CONST_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_PRIM_CONST_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_PRIM_CONST_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_PRIM_CONST_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_REGISTER_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_INPUT_REGISTER_VERTICES: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_MAX_INSTANCE_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_MAX_OUTPUT_VERTEX_COUNT_ACROSS_INSTANCES: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_OUTPUT_ELEMENTS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_GS_OUTPUT_REGISTER_COUNT: u32 = 32u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_HEAP_DESC {
-    pub SizeInBytes: u64,
-    pub Properties: D3D12_HEAP_PROPERTIES,
-    pub Alignment: u64,
-    pub Flags: D3D12_HEAP_FLAGS,
-}
-impl ::core::marker::Copy for D3D12_HEAP_DESC {}
-impl ::core::clone::Clone for D3D12_HEAP_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_HEAP_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_HEAP_FLAG_NONE: D3D12_HEAP_FLAGS = 0u32;
@@ -2708,21 +1911,6 @@ pub const D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS: D3D12_HEAP_FLAGS = 192u32;
 pub const D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES: D3D12_HEAP_FLAGS = 68u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES: D3D12_HEAP_FLAGS = 132u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_HEAP_PROPERTIES {
-    pub Type: D3D12_HEAP_TYPE,
-    pub CPUPageProperty: D3D12_CPU_PAGE_PROPERTY,
-    pub MemoryPoolPreference: D3D12_MEMORY_POOL,
-    pub CreationNodeMask: u32,
-    pub VisibleNodeMask: u32,
-}
-impl ::core::marker::Copy for D3D12_HEAP_PROPERTIES {}
-impl ::core::clone::Clone for D3D12_HEAP_PROPERTIES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_HEAP_SERIALIZATION_TIER = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -2739,21 +1927,6 @@ pub const D3D12_HEAP_TYPE_UPLOAD: D3D12_HEAP_TYPE = 2i32;
 pub const D3D12_HEAP_TYPE_READBACK: D3D12_HEAP_TYPE = 3i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_HEAP_TYPE_CUSTOM: D3D12_HEAP_TYPE = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_HIT_GROUP_DESC {
-    pub HitGroupExport: ::windows_sys::core::PCWSTR,
-    pub Type: D3D12_HIT_GROUP_TYPE,
-    pub AnyHitShaderImport: ::windows_sys::core::PCWSTR,
-    pub ClosestHitShaderImport: ::windows_sys::core::PCWSTR,
-    pub IntersectionShaderImport: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for D3D12_HIT_GROUP_DESC {}
-impl ::core::clone::Clone for D3D12_HIT_GROUP_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_HIT_GROUP_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -2767,104 +1940,6 @@ pub const D3D12_HIT_KIND_TRIANGLE_FRONT_FACE: D3D12_HIT_KIND = 254i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_HIT_KIND_TRIANGLE_BACK_FACE: D3D12_HIT_KIND = 255i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_CONTROL_POINT_PHASE_INPUT_REGISTER_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_CONTROL_POINT_PHASE_OUTPUT_REGISTER_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_CONTROL_POINT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_CONTROL_POINT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_CONTROL_POINT_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_CONTROL_POINT_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_FORK_PHASE_INSTANCE_COUNT_UPPER_BOUND: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_FORK_INSTANCE_ID_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_FORK_INSTANCE_ID_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_FORK_INSTANCE_ID_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_FORK_INSTANCE_ID_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_FORK_INSTANCE_ID_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_JOIN_INSTANCE_ID_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_JOIN_INSTANCE_ID_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_JOIN_INSTANCE_ID_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_JOIN_INSTANCE_ID_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_JOIN_INSTANCE_ID_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_PRIMITIVE_ID_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_PRIMITIVE_ID_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_PRIMITIVE_ID_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_PRIMITIVE_ID_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_INPUT_PRIMITIVE_ID_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_JOIN_PHASE_INSTANCE_COUNT_UPPER_BOUND: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_MAXTESSFACTOR_LOWER_BOUND: f32 = 1f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_MAXTESSFACTOR_UPPER_BOUND: f32 = 64f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_OUTPUT_CONTROL_POINTS_MAX_TOTAL_SCALARS: u32 = 3968u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_OUTPUT_CONTROL_POINT_ID_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_OUTPUT_CONTROL_POINT_ID_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_OUTPUT_CONTROL_POINT_ID_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_OUTPUT_CONTROL_POINT_ID_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_OUTPUT_CONTROL_POINT_ID_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_OUTPUT_PATCH_CONSTANT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_OUTPUT_PATCH_CONSTANT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_OUTPUT_PATCH_CONSTANT_REGISTER_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_OUTPUT_PATCH_CONSTANT_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_OUTPUT_PATCH_CONSTANT_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_HS_OUTPUT_PATCH_CONSTANT_REGISTER_SCALAR_COMPONENTS: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_IA_DEFAULT_INDEX_BUFFER_OFFSET_IN_BYTES: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_IA_DEFAULT_PRIMITIVE_TOPOLOGY: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_IA_DEFAULT_VERTEX_BUFFER_OFFSET_IN_BYTES: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_IA_INDEX_INPUT_RESOURCE_SLOT_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_IA_INSTANCE_ID_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_IA_INTEGER_ARITHMETIC_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_IA_PATCH_MAX_CONTROL_POINT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_IA_PRIMITIVE_ID_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_IA_VERTEX_ID_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_IA_VERTEX_INPUT_STRUCTURE_ELEMENTS_COMPONENTS: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_IA_VERTEX_INPUT_STRUCTURE_ELEMENT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_INDEX_BUFFER_STRIP_CUT_VALUE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED: D3D12_INDEX_BUFFER_STRIP_CUT_VALUE = 0i32;
@@ -2872,106 +1947,6 @@ pub const D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED: D3D12_INDEX_BUFFER_STRIP_
 pub const D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFF: D3D12_INDEX_BUFFER_STRIP_CUT_VALUE = 1i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF: D3D12_INDEX_BUFFER_STRIP_CUT_VALUE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_INDEX_BUFFER_VIEW {
-    pub BufferLocation: u64,
-    pub SizeInBytes: u32,
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_INDEX_BUFFER_VIEW {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_INDEX_BUFFER_VIEW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_INDIRECT_ARGUMENT_DESC {
-    pub Type: D3D12_INDIRECT_ARGUMENT_TYPE,
-    pub Anonymous: D3D12_INDIRECT_ARGUMENT_DESC_0,
-}
-impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC {}
-impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub union D3D12_INDIRECT_ARGUMENT_DESC_0 {
-    pub VertexBuffer: D3D12_INDIRECT_ARGUMENT_DESC_0_4,
-    pub Constant: D3D12_INDIRECT_ARGUMENT_DESC_0_1,
-    pub ConstantBufferView: D3D12_INDIRECT_ARGUMENT_DESC_0_0,
-    pub ShaderResourceView: D3D12_INDIRECT_ARGUMENT_DESC_0_2,
-    pub UnorderedAccessView: D3D12_INDIRECT_ARGUMENT_DESC_0_3,
-}
-impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC_0 {}
-impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_INDIRECT_ARGUMENT_DESC_0_0 {
-    pub RootParameterIndex: u32,
-}
-impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC_0_0 {}
-impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_INDIRECT_ARGUMENT_DESC_0_1 {
-    pub RootParameterIndex: u32,
-    pub DestOffsetIn32BitValues: u32,
-    pub Num32BitValuesToSet: u32,
-}
-impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC_0_1 {}
-impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC_0_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_INDIRECT_ARGUMENT_DESC_0_2 {
-    pub RootParameterIndex: u32,
-}
-impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC_0_2 {}
-impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC_0_2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_INDIRECT_ARGUMENT_DESC_0_3 {
-    pub RootParameterIndex: u32,
-}
-impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC_0_3 {}
-impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC_0_3 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_INDIRECT_ARGUMENT_DESC_0_4 {
-    pub Slot: u32,
-}
-impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC_0_4 {}
-impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC_0_4 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_INDIRECT_ARGUMENT_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -2997,116 +1972,17 @@ pub const D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS: D3D12_INDIRECT_ARGUMENT_TY
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH: D3D12_INDIRECT_ARGUMENT_TYPE = 10i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_INFO_QUEUE_DEFAULT_MESSAGE_COUNT_LIMIT: u32 = 1024u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_INFO_QUEUE_FILTER {
-    pub AllowList: D3D12_INFO_QUEUE_FILTER_DESC,
-    pub DenyList: D3D12_INFO_QUEUE_FILTER_DESC,
-}
-impl ::core::marker::Copy for D3D12_INFO_QUEUE_FILTER {}
-impl ::core::clone::Clone for D3D12_INFO_QUEUE_FILTER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_INFO_QUEUE_FILTER_DESC {
-    pub NumCategories: u32,
-    pub pCategoryList: *mut D3D12_MESSAGE_CATEGORY,
-    pub NumSeverities: u32,
-    pub pSeverityList: *mut D3D12_MESSAGE_SEVERITY,
-    pub NumIDs: u32,
-    pub pIDList: *mut D3D12_MESSAGE_ID,
-}
-impl ::core::marker::Copy for D3D12_INFO_QUEUE_FILTER_DESC {}
-impl ::core::clone::Clone for D3D12_INFO_QUEUE_FILTER_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_INPUT_CLASSIFICATION = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA: D3D12_INPUT_CLASSIFICATION = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA: D3D12_INPUT_CLASSIFICATION = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_INPUT_ELEMENT_DESC {
-    pub SemanticName: ::windows_sys::core::PCSTR,
-    pub SemanticIndex: u32,
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-    pub InputSlot: u32,
-    pub AlignedByteOffset: u32,
-    pub InputSlotClass: D3D12_INPUT_CLASSIFICATION,
-    pub InstanceDataStepRate: u32,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_INPUT_ELEMENT_DESC {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_INPUT_ELEMENT_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_INPUT_LAYOUT_DESC {
-    pub pInputElementDescs: *const D3D12_INPUT_ELEMENT_DESC,
-    pub NumElements: u32,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_INPUT_LAYOUT_DESC {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_INPUT_LAYOUT_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_INTEGER_DIVIDE_BY_ZERO_QUOTIENT: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_INTEGER_DIVIDE_BY_ZERO_REMAINDER: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_KEEP_UNORDERED_ACCESS_VIEWS: u32 = 4294967295u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_LIBRARY_DESC {
-    pub Creator: ::windows_sys::core::PCSTR,
-    pub Flags: u32,
-    pub FunctionCount: u32,
-}
-impl ::core::marker::Copy for D3D12_LIBRARY_DESC {}
-impl ::core::clone::Clone for D3D12_LIBRARY_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_LIFETIME_STATE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_LIFETIME_STATE_IN_USE: D3D12_LIFETIME_STATE = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_LIFETIME_STATE_NOT_IN_USE: D3D12_LIFETIME_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_LINEAR_GAMMA: f32 = 1f32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_LOCAL_ROOT_SIGNATURE {
-    pub pLocalRootSignature: ID3D12RootSignature,
-}
-impl ::core::marker::Copy for D3D12_LOCAL_ROOT_SIGNATURE {}
-impl ::core::clone::Clone for D3D12_LOCAL_ROOT_SIGNATURE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_LOGIC_OP = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -3142,34 +2018,6 @@ pub const D3D12_LOGIC_OP_OR_REVERSE: D3D12_LOGIC_OP = 14i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_LOGIC_OP_OR_INVERTED: D3D12_LOGIC_OP = 15i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAG_FILTER_SHIFT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAJOR_VERSION: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAX_BORDER_COLOR_COMPONENT: f32 = 1f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAX_DEPTH: f32 = 1f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAX_LIVE_STATIC_SAMPLERS: u32 = 2032u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAX_MAXANISOTROPY: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAX_POSITION_VALUE: f32 = 34028236000000000000000000000000000f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAX_ROOT_COST: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_1: u32 = 1000000u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_2: u32 = 1000000u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAX_TEXTURE_DIMENSION_2_TO_EXP: u32 = 17u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MAX_VIEW_INSTANCE_COUNT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_MEASUREMENTS_ACTION = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_MEASUREMENTS_ACTION_KEEP_ALL: D3D12_MEASUREMENTS_ACTION = 0i32;
@@ -3179,19 +2027,6 @@ pub const D3D12_MEASUREMENTS_ACTION_COMMIT_RESULTS: D3D12_MEASUREMENTS_ACTION = 
 pub const D3D12_MEASUREMENTS_ACTION_COMMIT_RESULTS_HIGH_PRIORITY: D3D12_MEASUREMENTS_ACTION = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_MEASUREMENTS_ACTION_DISCARD_PREVIOUS: D3D12_MEASUREMENTS_ACTION = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_MEMCPY_DEST {
-    pub pData: *mut ::core::ffi::c_void,
-    pub RowPitch: usize,
-    pub SlicePitch: usize,
-}
-impl ::core::marker::Copy for D3D12_MEMCPY_DEST {}
-impl ::core::clone::Clone for D3D12_MEMCPY_DEST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_MEMORY_POOL = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -3206,21 +2041,6 @@ pub type D3D12_MESH_SHADER_TIER = i32;
 pub const D3D12_MESH_SHADER_TIER_NOT_SUPPORTED: D3D12_MESH_SHADER_TIER = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_MESH_SHADER_TIER_1: D3D12_MESH_SHADER_TIER = 10i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_MESSAGE {
-    pub Category: D3D12_MESSAGE_CATEGORY,
-    pub Severity: D3D12_MESSAGE_SEVERITY,
-    pub ID: D3D12_MESSAGE_ID,
-    pub pDescription: *const u8,
-    pub DescriptionByteLength: usize,
-}
-impl ::core::marker::Copy for D3D12_MESSAGE {}
-impl ::core::clone::Clone for D3D12_MESSAGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_MESSAGE_CALLBACK_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5049,35 +3869,6 @@ pub const D3D12_MESSAGE_SEVERITY_WARNING: D3D12_MESSAGE_SEVERITY = 2i32;
 pub const D3D12_MESSAGE_SEVERITY_INFO: D3D12_MESSAGE_SEVERITY = 3i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_MESSAGE_SEVERITY_MESSAGE: D3D12_MESSAGE_SEVERITY = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_META_COMMAND_DESC {
-    pub Id: ::windows_sys::core::GUID,
-    pub Name: ::windows_sys::core::PCWSTR,
-    pub InitializationDirtyState: D3D12_GRAPHICS_STATES,
-    pub ExecutionDirtyState: D3D12_GRAPHICS_STATES,
-}
-impl ::core::marker::Copy for D3D12_META_COMMAND_DESC {}
-impl ::core::clone::Clone for D3D12_META_COMMAND_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_META_COMMAND_PARAMETER_DESC {
-    pub Name: ::windows_sys::core::PCWSTR,
-    pub Type: D3D12_META_COMMAND_PARAMETER_TYPE,
-    pub Flags: D3D12_META_COMMAND_PARAMETER_FLAGS,
-    pub RequiredResourceState: D3D12_RESOURCE_STATES,
-    pub StructureOffset: u32,
-}
-impl ::core::marker::Copy for D3D12_META_COMMAND_PARAMETER_DESC {}
-impl ::core::clone::Clone for D3D12_META_COMMAND_PARAMETER_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_META_COMMAND_PARAMETER_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5105,39 +3896,6 @@ pub const D3D12_META_COMMAND_PARAMETER_TYPE_CPU_DESCRIPTOR_HANDLE_HEAP_TYPE_CBV_
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_META_COMMAND_PARAMETER_TYPE_GPU_DESCRIPTOR_HANDLE_HEAP_TYPE_CBV_SRV_UAV: D3D12_META_COMMAND_PARAMETER_TYPE = 4i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MINOR_VERSION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MIN_BORDER_COLOR_COMPONENT: f32 = 0f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MIN_DEPTH: f32 = 0f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MIN_FILTER_SHIFT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MIN_MAXANISOTROPY: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MIP_FILTER_SHIFT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MIP_LOD_BIAS_MAX: f32 = 15.99f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MIP_LOD_BIAS_MIN: f32 = -16f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MIP_LOD_FRACTIONAL_BIT_COUNT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MIP_LOD_RANGE_BIT_COUNT: u32 = 8u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_MIP_REGION {
-    pub Width: u32,
-    pub Height: u32,
-    pub Depth: u32,
-}
-impl ::core::marker::Copy for D3D12_MIP_REGION {}
-impl ::core::clone::Clone for D3D12_MIP_REGION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_MULTIPLE_FENCE_WAIT_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_MULTIPLE_FENCE_WAIT_FLAG_NONE: D3D12_MULTIPLE_FENCE_WAIT_FLAGS = 0u32;
@@ -5146,89 +3904,17 @@ pub const D3D12_MULTIPLE_FENCE_WAIT_FLAG_ANY: D3D12_MULTIPLE_FENCE_WAIT_FLAGS = 
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_MULTIPLE_FENCE_WAIT_FLAG_ALL: D3D12_MULTIPLE_FENCE_WAIT_FLAGS = 0u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_MULTISAMPLE_ANTIALIAS_LINE_WIDTH: f32 = 1.4f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE: D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS = 0u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_TILED_RESOURCE: D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_NODE_MASK {
-    pub NodeMask: u32,
-}
-impl ::core::marker::Copy for D3D12_NODE_MASK {}
-impl ::core::clone::Clone for D3D12_NODE_MASK {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_NONSAMPLE_FETCH_OUT_OF_RANGE_ACCESS_RESULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_OS_RESERVED_REGISTER_SPACE_VALUES_END: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_OS_RESERVED_REGISTER_SPACE_VALUES_START: u32 = 4294967288u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_PACKED_MIP_INFO {
-    pub NumStandardMips: u8,
-    pub NumPackedMips: u8,
-    pub NumTilesForPackedMips: u32,
-    pub StartTileIndexInOverallResource: u32,
-}
-impl ::core::marker::Copy for D3D12_PACKED_MIP_INFO {}
-impl ::core::clone::Clone for D3D12_PACKED_MIP_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PACKED_TILE: u32 = 4294967295u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Direct3D\"`*"]
-#[cfg(feature = "Win32_Graphics_Direct3D")]
-pub struct D3D12_PARAMETER_DESC {
-    pub Name: ::windows_sys::core::PCSTR,
-    pub SemanticName: ::windows_sys::core::PCSTR,
-    pub Type: super::Direct3D::D3D_SHADER_VARIABLE_TYPE,
-    pub Class: super::Direct3D::D3D_SHADER_VARIABLE_CLASS,
-    pub Rows: u32,
-    pub Columns: u32,
-    pub InterpolationMode: super::Direct3D::D3D_INTERPOLATION_MODE,
-    pub Flags: super::Direct3D::D3D_PARAMETER_FLAGS,
-    pub FirstInRegister: u32,
-    pub FirstInComponent: u32,
-    pub FirstOutRegister: u32,
-    pub FirstOutComponent: u32,
-}
-#[cfg(feature = "Win32_Graphics_Direct3D")]
-impl ::core::marker::Copy for D3D12_PARAMETER_DESC {}
-#[cfg(feature = "Win32_Graphics_Direct3D")]
-impl ::core::clone::Clone for D3D12_PARAMETER_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_PIPELINE_STATE_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_PIPELINE_STATE_FLAG_NONE: D3D12_PIPELINE_STATE_FLAGS = 0u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG: D3D12_PIPELINE_STATE_FLAGS = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_PIPELINE_STATE_STREAM_DESC {
-    pub SizeInBytes: usize,
-    pub pPipelineStateSubobjectStream: *mut ::core::ffi::c_void,
-}
-impl ::core::marker::Copy for D3D12_PIPELINE_STATE_STREAM_DESC {}
-impl ::core::clone::Clone for D3D12_PIPELINE_STATE_STREAM_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_PIPELINE_STATE_SUBOBJECT_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5284,30 +3970,11 @@ pub const D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS: D3D12_PIPELINE_STATE_SUBOBJECT
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MAX_VALID: D3D12_PIPELINE_STATE_SUBOBJECT_TYPE = 26i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PIXEL_ADDRESS_RANGE_BIT_COUNT: u32 = 15u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_PLACED_SUBRESOURCE_FOOTPRINT {
-    pub Offset: u64,
-    pub Footprint: D3D12_SUBRESOURCE_FOOTPRINT,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_PLACED_SUBRESOURCE_FOOTPRINT {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_PLACED_SUBRESOURCE_FOOTPRINT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_PREDICATION_OP = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_PREDICATION_OP_EQUAL_ZERO: D3D12_PREDICATION_OP = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_PREDICATION_OP_NOT_EQUAL_ZERO: D3D12_PREDICATION_OP = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PRE_SCISSOR_PIXEL_ADDRESS_RANGE_BIT_COUNT: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_PRIMITIVE_TOPOLOGY_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5328,32 +3995,6 @@ pub const D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER_NOT_SUPPORTED: D3D12_PROGRAMM
 pub const D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER_1: D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER = 1i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER_2: D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER = 2i32;
-pub const D3D12_PROTECTED_RESOURCES_SESSION_HARDWARE_PROTECTED: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1655703630, data2: 50958, data3: 19882, data4: [161, 9, 48, 255, 141, 90, 4, 130] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_PROTECTED_RESOURCE_SESSION_DESC {
-    pub NodeMask: u32,
-    pub Flags: D3D12_PROTECTED_RESOURCE_SESSION_FLAGS,
-}
-impl ::core::marker::Copy for D3D12_PROTECTED_RESOURCE_SESSION_DESC {}
-impl ::core::clone::Clone for D3D12_PROTECTED_RESOURCE_SESSION_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_PROTECTED_RESOURCE_SESSION_DESC1 {
-    pub NodeMask: u32,
-    pub Flags: D3D12_PROTECTED_RESOURCE_SESSION_FLAGS,
-    pub ProtectionType: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for D3D12_PROTECTED_RESOURCE_SESSION_DESC1 {}
-impl ::core::clone::Clone for D3D12_PROTECTED_RESOURCE_SESSION_DESC1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_PROTECTED_RESOURCE_SESSION_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5370,122 +4011,6 @@ pub type D3D12_PROTECTED_SESSION_STATUS = i32;
 pub const D3D12_PROTECTED_SESSION_STATUS_OK: D3D12_PROTECTED_SESSION_STATUS = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_PROTECTED_SESSION_STATUS_INVALID: D3D12_PROTECTED_SESSION_STATUS = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_CS_UAV_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_CS_UAV_REGISTER_COUNT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_CS_UAV_REGISTER_READS_PER_INST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_CS_UAV_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_FRONTFACING_DEFAULT_VALUE: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_FRONTFACING_FALSE_VALUE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_FRONTFACING_TRUE_VALUE: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_INPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_INPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_INPUT_REGISTER_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_INPUT_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_INPUT_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_LEGACY_PIXEL_CENTER_FRACTIONAL_COMPONENT: f32 = 0f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_OUTPUT_DEPTH_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_OUTPUT_DEPTH_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_OUTPUT_DEPTH_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_OUTPUT_MASK_REGISTER_COMPONENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_OUTPUT_MASK_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_OUTPUT_MASK_REGISTER_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_OUTPUT_REGISTER_COUNT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_PS_PIXEL_CENTER_FRACTIONAL_COMPONENT: f32 = 0.5f32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_QUERY_DATA_PIPELINE_STATISTICS {
-    pub IAVertices: u64,
-    pub IAPrimitives: u64,
-    pub VSInvocations: u64,
-    pub GSInvocations: u64,
-    pub GSPrimitives: u64,
-    pub CInvocations: u64,
-    pub CPrimitives: u64,
-    pub PSInvocations: u64,
-    pub HSInvocations: u64,
-    pub DSInvocations: u64,
-    pub CSInvocations: u64,
-}
-impl ::core::marker::Copy for D3D12_QUERY_DATA_PIPELINE_STATISTICS {}
-impl ::core::clone::Clone for D3D12_QUERY_DATA_PIPELINE_STATISTICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_QUERY_DATA_PIPELINE_STATISTICS1 {
-    pub IAVertices: u64,
-    pub IAPrimitives: u64,
-    pub VSInvocations: u64,
-    pub GSInvocations: u64,
-    pub GSPrimitives: u64,
-    pub CInvocations: u64,
-    pub CPrimitives: u64,
-    pub PSInvocations: u64,
-    pub HSInvocations: u64,
-    pub DSInvocations: u64,
-    pub CSInvocations: u64,
-    pub ASInvocations: u64,
-    pub MSInvocations: u64,
-    pub MSPrimitives: u64,
-}
-impl ::core::marker::Copy for D3D12_QUERY_DATA_PIPELINE_STATISTICS1 {}
-impl ::core::clone::Clone for D3D12_QUERY_DATA_PIPELINE_STATISTICS1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_QUERY_DATA_SO_STATISTICS {
-    pub NumPrimitivesWritten: u64,
-    pub PrimitivesStorageNeeded: u64,
-}
-impl ::core::marker::Copy for D3D12_QUERY_DATA_SO_STATISTICS {}
-impl ::core::clone::Clone for D3D12_QUERY_DATA_SO_STATISTICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_QUERY_HEAP_DESC {
-    pub Type: D3D12_QUERY_HEAP_TYPE,
-    pub Count: u32,
-    pub NodeMask: u32,
-}
-impl ::core::marker::Copy for D3D12_QUERY_HEAP_DESC {}
-impl ::core::clone::Clone for D3D12_QUERY_HEAP_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_QUERY_HEAP_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5524,74 +4049,6 @@ pub const D3D12_QUERY_TYPE_SO_STATISTICS_STREAM3: D3D12_QUERY_TYPE = 7i32;
 pub const D3D12_QUERY_TYPE_VIDEO_DECODE_STATISTICS: D3D12_QUERY_TYPE = 8i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_QUERY_TYPE_PIPELINE_STATISTICS1: D3D12_QUERY_TYPE = 10i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RANGE {
-    pub Begin: usize,
-    pub End: usize,
-}
-impl ::core::marker::Copy for D3D12_RANGE {}
-impl ::core::clone::Clone for D3D12_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RANGE_UINT64 {
-    pub Begin: u64,
-    pub End: u64,
-}
-impl ::core::marker::Copy for D3D12_RANGE_UINT64 {}
-impl ::core::clone::Clone for D3D12_RANGE_UINT64 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_RASTERIZER_DESC {
-    pub FillMode: D3D12_FILL_MODE,
-    pub CullMode: D3D12_CULL_MODE,
-    pub FrontCounterClockwise: super::super::Foundation::BOOL,
-    pub DepthBias: i32,
-    pub DepthBiasClamp: f32,
-    pub SlopeScaledDepthBias: f32,
-    pub DepthClipEnable: super::super::Foundation::BOOL,
-    pub MultisampleEnable: super::super::Foundation::BOOL,
-    pub AntialiasedLineEnable: super::super::Foundation::BOOL,
-    pub ForcedSampleCount: u32,
-    pub ConservativeRaster: D3D12_CONSERVATIVE_RASTERIZATION_MODE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_RASTERIZER_DESC {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_RASTERIZER_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT: u32 = 16u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_AABB {
-    pub MinX: f32,
-    pub MinY: f32,
-    pub MinZ: f32,
-    pub MaxX: f32,
-    pub MaxY: f32,
-    pub MaxZ: f32,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_AABB {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_AABB {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_AABB_BYTE_ALIGNMENT: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5609,8 +4066,6 @@ pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_MINIMIZE_MEMORY: D3
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS = 32u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_CLONE: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE = 0i32;
@@ -5622,63 +4077,6 @@ pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_VISUALIZATION_DECODE
 pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_SERIALIZE: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE = 3i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_DESERIALIZE: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC {
-    pub CompactedSizeInBytes: u64,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_CURRENT_SIZE_DESC {
-    pub CurrentSizeInBytes: u64,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_CURRENT_SIZE_DESC {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_CURRENT_SIZE_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC {
-    pub DestBuffer: u64,
-    pub InfoType: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TYPE,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION_DESC {
-    pub SerializedSizeInBytes: u64,
-    pub NumBottomLevelAccelerationStructurePointers: u64,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION_DESC {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TOOLS_VISUALIZATION_DESC {
-    pub DecodedSizeInBytes: u64,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TOOLS_VISUALIZATION_DESC {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TOOLS_VISUALIZATION_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5689,79 +4087,12 @@ pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TOOLS_VISUALIZA
 pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_CURRENT_SIZE: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TYPE = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO {
-    pub ResultDataMaxSizeInBytes: u64,
-    pub ScratchDataSizeInBytes: u64,
-    pub UpdateScratchDataSizeInBytes: u64,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV {
-    pub Location: u64,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_GEOMETRY_AABBS_DESC {
-    pub AABBCount: u64,
-    pub AABBs: D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_GEOMETRY_AABBS_DESC {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_GEOMETRY_AABBS_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_RAYTRACING_GEOMETRY_DESC {
-    pub Type: D3D12_RAYTRACING_GEOMETRY_TYPE,
-    pub Flags: D3D12_RAYTRACING_GEOMETRY_FLAGS,
-    pub Anonymous: D3D12_RAYTRACING_GEOMETRY_DESC_0,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_RAYTRACING_GEOMETRY_DESC {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_RAYTRACING_GEOMETRY_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub union D3D12_RAYTRACING_GEOMETRY_DESC_0 {
-    pub Triangles: D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC,
-    pub AABBs: D3D12_RAYTRACING_GEOMETRY_AABBS_DESC,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_RAYTRACING_GEOMETRY_DESC_0 {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_RAYTRACING_GEOMETRY_DESC_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RAYTRACING_GEOMETRY_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5770,48 +4101,12 @@ pub const D3D12_RAYTRACING_GEOMETRY_FLAG_NONE: D3D12_RAYTRACING_GEOMETRY_FLAGS =
 pub const D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE: D3D12_RAYTRACING_GEOMETRY_FLAGS = 1u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION: D3D12_RAYTRACING_GEOMETRY_FLAGS = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC {
-    pub Transform3x4: u64,
-    pub IndexFormat: super::Dxgi::Common::DXGI_FORMAT,
-    pub VertexFormat: super::Dxgi::Common::DXGI_FORMAT,
-    pub IndexCount: u32,
-    pub VertexCount: u32,
-    pub IndexBuffer: u64,
-    pub VertexBuffer: D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RAYTRACING_GEOMETRY_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES: D3D12_RAYTRACING_GEOMETRY_TYPE = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS: D3D12_RAYTRACING_GEOMETRY_TYPE = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_INSTANCE_DESC {
-    pub Transform: [f32; 12],
-    pub _bitfield1: u32,
-    pub _bitfield2: u32,
-    pub AccelerationStructure: u64,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_INSTANCE_DESC {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_INSTANCE_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_INSTANCE_DESCS_BYTE_ALIGNMENT: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RAYTRACING_INSTANCE_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5825,43 +4120,6 @@ pub const D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE: D3D12_RAYTRACING_INSTANCE
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE: D3D12_RAYTRACING_INSTANCE_FLAGS = 8u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH: u32 = 31u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE: u32 = 4096u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_PIPELINE_CONFIG {
-    pub MaxTraceRecursionDepth: u32,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_PIPELINE_CONFIG {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_PIPELINE_CONFIG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_PIPELINE_CONFIG1 {
-    pub MaxTraceRecursionDepth: u32,
-    pub Flags: D3D12_RAYTRACING_PIPELINE_FLAGS,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_PIPELINE_CONFIG1 {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_PIPELINE_CONFIG1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RAYTRACING_PIPELINE_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_PIPELINE_FLAG_NONE: D3D12_RAYTRACING_PIPELINE_FLAGS = 0u32;
@@ -5869,22 +4127,6 @@ pub const D3D12_RAYTRACING_PIPELINE_FLAG_NONE: D3D12_RAYTRACING_PIPELINE_FLAGS =
 pub const D3D12_RAYTRACING_PIPELINE_FLAG_SKIP_TRIANGLES: D3D12_RAYTRACING_PIPELINE_FLAGS = 256u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_PIPELINE_FLAG_SKIP_PROCEDURAL_PRIMITIVES: D3D12_RAYTRACING_PIPELINE_FLAGS = 512u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RAYTRACING_SHADER_CONFIG {
-    pub MaxPayloadSizeInBytes: u32,
-    pub MaxAttributeSizeInBytes: u32,
-}
-impl ::core::marker::Copy for D3D12_RAYTRACING_SHADER_CONFIG {}
-impl ::core::clone::Clone for D3D12_RAYTRACING_SHADER_CONFIG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT: u32 = 64u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RAYTRACING_TIER = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5893,8 +4135,6 @@ pub const D3D12_RAYTRACING_TIER_NOT_SUPPORTED: D3D12_RAYTRACING_TIER = 0i32;
 pub const D3D12_RAYTRACING_TIER_1_0: D3D12_RAYTRACING_TIER = 10i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAYTRACING_TIER_1_1: D3D12_RAYTRACING_TIER = 11i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RAYTRACING_TRANSFORM3X4_BYTE_ALIGNMENT: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RAY_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5919,49 +4159,6 @@ pub const D3D12_RAY_FLAG_CULL_NON_OPAQUE: D3D12_RAY_FLAGS = 128u32;
 pub const D3D12_RAY_FLAG_SKIP_TRIANGLES: D3D12_RAY_FLAGS = 256u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES: D3D12_RAY_FLAGS = 512u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_RENDER_PASS_BEGINNING_ACCESS {
-    pub Type: D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE,
-    pub Anonymous: D3D12_RENDER_PASS_BEGINNING_ACCESS_0,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_RENDER_PASS_BEGINNING_ACCESS {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_RENDER_PASS_BEGINNING_ACCESS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub union D3D12_RENDER_PASS_BEGINNING_ACCESS_0 {
-    pub Clear: D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_RENDER_PASS_BEGINNING_ACCESS_0 {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_RENDER_PASS_BEGINNING_ACCESS_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS {
-    pub ClearValue: D3D12_CLEAR_VALUE,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -5972,91 +4169,6 @@ pub const D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE: D3D12_RENDER_PASS_BE
 pub const D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR: D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS: D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-pub struct D3D12_RENDER_PASS_DEPTH_STENCIL_DESC {
-    pub cpuDescriptor: D3D12_CPU_DESCRIPTOR_HANDLE,
-    pub DepthBeginningAccess: D3D12_RENDER_PASS_BEGINNING_ACCESS,
-    pub StencilBeginningAccess: D3D12_RENDER_PASS_BEGINNING_ACCESS,
-    pub DepthEndingAccess: D3D12_RENDER_PASS_ENDING_ACCESS,
-    pub StencilEndingAccess: D3D12_RENDER_PASS_ENDING_ACCESS,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::marker::Copy for D3D12_RENDER_PASS_DEPTH_STENCIL_DESC {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::clone::Clone for D3D12_RENDER_PASS_DEPTH_STENCIL_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-pub struct D3D12_RENDER_PASS_ENDING_ACCESS {
-    pub Type: D3D12_RENDER_PASS_ENDING_ACCESS_TYPE,
-    pub Anonymous: D3D12_RENDER_PASS_ENDING_ACCESS_0,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::marker::Copy for D3D12_RENDER_PASS_ENDING_ACCESS {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::clone::Clone for D3D12_RENDER_PASS_ENDING_ACCESS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-pub union D3D12_RENDER_PASS_ENDING_ACCESS_0 {
-    pub Resolve: D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::marker::Copy for D3D12_RENDER_PASS_ENDING_ACCESS_0 {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::clone::Clone for D3D12_RENDER_PASS_ENDING_ACCESS_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-pub struct D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS {
-    pub pSrcResource: ID3D12Resource,
-    pub pDstResource: ID3D12Resource,
-    pub SubresourceCount: u32,
-    pub pSubresourceParameters: *const D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS,
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-    pub ResolveMode: D3D12_RESOLVE_MODE,
-    pub PreserveResolveSource: super::super::Foundation::BOOL,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::marker::Copy for D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::clone::Clone for D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS {
-    pub SrcSubresource: u32,
-    pub DstSubresource: u32,
-    pub DstX: u32,
-    pub DstY: u32,
-    pub SrcRect: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RENDER_PASS_ENDING_ACCESS_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -6077,22 +4189,6 @@ pub const D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES: D3D12_RENDER_PASS_FLAGS = 1u3
 pub const D3D12_RENDER_PASS_FLAG_SUSPENDING_PASS: D3D12_RENDER_PASS_FLAGS = 2u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RENDER_PASS_FLAG_RESUMING_PASS: D3D12_RENDER_PASS_FLAGS = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-pub struct D3D12_RENDER_PASS_RENDER_TARGET_DESC {
-    pub cpuDescriptor: D3D12_CPU_DESCRIPTOR_HANDLE,
-    pub BeginningAccess: D3D12_RENDER_PASS_BEGINNING_ACCESS,
-    pub EndingAccess: D3D12_RENDER_PASS_ENDING_ACCESS,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::marker::Copy for D3D12_RENDER_PASS_RENDER_TARGET_DESC {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
-impl ::core::clone::Clone for D3D12_RENDER_PASS_RENDER_TARGET_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RENDER_PASS_TIER = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -6101,118 +4197,6 @@ pub const D3D12_RENDER_PASS_TIER_0: D3D12_RENDER_PASS_TIER = 0i32;
 pub const D3D12_RENDER_PASS_TIER_1: D3D12_RENDER_PASS_TIER = 1i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RENDER_PASS_TIER_2: D3D12_RENDER_PASS_TIER = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct D3D12_RENDER_TARGET_BLEND_DESC {
-    pub BlendEnable: super::super::Foundation::BOOL,
-    pub LogicOpEnable: super::super::Foundation::BOOL,
-    pub SrcBlend: D3D12_BLEND,
-    pub DestBlend: D3D12_BLEND,
-    pub BlendOp: D3D12_BLEND_OP,
-    pub SrcBlendAlpha: D3D12_BLEND,
-    pub DestBlendAlpha: D3D12_BLEND,
-    pub BlendOpAlpha: D3D12_BLEND_OP,
-    pub LogicOp: D3D12_LOGIC_OP,
-    pub RenderTargetWriteMask: u8,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for D3D12_RENDER_TARGET_BLEND_DESC {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for D3D12_RENDER_TARGET_BLEND_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_RENDER_TARGET_VIEW_DESC {
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-    pub ViewDimension: D3D12_RTV_DIMENSION,
-    pub Anonymous: D3D12_RENDER_TARGET_VIEW_DESC_0,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_RENDER_TARGET_VIEW_DESC {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_RENDER_TARGET_VIEW_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub union D3D12_RENDER_TARGET_VIEW_DESC_0 {
-    pub Buffer: D3D12_BUFFER_RTV,
-    pub Texture1D: D3D12_TEX1D_RTV,
-    pub Texture1DArray: D3D12_TEX1D_ARRAY_RTV,
-    pub Texture2D: D3D12_TEX2D_RTV,
-    pub Texture2DArray: D3D12_TEX2D_ARRAY_RTV,
-    pub Texture2DMS: D3D12_TEX2DMS_RTV,
-    pub Texture2DMSArray: D3D12_TEX2DMS_ARRAY_RTV,
-    pub Texture3D: D3D12_TEX3D_RTV,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_RENDER_TARGET_VIEW_DESC_0 {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_RENDER_TARGET_VIEW_DESC_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_BLEND_OBJECT_COUNT_PER_DEVICE: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_BUFFER_RESOURCE_TEXEL_COUNT_2_TO_EXP: u32 = 27u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_DEPTH_STENCIL_OBJECT_COUNT_PER_DEVICE: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_DRAW_VERTEX_COUNT_2_TO_EXP: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_FILTERING_HW_ADDRESSABLE_RESOURCE_DIMENSION: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_GS_INVOCATION_32BIT_OUTPUT_COMPONENT_LIMIT: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_IMMEDIATE_CONSTANT_BUFFER_ELEMENT_COUNT: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_MAXANISOTROPY: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_MIP_LEVELS: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_MULTI_ELEMENT_STRUCTURE_SIZE_IN_BYTES: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_RASTERIZER_OBJECT_COUNT_PER_DEVICE: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_RENDER_TO_BUFFER_WINDOW_WIDTH: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_B_TERM: f32 = 0.25f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_C_TERM: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_RESOURCE_VIEW_COUNT_PER_DEVICE_2_TO_EXP: u32 = 20u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_SAMPLER_OBJECT_COUNT_PER_DEVICE: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_SUBRESOURCES: u32 = 30720u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_TEXTURE1D_U_DIMENSION: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_REQ_TEXTURECUBE_DIMENSION: u32 = 16384u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RESIDENCY_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -6232,8 +4216,6 @@ pub const D3D12_RESIDENCY_PRIORITY_HIGH: D3D12_RESIDENCY_PRIORITY = -1610547200i
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RESIDENCY_PRIORITY_MAXIMUM: D3D12_RESIDENCY_PRIORITY = -939524096i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RESINFO_INSTRUCTION_MISSING_COMPONENT_RETVAL: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RESOLVE_MODE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RESOLVE_MODE_DECOMPRESS: D3D12_RESOLVE_MODE = 0i32;
@@ -6247,71 +4229,6 @@ pub const D3D12_RESOLVE_MODE_AVERAGE: D3D12_RESOLVE_MODE = 3i32;
 pub const D3D12_RESOLVE_MODE_ENCODE_SAMPLER_FEEDBACK: D3D12_RESOLVE_MODE = 4i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RESOLVE_MODE_DECODE_SAMPLER_FEEDBACK: D3D12_RESOLVE_MODE = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RESOURCE_ALIASING_BARRIER {
-    pub pResourceBefore: ID3D12Resource,
-    pub pResourceAfter: ID3D12Resource,
-}
-impl ::core::marker::Copy for D3D12_RESOURCE_ALIASING_BARRIER {}
-impl ::core::clone::Clone for D3D12_RESOURCE_ALIASING_BARRIER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RESOURCE_ALLOCATION_INFO {
-    pub SizeInBytes: u64,
-    pub Alignment: u64,
-}
-impl ::core::marker::Copy for D3D12_RESOURCE_ALLOCATION_INFO {}
-impl ::core::clone::Clone for D3D12_RESOURCE_ALLOCATION_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RESOURCE_ALLOCATION_INFO1 {
-    pub Offset: u64,
-    pub Alignment: u64,
-    pub SizeInBytes: u64,
-}
-impl ::core::marker::Copy for D3D12_RESOURCE_ALLOCATION_INFO1 {}
-impl ::core::clone::Clone for D3D12_RESOURCE_ALLOCATION_INFO1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub struct D3D12_RESOURCE_BARRIER {
-    pub Type: D3D12_RESOURCE_BARRIER_TYPE,
-    pub Flags: D3D12_RESOURCE_BARRIER_FLAGS,
-    pub Anonymous: D3D12_RESOURCE_BARRIER_0,
-}
-impl ::core::marker::Copy for D3D12_RESOURCE_BARRIER {}
-impl ::core::clone::Clone for D3D12_RESOURCE_BARRIER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub union D3D12_RESOURCE_BARRIER_0 {
-    pub Transition: D3D12_RESOURCE_TRANSITION_BARRIER,
-    pub Aliasing: D3D12_RESOURCE_ALIASING_BARRIER,
-    pub UAV: D3D12_RESOURCE_UAV_BARRIER,
-}
-impl ::core::marker::Copy for D3D12_RESOURCE_BARRIER_0 {}
-impl ::core::clone::Clone for D3D12_RESOURCE_BARRIER_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES: u32 = 4294967295u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RESOURCE_BARRIER_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -6336,53 +4253,6 @@ pub const D3D12_RESOURCE_BINDING_TIER_1: D3D12_RESOURCE_BINDING_TIER = 1i32;
 pub const D3D12_RESOURCE_BINDING_TIER_2: D3D12_RESOURCE_BINDING_TIER = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RESOURCE_BINDING_TIER_3: D3D12_RESOURCE_BINDING_TIER = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_RESOURCE_DESC {
-    pub Dimension: D3D12_RESOURCE_DIMENSION,
-    pub Alignment: u64,
-    pub Width: u64,
-    pub Height: u32,
-    pub DepthOrArraySize: u16,
-    pub MipLevels: u16,
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-    pub SampleDesc: super::Dxgi::Common::DXGI_SAMPLE_DESC,
-    pub Layout: D3D12_TEXTURE_LAYOUT,
-    pub Flags: D3D12_RESOURCE_FLAGS,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_RESOURCE_DESC {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_RESOURCE_DESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-pub struct D3D12_RESOURCE_DESC1 {
-    pub Dimension: D3D12_RESOURCE_DIMENSION,
-    pub Alignment: u64,
-    pub Width: u64,
-    pub Height: u32,
-    pub DepthOrArraySize: u16,
-    pub MipLevels: u16,
-    pub Format: super::Dxgi::Common::DXGI_FORMAT,
-    pub SampleDesc: super::Dxgi::Common::DXGI_SAMPLE_DESC,
-    pub Layout: D3D12_TEXTURE_LAYOUT,
-    pub Flags: D3D12_RESOURCE_FLAGS,
-    pub SamplerFeedbackMipRegion: D3D12_MIP_REGION,
-}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::marker::Copy for D3D12_RESOURCE_DESC1 {}
-#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
-impl ::core::clone::Clone for D3D12_RESOURCE_DESC1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub type D3D12_RESOURCE_DIMENSION = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
@@ -6477,6 +4347,2907 @@ pub const D3D12_RESOURCE_STATE_VIDEO_PROCESS_WRITE: D3D12_RESOURCE_STATES = 5242
 pub const D3D12_RESOURCE_STATE_VIDEO_ENCODE_READ: D3D12_RESOURCE_STATES = 2097152u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub const D3D12_RESOURCE_STATE_VIDEO_ENCODE_WRITE: D3D12_RESOURCE_STATES = 8388608u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_RLDO_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RLDO_NONE: D3D12_RLDO_FLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RLDO_SUMMARY: D3D12_RLDO_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RLDO_DETAIL: D3D12_RLDO_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RLDO_IGNORE_INTERNAL: D3D12_RLDO_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_ROOT_DESCRIPTOR_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_DESCRIPTOR_FLAG_NONE: D3D12_ROOT_DESCRIPTOR_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE: D3D12_ROOT_DESCRIPTOR_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE: D3D12_ROOT_DESCRIPTOR_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC: D3D12_ROOT_DESCRIPTOR_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_ROOT_PARAMETER_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE: D3D12_ROOT_PARAMETER_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS: D3D12_ROOT_PARAMETER_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_PARAMETER_TYPE_CBV: D3D12_ROOT_PARAMETER_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_PARAMETER_TYPE_SRV: D3D12_ROOT_PARAMETER_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_PARAMETER_TYPE_UAV: D3D12_ROOT_PARAMETER_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_ROOT_SIGNATURE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_NONE: D3D12_ROOT_SIGNATURE_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT: D3D12_ROOT_SIGNATURE_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT: D3D12_ROOT_SIGNATURE_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE: D3D12_ROOT_SIGNATURE_FLAGS = 128u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 256u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 512u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED: D3D12_ROOT_SIGNATURE_FLAGS = 1024u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED: D3D12_ROOT_SIGNATURE_FLAGS = 2048u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_RTV_DIMENSION = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RTV_DIMENSION_UNKNOWN: D3D12_RTV_DIMENSION = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RTV_DIMENSION_BUFFER: D3D12_RTV_DIMENSION = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RTV_DIMENSION_TEXTURE1D: D3D12_RTV_DIMENSION = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RTV_DIMENSION_TEXTURE1DARRAY: D3D12_RTV_DIMENSION = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RTV_DIMENSION_TEXTURE2D: D3D12_RTV_DIMENSION = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RTV_DIMENSION_TEXTURE2DARRAY: D3D12_RTV_DIMENSION = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RTV_DIMENSION_TEXTURE2DMS: D3D12_RTV_DIMENSION = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY: D3D12_RTV_DIMENSION = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_RTV_DIMENSION_TEXTURE3D: D3D12_RTV_DIMENSION = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SAMPLER_FEEDBACK_TIER = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SAMPLER_FEEDBACK_TIER_NOT_SUPPORTED: D3D12_SAMPLER_FEEDBACK_TIER = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SAMPLER_FEEDBACK_TIER_0_9: D3D12_SAMPLER_FEEDBACK_TIER = 90i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SAMPLER_FEEDBACK_TIER_1_0: D3D12_SAMPLER_FEEDBACK_TIER = 100i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SERIALIZED_DATA_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SERIALIZED_DATA_RAYTRACING_ACCELERATION_STRUCTURE: D3D12_SERIALIZED_DATA_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SHADER_CACHE_CONTROL_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_CONTROL_FLAG_DISABLE: D3D12_SHADER_CACHE_CONTROL_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_CONTROL_FLAG_ENABLE: D3D12_SHADER_CACHE_CONTROL_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_CONTROL_FLAG_CLEAR: D3D12_SHADER_CACHE_CONTROL_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SHADER_CACHE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_FLAG_NONE: D3D12_SHADER_CACHE_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_FLAG_DRIVER_VERSIONED: D3D12_SHADER_CACHE_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_FLAG_USE_WORKING_DIR: D3D12_SHADER_CACHE_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SHADER_CACHE_KIND_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_KIND_FLAG_IMPLICIT_D3D_CACHE_FOR_DRIVER: D3D12_SHADER_CACHE_KIND_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_KIND_FLAG_IMPLICIT_D3D_CONVERSIONS: D3D12_SHADER_CACHE_KIND_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_KIND_FLAG_IMPLICIT_DRIVER_MANAGED: D3D12_SHADER_CACHE_KIND_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_KIND_FLAG_APPLICATION_MANAGED: D3D12_SHADER_CACHE_KIND_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SHADER_CACHE_MODE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_MODE_MEMORY: D3D12_SHADER_CACHE_MODE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_MODE_DISK: D3D12_SHADER_CACHE_MODE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SHADER_CACHE_SUPPORT_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_SUPPORT_NONE: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_SUPPORT_SINGLE_PSO: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_SUPPORT_LIBRARY: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_SUPPORT_AUTOMATIC_INPROC_CACHE: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_SUPPORT_AUTOMATIC_DISK_CACHE: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_SUPPORT_DRIVER_MANAGED_CACHE: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_SUPPORT_SHADER_CONTROL_CLEAR: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_CACHE_SUPPORT_SHADER_SESSION_DELETE: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SHADER_COMPONENT_MAPPING = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0: D3D12_SHADER_COMPONENT_MAPPING = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1: D3D12_SHADER_COMPONENT_MAPPING = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2: D3D12_SHADER_COMPONENT_MAPPING = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3: D3D12_SHADER_COMPONENT_MAPPING = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0: D3D12_SHADER_COMPONENT_MAPPING = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1: D3D12_SHADER_COMPONENT_MAPPING = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SHADER_MIN_PRECISION_SUPPORT = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_MIN_PRECISION_SUPPORT_NONE: D3D12_SHADER_MIN_PRECISION_SUPPORT = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_MIN_PRECISION_SUPPORT_10_BIT: D3D12_SHADER_MIN_PRECISION_SUPPORT = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_MIN_PRECISION_SUPPORT_16_BIT: D3D12_SHADER_MIN_PRECISION_SUPPORT = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SHADER_VERSION_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHVER_PIXEL_SHADER: D3D12_SHADER_VERSION_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHVER_VERTEX_SHADER: D3D12_SHADER_VERSION_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHVER_GEOMETRY_SHADER: D3D12_SHADER_VERSION_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHVER_HULL_SHADER: D3D12_SHADER_VERSION_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHVER_DOMAIN_SHADER: D3D12_SHADER_VERSION_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHVER_COMPUTE_SHADER: D3D12_SHADER_VERSION_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHVER_RESERVED0: D3D12_SHADER_VERSION_TYPE = 65520i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SHADER_VISIBILITY = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_VISIBILITY_ALL: D3D12_SHADER_VISIBILITY = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_VISIBILITY_VERTEX: D3D12_SHADER_VISIBILITY = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_VISIBILITY_HULL: D3D12_SHADER_VISIBILITY = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_VISIBILITY_DOMAIN: D3D12_SHADER_VISIBILITY = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_VISIBILITY_GEOMETRY: D3D12_SHADER_VISIBILITY = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_VISIBILITY_PIXEL: D3D12_SHADER_VISIBILITY = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_VISIBILITY_AMPLIFICATION: D3D12_SHADER_VISIBILITY = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADER_VISIBILITY_MESH: D3D12_SHADER_VISIBILITY = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SHADING_RATE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_1X1: D3D12_SHADING_RATE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_1X2: D3D12_SHADING_RATE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_2X1: D3D12_SHADING_RATE = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_2X2: D3D12_SHADING_RATE = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_2X4: D3D12_SHADING_RATE = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_4X2: D3D12_SHADING_RATE = 9i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_4X4: D3D12_SHADING_RATE = 10i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SHADING_RATE_COMBINER = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_COMBINER_PASSTHROUGH: D3D12_SHADING_RATE_COMBINER = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_COMBINER_OVERRIDE: D3D12_SHADING_RATE_COMBINER = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_COMBINER_MIN: D3D12_SHADING_RATE_COMBINER = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_COMBINER_MAX: D3D12_SHADING_RATE_COMBINER = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHADING_RATE_COMBINER_SUM: D3D12_SHADING_RATE_COMBINER = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_0: D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_1: D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_2: D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_SRV_DIMENSION = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRV_DIMENSION_UNKNOWN: D3D12_SRV_DIMENSION = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRV_DIMENSION_BUFFER: D3D12_SRV_DIMENSION = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRV_DIMENSION_TEXTURE1D: D3D12_SRV_DIMENSION = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRV_DIMENSION_TEXTURE1DARRAY: D3D12_SRV_DIMENSION = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRV_DIMENSION_TEXTURE2D: D3D12_SRV_DIMENSION = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRV_DIMENSION_TEXTURE2DARRAY: D3D12_SRV_DIMENSION = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRV_DIMENSION_TEXTURE2DMS: D3D12_SRV_DIMENSION = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY: D3D12_SRV_DIMENSION = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRV_DIMENSION_TEXTURE3D: D3D12_SRV_DIMENSION = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRV_DIMENSION_TEXTURECUBE: D3D12_SRV_DIMENSION = 9i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRV_DIMENSION_TEXTURECUBEARRAY: D3D12_SRV_DIMENSION = 10i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE: D3D12_SRV_DIMENSION = 11i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_STATE_OBJECT_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_OBJECT_FLAG_NONE: D3D12_STATE_OBJECT_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_OBJECT_FLAG_ALLOW_LOCAL_DEPENDENCIES_ON_EXTERNAL_DEFINITIONS: D3D12_STATE_OBJECT_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_OBJECT_FLAG_ALLOW_EXTERNAL_DEPENDENCIES_ON_LOCAL_DEFINITIONS: D3D12_STATE_OBJECT_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_OBJECT_FLAG_ALLOW_STATE_OBJECT_ADDITIONS: D3D12_STATE_OBJECT_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_STATE_OBJECT_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_OBJECT_TYPE_COLLECTION: D3D12_STATE_OBJECT_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE: D3D12_STATE_OBJECT_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_STATE_SUBOBJECT_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_STATE_OBJECT_CONFIG: D3D12_STATE_SUBOBJECT_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE: D3D12_STATE_SUBOBJECT_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE: D3D12_STATE_SUBOBJECT_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_NODE_MASK: D3D12_STATE_SUBOBJECT_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY: D3D12_STATE_SUBOBJECT_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION: D3D12_STATE_SUBOBJECT_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION: D3D12_STATE_SUBOBJECT_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION: D3D12_STATE_SUBOBJECT_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG: D3D12_STATE_SUBOBJECT_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG: D3D12_STATE_SUBOBJECT_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP: D3D12_STATE_SUBOBJECT_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG1: D3D12_STATE_SUBOBJECT_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATE_SUBOBJECT_TYPE_MAX_VALID: D3D12_STATE_SUBOBJECT_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_STATIC_BORDER_COLOR = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK: D3D12_STATIC_BORDER_COLOR = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK: D3D12_STATIC_BORDER_COLOR = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE: D3D12_STATIC_BORDER_COLOR = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_STENCIL_OP = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STENCIL_OP_KEEP: D3D12_STENCIL_OP = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STENCIL_OP_ZERO: D3D12_STENCIL_OP = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STENCIL_OP_REPLACE: D3D12_STENCIL_OP = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STENCIL_OP_INCR_SAT: D3D12_STENCIL_OP = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STENCIL_OP_DECR_SAT: D3D12_STENCIL_OP = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STENCIL_OP_INVERT: D3D12_STENCIL_OP = 6i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STENCIL_OP_INCR: D3D12_STENCIL_OP = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_STENCIL_OP_DECR: D3D12_STENCIL_OP = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_TEXTURE_ADDRESS_MODE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_ADDRESS_MODE_WRAP: D3D12_TEXTURE_ADDRESS_MODE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_ADDRESS_MODE_MIRROR: D3D12_TEXTURE_ADDRESS_MODE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_ADDRESS_MODE_CLAMP: D3D12_TEXTURE_ADDRESS_MODE = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_ADDRESS_MODE_BORDER: D3D12_TEXTURE_ADDRESS_MODE = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE: D3D12_TEXTURE_ADDRESS_MODE = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_TEXTURE_COPY_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX: D3D12_TEXTURE_COPY_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT: D3D12_TEXTURE_COPY_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_TEXTURE_LAYOUT = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_LAYOUT_UNKNOWN: D3D12_TEXTURE_LAYOUT = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_LAYOUT_ROW_MAJOR: D3D12_TEXTURE_LAYOUT = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE: D3D12_TEXTURE_LAYOUT = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TEXTURE_LAYOUT_64KB_STANDARD_SWIZZLE: D3D12_TEXTURE_LAYOUT = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_TILED_RESOURCES_TIER = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILED_RESOURCES_TIER_NOT_SUPPORTED: D3D12_TILED_RESOURCES_TIER = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILED_RESOURCES_TIER_1: D3D12_TILED_RESOURCES_TIER = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILED_RESOURCES_TIER_2: D3D12_TILED_RESOURCES_TIER = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILED_RESOURCES_TIER_3: D3D12_TILED_RESOURCES_TIER = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILED_RESOURCES_TIER_4: D3D12_TILED_RESOURCES_TIER = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_TILE_COPY_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILE_COPY_FLAG_NONE: D3D12_TILE_COPY_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILE_COPY_FLAG_NO_HAZARD: D3D12_TILE_COPY_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILE_COPY_FLAG_LINEAR_BUFFER_TO_SWIZZLED_TILED_RESOURCE: D3D12_TILE_COPY_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILE_COPY_FLAG_SWIZZLED_TILED_RESOURCE_TO_LINEAR_BUFFER: D3D12_TILE_COPY_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_TILE_MAPPING_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILE_MAPPING_FLAG_NONE: D3D12_TILE_MAPPING_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILE_MAPPING_FLAG_NO_HAZARD: D3D12_TILE_MAPPING_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_TILE_RANGE_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILE_RANGE_FLAG_NONE: D3D12_TILE_RANGE_FLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILE_RANGE_FLAG_NULL: D3D12_TILE_RANGE_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILE_RANGE_FLAG_SKIP: D3D12_TILE_RANGE_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_TILE_RANGE_FLAG_REUSE_SINGLE_TILE: D3D12_TILE_RANGE_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_UAV_DIMENSION = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_UAV_DIMENSION_UNKNOWN: D3D12_UAV_DIMENSION = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_UAV_DIMENSION_BUFFER: D3D12_UAV_DIMENSION = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_UAV_DIMENSION_TEXTURE1D: D3D12_UAV_DIMENSION = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_UAV_DIMENSION_TEXTURE1DARRAY: D3D12_UAV_DIMENSION = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_UAV_DIMENSION_TEXTURE2D: D3D12_UAV_DIMENSION = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_UAV_DIMENSION_TEXTURE2DARRAY: D3D12_UAV_DIMENSION = 5i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_UAV_DIMENSION_TEXTURE3D: D3D12_UAV_DIMENSION = 8i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_VARIABLE_SHADING_RATE_TIER = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VARIABLE_SHADING_RATE_TIER_NOT_SUPPORTED: D3D12_VARIABLE_SHADING_RATE_TIER = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VARIABLE_SHADING_RATE_TIER_1: D3D12_VARIABLE_SHADING_RATE_TIER = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VARIABLE_SHADING_RATE_TIER_2: D3D12_VARIABLE_SHADING_RATE_TIER = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_VIEW_INSTANCING_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIEW_INSTANCING_FLAG_NONE: D3D12_VIEW_INSTANCING_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIEW_INSTANCING_FLAG_ENABLE_VIEW_INSTANCE_MASKING: D3D12_VIEW_INSTANCING_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_VIEW_INSTANCING_TIER = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIEW_INSTANCING_TIER_NOT_SUPPORTED: D3D12_VIEW_INSTANCING_TIER = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIEW_INSTANCING_TIER_1: D3D12_VIEW_INSTANCING_TIER = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIEW_INSTANCING_TIER_2: D3D12_VIEW_INSTANCING_TIER = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_VIEW_INSTANCING_TIER_3: D3D12_VIEW_INSTANCING_TIER = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_WAVE_MMA_TIER = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_WAVE_MMA_TIER_NOT_SUPPORTED: D3D12_WAVE_MMA_TIER = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_WAVE_MMA_TIER_1_0: D3D12_WAVE_MMA_TIER = 10i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D12_WRITEBUFFERIMMEDIATE_MODE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_WRITEBUFFERIMMEDIATE_MODE_DEFAULT: D3D12_WRITEBUFFERIMMEDIATE_MODE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_IN: D3D12_WRITEBUFFERIMMEDIATE_MODE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_OUT: D3D12_WRITEBUFFERIMMEDIATE_MODE = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D_ROOT_SIGNATURE_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_ROOT_SIGNATURE_VERSION_1: D3D_ROOT_SIGNATURE_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_ROOT_SIGNATURE_VERSION_1_0: D3D_ROOT_SIGNATURE_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_ROOT_SIGNATURE_VERSION_1_1: D3D_ROOT_SIGNATURE_VERSION = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub type D3D_SHADER_MODEL = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_MODEL_5_1: D3D_SHADER_MODEL = 81i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_MODEL_6_0: D3D_SHADER_MODEL = 96i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_MODEL_6_1: D3D_SHADER_MODEL = 97i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_MODEL_6_2: D3D_SHADER_MODEL = 98i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_MODEL_6_3: D3D_SHADER_MODEL = 99i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_MODEL_6_4: D3D_SHADER_MODEL = 100i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_MODEL_6_5: D3D_SHADER_MODEL = 101i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_MODEL_6_6: D3D_SHADER_MODEL = 102i32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub const D3D_SHADER_MODEL_6_7: D3D_SHADER_MODEL = 103i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_AUTO_BREADCRUMB_NODE {
+    pub pCommandListDebugNameA: *const u8,
+    pub pCommandListDebugNameW: ::windows_sys::core::PCWSTR,
+    pub pCommandQueueDebugNameA: *const u8,
+    pub pCommandQueueDebugNameW: ::windows_sys::core::PCWSTR,
+    pub pCommandList: ID3D12GraphicsCommandList,
+    pub pCommandQueue: ID3D12CommandQueue,
+    pub BreadcrumbCount: u32,
+    pub pLastBreadcrumbValue: *const u32,
+    pub pCommandHistory: *const D3D12_AUTO_BREADCRUMB_OP,
+    pub pNext: *const D3D12_AUTO_BREADCRUMB_NODE,
+}
+impl ::core::marker::Copy for D3D12_AUTO_BREADCRUMB_NODE {}
+impl ::core::clone::Clone for D3D12_AUTO_BREADCRUMB_NODE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_AUTO_BREADCRUMB_NODE1 {
+    pub pCommandListDebugNameA: *const u8,
+    pub pCommandListDebugNameW: ::windows_sys::core::PCWSTR,
+    pub pCommandQueueDebugNameA: *const u8,
+    pub pCommandQueueDebugNameW: ::windows_sys::core::PCWSTR,
+    pub pCommandList: ID3D12GraphicsCommandList,
+    pub pCommandQueue: ID3D12CommandQueue,
+    pub BreadcrumbCount: u32,
+    pub pLastBreadcrumbValue: *const u32,
+    pub pCommandHistory: *const D3D12_AUTO_BREADCRUMB_OP,
+    pub pNext: *const D3D12_AUTO_BREADCRUMB_NODE1,
+    pub BreadcrumbContextsCount: u32,
+    pub pBreadcrumbContexts: *mut D3D12_DRED_BREADCRUMB_CONTEXT,
+}
+impl ::core::marker::Copy for D3D12_AUTO_BREADCRUMB_NODE1 {}
+impl ::core::clone::Clone for D3D12_AUTO_BREADCRUMB_NODE1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_BLEND_DESC {
+    pub AlphaToCoverageEnable: super::super::Foundation::BOOL,
+    pub IndependentBlendEnable: super::super::Foundation::BOOL,
+    pub RenderTarget: [D3D12_RENDER_TARGET_BLEND_DESC; 8],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_BLEND_DESC {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_BLEND_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_BOX {
+    pub left: u32,
+    pub top: u32,
+    pub front: u32,
+    pub right: u32,
+    pub bottom: u32,
+    pub back: u32,
+}
+impl ::core::marker::Copy for D3D12_BOX {}
+impl ::core::clone::Clone for D3D12_BOX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_BUFFER_RTV {
+    pub FirstElement: u64,
+    pub NumElements: u32,
+}
+impl ::core::marker::Copy for D3D12_BUFFER_RTV {}
+impl ::core::clone::Clone for D3D12_BUFFER_RTV {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_BUFFER_SRV {
+    pub FirstElement: u64,
+    pub NumElements: u32,
+    pub StructureByteStride: u32,
+    pub Flags: D3D12_BUFFER_SRV_FLAGS,
+}
+impl ::core::marker::Copy for D3D12_BUFFER_SRV {}
+impl ::core::clone::Clone for D3D12_BUFFER_SRV {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_BUFFER_UAV {
+    pub FirstElement: u64,
+    pub NumElements: u32,
+    pub StructureByteStride: u32,
+    pub CounterOffsetInBytes: u64,
+    pub Flags: D3D12_BUFFER_UAV_FLAGS,
+}
+impl ::core::marker::Copy for D3D12_BUFFER_UAV {}
+impl ::core::clone::Clone for D3D12_BUFFER_UAV {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC {
+    pub DestAccelerationStructureData: u64,
+    pub Inputs: D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS,
+    pub SourceAccelerationStructureData: u64,
+    pub ScratchAccelerationStructureData: u64,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS {
+    pub Type: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE,
+    pub Flags: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS,
+    pub NumDescs: u32,
+    pub DescsLayout: D3D12_ELEMENTS_LAYOUT,
+    pub Anonymous: D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_0,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub union D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_0 {
+    pub InstanceDescs: u64,
+    pub pGeometryDescs: *const D3D12_RAYTRACING_GEOMETRY_DESC,
+    pub ppGeometryDescs: *const *const D3D12_RAYTRACING_GEOMETRY_DESC,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_0 {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_TOOLS_VISUALIZATION_HEADER {
+    pub Type: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE,
+    pub NumDescs: u32,
+}
+impl ::core::marker::Copy for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_TOOLS_VISUALIZATION_HEADER {}
+impl ::core::clone::Clone for D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_TOOLS_VISUALIZATION_HEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_CACHED_PIPELINE_STATE {
+    pub pCachedBlob: *const ::core::ffi::c_void,
+    pub CachedBlobSizeInBytes: usize,
+}
+impl ::core::marker::Copy for D3D12_CACHED_PIPELINE_STATE {}
+impl ::core::clone::Clone for D3D12_CACHED_PIPELINE_STATE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_CLEAR_VALUE {
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+    pub Anonymous: D3D12_CLEAR_VALUE_0,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_CLEAR_VALUE {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_CLEAR_VALUE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub union D3D12_CLEAR_VALUE_0 {
+    pub Color: [f32; 4],
+    pub DepthStencil: D3D12_DEPTH_STENCIL_VALUE,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_CLEAR_VALUE_0 {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_CLEAR_VALUE_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_COMMAND_QUEUE_DESC {
+    pub Type: D3D12_COMMAND_LIST_TYPE,
+    pub Priority: i32,
+    pub Flags: D3D12_COMMAND_QUEUE_FLAGS,
+    pub NodeMask: u32,
+}
+impl ::core::marker::Copy for D3D12_COMMAND_QUEUE_DESC {}
+impl ::core::clone::Clone for D3D12_COMMAND_QUEUE_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_COMMAND_SIGNATURE_DESC {
+    pub ByteStride: u32,
+    pub NumArgumentDescs: u32,
+    pub pArgumentDescs: *const D3D12_INDIRECT_ARGUMENT_DESC,
+    pub NodeMask: u32,
+}
+impl ::core::marker::Copy for D3D12_COMMAND_SIGNATURE_DESC {}
+impl ::core::clone::Clone for D3D12_COMMAND_SIGNATURE_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_COMPUTE_PIPELINE_STATE_DESC {
+    pub pRootSignature: ID3D12RootSignature,
+    pub CS: D3D12_SHADER_BYTECODE,
+    pub NodeMask: u32,
+    pub CachedPSO: D3D12_CACHED_PIPELINE_STATE,
+    pub Flags: D3D12_PIPELINE_STATE_FLAGS,
+}
+impl ::core::marker::Copy for D3D12_COMPUTE_PIPELINE_STATE_DESC {}
+impl ::core::clone::Clone for D3D12_COMPUTE_PIPELINE_STATE_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_CONSTANT_BUFFER_VIEW_DESC {
+    pub BufferLocation: u64,
+    pub SizeInBytes: u32,
+}
+impl ::core::marker::Copy for D3D12_CONSTANT_BUFFER_VIEW_DESC {}
+impl ::core::clone::Clone for D3D12_CONSTANT_BUFFER_VIEW_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_CPU_DESCRIPTOR_HANDLE {
+    pub ptr: usize,
+}
+impl ::core::marker::Copy for D3D12_CPU_DESCRIPTOR_HANDLE {}
+impl ::core::clone::Clone for D3D12_CPU_DESCRIPTOR_HANDLE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DEBUG_COMMAND_LIST_GPU_BASED_VALIDATION_SETTINGS {
+    pub ShaderPatchMode: D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE,
+}
+impl ::core::marker::Copy for D3D12_DEBUG_COMMAND_LIST_GPU_BASED_VALIDATION_SETTINGS {}
+impl ::core::clone::Clone for D3D12_DEBUG_COMMAND_LIST_GPU_BASED_VALIDATION_SETTINGS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DEBUG_DEVICE_GPU_BASED_VALIDATION_SETTINGS {
+    pub MaxMessagesPerCommandList: u32,
+    pub DefaultShaderPatchMode: D3D12_GPU_BASED_VALIDATION_SHADER_PATCH_MODE,
+    pub PipelineStateCreateFlags: D3D12_GPU_BASED_VALIDATION_PIPELINE_STATE_CREATE_FLAGS,
+}
+impl ::core::marker::Copy for D3D12_DEBUG_DEVICE_GPU_BASED_VALIDATION_SETTINGS {}
+impl ::core::clone::Clone for D3D12_DEBUG_DEVICE_GPU_BASED_VALIDATION_SETTINGS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DEBUG_DEVICE_GPU_SLOWDOWN_PERFORMANCE_FACTOR {
+    pub SlowdownFactor: f32,
+}
+impl ::core::marker::Copy for D3D12_DEBUG_DEVICE_GPU_SLOWDOWN_PERFORMANCE_FACTOR {}
+impl ::core::clone::Clone for D3D12_DEBUG_DEVICE_GPU_SLOWDOWN_PERFORMANCE_FACTOR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DEPTH_STENCILOP_DESC {
+    pub StencilFailOp: D3D12_STENCIL_OP,
+    pub StencilDepthFailOp: D3D12_STENCIL_OP,
+    pub StencilPassOp: D3D12_STENCIL_OP,
+    pub StencilFunc: D3D12_COMPARISON_FUNC,
+}
+impl ::core::marker::Copy for D3D12_DEPTH_STENCILOP_DESC {}
+impl ::core::clone::Clone for D3D12_DEPTH_STENCILOP_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_DEPTH_STENCIL_DESC {
+    pub DepthEnable: super::super::Foundation::BOOL,
+    pub DepthWriteMask: D3D12_DEPTH_WRITE_MASK,
+    pub DepthFunc: D3D12_COMPARISON_FUNC,
+    pub StencilEnable: super::super::Foundation::BOOL,
+    pub StencilReadMask: u8,
+    pub StencilWriteMask: u8,
+    pub FrontFace: D3D12_DEPTH_STENCILOP_DESC,
+    pub BackFace: D3D12_DEPTH_STENCILOP_DESC,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_DEPTH_STENCIL_DESC {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_DEPTH_STENCIL_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_DEPTH_STENCIL_DESC1 {
+    pub DepthEnable: super::super::Foundation::BOOL,
+    pub DepthWriteMask: D3D12_DEPTH_WRITE_MASK,
+    pub DepthFunc: D3D12_COMPARISON_FUNC,
+    pub StencilEnable: super::super::Foundation::BOOL,
+    pub StencilReadMask: u8,
+    pub StencilWriteMask: u8,
+    pub FrontFace: D3D12_DEPTH_STENCILOP_DESC,
+    pub BackFace: D3D12_DEPTH_STENCILOP_DESC,
+    pub DepthBoundsTestEnable: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_DEPTH_STENCIL_DESC1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_DEPTH_STENCIL_DESC1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DEPTH_STENCIL_VALUE {
+    pub Depth: f32,
+    pub Stencil: u8,
+}
+impl ::core::marker::Copy for D3D12_DEPTH_STENCIL_VALUE {}
+impl ::core::clone::Clone for D3D12_DEPTH_STENCIL_VALUE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_DEPTH_STENCIL_VIEW_DESC {
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+    pub ViewDimension: D3D12_DSV_DIMENSION,
+    pub Flags: D3D12_DSV_FLAGS,
+    pub Anonymous: D3D12_DEPTH_STENCIL_VIEW_DESC_0,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_DEPTH_STENCIL_VIEW_DESC {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_DEPTH_STENCIL_VIEW_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub union D3D12_DEPTH_STENCIL_VIEW_DESC_0 {
+    pub Texture1D: D3D12_TEX1D_DSV,
+    pub Texture1DArray: D3D12_TEX1D_ARRAY_DSV,
+    pub Texture2D: D3D12_TEX2D_DSV,
+    pub Texture2DArray: D3D12_TEX2D_ARRAY_DSV,
+    pub Texture2DMS: D3D12_TEX2DMS_DSV,
+    pub Texture2DMSArray: D3D12_TEX2DMS_ARRAY_DSV,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_DEPTH_STENCIL_VIEW_DESC_0 {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_DEPTH_STENCIL_VIEW_DESC_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DESCRIPTOR_HEAP_DESC {
+    pub Type: D3D12_DESCRIPTOR_HEAP_TYPE,
+    pub NumDescriptors: u32,
+    pub Flags: D3D12_DESCRIPTOR_HEAP_FLAGS,
+    pub NodeMask: u32,
+}
+impl ::core::marker::Copy for D3D12_DESCRIPTOR_HEAP_DESC {}
+impl ::core::clone::Clone for D3D12_DESCRIPTOR_HEAP_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DESCRIPTOR_RANGE {
+    pub RangeType: D3D12_DESCRIPTOR_RANGE_TYPE,
+    pub NumDescriptors: u32,
+    pub BaseShaderRegister: u32,
+    pub RegisterSpace: u32,
+    pub OffsetInDescriptorsFromTableStart: u32,
+}
+impl ::core::marker::Copy for D3D12_DESCRIPTOR_RANGE {}
+impl ::core::clone::Clone for D3D12_DESCRIPTOR_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DESCRIPTOR_RANGE1 {
+    pub RangeType: D3D12_DESCRIPTOR_RANGE_TYPE,
+    pub NumDescriptors: u32,
+    pub BaseShaderRegister: u32,
+    pub RegisterSpace: u32,
+    pub Flags: D3D12_DESCRIPTOR_RANGE_FLAGS,
+    pub OffsetInDescriptorsFromTableStart: u32,
+}
+impl ::core::marker::Copy for D3D12_DESCRIPTOR_RANGE1 {}
+impl ::core::clone::Clone for D3D12_DESCRIPTOR_RANGE1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DEVICE_REMOVED_EXTENDED_DATA {
+    pub Flags: D3D12_DRED_FLAGS,
+    pub pHeadAutoBreadcrumbNode: *mut D3D12_AUTO_BREADCRUMB_NODE,
+}
+impl ::core::marker::Copy for D3D12_DEVICE_REMOVED_EXTENDED_DATA {}
+impl ::core::clone::Clone for D3D12_DEVICE_REMOVED_EXTENDED_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DEVICE_REMOVED_EXTENDED_DATA1 {
+    pub DeviceRemovedReason: ::windows_sys::core::HRESULT,
+    pub AutoBreadcrumbsOutput: D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT,
+    pub PageFaultOutput: D3D12_DRED_PAGE_FAULT_OUTPUT,
+}
+impl ::core::marker::Copy for D3D12_DEVICE_REMOVED_EXTENDED_DATA1 {}
+impl ::core::clone::Clone for D3D12_DEVICE_REMOVED_EXTENDED_DATA1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DEVICE_REMOVED_EXTENDED_DATA2 {
+    pub DeviceRemovedReason: ::windows_sys::core::HRESULT,
+    pub AutoBreadcrumbsOutput: D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1,
+    pub PageFaultOutput: D3D12_DRED_PAGE_FAULT_OUTPUT1,
+}
+impl ::core::marker::Copy for D3D12_DEVICE_REMOVED_EXTENDED_DATA2 {}
+impl ::core::clone::Clone for D3D12_DEVICE_REMOVED_EXTENDED_DATA2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DEVICE_REMOVED_EXTENDED_DATA3 {
+    pub DeviceRemovedReason: ::windows_sys::core::HRESULT,
+    pub AutoBreadcrumbsOutput: D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1,
+    pub PageFaultOutput: D3D12_DRED_PAGE_FAULT_OUTPUT2,
+    pub DeviceState: D3D12_DRED_DEVICE_STATE,
+}
+impl ::core::marker::Copy for D3D12_DEVICE_REMOVED_EXTENDED_DATA3 {}
+impl ::core::clone::Clone for D3D12_DEVICE_REMOVED_EXTENDED_DATA3 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_DISCARD_REGION {
+    pub NumRects: u32,
+    pub pRects: *const super::super::Foundation::RECT,
+    pub FirstSubresource: u32,
+    pub NumSubresources: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_DISCARD_REGION {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_DISCARD_REGION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DISPATCH_ARGUMENTS {
+    pub ThreadGroupCountX: u32,
+    pub ThreadGroupCountY: u32,
+    pub ThreadGroupCountZ: u32,
+}
+impl ::core::marker::Copy for D3D12_DISPATCH_ARGUMENTS {}
+impl ::core::clone::Clone for D3D12_DISPATCH_ARGUMENTS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DISPATCH_MESH_ARGUMENTS {
+    pub ThreadGroupCountX: u32,
+    pub ThreadGroupCountY: u32,
+    pub ThreadGroupCountZ: u32,
+}
+impl ::core::marker::Copy for D3D12_DISPATCH_MESH_ARGUMENTS {}
+impl ::core::clone::Clone for D3D12_DISPATCH_MESH_ARGUMENTS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DISPATCH_RAYS_DESC {
+    pub RayGenerationShaderRecord: D3D12_GPU_VIRTUAL_ADDRESS_RANGE,
+    pub MissShaderTable: D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE,
+    pub HitGroupTable: D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE,
+    pub CallableShaderTable: D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE,
+    pub Width: u32,
+    pub Height: u32,
+    pub Depth: u32,
+}
+impl ::core::marker::Copy for D3D12_DISPATCH_RAYS_DESC {}
+impl ::core::clone::Clone for D3D12_DISPATCH_RAYS_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DRAW_ARGUMENTS {
+    pub VertexCountPerInstance: u32,
+    pub InstanceCount: u32,
+    pub StartVertexLocation: u32,
+    pub StartInstanceLocation: u32,
+}
+impl ::core::marker::Copy for D3D12_DRAW_ARGUMENTS {}
+impl ::core::clone::Clone for D3D12_DRAW_ARGUMENTS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DRAW_INDEXED_ARGUMENTS {
+    pub IndexCountPerInstance: u32,
+    pub InstanceCount: u32,
+    pub StartIndexLocation: u32,
+    pub BaseVertexLocation: i32,
+    pub StartInstanceLocation: u32,
+}
+impl ::core::marker::Copy for D3D12_DRAW_INDEXED_ARGUMENTS {}
+impl ::core::clone::Clone for D3D12_DRAW_INDEXED_ARGUMENTS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DRED_ALLOCATION_NODE {
+    pub ObjectNameA: *const u8,
+    pub ObjectNameW: ::windows_sys::core::PCWSTR,
+    pub AllocationType: D3D12_DRED_ALLOCATION_TYPE,
+    pub pNext: *const D3D12_DRED_ALLOCATION_NODE,
+}
+impl ::core::marker::Copy for D3D12_DRED_ALLOCATION_NODE {}
+impl ::core::clone::Clone for D3D12_DRED_ALLOCATION_NODE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DRED_ALLOCATION_NODE1 {
+    pub ObjectNameA: *const u8,
+    pub ObjectNameW: ::windows_sys::core::PCWSTR,
+    pub AllocationType: D3D12_DRED_ALLOCATION_TYPE,
+    pub pNext: *const D3D12_DRED_ALLOCATION_NODE1,
+    pub pObject: ::windows_sys::core::IUnknown,
+}
+impl ::core::marker::Copy for D3D12_DRED_ALLOCATION_NODE1 {}
+impl ::core::clone::Clone for D3D12_DRED_ALLOCATION_NODE1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT {
+    pub pHeadAutoBreadcrumbNode: *const D3D12_AUTO_BREADCRUMB_NODE,
+}
+impl ::core::marker::Copy for D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT {}
+impl ::core::clone::Clone for D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 {
+    pub pHeadAutoBreadcrumbNode: *const D3D12_AUTO_BREADCRUMB_NODE1,
+}
+impl ::core::marker::Copy for D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 {}
+impl ::core::clone::Clone for D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DRED_BREADCRUMB_CONTEXT {
+    pub BreadcrumbIndex: u32,
+    pub pContextString: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for D3D12_DRED_BREADCRUMB_CONTEXT {}
+impl ::core::clone::Clone for D3D12_DRED_BREADCRUMB_CONTEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DRED_PAGE_FAULT_OUTPUT {
+    pub PageFaultVA: u64,
+    pub pHeadExistingAllocationNode: *const D3D12_DRED_ALLOCATION_NODE,
+    pub pHeadRecentFreedAllocationNode: *const D3D12_DRED_ALLOCATION_NODE,
+}
+impl ::core::marker::Copy for D3D12_DRED_PAGE_FAULT_OUTPUT {}
+impl ::core::clone::Clone for D3D12_DRED_PAGE_FAULT_OUTPUT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DRED_PAGE_FAULT_OUTPUT1 {
+    pub PageFaultVA: u64,
+    pub pHeadExistingAllocationNode: *const D3D12_DRED_ALLOCATION_NODE1,
+    pub pHeadRecentFreedAllocationNode: *const D3D12_DRED_ALLOCATION_NODE1,
+}
+impl ::core::marker::Copy for D3D12_DRED_PAGE_FAULT_OUTPUT1 {}
+impl ::core::clone::Clone for D3D12_DRED_PAGE_FAULT_OUTPUT1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DRED_PAGE_FAULT_OUTPUT2 {
+    pub PageFaultVA: u64,
+    pub pHeadExistingAllocationNode: *const D3D12_DRED_ALLOCATION_NODE1,
+    pub pHeadRecentFreedAllocationNode: *const D3D12_DRED_ALLOCATION_NODE1,
+    pub PageFaultFlags: D3D12_DRED_PAGE_FAULT_FLAGS,
+}
+impl ::core::marker::Copy for D3D12_DRED_PAGE_FAULT_OUTPUT2 {}
+impl ::core::clone::Clone for D3D12_DRED_PAGE_FAULT_OUTPUT2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DXIL_LIBRARY_DESC {
+    pub DXILLibrary: D3D12_SHADER_BYTECODE,
+    pub NumExports: u32,
+    pub pExports: *mut D3D12_EXPORT_DESC,
+}
+impl ::core::marker::Copy for D3D12_DXIL_LIBRARY_DESC {}
+impl ::core::clone::Clone for D3D12_DXIL_LIBRARY_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION {
+    pub SubobjectToAssociate: ::windows_sys::core::PCWSTR,
+    pub NumExports: u32,
+    pub pExports: *mut ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for D3D12_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION {}
+impl ::core::clone::Clone for D3D12_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_EXISTING_COLLECTION_DESC {
+    pub pExistingCollection: ID3D12StateObject,
+    pub NumExports: u32,
+    pub pExports: *mut D3D12_EXPORT_DESC,
+}
+impl ::core::marker::Copy for D3D12_EXISTING_COLLECTION_DESC {}
+impl ::core::clone::Clone for D3D12_EXISTING_COLLECTION_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_EXPORT_DESC {
+    pub Name: ::windows_sys::core::PCWSTR,
+    pub ExportToRename: ::windows_sys::core::PCWSTR,
+    pub Flags: D3D12_EXPORT_FLAGS,
+}
+impl ::core::marker::Copy for D3D12_EXPORT_DESC {}
+impl ::core::clone::Clone for D3D12_EXPORT_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_ARCHITECTURE {
+    pub NodeIndex: u32,
+    pub TileBasedRenderer: super::super::Foundation::BOOL,
+    pub UMA: super::super::Foundation::BOOL,
+    pub CacheCoherentUMA: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_ARCHITECTURE {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_ARCHITECTURE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_ARCHITECTURE1 {
+    pub NodeIndex: u32,
+    pub TileBasedRenderer: super::super::Foundation::BOOL,
+    pub UMA: super::super::Foundation::BOOL,
+    pub CacheCoherentUMA: super::super::Foundation::BOOL,
+    pub IsolatedMMU: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_ARCHITECTURE1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_ARCHITECTURE1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_COMMAND_QUEUE_PRIORITY {
+    pub CommandListType: D3D12_COMMAND_LIST_TYPE,
+    pub Priority: u32,
+    pub PriorityForTypeIsSupported: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_COMMAND_QUEUE_PRIORITY {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_COMMAND_QUEUE_PRIORITY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_CROSS_NODE {
+    pub SharingTier: D3D12_CROSS_NODE_SHARING_TIER,
+    pub AtomicShaderInstructions: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_CROSS_NODE {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_CROSS_NODE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS {
+    pub DoublePrecisionFloatShaderOps: super::super::Foundation::BOOL,
+    pub OutputMergerLogicOp: super::super::Foundation::BOOL,
+    pub MinPrecisionSupport: D3D12_SHADER_MIN_PRECISION_SUPPORT,
+    pub TiledResourcesTier: D3D12_TILED_RESOURCES_TIER,
+    pub ResourceBindingTier: D3D12_RESOURCE_BINDING_TIER,
+    pub PSSpecifiedStencilRefSupported: super::super::Foundation::BOOL,
+    pub TypedUAVLoadAdditionalFormats: super::super::Foundation::BOOL,
+    pub ROVsSupported: super::super::Foundation::BOOL,
+    pub ConservativeRasterizationTier: D3D12_CONSERVATIVE_RASTERIZATION_TIER,
+    pub MaxGPUVirtualAddressBitsPerResource: u32,
+    pub StandardSwizzle64KBSupported: super::super::Foundation::BOOL,
+    pub CrossNodeSharingTier: D3D12_CROSS_NODE_SHARING_TIER,
+    pub CrossAdapterRowMajorTextureSupported: super::super::Foundation::BOOL,
+    pub VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation: super::super::Foundation::BOOL,
+    pub ResourceHeapTier: D3D12_RESOURCE_HEAP_TIER,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS1 {
+    pub WaveOps: super::super::Foundation::BOOL,
+    pub WaveLaneCountMin: u32,
+    pub WaveLaneCountMax: u32,
+    pub TotalLaneCount: u32,
+    pub ExpandedComputeResourceStates: super::super::Foundation::BOOL,
+    pub Int64ShaderOps: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS10 {
+    pub VariableRateShadingSumCombinerSupported: super::super::Foundation::BOOL,
+    pub MeshShaderPerPrimitiveShadingRateSupported: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS10 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS10 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS11 {
+    pub AtomicInt64OnDescriptorHeapResourceSupported: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS11 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS11 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS2 {
+    pub DepthBoundsTestSupported: super::super::Foundation::BOOL,
+    pub ProgrammableSamplePositionsTier: D3D12_PROGRAMMABLE_SAMPLE_POSITIONS_TIER,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS2 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS3 {
+    pub CopyQueueTimestampQueriesSupported: super::super::Foundation::BOOL,
+    pub CastingFullyTypedFormatSupported: super::super::Foundation::BOOL,
+    pub WriteBufferImmediateSupportFlags: D3D12_COMMAND_LIST_SUPPORT_FLAGS,
+    pub ViewInstancingTier: D3D12_VIEW_INSTANCING_TIER,
+    pub BarycentricsSupported: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS3 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS3 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS4 {
+    pub MSAA64KBAlignedTextureSupported: super::super::Foundation::BOOL,
+    pub SharedResourceCompatibilityTier: D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER,
+    pub Native16BitShaderOpsSupported: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS4 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS4 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS5 {
+    pub SRVOnlyTiledResourceTier3: super::super::Foundation::BOOL,
+    pub RenderPassesTier: D3D12_RENDER_PASS_TIER,
+    pub RaytracingTier: D3D12_RAYTRACING_TIER,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS5 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS5 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS6 {
+    pub AdditionalShadingRatesSupported: super::super::Foundation::BOOL,
+    pub PerPrimitiveShadingRateSupportedWithViewportIndexing: super::super::Foundation::BOOL,
+    pub VariableShadingRateTier: D3D12_VARIABLE_SHADING_RATE_TIER,
+    pub ShadingRateImageTileSize: u32,
+    pub BackgroundProcessingSupported: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS6 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS6 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS7 {
+    pub MeshShaderTier: D3D12_MESH_SHADER_TIER,
+    pub SamplerFeedbackTier: D3D12_SAMPLER_FEEDBACK_TIER,
+}
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS7 {}
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS7 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS8 {
+    pub UnalignedBlockTexturesSupported: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS8 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS8 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_D3D12_OPTIONS9 {
+    pub MeshShaderPipelineStatsSupported: super::super::Foundation::BOOL,
+    pub MeshShaderSupportsFullRangeRenderTargetArrayIndex: super::super::Foundation::BOOL,
+    pub AtomicInt64OnTypedResourceSupported: super::super::Foundation::BOOL,
+    pub AtomicInt64OnGroupSharedSupported: super::super::Foundation::BOOL,
+    pub DerivativesInMeshAndAmplificationShadersSupported: super::super::Foundation::BOOL,
+    pub WaveMMATier: D3D12_WAVE_MMA_TIER,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_D3D12_OPTIONS9 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_D3D12_OPTIONS9 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_DISPLAYABLE {
+    pub DisplayableTexture: super::super::Foundation::BOOL,
+    pub SharedResourceCompatibilityTier: D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_DISPLAYABLE {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_DISPLAYABLE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_FEATURE_DATA_EXISTING_HEAPS {
+    pub Supported: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_EXISTING_HEAPS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_EXISTING_HEAPS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Direct3D\"`*"]
+#[cfg(feature = "Win32_Graphics_Direct3D")]
+pub struct D3D12_FEATURE_DATA_FEATURE_LEVELS {
+    pub NumFeatureLevels: u32,
+    pub pFeatureLevelsRequested: *const super::Direct3D::D3D_FEATURE_LEVEL,
+    pub MaxSupportedFeatureLevel: super::Direct3D::D3D_FEATURE_LEVEL,
+}
+#[cfg(feature = "Win32_Graphics_Direct3D")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_FEATURE_LEVELS {}
+#[cfg(feature = "Win32_Graphics_Direct3D")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_FEATURE_LEVELS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_FEATURE_DATA_FORMAT_INFO {
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+    pub PlaneCount: u8,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_FORMAT_INFO {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_FORMAT_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_FEATURE_DATA_FORMAT_SUPPORT {
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+    pub Support1: D3D12_FORMAT_SUPPORT1,
+    pub Support2: D3D12_FORMAT_SUPPORT2,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_FORMAT_SUPPORT {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_FORMAT_SUPPORT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT {
+    pub MaxGPUVirtualAddressBitsPerResource: u32,
+    pub MaxGPUVirtualAddressBitsPerProcess: u32,
+}
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT {}
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS {
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+    pub SampleCount: u32,
+    pub Flags: D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS,
+    pub NumQualityLevels: u32,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_SUPPORT {
+    pub NodeIndex: u32,
+    pub Support: D3D12_PROTECTED_RESOURCE_SESSION_SUPPORT_FLAGS,
+}
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_SUPPORT {}
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_SUPPORT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPES {
+    pub NodeIndex: u32,
+    pub Count: u32,
+    pub pTypes: *mut ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPES {}
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPE_COUNT {
+    pub NodeIndex: u32,
+    pub Count: u32,
+}
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPE_COUNT {}
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_TYPE_COUNT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_FEATURE_DATA_QUERY_META_COMMAND {
+    pub CommandId: ::windows_sys::core::GUID,
+    pub NodeMask: u32,
+    pub pQueryInputData: *const ::core::ffi::c_void,
+    pub QueryInputDataSizeInBytes: usize,
+    pub pQueryOutputData: *mut ::core::ffi::c_void,
+    pub QueryOutputDataSizeInBytes: usize,
+}
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_QUERY_META_COMMAND {}
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_QUERY_META_COMMAND {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_FEATURE_DATA_ROOT_SIGNATURE {
+    pub HighestVersion: D3D_ROOT_SIGNATURE_VERSION,
+}
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_ROOT_SIGNATURE {}
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_ROOT_SIGNATURE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_FEATURE_DATA_SERIALIZATION {
+    pub NodeIndex: u32,
+    pub HeapSerializationTier: D3D12_HEAP_SERIALIZATION_TIER,
+}
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_SERIALIZATION {}
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_SERIALIZATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_FEATURE_DATA_SHADER_CACHE {
+    pub SupportFlags: D3D12_SHADER_CACHE_SUPPORT_FLAGS,
+}
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_SHADER_CACHE {}
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_SHADER_CACHE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_FEATURE_DATA_SHADER_MODEL {
+    pub HighestShaderModel: D3D_SHADER_MODEL,
+}
+impl ::core::marker::Copy for D3D12_FEATURE_DATA_SHADER_MODEL {}
+impl ::core::clone::Clone for D3D12_FEATURE_DATA_SHADER_MODEL {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Direct3D\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Direct3D"))]
+pub struct D3D12_FUNCTION_DESC {
+    pub Version: u32,
+    pub Creator: ::windows_sys::core::PCSTR,
+    pub Flags: u32,
+    pub ConstantBuffers: u32,
+    pub BoundResources: u32,
+    pub InstructionCount: u32,
+    pub TempRegisterCount: u32,
+    pub TempArrayCount: u32,
+    pub DefCount: u32,
+    pub DclCount: u32,
+    pub TextureNormalInstructions: u32,
+    pub TextureLoadInstructions: u32,
+    pub TextureCompInstructions: u32,
+    pub TextureBiasInstructions: u32,
+    pub TextureGradientInstructions: u32,
+    pub FloatInstructionCount: u32,
+    pub IntInstructionCount: u32,
+    pub UintInstructionCount: u32,
+    pub StaticFlowControlCount: u32,
+    pub DynamicFlowControlCount: u32,
+    pub MacroInstructionCount: u32,
+    pub ArrayInstructionCount: u32,
+    pub MovInstructionCount: u32,
+    pub MovcInstructionCount: u32,
+    pub ConversionInstructionCount: u32,
+    pub BitwiseInstructionCount: u32,
+    pub MinFeatureLevel: super::Direct3D::D3D_FEATURE_LEVEL,
+    pub RequiredFeatureFlags: u64,
+    pub Name: ::windows_sys::core::PCSTR,
+    pub FunctionParameterCount: i32,
+    pub HasReturn: super::super::Foundation::BOOL,
+    pub Has10Level9VertexShader: super::super::Foundation::BOOL,
+    pub Has10Level9PixelShader: super::super::Foundation::BOOL,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Direct3D"))]
+impl ::core::marker::Copy for D3D12_FUNCTION_DESC {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Direct3D"))]
+impl ::core::clone::Clone for D3D12_FUNCTION_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_GLOBAL_ROOT_SIGNATURE {
+    pub pGlobalRootSignature: ID3D12RootSignature,
+}
+impl ::core::marker::Copy for D3D12_GLOBAL_ROOT_SIGNATURE {}
+impl ::core::clone::Clone for D3D12_GLOBAL_ROOT_SIGNATURE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_GPU_DESCRIPTOR_HANDLE {
+    pub ptr: u64,
+}
+impl ::core::marker::Copy for D3D12_GPU_DESCRIPTOR_HANDLE {}
+impl ::core::clone::Clone for D3D12_GPU_DESCRIPTOR_HANDLE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE {
+    pub StartAddress: u64,
+    pub StrideInBytes: u64,
+}
+impl ::core::marker::Copy for D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE {}
+impl ::core::clone::Clone for D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_GPU_VIRTUAL_ADDRESS_RANGE {
+    pub StartAddress: u64,
+    pub SizeInBytes: u64,
+}
+impl ::core::marker::Copy for D3D12_GPU_VIRTUAL_ADDRESS_RANGE {}
+impl ::core::clone::Clone for D3D12_GPU_VIRTUAL_ADDRESS_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE {
+    pub StartAddress: u64,
+    pub SizeInBytes: u64,
+    pub StrideInBytes: u64,
+}
+impl ::core::marker::Copy for D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE {}
+impl ::core::clone::Clone for D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+pub struct D3D12_GRAPHICS_PIPELINE_STATE_DESC {
+    pub pRootSignature: ID3D12RootSignature,
+    pub VS: D3D12_SHADER_BYTECODE,
+    pub PS: D3D12_SHADER_BYTECODE,
+    pub DS: D3D12_SHADER_BYTECODE,
+    pub HS: D3D12_SHADER_BYTECODE,
+    pub GS: D3D12_SHADER_BYTECODE,
+    pub StreamOutput: D3D12_STREAM_OUTPUT_DESC,
+    pub BlendState: D3D12_BLEND_DESC,
+    pub SampleMask: u32,
+    pub RasterizerState: D3D12_RASTERIZER_DESC,
+    pub DepthStencilState: D3D12_DEPTH_STENCIL_DESC,
+    pub InputLayout: D3D12_INPUT_LAYOUT_DESC,
+    pub IBStripCutValue: D3D12_INDEX_BUFFER_STRIP_CUT_VALUE,
+    pub PrimitiveTopologyType: D3D12_PRIMITIVE_TOPOLOGY_TYPE,
+    pub NumRenderTargets: u32,
+    pub RTVFormats: [super::Dxgi::Common::DXGI_FORMAT; 8],
+    pub DSVFormat: super::Dxgi::Common::DXGI_FORMAT,
+    pub SampleDesc: super::Dxgi::Common::DXGI_SAMPLE_DESC,
+    pub NodeMask: u32,
+    pub CachedPSO: D3D12_CACHED_PIPELINE_STATE,
+    pub Flags: D3D12_PIPELINE_STATE_FLAGS,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::marker::Copy for D3D12_GRAPHICS_PIPELINE_STATE_DESC {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::clone::Clone for D3D12_GRAPHICS_PIPELINE_STATE_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_HEAP_DESC {
+    pub SizeInBytes: u64,
+    pub Properties: D3D12_HEAP_PROPERTIES,
+    pub Alignment: u64,
+    pub Flags: D3D12_HEAP_FLAGS,
+}
+impl ::core::marker::Copy for D3D12_HEAP_DESC {}
+impl ::core::clone::Clone for D3D12_HEAP_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_HEAP_PROPERTIES {
+    pub Type: D3D12_HEAP_TYPE,
+    pub CPUPageProperty: D3D12_CPU_PAGE_PROPERTY,
+    pub MemoryPoolPreference: D3D12_MEMORY_POOL,
+    pub CreationNodeMask: u32,
+    pub VisibleNodeMask: u32,
+}
+impl ::core::marker::Copy for D3D12_HEAP_PROPERTIES {}
+impl ::core::clone::Clone for D3D12_HEAP_PROPERTIES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_HIT_GROUP_DESC {
+    pub HitGroupExport: ::windows_sys::core::PCWSTR,
+    pub Type: D3D12_HIT_GROUP_TYPE,
+    pub AnyHitShaderImport: ::windows_sys::core::PCWSTR,
+    pub ClosestHitShaderImport: ::windows_sys::core::PCWSTR,
+    pub IntersectionShaderImport: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for D3D12_HIT_GROUP_DESC {}
+impl ::core::clone::Clone for D3D12_HIT_GROUP_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_INDEX_BUFFER_VIEW {
+    pub BufferLocation: u64,
+    pub SizeInBytes: u32,
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_INDEX_BUFFER_VIEW {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_INDEX_BUFFER_VIEW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_INDIRECT_ARGUMENT_DESC {
+    pub Type: D3D12_INDIRECT_ARGUMENT_TYPE,
+    pub Anonymous: D3D12_INDIRECT_ARGUMENT_DESC_0,
+}
+impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC {}
+impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub union D3D12_INDIRECT_ARGUMENT_DESC_0 {
+    pub VertexBuffer: D3D12_INDIRECT_ARGUMENT_DESC_0_4,
+    pub Constant: D3D12_INDIRECT_ARGUMENT_DESC_0_1,
+    pub ConstantBufferView: D3D12_INDIRECT_ARGUMENT_DESC_0_0,
+    pub ShaderResourceView: D3D12_INDIRECT_ARGUMENT_DESC_0_2,
+    pub UnorderedAccessView: D3D12_INDIRECT_ARGUMENT_DESC_0_3,
+}
+impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC_0 {}
+impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_INDIRECT_ARGUMENT_DESC_0_0 {
+    pub RootParameterIndex: u32,
+}
+impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC_0_0 {}
+impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_INDIRECT_ARGUMENT_DESC_0_1 {
+    pub RootParameterIndex: u32,
+    pub DestOffsetIn32BitValues: u32,
+    pub Num32BitValuesToSet: u32,
+}
+impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC_0_1 {}
+impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC_0_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_INDIRECT_ARGUMENT_DESC_0_2 {
+    pub RootParameterIndex: u32,
+}
+impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC_0_2 {}
+impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC_0_2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_INDIRECT_ARGUMENT_DESC_0_3 {
+    pub RootParameterIndex: u32,
+}
+impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC_0_3 {}
+impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC_0_3 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_INDIRECT_ARGUMENT_DESC_0_4 {
+    pub Slot: u32,
+}
+impl ::core::marker::Copy for D3D12_INDIRECT_ARGUMENT_DESC_0_4 {}
+impl ::core::clone::Clone for D3D12_INDIRECT_ARGUMENT_DESC_0_4 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_INFO_QUEUE_FILTER {
+    pub AllowList: D3D12_INFO_QUEUE_FILTER_DESC,
+    pub DenyList: D3D12_INFO_QUEUE_FILTER_DESC,
+}
+impl ::core::marker::Copy for D3D12_INFO_QUEUE_FILTER {}
+impl ::core::clone::Clone for D3D12_INFO_QUEUE_FILTER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_INFO_QUEUE_FILTER_DESC {
+    pub NumCategories: u32,
+    pub pCategoryList: *mut D3D12_MESSAGE_CATEGORY,
+    pub NumSeverities: u32,
+    pub pSeverityList: *mut D3D12_MESSAGE_SEVERITY,
+    pub NumIDs: u32,
+    pub pIDList: *mut D3D12_MESSAGE_ID,
+}
+impl ::core::marker::Copy for D3D12_INFO_QUEUE_FILTER_DESC {}
+impl ::core::clone::Clone for D3D12_INFO_QUEUE_FILTER_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_INPUT_ELEMENT_DESC {
+    pub SemanticName: ::windows_sys::core::PCSTR,
+    pub SemanticIndex: u32,
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+    pub InputSlot: u32,
+    pub AlignedByteOffset: u32,
+    pub InputSlotClass: D3D12_INPUT_CLASSIFICATION,
+    pub InstanceDataStepRate: u32,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_INPUT_ELEMENT_DESC {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_INPUT_ELEMENT_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_INPUT_LAYOUT_DESC {
+    pub pInputElementDescs: *const D3D12_INPUT_ELEMENT_DESC,
+    pub NumElements: u32,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_INPUT_LAYOUT_DESC {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_INPUT_LAYOUT_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_LIBRARY_DESC {
+    pub Creator: ::windows_sys::core::PCSTR,
+    pub Flags: u32,
+    pub FunctionCount: u32,
+}
+impl ::core::marker::Copy for D3D12_LIBRARY_DESC {}
+impl ::core::clone::Clone for D3D12_LIBRARY_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_LOCAL_ROOT_SIGNATURE {
+    pub pLocalRootSignature: ID3D12RootSignature,
+}
+impl ::core::marker::Copy for D3D12_LOCAL_ROOT_SIGNATURE {}
+impl ::core::clone::Clone for D3D12_LOCAL_ROOT_SIGNATURE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_MEMCPY_DEST {
+    pub pData: *mut ::core::ffi::c_void,
+    pub RowPitch: usize,
+    pub SlicePitch: usize,
+}
+impl ::core::marker::Copy for D3D12_MEMCPY_DEST {}
+impl ::core::clone::Clone for D3D12_MEMCPY_DEST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_MESSAGE {
+    pub Category: D3D12_MESSAGE_CATEGORY,
+    pub Severity: D3D12_MESSAGE_SEVERITY,
+    pub ID: D3D12_MESSAGE_ID,
+    pub pDescription: *const u8,
+    pub DescriptionByteLength: usize,
+}
+impl ::core::marker::Copy for D3D12_MESSAGE {}
+impl ::core::clone::Clone for D3D12_MESSAGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_META_COMMAND_DESC {
+    pub Id: ::windows_sys::core::GUID,
+    pub Name: ::windows_sys::core::PCWSTR,
+    pub InitializationDirtyState: D3D12_GRAPHICS_STATES,
+    pub ExecutionDirtyState: D3D12_GRAPHICS_STATES,
+}
+impl ::core::marker::Copy for D3D12_META_COMMAND_DESC {}
+impl ::core::clone::Clone for D3D12_META_COMMAND_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_META_COMMAND_PARAMETER_DESC {
+    pub Name: ::windows_sys::core::PCWSTR,
+    pub Type: D3D12_META_COMMAND_PARAMETER_TYPE,
+    pub Flags: D3D12_META_COMMAND_PARAMETER_FLAGS,
+    pub RequiredResourceState: D3D12_RESOURCE_STATES,
+    pub StructureOffset: u32,
+}
+impl ::core::marker::Copy for D3D12_META_COMMAND_PARAMETER_DESC {}
+impl ::core::clone::Clone for D3D12_META_COMMAND_PARAMETER_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_MIP_REGION {
+    pub Width: u32,
+    pub Height: u32,
+    pub Depth: u32,
+}
+impl ::core::marker::Copy for D3D12_MIP_REGION {}
+impl ::core::clone::Clone for D3D12_MIP_REGION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_NODE_MASK {
+    pub NodeMask: u32,
+}
+impl ::core::marker::Copy for D3D12_NODE_MASK {}
+impl ::core::clone::Clone for D3D12_NODE_MASK {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_PACKED_MIP_INFO {
+    pub NumStandardMips: u8,
+    pub NumPackedMips: u8,
+    pub NumTilesForPackedMips: u32,
+    pub StartTileIndexInOverallResource: u32,
+}
+impl ::core::marker::Copy for D3D12_PACKED_MIP_INFO {}
+impl ::core::clone::Clone for D3D12_PACKED_MIP_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Direct3D\"`*"]
+#[cfg(feature = "Win32_Graphics_Direct3D")]
+pub struct D3D12_PARAMETER_DESC {
+    pub Name: ::windows_sys::core::PCSTR,
+    pub SemanticName: ::windows_sys::core::PCSTR,
+    pub Type: super::Direct3D::D3D_SHADER_VARIABLE_TYPE,
+    pub Class: super::Direct3D::D3D_SHADER_VARIABLE_CLASS,
+    pub Rows: u32,
+    pub Columns: u32,
+    pub InterpolationMode: super::Direct3D::D3D_INTERPOLATION_MODE,
+    pub Flags: super::Direct3D::D3D_PARAMETER_FLAGS,
+    pub FirstInRegister: u32,
+    pub FirstInComponent: u32,
+    pub FirstOutRegister: u32,
+    pub FirstOutComponent: u32,
+}
+#[cfg(feature = "Win32_Graphics_Direct3D")]
+impl ::core::marker::Copy for D3D12_PARAMETER_DESC {}
+#[cfg(feature = "Win32_Graphics_Direct3D")]
+impl ::core::clone::Clone for D3D12_PARAMETER_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_PIPELINE_STATE_STREAM_DESC {
+    pub SizeInBytes: usize,
+    pub pPipelineStateSubobjectStream: *mut ::core::ffi::c_void,
+}
+impl ::core::marker::Copy for D3D12_PIPELINE_STATE_STREAM_DESC {}
+impl ::core::clone::Clone for D3D12_PIPELINE_STATE_STREAM_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_PLACED_SUBRESOURCE_FOOTPRINT {
+    pub Offset: u64,
+    pub Footprint: D3D12_SUBRESOURCE_FOOTPRINT,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_PLACED_SUBRESOURCE_FOOTPRINT {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_PLACED_SUBRESOURCE_FOOTPRINT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_PROTECTED_RESOURCE_SESSION_DESC {
+    pub NodeMask: u32,
+    pub Flags: D3D12_PROTECTED_RESOURCE_SESSION_FLAGS,
+}
+impl ::core::marker::Copy for D3D12_PROTECTED_RESOURCE_SESSION_DESC {}
+impl ::core::clone::Clone for D3D12_PROTECTED_RESOURCE_SESSION_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_PROTECTED_RESOURCE_SESSION_DESC1 {
+    pub NodeMask: u32,
+    pub Flags: D3D12_PROTECTED_RESOURCE_SESSION_FLAGS,
+    pub ProtectionType: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for D3D12_PROTECTED_RESOURCE_SESSION_DESC1 {}
+impl ::core::clone::Clone for D3D12_PROTECTED_RESOURCE_SESSION_DESC1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_QUERY_DATA_PIPELINE_STATISTICS {
+    pub IAVertices: u64,
+    pub IAPrimitives: u64,
+    pub VSInvocations: u64,
+    pub GSInvocations: u64,
+    pub GSPrimitives: u64,
+    pub CInvocations: u64,
+    pub CPrimitives: u64,
+    pub PSInvocations: u64,
+    pub HSInvocations: u64,
+    pub DSInvocations: u64,
+    pub CSInvocations: u64,
+}
+impl ::core::marker::Copy for D3D12_QUERY_DATA_PIPELINE_STATISTICS {}
+impl ::core::clone::Clone for D3D12_QUERY_DATA_PIPELINE_STATISTICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_QUERY_DATA_PIPELINE_STATISTICS1 {
+    pub IAVertices: u64,
+    pub IAPrimitives: u64,
+    pub VSInvocations: u64,
+    pub GSInvocations: u64,
+    pub GSPrimitives: u64,
+    pub CInvocations: u64,
+    pub CPrimitives: u64,
+    pub PSInvocations: u64,
+    pub HSInvocations: u64,
+    pub DSInvocations: u64,
+    pub CSInvocations: u64,
+    pub ASInvocations: u64,
+    pub MSInvocations: u64,
+    pub MSPrimitives: u64,
+}
+impl ::core::marker::Copy for D3D12_QUERY_DATA_PIPELINE_STATISTICS1 {}
+impl ::core::clone::Clone for D3D12_QUERY_DATA_PIPELINE_STATISTICS1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_QUERY_DATA_SO_STATISTICS {
+    pub NumPrimitivesWritten: u64,
+    pub PrimitivesStorageNeeded: u64,
+}
+impl ::core::marker::Copy for D3D12_QUERY_DATA_SO_STATISTICS {}
+impl ::core::clone::Clone for D3D12_QUERY_DATA_SO_STATISTICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_QUERY_HEAP_DESC {
+    pub Type: D3D12_QUERY_HEAP_TYPE,
+    pub Count: u32,
+    pub NodeMask: u32,
+}
+impl ::core::marker::Copy for D3D12_QUERY_HEAP_DESC {}
+impl ::core::clone::Clone for D3D12_QUERY_HEAP_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RANGE {
+    pub Begin: usize,
+    pub End: usize,
+}
+impl ::core::marker::Copy for D3D12_RANGE {}
+impl ::core::clone::Clone for D3D12_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RANGE_UINT64 {
+    pub Begin: u64,
+    pub End: u64,
+}
+impl ::core::marker::Copy for D3D12_RANGE_UINT64 {}
+impl ::core::clone::Clone for D3D12_RANGE_UINT64 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_RASTERIZER_DESC {
+    pub FillMode: D3D12_FILL_MODE,
+    pub CullMode: D3D12_CULL_MODE,
+    pub FrontCounterClockwise: super::super::Foundation::BOOL,
+    pub DepthBias: i32,
+    pub DepthBiasClamp: f32,
+    pub SlopeScaledDepthBias: f32,
+    pub DepthClipEnable: super::super::Foundation::BOOL,
+    pub MultisampleEnable: super::super::Foundation::BOOL,
+    pub AntialiasedLineEnable: super::super::Foundation::BOOL,
+    pub ForcedSampleCount: u32,
+    pub ConservativeRaster: D3D12_CONSERVATIVE_RASTERIZATION_MODE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_RASTERIZER_DESC {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_RASTERIZER_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_AABB {
+    pub MinX: f32,
+    pub MinY: f32,
+    pub MinZ: f32,
+    pub MaxX: f32,
+    pub MaxY: f32,
+    pub MaxZ: f32,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_AABB {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_AABB {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC {
+    pub CompactedSizeInBytes: u64,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_CURRENT_SIZE_DESC {
+    pub CurrentSizeInBytes: u64,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_CURRENT_SIZE_DESC {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_CURRENT_SIZE_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC {
+    pub DestBuffer: u64,
+    pub InfoType: D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TYPE,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION_DESC {
+    pub SerializedSizeInBytes: u64,
+    pub NumBottomLevelAccelerationStructurePointers: u64,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION_DESC {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TOOLS_VISUALIZATION_DESC {
+    pub DecodedSizeInBytes: u64,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TOOLS_VISUALIZATION_DESC {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_TOOLS_VISUALIZATION_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO {
+    pub ResultDataMaxSizeInBytes: u64,
+    pub ScratchDataSizeInBytes: u64,
+    pub UpdateScratchDataSizeInBytes: u64,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV {
+    pub Location: u64,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_GEOMETRY_AABBS_DESC {
+    pub AABBCount: u64,
+    pub AABBs: D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_GEOMETRY_AABBS_DESC {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_GEOMETRY_AABBS_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_RAYTRACING_GEOMETRY_DESC {
+    pub Type: D3D12_RAYTRACING_GEOMETRY_TYPE,
+    pub Flags: D3D12_RAYTRACING_GEOMETRY_FLAGS,
+    pub Anonymous: D3D12_RAYTRACING_GEOMETRY_DESC_0,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_RAYTRACING_GEOMETRY_DESC {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_RAYTRACING_GEOMETRY_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub union D3D12_RAYTRACING_GEOMETRY_DESC_0 {
+    pub Triangles: D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC,
+    pub AABBs: D3D12_RAYTRACING_GEOMETRY_AABBS_DESC,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_RAYTRACING_GEOMETRY_DESC_0 {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_RAYTRACING_GEOMETRY_DESC_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC {
+    pub Transform3x4: u64,
+    pub IndexFormat: super::Dxgi::Common::DXGI_FORMAT,
+    pub VertexFormat: super::Dxgi::Common::DXGI_FORMAT,
+    pub IndexCount: u32,
+    pub VertexCount: u32,
+    pub IndexBuffer: u64,
+    pub VertexBuffer: D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_INSTANCE_DESC {
+    pub Transform: [f32; 12],
+    pub _bitfield1: u32,
+    pub _bitfield2: u32,
+    pub AccelerationStructure: u64,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_INSTANCE_DESC {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_INSTANCE_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_PIPELINE_CONFIG {
+    pub MaxTraceRecursionDepth: u32,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_PIPELINE_CONFIG {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_PIPELINE_CONFIG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_PIPELINE_CONFIG1 {
+    pub MaxTraceRecursionDepth: u32,
+    pub Flags: D3D12_RAYTRACING_PIPELINE_FLAGS,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_PIPELINE_CONFIG1 {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_PIPELINE_CONFIG1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RAYTRACING_SHADER_CONFIG {
+    pub MaxPayloadSizeInBytes: u32,
+    pub MaxAttributeSizeInBytes: u32,
+}
+impl ::core::marker::Copy for D3D12_RAYTRACING_SHADER_CONFIG {}
+impl ::core::clone::Clone for D3D12_RAYTRACING_SHADER_CONFIG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_RENDER_PASS_BEGINNING_ACCESS {
+    pub Type: D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE,
+    pub Anonymous: D3D12_RENDER_PASS_BEGINNING_ACCESS_0,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_RENDER_PASS_BEGINNING_ACCESS {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_RENDER_PASS_BEGINNING_ACCESS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub union D3D12_RENDER_PASS_BEGINNING_ACCESS_0 {
+    pub Clear: D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_RENDER_PASS_BEGINNING_ACCESS_0 {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_RENDER_PASS_BEGINNING_ACCESS_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS {
+    pub ClearValue: D3D12_CLEAR_VALUE,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_RENDER_PASS_BEGINNING_ACCESS_CLEAR_PARAMETERS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+pub struct D3D12_RENDER_PASS_DEPTH_STENCIL_DESC {
+    pub cpuDescriptor: D3D12_CPU_DESCRIPTOR_HANDLE,
+    pub DepthBeginningAccess: D3D12_RENDER_PASS_BEGINNING_ACCESS,
+    pub StencilBeginningAccess: D3D12_RENDER_PASS_BEGINNING_ACCESS,
+    pub DepthEndingAccess: D3D12_RENDER_PASS_ENDING_ACCESS,
+    pub StencilEndingAccess: D3D12_RENDER_PASS_ENDING_ACCESS,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::marker::Copy for D3D12_RENDER_PASS_DEPTH_STENCIL_DESC {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::clone::Clone for D3D12_RENDER_PASS_DEPTH_STENCIL_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+pub struct D3D12_RENDER_PASS_ENDING_ACCESS {
+    pub Type: D3D12_RENDER_PASS_ENDING_ACCESS_TYPE,
+    pub Anonymous: D3D12_RENDER_PASS_ENDING_ACCESS_0,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::marker::Copy for D3D12_RENDER_PASS_ENDING_ACCESS {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::clone::Clone for D3D12_RENDER_PASS_ENDING_ACCESS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+pub union D3D12_RENDER_PASS_ENDING_ACCESS_0 {
+    pub Resolve: D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::marker::Copy for D3D12_RENDER_PASS_ENDING_ACCESS_0 {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::clone::Clone for D3D12_RENDER_PASS_ENDING_ACCESS_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+pub struct D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS {
+    pub pSrcResource: ID3D12Resource,
+    pub pDstResource: ID3D12Resource,
+    pub SubresourceCount: u32,
+    pub pSubresourceParameters: *const D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS,
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+    pub ResolveMode: D3D12_RESOLVE_MODE,
+    pub PreserveResolveSource: super::super::Foundation::BOOL,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::marker::Copy for D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::clone::Clone for D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS {
+    pub SrcSubresource: u32,
+    pub DstSubresource: u32,
+    pub DstX: u32,
+    pub DstY: u32,
+    pub SrcRect: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+pub struct D3D12_RENDER_PASS_RENDER_TARGET_DESC {
+    pub cpuDescriptor: D3D12_CPU_DESCRIPTOR_HANDLE,
+    pub BeginningAccess: D3D12_RENDER_PASS_BEGINNING_ACCESS,
+    pub EndingAccess: D3D12_RENDER_PASS_ENDING_ACCESS,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::marker::Copy for D3D12_RENDER_PASS_RENDER_TARGET_DESC {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Dxgi_Common"))]
+impl ::core::clone::Clone for D3D12_RENDER_PASS_RENDER_TARGET_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct D3D12_RENDER_TARGET_BLEND_DESC {
+    pub BlendEnable: super::super::Foundation::BOOL,
+    pub LogicOpEnable: super::super::Foundation::BOOL,
+    pub SrcBlend: D3D12_BLEND,
+    pub DestBlend: D3D12_BLEND,
+    pub BlendOp: D3D12_BLEND_OP,
+    pub SrcBlendAlpha: D3D12_BLEND,
+    pub DestBlendAlpha: D3D12_BLEND,
+    pub BlendOpAlpha: D3D12_BLEND_OP,
+    pub LogicOp: D3D12_LOGIC_OP,
+    pub RenderTargetWriteMask: u8,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for D3D12_RENDER_TARGET_BLEND_DESC {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for D3D12_RENDER_TARGET_BLEND_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_RENDER_TARGET_VIEW_DESC {
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+    pub ViewDimension: D3D12_RTV_DIMENSION,
+    pub Anonymous: D3D12_RENDER_TARGET_VIEW_DESC_0,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_RENDER_TARGET_VIEW_DESC {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_RENDER_TARGET_VIEW_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub union D3D12_RENDER_TARGET_VIEW_DESC_0 {
+    pub Buffer: D3D12_BUFFER_RTV,
+    pub Texture1D: D3D12_TEX1D_RTV,
+    pub Texture1DArray: D3D12_TEX1D_ARRAY_RTV,
+    pub Texture2D: D3D12_TEX2D_RTV,
+    pub Texture2DArray: D3D12_TEX2D_ARRAY_RTV,
+    pub Texture2DMS: D3D12_TEX2DMS_RTV,
+    pub Texture2DMSArray: D3D12_TEX2DMS_ARRAY_RTV,
+    pub Texture3D: D3D12_TEX3D_RTV,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_RENDER_TARGET_VIEW_DESC_0 {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_RENDER_TARGET_VIEW_DESC_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RESOURCE_ALIASING_BARRIER {
+    pub pResourceBefore: ID3D12Resource,
+    pub pResourceAfter: ID3D12Resource,
+}
+impl ::core::marker::Copy for D3D12_RESOURCE_ALIASING_BARRIER {}
+impl ::core::clone::Clone for D3D12_RESOURCE_ALIASING_BARRIER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RESOURCE_ALLOCATION_INFO {
+    pub SizeInBytes: u64,
+    pub Alignment: u64,
+}
+impl ::core::marker::Copy for D3D12_RESOURCE_ALLOCATION_INFO {}
+impl ::core::clone::Clone for D3D12_RESOURCE_ALLOCATION_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RESOURCE_ALLOCATION_INFO1 {
+    pub Offset: u64,
+    pub Alignment: u64,
+    pub SizeInBytes: u64,
+}
+impl ::core::marker::Copy for D3D12_RESOURCE_ALLOCATION_INFO1 {}
+impl ::core::clone::Clone for D3D12_RESOURCE_ALLOCATION_INFO1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub struct D3D12_RESOURCE_BARRIER {
+    pub Type: D3D12_RESOURCE_BARRIER_TYPE,
+    pub Flags: D3D12_RESOURCE_BARRIER_FLAGS,
+    pub Anonymous: D3D12_RESOURCE_BARRIER_0,
+}
+impl ::core::marker::Copy for D3D12_RESOURCE_BARRIER {}
+impl ::core::clone::Clone for D3D12_RESOURCE_BARRIER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
+pub union D3D12_RESOURCE_BARRIER_0 {
+    pub Transition: D3D12_RESOURCE_TRANSITION_BARRIER,
+    pub Aliasing: D3D12_RESOURCE_ALIASING_BARRIER,
+    pub UAV: D3D12_RESOURCE_UAV_BARRIER,
+}
+impl ::core::marker::Copy for D3D12_RESOURCE_BARRIER_0 {}
+impl ::core::clone::Clone for D3D12_RESOURCE_BARRIER_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_RESOURCE_DESC {
+    pub Dimension: D3D12_RESOURCE_DIMENSION,
+    pub Alignment: u64,
+    pub Width: u64,
+    pub Height: u32,
+    pub DepthOrArraySize: u16,
+    pub MipLevels: u16,
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+    pub SampleDesc: super::Dxgi::Common::DXGI_SAMPLE_DESC,
+    pub Layout: D3D12_TEXTURE_LAYOUT,
+    pub Flags: D3D12_RESOURCE_FLAGS,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_RESOURCE_DESC {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_RESOURCE_DESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+pub struct D3D12_RESOURCE_DESC1 {
+    pub Dimension: D3D12_RESOURCE_DIMENSION,
+    pub Alignment: u64,
+    pub Width: u64,
+    pub Height: u32,
+    pub DepthOrArraySize: u16,
+    pub MipLevels: u16,
+    pub Format: super::Dxgi::Common::DXGI_FORMAT,
+    pub SampleDesc: super::Dxgi::Common::DXGI_SAMPLE_DESC,
+    pub Layout: D3D12_TEXTURE_LAYOUT,
+    pub Flags: D3D12_RESOURCE_FLAGS,
+    pub SamplerFeedbackMipRegion: D3D12_MIP_REGION,
+}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::marker::Copy for D3D12_RESOURCE_DESC1 {}
+#[cfg(feature = "Win32_Graphics_Dxgi_Common")]
+impl ::core::clone::Clone for D3D12_RESOURCE_DESC1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_RESOURCE_TRANSITION_BARRIER {
@@ -6502,16 +7273,6 @@ impl ::core::clone::Clone for D3D12_RESOURCE_UAV_BARRIER {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_RLDO_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RLDO_NONE: D3D12_RLDO_FLAGS = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RLDO_SUMMARY: D3D12_RLDO_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RLDO_DETAIL: D3D12_RLDO_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RLDO_IGNORE_INTERNAL: D3D12_RLDO_FLAGS = 4i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_ROOT_CONSTANTS {
@@ -6550,16 +7311,6 @@ impl ::core::clone::Clone for D3D12_ROOT_DESCRIPTOR1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_ROOT_DESCRIPTOR_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_DESCRIPTOR_FLAG_NONE: D3D12_ROOT_DESCRIPTOR_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE: D3D12_ROOT_DESCRIPTOR_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE: D3D12_ROOT_DESCRIPTOR_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC: D3D12_ROOT_DESCRIPTOR_FLAGS = 8u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_ROOT_DESCRIPTOR_TABLE {
@@ -6636,18 +7387,6 @@ impl ::core::clone::Clone for D3D12_ROOT_PARAMETER1_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_ROOT_PARAMETER_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE: D3D12_ROOT_PARAMETER_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS: D3D12_ROOT_PARAMETER_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_PARAMETER_TYPE_CBV: D3D12_ROOT_PARAMETER_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_PARAMETER_TYPE_SRV: D3D12_ROOT_PARAMETER_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_PARAMETER_TYPE_UAV: D3D12_ROOT_PARAMETER_TYPE = 4i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_ROOT_SIGNATURE_DESC {
@@ -6678,56 +7417,6 @@ impl ::core::clone::Clone for D3D12_ROOT_SIGNATURE_DESC1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_ROOT_SIGNATURE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_NONE: D3D12_ROOT_SIGNATURE_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT: D3D12_ROOT_SIGNATURE_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT: D3D12_ROOT_SIGNATURE_FLAGS = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE: D3D12_ROOT_SIGNATURE_FLAGS = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 256u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS: D3D12_ROOT_SIGNATURE_FLAGS = 512u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED: D3D12_ROOT_SIGNATURE_FLAGS = 1024u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED: D3D12_ROOT_SIGNATURE_FLAGS = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RS_SET_SHADING_RATE_COMBINER_COUNT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_RTV_DIMENSION = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RTV_DIMENSION_UNKNOWN: D3D12_RTV_DIMENSION = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RTV_DIMENSION_BUFFER: D3D12_RTV_DIMENSION = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RTV_DIMENSION_TEXTURE1D: D3D12_RTV_DIMENSION = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RTV_DIMENSION_TEXTURE1DARRAY: D3D12_RTV_DIMENSION = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RTV_DIMENSION_TEXTURE2D: D3D12_RTV_DIMENSION = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RTV_DIMENSION_TEXTURE2DARRAY: D3D12_RTV_DIMENSION = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RTV_DIMENSION_TEXTURE2DMS: D3D12_RTV_DIMENSION = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY: D3D12_RTV_DIMENSION = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_RTV_DIMENSION_TEXTURE3D: D3D12_RTV_DIMENSION = 8i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
 #[cfg(feature = "Win32_Graphics_Dxgi_Common")]
@@ -6763,14 +7452,6 @@ impl ::core::clone::Clone for D3D12_SAMPLER_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SAMPLER_FEEDBACK_TIER = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SAMPLER_FEEDBACK_TIER_NOT_SUPPORTED: D3D12_SAMPLER_FEEDBACK_TIER = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SAMPLER_FEEDBACK_TIER_0_9: D3D12_SAMPLER_FEEDBACK_TIER = 90i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SAMPLER_FEEDBACK_TIER_1_0: D3D12_SAMPLER_FEEDBACK_TIER = 100i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_SAMPLE_POSITION {
@@ -6783,8 +7464,6 @@ impl ::core::clone::Clone for D3D12_SAMPLE_POSITION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SDK_VERSION: u32 = 5u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_SERIALIZED_DATA_DRIVER_MATCHING_IDENTIFIER {
@@ -6797,10 +7476,6 @@ impl ::core::clone::Clone for D3D12_SERIALIZED_DATA_DRIVER_MATCHING_IDENTIFIER {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SERIALIZED_DATA_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SERIALIZED_DATA_RAYTRACING_ACCELERATION_STRUCTURE: D3D12_SERIALIZED_DATA_TYPE = 0i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_SERIALIZED_RAYTRACING_ACCELERATION_STRUCTURE_HEADER {
@@ -6845,38 +7520,6 @@ impl ::core::clone::Clone for D3D12_SHADER_BYTECODE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SHADER_CACHE_CONTROL_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_CONTROL_FLAG_DISABLE: D3D12_SHADER_CACHE_CONTROL_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_CONTROL_FLAG_ENABLE: D3D12_SHADER_CACHE_CONTROL_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_CONTROL_FLAG_CLEAR: D3D12_SHADER_CACHE_CONTROL_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SHADER_CACHE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_FLAG_NONE: D3D12_SHADER_CACHE_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_FLAG_DRIVER_VERSIONED: D3D12_SHADER_CACHE_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_FLAG_USE_WORKING_DIR: D3D12_SHADER_CACHE_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SHADER_CACHE_KIND_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_KIND_FLAG_IMPLICIT_D3D_CACHE_FOR_DRIVER: D3D12_SHADER_CACHE_KIND_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_KIND_FLAG_IMPLICIT_D3D_CONVERSIONS: D3D12_SHADER_CACHE_KIND_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_KIND_FLAG_IMPLICIT_DRIVER_MANAGED: D3D12_SHADER_CACHE_KIND_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_KIND_FLAG_APPLICATION_MANAGED: D3D12_SHADER_CACHE_KIND_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SHADER_CACHE_MODE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_MODE_MEMORY: D3D12_SHADER_CACHE_MODE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_MODE_DISK: D3D12_SHADER_CACHE_MODE = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_SHADER_CACHE_SESSION_DESC {
@@ -6894,44 +7537,6 @@ impl ::core::clone::Clone for D3D12_SHADER_CACHE_SESSION_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SHADER_CACHE_SUPPORT_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_SUPPORT_NONE: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_SUPPORT_SINGLE_PSO: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_SUPPORT_LIBRARY: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_SUPPORT_AUTOMATIC_INPROC_CACHE: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_SUPPORT_AUTOMATIC_DISK_CACHE: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_SUPPORT_DRIVER_MANAGED_CACHE: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_SUPPORT_SHADER_CONTROL_CLEAR: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_CACHE_SUPPORT_SHADER_SESSION_DELETE: D3D12_SHADER_CACHE_SUPPORT_FLAGS = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SHADER_COMPONENT_MAPPING = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0: D3D12_SHADER_COMPONENT_MAPPING = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1: D3D12_SHADER_COMPONENT_MAPPING = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2: D3D12_SHADER_COMPONENT_MAPPING = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3: D3D12_SHADER_COMPONENT_MAPPING = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0: D3D12_SHADER_COMPONENT_MAPPING = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1: D3D12_SHADER_COMPONENT_MAPPING = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_COMPONENT_MAPPING_ALWAYS_SET_BIT_AVOIDING_ZEROMEM_MISTAKES: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_COMPONENT_MAPPING_MASK: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_COMPONENT_MAPPING_SHIFT: u32 = 3u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Direct3D\"`*"]
 #[cfg(feature = "Win32_Graphics_Direct3D")]
@@ -6983,8 +7588,6 @@ impl ::core::clone::Clone for D3D12_SHADER_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES: u32 = 32u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Direct3D\"`*"]
 #[cfg(feature = "Win32_Graphics_Direct3D")]
@@ -7008,26 +7611,6 @@ impl ::core::clone::Clone for D3D12_SHADER_INPUT_BIND_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_MAJOR_VERSION: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_MAX_INSTANCES: u32 = 65535u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_MAX_INTERFACES: u32 = 253u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_MAX_INTERFACE_CALL_SITES: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_MAX_TYPES: u32 = 65535u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_MINOR_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SHADER_MIN_PRECISION_SUPPORT = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_MIN_PRECISION_SUPPORT_NONE: D3D12_SHADER_MIN_PRECISION_SUPPORT = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_MIN_PRECISION_SUPPORT_10_BIT: D3D12_SHADER_MIN_PRECISION_SUPPORT = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_MIN_PRECISION_SUPPORT_16_BIT: D3D12_SHADER_MIN_PRECISION_SUPPORT = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
 #[cfg(feature = "Win32_Graphics_Dxgi_Common")]
@@ -7109,84 +7692,6 @@ impl ::core::clone::Clone for D3D12_SHADER_VARIABLE_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SHADER_VERSION_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHVER_PIXEL_SHADER: D3D12_SHADER_VERSION_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHVER_VERTEX_SHADER: D3D12_SHADER_VERSION_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHVER_GEOMETRY_SHADER: D3D12_SHADER_VERSION_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHVER_HULL_SHADER: D3D12_SHADER_VERSION_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHVER_DOMAIN_SHADER: D3D12_SHADER_VERSION_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHVER_COMPUTE_SHADER: D3D12_SHADER_VERSION_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHVER_RESERVED0: D3D12_SHADER_VERSION_TYPE = 65520i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SHADER_VISIBILITY = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_VISIBILITY_ALL: D3D12_SHADER_VISIBILITY = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_VISIBILITY_VERTEX: D3D12_SHADER_VISIBILITY = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_VISIBILITY_HULL: D3D12_SHADER_VISIBILITY = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_VISIBILITY_DOMAIN: D3D12_SHADER_VISIBILITY = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_VISIBILITY_GEOMETRY: D3D12_SHADER_VISIBILITY = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_VISIBILITY_PIXEL: D3D12_SHADER_VISIBILITY = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_VISIBILITY_AMPLIFICATION: D3D12_SHADER_VISIBILITY = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADER_VISIBILITY_MESH: D3D12_SHADER_VISIBILITY = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SHADING_RATE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_1X1: D3D12_SHADING_RATE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_1X2: D3D12_SHADING_RATE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_2X1: D3D12_SHADING_RATE = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_2X2: D3D12_SHADING_RATE = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_2X4: D3D12_SHADING_RATE = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_4X2: D3D12_SHADING_RATE = 9i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_4X4: D3D12_SHADING_RATE = 10i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SHADING_RATE_COMBINER = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_COMBINER_PASSTHROUGH: D3D12_SHADING_RATE_COMBINER = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_COMBINER_OVERRIDE: D3D12_SHADING_RATE_COMBINER = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_COMBINER_MIN: D3D12_SHADING_RATE_COMBINER = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_COMBINER_MAX: D3D12_SHADING_RATE_COMBINER = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_COMBINER_SUM: D3D12_SHADING_RATE_COMBINER = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_VALID_MASK: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHADING_RATE_X_AXIS_SHIFT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_0: D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_1: D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER_2: D3D12_SHARED_RESOURCE_COMPATIBILITY_TIER = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHIFT_INSTRUCTION_PAD_VALUE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SHIFT_INSTRUCTION_SHIFT_VALUE_BIT_COUNT: u32 = 5u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Direct3D\"`*"]
 #[cfg(feature = "Win32_Graphics_Direct3D")]
@@ -7209,20 +7714,6 @@ impl ::core::clone::Clone for D3D12_SIGNATURE_PARAMETER_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SMALL_MSAA_RESOURCE_PLACEMENT_ALIGNMENT: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SO_BUFFER_MAX_STRIDE_IN_BYTES: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SO_BUFFER_MAX_WRITE_WINDOW_IN_BYTES: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SO_BUFFER_SLOT_COUNT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SO_DDI_REGISTER_INDEX_DENOTING_GAP: u32 = 4294967295u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_SO_DECLARATION_ENTRY {
@@ -7239,76 +7730,6 @@ impl ::core::clone::Clone for D3D12_SO_DECLARATION_ENTRY {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SO_NO_RASTERIZED_STREAM: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SO_OUTPUT_COMPONENT_COUNT: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SO_STREAM_COUNT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SPEC_DATE_DAY: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SPEC_DATE_MONTH: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SPEC_DATE_YEAR: u32 = 2014u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SPEC_VERSION: f64 = 1.16f64;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRGB_GAMMA: f32 = 2.2f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRGB_TO_FLOAT_DENOMINATOR_1: f32 = 12.92f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRGB_TO_FLOAT_DENOMINATOR_2: f32 = 1.055f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRGB_TO_FLOAT_EXPONENT: f32 = 2.4f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRGB_TO_FLOAT_OFFSET: f32 = 0.055f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRGB_TO_FLOAT_THRESHOLD: f32 = 0.04045f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRGB_TO_FLOAT_TOLERANCE_IN_ULP: f32 = 0.5f32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_SRV_DIMENSION = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRV_DIMENSION_UNKNOWN: D3D12_SRV_DIMENSION = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRV_DIMENSION_BUFFER: D3D12_SRV_DIMENSION = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRV_DIMENSION_TEXTURE1D: D3D12_SRV_DIMENSION = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRV_DIMENSION_TEXTURE1DARRAY: D3D12_SRV_DIMENSION = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRV_DIMENSION_TEXTURE2D: D3D12_SRV_DIMENSION = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRV_DIMENSION_TEXTURE2DARRAY: D3D12_SRV_DIMENSION = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRV_DIMENSION_TEXTURE2DMS: D3D12_SRV_DIMENSION = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY: D3D12_SRV_DIMENSION = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRV_DIMENSION_TEXTURE3D: D3D12_SRV_DIMENSION = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRV_DIMENSION_TEXTURECUBE: D3D12_SRV_DIMENSION = 9i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRV_DIMENSION_TEXTURECUBEARRAY: D3D12_SRV_DIMENSION = 10i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE: D3D12_SRV_DIMENSION = 11i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STANDARD_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STANDARD_COMPONENT_BIT_COUNT_DOUBLED: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STANDARD_MAXIMUM_ELEMENT_ALIGNMENT_BYTE_MULTIPLE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STANDARD_PIXEL_COMPONENT_COUNT: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STANDARD_PIXEL_ELEMENT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STANDARD_VECTOR_SIZE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STANDARD_VERTEX_ELEMENT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STANDARD_VERTEX_TOTAL_COMPONENT_COUNT: u32 = 64u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_STATE_OBJECT_CONFIG {
@@ -7333,22 +7754,6 @@ impl ::core::clone::Clone for D3D12_STATE_OBJECT_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_STATE_OBJECT_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_OBJECT_FLAG_NONE: D3D12_STATE_OBJECT_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_OBJECT_FLAG_ALLOW_LOCAL_DEPENDENCIES_ON_EXTERNAL_DEFINITIONS: D3D12_STATE_OBJECT_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_OBJECT_FLAG_ALLOW_EXTERNAL_DEPENDENCIES_ON_LOCAL_DEFINITIONS: D3D12_STATE_OBJECT_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_OBJECT_FLAG_ALLOW_STATE_OBJECT_ADDITIONS: D3D12_STATE_OBJECT_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_STATE_OBJECT_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_OBJECT_TYPE_COLLECTION: D3D12_STATE_OBJECT_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE: D3D12_STATE_OBJECT_TYPE = 3i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_STATE_SUBOBJECT {
@@ -7361,42 +7766,6 @@ impl ::core::clone::Clone for D3D12_STATE_SUBOBJECT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_STATE_SUBOBJECT_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_STATE_OBJECT_CONFIG: D3D12_STATE_SUBOBJECT_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE: D3D12_STATE_SUBOBJECT_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE: D3D12_STATE_SUBOBJECT_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_NODE_MASK: D3D12_STATE_SUBOBJECT_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY: D3D12_STATE_SUBOBJECT_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION: D3D12_STATE_SUBOBJECT_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION: D3D12_STATE_SUBOBJECT_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION: D3D12_STATE_SUBOBJECT_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG: D3D12_STATE_SUBOBJECT_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG: D3D12_STATE_SUBOBJECT_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP: D3D12_STATE_SUBOBJECT_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG1: D3D12_STATE_SUBOBJECT_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATE_SUBOBJECT_TYPE_MAX_VALID: D3D12_STATE_SUBOBJECT_TYPE = 13i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_STATIC_BORDER_COLOR = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK: D3D12_STATIC_BORDER_COLOR = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK: D3D12_STATIC_BORDER_COLOR = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE: D3D12_STATIC_BORDER_COLOR = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_STATIC_SAMPLER_DESC {
@@ -7420,24 +7789,6 @@ impl ::core::clone::Clone for D3D12_STATIC_SAMPLER_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_STENCIL_OP = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STENCIL_OP_KEEP: D3D12_STENCIL_OP = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STENCIL_OP_ZERO: D3D12_STENCIL_OP = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STENCIL_OP_REPLACE: D3D12_STENCIL_OP = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STENCIL_OP_INCR_SAT: D3D12_STENCIL_OP = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STENCIL_OP_DECR_SAT: D3D12_STENCIL_OP = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STENCIL_OP_INVERT: D3D12_STENCIL_OP = 6i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STENCIL_OP_INCR: D3D12_STENCIL_OP = 7i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_STENCIL_OP_DECR: D3D12_STENCIL_OP = 8i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_STREAM_OUTPUT_BUFFER_VIEW {
@@ -7479,8 +7830,6 @@ impl ::core::clone::Clone for D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SUBPIXEL_FRACTIONAL_BIT_COUNT: u32 = 8u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_SUBRESOURCE_DATA {
@@ -7551,26 +7900,6 @@ impl ::core::clone::Clone for D3D12_SUBRESOURCE_TILING {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SUBTEXEL_FRACTIONAL_BIT_COUNT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SYSTEM_RESERVED_REGISTER_SPACE_VALUES_END: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_SYSTEM_RESERVED_REGISTER_SPACE_VALUES_START: u32 = 4294967280u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TESSELLATOR_MAX_EVEN_TESSELLATION_FACTOR: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TESSELLATOR_MAX_ISOLINE_DENSITY_TESSELLATION_FACTOR: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TESSELLATOR_MAX_ODD_TESSELLATION_FACTOR: u32 = 63u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TESSELLATOR_MAX_TESSELLATION_FACTOR: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TESSELLATOR_MIN_EVEN_TESSELLATION_FACTOR: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TESSELLATOR_MIN_ISOLINE_DENSITY_TESSELLATION_FACTOR: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TESSELLATOR_MIN_ODD_TESSELLATION_FACTOR: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_TEX1D_ARRAY_DSV {
@@ -7913,20 +8242,6 @@ impl ::core::clone::Clone for D3D12_TEXCUBE_SRV {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXEL_ADDRESS_RANGE_BIT_COUNT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_TEXTURE_ADDRESS_MODE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_ADDRESS_MODE_WRAP: D3D12_TEXTURE_ADDRESS_MODE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_ADDRESS_MODE_MIRROR: D3D12_TEXTURE_ADDRESS_MODE = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_ADDRESS_MODE_CLAMP: D3D12_TEXTURE_ADDRESS_MODE = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_ADDRESS_MODE_BORDER: D3D12_TEXTURE_ADDRESS_MODE = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE: D3D12_TEXTURE_ADDRESS_MODE = 5i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
 #[cfg(feature = "Win32_Graphics_Dxgi_Common")]
@@ -7958,38 +8273,6 @@ impl ::core::clone::Clone for D3D12_TEXTURE_COPY_LOCATION_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_TEXTURE_COPY_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX: D3D12_TEXTURE_COPY_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT: D3D12_TEXTURE_COPY_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_DATA_PITCH_ALIGNMENT: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_TEXTURE_LAYOUT = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_LAYOUT_UNKNOWN: D3D12_TEXTURE_LAYOUT = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_LAYOUT_ROW_MAJOR: D3D12_TEXTURE_LAYOUT = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE: D3D12_TEXTURE_LAYOUT = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TEXTURE_LAYOUT_64KB_STANDARD_SWIZZLE: D3D12_TEXTURE_LAYOUT = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_TILED_RESOURCES_TIER = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILED_RESOURCES_TIER_NOT_SUPPORTED: D3D12_TILED_RESOURCES_TIER = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILED_RESOURCES_TIER_1: D3D12_TILED_RESOURCES_TIER = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILED_RESOURCES_TIER_2: D3D12_TILED_RESOURCES_TIER = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILED_RESOURCES_TIER_3: D3D12_TILED_RESOURCES_TIER = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILED_RESOURCES_TIER_4: D3D12_TILED_RESOURCES_TIER = 4i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_TILED_RESOURCE_COORDINATE {
@@ -8004,34 +8287,6 @@ impl ::core::clone::Clone for D3D12_TILED_RESOURCE_COORDINATE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_TILE_COPY_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILE_COPY_FLAG_NONE: D3D12_TILE_COPY_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILE_COPY_FLAG_NO_HAZARD: D3D12_TILE_COPY_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILE_COPY_FLAG_LINEAR_BUFFER_TO_SWIZZLED_TILED_RESOURCE: D3D12_TILE_COPY_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILE_COPY_FLAG_SWIZZLED_TILED_RESOURCE_TO_LINEAR_BUFFER: D3D12_TILE_COPY_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_TILE_MAPPING_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILE_MAPPING_FLAG_NONE: D3D12_TILE_MAPPING_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILE_MAPPING_FLAG_NO_HAZARD: D3D12_TILE_MAPPING_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_TILE_RANGE_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILE_RANGE_FLAG_NONE: D3D12_TILE_RANGE_FLAGS = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILE_RANGE_FLAG_NULL: D3D12_TILE_RANGE_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILE_RANGE_FLAG_SKIP: D3D12_TILE_RANGE_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TILE_RANGE_FLAG_REUSE_SINGLE_TILE: D3D12_TILE_RANGE_FLAGS = 4i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -8063,30 +8318,6 @@ impl ::core::clone::Clone for D3D12_TILE_SHAPE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_TRACKED_WORKLOAD_MAX_INSTANCES: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_UAV_DIMENSION = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_UAV_DIMENSION_UNKNOWN: D3D12_UAV_DIMENSION = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_UAV_DIMENSION_BUFFER: D3D12_UAV_DIMENSION = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_UAV_DIMENSION_TEXTURE1D: D3D12_UAV_DIMENSION = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_UAV_DIMENSION_TEXTURE1DARRAY: D3D12_UAV_DIMENSION = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_UAV_DIMENSION_TEXTURE2D: D3D12_UAV_DIMENSION = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_UAV_DIMENSION_TEXTURE2DARRAY: D3D12_UAV_DIMENSION = 5i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_UAV_DIMENSION_TEXTURE3D: D3D12_UAV_DIMENSION = 8i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_UAV_SLOT_COUNT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_UNBOUND_MEMORY_ACCESS_RESULT: u32 = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
 #[cfg(feature = "Win32_Graphics_Dxgi_Common")]
@@ -8122,14 +8353,6 @@ impl ::core::clone::Clone for D3D12_UNORDERED_ACCESS_VIEW_DESC_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_VARIABLE_SHADING_RATE_TIER = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VARIABLE_SHADING_RATE_TIER_NOT_SUPPORTED: D3D12_VARIABLE_SHADING_RATE_TIER = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VARIABLE_SHADING_RATE_TIER_1: D3D12_VARIABLE_SHADING_RATE_TIER = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VARIABLE_SHADING_RATE_TIER_2: D3D12_VARIABLE_SHADING_RATE_TIER = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_VERSIONED_DEVICE_REMOVED_EXTENDED_DATA {
@@ -8193,20 +8416,6 @@ impl ::core::clone::Clone for D3D12_VERTEX_BUFFER_VIEW {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIDEO_DECODE_MAX_ARGUMENTS: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIDEO_DECODE_MAX_HISTOGRAM_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIDEO_DECODE_MIN_BITSTREAM_OFFSET_ALIGNMENT: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIDEO_DECODE_MIN_HISTOGRAM_OFFSET_ALIGNMENT: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIDEO_DECODE_STATUS_MACROBLOCKS_AFFECTED_UNKNOWN: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIDEO_PROCESS_MAX_FILTERS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIDEO_PROCESS_STEREO_VIEWS: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_VIEWPORT {
@@ -8223,14 +8432,6 @@ impl ::core::clone::Clone for D3D12_VIEWPORT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIEWPORT_BOUNDS_MAX: u32 = 32767u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIEWPORT_BOUNDS_MIN: i32 = -32768i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_VIEW_INSTANCE_LOCATION {
@@ -8256,58 +8457,6 @@ impl ::core::clone::Clone for D3D12_VIEW_INSTANCING_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_VIEW_INSTANCING_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIEW_INSTANCING_FLAG_NONE: D3D12_VIEW_INSTANCING_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIEW_INSTANCING_FLAG_ENABLE_VIEW_INSTANCE_MASKING: D3D12_VIEW_INSTANCING_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_VIEW_INSTANCING_TIER = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIEW_INSTANCING_TIER_NOT_SUPPORTED: D3D12_VIEW_INSTANCING_TIER = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIEW_INSTANCING_TIER_1: D3D12_VIEW_INSTANCING_TIER = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIEW_INSTANCING_TIER_2: D3D12_VIEW_INSTANCING_TIER = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VIEW_INSTANCING_TIER_3: D3D12_VIEW_INSTANCING_TIER = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VS_INPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VS_INPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VS_INPUT_REGISTER_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VS_INPUT_REGISTER_READS_PER_INST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VS_INPUT_REGISTER_READ_PORTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VS_OUTPUT_REGISTER_COMPONENTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VS_OUTPUT_REGISTER_COMPONENT_BIT_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_VS_OUTPUT_REGISTER_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_WAVE_MMA_TIER = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_WAVE_MMA_TIER_NOT_SUPPORTED: D3D12_WAVE_MMA_TIER = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_WAVE_MMA_TIER_1_0: D3D12_WAVE_MMA_TIER = 10i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_WHQL_CONTEXT_COUNT_FOR_RESOURCE_LIMIT: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_WHQL_DRAWINDEXED_INDEX_COUNT_2_TO_EXP: u32 = 25u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_WHQL_DRAW_VERTEX_COUNT_2_TO_EXP: u32 = 25u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D12_WRITEBUFFERIMMEDIATE_MODE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_WRITEBUFFERIMMEDIATE_MODE_DEFAULT: D3D12_WRITEBUFFERIMMEDIATE_MODE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_IN: D3D12_WRITEBUFFERIMMEDIATE_MODE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_OUT: D3D12_WRITEBUFFERIMMEDIATE_MODE = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
 pub struct D3D12_WRITEBUFFERIMMEDIATE_PARAMETER {
@@ -8321,155 +8470,7 @@ impl ::core::clone::Clone for D3D12_WRITEBUFFERIMMEDIATE_PARAMETER {
     }
 }
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D_ROOT_SIGNATURE_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_ROOT_SIGNATURE_VERSION_1: D3D_ROOT_SIGNATURE_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_ROOT_SIGNATURE_VERSION_1_0: D3D_ROOT_SIGNATURE_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_ROOT_SIGNATURE_VERSION_1_1: D3D_ROOT_SIGNATURE_VERSION = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub type D3D_SHADER_MODEL = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_MODEL_5_1: D3D_SHADER_MODEL = 81i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_MODEL_6_0: D3D_SHADER_MODEL = 96i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_MODEL_6_1: D3D_SHADER_MODEL = 97i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_MODEL_6_2: D3D_SHADER_MODEL = 98i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_MODEL_6_3: D3D_SHADER_MODEL = 99i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_MODEL_6_4: D3D_SHADER_MODEL = 100i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_MODEL_6_5: D3D_SHADER_MODEL = 101i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_MODEL_6_6: D3D_SHADER_MODEL = 102i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_MODEL_6_7: D3D_SHADER_MODEL = 103i32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_ATOMIC_INT64_ON_DESCRIPTOR_HEAP_RESOURCE: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_ATOMIC_INT64_ON_GROUP_SHARED: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_ATOMIC_INT64_ON_TYPED_RESOURCE: u32 = 4194304u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_BARYCENTRICS: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_DERIVATIVES_IN_MESH_AND_AMPLIFICATION_SHADERS: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_INNER_COVERAGE: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_INT64_OPS: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_NATIVE_16BIT_OPS: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_RAYTRACING_TIER_1_1: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_RESOURCE_DESCRIPTOR_HEAP_INDEXING: u32 = 33554432u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_ROVS: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_SAMPLER_DESCRIPTOR_HEAP_INDEXING: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_SAMPLER_FEEDBACK: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_SHADING_RATE: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_STENCIL_REF: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_TYPED_UAV_LOAD_ADDITIONAL_FORMATS: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_VIEWPORT_AND_RT_ARRAY_INDEX_FROM_ANY_SHADER_FEEDING_RASTERIZER: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_VIEW_ID: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_WAVE_MMA: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const D3D_SHADER_REQUIRES_WAVE_OPS: u32 = 16384u32;
-pub const DXGI_DEBUG_D3D12: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3478759820, data2: 43344, data3: 17190, data4: [145, 239, 155, 186, 161, 123, 253, 149] };
-pub type ID3D12CommandAllocator = *mut ::core::ffi::c_void;
-pub type ID3D12CommandList = *mut ::core::ffi::c_void;
-pub type ID3D12CommandQueue = *mut ::core::ffi::c_void;
-pub type ID3D12CommandSignature = *mut ::core::ffi::c_void;
-pub type ID3D12Debug = *mut ::core::ffi::c_void;
-pub type ID3D12Debug1 = *mut ::core::ffi::c_void;
-pub type ID3D12Debug2 = *mut ::core::ffi::c_void;
-pub type ID3D12Debug3 = *mut ::core::ffi::c_void;
-pub type ID3D12Debug4 = *mut ::core::ffi::c_void;
-pub type ID3D12Debug5 = *mut ::core::ffi::c_void;
-pub type ID3D12DebugCommandList = *mut ::core::ffi::c_void;
-pub type ID3D12DebugCommandList1 = *mut ::core::ffi::c_void;
-pub type ID3D12DebugCommandList2 = *mut ::core::ffi::c_void;
-pub type ID3D12DebugCommandQueue = *mut ::core::ffi::c_void;
-pub type ID3D12DebugDevice = *mut ::core::ffi::c_void;
-pub type ID3D12DebugDevice1 = *mut ::core::ffi::c_void;
-pub type ID3D12DebugDevice2 = *mut ::core::ffi::c_void;
-pub type ID3D12DescriptorHeap = *mut ::core::ffi::c_void;
-pub type ID3D12Device = *mut ::core::ffi::c_void;
-pub type ID3D12Device1 = *mut ::core::ffi::c_void;
-pub type ID3D12Device2 = *mut ::core::ffi::c_void;
-pub type ID3D12Device3 = *mut ::core::ffi::c_void;
-pub type ID3D12Device4 = *mut ::core::ffi::c_void;
-pub type ID3D12Device5 = *mut ::core::ffi::c_void;
-pub type ID3D12Device6 = *mut ::core::ffi::c_void;
-pub type ID3D12Device7 = *mut ::core::ffi::c_void;
-pub type ID3D12Device8 = *mut ::core::ffi::c_void;
-pub type ID3D12Device9 = *mut ::core::ffi::c_void;
-pub type ID3D12DeviceChild = *mut ::core::ffi::c_void;
-pub type ID3D12DeviceRemovedExtendedData = *mut ::core::ffi::c_void;
-pub type ID3D12DeviceRemovedExtendedData1 = *mut ::core::ffi::c_void;
-pub type ID3D12DeviceRemovedExtendedData2 = *mut ::core::ffi::c_void;
-pub type ID3D12DeviceRemovedExtendedDataSettings = *mut ::core::ffi::c_void;
-pub type ID3D12DeviceRemovedExtendedDataSettings1 = *mut ::core::ffi::c_void;
-pub type ID3D12Fence = *mut ::core::ffi::c_void;
-pub type ID3D12Fence1 = *mut ::core::ffi::c_void;
-pub type ID3D12FunctionParameterReflection = *mut ::core::ffi::c_void;
-pub type ID3D12FunctionReflection = *mut ::core::ffi::c_void;
-pub type ID3D12GraphicsCommandList = *mut ::core::ffi::c_void;
-pub type ID3D12GraphicsCommandList1 = *mut ::core::ffi::c_void;
-pub type ID3D12GraphicsCommandList2 = *mut ::core::ffi::c_void;
-pub type ID3D12GraphicsCommandList3 = *mut ::core::ffi::c_void;
-pub type ID3D12GraphicsCommandList4 = *mut ::core::ffi::c_void;
-pub type ID3D12GraphicsCommandList5 = *mut ::core::ffi::c_void;
-pub type ID3D12GraphicsCommandList6 = *mut ::core::ffi::c_void;
-pub type ID3D12Heap = *mut ::core::ffi::c_void;
-pub type ID3D12Heap1 = *mut ::core::ffi::c_void;
-pub type ID3D12InfoQueue = *mut ::core::ffi::c_void;
-pub type ID3D12InfoQueue1 = *mut ::core::ffi::c_void;
-pub type ID3D12LibraryReflection = *mut ::core::ffi::c_void;
-pub type ID3D12LifetimeOwner = *mut ::core::ffi::c_void;
-pub type ID3D12LifetimeTracker = *mut ::core::ffi::c_void;
-pub type ID3D12MetaCommand = *mut ::core::ffi::c_void;
-pub type ID3D12Object = *mut ::core::ffi::c_void;
-pub type ID3D12Pageable = *mut ::core::ffi::c_void;
-pub type ID3D12PipelineLibrary = *mut ::core::ffi::c_void;
-pub type ID3D12PipelineLibrary1 = *mut ::core::ffi::c_void;
-pub type ID3D12PipelineState = *mut ::core::ffi::c_void;
-pub type ID3D12ProtectedResourceSession = *mut ::core::ffi::c_void;
-pub type ID3D12ProtectedResourceSession1 = *mut ::core::ffi::c_void;
-pub type ID3D12ProtectedSession = *mut ::core::ffi::c_void;
-pub type ID3D12QueryHeap = *mut ::core::ffi::c_void;
-pub type ID3D12Resource = *mut ::core::ffi::c_void;
-pub type ID3D12Resource1 = *mut ::core::ffi::c_void;
-pub type ID3D12Resource2 = *mut ::core::ffi::c_void;
-pub type ID3D12RootSignature = *mut ::core::ffi::c_void;
-pub type ID3D12RootSignatureDeserializer = *mut ::core::ffi::c_void;
-pub type ID3D12SDKConfiguration = *mut ::core::ffi::c_void;
-pub type ID3D12ShaderCacheSession = *mut ::core::ffi::c_void;
-pub type ID3D12ShaderReflection = *mut ::core::ffi::c_void;
-pub type ID3D12ShaderReflectionConstantBuffer = *mut ::core::ffi::c_void;
-pub type ID3D12ShaderReflectionType = *mut ::core::ffi::c_void;
-pub type ID3D12ShaderReflectionVariable = *mut ::core::ffi::c_void;
-pub type ID3D12SharingContract = *mut ::core::ffi::c_void;
-pub type ID3D12StateObject = *mut ::core::ffi::c_void;
-pub type ID3D12StateObjectProperties = *mut ::core::ffi::c_void;
-pub type ID3D12SwapChainAssistant = *mut ::core::ffi::c_void;
-pub type ID3D12Tools = *mut ::core::ffi::c_void;
-pub type ID3D12VersionedRootSignatureDeserializer = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`*"]
-pub const LUID_DEFINED: u32 = 1u32;
+pub type D3D12MessageFunc = ::core::option::Option<unsafe extern "system" fn(category: D3D12_MESSAGE_CATEGORY, severity: D3D12_MESSAGE_SEVERITY, id: D3D12_MESSAGE_ID, pdescription: ::windows_sys::core::PCSTR, pcontext: *mut ::core::ffi::c_void)>;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Direct3D\"`*"]
 #[cfg(feature = "Win32_Graphics_Direct3D")]
 pub type PFN_D3D12_CREATE_DEVICE = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::IUnknown, param1: super::Direct3D::D3D_FEATURE_LEVEL, param2: *const ::windows_sys::core::GUID, param3: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
@@ -8487,4 +8488,3 @@ pub type PFN_D3D12_SERIALIZE_ROOT_SIGNATURE = ::core::option::Option<unsafe exte
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D12\"`, `\"Win32_Graphics_Direct3D\"`*"]
 #[cfg(feature = "Win32_Graphics_Direct3D")]
 pub type PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE = ::core::option::Option<unsafe extern "system" fn(prootsignature: *const D3D12_VERSIONED_ROOT_SIGNATURE_DESC, ppblob: *mut super::Direct3D::ID3DBlob, pperrorblob: *mut super::Direct3D::ID3DBlob) -> ::windows_sys::core::HRESULT>;
-pub const WKPDID_D3DAutoDebugObjectNameW: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3566218806, data2: 30074, data3: 18754, data4: [149, 148, 182, 118, 154, 250, 67, 205] };

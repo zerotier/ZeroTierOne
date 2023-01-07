@@ -1,3 +1,4 @@
+pub type ID2D1SimplifiedGeometrySink = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
 pub type D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
@@ -26,19 +27,6 @@ pub const D2D1_ALPHA_MODE_STRAIGHT: D2D1_ALPHA_MODE = 2u32;
 pub const D2D1_ALPHA_MODE_IGNORE: D2D1_ALPHA_MODE = 3u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
 pub const D2D1_ALPHA_MODE_FORCE_DWORD: D2D1_ALPHA_MODE = 4294967295u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
-pub struct D2D1_BEZIER_SEGMENT {
-    pub point1: D2D_POINT_2F,
-    pub point2: D2D_POINT_2F,
-    pub point3: D2D_POINT_2F,
-}
-impl ::core::marker::Copy for D2D1_BEZIER_SEGMENT {}
-impl ::core::clone::Clone for D2D1_BEZIER_SEGMENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
 pub type D2D1_BLEND_MODE = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
@@ -111,20 +99,6 @@ pub const D2D1_COLORMATRIX_ALPHA_MODE_PREMULTIPLIED: D2D1_COLORMATRIX_ALPHA_MODE
 pub const D2D1_COLORMATRIX_ALPHA_MODE_STRAIGHT: D2D1_COLORMATRIX_ALPHA_MODE = 2u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
 pub const D2D1_COLORMATRIX_ALPHA_MODE_FORCE_DWORD: D2D1_COLORMATRIX_ALPHA_MODE = 4294967295u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
-pub struct D2D1_COLOR_F {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-    pub a: f32,
-}
-impl ::core::marker::Copy for D2D1_COLOR_F {}
-impl ::core::clone::Clone for D2D1_COLOR_F {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
 pub type D2D1_COMPOSITE_MODE = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
@@ -189,6 +163,41 @@ pub const D2D1_PATH_SEGMENT_FORCE_UNSTROKED: D2D1_PATH_SEGMENT = 1u32;
 pub const D2D1_PATH_SEGMENT_FORCE_ROUND_LINE_JOIN: D2D1_PATH_SEGMENT = 2u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
 pub const D2D1_PATH_SEGMENT_FORCE_DWORD: D2D1_PATH_SEGMENT = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
+pub type D2D1_TURBULENCE_NOISE = u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
+pub const D2D1_TURBULENCE_NOISE_FRACTAL_SUM: D2D1_TURBULENCE_NOISE = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
+pub const D2D1_TURBULENCE_NOISE_TURBULENCE: D2D1_TURBULENCE_NOISE = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
+pub const D2D1_TURBULENCE_NOISE_FORCE_DWORD: D2D1_TURBULENCE_NOISE = 4294967295u32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
+pub struct D2D1_BEZIER_SEGMENT {
+    pub point1: D2D_POINT_2F,
+    pub point2: D2D_POINT_2F,
+    pub point3: D2D_POINT_2F,
+}
+impl ::core::marker::Copy for D2D1_BEZIER_SEGMENT {}
+impl ::core::clone::Clone for D2D1_BEZIER_SEGMENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
+pub struct D2D1_COLOR_F {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
+}
+impl ::core::marker::Copy for D2D1_COLOR_F {}
+impl ::core::clone::Clone for D2D1_COLOR_F {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`, `\"Win32_Graphics_Dxgi_Common\"`*"]
 #[cfg(feature = "Win32_Graphics_Dxgi_Common")]
@@ -204,14 +213,6 @@ impl ::core::clone::Clone for D2D1_PIXEL_FORMAT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
-pub type D2D1_TURBULENCE_NOISE = u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
-pub const D2D1_TURBULENCE_NOISE_FRACTAL_SUM: D2D1_TURBULENCE_NOISE = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
-pub const D2D1_TURBULENCE_NOISE_TURBULENCE: D2D1_TURBULENCE_NOISE = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
-pub const D2D1_TURBULENCE_NOISE_FORCE_DWORD: D2D1_TURBULENCE_NOISE = 4294967295u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct2D_Common\"`*"]
 pub struct D2D_COLOR_F {
@@ -544,4 +545,3 @@ impl ::core::clone::Clone for D2D_VECTOR_4F {
         *self
     }
 }
-pub type ID2D1SimplifiedGeometrySink = *mut ::core::ffi::c_void;

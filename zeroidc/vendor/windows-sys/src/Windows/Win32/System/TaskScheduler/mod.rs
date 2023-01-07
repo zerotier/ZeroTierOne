@@ -1,16 +1,3 @@
-pub const CLSID_CTask: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 344708384, data2: 41643, data3: 4558, data4: [177, 31, 0, 170, 0, 83, 5, 3] };
-pub const CLSID_CTaskScheduler: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 344708394, data2: 41643, data3: 4558, data4: [177, 31, 0, 170, 0, 83, 5, 3] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub struct DAILY {
-    pub DaysInterval: u16,
-}
-impl ::core::marker::Copy for DAILY {}
-impl ::core::clone::Clone for DAILY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub type IAction = *mut ::core::ffi::c_void;
 pub type IActionCollection = *mut ::core::ffi::c_void;
 pub type IBootTrigger = *mut ::core::ffi::c_void;
@@ -60,91 +47,14 @@ pub type ITimeTrigger = *mut ::core::ffi::c_void;
 pub type ITrigger = *mut ::core::ffi::c_void;
 pub type ITriggerCollection = *mut ::core::ffi::c_void;
 pub type IWeeklyTrigger = *mut ::core::ffi::c_void;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub struct MONTHLYDATE {
-    pub rgfDays: u32,
-    pub rgfMonths: u16,
-}
-impl ::core::marker::Copy for MONTHLYDATE {}
-impl ::core::clone::Clone for MONTHLYDATE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub struct MONTHLYDOW {
-    pub wWhichWeek: u16,
-    pub rgfDaysOfTheWeek: u16,
-    pub rgfMonths: u16,
-}
-impl ::core::marker::Copy for MONTHLYDOW {}
-impl ::core::clone::Clone for MONTHLYDOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub type TASKPAGE = i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASKPAGE_TASK: TASKPAGE = 0i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASKPAGE_SCHEDULE: TASKPAGE = 1i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASKPAGE_SETTINGS: TASKPAGE = 2i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub type TASK_ACTION_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_ACTION_EXEC: TASK_ACTION_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_ACTION_COM_HANDLER: TASK_ACTION_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_ACTION_SEND_EMAIL: TASK_ACTION_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_ACTION_SHOW_MESSAGE: TASK_ACTION_TYPE = 7i32;
+pub const CLSID_CTask: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 344708384, data2: 41643, data3: 4558, data4: [177, 31, 0, 170, 0, 83, 5, 3] };
+pub const CLSID_CTaskScheduler: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 344708394, data2: 41643, data3: 4558, data4: [177, 31, 0, 170, 0, 83, 5, 3] };
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub const TASK_APRIL: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub const TASK_AUGUST: u32 = 128u32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub type TASK_COMPATIBILITY = i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_COMPATIBILITY_AT: TASK_COMPATIBILITY = 0i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_COMPATIBILITY_V1: TASK_COMPATIBILITY = 1i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_COMPATIBILITY_V2: TASK_COMPATIBILITY = 2i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_COMPATIBILITY_V2_1: TASK_COMPATIBILITY = 3i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_COMPATIBILITY_V2_2: TASK_COMPATIBILITY = 4i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_COMPATIBILITY_V2_3: TASK_COMPATIBILITY = 5i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_COMPATIBILITY_V2_4: TASK_COMPATIBILITY = 6i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub type TASK_CREATION = i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_VALIDATE_ONLY: TASK_CREATION = 1i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_CREATE: TASK_CREATION = 2i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_UPDATE: TASK_CREATION = 4i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_CREATE_OR_UPDATE: TASK_CREATION = 6i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_DISABLE: TASK_CREATION = 8i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_DONT_ADD_PRINCIPAL_ACE: TASK_CREATION = 16i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_IGNORE_REGISTRATION_TRIGGERS: TASK_CREATION = 32i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub const TASK_DECEMBER: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub type TASK_ENUM_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_ENUM_HIDDEN: TASK_ENUM_FLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub const TASK_FEBRUARY: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
@@ -180,6 +90,105 @@ pub const TASK_FOURTH_WEEK: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub const TASK_FRIDAY: u32 = 32u32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_JANUARY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_JULY: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_JUNE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_LAST_WEEK: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_MARCH: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_MAX_RUN_TIMES: u32 = 1440u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_MAY: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_MONDAY: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_NOVEMBER: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_OCTOBER: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_SATURDAY: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_SECOND_WEEK: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_SEPTEMBER: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_SUNDAY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_THIRD_WEEK: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_THURSDAY: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_TRIGGER_FLAG_DISABLED: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_TRIGGER_FLAG_HAS_END_DATE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_TRIGGER_FLAG_KILL_AT_DURATION_END: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_TUESDAY: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_WEDNESDAY: u32 = 8u32;
+pub const TaskHandlerPS: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4071005623, data2: 55852, data3: 17234, data4: [144, 102, 134, 254, 230, 218, 202, 201] };
+pub const TaskHandlerStatusPS: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2668963437, data2: 55226, data3: 18672, data4: [147, 193, 230, 137, 95, 111, 229, 172] };
+pub const TaskScheduler: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 260519583, data2: 42213, data3: 19708, data4: [189, 62, 115, 230, 21, 69, 114, 221] };
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub type TASKPAGE = i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASKPAGE_TASK: TASKPAGE = 0i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASKPAGE_SCHEDULE: TASKPAGE = 1i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASKPAGE_SETTINGS: TASKPAGE = 2i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub type TASK_ACTION_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_ACTION_EXEC: TASK_ACTION_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_ACTION_COM_HANDLER: TASK_ACTION_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_ACTION_SEND_EMAIL: TASK_ACTION_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_ACTION_SHOW_MESSAGE: TASK_ACTION_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub type TASK_COMPATIBILITY = i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_COMPATIBILITY_AT: TASK_COMPATIBILITY = 0i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_COMPATIBILITY_V1: TASK_COMPATIBILITY = 1i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_COMPATIBILITY_V2: TASK_COMPATIBILITY = 2i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_COMPATIBILITY_V2_1: TASK_COMPATIBILITY = 3i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_COMPATIBILITY_V2_2: TASK_COMPATIBILITY = 4i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_COMPATIBILITY_V2_3: TASK_COMPATIBILITY = 5i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_COMPATIBILITY_V2_4: TASK_COMPATIBILITY = 6i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub type TASK_CREATION = i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_VALIDATE_ONLY: TASK_CREATION = 1i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_CREATE: TASK_CREATION = 2i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_UPDATE: TASK_CREATION = 4i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_CREATE_OR_UPDATE: TASK_CREATION = 6i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_DISABLE: TASK_CREATION = 8i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_DONT_ADD_PRINCIPAL_ACE: TASK_CREATION = 16i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_IGNORE_REGISTRATION_TRIGGERS: TASK_CREATION = 32i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub type TASK_ENUM_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub const TASK_ENUM_HIDDEN: TASK_ENUM_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub type TASK_INSTANCES_POLICY = i32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub const TASK_INSTANCES_PARALLEL: TASK_INSTANCES_POLICY = 0i32;
@@ -189,14 +198,6 @@ pub const TASK_INSTANCES_QUEUE: TASK_INSTANCES_POLICY = 1i32;
 pub const TASK_INSTANCES_IGNORE_NEW: TASK_INSTANCES_POLICY = 2i32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub const TASK_INSTANCES_STOP_EXISTING: TASK_INSTANCES_POLICY = 3i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_JANUARY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_JULY: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_JUNE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_LAST_WEEK: u32 = 5u32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub type TASK_LOGON_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
@@ -213,18 +214,6 @@ pub const TASK_LOGON_GROUP: TASK_LOGON_TYPE = 4i32;
 pub const TASK_LOGON_SERVICE_ACCOUNT: TASK_LOGON_TYPE = 5i32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub const TASK_LOGON_INTERACTIVE_TOKEN_OR_PASSWORD: TASK_LOGON_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_MARCH: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_MAX_RUN_TIMES: u32 = 1440u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_MAY: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_MONDAY: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_NOVEMBER: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_OCTOBER: u32 = 512u32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub type TASK_PROCESSTOKENSID_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
@@ -252,12 +241,6 @@ pub const TASK_RUN_USE_SESSION_ID: TASK_RUN_FLAGS = 4i32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub const TASK_RUN_USER_SID: TASK_RUN_FLAGS = 8i32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_SATURDAY: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_SECOND_WEEK: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_SEPTEMBER: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub type TASK_SESSION_STATE_CHANGE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub const TASK_CONSOLE_CONNECT: TASK_SESSION_STATE_CHANGE_TYPE = 1i32;
@@ -283,45 +266,6 @@ pub const TASK_STATE_QUEUED: TASK_STATE = 2i32;
 pub const TASK_STATE_READY: TASK_STATE = 3i32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub const TASK_STATE_RUNNING: TASK_STATE = 4i32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_SUNDAY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_THIRD_WEEK: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_THURSDAY: u32 = 16u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub struct TASK_TRIGGER {
-    pub cbTriggerSize: u16,
-    pub Reserved1: u16,
-    pub wBeginYear: u16,
-    pub wBeginMonth: u16,
-    pub wBeginDay: u16,
-    pub wEndYear: u16,
-    pub wEndMonth: u16,
-    pub wEndDay: u16,
-    pub wStartHour: u16,
-    pub wStartMinute: u16,
-    pub MinutesDuration: u32,
-    pub MinutesInterval: u32,
-    pub rgFlags: u32,
-    pub TriggerType: TASK_TRIGGER_TYPE,
-    pub Type: TRIGGER_TYPE_UNION,
-    pub Reserved2: u16,
-    pub wRandomMinutesInterval: u16,
-}
-impl ::core::marker::Copy for TASK_TRIGGER {}
-impl ::core::clone::Clone for TASK_TRIGGER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_TRIGGER_FLAG_DISABLED: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_TRIGGER_FLAG_HAS_END_DATE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_TRIGGER_FLAG_KILL_AT_DURATION_END: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub type TASK_TRIGGER_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
@@ -366,10 +310,69 @@ pub const TASK_TRIGGER_LOGON: TASK_TRIGGER_TYPE2 = 9i32;
 pub const TASK_TRIGGER_SESSION_STATE_CHANGE: TASK_TRIGGER_TYPE2 = 11i32;
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub const TASK_TRIGGER_CUSTOM_TRIGGER_01: TASK_TRIGGER_TYPE2 = 12i32;
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_TUESDAY: u32 = 4u32;
+pub struct DAILY {
+    pub DaysInterval: u16,
+}
+impl ::core::marker::Copy for DAILY {}
+impl ::core::clone::Clone for DAILY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
-pub const TASK_WEDNESDAY: u32 = 8u32;
+pub struct MONTHLYDATE {
+    pub rgfDays: u32,
+    pub rgfMonths: u16,
+}
+impl ::core::marker::Copy for MONTHLYDATE {}
+impl ::core::clone::Clone for MONTHLYDATE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub struct MONTHLYDOW {
+    pub wWhichWeek: u16,
+    pub rgfDaysOfTheWeek: u16,
+    pub rgfMonths: u16,
+}
+impl ::core::marker::Copy for MONTHLYDOW {}
+impl ::core::clone::Clone for MONTHLYDOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
+pub struct TASK_TRIGGER {
+    pub cbTriggerSize: u16,
+    pub Reserved1: u16,
+    pub wBeginYear: u16,
+    pub wBeginMonth: u16,
+    pub wBeginDay: u16,
+    pub wEndYear: u16,
+    pub wEndMonth: u16,
+    pub wEndDay: u16,
+    pub wStartHour: u16,
+    pub wStartMinute: u16,
+    pub MinutesDuration: u32,
+    pub MinutesInterval: u32,
+    pub rgFlags: u32,
+    pub TriggerType: TASK_TRIGGER_TYPE,
+    pub Type: TRIGGER_TYPE_UNION,
+    pub Reserved2: u16,
+    pub wRandomMinutesInterval: u16,
+}
+impl ::core::marker::Copy for TASK_TRIGGER {}
+impl ::core::clone::Clone for TASK_TRIGGER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub union TRIGGER_TYPE_UNION {
@@ -384,9 +387,6 @@ impl ::core::clone::Clone for TRIGGER_TYPE_UNION {
         *self
     }
 }
-pub const TaskHandlerPS: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4071005623, data2: 55852, data3: 17234, data4: [144, 102, 134, 254, 230, 218, 202, 201] };
-pub const TaskHandlerStatusPS: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2668963437, data2: 55226, data3: 18672, data4: [147, 193, 230, 137, 95, 111, 229, 172] };
-pub const TaskScheduler: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 260519583, data2: 42213, data3: 19708, data4: [189, 62, 115, 230, 21, 69, 114, 221] };
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_TaskScheduler\"`*"]
 pub struct WEEKLY {

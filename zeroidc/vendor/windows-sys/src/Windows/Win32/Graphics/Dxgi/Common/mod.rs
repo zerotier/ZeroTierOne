@@ -1,4 +1,22 @@
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_CENTER_MULTISAMPLE_QUALITY_PATTERN: u32 = 4294967294u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_CPU_ACCESS_DYNAMIC: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_CPU_ACCESS_FIELD: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_CPU_ACCESS_NONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_CPU_ACCESS_READ_WRITE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_CPU_ACCESS_SCRATCH: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_FORMAT_DEFINED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_STANDARD_MULTISAMPLE_QUALITY_PATTERN: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const _FACDXGI: u32 = 2170u32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
 pub type DXGI_ALPHA_MODE = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
 pub const DXGI_ALPHA_MODE_UNSPECIFIED: DXGI_ALPHA_MODE = 0u32;
@@ -10,8 +28,6 @@ pub const DXGI_ALPHA_MODE_STRAIGHT: DXGI_ALPHA_MODE = 2u32;
 pub const DXGI_ALPHA_MODE_IGNORE: DXGI_ALPHA_MODE = 3u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
 pub const DXGI_ALPHA_MODE_FORCE_DWORD: DXGI_ALPHA_MODE = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_CENTER_MULTISAMPLE_QUALITY_PATTERN: u32 = 4294967294u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
 pub type DXGI_COLOR_SPACE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
@@ -66,16 +82,6 @@ pub const DXGI_COLOR_SPACE_YCBCR_STUDIO_G24_LEFT_P2020: DXGI_COLOR_SPACE_TYPE = 
 pub const DXGI_COLOR_SPACE_YCBCR_STUDIO_G24_TOPLEFT_P2020: DXGI_COLOR_SPACE_TYPE = 24i32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
 pub const DXGI_COLOR_SPACE_CUSTOM: DXGI_COLOR_SPACE_TYPE = -1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_CPU_ACCESS_DYNAMIC: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_CPU_ACCESS_FIELD: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_CPU_ACCESS_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_CPU_ACCESS_READ_WRITE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_CPU_ACCESS_SCRATCH: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
 pub type DXGI_FORMAT = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
@@ -323,7 +329,35 @@ pub const DXGI_FORMAT_SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE: DXGI_FORMAT = 190
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
 pub const DXGI_FORMAT_FORCE_UINT: DXGI_FORMAT = 4294967295u32;
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_FORMAT_DEFINED: u32 = 1u32;
+pub type DXGI_MODE_ROTATION = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_MODE_ROTATION_UNSPECIFIED: DXGI_MODE_ROTATION = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_MODE_ROTATION_IDENTITY: DXGI_MODE_ROTATION = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_MODE_ROTATION_ROTATE90: DXGI_MODE_ROTATION = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_MODE_ROTATION_ROTATE180: DXGI_MODE_ROTATION = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_MODE_ROTATION_ROTATE270: DXGI_MODE_ROTATION = 4i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub type DXGI_MODE_SCALING = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_MODE_SCALING_UNSPECIFIED: DXGI_MODE_SCALING = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_MODE_SCALING_CENTERED: DXGI_MODE_SCALING = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_MODE_SCALING_STRETCHED: DXGI_MODE_SCALING = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub type DXGI_MODE_SCANLINE_ORDER = i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED: DXGI_MODE_SCANLINE_ORDER = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE: DXGI_MODE_SCANLINE_ORDER = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_MODE_SCANLINE_ORDER_UPPER_FIELD_FIRST: DXGI_MODE_SCANLINE_ORDER = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
+pub const DXGI_MODE_SCANLINE_ORDER_LOWER_FIELD_FIRST: DXGI_MODE_SCANLINE_ORDER = 3i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
 pub struct DXGI_GAMMA_CONTROL {
@@ -406,36 +440,6 @@ impl ::core::clone::Clone for DXGI_MODE_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub type DXGI_MODE_ROTATION = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_MODE_ROTATION_UNSPECIFIED: DXGI_MODE_ROTATION = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_MODE_ROTATION_IDENTITY: DXGI_MODE_ROTATION = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_MODE_ROTATION_ROTATE90: DXGI_MODE_ROTATION = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_MODE_ROTATION_ROTATE180: DXGI_MODE_ROTATION = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_MODE_ROTATION_ROTATE270: DXGI_MODE_ROTATION = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub type DXGI_MODE_SCALING = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_MODE_SCALING_UNSPECIFIED: DXGI_MODE_SCALING = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_MODE_SCALING_CENTERED: DXGI_MODE_SCALING = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_MODE_SCALING_STRETCHED: DXGI_MODE_SCALING = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub type DXGI_MODE_SCANLINE_ORDER = i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED: DXGI_MODE_SCANLINE_ORDER = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE: DXGI_MODE_SCANLINE_ORDER = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_MODE_SCANLINE_ORDER_UPPER_FIELD_FIRST: DXGI_MODE_SCANLINE_ORDER = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_MODE_SCANLINE_ORDER_LOWER_FIELD_FIRST: DXGI_MODE_SCANLINE_ORDER = 3i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
 pub struct DXGI_RATIONAL {
@@ -473,7 +477,3 @@ impl ::core::clone::Clone for DXGI_SAMPLE_DESC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const DXGI_STANDARD_MULTISAMPLE_QUALITY_PATTERN: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Graphics_Dxgi_Common\"`*"]
-pub const _FACDXGI: u32 = 2170u32;

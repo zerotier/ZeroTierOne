@@ -40,6 +40,10 @@ pub type IMbnSmsReadMsgTextCdma = *mut ::core::ffi::c_void;
 pub type IMbnSubscriberInformation = *mut ::core::ffi::c_void;
 pub type IMbnVendorSpecificEvents = *mut ::core::ffi::c_void;
 pub type IMbnVendorSpecificOperation = *mut ::core::ffi::c_void;
+pub const MbnConnectionManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3187597404, data2: 17432, data3: 4573, data4: [144, 237, 0, 28, 37, 124, 207, 241] };
+pub const MbnConnectionProfileManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3187597402, data2: 17432, data3: 4573, data4: [144, 237, 0, 28, 37, 124, 207, 241] };
+pub const MbnDeviceServicesManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 577362595, data2: 10911, data3: 16741, data4: [165, 1, 206, 0, 166, 247, 167, 91] };
+pub const MbnInterfaceManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3187597403, data2: 17432, data3: 4573, data4: [144, 237, 0, 28, 37, 124, 207, 241] };
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub type MBN_ACTIVATION_STATE = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
@@ -124,26 +128,6 @@ pub type MBN_CONNECTION_MODE = i32;
 pub const MBN_CONNECTION_MODE_PROFILE: MBN_CONNECTION_MODE = 0i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub const MBN_CONNECTION_MODE_TMP_PROFILE: MBN_CONNECTION_MODE = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MBN_CONTEXT {
-    pub contextID: u32,
-    pub contextType: MBN_CONTEXT_TYPE,
-    pub accessString: super::super::Foundation::BSTR,
-    pub userName: super::super::Foundation::BSTR,
-    pub password: super::super::Foundation::BSTR,
-    pub compression: MBN_COMPRESSION,
-    pub authType: MBN_AUTH_PROTOCOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MBN_CONTEXT {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MBN_CONTEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub type MBN_CONTEXT_CONSTANTS = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
@@ -226,22 +210,6 @@ pub const MBN_DATA_CLASS_1XEVDO_REVB: MBN_DATA_CLASS = 2097152i32;
 pub const MBN_DATA_CLASS_UMB: MBN_DATA_CLASS = 4194304i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub const MBN_DATA_CLASS_CUSTOM: MBN_DATA_CLASS = -2147483648i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MBN_DEVICE_SERVICE {
-    pub deviceServiceID: super::super::Foundation::BSTR,
-    pub dataWriteSupported: i16,
-    pub dataReadSupported: i16,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MBN_DEVICE_SERVICE {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MBN_DEVICE_SERVICE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub type MBN_DEVICE_SERVICES_INTERFACE_STATE = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
@@ -252,32 +220,6 @@ pub const MBN_DEVICE_SERVICES_CAPABLE_INTERFACE_REMOVAL: MBN_DEVICE_SERVICES_INT
 pub type MBN_DEVICE_SERVICE_SESSIONS_STATE = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub const MBN_DEVICE_SERVICE_SESSIONS_RESTORED: MBN_DEVICE_SERVICE_SESSIONS_STATE = 0i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MBN_INTERFACE_CAPS {
-    pub cellularClass: MBN_CELLULAR_CLASS,
-    pub voiceClass: MBN_VOICE_CLASS,
-    pub dataClass: u32,
-    pub customDataClass: super::super::Foundation::BSTR,
-    pub gsmBandClass: u32,
-    pub cdmaBandClass: u32,
-    pub customBandClass: super::super::Foundation::BSTR,
-    pub smsCaps: u32,
-    pub controlCaps: u32,
-    pub deviceID: super::super::Foundation::BSTR,
-    pub manufacturer: super::super::Foundation::BSTR,
-    pub model: super::super::Foundation::BSTR,
-    pub firmwareInfo: super::super::Foundation::BSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MBN_INTERFACE_CAPS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MBN_INTERFACE_CAPS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub type MBN_INTERFACE_CAPS_CONSTANTS = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
@@ -312,19 +254,6 @@ pub const MBN_PIN_FORMAT_NONE: MBN_PIN_FORMAT = 0i32;
 pub const MBN_PIN_FORMAT_NUMERIC: MBN_PIN_FORMAT = 1i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub const MBN_PIN_FORMAT_ALPHANUMERIC: MBN_PIN_FORMAT = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
-pub struct MBN_PIN_INFO {
-    pub pinState: MBN_PIN_STATE,
-    pub pinType: MBN_PIN_TYPE,
-    pub attemptsRemaining: u32,
-}
-impl ::core::marker::Copy for MBN_PIN_INFO {}
-impl ::core::clone::Clone for MBN_PIN_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub type MBN_PIN_MODE = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
@@ -363,40 +292,6 @@ pub const MBN_PIN_TYPE_SVC_PROVIDER_PIN: MBN_PIN_TYPE = 8i32;
 pub const MBN_PIN_TYPE_CORPORATE_PIN: MBN_PIN_TYPE = 9i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub const MBN_PIN_TYPE_SUBSIDY_LOCK: MBN_PIN_TYPE = 10i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MBN_PROVIDER {
-    pub providerID: super::super::Foundation::BSTR,
-    pub providerState: u32,
-    pub providerName: super::super::Foundation::BSTR,
-    pub dataClass: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MBN_PROVIDER {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MBN_PROVIDER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MBN_PROVIDER2 {
-    pub provider: MBN_PROVIDER,
-    pub cellularClass: MBN_CELLULAR_CLASS,
-    pub signalStrength: u32,
-    pub signalError: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MBN_PROVIDER2 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MBN_PROVIDER2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub type MBN_PROVIDER_CONSTANTS = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
@@ -537,18 +432,6 @@ pub const MBN_SMS_CDMA_LANG_KOREAN: MBN_SMS_CDMA_LANG = 5i32;
 pub const MBN_SMS_CDMA_LANG_CHINESE: MBN_SMS_CDMA_LANG = 6i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub const MBN_SMS_CDMA_LANG_HEBREW: MBN_SMS_CDMA_LANG = 7i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
-pub struct MBN_SMS_FILTER {
-    pub flag: MBN_SMS_FLAG,
-    pub messageIndex: u32,
-}
-impl ::core::marker::Copy for MBN_SMS_FILTER {}
-impl ::core::clone::Clone for MBN_SMS_FILTER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub type MBN_SMS_FLAG = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
@@ -579,18 +462,6 @@ pub const MBN_SMS_FLAG_NONE: MBN_SMS_STATUS_FLAG = 0i32;
 pub const MBN_SMS_FLAG_MESSAGE_STORE_FULL: MBN_SMS_STATUS_FLAG = 1i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub const MBN_SMS_FLAG_NEW_MESSAGE: MBN_SMS_STATUS_FLAG = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
-pub struct MBN_SMS_STATUS_INFO {
-    pub flag: u32,
-    pub messageIndex: u32,
-}
-impl ::core::marker::Copy for MBN_SMS_STATUS_INFO {}
-impl ::core::clone::Clone for MBN_SMS_STATUS_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub type MBN_VOICE_CALL_STATE = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
@@ -609,10 +480,6 @@ pub const MBN_VOICE_CLASS_NO_VOICE: MBN_VOICE_CLASS = 1i32;
 pub const MBN_VOICE_CLASS_SEPARATE_VOICE_DATA: MBN_VOICE_CLASS = 2i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub const MBN_VOICE_CLASS_SIMULTANEOUS_VOICE_DATA: MBN_VOICE_CLASS = 3i32;
-pub const MbnConnectionManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3187597404, data2: 17432, data3: 4573, data4: [144, 237, 0, 28, 37, 124, 207, 241] };
-pub const MbnConnectionProfileManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3187597402, data2: 17432, data3: 4573, data4: [144, 237, 0, 28, 37, 124, 207, 241] };
-pub const MbnDeviceServicesManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 577362595, data2: 10911, data3: 16741, data4: [165, 1, 206, 0, 166, 247, 167, 91] };
-pub const MbnInterfaceManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3187597403, data2: 17432, data3: 4573, data4: [144, 237, 0, 28, 37, 124, 207, 241] };
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub type WWAEXT_SMS_CONSTANTS = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
@@ -621,6 +488,124 @@ pub const MBN_MESSAGE_INDEX_NONE: WWAEXT_SMS_CONSTANTS = 0i32;
 pub const MBN_CDMA_SHORT_MSG_SIZE_UNKNOWN: WWAEXT_SMS_CONSTANTS = 0i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub const MBN_CDMA_SHORT_MSG_SIZE_MAX: WWAEXT_SMS_CONSTANTS = 160i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
+pub struct MBN_CONTEXT {
+    pub contextID: u32,
+    pub contextType: MBN_CONTEXT_TYPE,
+    pub accessString: ::windows_sys::core::BSTR,
+    pub userName: ::windows_sys::core::BSTR,
+    pub password: ::windows_sys::core::BSTR,
+    pub compression: MBN_COMPRESSION,
+    pub authType: MBN_AUTH_PROTOCOL,
+}
+impl ::core::marker::Copy for MBN_CONTEXT {}
+impl ::core::clone::Clone for MBN_CONTEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
+pub struct MBN_DEVICE_SERVICE {
+    pub deviceServiceID: ::windows_sys::core::BSTR,
+    pub dataWriteSupported: i16,
+    pub dataReadSupported: i16,
+}
+impl ::core::marker::Copy for MBN_DEVICE_SERVICE {}
+impl ::core::clone::Clone for MBN_DEVICE_SERVICE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
+pub struct MBN_INTERFACE_CAPS {
+    pub cellularClass: MBN_CELLULAR_CLASS,
+    pub voiceClass: MBN_VOICE_CLASS,
+    pub dataClass: u32,
+    pub customDataClass: ::windows_sys::core::BSTR,
+    pub gsmBandClass: u32,
+    pub cdmaBandClass: u32,
+    pub customBandClass: ::windows_sys::core::BSTR,
+    pub smsCaps: u32,
+    pub controlCaps: u32,
+    pub deviceID: ::windows_sys::core::BSTR,
+    pub manufacturer: ::windows_sys::core::BSTR,
+    pub model: ::windows_sys::core::BSTR,
+    pub firmwareInfo: ::windows_sys::core::BSTR,
+}
+impl ::core::marker::Copy for MBN_INTERFACE_CAPS {}
+impl ::core::clone::Clone for MBN_INTERFACE_CAPS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
+pub struct MBN_PIN_INFO {
+    pub pinState: MBN_PIN_STATE,
+    pub pinType: MBN_PIN_TYPE,
+    pub attemptsRemaining: u32,
+}
+impl ::core::marker::Copy for MBN_PIN_INFO {}
+impl ::core::clone::Clone for MBN_PIN_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
+pub struct MBN_PROVIDER {
+    pub providerID: ::windows_sys::core::BSTR,
+    pub providerState: u32,
+    pub providerName: ::windows_sys::core::BSTR,
+    pub dataClass: u32,
+}
+impl ::core::marker::Copy for MBN_PROVIDER {}
+impl ::core::clone::Clone for MBN_PROVIDER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
+pub struct MBN_PROVIDER2 {
+    pub provider: MBN_PROVIDER,
+    pub cellularClass: MBN_CELLULAR_CLASS,
+    pub signalStrength: u32,
+    pub signalError: u32,
+}
+impl ::core::marker::Copy for MBN_PROVIDER2 {}
+impl ::core::clone::Clone for MBN_PROVIDER2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
+pub struct MBN_SMS_FILTER {
+    pub flag: MBN_SMS_FLAG,
+    pub messageIndex: u32,
+}
+impl ::core::marker::Copy for MBN_SMS_FILTER {}
+impl ::core::clone::Clone for MBN_SMS_FILTER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
+pub struct MBN_SMS_STATUS_INFO {
+    pub flag: u32,
+    pub messageIndex: u32,
+}
+impl ::core::marker::Copy for MBN_SMS_STATUS_INFO {}
+impl ::core::clone::Clone for MBN_SMS_STATUS_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_NetworkManagement_MobileBroadband\"`*"]
 pub struct __DummyPinType__ {
