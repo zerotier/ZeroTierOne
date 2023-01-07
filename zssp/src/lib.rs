@@ -1,5 +1,4 @@
 mod applicationlayer;
-mod counter;
 mod error;
 mod sessionid;
 mod tests;

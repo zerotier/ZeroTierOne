@@ -9,7 +9,6 @@ mod tests {
     use zerotier_crypto::secret::Secret;
     use zerotier_utils::hex;
 
-    use crate::counter::CounterWindow;
     use crate::*;
     use constants::*;
 
@@ -17,7 +16,7 @@ mod tests {
         local_s: P384KeyPair,
         local_s_hash: [u8; 48],
         psk: Secret<64>,
-        session: Mutex<Option<Arc<Session<TestHost>>>>,
+        session: Mutex<Option<Arc<Session<Box<TestHost>>>>>,
         session_id_counter: Mutex<u64>,
         queue: Mutex<LinkedList<Vec<u8>>>,
         key_id: Mutex<[u8; 16]>,
@@ -43,9 +42,9 @@ mod tests {
         }
     }
 
-    impl ApplicationLayer for TestHost {
+    impl ApplicationLayer for Box<TestHost> {
         type Data = u32;
-        type SessionRef<'a> = Arc<Session<TestHost>>;
+        type SessionRef<'a> = Arc<Session<Box<TestHost>>>;
         type IncomingPacketBuffer = Vec<u8>;
         type RemoteAddress = u32;
 
@@ -98,10 +97,10 @@ mod tests {
         let mut psk: Secret<64> = Secret::default();
         random::fill_bytes_secure(&mut psk.0);
 
-        let alice_host = TestHost::new(psk.clone(), "alice", "bob");
-        let bob_host = TestHost::new(psk.clone(), "bob", "alice");
-        let alice_rc: ReceiveContext<TestHost> = ReceiveContext::new(&alice_host);
-        let bob_rc: ReceiveContext<TestHost> = ReceiveContext::new(&bob_host);
+        let alice_host = Box::new(TestHost::new(psk.clone(), "alice", "bob"));
+        let bob_host = Box::new(TestHost::new(psk.clone(), "bob", "alice"));
+        let alice_rc: Box<ReceiveContext<Box<TestHost>>> = Box::new(ReceiveContext::new(&alice_host));
+        let bob_rc: Box<ReceiveContext<Box<TestHost>>> = Box::new(ReceiveContext::new(&bob_host));
 
         //println!("zssp: size of session (bytes): {}", std::mem::size_of::<Session<Box<TestHost>>>());
 
@@ -195,8 +194,8 @@ mod tests {
                                     "zssp: new key at {}: fingerprint {} ratchet {} kyber {}",
                                     host.this_name,
                                     hex::to_string(key_id.as_ref()),
-                                    security_info.2,
-                                    security_info.3
+                                    security_info.1,
+                                    security_info.2
                                 );
                             }
                         }
@@ -209,61 +208,11 @@ mod tests {
                                 )
                                 .is_ok());
                         }
-                        if (test_loop % 8) == 0 && test_loop >= 8 {
+                        if (test_loop % 8) == 0 && test_loop >= 8 && host.this_name.eq("alice") {
                             session.service(host, send_to_other, &[], mtu_buffer.len(), test_loop as i64, true);
                         }
                     }
                 }
-            }
-        }
-    }
-
-
-    #[inline(always)]
-    pub fn xorshift64(x: &mut u64) -> u32 {
-        *x ^= x.wrapping_shl(13);
-        *x ^= x.wrapping_shr(7);
-        *x ^= x.wrapping_shl(17);
-        *x as u32
-    }
-    #[test]
-    fn counter_window() {
-        let mut rng = 844632;
-        let mut counter = 1u32;
-        let mut history = Vec::new();
-
-        let w = CounterWindow::new();
-        for _i in 0..1000000 {
-            let p = xorshift64(&mut rng) as f32/(u32::MAX as f32 + 1.0);
-            let c;
-            if p < 0.5 {
-                let r = xorshift64(&mut rng);
-                c = counter + (r%(COUNTER_MAX_ALLOWED_OOO - 1) as u32 + 1);
-            } else if p < 0.8 {
-                counter = counter + (1);
-                c = counter;
-            } else if p < 0.9 {
-                if history.len() > 0 {
-                    let idx = xorshift64(&mut rng) as usize%history.len();
-                    let c = history[idx];
-                    assert!(!w.message_authenticated(c));
-                }
-                continue;
-            } else if p < 0.999 {
-                c = xorshift64(&mut rng);
-                w.message_received(c);
-                continue;
-            } else {
-                w.reset_for_new_key_offer();
-                counter = 1u32;
-                history = Vec::new();
-                continue;
-            }
-            if history.contains(&c) {
-                assert!(!w.message_authenticated(c));
-            } else {
-                assert!(w.message_authenticated(c));
-                history.push(c);
             }
         }
     }

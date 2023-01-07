@@ -27,20 +27,15 @@ pub(crate) const MAX_FRAGMENTS: usize = 48; // hard protocol max: 63
 pub(crate) const KEY_EXCHANGE_MAX_FRAGMENTS: usize = 2; // enough room for p384 + ZT identity + kyber1024 + tag/hmac/etc.
 
 /// Start attempting to rekey after a key has been used to send packets this many times.
-///
-/// This is 1/4 the NIST recommended maximum and 1/8 the absolute limit where u32 wraps.
-/// As such it should leave plenty of margin against nearing key reuse bounds w/AES-GCM.
+/// This is 1/4 the recommended NIST limit for AES-GCM key lifetimes under most conditions.
 pub(crate) const REKEY_AFTER_USES: u64 = 536870912;
-
-/// Maximum random jitter to add to rekey-after usage count.
-pub(crate) const REKEY_AFTER_USES_MAX_JITTER: u32 = 1048576;
 
 /// Hard expiration after this many uses.
 ///
 /// Use of the key beyond this point is prohibited. If we reach this number of key uses
 /// the key will be destroyed in memory and the session will cease to function. A hard
 /// error is also generated.
-pub(crate) const EXPIRE_AFTER_USES: u64 = (u32::MAX - 1024) as u64;
+pub(crate) const EXPIRE_AFTER_USES: u64 = REKEY_AFTER_USES * 2;
 
 /// Start attempting to rekey after a key has been in use for this many milliseconds.
 pub(crate) const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60; // 1 hour
@@ -75,12 +70,13 @@ pub(crate) const HMAC_SIZE: usize = 48;
 pub(crate) const SESSION_ID_SIZE: usize = 6;
 
 /// Maximum difference between out-of-order incoming packet counters, and size of deduplication buffer.
-pub(crate) const COUNTER_MAX_ALLOWED_OOO: usize = 16;
+pub(crate) const COUNTER_MAX_DELTA: usize = 16;
 
 // Packet types can range from 0 to 15 (4 bits) -- 0-3 are defined and 4-15 are reserved for future use
 pub(crate) const PACKET_TYPE_DATA: u8 = 0;
-pub(crate) const PACKET_TYPE_INITIAL_KEY_OFFER: u8 = 1; // "alice"
-pub(crate) const PACKET_TYPE_KEY_COUNTER_OFFER: u8 = 2; // "bob"
+pub(crate) const PACKET_TYPE_NOP: u8 = 1;
+pub(crate) const PACKET_TYPE_INITIAL_KEY_OFFER: u8 = 2; // "alice"
+pub(crate) const PACKET_TYPE_KEY_COUNTER_OFFER: u8 = 3; // "bob"
 
 // Key usage labels for sub-key derivation using NIST-style KBKDF (basically just HMAC KDF).
 pub(crate) const KBKDF_KEY_USAGE_LABEL_HMAC: u8 = b'M'; // HMAC-SHA384 authentication for key exchanges
