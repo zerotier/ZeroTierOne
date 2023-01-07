@@ -119,8 +119,8 @@ mod tests {
             .unwrap(),
         ));
 
-        let mut ts = 0;
         for test_loop in 0..256 {
+            let time_ticks = (test_loop * 10000) as i64;
             for host in [&alice_host, &bob_host] {
                 let send_to_other = |data: &mut [u8]| {
                     if std::ptr::eq(host, &alice_host) {
@@ -139,8 +139,7 @@ mod tests {
                 loop {
                     if let Some(qi) = host.queue.lock().unwrap().pop_back() {
                         let qi_len = qi.len();
-                        ts += 1;
-                        let r = rc.receive(host, &0, send_to_other, &mut data_buf, qi, mtu_buffer.len(), ts);
+                        let r = rc.receive(host, &0, send_to_other, &mut data_buf, qi, mtu_buffer.len(), time_ticks);
                         if r.is_ok() {
                             let r = r.unwrap();
                             match r {
@@ -152,13 +151,7 @@ mod tests {
                                     assert!(!data.iter().any(|x| *x != 0x12));
                                 }
                                 ReceiveResult::OkNewSession(new_session) => {
-                                    println!(
-                                        "zssp: {} => {} ({}): OkNewSession ({})",
-                                        host.other_name,
-                                        host.this_name,
-                                        qi_len,
-                                        u64::from(new_session.id)
-                                    );
+                                    println!("zssp: new session at {} ({})", host.this_name, u64::from(new_session.id));
                                     let mut hs = host.session.lock().unwrap();
                                     assert!(hs.is_none());
                                     let _ = hs.insert(Arc::new(new_session));
@@ -191,11 +184,15 @@ mod tests {
                             if !security_info.0.eq(key_id.as_ref()) {
                                 *key_id = security_info.0;
                                 println!(
-                                    "zssp: new key at {}: fingerprint {} ratchet {} kyber {}",
+                                    "zssp: new key at {}: fingerprint {} ratchet {} kyber {} latest role {}",
                                     host.this_name,
                                     hex::to_string(key_id.as_ref()),
                                     security_info.1,
-                                    security_info.2
+                                    security_info.3,
+                                    match security_info.2 {
+                                        Role::Alice => "A",
+                                        Role::Bob => "B",
+                                    }
                                 );
                             }
                         }
@@ -208,8 +205,8 @@ mod tests {
                                 )
                                 .is_ok());
                         }
-                        if (test_loop % 8) == 0 && test_loop >= 8 && host.this_name.eq("alice") {
-                            session.service(host, send_to_other, &[], mtu_buffer.len(), test_loop as i64, true);
+                        if (test_loop % 13) == 0 && test_loop > 0 {
+                            session.service(host, send_to_other, &[], mtu_buffer.len(), time_ticks, true);
                         }
                     }
                 }

@@ -43,15 +43,6 @@ pub enum ReceiveResult<'a, H: ApplicationLayer> {
     Ignored,
 }
 
-/// Was this side the one who sent the first offer (Alice) or countered (Bob).
-///
-/// Note that the role can switch through the course of a session. It's the side that most recently
-/// initiated a session or a rekey event. Initiator is Alice, responder is Bob.
-pub enum Role {
-    Alice,
-    Bob,
-}
-
 /// State information to associate with receiving contexts such as sockets or remote paths/endpoints.
 ///
 /// This holds the data structures used to defragment incoming packets that are not associated with an
@@ -102,7 +93,7 @@ struct SessionKey {
     send_key: Secret<AES_KEY_SIZE>,               // Send side AES-GCM key
     receive_cipher_pool: Mutex<Vec<Box<AesGcm>>>, // Pool of reusable sending ciphers
     send_cipher_pool: Mutex<Vec<Box<AesGcm>>>,    // Pool of reusable receiving ciphers
-    rekey_needed: AtomicBool,                     // We have reached or exceeded the counter
+    role: Role,                                   // Was this side Alice or Bob?
     confirmed: bool,                              // We have confirmed that the other side has this key
     jedi: bool,                                   // True if Kyber1024 was used (both sides enabled)
 }
@@ -118,15 +109,15 @@ struct EphemeralOffer {
     alice_hk_keypair: Option<pqc_kyber::Keypair>, // Kyber1024 key pair (PQ hybrid ephemeral key for Alice)
 }
 
-/// "Canonical header" for generating 96-bit AES-GCM nonce and for inclusion in key exchange HMACs.
+/// Was this side the one who sent the first offer (Alice) or countered (Bob).
 ///
-/// This is basically the actual header but with fragment count and fragment total set to zero.
-/// Fragmentation is not considered when authenticating the entire packet. A separate header
-/// check code is used to make fragmentation itself more robust, but that's outside the scope
-/// of AEAD authentication.
+/// Note that the role can switch through the course of a session. It's the side that most recently
+/// initiated a session or a rekey event. Initiator is Alice, responder is Bob.
 #[derive(Clone, Copy)]
-#[repr(C, packed)]
-struct CanonicalHeader(pub u64, pub u32);
+pub enum Role {
+    Alice,
+    Bob,
+}
 
 impl<Application: ApplicationLayer> Session<Application> {
     /// Create a new session and send an initial key offer message to the other end.
@@ -297,11 +288,11 @@ impl<Application: ApplicationLayer> Session<Application> {
     }
 
     /// Get the shared key fingerprint, ratchet count, and whether Kyber was used, or None if not yet established.
-    pub fn status(&self) -> Option<([u8; 16], u64, bool)> {
+    pub fn status(&self) -> Option<([u8; 16], u64, Role, bool)> {
         let state = self.state.read().unwrap();
         state.session_keys[state.cur_session_key_idx]
             .as_ref()
-            .map(|k| (k.secret_fingerprint, k.ratchet_count, k.jedi))
+            .map(|k| (k.secret_fingerprint, k.ratchet_count, k.role, k.jedi))
     }
 
     /// This function needs to be called on each session at least every SERVICE_INTERVAL milliseconds.
@@ -322,14 +313,13 @@ impl<Application: ApplicationLayer> Session<Application> {
         force_expire: bool,
     ) {
         let state = self.state.read().unwrap();
-        if (force_expire
-            || state.session_keys[state.cur_session_key_idx]
-                .as_ref()
-                .map_or(true, |k| k.rekey_needed.load(Ordering::Relaxed) || current_time < k.rekey_at_time))
-            && state
-                .offer
-                .as_ref()
-                .map_or(true, |o| (current_time - o.creation_time) > Application::REKEY_RATE_LIMIT_MS)
+        if state.session_keys[state.cur_session_key_idx].as_ref().map_or(true, |k| {
+            matches!(k.role, Role::Bob)
+                && (force_expire || self.send_counter.load(Ordering::Relaxed) >= k.rekey_at_counter || current_time >= k.rekey_at_time)
+        }) && state
+            .offer
+            .as_ref()
+            .map_or(true, |o| (current_time - o.creation_time) > Application::REKEY_RATE_LIMIT_MS)
         {
             if let Some(remote_s_public) = P384PublicKey::from_bytes(&self.remote_s_public_p384_bytes) {
                 let mut offer = None;
@@ -604,6 +594,8 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                         if other_session_key.ratchet_count < this_ratchet_count {
                                             state.cur_session_key_idx = key_index;
                                         }
+                                    } else {
+                                        state.cur_session_key_idx = key_index;
                                     }
                                 }
                             }
@@ -687,7 +679,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
                     // Check rate limits.
                     if let Some(session) = session.as_ref() {
-                        if (current_time - session.state.read().unwrap().last_remote_offer) < Application::REKEY_RATE_LIMIT_MS {
+                        if (session.state.read().unwrap().last_remote_offer + Application::REKEY_RATE_LIMIT_MS) > current_time {
                             return Err(Error::RateLimited);
                         }
                     } else {
@@ -969,9 +961,12 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                         hybrid_kk.is_some(),
                     );
 
+                    let next_key_index = (next_ratchet_count as usize) & 1;
+
                     let mut state = session.state.write().unwrap();
                     let _ = state.remote_session_id.replace(alice_session_id);
-                    let _ = state.session_keys[(next_ratchet_count as usize) & 1].replace(session_key);
+                    let _ = state.session_keys[next_key_index].replace(session_key);
+                    state.last_remote_offer = current_time;
                     drop(state);
 
                     // Bob now has final key state for this exchange. Yay! Now reply to Alice so she can construct it.
@@ -1452,7 +1447,7 @@ impl SessionKey {
             send_key,
             receive_cipher_pool: Mutex::new(Vec::with_capacity(2)),
             send_cipher_pool: Mutex::new(Vec::with_capacity(2)),
-            rekey_needed: AtomicBool::new(false),
+            role,
             confirmed,
             jedi,
         }
@@ -1460,8 +1455,6 @@ impl SessionKey {
 
     fn get_send_cipher(&self, counter: u64) -> Result<Box<AesGcm>, Error> {
         if counter < self.expire_at_counter {
-            self.rekey_needed
-                .store(counter >= self.rekey_at_counter, std::sync::atomic::Ordering::Relaxed);
             Ok(self
                 .send_cipher_pool
                 .lock()
