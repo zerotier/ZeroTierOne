@@ -44,7 +44,6 @@ pub struct FileDatabase {
 impl FileDatabase {
     pub async fn new<P: AsRef<Path>>(runtime: Handle, base_path: P) -> Result<Arc<Self>, Error> {
         let base_path: PathBuf = base_path.as_ref().into();
-        let _ = fs::create_dir_all(&base_path).await?;
 
         let (change_sender, _) = channel(256);
         let db_weak_tmp: Arc<Mutex<Weak<Self>>> = Arc::new(Mutex::new(Weak::default()));
@@ -383,9 +382,9 @@ mod tests {
                 let _ = std::fs::remove_dir_all(&test_dir);
                 let controller_id = Identity::generate();
 
+                assert!(fs::create_dir_all(&test_dir).await.is_ok());
+                assert!(save_node_identity(test_dir.as_path(), &controller_id));
                 let db = Arc::new(FileDatabase::new(tokio_runtime.handle().clone(), test_dir).await.expect("new db"));
-                db.save_node_identity(&controller_id);
-                assert!(db.load_node_identity().is_some());
 
                 let change_count = Arc::new(AtomicUsize::new(0));
 
