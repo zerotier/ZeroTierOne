@@ -70,7 +70,7 @@ pub(crate) const HMAC_SIZE: usize = 48;
 pub(crate) const SESSION_ID_SIZE: usize = 6;
 
 /// Maximum difference between out-of-order incoming packet counters, and size of deduplication buffer.
-pub(crate) const COUNTER_MAX_DELTA: usize = 16;
+pub(crate) const COUNTER_WINDOW_MAX_OUT_OF_ORDER: usize = 16;
 
 // Packet types can range from 0 to 15 (4 bits) -- 0-3 are defined and 4-15 are reserved for future use
 pub(crate) const PACKET_TYPE_DATA: u8 = 0;

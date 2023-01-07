@@ -61,14 +61,14 @@ pub struct Session<Application: ApplicationLayer> {
     /// An arbitrary application defined object associated with each session
     pub application_data: Application::Data,
 
-    send_counter: AtomicU64,                                // Outgoing packet counter and nonce state
-    receive_window: [AtomicU64; COUNTER_MAX_DELTA],         // Receive window for anti-replay and deduplication
-    psk: Secret<64>,                                        // Arbitrary PSK provided by external code
-    noise_ss: Secret<48>,                                   // Static raw shared ECDH NIST P-384 key
-    header_check_cipher: Aes,                               // Cipher used for header check codes (not Noise related)
-    state: RwLock<SessionMutableState>,                     // Mutable parts of state (other than defrag buffers)
-    remote_s_public_blob_hash: [u8; 48],                    // SHA384(remote static public key blob)
-    remote_s_public_p384_bytes: [u8; P384_PUBLIC_KEY_SIZE], // Remote NIST P-384 static public key
+    send_counter: AtomicU64,                                      // Outgoing packet counter and nonce state
+    receive_window: [AtomicU64; COUNTER_WINDOW_MAX_OUT_OF_ORDER], // Receive window for anti-replay and deduplication
+    psk: Secret<64>,                                              // Arbitrary PSK provided by external code
+    noise_ss: Secret<48>,                                         // Static raw shared ECDH NIST P-384 key
+    header_check_cipher: Aes,                                     // Cipher used for header check codes (not Noise related)
+    state: RwLock<SessionMutableState>,                           // Mutable parts of state (other than defrag buffers)
+    remote_s_public_blob_hash: [u8; 48],                          // SHA384(remote static public key blob)
+    remote_s_public_p384_bytes: [u8; P384_PUBLIC_KEY_SIZE],       // Remote NIST P-384 static public key
 
     defrag: Mutex<RingBufferMap<u64, GatherArray<Application::IncomingPacketBuffer, MAX_FRAGMENTS>, 8, 8>>,
 }
@@ -355,14 +355,14 @@ impl<Application: ApplicationLayer> Session<Application> {
     /// Check the receive window without mutating state.
     #[inline(always)]
     fn check_receive_window(&self, counter: u64) -> bool {
-        self.receive_window[(counter as usize) % COUNTER_MAX_DELTA].load(Ordering::Acquire) < counter
+        self.receive_window[(counter as usize) % COUNTER_WINDOW_MAX_OUT_OF_ORDER].load(Ordering::Acquire) < counter
     }
 
     /// Update the receive window, returning true if the packet is still valid.
     /// This should only be called after the packet is authenticated.
     #[inline(always)]
     fn update_receive_window(&self, counter: u64) -> bool {
-        self.receive_window[(counter as usize) % COUNTER_MAX_DELTA].fetch_max(counter, Ordering::AcqRel) < counter
+        self.receive_window[(counter as usize) % COUNTER_WINDOW_MAX_OUT_OF_ORDER].fetch_max(counter, Ordering::AcqRel) < counter
     }
 }
 
