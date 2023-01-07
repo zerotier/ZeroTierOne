@@ -1484,6 +1484,5 @@ dependencies = [
  "serde",
  "thiserror",
  "time",
- "tokio",
  "url",
 ]
