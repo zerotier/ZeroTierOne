@@ -288,6 +288,9 @@
     <ClCompile Include="..\..\node\AES_armcrypto.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\osdep\WinFWHelper.cpp">
+      <Filter>Source Files\osdep</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -549,6 +552,9 @@
       <Filter>Header Files\controller</Filter>
     </ClInclude>
     <ClInclude Include="..\..\osdep\WinDNSHelper.hpp">
+      <Filter>Header Files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\osdep\WinFWHelper.hpp">
       <Filter>Header Files\osdep</Filter>
     </ClInclude>
   </ItemGroup>

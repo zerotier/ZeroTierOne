@@ -477,7 +477,7 @@ bool ManagedRoute::sync()
 	if ((newSystemVia)&&(!newSystemDevice[0])) {
 		rtes = _getRTEs(newSystemVia,true);
 		for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
-			if ( (r->device[0]) && (strcmp(r->device,_device) != 0) ) {
+			if ( (r->device[0]) && (strcmp(r->device,_device) != 0) && r->target.netmaskBits() != 0) {
 				Utils::scopy(newSystemDevice,sizeof(newSystemDevice),r->device);
 				break;
 			}
