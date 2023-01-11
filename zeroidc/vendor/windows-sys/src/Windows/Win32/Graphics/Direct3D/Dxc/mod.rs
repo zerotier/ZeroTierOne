@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
     pub fn DxcCreateInstance(rclsid: *const ::windows_sys::core::GUID, riid: *const ::windows_sys::core::GUID, ppv: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
@@ -6,6 +6,32 @@ extern "system" {
     #[cfg(feature = "Win32_System_Com")]
     pub fn DxcCreateInstance2(pmalloc: super::super::super::System::Com::IMalloc, rclsid: *const ::windows_sys::core::GUID, riid: *const ::windows_sys::core::GUID, ppv: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
 }
+pub type IDxcAssembler = *mut ::core::ffi::c_void;
+pub type IDxcBlob = *mut ::core::ffi::c_void;
+pub type IDxcBlobEncoding = *mut ::core::ffi::c_void;
+pub type IDxcBlobUtf16 = *mut ::core::ffi::c_void;
+pub type IDxcBlobUtf8 = *mut ::core::ffi::c_void;
+pub type IDxcCompiler = *mut ::core::ffi::c_void;
+pub type IDxcCompiler2 = *mut ::core::ffi::c_void;
+pub type IDxcCompiler3 = *mut ::core::ffi::c_void;
+pub type IDxcCompilerArgs = *mut ::core::ffi::c_void;
+pub type IDxcContainerBuilder = *mut ::core::ffi::c_void;
+pub type IDxcContainerReflection = *mut ::core::ffi::c_void;
+pub type IDxcExtraOutputs = *mut ::core::ffi::c_void;
+pub type IDxcIncludeHandler = *mut ::core::ffi::c_void;
+pub type IDxcLibrary = *mut ::core::ffi::c_void;
+pub type IDxcLinker = *mut ::core::ffi::c_void;
+pub type IDxcOperationResult = *mut ::core::ffi::c_void;
+pub type IDxcOptimizer = *mut ::core::ffi::c_void;
+pub type IDxcOptimizerPass = *mut ::core::ffi::c_void;
+pub type IDxcPdbUtils = *mut ::core::ffi::c_void;
+pub type IDxcResult = *mut ::core::ffi::c_void;
+pub type IDxcUtils = *mut ::core::ffi::c_void;
+pub type IDxcValidator = *mut ::core::ffi::c_void;
+pub type IDxcValidator2 = *mut ::core::ffi::c_void;
+pub type IDxcVersionInfo = *mut ::core::ffi::c_void;
+pub type IDxcVersionInfo2 = *mut ::core::ffi::c_void;
+pub type IDxcVersionInfo3 = *mut ::core::ffi::c_void;
 pub const CLSID_DxcAssembler: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3609779048, data2: 63747, data3: 20352, data4: [148, 205, 220, 207, 118, 236, 113, 81] };
 pub const CLSID_DxcCompiler: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1944202643, data2: 59086, data3: 18419, data4: [181, 191, 240, 102, 79, 57, 193, 176] };
 pub const CLSID_DxcCompilerArgs: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1045868162, data2: 8781, data3: 18191, data4: [161, 161, 254, 48, 22, 238, 159, 157] };
@@ -56,6 +82,28 @@ pub const DXC_ARG_SKIP_VALIDATION: &str = "-Vd";
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
 pub const DXC_ARG_WARNINGS_ARE_ERRORS: &str = "-WX";
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
+pub const DXC_EXTRA_OUTPUT_NAME_STDERR: &str = "*stderr*";
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
+pub const DXC_EXTRA_OUTPUT_NAME_STDOUT: &str = "*stdout*";
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
+pub const DXC_HASHFLAG_INCLUDES_SOURCE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
+pub const DxcValidatorFlags_Default: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
+pub const DxcValidatorFlags_InPlaceEdit: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
+pub const DxcValidatorFlags_ModuleOnly: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
+pub const DxcValidatorFlags_RootSignatureOnly: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
+pub const DxcValidatorFlags_ValidMask: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
+pub const DxcVersionInfoFlags_Debug: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
+pub const DxcVersionInfoFlags_Internal: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
+pub const DxcVersionInfoFlags_None: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
 pub type DXC_CP = u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
 pub const DXC_CP_ACP: DXC_CP = 0u32;
@@ -63,12 +111,6 @@ pub const DXC_CP_ACP: DXC_CP = 0u32;
 pub const DXC_CP_UTF16: DXC_CP = 1200u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
 pub const DXC_CP_UTF8: DXC_CP = 65001u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
-pub const DXC_EXTRA_OUTPUT_NAME_STDERR: &str = "*stderr*";
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
-pub const DXC_EXTRA_OUTPUT_NAME_STDOUT: &str = "*stdout*";
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
-pub const DXC_HASHFLAG_INCLUDES_SOURCE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
 pub type DXC_OUT_KIND = i32;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
@@ -120,11 +162,6 @@ impl ::core::clone::Clone for DxcBuffer {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`, `\"Win32_System_Com\"`*"]
-#[cfg(feature = "Win32_System_Com")]
-pub type DxcCreateInstance2Proc = ::core::option::Option<unsafe extern "system" fn(pmalloc: super::super::super::System::Com::IMalloc, rclsid: *const ::windows_sys::core::GUID, riid: *const ::windows_sys::core::GUID, ppv: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
-pub type DxcCreateInstanceProc = ::core::option::Option<unsafe extern "system" fn(rclsid: *const ::windows_sys::core::GUID, riid: *const ::windows_sys::core::GUID, ppv: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
 pub struct DxcDefine {
@@ -149,45 +186,8 @@ impl ::core::clone::Clone for DxcShaderHash {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub type DxcCreateInstance2Proc = ::core::option::Option<unsafe extern "system" fn(pmalloc: super::super::super::System::Com::IMalloc, rclsid: *const ::windows_sys::core::GUID, riid: *const ::windows_sys::core::GUID, ppv: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
-pub const DxcValidatorFlags_Default: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
-pub const DxcValidatorFlags_InPlaceEdit: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
-pub const DxcValidatorFlags_ModuleOnly: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
-pub const DxcValidatorFlags_RootSignatureOnly: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
-pub const DxcValidatorFlags_ValidMask: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
-pub const DxcVersionInfoFlags_Debug: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
-pub const DxcVersionInfoFlags_Internal: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Graphics_Direct3D_Dxc\"`*"]
-pub const DxcVersionInfoFlags_None: u32 = 0u32;
-pub type IDxcAssembler = *mut ::core::ffi::c_void;
-pub type IDxcBlob = *mut ::core::ffi::c_void;
-pub type IDxcBlobEncoding = *mut ::core::ffi::c_void;
-pub type IDxcBlobUtf16 = *mut ::core::ffi::c_void;
-pub type IDxcBlobUtf8 = *mut ::core::ffi::c_void;
-pub type IDxcCompiler = *mut ::core::ffi::c_void;
-pub type IDxcCompiler2 = *mut ::core::ffi::c_void;
-pub type IDxcCompiler3 = *mut ::core::ffi::c_void;
-pub type IDxcCompilerArgs = *mut ::core::ffi::c_void;
-pub type IDxcContainerBuilder = *mut ::core::ffi::c_void;
-pub type IDxcContainerReflection = *mut ::core::ffi::c_void;
-pub type IDxcExtraOutputs = *mut ::core::ffi::c_void;
-pub type IDxcIncludeHandler = *mut ::core::ffi::c_void;
-pub type IDxcLibrary = *mut ::core::ffi::c_void;
-pub type IDxcLinker = *mut ::core::ffi::c_void;
-pub type IDxcOperationResult = *mut ::core::ffi::c_void;
-pub type IDxcOptimizer = *mut ::core::ffi::c_void;
-pub type IDxcOptimizerPass = *mut ::core::ffi::c_void;
-pub type IDxcPdbUtils = *mut ::core::ffi::c_void;
-pub type IDxcResult = *mut ::core::ffi::c_void;
-pub type IDxcUtils = *mut ::core::ffi::c_void;
-pub type IDxcValidator = *mut ::core::ffi::c_void;
-pub type IDxcValidator2 = *mut ::core::ffi::c_void;
-pub type IDxcVersionInfo = *mut ::core::ffi::c_void;
-pub type IDxcVersionInfo2 = *mut ::core::ffi::c_void;
-pub type IDxcVersionInfo3 = *mut ::core::ffi::c_void;
+pub type DxcCreateInstanceProc = ::core::option::Option<unsafe extern "system" fn(rclsid: *const ::windows_sys::core::GUID, riid: *const ::windows_sys::core::GUID, ppv: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;

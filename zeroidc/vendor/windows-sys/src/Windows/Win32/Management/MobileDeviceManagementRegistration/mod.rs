@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Management_MobileDeviceManagementRegistration\"`*"]
     pub fn ApplyLocalManagementSyncML(syncmlrequest: ::windows_sys::core::PCWSTR, syncmlresult: *mut ::windows_sys::core::PWSTR) -> ::windows_sys::core::HRESULT;
@@ -53,35 +53,6 @@ pub const DEVICEREGISTRATIONTYPE_MDM_ONLY: u32 = 0u32;
 pub const DEVICEREGISTRATIONTYPE_MDM_USERSPECIFIC_WITH_AAD: u32 = 13u32;
 #[doc = "*Required features: `\"Win32_Management_MobileDeviceManagementRegistration\"`*"]
 pub const DEVICE_ENROLLER_FACILITY_CODE: u32 = 24u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Management_MobileDeviceManagementRegistration\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MANAGEMENT_REGISTRATION_INFO {
-    pub fDeviceRegisteredWithManagement: super::super::Foundation::BOOL,
-    pub dwDeviceRegistionKind: u32,
-    pub pszUPN: ::windows_sys::core::PWSTR,
-    pub pszMDMServiceUri: ::windows_sys::core::PWSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MANAGEMENT_REGISTRATION_INFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MANAGEMENT_REGISTRATION_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Management_MobileDeviceManagementRegistration\"`*"]
-pub struct MANAGEMENT_SERVICE_INFO {
-    pub pszMDMServiceUri: ::windows_sys::core::PWSTR,
-    pub pszAuthenticationUri: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for MANAGEMENT_SERVICE_INFO {}
-impl ::core::clone::Clone for MANAGEMENT_SERVICE_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Management_MobileDeviceManagementRegistration\"`*"]
 pub const MDM_REGISTRATION_FACILITY_CODE: u32 = 25u32;
 #[doc = "*Required features: `\"Win32_Management_MobileDeviceManagementRegistration\"`*"]
@@ -210,3 +181,32 @@ pub type REGISTRATION_INFORMATION_CLASS = i32;
 pub const DeviceRegistrationBasicInfo: REGISTRATION_INFORMATION_CLASS = 1i32;
 #[doc = "*Required features: `\"Win32_Management_MobileDeviceManagementRegistration\"`*"]
 pub const MaxDeviceInfoClass: REGISTRATION_INFORMATION_CLASS = 2i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Management_MobileDeviceManagementRegistration\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MANAGEMENT_REGISTRATION_INFO {
+    pub fDeviceRegisteredWithManagement: super::super::Foundation::BOOL,
+    pub dwDeviceRegistionKind: u32,
+    pub pszUPN: ::windows_sys::core::PWSTR,
+    pub pszMDMServiceUri: ::windows_sys::core::PWSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MANAGEMENT_REGISTRATION_INFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MANAGEMENT_REGISTRATION_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Management_MobileDeviceManagementRegistration\"`*"]
+pub struct MANAGEMENT_SERVICE_INFO {
+    pub pszMDMServiceUri: ::windows_sys::core::PWSTR,
+    pub pszAuthenticationUri: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for MANAGEMENT_SERVICE_INFO {}
+impl ::core::clone::Clone for MANAGEMENT_SERVICE_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}

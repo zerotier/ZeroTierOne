@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
     pub fn DMOEnum(guidcategory: *const ::windows_sys::core::GUID, dwflags: u32, cintypes: u32, pintypes: *const DMO_PARTIAL_MEDIATYPE, couttypes: u32, pouttypes: *const DMO_PARTIAL_MEDIATYPE, ppenum: *mut IEnumDMO) -> ::windows_sys::core::HRESULT;
@@ -29,6 +29,12 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn MoInitMediaType(pmt: *mut DMO_MEDIA_TYPE, cbformat: u32) -> ::windows_sys::core::HRESULT;
 }
+pub type IDMOQualityControl = *mut ::core::ffi::c_void;
+pub type IDMOVideoOutputOptimizations = *mut ::core::ffi::c_void;
+pub type IEnumDMO = *mut ::core::ffi::c_void;
+pub type IMediaBuffer = *mut ::core::ffi::c_void;
+pub type IMediaObject = *mut ::core::ffi::c_void;
+pub type IMediaObjectInPlace = *mut ::core::ffi::c_void;
 pub const DMOCATEGORY_ACOUSTIC_ECHO_CANCEL: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3214294400, data2: 50521, data3: 4560, data4: [138, 43, 0, 160, 201, 37, 90, 193] };
 pub const DMOCATEGORY_AGC: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3901528992, data2: 50519, data3: 4560, data4: [138, 43, 0, 160, 201, 37, 90, 193] };
 pub const DMOCATEGORY_AUDIO_CAPTURE_EFFECT: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4133857978, data2: 15881, data3: 18720, data4: [170, 95, 33, 152, 17, 20, 143, 9] };
@@ -39,10 +45,6 @@ pub const DMOCATEGORY_AUDIO_NOISE_SUPPRESS: ::windows_sys::core::GUID = ::window
 pub const DMOCATEGORY_VIDEO_DECODER: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1248441410, data2: 10430, data3: 18833, data4: [150, 156, 181, 0, 173, 245, 216, 168] };
 pub const DMOCATEGORY_VIDEO_EFFECT: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3650154004, data2: 30572, data3: 18211, data4: [190, 70, 61, 162, 245, 111, 16, 185] };
 pub const DMOCATEGORY_VIDEO_ENCODER: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 869902176, data2: 37064, data3: 4560, data4: [189, 67, 0, 160, 201, 17, 206, 134] };
-#[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
-pub type DMO_ENUM_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
-pub const DMO_ENUMF_INCLUDE_KEYED: DMO_ENUM_FLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
 pub const DMO_E_INVALIDSTREAMINDEX: ::windows_sys::core::HRESULT = -2147220991i32;
 #[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
@@ -55,64 +57,14 @@ pub const DMO_E_NO_MORE_ITEMS: ::windows_sys::core::HRESULT = -2147220986i32;
 pub const DMO_E_TYPE_NOT_ACCEPTED: ::windows_sys::core::HRESULT = -2147220987i32;
 #[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
 pub const DMO_E_TYPE_NOT_SET: ::windows_sys::core::HRESULT = -2147220989i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DMO_MEDIA_TYPE {
-    pub majortype: ::windows_sys::core::GUID,
-    pub subtype: ::windows_sys::core::GUID,
-    pub bFixedSizeSamples: super::super::Foundation::BOOL,
-    pub bTemporalCompression: super::super::Foundation::BOOL,
-    pub lSampleSize: u32,
-    pub formattype: ::windows_sys::core::GUID,
-    pub pUnk: ::windows_sys::core::IUnknown,
-    pub cbFormat: u32,
-    pub pbFormat: *mut u8,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DMO_MEDIA_TYPE {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DMO_MEDIA_TYPE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
-pub struct DMO_OUTPUT_DATA_BUFFER {
-    pub pBuffer: IMediaBuffer,
-    pub dwStatus: u32,
-    pub rtTimestamp: i64,
-    pub rtTimelength: i64,
-}
-impl ::core::marker::Copy for DMO_OUTPUT_DATA_BUFFER {}
-impl ::core::clone::Clone for DMO_OUTPUT_DATA_BUFFER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub type DMO_ENUM_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
-pub struct DMO_PARTIAL_MEDIATYPE {
-    pub r#type: ::windows_sys::core::GUID,
-    pub subtype: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for DMO_PARTIAL_MEDIATYPE {}
-impl ::core::clone::Clone for DMO_PARTIAL_MEDIATYPE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const DMO_ENUMF_INCLUDE_KEYED: DMO_ENUM_FLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
 pub type DMO_REGISTER_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
 pub const DMO_REGISTERF_IS_KEYED: DMO_REGISTER_FLAGS = 1i32;
-pub type IDMOQualityControl = *mut ::core::ffi::c_void;
-pub type IDMOVideoOutputOptimizations = *mut ::core::ffi::c_void;
-pub type IEnumDMO = *mut ::core::ffi::c_void;
-pub type IMediaBuffer = *mut ::core::ffi::c_void;
-pub type IMediaObject = *mut ::core::ffi::c_void;
-pub type IMediaObjectInPlace = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
 pub type _DMO_INPLACE_PROCESS_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
@@ -185,3 +137,51 @@ pub const DMO_SET_TYPEF_CLEAR: _DMO_SET_TYPE_FLAGS = 2i32;
 pub type _DMO_VIDEO_OUTPUT_STREAM_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
 pub const DMO_VOSF_NEEDS_PREVIOUS_SAMPLE: _DMO_VIDEO_OUTPUT_STREAM_FLAGS = 1i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DMO_MEDIA_TYPE {
+    pub majortype: ::windows_sys::core::GUID,
+    pub subtype: ::windows_sys::core::GUID,
+    pub bFixedSizeSamples: super::super::Foundation::BOOL,
+    pub bTemporalCompression: super::super::Foundation::BOOL,
+    pub lSampleSize: u32,
+    pub formattype: ::windows_sys::core::GUID,
+    pub pUnk: ::windows_sys::core::IUnknown,
+    pub cbFormat: u32,
+    pub pbFormat: *mut u8,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DMO_MEDIA_TYPE {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DMO_MEDIA_TYPE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
+pub struct DMO_OUTPUT_DATA_BUFFER {
+    pub pBuffer: IMediaBuffer,
+    pub dwStatus: u32,
+    pub rtTimestamp: i64,
+    pub rtTimelength: i64,
+}
+impl ::core::marker::Copy for DMO_OUTPUT_DATA_BUFFER {}
+impl ::core::clone::Clone for DMO_OUTPUT_DATA_BUFFER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_DxMediaObjects\"`*"]
+pub struct DMO_PARTIAL_MEDIATYPE {
+    pub r#type: ::windows_sys::core::GUID,
+    pub subtype: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for DMO_PARTIAL_MEDIATYPE {}
+impl ::core::clone::Clone for DMO_PARTIAL_MEDIATYPE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}

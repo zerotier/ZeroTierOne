@@ -1,4 +1,13 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
+extern "cdecl" {
+    #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+    pub fn GetDispenserManager(param0: *mut IDispenserManager) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+    pub fn RecycleSurrogate(lreasoncode: i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+    pub fn SafeRef(rid: *const ::windows_sys::core::GUID, punk: ::windows_sys::core::IUnknown) -> *mut ::core::ffi::c_void;
+}
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
     pub fn CoCreateActivity(piunknown: ::windows_sys::core::IUnknown, riid: *const ::windows_sys::core::GUID, ppobj: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
@@ -10,101 +19,187 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
     pub fn CoLeaveServiceDomain(punkstatus: ::windows_sys::core::IUnknown);
     #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-    pub fn GetDispenserManager(param0: *mut IDispenserManager) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
     pub fn GetManagedExtensions(dwexts: *mut u32) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
     pub fn MTSCreateActivity(riid: *const ::windows_sys::core::GUID, ppobj: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-    pub fn RecycleSurrogate(lreasoncode: i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-    pub fn SafeRef(rid: *const ::windows_sys::core::GUID, punk: ::windows_sys::core::IUnknown) -> *mut ::core::ffi::c_void;
 }
+pub type ContextInfo = *mut ::core::ffi::c_void;
+pub type ContextInfo2 = *mut ::core::ffi::c_void;
+pub type IAppDomainHelper = *mut ::core::ffi::c_void;
+pub type IAssemblyLocator = *mut ::core::ffi::c_void;
+pub type IAsyncErrorNotify = *mut ::core::ffi::c_void;
+pub type ICOMAdminCatalog = *mut ::core::ffi::c_void;
+pub type ICOMAdminCatalog2 = *mut ::core::ffi::c_void;
+pub type ICOMLBArguments = *mut ::core::ffi::c_void;
+pub type ICatalogCollection = *mut ::core::ffi::c_void;
+pub type ICatalogObject = *mut ::core::ffi::c_void;
+pub type ICheckSxsConfig = *mut ::core::ffi::c_void;
+pub type IComActivityEvents = *mut ::core::ffi::c_void;
+pub type IComApp2Events = *mut ::core::ffi::c_void;
+pub type IComAppEvents = *mut ::core::ffi::c_void;
+pub type IComCRMEvents = *mut ::core::ffi::c_void;
+pub type IComExceptionEvents = *mut ::core::ffi::c_void;
+pub type IComIdentityEvents = *mut ::core::ffi::c_void;
+pub type IComInstance2Events = *mut ::core::ffi::c_void;
+pub type IComInstanceEvents = *mut ::core::ffi::c_void;
+pub type IComLTxEvents = *mut ::core::ffi::c_void;
+pub type IComMethod2Events = *mut ::core::ffi::c_void;
+pub type IComMethodEvents = *mut ::core::ffi::c_void;
+pub type IComMtaThreadPoolKnobs = *mut ::core::ffi::c_void;
+pub type IComObjectConstruction2Events = *mut ::core::ffi::c_void;
+pub type IComObjectConstructionEvents = *mut ::core::ffi::c_void;
+pub type IComObjectEvents = *mut ::core::ffi::c_void;
+pub type IComObjectPool2Events = *mut ::core::ffi::c_void;
+pub type IComObjectPoolEvents = *mut ::core::ffi::c_void;
+pub type IComObjectPoolEvents2 = *mut ::core::ffi::c_void;
+pub type IComQCEvents = *mut ::core::ffi::c_void;
+pub type IComResourceEvents = *mut ::core::ffi::c_void;
+pub type IComSecurityEvents = *mut ::core::ffi::c_void;
+pub type IComStaThreadPoolKnobs = *mut ::core::ffi::c_void;
+pub type IComStaThreadPoolKnobs2 = *mut ::core::ffi::c_void;
+pub type IComThreadEvents = *mut ::core::ffi::c_void;
+pub type IComTrackingInfoCollection = *mut ::core::ffi::c_void;
+pub type IComTrackingInfoEvents = *mut ::core::ffi::c_void;
+pub type IComTrackingInfoObject = *mut ::core::ffi::c_void;
+pub type IComTrackingInfoProperties = *mut ::core::ffi::c_void;
+pub type IComTransaction2Events = *mut ::core::ffi::c_void;
+pub type IComTransactionEvents = *mut ::core::ffi::c_void;
+pub type IComUserEvent = *mut ::core::ffi::c_void;
+pub type IContextProperties = *mut ::core::ffi::c_void;
+pub type IContextSecurityPerimeter = *mut ::core::ffi::c_void;
+pub type IContextState = *mut ::core::ffi::c_void;
+pub type ICreateWithLocalTransaction = *mut ::core::ffi::c_void;
+pub type ICreateWithTipTransactionEx = *mut ::core::ffi::c_void;
+pub type ICreateWithTransactionEx = *mut ::core::ffi::c_void;
+pub type ICrmCompensator = *mut ::core::ffi::c_void;
+pub type ICrmCompensatorVariants = *mut ::core::ffi::c_void;
+pub type ICrmFormatLogRecords = *mut ::core::ffi::c_void;
+pub type ICrmLogControl = *mut ::core::ffi::c_void;
+pub type ICrmMonitor = *mut ::core::ffi::c_void;
+pub type ICrmMonitorClerks = *mut ::core::ffi::c_void;
+pub type ICrmMonitorLogRecords = *mut ::core::ffi::c_void;
+pub type IDispenserDriver = *mut ::core::ffi::c_void;
+pub type IDispenserManager = *mut ::core::ffi::c_void;
+pub type IEnumNames = *mut ::core::ffi::c_void;
+pub type IEventServerTrace = *mut ::core::ffi::c_void;
+pub type IGetAppTrackerData = *mut ::core::ffi::c_void;
+pub type IGetContextProperties = *mut ::core::ffi::c_void;
+pub type IGetSecurityCallContext = *mut ::core::ffi::c_void;
+pub type IHolder = *mut ::core::ffi::c_void;
+pub type ILBEvents = *mut ::core::ffi::c_void;
+pub type IMTSActivity = *mut ::core::ffi::c_void;
+pub type IMTSCall = *mut ::core::ffi::c_void;
+pub type IMTSLocator = *mut ::core::ffi::c_void;
+pub type IManagedActivationEvents = *mut ::core::ffi::c_void;
+pub type IManagedObjectInfo = *mut ::core::ffi::c_void;
+pub type IManagedPoolAction = *mut ::core::ffi::c_void;
+pub type IManagedPooledObj = *mut ::core::ffi::c_void;
+pub type IMessageMover = *mut ::core::ffi::c_void;
+pub type IMtsEventInfo = *mut ::core::ffi::c_void;
+pub type IMtsEvents = *mut ::core::ffi::c_void;
+pub type IMtsGrp = *mut ::core::ffi::c_void;
+pub type IObjPool = *mut ::core::ffi::c_void;
+pub type IObjectConstruct = *mut ::core::ffi::c_void;
+pub type IObjectConstructString = *mut ::core::ffi::c_void;
+pub type IObjectContext = *mut ::core::ffi::c_void;
+pub type IObjectContextActivity = *mut ::core::ffi::c_void;
+pub type IObjectContextInfo = *mut ::core::ffi::c_void;
+pub type IObjectContextInfo2 = *mut ::core::ffi::c_void;
+pub type IObjectContextTip = *mut ::core::ffi::c_void;
+pub type IObjectControl = *mut ::core::ffi::c_void;
+pub type IPlaybackControl = *mut ::core::ffi::c_void;
+pub type IPoolManager = *mut ::core::ffi::c_void;
+pub type IProcessInitializer = *mut ::core::ffi::c_void;
+pub type ISecurityCallContext = *mut ::core::ffi::c_void;
+pub type ISecurityCallersColl = *mut ::core::ffi::c_void;
+pub type ISecurityIdentityColl = *mut ::core::ffi::c_void;
+pub type ISecurityProperty = *mut ::core::ffi::c_void;
+pub type ISelectCOMLBServer = *mut ::core::ffi::c_void;
+pub type ISendMethodEvents = *mut ::core::ffi::c_void;
+pub type IServiceActivity = *mut ::core::ffi::c_void;
+pub type IServiceCall = *mut ::core::ffi::c_void;
+pub type IServiceComTIIntrinsicsConfig = *mut ::core::ffi::c_void;
+pub type IServiceIISIntrinsicsConfig = *mut ::core::ffi::c_void;
+pub type IServiceInheritanceConfig = *mut ::core::ffi::c_void;
+pub type IServicePartitionConfig = *mut ::core::ffi::c_void;
+pub type IServicePool = *mut ::core::ffi::c_void;
+pub type IServicePoolConfig = *mut ::core::ffi::c_void;
+pub type IServiceSxsConfig = *mut ::core::ffi::c_void;
+pub type IServiceSynchronizationConfig = *mut ::core::ffi::c_void;
+pub type IServiceSysTxnConfig = *mut ::core::ffi::c_void;
+pub type IServiceThreadPoolConfig = *mut ::core::ffi::c_void;
+pub type IServiceTrackerConfig = *mut ::core::ffi::c_void;
+pub type IServiceTransactionConfig = *mut ::core::ffi::c_void;
+pub type IServiceTransactionConfigBase = *mut ::core::ffi::c_void;
+pub type ISharedProperty = *mut ::core::ffi::c_void;
+pub type ISharedPropertyGroup = *mut ::core::ffi::c_void;
+pub type ISharedPropertyGroupManager = *mut ::core::ffi::c_void;
+pub type ISystemAppEventData = *mut ::core::ffi::c_void;
+pub type IThreadPoolKnobs = *mut ::core::ffi::c_void;
+pub type ITransactionContext = *mut ::core::ffi::c_void;
+pub type ITransactionContextEx = *mut ::core::ffi::c_void;
+pub type ITransactionProperty = *mut ::core::ffi::c_void;
+pub type ITransactionProxy = *mut ::core::ffi::c_void;
+pub type ITransactionResourcePool = *mut ::core::ffi::c_void;
+pub type ITransactionStatus = *mut ::core::ffi::c_void;
+pub type ITxProxyHolder = *mut ::core::ffi::c_void;
+pub type ObjectContext = *mut ::core::ffi::c_void;
+pub type ObjectControl = *mut ::core::ffi::c_void;
+pub type SecurityProperty = *mut ::core::ffi::c_void;
 pub const AppDomainHelper: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4012177033, data2: 5368, data3: 19858, data4: [180, 175, 215, 177, 240, 231, 15, 212] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ApplicationProcessRecycleInfo {
-    pub IsRecyclable: super::super::Foundation::BOOL,
-    pub IsRecycled: super::super::Foundation::BOOL,
-    pub TimeRecycled: super::super::Foundation::FILETIME,
-    pub TimeToTerminate: super::super::Foundation::FILETIME,
-    pub RecycleReasonCode: i32,
-    pub IsPendingRecycle: super::super::Foundation::BOOL,
-    pub HasAutomaticLifetimeRecycling: super::super::Foundation::BOOL,
-    pub TimeForAutomaticRecycling: super::super::Foundation::FILETIME,
-    pub MemoryLimitInKB: u32,
-    pub MemoryUsageInKBLastCheck: u32,
-    pub ActivationLimit: u32,
-    pub NumActivationsLastReported: u32,
-    pub CallLimit: u32,
-    pub NumCallsLastReported: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ApplicationProcessRecycleInfo {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ApplicationProcessRecycleInfo {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub const ByotServerEx: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674858, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const COMAdminCatalog: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4128818452, data2: 57272, data3: 4561, data4: [162, 207, 0, 128, 95, 199, 146, 53] };
+pub const COMAdminCatalogCollection: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4128818454, data2: 57272, data3: 4561, data4: [162, 207, 0, 128, 95, 199, 146, 53] };
+pub const COMAdminCatalogObject: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4128818453, data2: 57272, data3: 4561, data4: [162, 207, 0, 128, 95, 199, 146, 53] };
+pub const COMEvents: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674859, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const CRMClerk: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674877, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const CRMRecoveryClerk: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674878, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub struct ApplicationProcessStatistics {
-    pub NumCallsOutstanding: u32,
-    pub NumTrackedComponents: u32,
-    pub NumComponentInstances: u32,
-    pub AvgCallsPerSecond: u32,
-    pub Reserved1: u32,
-    pub Reserved2: u32,
-    pub Reserved3: u32,
-    pub Reserved4: u32,
-}
-impl ::core::marker::Copy for ApplicationProcessStatistics {}
-impl ::core::clone::Clone for ApplicationProcessStatistics {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ApplicationProcessSummary {
-    pub PartitionIdPrimaryApplication: ::windows_sys::core::GUID,
-    pub ApplicationIdPrimaryApplication: ::windows_sys::core::GUID,
-    pub ApplicationInstanceId: ::windows_sys::core::GUID,
-    pub ProcessId: u32,
-    pub Type: COMPLUS_APPTYPE,
-    pub ProcessExeName: ::windows_sys::core::PWSTR,
-    pub IsService: super::super::Foundation::BOOL,
-    pub IsPaused: super::super::Foundation::BOOL,
-    pub IsRecycled: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ApplicationProcessSummary {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ApplicationProcessSummary {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub const CRR_ACTIVATION_LIMIT: u32 = 4294967294u32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub struct ApplicationSummary {
-    pub ApplicationInstanceId: ::windows_sys::core::GUID,
-    pub PartitionId: ::windows_sys::core::GUID,
-    pub ApplicationId: ::windows_sys::core::GUID,
-    pub Type: COMPLUS_APPTYPE,
-    pub ApplicationName: ::windows_sys::core::PWSTR,
-    pub NumTrackedComponents: u32,
-    pub NumComponentInstances: u32,
-}
-impl ::core::marker::Copy for ApplicationSummary {}
-impl ::core::clone::Clone for ApplicationSummary {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const CRR_CALL_LIMIT: u32 = 4294967293u32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const CRR_LIFETIME_LIMIT: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const CRR_MEMORY_LIMIT: u32 = 4294967292u32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const CRR_NO_REASON_SUPPLIED: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const CRR_RECYCLED_FROM_UI: u32 = 4294967291u32;
+pub const CServiceConfig: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674888, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const ClrAssemblyLocator: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1166713781, data2: 9818, data3: 19317, data4: [188, 5, 155, 234, 70, 48, 207, 24] };
+pub const CoMTSLocator: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674860, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const ComServiceEvents: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674883, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const ComSystemAppEventData: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674886, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const DATA_NOT_AVAILABLE: u32 = 4294967295u32;
+pub const DispenserManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674880, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const Dummy30040732: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674857, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const EventServer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674620, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const GUID_STRING_SIZE: u32 = 40u32;
+pub const GetSecurityCallContextAppObject: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674856, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const LBEvents: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674881, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const MTXDM_E_ENLISTRESOURCEFAILED: u32 = 2147803392u32;
+pub const MessageMover: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674879, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const MtsGrp: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1261344141, data2: 915, data3: 4561, data4: [177, 171, 0, 170, 0, 186, 50, 88] };
+pub const PoolMgr: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674613, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const SecurityCallContext: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674855, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const SecurityCallers: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674854, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const SecurityIdentity: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674853, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const ServicePool: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674889, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const ServicePoolConfig: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674890, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const SharedProperty: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 704666629, data2: 42462, data3: 4559, data4: [158, 102, 0, 170, 0, 163, 244, 100] };
+pub const SharedPropertyGroup: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 704666635, data2: 42462, data3: 4559, data4: [158, 102, 0, 170, 0, 163, 244, 100] };
+pub const SharedPropertyGroupManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 704666641, data2: 42462, data3: 4559, data4: [158, 102, 0, 170, 0, 163, 244, 100] };
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const TRACKER_INIT_EVENT: &str = "Global\\COM+ Tracker Init Event";
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const TRACKER_STARTSTOP_EVENT: &str = "Global\\COM+ Tracker Push Event";
+pub const TrackerServer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674617, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+pub const TransactionContext: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2040134693, data2: 54214, data3: 4559, data4: [172, 171, 0, 160, 36, 165, 90, 239] };
+pub const TransactionContextEx: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1555457648, data2: 54228, data3: 4559, data4: [172, 171, 0, 160, 36, 165, 90, 239] };
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub type AutoSvcs_Error_Constants = u32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
@@ -159,76 +254,6 @@ pub const comqcErrMsgNotAuthenticated: AutoSvcs_Error_Constants = 2148599380u32;
 pub const comqcErrMsmqConnectorUsed: AutoSvcs_Error_Constants = 2148599381u32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub const comqcErrBadMarshaledObject: AutoSvcs_Error_Constants = 2148599382u32;
-pub const ByotServerEx: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674858, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub struct CAppData {
-    pub m_idApp: u32,
-    pub m_szAppGuid: [u16; 40],
-    pub m_dwAppProcessId: u32,
-    pub m_AppStatistics: CAppStatistics,
-}
-impl ::core::marker::Copy for CAppData {}
-impl ::core::clone::Clone for CAppData {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub struct CAppStatistics {
-    pub m_cTotalCalls: u32,
-    pub m_cTotalInstances: u32,
-    pub m_cTotalClasses: u32,
-    pub m_cCallsPerSecond: u32,
-}
-impl ::core::marker::Copy for CAppStatistics {}
-impl ::core::clone::Clone for CAppStatistics {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub struct CCLSIDData {
-    pub m_clsid: ::windows_sys::core::GUID,
-    pub m_cReferences: u32,
-    pub m_cBound: u32,
-    pub m_cPooled: u32,
-    pub m_cInCall: u32,
-    pub m_dwRespTime: u32,
-    pub m_cCallsCompleted: u32,
-    pub m_cCallsFailed: u32,
-}
-impl ::core::marker::Copy for CCLSIDData {}
-impl ::core::clone::Clone for CCLSIDData {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub struct CCLSIDData2 {
-    pub m_clsid: ::windows_sys::core::GUID,
-    pub m_appid: ::windows_sys::core::GUID,
-    pub m_partid: ::windows_sys::core::GUID,
-    pub m_pwszAppName: ::windows_sys::core::PWSTR,
-    pub m_pwszCtxName: ::windows_sys::core::PWSTR,
-    pub m_eAppType: COMPLUS_APPTYPE,
-    pub m_cReferences: u32,
-    pub m_cBound: u32,
-    pub m_cPooled: u32,
-    pub m_cInCall: u32,
-    pub m_dwRespTime: u32,
-    pub m_cCallsCompleted: u32,
-    pub m_cCallsFailed: u32,
-}
-impl ::core::marker::Copy for CCLSIDData2 {}
-impl ::core::clone::Clone for CCLSIDData2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub type COMAdminAccessChecksLevelOptions = i32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
@@ -287,9 +312,6 @@ pub const COMAdminAuthenticationPacket: COMAdminAuthenticationLevelOptions = 4i3
 pub const COMAdminAuthenticationIntegrity: COMAdminAuthenticationLevelOptions = 5i32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub const COMAdminAuthenticationPrivacy: COMAdminAuthenticationLevelOptions = 6i32;
-pub const COMAdminCatalog: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4128818452, data2: 57272, data3: 4561, data4: [162, 207, 0, 128, 95, 199, 146, 53] };
-pub const COMAdminCatalogCollection: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4128818454, data2: 57272, data3: 4561, data4: [162, 207, 0, 128, 95, 199, 146, 53] };
-pub const COMAdminCatalogObject: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4128818453, data2: 57272, data3: 4561, data4: [162, 207, 0, 128, 95, 199, 146, 53] };
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub type COMAdminComponentFlags = i32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
@@ -708,7 +730,6 @@ pub const COMAdminTxIsolationLevelReadCommitted: COMAdminTxIsolationLevelOptions
 pub const COMAdminTxIsolationLevelRepeatableRead: COMAdminTxIsolationLevelOptions = 3i32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub const COMAdminTxIsolationLevelSerializable: COMAdminTxIsolationLevelOptions = 4i32;
-pub const COMEvents: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674859, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub type COMPLUS_APPTYPE = i32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
@@ -719,24 +740,6 @@ pub const APPTYPE_SERVER: COMPLUS_APPTYPE = 1i32;
 pub const APPTYPE_LIBRARY: COMPLUS_APPTYPE = 0i32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub const APPTYPE_SWC: COMPLUS_APPTYPE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub struct COMSVCSEVENTINFO {
-    pub cbSize: u32,
-    pub dwPid: u32,
-    pub lTime: i64,
-    pub lMicroTime: i32,
-    pub perfCount: i64,
-    pub guidApp: ::windows_sys::core::GUID,
-    pub sMachineName: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for COMSVCSEVENTINFO {}
-impl ::core::clone::Clone for COMSVCSEVENTINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub const CRMClerk: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674877, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub type CRMFLAGS = i32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
@@ -765,19 +768,6 @@ pub const CRMREGFLAG_ABORTPHASE: CRMREGFLAGS = 4i32;
 pub const CRMREGFLAG_ALLPHASES: CRMREGFLAGS = 7i32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub const CRMREGFLAG_FAILIFINDOUBTSREMAIN: CRMREGFLAGS = 16i32;
-pub const CRMRecoveryClerk: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674878, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const CRR_ACTIVATION_LIMIT: u32 = 4294967294u32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const CRR_CALL_LIMIT: u32 = 4294967293u32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const CRR_LIFETIME_LIMIT: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const CRR_MEMORY_LIMIT: u32 = 4294967292u32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const CRR_NO_REASON_SUPPLIED: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const CRR_RECYCLED_FROM_UI: u32 = 4294967291u32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub type CSC_Binding = i32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
@@ -854,11 +844,232 @@ pub const CSC_IfContainerIsTransactional: CSC_TransactionConfig = 1i32;
 pub const CSC_CreateTransactionIfNecessary: CSC_TransactionConfig = 2i32;
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub const CSC_NewTransaction: CSC_TransactionConfig = 3i32;
-pub const CServiceConfig: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674888, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-pub const ClrAssemblyLocator: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1166713781, data2: 9818, data3: 19317, data4: [188, 5, 155, 234, 70, 48, 207, 24] };
-pub const CoMTSLocator: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674860, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-pub const ComServiceEvents: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674883, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-pub const ComSystemAppEventData: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674886, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub type CrmTransactionState = i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const TxState_Active: CrmTransactionState = 0i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const TxState_Committed: CrmTransactionState = 1i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const TxState_Aborted: CrmTransactionState = 2i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const TxState_Indoubt: CrmTransactionState = 3i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub type DUMPTYPE = i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const DUMPTYPE_FULL: DUMPTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const DUMPTYPE_MINI: DUMPTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const DUMPTYPE_NONE: DUMPTYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub type GetAppTrackerDataFlags = i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const GATD_INCLUDE_PROCESS_EXE_NAME: GetAppTrackerDataFlags = 1i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const GATD_INCLUDE_LIBRARY_APPS: GetAppTrackerDataFlags = 2i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const GATD_INCLUDE_SWC: GetAppTrackerDataFlags = 4i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const GATD_INCLUDE_CLASS_NAME: GetAppTrackerDataFlags = 8i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const GATD_INCLUDE_APPLICATION_NAME: GetAppTrackerDataFlags = 16i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub type LockModes = i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const LockSetGet: LockModes = 0i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const LockMethod: LockModes = 1i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub type ReleaseModes = i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const Standard: ReleaseModes = 0i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const Process: ReleaseModes = 1i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub type TRACKING_COLL_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const TRKCOLL_PROCESSES: TRACKING_COLL_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const TRKCOLL_APPLICATIONS: TRACKING_COLL_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const TRKCOLL_COMPONENTS: TRACKING_COLL_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub type TransactionVote = i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const TxCommit: TransactionVote = 0i32;
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub const TxAbort: TransactionVote = 1i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub struct APPDATA {
+    pub m_idApp: u32,
+    pub m_szAppGuid: [u16; 40],
+    pub m_dwAppProcessId: u32,
+    pub m_AppStatistics: APPSTATISTICS,
+}
+impl ::core::marker::Copy for APPDATA {}
+impl ::core::clone::Clone for APPDATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub struct APPSTATISTICS {
+    pub m_cTotalCalls: u32,
+    pub m_cTotalInstances: u32,
+    pub m_cTotalClasses: u32,
+    pub m_cCallsPerSecond: u32,
+}
+impl ::core::marker::Copy for APPSTATISTICS {}
+impl ::core::clone::Clone for APPSTATISTICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ApplicationProcessRecycleInfo {
+    pub IsRecyclable: super::super::Foundation::BOOL,
+    pub IsRecycled: super::super::Foundation::BOOL,
+    pub TimeRecycled: super::super::Foundation::FILETIME,
+    pub TimeToTerminate: super::super::Foundation::FILETIME,
+    pub RecycleReasonCode: i32,
+    pub IsPendingRecycle: super::super::Foundation::BOOL,
+    pub HasAutomaticLifetimeRecycling: super::super::Foundation::BOOL,
+    pub TimeForAutomaticRecycling: super::super::Foundation::FILETIME,
+    pub MemoryLimitInKB: u32,
+    pub MemoryUsageInKBLastCheck: u32,
+    pub ActivationLimit: u32,
+    pub NumActivationsLastReported: u32,
+    pub CallLimit: u32,
+    pub NumCallsLastReported: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ApplicationProcessRecycleInfo {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ApplicationProcessRecycleInfo {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub struct ApplicationProcessStatistics {
+    pub NumCallsOutstanding: u32,
+    pub NumTrackedComponents: u32,
+    pub NumComponentInstances: u32,
+    pub AvgCallsPerSecond: u32,
+    pub Reserved1: u32,
+    pub Reserved2: u32,
+    pub Reserved3: u32,
+    pub Reserved4: u32,
+}
+impl ::core::marker::Copy for ApplicationProcessStatistics {}
+impl ::core::clone::Clone for ApplicationProcessStatistics {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ApplicationProcessSummary {
+    pub PartitionIdPrimaryApplication: ::windows_sys::core::GUID,
+    pub ApplicationIdPrimaryApplication: ::windows_sys::core::GUID,
+    pub ApplicationInstanceId: ::windows_sys::core::GUID,
+    pub ProcessId: u32,
+    pub Type: COMPLUS_APPTYPE,
+    pub ProcessExeName: ::windows_sys::core::PWSTR,
+    pub IsService: super::super::Foundation::BOOL,
+    pub IsPaused: super::super::Foundation::BOOL,
+    pub IsRecycled: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ApplicationProcessSummary {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ApplicationProcessSummary {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub struct ApplicationSummary {
+    pub ApplicationInstanceId: ::windows_sys::core::GUID,
+    pub PartitionId: ::windows_sys::core::GUID,
+    pub ApplicationId: ::windows_sys::core::GUID,
+    pub Type: COMPLUS_APPTYPE,
+    pub ApplicationName: ::windows_sys::core::PWSTR,
+    pub NumTrackedComponents: u32,
+    pub NumComponentInstances: u32,
+}
+impl ::core::marker::Copy for ApplicationSummary {}
+impl ::core::clone::Clone for ApplicationSummary {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub struct CLSIDDATA {
+    pub m_clsid: ::windows_sys::core::GUID,
+    pub m_cReferences: u32,
+    pub m_cBound: u32,
+    pub m_cPooled: u32,
+    pub m_cInCall: u32,
+    pub m_dwRespTime: u32,
+    pub m_cCallsCompleted: u32,
+    pub m_cCallsFailed: u32,
+}
+impl ::core::marker::Copy for CLSIDDATA {}
+impl ::core::clone::Clone for CLSIDDATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub struct CLSIDDATA2 {
+    pub m_clsid: ::windows_sys::core::GUID,
+    pub m_appid: ::windows_sys::core::GUID,
+    pub m_partid: ::windows_sys::core::GUID,
+    pub m_pwszAppName: ::windows_sys::core::PWSTR,
+    pub m_pwszCtxName: ::windows_sys::core::PWSTR,
+    pub m_eAppType: COMPLUS_APPTYPE,
+    pub m_cReferences: u32,
+    pub m_cBound: u32,
+    pub m_cPooled: u32,
+    pub m_cInCall: u32,
+    pub m_dwRespTime: u32,
+    pub m_cCallsCompleted: u32,
+    pub m_cCallsFailed: u32,
+}
+impl ::core::marker::Copy for CLSIDDATA2 {}
+impl ::core::clone::Clone for CLSIDDATA2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
+pub struct COMSVCSEVENTINFO {
+    pub cbSize: u32,
+    pub dwPid: u32,
+    pub lTime: i64,
+    pub lMicroTime: i32,
+    pub perfCount: i64,
+    pub guidApp: ::windows_sys::core::GUID,
+    pub sMachineName: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for COMSVCSEVENTINFO {}
+impl ::core::clone::Clone for COMSVCSEVENTINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -914,8 +1125,6 @@ impl ::core::clone::Clone for ComponentSummary {
         *self
     }
 }
-pub type ContextInfo = *mut ::core::ffi::c_void;
-pub type ContextInfo2 = *mut ::core::ffi::c_void;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`, `\"Win32_System_Com\"`*"]
 #[cfg(feature = "Win32_System_Com")]
@@ -932,44 +1141,6 @@ impl ::core::clone::Clone for CrmLogRecordRead {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub type CrmTransactionState = i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const TxState_Active: CrmTransactionState = 0i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const TxState_Committed: CrmTransactionState = 1i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const TxState_Aborted: CrmTransactionState = 2i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const TxState_Indoubt: CrmTransactionState = 3i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const DATA_NOT_AVAILABLE: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub type DUMPTYPE = i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const DUMPTYPE_FULL: DUMPTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const DUMPTYPE_MINI: DUMPTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const DUMPTYPE_NONE: DUMPTYPE = 2i32;
-pub const DispenserManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674880, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-pub const Dummy30040732: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674857, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-pub const EventServer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674620, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const GUID_STRING_SIZE: u32 = 40u32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub type GetAppTrackerDataFlags = i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const GATD_INCLUDE_PROCESS_EXE_NAME: GetAppTrackerDataFlags = 1i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const GATD_INCLUDE_LIBRARY_APPS: GetAppTrackerDataFlags = 2i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const GATD_INCLUDE_SWC: GetAppTrackerDataFlags = 4i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const GATD_INCLUDE_CLASS_NAME: GetAppTrackerDataFlags = 8i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const GATD_INCLUDE_APPLICATION_NAME: GetAppTrackerDataFlags = 16i32;
-pub const GetSecurityCallContextAppObject: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674856, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -989,138 +1160,6 @@ impl ::core::clone::Clone for HANG_INFO {
         *self
     }
 }
-pub type IAppDomainHelper = *mut ::core::ffi::c_void;
-pub type IAssemblyLocator = *mut ::core::ffi::c_void;
-pub type IAsyncErrorNotify = *mut ::core::ffi::c_void;
-pub type ICOMAdminCatalog = *mut ::core::ffi::c_void;
-pub type ICOMAdminCatalog2 = *mut ::core::ffi::c_void;
-pub type ICOMLBArguments = *mut ::core::ffi::c_void;
-pub type ICatalogCollection = *mut ::core::ffi::c_void;
-pub type ICatalogObject = *mut ::core::ffi::c_void;
-pub type ICheckSxsConfig = *mut ::core::ffi::c_void;
-pub type IComActivityEvents = *mut ::core::ffi::c_void;
-pub type IComApp2Events = *mut ::core::ffi::c_void;
-pub type IComAppEvents = *mut ::core::ffi::c_void;
-pub type IComCRMEvents = *mut ::core::ffi::c_void;
-pub type IComExceptionEvents = *mut ::core::ffi::c_void;
-pub type IComIdentityEvents = *mut ::core::ffi::c_void;
-pub type IComInstance2Events = *mut ::core::ffi::c_void;
-pub type IComInstanceEvents = *mut ::core::ffi::c_void;
-pub type IComLTxEvents = *mut ::core::ffi::c_void;
-pub type IComMethod2Events = *mut ::core::ffi::c_void;
-pub type IComMethodEvents = *mut ::core::ffi::c_void;
-pub type IComMtaThreadPoolKnobs = *mut ::core::ffi::c_void;
-pub type IComObjectConstruction2Events = *mut ::core::ffi::c_void;
-pub type IComObjectConstructionEvents = *mut ::core::ffi::c_void;
-pub type IComObjectEvents = *mut ::core::ffi::c_void;
-pub type IComObjectPool2Events = *mut ::core::ffi::c_void;
-pub type IComObjectPoolEvents = *mut ::core::ffi::c_void;
-pub type IComObjectPoolEvents2 = *mut ::core::ffi::c_void;
-pub type IComQCEvents = *mut ::core::ffi::c_void;
-pub type IComResourceEvents = *mut ::core::ffi::c_void;
-pub type IComSecurityEvents = *mut ::core::ffi::c_void;
-pub type IComStaThreadPoolKnobs = *mut ::core::ffi::c_void;
-pub type IComStaThreadPoolKnobs2 = *mut ::core::ffi::c_void;
-pub type IComThreadEvents = *mut ::core::ffi::c_void;
-pub type IComTrackingInfoCollection = *mut ::core::ffi::c_void;
-pub type IComTrackingInfoEvents = *mut ::core::ffi::c_void;
-pub type IComTrackingInfoObject = *mut ::core::ffi::c_void;
-pub type IComTrackingInfoProperties = *mut ::core::ffi::c_void;
-pub type IComTransaction2Events = *mut ::core::ffi::c_void;
-pub type IComTransactionEvents = *mut ::core::ffi::c_void;
-pub type IComUserEvent = *mut ::core::ffi::c_void;
-pub type IContextProperties = *mut ::core::ffi::c_void;
-pub type IContextSecurityPerimeter = *mut ::core::ffi::c_void;
-pub type IContextState = *mut ::core::ffi::c_void;
-pub type ICreateWithLocalTransaction = *mut ::core::ffi::c_void;
-pub type ICreateWithTipTransactionEx = *mut ::core::ffi::c_void;
-pub type ICreateWithTransactionEx = *mut ::core::ffi::c_void;
-pub type ICrmCompensator = *mut ::core::ffi::c_void;
-pub type ICrmCompensatorVariants = *mut ::core::ffi::c_void;
-pub type ICrmFormatLogRecords = *mut ::core::ffi::c_void;
-pub type ICrmLogControl = *mut ::core::ffi::c_void;
-pub type ICrmMonitor = *mut ::core::ffi::c_void;
-pub type ICrmMonitorClerks = *mut ::core::ffi::c_void;
-pub type ICrmMonitorLogRecords = *mut ::core::ffi::c_void;
-pub type IDispenserDriver = *mut ::core::ffi::c_void;
-pub type IDispenserManager = *mut ::core::ffi::c_void;
-pub type IEnumNames = *mut ::core::ffi::c_void;
-pub type IEventServerTrace = *mut ::core::ffi::c_void;
-pub type IGetAppTrackerData = *mut ::core::ffi::c_void;
-pub type IGetContextProperties = *mut ::core::ffi::c_void;
-pub type IGetSecurityCallContext = *mut ::core::ffi::c_void;
-pub type IHolder = *mut ::core::ffi::c_void;
-pub type ILBEvents = *mut ::core::ffi::c_void;
-pub type IMTSActivity = *mut ::core::ffi::c_void;
-pub type IMTSCall = *mut ::core::ffi::c_void;
-pub type IMTSLocator = *mut ::core::ffi::c_void;
-pub type IManagedActivationEvents = *mut ::core::ffi::c_void;
-pub type IManagedObjectInfo = *mut ::core::ffi::c_void;
-pub type IManagedPoolAction = *mut ::core::ffi::c_void;
-pub type IManagedPooledObj = *mut ::core::ffi::c_void;
-pub type IMessageMover = *mut ::core::ffi::c_void;
-pub type IMtsEventInfo = *mut ::core::ffi::c_void;
-pub type IMtsEvents = *mut ::core::ffi::c_void;
-pub type IMtsGrp = *mut ::core::ffi::c_void;
-pub type IObjPool = *mut ::core::ffi::c_void;
-pub type IObjectConstruct = *mut ::core::ffi::c_void;
-pub type IObjectConstructString = *mut ::core::ffi::c_void;
-pub type IObjectContext = *mut ::core::ffi::c_void;
-pub type IObjectContextActivity = *mut ::core::ffi::c_void;
-pub type IObjectContextInfo = *mut ::core::ffi::c_void;
-pub type IObjectContextInfo2 = *mut ::core::ffi::c_void;
-pub type IObjectContextTip = *mut ::core::ffi::c_void;
-pub type IObjectControl = *mut ::core::ffi::c_void;
-pub type IPlaybackControl = *mut ::core::ffi::c_void;
-pub type IPoolManager = *mut ::core::ffi::c_void;
-pub type IProcessInitializer = *mut ::core::ffi::c_void;
-pub type ISecurityCallContext = *mut ::core::ffi::c_void;
-pub type ISecurityCallersColl = *mut ::core::ffi::c_void;
-pub type ISecurityIdentityColl = *mut ::core::ffi::c_void;
-pub type ISecurityProperty = *mut ::core::ffi::c_void;
-pub type ISelectCOMLBServer = *mut ::core::ffi::c_void;
-pub type ISendMethodEvents = *mut ::core::ffi::c_void;
-pub type IServiceActivity = *mut ::core::ffi::c_void;
-pub type IServiceCall = *mut ::core::ffi::c_void;
-pub type IServiceComTIIntrinsicsConfig = *mut ::core::ffi::c_void;
-pub type IServiceIISIntrinsicsConfig = *mut ::core::ffi::c_void;
-pub type IServiceInheritanceConfig = *mut ::core::ffi::c_void;
-pub type IServicePartitionConfig = *mut ::core::ffi::c_void;
-pub type IServicePool = *mut ::core::ffi::c_void;
-pub type IServicePoolConfig = *mut ::core::ffi::c_void;
-pub type IServiceSxsConfig = *mut ::core::ffi::c_void;
-pub type IServiceSynchronizationConfig = *mut ::core::ffi::c_void;
-pub type IServiceSysTxnConfig = *mut ::core::ffi::c_void;
-pub type IServiceThreadPoolConfig = *mut ::core::ffi::c_void;
-pub type IServiceTrackerConfig = *mut ::core::ffi::c_void;
-pub type IServiceTransactionConfig = *mut ::core::ffi::c_void;
-pub type IServiceTransactionConfigBase = *mut ::core::ffi::c_void;
-pub type ISharedProperty = *mut ::core::ffi::c_void;
-pub type ISharedPropertyGroup = *mut ::core::ffi::c_void;
-pub type ISharedPropertyGroupManager = *mut ::core::ffi::c_void;
-pub type ISystemAppEventData = *mut ::core::ffi::c_void;
-pub type IThreadPoolKnobs = *mut ::core::ffi::c_void;
-pub type ITransactionContext = *mut ::core::ffi::c_void;
-pub type ITransactionContextEx = *mut ::core::ffi::c_void;
-pub type ITransactionProperty = *mut ::core::ffi::c_void;
-pub type ITransactionProxy = *mut ::core::ffi::c_void;
-pub type ITransactionResourcePool = *mut ::core::ffi::c_void;
-pub type ITransactionStatus = *mut ::core::ffi::c_void;
-pub type ITxProxyHolder = *mut ::core::ffi::c_void;
-pub const LBEvents: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674881, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub type LockModes = i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const LockSetGet: LockModes = 0i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const LockMethod: LockModes = 1i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const MTXDM_E_ENLISTRESOURCEFAILED: u32 = 2147803392u32;
-pub const MessageMover: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674879, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-pub const MtsGrp: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1261344141, data2: 915, data3: 4561, data4: [177, 171, 0, 170, 0, 186, 50, 88] };
-pub type ObjectContext = *mut ::core::ffi::c_void;
-pub type ObjectControl = *mut ::core::ffi::c_void;
-pub const PoolMgr: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674613, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
 pub struct RECYCLE_INFO {
@@ -1136,39 +1175,3 @@ impl ::core::clone::Clone for RECYCLE_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub type ReleaseModes = i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const Standard: ReleaseModes = 0i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const Process: ReleaseModes = 1i32;
-pub const SecurityCallContext: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674855, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-pub const SecurityCallers: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674854, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-pub const SecurityIdentity: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674853, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-pub type SecurityProperty = *mut ::core::ffi::c_void;
-pub const ServicePool: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674889, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-pub const ServicePoolConfig: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674890, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-pub const SharedProperty: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 704666629, data2: 42462, data3: 4559, data4: [158, 102, 0, 170, 0, 163, 244, 100] };
-pub const SharedPropertyGroup: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 704666635, data2: 42462, data3: 4559, data4: [158, 102, 0, 170, 0, 163, 244, 100] };
-pub const SharedPropertyGroupManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 704666641, data2: 42462, data3: 4559, data4: [158, 102, 0, 170, 0, 163, 244, 100] };
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const TRACKER_INIT_EVENT: &str = "Global\\COM+ Tracker Init Event";
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const TRACKER_STARTSTOP_EVENT: &str = "Global\\COM+ Tracker Push Event";
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub type TRACKING_COLL_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const TRKCOLL_PROCESSES: TRACKING_COLL_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const TRKCOLL_APPLICATIONS: TRACKING_COLL_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const TRKCOLL_COMPONENTS: TRACKING_COLL_TYPE = 2i32;
-pub const TrackerServer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3970674617, data2: 32537, data3: 4562, data4: [151, 142, 0, 0, 248, 117, 126, 42] };
-pub const TransactionContext: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2040134693, data2: 54214, data3: 4559, data4: [172, 171, 0, 160, 36, 165, 90, 239] };
-pub const TransactionContextEx: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1555457648, data2: 54228, data3: 4559, data4: [172, 171, 0, 160, 36, 165, 90, 239] };
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub type TransactionVote = i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const TxCommit: TransactionVote = 0i32;
-#[doc = "*Required features: `\"Win32_System_ComponentServices\"`*"]
-pub const TxAbort: TransactionVote = 1i32;

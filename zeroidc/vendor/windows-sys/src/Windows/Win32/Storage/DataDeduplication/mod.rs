@@ -1,50 +1,19 @@
-#[repr(C)]
+pub type IDedupBackupSupport = *mut ::core::ffi::c_void;
+pub type IDedupChunkLibrary = *mut ::core::ffi::c_void;
+pub type IDedupDataPort = *mut ::core::ffi::c_void;
+pub type IDedupDataPortManager = *mut ::core::ffi::c_void;
+pub type IDedupIterateChunksHash32 = *mut ::core::ffi::c_void;
+pub type IDedupReadFileCallback = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
-pub struct DDP_FILE_EXTENT {
-    pub Length: i64,
-    pub Offset: i64,
-}
-impl ::core::marker::Copy for DDP_FILE_EXTENT {}
-impl ::core::clone::Clone for DDP_FILE_EXTENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const DEDUP_CHUNKLIB_MAX_CHUNKS_ENUM: u32 = 1024u32;
+pub const DedupBackupSupport: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1943450285, data2: 10628, data3: 18197, data4: [178, 227, 146, 76, 20, 151, 68, 221] };
+pub const DedupDataPort: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2400219655, data2: 6185, data3: 18610, data4: [166, 75, 230, 31, 142, 13, 154, 203] };
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
 pub type DEDUP_BACKUP_SUPPORT_PARAM_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
 pub const DEDUP_RECONSTRUCT_UNOPTIMIZED: DEDUP_BACKUP_SUPPORT_PARAM_TYPE = 1i32;
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
 pub const DEDUP_RECONSTRUCT_OPTIMIZED: DEDUP_BACKUP_SUPPORT_PARAM_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
-pub const DEDUP_CHUNKLIB_MAX_CHUNKS_ENUM: u32 = 1024u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
-pub struct DEDUP_CHUNK_INFO_HASH32 {
-    pub ChunkFlags: u32,
-    pub ChunkOffsetInStream: u64,
-    pub ChunkSize: u64,
-    pub HashVal: [u8; 32],
-}
-impl ::core::marker::Copy for DEDUP_CHUNK_INFO_HASH32 {}
-impl ::core::clone::Clone for DEDUP_CHUNK_INFO_HASH32 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
-pub struct DEDUP_CONTAINER_EXTENT {
-    pub ContainerIndex: u32,
-    pub StartOffset: i64,
-    pub Length: i64,
-}
-impl ::core::marker::Copy for DEDUP_CONTAINER_EXTENT {}
-impl ::core::clone::Clone for DEDUP_CONTAINER_EXTENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
 pub type DEDUP_SET_PARAM_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
@@ -57,21 +26,6 @@ pub const DEDUP_PT_AvgChunkSizeBytes: DEDUP_SET_PARAM_TYPE = 3i32;
 pub const DEDUP_PT_InvariantChunking: DEDUP_SET_PARAM_TYPE = 4i32;
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
 pub const DEDUP_PT_DisableStrongHashComputation: DEDUP_SET_PARAM_TYPE = 5i32;
-pub const DedupBackupSupport: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1943450285, data2: 10628, data3: 18197, data4: [178, 227, 146, 76, 20, 151, 68, 221] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
-pub struct DedupChunk {
-    pub Hash: DedupHash,
-    pub Flags: DedupChunkFlags,
-    pub LogicalSize: u32,
-    pub DataSize: u32,
-}
-impl ::core::marker::Copy for DedupChunk {}
-impl ::core::clone::Clone for DedupChunk {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
 pub type DedupChunkFlags = i32;
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
@@ -90,7 +44,6 @@ pub type DedupCompressionAlgorithm = i32;
 pub const DedupCompressionAlgorithm_Unknonwn: DedupCompressionAlgorithm = 0i32;
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
 pub const DedupCompressionAlgorithm_Xpress: DedupCompressionAlgorithm = 1i32;
-pub const DedupDataPort: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2400219655, data2: 6185, data3: 18610, data4: [166, 75, 230, 31, 142, 13, 154, 203] };
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
 pub type DedupDataPortManagerOption = i32;
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
@@ -129,6 +82,65 @@ pub const DedupDataPortVolumeStatus_Ready: DedupDataPortVolumeStatus = 4i32;
 pub const DedupDataPortVolumeStatus_Maintenance: DedupDataPortVolumeStatus = 5i32;
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
 pub const DedupDataPortVolumeStatus_Shutdown: DedupDataPortVolumeStatus = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
+pub type DedupHashingAlgorithm = i32;
+#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
+pub const DedupHashingAlgorithm_Unknonwn: DedupHashingAlgorithm = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
+pub const DedupHashingAlgorithm_V1: DedupHashingAlgorithm = 1i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
+pub struct DDP_FILE_EXTENT {
+    pub Length: i64,
+    pub Offset: i64,
+}
+impl ::core::marker::Copy for DDP_FILE_EXTENT {}
+impl ::core::clone::Clone for DDP_FILE_EXTENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
+pub struct DEDUP_CHUNK_INFO_HASH32 {
+    pub ChunkFlags: u32,
+    pub ChunkOffsetInStream: u64,
+    pub ChunkSize: u64,
+    pub HashVal: [u8; 32],
+}
+impl ::core::marker::Copy for DEDUP_CHUNK_INFO_HASH32 {}
+impl ::core::clone::Clone for DEDUP_CHUNK_INFO_HASH32 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
+pub struct DEDUP_CONTAINER_EXTENT {
+    pub ContainerIndex: u32,
+    pub StartOffset: i64,
+    pub Length: i64,
+}
+impl ::core::marker::Copy for DEDUP_CONTAINER_EXTENT {}
+impl ::core::clone::Clone for DEDUP_CONTAINER_EXTENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
+pub struct DedupChunk {
+    pub Hash: DedupHash,
+    pub Flags: DedupChunkFlags,
+    pub LogicalSize: u32,
+    pub DataSize: u32,
+}
+impl ::core::marker::Copy for DedupChunk {}
+impl ::core::clone::Clone for DedupChunk {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
 pub struct DedupHash {
@@ -140,24 +152,15 @@ impl ::core::clone::Clone for DedupHash {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
-pub type DedupHashingAlgorithm = i32;
-#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
-pub const DedupHashingAlgorithm_Unknonwn: DedupHashingAlgorithm = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
-pub const DedupHashingAlgorithm_V1: DedupHashingAlgorithm = 1i32;
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
+#[doc = "*Required features: `\"Win32_Storage_DataDeduplication\"`*"]
 pub struct DedupStream {
-    pub Path: super::super::Foundation::BSTR,
+    pub Path: ::windows_sys::core::BSTR,
     pub Offset: u64,
     pub Length: u64,
     pub ChunkCount: u32,
 }
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::marker::Copy for DedupStream {}
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::clone::Clone for DedupStream {
     fn clone(&self) -> Self {
         *self
@@ -176,9 +179,3 @@ impl ::core::clone::Clone for DedupStreamEntry {
         *self
     }
 }
-pub type IDedupBackupSupport = *mut ::core::ffi::c_void;
-pub type IDedupChunkLibrary = *mut ::core::ffi::c_void;
-pub type IDedupDataPort = *mut ::core::ffi::c_void;
-pub type IDedupDataPortManager = *mut ::core::ffi::c_void;
-pub type IDedupIterateChunksHash32 = *mut ::core::ffi::c_void;
-pub type IDedupReadFileCallback = *mut ::core::ffi::c_void;

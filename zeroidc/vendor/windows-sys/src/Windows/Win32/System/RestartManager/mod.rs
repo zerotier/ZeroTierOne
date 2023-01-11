@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_RestartManager\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -33,6 +33,10 @@ pub const CCH_RM_MAX_APP_NAME: u32 = 255u32;
 pub const CCH_RM_MAX_SVC_NAME: u32 = 63u32;
 #[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
 pub const CCH_RM_SESSION_KEY: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RM_INVALID_PROCESS: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RM_INVALID_TS_SESSION: i32 = -1i32;
 #[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
 pub type RM_APP_STATUS = i32;
 #[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
@@ -77,6 +81,36 @@ pub const RmInvalidFilterAction: RM_FILTER_ACTION = 0i32;
 pub const RmNoRestart: RM_FILTER_ACTION = 1i32;
 #[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
 pub const RmNoShutdown: RM_FILTER_ACTION = 2i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub type RM_FILTER_TRIGGER = i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RmFilterTriggerInvalid: RM_FILTER_TRIGGER = 0i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RmFilterTriggerFile: RM_FILTER_TRIGGER = 1i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RmFilterTriggerProcess: RM_FILTER_TRIGGER = 2i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RmFilterTriggerService: RM_FILTER_TRIGGER = 3i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub type RM_REBOOT_REASON = i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RmRebootReasonNone: RM_REBOOT_REASON = 0i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RmRebootReasonPermissionDenied: RM_REBOOT_REASON = 1i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RmRebootReasonSessionMismatch: RM_REBOOT_REASON = 2i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RmRebootReasonCriticalProcess: RM_REBOOT_REASON = 4i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RmRebootReasonCriticalService: RM_REBOOT_REASON = 8i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RmRebootReasonDetectedSelf: RM_REBOOT_REASON = 16i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub type RM_SHUTDOWN_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RmForceShutdown: RM_SHUTDOWN_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
+pub const RmShutdownOnlyRegistered: RM_SHUTDOWN_TYPE = 16i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_RestartManager\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -110,20 +144,6 @@ impl ::core::clone::Clone for RM_FILTER_INFO_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub type RM_FILTER_TRIGGER = i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RmFilterTriggerInvalid: RM_FILTER_TRIGGER = 0i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RmFilterTriggerFile: RM_FILTER_TRIGGER = 1i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RmFilterTriggerProcess: RM_FILTER_TRIGGER = 2i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RmFilterTriggerService: RM_FILTER_TRIGGER = 3i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RM_INVALID_PROCESS: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RM_INVALID_TS_SESSION: i32 = -1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_RestartManager\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -144,26 +164,6 @@ impl ::core::clone::Clone for RM_PROCESS_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub type RM_REBOOT_REASON = i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RmRebootReasonNone: RM_REBOOT_REASON = 0i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RmRebootReasonPermissionDenied: RM_REBOOT_REASON = 1i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RmRebootReasonSessionMismatch: RM_REBOOT_REASON = 2i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RmRebootReasonCriticalProcess: RM_REBOOT_REASON = 4i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RmRebootReasonCriticalService: RM_REBOOT_REASON = 8i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RmRebootReasonDetectedSelf: RM_REBOOT_REASON = 16i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub type RM_SHUTDOWN_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RmForceShutdown: RM_SHUTDOWN_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_RestartManager\"`*"]
-pub const RmShutdownOnlyRegistered: RM_SHUTDOWN_TYPE = 16i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_RestartManager\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]

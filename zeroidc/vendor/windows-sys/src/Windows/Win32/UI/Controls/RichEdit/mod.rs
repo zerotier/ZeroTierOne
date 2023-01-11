@@ -1,3 +1,27 @@
+pub type IRichEditOle = *mut ::core::ffi::c_void;
+pub type IRichEditOleCallback = *mut ::core::ffi::c_void;
+pub type IRicheditUiaOverrides = *mut ::core::ffi::c_void;
+pub type ITextDisplays = *mut ::core::ffi::c_void;
+pub type ITextDocument = *mut ::core::ffi::c_void;
+pub type ITextDocument2 = *mut ::core::ffi::c_void;
+pub type ITextDocument2Old = *mut ::core::ffi::c_void;
+pub type ITextFont = *mut ::core::ffi::c_void;
+pub type ITextFont2 = *mut ::core::ffi::c_void;
+pub type ITextHost = *mut ::core::ffi::c_void;
+pub type ITextHost2 = *mut ::core::ffi::c_void;
+pub type ITextPara = *mut ::core::ffi::c_void;
+pub type ITextPara2 = *mut ::core::ffi::c_void;
+pub type ITextRange = *mut ::core::ffi::c_void;
+pub type ITextRange2 = *mut ::core::ffi::c_void;
+pub type ITextRow = *mut ::core::ffi::c_void;
+pub type ITextSelection = *mut ::core::ffi::c_void;
+pub type ITextSelection2 = *mut ::core::ffi::c_void;
+pub type ITextServices = *mut ::core::ffi::c_void;
+pub type ITextServices2 = *mut ::core::ffi::c_void;
+pub type ITextStory = *mut ::core::ffi::c_void;
+pub type ITextStoryRanges = *mut ::core::ffi::c_void;
+pub type ITextStoryRanges2 = *mut ::core::ffi::c_void;
+pub type ITextStrings = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const ATP_CHANGE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -20,21 +44,6 @@ pub const AURL_ENABLEEMAILADDR: u32 = 2u32;
 pub const AURL_ENABLETELNO: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const AURL_ENABLEURL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type AutoCorrectProc = ::core::option::Option<unsafe extern "system" fn(langid: u16, pszbefore: ::windows_sys::core::PCWSTR, pszafter: ::windows_sys::core::PCWSTR, cchafter: i32, pcchreplaced: *mut i32) -> i32>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct BIDIOPTIONS {
-    pub cbSize: u32,
-    pub wMask: u16,
-    pub wEffects: u16,
-}
-impl ::core::marker::Copy for BIDIOPTIONS {}
-impl ::core::clone::Clone for BIDIOPTIONS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const BOE_CONTEXTALIGNMENT: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -66,361 +75,15 @@ pub const BOM_PLAINTEXT: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const BOM_UNICODEBIDI: u32 = 128u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type CARET_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CARET_NONE: CARET_FLAGS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CARET_CUSTOM: CARET_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CARET_RTL: CARET_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CARET_ITALIC: CARET_FLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CARET_NULL: CARET_FLAGS = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CARET_ROTATE90: CARET_FLAGS = 128i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub union CARET_INFO {
-    pub hbitmap: super::super::super::Graphics::Gdi::HBITMAP,
-    pub caretFlags: CARET_FLAGS,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for CARET_INFO {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for CARET_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const CERICHEDIT_CLASSA: &str = "RichEditCEA";
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const CERICHEDIT_CLASSW: &str = "RichEditCEW";
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type CFE_EFFECTS = u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_ALLCAPS: CFE_EFFECTS = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_AUTOBACKCOLOR: CFE_EFFECTS = 67108864u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_DISABLED: CFE_EFFECTS = 8192u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_EMBOSS: CFE_EFFECTS = 2048u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_HIDDEN: CFE_EFFECTS = 256u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_IMPRINT: CFE_EFFECTS = 4096u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_OUTLINE: CFE_EFFECTS = 512u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_REVISED: CFE_EFFECTS = 16384u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_SHADOW: CFE_EFFECTS = 1024u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_SMALLCAPS: CFE_EFFECTS = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_AUTOCOLOR: CFE_EFFECTS = 1073741824u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_BOLD: CFE_EFFECTS = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_ITALIC: CFE_EFFECTS = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_STRIKEOUT: CFE_EFFECTS = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_UNDERLINE: CFE_EFFECTS = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_PROTECTED: CFE_EFFECTS = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_LINK: CFE_EFFECTS = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_SUBSCRIPT: CFE_EFFECTS = 65536u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_SUPERSCRIPT: CFE_EFFECTS = 131072u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_FONTBOUND: CFE_EFFECTS = 1048576u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_LINKPROTECTED: CFE_EFFECTS = 8388608u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_EXTENDED: CFE_EFFECTS = 33554432u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_MATHNOBUILDUP: CFE_EFFECTS = 134217728u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_MATH: CFE_EFFECTS = 268435456u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFE_MATHORDINARY: CFE_EFFECTS = 536870912u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type CFM_MASK = u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_SUBSCRIPT: CFM_MASK = 196608u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_SUPERSCRIPT: CFM_MASK = 196608u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_EFFECTS: CFM_MASK = 1073741887u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_ALL: CFM_MASK = 4160749631u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_BOLD: CFM_MASK = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_CHARSET: CFM_MASK = 134217728u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_COLOR: CFM_MASK = 1073741824u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_FACE: CFM_MASK = 536870912u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_ITALIC: CFM_MASK = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_OFFSET: CFM_MASK = 268435456u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_PROTECTED: CFM_MASK = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_SIZE: CFM_MASK = 2147483648u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_STRIKEOUT: CFM_MASK = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_UNDERLINE: CFM_MASK = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_LINK: CFM_MASK = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_SMALLCAPS: CFM_MASK = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_ALLCAPS: CFM_MASK = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_HIDDEN: CFM_MASK = 256u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_OUTLINE: CFM_MASK = 512u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_SHADOW: CFM_MASK = 1024u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_EMBOSS: CFM_MASK = 2048u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_IMPRINT: CFM_MASK = 4096u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_DISABLED: CFM_MASK = 8192u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_REVISED: CFM_MASK = 16384u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_REVAUTHOR: CFM_MASK = 32768u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_ANIMATION: CFM_MASK = 262144u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_STYLE: CFM_MASK = 524288u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_KERNING: CFM_MASK = 1048576u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_SPACING: CFM_MASK = 2097152u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_WEIGHT: CFM_MASK = 4194304u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_UNDERLINETYPE: CFM_MASK = 8388608u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_COOKIE: CFM_MASK = 16777216u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_LCID: CFM_MASK = 33554432u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_BACKCOLOR: CFM_MASK = 67108864u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_EFFECTS2: CFM_MASK = 1141080063u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_ALL2: CFM_MASK = 4294967295u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_FONTBOUND: CFM_MASK = 1048576u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_LINKPROTECTED: CFM_MASK = 8388608u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_EXTENDED: CFM_MASK = 33554432u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_MATHNOBUILDUP: CFM_MASK = 134217728u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_MATH: CFM_MASK = 268435456u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_MATHORDINARY: CFM_MASK = 536870912u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CFM_ALLEFFECTS: CFM_MASK = 2115207167u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const CF_RETEXTOBJ: &str = "RichEdit Text and Objects";
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const CF_RTF: &str = "Rich Text Format";
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const CF_RTFNOOBJS: &str = "Rich Text Format Without Objects";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct CHANGENOTIFY {
-    pub dwChangeType: CHANGETYPE,
-    pub pvCookieData: *mut ::core::ffi::c_void,
-}
-impl ::core::marker::Copy for CHANGENOTIFY {}
-impl ::core::clone::Clone for CHANGENOTIFY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type CHANGETYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CN_GENERIC: CHANGETYPE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CN_TEXTCHANGED: CHANGETYPE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CN_NEWUNDO: CHANGETYPE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const CN_NEWREDO: CHANGETYPE = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CHARFORMAT2A {
-    pub __AnonymousBase_richedit_L736_C23: CHARFORMATA,
-    pub wWeight: u16,
-    pub sSpacing: i16,
-    pub crBackColor: u32,
-    pub lcid: u32,
-    pub Anonymous: CHARFORMAT2A_0,
-    pub sStyle: i16,
-    pub wKerning: u16,
-    pub bUnderlineType: u8,
-    pub bAnimation: u8,
-    pub bRevAuthor: u8,
-    pub bUnderlineColor: u8,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CHARFORMAT2A {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CHARFORMAT2A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union CHARFORMAT2A_0 {
-    pub dwReserved: u32,
-    pub dwCookie: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CHARFORMAT2A_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CHARFORMAT2A_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct CHARFORMAT2W {
-    pub __AnonymousBase_richedit_L711_C23: CHARFORMATW,
-    pub wWeight: u16,
-    pub sSpacing: i16,
-    pub crBackColor: u32,
-    pub lcid: u32,
-    pub Anonymous: CHARFORMAT2W_0,
-    pub sStyle: i16,
-    pub wKerning: u16,
-    pub bUnderlineType: u8,
-    pub bAnimation: u8,
-    pub bRevAuthor: u8,
-    pub bUnderlineColor: u8,
-}
-impl ::core::marker::Copy for CHARFORMAT2W {}
-impl ::core::clone::Clone for CHARFORMAT2W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub union CHARFORMAT2W_0 {
-    pub dwReserved: u32,
-    pub dwCookie: u32,
-}
-impl ::core::marker::Copy for CHARFORMAT2W_0 {}
-impl ::core::clone::Clone for CHARFORMAT2W_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CHARFORMATA {
-    pub cbSize: u32,
-    pub dwMask: CFM_MASK,
-    pub dwEffects: CFE_EFFECTS,
-    pub yHeight: i32,
-    pub yOffset: i32,
-    pub crTextColor: u32,
-    pub bCharSet: u8,
-    pub bPitchAndFamily: u8,
-    pub szFaceName: [super::super::super::Foundation::CHAR; 32],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CHARFORMATA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CHARFORMATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct CHARFORMATW {
-    pub cbSize: u32,
-    pub dwMask: CFM_MASK,
-    pub dwEffects: CFE_EFFECTS,
-    pub yHeight: i32,
-    pub yOffset: i32,
-    pub crTextColor: u32,
-    pub bCharSet: u8,
-    pub bPitchAndFamily: u8,
-    pub szFaceName: [u16; 32],
-}
-impl ::core::marker::Copy for CHARFORMATW {}
-impl ::core::clone::Clone for CHARFORMATW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct CHARRANGE {
-    pub cpMin: i32,
-    pub cpMax: i32,
-}
-impl ::core::marker::Copy for CHARRANGE {}
-impl ::core::clone::Clone for CHARRANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CLIPBOARDFORMAT {
-    pub nmhdr: super::NMHDR,
-    pub cf: u16,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CLIPBOARDFORMAT {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CLIPBOARDFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct COMPCOLOR {
-    pub crText: u32,
-    pub crBackground: u32,
-    pub dwEffects: u32,
-}
-impl ::core::marker::Copy for COMPCOLOR {}
-impl ::core::clone::Clone for COMPCOLOR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const CTFMODEBIAS_CONVERSATION: u32 = 5u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -473,23 +136,6 @@ pub const ECO_SELECTIONBAR: u32 = 16777216u32;
 pub const ECO_VERTICAL: u32 = 4194304u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const ECO_WANTRETURN: u32 = 4096u32;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct EDITSTREAM {
-    pub dwCookie: usize,
-    pub dwError: u32,
-    pub pfnCallback: EDITSTREAMCALLBACK,
-}
-impl ::core::marker::Copy for EDITSTREAM {}
-impl ::core::clone::Clone for EDITSTREAM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type EDITSTREAMCALLBACK = ::core::option::Option<unsafe extern "system" fn(dwcookie: usize, pbbuff: *mut u8, cb: i32, pcb: *mut i32) -> u32>;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type EDITWORDBREAKPROCEX = ::core::option::Option<unsafe extern "system" fn(pchtext: ::windows_sys::core::PCSTR, cchtext: i32, bcharset: u8, action: i32) -> i32>;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const ELLIPSIS_END: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -734,93 +380,6 @@ pub const EM_STOPGROUPTYPING: u32 = 1112u32;
 pub const EM_STREAMIN: u32 = 1097u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const EM_STREAMOUT: u32 = 1098u32;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ENCORRECTTEXT {
-    pub nmhdr: super::NMHDR,
-    pub chrg: CHARRANGE,
-    pub seltyp: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ENCORRECTTEXT {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ENCORRECTTEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ENDCOMPOSITIONNOTIFY {
-    pub nmhdr: super::NMHDR,
-    pub dwCode: ENDCOMPOSITIONNOTIFY_CODE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ENDCOMPOSITIONNOTIFY {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ENDCOMPOSITIONNOTIFY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type ENDCOMPOSITIONNOTIFY_CODE = u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const ECN_ENDCOMPOSITION: ENDCOMPOSITIONNOTIFY_CODE = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const ECN_NEWTEXT: ENDCOMPOSITIONNOTIFY_CODE = 2u32;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ENDROPFILES {
-    pub nmhdr: super::NMHDR,
-    pub hDrop: super::super::super::Foundation::HANDLE,
-    pub cp: i32,
-    pub fProtected: super::super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ENDROPFILES {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ENDROPFILES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ENLINK {
-    pub nmhdr: super::NMHDR,
-    pub msg: u32,
-    pub wParam: super::super::super::Foundation::WPARAM,
-    pub lParam: super::super::super::Foundation::LPARAM,
-    pub chrg: CHARRANGE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ENLINK {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ENLINK {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ENLOWFIRTF {
-    pub nmhdr: super::NMHDR,
-    pub szControl: ::windows_sys::core::PSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ENLOWFIRTF {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ENLOWFIRTF {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const ENM_CHANGE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -871,57 +430,6 @@ pub const ENM_SELCHANGE: u32 = 524288u32;
 pub const ENM_STARTCOMPOSITION: u32 = 268435456u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const ENM_UPDATE: u32 = 2u32;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ENOLEOPFAILED {
-    pub nmhdr: super::NMHDR,
-    pub iob: i32,
-    pub lOper: i32,
-    pub hr: ::windows_sys::core::HRESULT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ENOLEOPFAILED {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ENOLEOPFAILED {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ENPROTECTED {
-    pub nmhdr: super::NMHDR,
-    pub msg: u32,
-    pub wParam: super::super::super::Foundation::WPARAM,
-    pub lParam: super::super::super::Foundation::LPARAM,
-    pub chrg: CHARRANGE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ENPROTECTED {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ENPROTECTED {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ENSAVECLIPBOARD {
-    pub nmhdr: super::NMHDR,
-    pub cObjectCount: i32,
-    pub cch: i32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ENSAVECLIPBOARD {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ENSAVECLIPBOARD {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const EN_ALIGNLTR: u32 = 1808u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -992,74 +500,6 @@ pub const ES_SELFIME: u32 = 262144u32;
 pub const ES_SUNKEN: u32 = 16384u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const ES_VERTICAL: u32 = 4194304u32;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct FINDTEXTA {
-    pub chrg: CHARRANGE,
-    pub lpstrText: ::windows_sys::core::PCSTR,
-}
-impl ::core::marker::Copy for FINDTEXTA {}
-impl ::core::clone::Clone for FINDTEXTA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct FINDTEXTEXA {
-    pub chrg: CHARRANGE,
-    pub lpstrText: ::windows_sys::core::PCSTR,
-    pub chrgText: CHARRANGE,
-}
-impl ::core::marker::Copy for FINDTEXTEXA {}
-impl ::core::clone::Clone for FINDTEXTEXA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct FINDTEXTEXW {
-    pub chrg: CHARRANGE,
-    pub lpstrText: ::windows_sys::core::PCWSTR,
-    pub chrgText: CHARRANGE,
-}
-impl ::core::marker::Copy for FINDTEXTEXW {}
-impl ::core::clone::Clone for FINDTEXTEXW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct FINDTEXTW {
-    pub chrg: CHARRANGE,
-    pub lpstrText: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for FINDTEXTW {}
-impl ::core::clone::Clone for FINDTEXTW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-pub struct FORMATRANGE {
-    pub hdc: super::super::super::Graphics::Gdi::HDC,
-    pub hdcTarget: super::super::super::Graphics::Gdi::HDC,
-    pub rc: super::super::super::Foundation::RECT,
-    pub rcPage: super::super::super::Foundation::RECT,
-    pub chrg: CHARRANGE,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::marker::Copy for FORMATRANGE {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::clone::Clone for FORMATRANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const FR_MATCHALEFHAMZA: u32 = 2147483648u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -1078,89 +518,6 @@ pub const GCMF_TOUCHMENU: u32 = 16384u32;
 pub const GCM_MOUSEMENU: u32 = 8192u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const GCM_TOUCHMENU: u32 = 16384u32;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct GETCONTEXTMENUEX {
-    pub chrg: CHARRANGE,
-    pub dwFlags: u32,
-    pub pt: super::super::super::Foundation::POINT,
-    pub pvReserved: *mut ::core::ffi::c_void,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for GETCONTEXTMENUEX {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for GETCONTEXTMENUEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct GETTEXTEX {
-    pub cb: u32,
-    pub flags: GETTEXTEX_FLAGS,
-    pub codepage: u32,
-    pub lpDefaultChar: ::windows_sys::core::PCSTR,
-    pub lpUsedDefChar: *mut i32,
-}
-impl ::core::marker::Copy for GETTEXTEX {}
-impl ::core::clone::Clone for GETTEXTEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type GETTEXTEX_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const GT_DEFAULT: GETTEXTEX_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const GT_NOHIDDENTEXT: GETTEXTEX_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const GT_RAWTEXT: GETTEXTEX_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const GT_SELECTION: GETTEXTEX_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const GT_USECRLF: GETTEXTEX_FLAGS = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct GETTEXTLENGTHEX {
-    pub flags: GETTEXTLENGTHEX_FLAGS,
-    pub codepage: u32,
-}
-impl ::core::marker::Copy for GETTEXTLENGTHEX {}
-impl ::core::clone::Clone for GETTEXTLENGTHEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type GETTEXTLENGTHEX_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const GTL_DEFAULT: GETTEXTLENGTHEX_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const GTL_USECRLF: GETTEXTLENGTHEX_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const GTL_PRECISE: GETTEXTLENGTHEX_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const GTL_CLOSE: GETTEXTLENGTHEX_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const GTL_NUMCHARS: GETTEXTLENGTHEX_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const GTL_NUMBYTES: GETTEXTLENGTHEX_FLAGS = 16u32;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct HYPHENATEINFO {
-    pub cbSize: i16,
-    pub dxHyphenateZone: i16,
-    pub pfnHyphenate: isize,
-}
-impl ::core::marker::Copy for HYPHENATEINFO {}
-impl ::core::clone::Clone for HYPHENATEINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const ICM_CTF: u32 = 5u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -1173,22 +530,6 @@ pub const ICM_LEVEL2_SUI: u32 = 4u32;
 pub const ICM_LEVEL3: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const ICM_NOTOPEN: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct IMECOMPTEXT {
-    pub cb: i32,
-    pub flags: IMECOMPTEXT_FLAGS,
-}
-impl ::core::marker::Copy for IMECOMPTEXT {}
-impl ::core::clone::Clone for IMECOMPTEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type IMECOMPTEXT_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const ICT_RESULTREADSTR: IMECOMPTEXT_FLAGS = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const IMF_AUTOFONT: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -1237,326 +578,14 @@ pub const IMF_TKBPREDICTION: u32 = 4096u32;
 pub const IMF_UIFONTS: u32 = 32u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const IMF_VERTICAL: u32 = 32u32;
-pub type IRichEditOle = *mut ::core::ffi::c_void;
-pub type IRichEditOleCallback = *mut ::core::ffi::c_void;
-pub type IRicheditUiaOverrides = *mut ::core::ffi::c_void;
-pub type ITextDisplays = *mut ::core::ffi::c_void;
-pub type ITextDocument = *mut ::core::ffi::c_void;
-pub type ITextDocument2 = *mut ::core::ffi::c_void;
-pub type ITextDocument2Old = *mut ::core::ffi::c_void;
-pub type ITextFont = *mut ::core::ffi::c_void;
-pub type ITextFont2 = *mut ::core::ffi::c_void;
-pub type ITextHost = *mut ::core::ffi::c_void;
-pub type ITextHost2 = *mut ::core::ffi::c_void;
-pub type ITextPara = *mut ::core::ffi::c_void;
-pub type ITextPara2 = *mut ::core::ffi::c_void;
-pub type ITextRange = *mut ::core::ffi::c_void;
-pub type ITextRange2 = *mut ::core::ffi::c_void;
-pub type ITextRow = *mut ::core::ffi::c_void;
-pub type ITextSelection = *mut ::core::ffi::c_void;
-pub type ITextSelection2 = *mut ::core::ffi::c_void;
-pub type ITextServices = *mut ::core::ffi::c_void;
-pub type ITextServices2 = *mut ::core::ffi::c_void;
-pub type ITextStory = *mut ::core::ffi::c_void;
-pub type ITextStoryRanges = *mut ::core::ffi::c_void;
-pub type ITextStoryRanges2 = *mut ::core::ffi::c_void;
-pub type ITextStrings = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type KHYPH = i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const khyphNil: KHYPH = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const khyphNormal: KHYPH = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const khyphAddBefore: KHYPH = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const khyphChangeBefore: KHYPH = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const khyphDeleteBefore: KHYPH = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const khyphChangeAfter: KHYPH = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const khyphDelAndChange: KHYPH = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type MANCODE = i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MBOLD: MANCODE = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MITAL: MANCODE = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MGREEK: MANCODE = 64i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MROMN: MANCODE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MSCRP: MANCODE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MFRAK: MANCODE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MOPEN: MANCODE = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MSANS: MANCODE = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MMONO: MANCODE = 5i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MMATH: MANCODE = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MISOL: MANCODE = 7i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MINIT: MANCODE = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MTAIL: MANCODE = 9i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MSTRCH: MANCODE = 10i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MLOOP: MANCODE = 11i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const MOPENA: MANCODE = 12i32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const MAX_TABLE_CELLS: u32 = 63u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const MAX_TAB_STOPS: u32 = 32u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const MSFTEDIT_CLASS: &str = "RICHEDIT50W";
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MSGFILTER {
-    pub nmhdr: super::NMHDR,
-    pub msg: u32,
-    pub wParam: super::super::super::Foundation::WPARAM,
-    pub lParam: super::super::super::Foundation::LPARAM,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MSGFILTER {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MSGFILTER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct OBJECTPOSITIONS {
-    pub nmhdr: super::NMHDR,
-    pub cObjectCount: i32,
-    pub pcpPositions: *mut i32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for OBJECTPOSITIONS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for OBJECTPOSITIONS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type OBJECTTYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomSimpleText: OBJECTTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomRuby: OBJECTTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomHorzVert: OBJECTTYPE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomWarichu: OBJECTTYPE = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomEq: OBJECTTYPE = 9i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomMath: OBJECTTYPE = 10i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomAccent: OBJECTTYPE = 10i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomBox: OBJECTTYPE = 11i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomBoxedFormula: OBJECTTYPE = 12i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomBrackets: OBJECTTYPE = 13i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomBracketsWithSeps: OBJECTTYPE = 14i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomEquationArray: OBJECTTYPE = 15i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomFraction: OBJECTTYPE = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomFunctionApply: OBJECTTYPE = 17i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomLeftSubSup: OBJECTTYPE = 18i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomLowerLimit: OBJECTTYPE = 19i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomMatrix: OBJECTTYPE = 20i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomNary: OBJECTTYPE = 21i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomOpChar: OBJECTTYPE = 22i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomOverbar: OBJECTTYPE = 23i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomPhantom: OBJECTTYPE = 24i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomRadical: OBJECTTYPE = 25i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomSlashedFraction: OBJECTTYPE = 26i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomStack: OBJECTTYPE = 27i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomStretchStack: OBJECTTYPE = 28i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomSubscript: OBJECTTYPE = 29i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomSubSup: OBJECTTYPE = 30i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomSuperscript: OBJECTTYPE = 31i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomUnderbar: OBJECTTYPE = 32i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomUpperLimit: OBJECTTYPE = 33i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const tomObjectMax: OBJECTTYPE = 33i32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const OLEOP_DOVERB: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct PARAFORMAT {
-    pub cbSize: u32,
-    pub dwMask: PARAFORMAT_MASK,
-    pub wNumbering: u16,
-    pub Anonymous: PARAFORMAT_0,
-    pub dxStartIndent: i32,
-    pub dxRightIndent: i32,
-    pub dxOffset: i32,
-    pub wAlignment: PARAFORMAT_ALIGNMENT,
-    pub cTabCount: i16,
-    pub rgxTabs: [u32; 32],
-}
-impl ::core::marker::Copy for PARAFORMAT {}
-impl ::core::clone::Clone for PARAFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub union PARAFORMAT_0 {
-    pub wReserved: u16,
-    pub wEffects: u16,
-}
-impl ::core::marker::Copy for PARAFORMAT_0 {}
-impl ::core::clone::Clone for PARAFORMAT_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct PARAFORMAT2 {
-    pub __AnonymousBase_richedit_L1149_C22: PARAFORMAT,
-    pub dySpaceBefore: i32,
-    pub dySpaceAfter: i32,
-    pub dyLineSpacing: i32,
-    pub sStyle: i16,
-    pub bLineSpacingRule: u8,
-    pub bOutlineLevel: u8,
-    pub wShadingWeight: u16,
-    pub wShadingStyle: PARAFORMAT_SHADING_STYLE,
-    pub wNumberingStart: u16,
-    pub wNumberingStyle: PARAFORMAT_NUMBERING_STYLE,
-    pub wNumberingTab: u16,
-    pub wBorderSpace: u16,
-    pub wBorderWidth: u16,
-    pub wBorders: PARAFORMAT_BORDERS,
-}
-impl ::core::marker::Copy for PARAFORMAT2 {}
-impl ::core::clone::Clone for PARAFORMAT2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type PARAFORMAT_ALIGNMENT = u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFA_CENTER: PARAFORMAT_ALIGNMENT = 3u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFA_LEFT: PARAFORMAT_ALIGNMENT = 1u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFA_RIGHT: PARAFORMAT_ALIGNMENT = 2u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type PARAFORMAT_BORDERS = u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_BORDERS_LEFT: PARAFORMAT_BORDERS = 1u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_BORDERS_RIGHT: PARAFORMAT_BORDERS = 2u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_BORDERS_TOP: PARAFORMAT_BORDERS = 4u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_BORDERS_BOTTOM: PARAFORMAT_BORDERS = 8u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_BORDERS_INSIDE: PARAFORMAT_BORDERS = 16u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_BORDERS_OUTSIDE: PARAFORMAT_BORDERS = 32u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_BORDERS_AUTOCOLOR: PARAFORMAT_BORDERS = 64u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type PARAFORMAT_MASK = u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFM_ALIGNMENT: PARAFORMAT_MASK = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFM_NUMBERING: PARAFORMAT_MASK = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFM_OFFSET: PARAFORMAT_MASK = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFM_OFFSETINDENT: PARAFORMAT_MASK = 2147483648u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFM_RIGHTINDENT: PARAFORMAT_MASK = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFM_RTLPARA: PARAFORMAT_MASK = 65536u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFM_STARTINDENT: PARAFORMAT_MASK = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFM_TABSTOPS: PARAFORMAT_MASK = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type PARAFORMAT_NUMBERING_STYLE = u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFNS_PAREN: PARAFORMAT_NUMBERING_STYLE = 0u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFNS_PARENS: PARAFORMAT_NUMBERING_STYLE = 256u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFNS_PERIOD: PARAFORMAT_NUMBERING_STYLE = 512u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFNS_PLAIN: PARAFORMAT_NUMBERING_STYLE = 768u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFNS_NONUMBER: PARAFORMAT_NUMBERING_STYLE = 1024u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFNS_NEWNUMBER: PARAFORMAT_NUMBERING_STYLE = 32768u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type PARAFORMAT_SHADING_STYLE = u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_NONE: PARAFORMAT_SHADING_STYLE = 0u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_DARK_HORIZ: PARAFORMAT_SHADING_STYLE = 1u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_DARK_VERT: PARAFORMAT_SHADING_STYLE = 2u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_DARK_DOWN_DIAG: PARAFORMAT_SHADING_STYLE = 3u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_DARK_UP_DIAG: PARAFORMAT_SHADING_STYLE = 4u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_DARK_GRID: PARAFORMAT_SHADING_STYLE = 5u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_DARK_TRELLIS: PARAFORMAT_SHADING_STYLE = 6u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_LIGHT_HORZ: PARAFORMAT_SHADING_STYLE = 7u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_LIGHT_VERT: PARAFORMAT_SHADING_STYLE = 8u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_LIGHT_DOWN_DIAG: PARAFORMAT_SHADING_STYLE = 9u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_LIGHT_UP_DIAG: PARAFORMAT_SHADING_STYLE = 10u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_LIGHT_GRID: PARAFORMAT_SHADING_STYLE = 11u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PARAFORMAT_SHADING_STYLE_LIGHT_TRELLIS: PARAFORMAT_SHADING_STYLE = 12u16;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const PC_DELIMITER: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -1565,8 +594,6 @@ pub const PC_FOLLOWING: u32 = 1u32;
 pub const PC_LEADING: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const PC_OVERFLOW: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type PCreateTextServices = ::core::option::Option<unsafe extern "system" fn(punkouter: ::windows_sys::core::IUnknown, pitexthost: ITextHost, ppunk: *mut ::windows_sys::core::IUnknown) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const PFA_FULL_GLYPHS: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -1626,138 +653,9 @@ pub const PFM_TABLEROWDELIMITER: u32 = 268435456u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const PFM_TEXTWRAPPINGBREAK: u32 = 536870912u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFN_ARABIC: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFN_BULLET: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFN_LCLETTER: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFN_LCROMAN: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFN_UCLETTER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const PFN_UCROMAN: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type PShutdownTextServices = ::core::option::Option<unsafe extern "system" fn(ptextservices: ::windows_sys::core::IUnknown) -> ::windows_sys::core::HRESULT>;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct PUNCTUATION {
-    pub iSize: u32,
-    pub szPunctuation: ::windows_sys::core::PSTR,
-}
-impl ::core::marker::Copy for PUNCTUATION {}
-impl ::core::clone::Clone for PUNCTUATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const RECO_COPY: i32 = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const RECO_CUT: i32 = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const RECO_DRAG: i32 = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const RECO_DROP: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const RECO_PASTE: i32 = 0i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
-pub struct REOBJECT {
-    pub cbStruct: u32,
-    pub cp: i32,
-    pub clsid: ::windows_sys::core::GUID,
-    pub poleobj: super::super::super::System::Ole::IOleObject,
-    pub pstg: super::super::super::System::Com::StructuredStorage::IStorage,
-    pub polesite: super::super::super::System::Ole::IOleClientSite,
-    pub sizel: super::super::super::Foundation::SIZE,
-    pub dvaspect: u32,
-    pub dwFlags: REOBJECT_FLAGS,
-    pub dwUser: u32,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for REOBJECT {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for REOBJECT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type REOBJECT_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_ALIGNTORIGHT: REOBJECT_FLAGS = 256u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_BELOWBASELINE: REOBJECT_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_BLANK: REOBJECT_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_CANROTATE: REOBJECT_FLAGS = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_DONTNEEDPALETTE: REOBJECT_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_DYNAMICSIZE: REOBJECT_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_GETMETAFILE: REOBJECT_FLAGS = 4194304u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_HILITED: REOBJECT_FLAGS = 16777216u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_INPLACEACTIVE: REOBJECT_FLAGS = 33554432u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_INVERTEDSELECT: REOBJECT_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_LINK: REOBJECT_FLAGS = 2147483648u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_LINKAVAILABLE: REOBJECT_FLAGS = 8388608u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_OPEN: REOBJECT_FLAGS = 67108864u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_OWNERDRAWSELECT: REOBJECT_FLAGS = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_RESIZABLE: REOBJECT_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_SELECTED: REOBJECT_FLAGS = 134217728u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_STATIC: REOBJECT_FLAGS = 1073741824u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_USEASBACKGROUND: REOBJECT_FLAGS = 1024u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_WRAPTEXTAROUND: REOBJECT_FLAGS = 512u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const REO_NULL: i32 = 0i32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const REO_READWRITEMASK: i32 = 2047i32;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_System_Com\"`*"]
-#[cfg(feature = "Win32_System_Com")]
-pub struct REPASTESPECIAL {
-    pub dwAspect: super::super::super::System::Com::DVASPECT,
-    pub dwParam: usize,
-}
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::marker::Copy for REPASTESPECIAL {}
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::clone::Clone for REPASTESPECIAL {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct REQRESIZE {
-    pub nmhdr: super::NMHDR,
-    pub rc: super::super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for REQRESIZE {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for REQRESIZE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const RICHEDIT60_CLASS: &str = "RICHEDIT60W";
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -1768,51 +666,6 @@ pub const RICHEDIT_CLASS10A: &str = "RICHEDIT";
 pub const RICHEDIT_CLASSA: &str = "RichEdit20A";
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const RICHEDIT_CLASSW: &str = "RichEdit20W";
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Graphics_Gdi\"`, `\"Win32_System_Com\"`*"]
-#[cfg(all(feature = "Win32_Graphics_Gdi", feature = "Win32_System_Com"))]
-pub struct RICHEDIT_IMAGE_PARAMETERS {
-    pub xWidth: i32,
-    pub yHeight: i32,
-    pub Ascent: i32,
-    pub Type: super::super::super::Graphics::Gdi::TEXT_ALIGN_OPTIONS,
-    pub pwszAlternateText: ::windows_sys::core::PCWSTR,
-    pub pIStream: super::super::super::System::Com::IStream,
-}
-#[cfg(all(feature = "Win32_Graphics_Gdi", feature = "Win32_System_Com"))]
-impl ::core::marker::Copy for RICHEDIT_IMAGE_PARAMETERS {}
-#[cfg(all(feature = "Win32_Graphics_Gdi", feature = "Win32_System_Com"))]
-impl ::core::clone::Clone for RICHEDIT_IMAGE_PARAMETERS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const SEL_EMPTY: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = 0u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const SEL_TEXT: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = 1u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const SEL_OBJECT: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = 2u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const SEL_MULTICHAR: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = 4u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const SEL_MULTIOBJECT: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = 8u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const GCM_RIGHTMOUSEDROP: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = 32768u16;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type RICH_EDIT_GET_OBJECT_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_GETOBJ_POLEOBJ: RICH_EDIT_GET_OBJECT_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_GETOBJ_PSTG: RICH_EDIT_GET_OBJECT_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_GETOBJ_POLESITE: RICH_EDIT_GET_OBJECT_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_GETOBJ_NO_INTERFACES: RICH_EDIT_GET_OBJECT_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const REO_GETOBJ_ALL_INTERFACES: RICH_EDIT_GET_OBJECT_FLAGS = 7u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const RTO_DISABLEHANDLES: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -1839,22 +692,6 @@ pub const SCF_SMARTFONT: u32 = 128u32;
 pub const SCF_USEUIRULES: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const SCF_WORD: u32 = 2u32;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SELCHANGE {
-    pub nmhdr: super::NMHDR,
-    pub chrg: CHARRANGE,
-    pub seltyp: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SELCHANGE {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SELCHANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const SES_ALLOWBEEPS: u32 = 256u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -1941,18 +778,6 @@ pub const SES_USECTF: u32 = 65536u32;
 pub const SES_WORDDRAGDROP: u32 = 33554432u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const SES_XLTCRCRLFTOCR: u32 = 16384u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct SETTEXTEX {
-    pub flags: u32,
-    pub codepage: u32,
-}
-impl ::core::marker::Copy for SETTEXTEX {}
-impl ::core::clone::Clone for SETTEXTEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const SFF_KEEPDOCINFO: u32 = 4096u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -1997,88 +822,6 @@ pub const ST_SELECTION: u32 = 2u32;
 pub const ST_UNICODE: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const S_MSG_KEY_IGNORED: ::windows_sys::core::HRESULT = 262657i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct TABLECELLPARMS {
-    pub dxWidth: i32,
-    pub _bitfield: u16,
-    pub wShading: u16,
-    pub dxBrdrLeft: i16,
-    pub dyBrdrTop: i16,
-    pub dxBrdrRight: i16,
-    pub dyBrdrBottom: i16,
-    pub crBrdrLeft: u32,
-    pub crBrdrTop: u32,
-    pub crBrdrRight: u32,
-    pub crBrdrBottom: u32,
-    pub crBackPat: u32,
-    pub crForePat: u32,
-}
-impl ::core::marker::Copy for TABLECELLPARMS {}
-impl ::core::clone::Clone for TABLECELLPARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct TABLEROWPARMS {
-    pub cbRow: u8,
-    pub cbCell: u8,
-    pub cCell: u8,
-    pub cRow: u8,
-    pub dxCellMargin: i32,
-    pub dxIndent: i32,
-    pub dyHeight: i32,
-    pub _bitfield: u32,
-    pub cpStartRow: i32,
-    pub bTableLevel: u8,
-    pub iCell: u8,
-}
-impl ::core::marker::Copy for TABLEROWPARMS {}
-impl ::core::clone::Clone for TABLEROWPARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type TEXTMODE = i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const TM_PLAINTEXT: TEXTMODE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const TM_RICHTEXT: TEXTMODE = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const TM_SINGLELEVELUNDO: TEXTMODE = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const TM_MULTILEVELUNDO: TEXTMODE = 8i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const TM_SINGLECODEPAGE: TEXTMODE = 16i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const TM_MULTICODEPAGE: TEXTMODE = 32i32;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct TEXTRANGEA {
-    pub chrg: CHARRANGE,
-    pub lpstrText: ::windows_sys::core::PSTR,
-}
-impl ::core::marker::Copy for TEXTRANGEA {}
-impl ::core::clone::Clone for TEXTRANGEA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct TEXTRANGEW {
-    pub chrg: CHARRANGE,
-    pub lpstrText: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for TEXTRANGEW {}
-impl ::core::clone::Clone for TEXTRANGEW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const TO_ADVANCEDLAYOUT: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -2089,12 +832,6 @@ pub const TO_DISABLECUSTOMTEXTOUT: u32 = 4u32;
 pub const TO_SIMPLELINEBREAK: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const TXES_ISDIALOG: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub type TXTBACKSTYLE = i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const TXTBACK_TRANSPARENT: TXTBACKSTYLE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const TXTBACK_OPAQUE: TXTBACKSTYLE = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const TXTBIT_ADVANCEDINPUT: u32 = 536870912u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -2156,6 +893,536 @@ pub const TXTBIT_VIEWINSETCHANGE: u32 = 8192u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const TXTBIT_WORDWRAP: u32 = 1024u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const VM_NORMAL: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const VM_OUTLINE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const VM_PAGE: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const WBF_CUSTOM: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const WBF_LEVEL1: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const WBF_LEVEL2: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const WBF_OVERFLOW: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const WBF_WORDBREAK: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const WBF_WORDWRAP: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const WB_MOVEWORDNEXT: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const WB_MOVEWORDPREV: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const WB_NEXTBREAK: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const WB_PREVBREAK: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const cchTextLimitDefault: u32 = 32767u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const lDefaultTab: u32 = 720u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const yHeightCharPtsMost: u32 = 1638u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type CARET_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CARET_NONE: CARET_FLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CARET_CUSTOM: CARET_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CARET_RTL: CARET_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CARET_ITALIC: CARET_FLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CARET_NULL: CARET_FLAGS = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CARET_ROTATE90: CARET_FLAGS = 128i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type CFE_EFFECTS = u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_ALLCAPS: CFE_EFFECTS = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_AUTOBACKCOLOR: CFE_EFFECTS = 67108864u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_DISABLED: CFE_EFFECTS = 8192u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_EMBOSS: CFE_EFFECTS = 2048u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_HIDDEN: CFE_EFFECTS = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_IMPRINT: CFE_EFFECTS = 4096u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_OUTLINE: CFE_EFFECTS = 512u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_REVISED: CFE_EFFECTS = 16384u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_SHADOW: CFE_EFFECTS = 1024u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_SMALLCAPS: CFE_EFFECTS = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_AUTOCOLOR: CFE_EFFECTS = 1073741824u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_BOLD: CFE_EFFECTS = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_ITALIC: CFE_EFFECTS = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_STRIKEOUT: CFE_EFFECTS = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_UNDERLINE: CFE_EFFECTS = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_PROTECTED: CFE_EFFECTS = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_LINK: CFE_EFFECTS = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_SUBSCRIPT: CFE_EFFECTS = 65536u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_SUPERSCRIPT: CFE_EFFECTS = 131072u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_FONTBOUND: CFE_EFFECTS = 1048576u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_LINKPROTECTED: CFE_EFFECTS = 8388608u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_EXTENDED: CFE_EFFECTS = 33554432u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_MATHNOBUILDUP: CFE_EFFECTS = 134217728u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_MATH: CFE_EFFECTS = 268435456u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFE_MATHORDINARY: CFE_EFFECTS = 536870912u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type CFM_MASK = u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_SUBSCRIPT: CFM_MASK = 196608u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_SUPERSCRIPT: CFM_MASK = 196608u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_EFFECTS: CFM_MASK = 1073741887u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_ALL: CFM_MASK = 4160749631u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_BOLD: CFM_MASK = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_CHARSET: CFM_MASK = 134217728u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_COLOR: CFM_MASK = 1073741824u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_FACE: CFM_MASK = 536870912u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_ITALIC: CFM_MASK = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_OFFSET: CFM_MASK = 268435456u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_PROTECTED: CFM_MASK = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_SIZE: CFM_MASK = 2147483648u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_STRIKEOUT: CFM_MASK = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_UNDERLINE: CFM_MASK = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_LINK: CFM_MASK = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_SMALLCAPS: CFM_MASK = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_ALLCAPS: CFM_MASK = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_HIDDEN: CFM_MASK = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_OUTLINE: CFM_MASK = 512u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_SHADOW: CFM_MASK = 1024u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_EMBOSS: CFM_MASK = 2048u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_IMPRINT: CFM_MASK = 4096u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_DISABLED: CFM_MASK = 8192u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_REVISED: CFM_MASK = 16384u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_REVAUTHOR: CFM_MASK = 32768u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_ANIMATION: CFM_MASK = 262144u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_STYLE: CFM_MASK = 524288u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_KERNING: CFM_MASK = 1048576u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_SPACING: CFM_MASK = 2097152u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_WEIGHT: CFM_MASK = 4194304u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_UNDERLINETYPE: CFM_MASK = 8388608u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_COOKIE: CFM_MASK = 16777216u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_LCID: CFM_MASK = 33554432u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_BACKCOLOR: CFM_MASK = 67108864u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_EFFECTS2: CFM_MASK = 1141080063u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_ALL2: CFM_MASK = 4294967295u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_FONTBOUND: CFM_MASK = 1048576u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_LINKPROTECTED: CFM_MASK = 8388608u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_EXTENDED: CFM_MASK = 33554432u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_MATHNOBUILDUP: CFM_MASK = 134217728u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_MATH: CFM_MASK = 268435456u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_MATHORDINARY: CFM_MASK = 536870912u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CFM_ALLEFFECTS: CFM_MASK = 2115207167u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type CHANGETYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CN_GENERIC: CHANGETYPE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CN_TEXTCHANGED: CHANGETYPE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CN_NEWUNDO: CHANGETYPE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const CN_NEWREDO: CHANGETYPE = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type ENDCOMPOSITIONNOTIFY_CODE = u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const ECN_ENDCOMPOSITION: ENDCOMPOSITIONNOTIFY_CODE = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const ECN_NEWTEXT: ENDCOMPOSITIONNOTIFY_CODE = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type GETTEXTEX_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const GT_DEFAULT: GETTEXTEX_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const GT_NOHIDDENTEXT: GETTEXTEX_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const GT_RAWTEXT: GETTEXTEX_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const GT_SELECTION: GETTEXTEX_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const GT_USECRLF: GETTEXTEX_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type GETTEXTLENGTHEX_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const GTL_DEFAULT: GETTEXTLENGTHEX_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const GTL_USECRLF: GETTEXTLENGTHEX_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const GTL_PRECISE: GETTEXTLENGTHEX_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const GTL_CLOSE: GETTEXTLENGTHEX_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const GTL_NUMCHARS: GETTEXTLENGTHEX_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const GTL_NUMBYTES: GETTEXTLENGTHEX_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type IMECOMPTEXT_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const ICT_RESULTREADSTR: IMECOMPTEXT_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type KHYPH = i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const khyphNil: KHYPH = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const khyphNormal: KHYPH = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const khyphAddBefore: KHYPH = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const khyphChangeBefore: KHYPH = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const khyphDeleteBefore: KHYPH = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const khyphChangeAfter: KHYPH = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const khyphDelAndChange: KHYPH = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type MANCODE = i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MBOLD: MANCODE = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MITAL: MANCODE = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MGREEK: MANCODE = 64i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MROMN: MANCODE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MSCRP: MANCODE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MFRAK: MANCODE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MOPEN: MANCODE = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MSANS: MANCODE = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MMONO: MANCODE = 5i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MMATH: MANCODE = 6i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MISOL: MANCODE = 7i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MINIT: MANCODE = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MTAIL: MANCODE = 9i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MSTRCH: MANCODE = 10i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MLOOP: MANCODE = 11i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const MOPENA: MANCODE = 12i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type OBJECTTYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomSimpleText: OBJECTTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomRuby: OBJECTTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomHorzVert: OBJECTTYPE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomWarichu: OBJECTTYPE = 3i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomEq: OBJECTTYPE = 9i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomMath: OBJECTTYPE = 10i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomAccent: OBJECTTYPE = 10i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomBox: OBJECTTYPE = 11i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomBoxedFormula: OBJECTTYPE = 12i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomBrackets: OBJECTTYPE = 13i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomBracketsWithSeps: OBJECTTYPE = 14i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomEquationArray: OBJECTTYPE = 15i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomFraction: OBJECTTYPE = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomFunctionApply: OBJECTTYPE = 17i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomLeftSubSup: OBJECTTYPE = 18i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomLowerLimit: OBJECTTYPE = 19i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomMatrix: OBJECTTYPE = 20i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomNary: OBJECTTYPE = 21i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomOpChar: OBJECTTYPE = 22i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomOverbar: OBJECTTYPE = 23i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomPhantom: OBJECTTYPE = 24i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomRadical: OBJECTTYPE = 25i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomSlashedFraction: OBJECTTYPE = 26i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomStack: OBJECTTYPE = 27i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomStretchStack: OBJECTTYPE = 28i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomSubscript: OBJECTTYPE = 29i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomSubSup: OBJECTTYPE = 30i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomSuperscript: OBJECTTYPE = 31i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomUnderbar: OBJECTTYPE = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomUpperLimit: OBJECTTYPE = 33i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const tomObjectMax: OBJECTTYPE = 33i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type PARAFORMAT_ALIGNMENT = u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFA_CENTER: PARAFORMAT_ALIGNMENT = 3u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFA_LEFT: PARAFORMAT_ALIGNMENT = 1u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFA_RIGHT: PARAFORMAT_ALIGNMENT = 2u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type PARAFORMAT_BORDERS = u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_BORDERS_LEFT: PARAFORMAT_BORDERS = 1u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_BORDERS_RIGHT: PARAFORMAT_BORDERS = 2u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_BORDERS_TOP: PARAFORMAT_BORDERS = 4u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_BORDERS_BOTTOM: PARAFORMAT_BORDERS = 8u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_BORDERS_INSIDE: PARAFORMAT_BORDERS = 16u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_BORDERS_OUTSIDE: PARAFORMAT_BORDERS = 32u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_BORDERS_AUTOCOLOR: PARAFORMAT_BORDERS = 64u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type PARAFORMAT_MASK = u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFM_ALIGNMENT: PARAFORMAT_MASK = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFM_NUMBERING: PARAFORMAT_MASK = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFM_OFFSET: PARAFORMAT_MASK = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFM_OFFSETINDENT: PARAFORMAT_MASK = 2147483648u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFM_RIGHTINDENT: PARAFORMAT_MASK = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFM_RTLPARA: PARAFORMAT_MASK = 65536u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFM_STARTINDENT: PARAFORMAT_MASK = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFM_TABSTOPS: PARAFORMAT_MASK = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type PARAFORMAT_NUMBERING = u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFN_BULLET: PARAFORMAT_NUMBERING = 1u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFN_ARABIC: PARAFORMAT_NUMBERING = 2u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFN_LCLETTER: PARAFORMAT_NUMBERING = 3u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFN_UCLETTER: PARAFORMAT_NUMBERING = 4u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFN_LCROMAN: PARAFORMAT_NUMBERING = 5u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFN_UCROMAN: PARAFORMAT_NUMBERING = 6u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type PARAFORMAT_NUMBERING_STYLE = u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFNS_PAREN: PARAFORMAT_NUMBERING_STYLE = 0u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFNS_PARENS: PARAFORMAT_NUMBERING_STYLE = 256u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFNS_PERIOD: PARAFORMAT_NUMBERING_STYLE = 512u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFNS_PLAIN: PARAFORMAT_NUMBERING_STYLE = 768u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFNS_NONUMBER: PARAFORMAT_NUMBERING_STYLE = 1024u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PFNS_NEWNUMBER: PARAFORMAT_NUMBERING_STYLE = 32768u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type PARAFORMAT_SHADING_STYLE = u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_NONE: PARAFORMAT_SHADING_STYLE = 0u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_DARK_HORIZ: PARAFORMAT_SHADING_STYLE = 1u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_DARK_VERT: PARAFORMAT_SHADING_STYLE = 2u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_DARK_DOWN_DIAG: PARAFORMAT_SHADING_STYLE = 3u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_DARK_UP_DIAG: PARAFORMAT_SHADING_STYLE = 4u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_DARK_GRID: PARAFORMAT_SHADING_STYLE = 5u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_DARK_TRELLIS: PARAFORMAT_SHADING_STYLE = 6u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_LIGHT_HORZ: PARAFORMAT_SHADING_STYLE = 7u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_LIGHT_VERT: PARAFORMAT_SHADING_STYLE = 8u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_LIGHT_DOWN_DIAG: PARAFORMAT_SHADING_STYLE = 9u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_LIGHT_UP_DIAG: PARAFORMAT_SHADING_STYLE = 10u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_LIGHT_GRID: PARAFORMAT_SHADING_STYLE = 11u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const PARAFORMAT_SHADING_STYLE_LIGHT_TRELLIS: PARAFORMAT_SHADING_STYLE = 12u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type REOBJECT_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_ALIGNTORIGHT: REOBJECT_FLAGS = 256u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_BELOWBASELINE: REOBJECT_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_BLANK: REOBJECT_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_CANROTATE: REOBJECT_FLAGS = 128u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_DONTNEEDPALETTE: REOBJECT_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_DYNAMICSIZE: REOBJECT_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_GETMETAFILE: REOBJECT_FLAGS = 4194304u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_HILITED: REOBJECT_FLAGS = 16777216u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_INPLACEACTIVE: REOBJECT_FLAGS = 33554432u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_INVERTEDSELECT: REOBJECT_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_LINK: REOBJECT_FLAGS = 2147483648u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_LINKAVAILABLE: REOBJECT_FLAGS = 8388608u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_OPEN: REOBJECT_FLAGS = 67108864u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_OWNERDRAWSELECT: REOBJECT_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_RESIZABLE: REOBJECT_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_SELECTED: REOBJECT_FLAGS = 134217728u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_STATIC: REOBJECT_FLAGS = 1073741824u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_USEASBACKGROUND: REOBJECT_FLAGS = 1024u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_WRAPTEXTAROUND: REOBJECT_FLAGS = 512u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const SEL_EMPTY: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = 0u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const SEL_TEXT: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = 1u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const SEL_OBJECT: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = 2u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const SEL_MULTICHAR: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = 4u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const SEL_MULTIOBJECT: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = 8u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const GCM_RIGHTMOUSEDROP: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE = 32768u16;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type RICH_EDIT_GET_OBJECT_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_GETOBJ_POLEOBJ: RICH_EDIT_GET_OBJECT_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_GETOBJ_PSTG: RICH_EDIT_GET_OBJECT_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_GETOBJ_POLESITE: RICH_EDIT_GET_OBJECT_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_GETOBJ_NO_INTERFACES: RICH_EDIT_GET_OBJECT_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const REO_GETOBJ_ALL_INTERFACES: RICH_EDIT_GET_OBJECT_FLAGS = 7u32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type TEXTMODE = i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const TM_PLAINTEXT: TEXTMODE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const TM_RICHTEXT: TEXTMODE = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const TM_SINGLELEVELUNDO: TEXTMODE = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const TM_MULTILEVELUNDO: TEXTMODE = 8i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const TM_SINGLECODEPAGE: TEXTMODE = 16i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const TM_MULTICODEPAGE: TEXTMODE = 32i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type TXTBACKSTYLE = i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const TXTBACK_TRANSPARENT: TXTBACKSTYLE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub const TXTBACK_OPAQUE: TXTBACKSTYLE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub type TXTHITRESULT = i32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const TXTHITRESULT_NOHIT: TXTHITRESULT = 0i32;
@@ -2203,64 +1470,6 @@ pub const UID_CUT: UNDONAMEID = 4i32;
 pub const UID_PASTE: UNDONAMEID = 5i32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const UID_AUTOTABLE: UNDONAMEID = 6i32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const VM_NORMAL: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const VM_OUTLINE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const VM_PAGE: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const WBF_CUSTOM: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const WBF_LEVEL1: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const WBF_LEVEL2: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const WBF_OVERFLOW: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const WBF_WORDBREAK: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const WBF_WORDWRAP: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const WB_MOVEWORDNEXT: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const WB_MOVEWORDPREV: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const WB_NEXTBREAK: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const WB_PREVBREAK: u32 = 6u32;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct _grouptypingchange {
-    pub nmhdr: super::NMHDR,
-    pub fGroupTyping: super::super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for _grouptypingchange {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for _grouptypingchange {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const cchTextLimitDefault: u32 = 32767u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub struct hyphresult {
-    pub khyph: KHYPH,
-    pub ichHyph: i32,
-    pub chHyph: u16,
-}
-impl ::core::marker::Copy for hyphresult {}
-impl ::core::clone::Clone for hyphresult {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const lDefaultTab: u32 = 720u32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub type tomConstants = i32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
@@ -3431,5 +2640,803 @@ pub const tomRowApplyDefault: tomConstants = 0i32;
 pub const tomCellStructureChangeOnly: tomConstants = 1i32;
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
 pub const tomRowHeightActual: tomConstants = 2059i32;
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
-pub const yHeightCharPtsMost: u32 = 1638u32;
+pub struct BIDIOPTIONS {
+    pub cbSize: u32,
+    pub wMask: u16,
+    pub wEffects: u16,
+}
+impl ::core::marker::Copy for BIDIOPTIONS {}
+impl ::core::clone::Clone for BIDIOPTIONS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub union CARET_INFO {
+    pub hbitmap: super::super::super::Graphics::Gdi::HBITMAP,
+    pub caretFlags: CARET_FLAGS,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for CARET_INFO {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for CARET_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct CHANGENOTIFY {
+    pub dwChangeType: CHANGETYPE,
+    pub pvCookieData: *mut ::core::ffi::c_void,
+}
+impl ::core::marker::Copy for CHANGENOTIFY {}
+impl ::core::clone::Clone for CHANGENOTIFY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct CHARFORMAT2A {
+    pub Base: CHARFORMATA,
+    pub wWeight: u16,
+    pub sSpacing: i16,
+    pub crBackColor: super::super::super::Foundation::COLORREF,
+    pub lcid: u32,
+    pub Anonymous: CHARFORMAT2A_0,
+    pub sStyle: i16,
+    pub wKerning: u16,
+    pub bUnderlineType: u8,
+    pub bAnimation: u8,
+    pub bRevAuthor: u8,
+    pub bUnderlineColor: u8,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for CHARFORMAT2A {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for CHARFORMAT2A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub union CHARFORMAT2A_0 {
+    pub dwReserved: u32,
+    pub dwCookie: u32,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for CHARFORMAT2A_0 {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for CHARFORMAT2A_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct CHARFORMAT2W {
+    pub Base: CHARFORMATW,
+    pub wWeight: u16,
+    pub sSpacing: i16,
+    pub crBackColor: super::super::super::Foundation::COLORREF,
+    pub lcid: u32,
+    pub Anonymous: CHARFORMAT2W_0,
+    pub sStyle: i16,
+    pub wKerning: u16,
+    pub bUnderlineType: u8,
+    pub bAnimation: u8,
+    pub bRevAuthor: u8,
+    pub bUnderlineColor: u8,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for CHARFORMAT2W {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for CHARFORMAT2W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub union CHARFORMAT2W_0 {
+    pub dwReserved: u32,
+    pub dwCookie: u32,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for CHARFORMAT2W_0 {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for CHARFORMAT2W_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct CHARFORMATA {
+    pub cbSize: u32,
+    pub dwMask: CFM_MASK,
+    pub dwEffects: CFE_EFFECTS,
+    pub yHeight: i32,
+    pub yOffset: i32,
+    pub crTextColor: super::super::super::Foundation::COLORREF,
+    pub bCharSet: super::super::super::Graphics::Gdi::EMBED_FONT_CHARSET,
+    pub bPitchAndFamily: u8,
+    pub szFaceName: [super::super::super::Foundation::CHAR; 32],
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for CHARFORMATA {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for CHARFORMATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct CHARFORMATW {
+    pub cbSize: u32,
+    pub dwMask: CFM_MASK,
+    pub dwEffects: CFE_EFFECTS,
+    pub yHeight: i32,
+    pub yOffset: i32,
+    pub crTextColor: super::super::super::Foundation::COLORREF,
+    pub bCharSet: super::super::super::Graphics::Gdi::EMBED_FONT_CHARSET,
+    pub bPitchAndFamily: u8,
+    pub szFaceName: [u16; 32],
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for CHARFORMATW {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for CHARFORMATW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct CHARRANGE {
+    pub cpMin: i32,
+    pub cpMax: i32,
+}
+impl ::core::marker::Copy for CHARRANGE {}
+impl ::core::clone::Clone for CHARRANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct CLIPBOARDFORMAT {
+    pub nmhdr: super::NMHDR,
+    pub cf: u16,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CLIPBOARDFORMAT {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CLIPBOARDFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct COMPCOLOR {
+    pub crText: super::super::super::Foundation::COLORREF,
+    pub crBackground: super::super::super::Foundation::COLORREF,
+    pub dwEffects: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for COMPCOLOR {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for COMPCOLOR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct EDITSTREAM {
+    pub dwCookie: usize,
+    pub dwError: u32,
+    pub pfnCallback: EDITSTREAMCALLBACK,
+}
+impl ::core::marker::Copy for EDITSTREAM {}
+impl ::core::clone::Clone for EDITSTREAM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ENCORRECTTEXT {
+    pub nmhdr: super::NMHDR,
+    pub chrg: CHARRANGE,
+    pub seltyp: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ENCORRECTTEXT {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ENCORRECTTEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ENDCOMPOSITIONNOTIFY {
+    pub nmhdr: super::NMHDR,
+    pub dwCode: ENDCOMPOSITIONNOTIFY_CODE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ENDCOMPOSITIONNOTIFY {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ENDCOMPOSITIONNOTIFY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ENDROPFILES {
+    pub nmhdr: super::NMHDR,
+    pub hDrop: super::super::super::Foundation::HANDLE,
+    pub cp: i32,
+    pub fProtected: super::super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ENDROPFILES {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ENDROPFILES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ENLINK {
+    pub nmhdr: super::NMHDR,
+    pub msg: u32,
+    pub wParam: super::super::super::Foundation::WPARAM,
+    pub lParam: super::super::super::Foundation::LPARAM,
+    pub chrg: CHARRANGE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ENLINK {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ENLINK {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ENLOWFIRTF {
+    pub nmhdr: super::NMHDR,
+    pub szControl: ::windows_sys::core::PSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ENLOWFIRTF {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ENLOWFIRTF {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ENOLEOPFAILED {
+    pub nmhdr: super::NMHDR,
+    pub iob: i32,
+    pub lOper: i32,
+    pub hr: ::windows_sys::core::HRESULT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ENOLEOPFAILED {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ENOLEOPFAILED {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ENPROTECTED {
+    pub nmhdr: super::NMHDR,
+    pub msg: u32,
+    pub wParam: super::super::super::Foundation::WPARAM,
+    pub lParam: super::super::super::Foundation::LPARAM,
+    pub chrg: CHARRANGE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ENPROTECTED {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ENPROTECTED {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ENSAVECLIPBOARD {
+    pub nmhdr: super::NMHDR,
+    pub cObjectCount: i32,
+    pub cch: i32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ENSAVECLIPBOARD {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ENSAVECLIPBOARD {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct FINDTEXTA {
+    pub chrg: CHARRANGE,
+    pub lpstrText: ::windows_sys::core::PCSTR,
+}
+impl ::core::marker::Copy for FINDTEXTA {}
+impl ::core::clone::Clone for FINDTEXTA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct FINDTEXTEXA {
+    pub chrg: CHARRANGE,
+    pub lpstrText: ::windows_sys::core::PCSTR,
+    pub chrgText: CHARRANGE,
+}
+impl ::core::marker::Copy for FINDTEXTEXA {}
+impl ::core::clone::Clone for FINDTEXTEXA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct FINDTEXTEXW {
+    pub chrg: CHARRANGE,
+    pub lpstrText: ::windows_sys::core::PCWSTR,
+    pub chrgText: CHARRANGE,
+}
+impl ::core::marker::Copy for FINDTEXTEXW {}
+impl ::core::clone::Clone for FINDTEXTEXW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct FINDTEXTW {
+    pub chrg: CHARRANGE,
+    pub lpstrText: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for FINDTEXTW {}
+impl ::core::clone::Clone for FINDTEXTW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct FORMATRANGE {
+    pub hdc: super::super::super::Graphics::Gdi::HDC,
+    pub hdcTarget: super::super::super::Graphics::Gdi::HDC,
+    pub rc: super::super::super::Foundation::RECT,
+    pub rcPage: super::super::super::Foundation::RECT,
+    pub chrg: CHARRANGE,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for FORMATRANGE {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for FORMATRANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct GETCONTEXTMENUEX {
+    pub chrg: CHARRANGE,
+    pub dwFlags: u32,
+    pub pt: super::super::super::Foundation::POINT,
+    pub pvReserved: *mut ::core::ffi::c_void,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for GETCONTEXTMENUEX {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for GETCONTEXTMENUEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct GETTEXTEX {
+    pub cb: u32,
+    pub flags: GETTEXTEX_FLAGS,
+    pub codepage: u32,
+    pub lpDefaultChar: ::windows_sys::core::PCSTR,
+    pub lpUsedDefChar: *mut i32,
+}
+impl ::core::marker::Copy for GETTEXTEX {}
+impl ::core::clone::Clone for GETTEXTEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct GETTEXTLENGTHEX {
+    pub flags: GETTEXTLENGTHEX_FLAGS,
+    pub codepage: u32,
+}
+impl ::core::marker::Copy for GETTEXTLENGTHEX {}
+impl ::core::clone::Clone for GETTEXTLENGTHEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct GROUPTYPINGCHANGE {
+    pub nmhdr: super::NMHDR,
+    pub fGroupTyping: super::super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for GROUPTYPINGCHANGE {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for GROUPTYPINGCHANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct HYPHENATEINFO {
+    pub cbSize: i16,
+    pub dxHyphenateZone: i16,
+    pub pfnHyphenate: isize,
+}
+impl ::core::marker::Copy for HYPHENATEINFO {}
+impl ::core::clone::Clone for HYPHENATEINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct HYPHRESULT {
+    pub khyph: KHYPH,
+    pub ichHyph: i32,
+    pub chHyph: u16,
+}
+impl ::core::marker::Copy for HYPHRESULT {}
+impl ::core::clone::Clone for HYPHRESULT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct IMECOMPTEXT {
+    pub cb: i32,
+    pub flags: IMECOMPTEXT_FLAGS,
+}
+impl ::core::marker::Copy for IMECOMPTEXT {}
+impl ::core::clone::Clone for IMECOMPTEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MSGFILTER {
+    pub nmhdr: super::NMHDR,
+    pub msg: u32,
+    pub wParam: super::super::super::Foundation::WPARAM,
+    pub lParam: super::super::super::Foundation::LPARAM,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MSGFILTER {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MSGFILTER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct OBJECTPOSITIONS {
+    pub nmhdr: super::NMHDR,
+    pub cObjectCount: i32,
+    pub pcpPositions: *mut i32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for OBJECTPOSITIONS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for OBJECTPOSITIONS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct PARAFORMAT {
+    pub cbSize: u32,
+    pub dwMask: PARAFORMAT_MASK,
+    pub wNumbering: PARAFORMAT_NUMBERING,
+    pub Anonymous: PARAFORMAT_0,
+    pub dxStartIndent: i32,
+    pub dxRightIndent: i32,
+    pub dxOffset: i32,
+    pub wAlignment: PARAFORMAT_ALIGNMENT,
+    pub cTabCount: i16,
+    pub rgxTabs: [u32; 32],
+}
+impl ::core::marker::Copy for PARAFORMAT {}
+impl ::core::clone::Clone for PARAFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub union PARAFORMAT_0 {
+    pub wReserved: u16,
+    pub wEffects: u16,
+}
+impl ::core::marker::Copy for PARAFORMAT_0 {}
+impl ::core::clone::Clone for PARAFORMAT_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct PARAFORMAT2 {
+    pub Base: PARAFORMAT,
+    pub dySpaceBefore: i32,
+    pub dySpaceAfter: i32,
+    pub dyLineSpacing: i32,
+    pub sStyle: i16,
+    pub bLineSpacingRule: u8,
+    pub bOutlineLevel: u8,
+    pub wShadingWeight: u16,
+    pub wShadingStyle: PARAFORMAT_SHADING_STYLE,
+    pub wNumberingStart: u16,
+    pub wNumberingStyle: PARAFORMAT_NUMBERING_STYLE,
+    pub wNumberingTab: u16,
+    pub wBorderSpace: u16,
+    pub wBorderWidth: u16,
+    pub wBorders: PARAFORMAT_BORDERS,
+}
+impl ::core::marker::Copy for PARAFORMAT2 {}
+impl ::core::clone::Clone for PARAFORMAT2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct PUNCTUATION {
+    pub iSize: u32,
+    pub szPunctuation: ::windows_sys::core::PSTR,
+}
+impl ::core::marker::Copy for PUNCTUATION {}
+impl ::core::clone::Clone for PUNCTUATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
+pub struct REOBJECT {
+    pub cbStruct: u32,
+    pub cp: i32,
+    pub clsid: ::windows_sys::core::GUID,
+    pub poleobj: super::super::super::System::Ole::IOleObject,
+    pub pstg: super::super::super::System::Com::StructuredStorage::IStorage,
+    pub polesite: super::super::super::System::Ole::IOleClientSite,
+    pub sizel: super::super::super::Foundation::SIZE,
+    pub dvaspect: u32,
+    pub dwFlags: REOBJECT_FLAGS,
+    pub dwUser: u32,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for REOBJECT {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for REOBJECT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct REPASTESPECIAL {
+    pub dwAspect: super::super::super::System::Com::DVASPECT,
+    pub dwParam: usize,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for REPASTESPECIAL {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for REPASTESPECIAL {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct REQRESIZE {
+    pub nmhdr: super::NMHDR,
+    pub rc: super::super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for REQRESIZE {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for REQRESIZE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Graphics_Gdi\"`, `\"Win32_System_Com\"`*"]
+#[cfg(all(feature = "Win32_Graphics_Gdi", feature = "Win32_System_Com"))]
+pub struct RICHEDIT_IMAGE_PARAMETERS {
+    pub xWidth: i32,
+    pub yHeight: i32,
+    pub Ascent: i32,
+    pub Type: super::super::super::Graphics::Gdi::TEXT_ALIGN_OPTIONS,
+    pub pwszAlternateText: ::windows_sys::core::PCWSTR,
+    pub pIStream: super::super::super::System::Com::IStream,
+}
+#[cfg(all(feature = "Win32_Graphics_Gdi", feature = "Win32_System_Com"))]
+impl ::core::marker::Copy for RICHEDIT_IMAGE_PARAMETERS {}
+#[cfg(all(feature = "Win32_Graphics_Gdi", feature = "Win32_System_Com"))]
+impl ::core::clone::Clone for RICHEDIT_IMAGE_PARAMETERS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SELCHANGE {
+    pub nmhdr: super::NMHDR,
+    pub chrg: CHARRANGE,
+    pub seltyp: RICH_EDIT_GET_CONTEXT_MENU_SEL_TYPE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SELCHANGE {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SELCHANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct SETTEXTEX {
+    pub flags: u32,
+    pub codepage: u32,
+}
+impl ::core::marker::Copy for SETTEXTEX {}
+impl ::core::clone::Clone for SETTEXTEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct TABLECELLPARMS {
+    pub dxWidth: i32,
+    pub _bitfield: u16,
+    pub wShading: u16,
+    pub dxBrdrLeft: i16,
+    pub dyBrdrTop: i16,
+    pub dxBrdrRight: i16,
+    pub dyBrdrBottom: i16,
+    pub crBrdrLeft: super::super::super::Foundation::COLORREF,
+    pub crBrdrTop: super::super::super::Foundation::COLORREF,
+    pub crBrdrRight: super::super::super::Foundation::COLORREF,
+    pub crBrdrBottom: super::super::super::Foundation::COLORREF,
+    pub crBackPat: super::super::super::Foundation::COLORREF,
+    pub crForePat: super::super::super::Foundation::COLORREF,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for TABLECELLPARMS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for TABLECELLPARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct TABLEROWPARMS {
+    pub cbRow: u8,
+    pub cbCell: u8,
+    pub cCell: u8,
+    pub cRow: u8,
+    pub dxCellMargin: i32,
+    pub dxIndent: i32,
+    pub dyHeight: i32,
+    pub _bitfield: u32,
+    pub cpStartRow: i32,
+    pub bTableLevel: u8,
+    pub iCell: u8,
+}
+impl ::core::marker::Copy for TABLEROWPARMS {}
+impl ::core::clone::Clone for TABLEROWPARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct TEXTRANGEA {
+    pub chrg: CHARRANGE,
+    pub lpstrText: ::windows_sys::core::PSTR,
+}
+impl ::core::marker::Copy for TEXTRANGEA {}
+impl ::core::clone::Clone for TEXTRANGEA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub struct TEXTRANGEW {
+    pub chrg: CHARRANGE,
+    pub lpstrText: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for TEXTRANGEW {}
+impl ::core::clone::Clone for TEXTRANGEW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type AutoCorrectProc = ::core::option::Option<unsafe extern "system" fn(langid: u16, pszbefore: ::windows_sys::core::PCWSTR, pszafter: ::windows_sys::core::PCWSTR, cchafter: i32, pcchreplaced: *mut i32) -> i32>;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type EDITSTREAMCALLBACK = ::core::option::Option<unsafe extern "system" fn(dwcookie: usize, pbbuff: *mut u8, cb: i32, pcb: *mut i32) -> u32>;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type EDITWORDBREAKPROCEX = ::core::option::Option<unsafe extern "system" fn(pchtext: ::windows_sys::core::PCSTR, cchtext: i32, bcharset: u8, action: i32) -> i32>;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type PCreateTextServices = ::core::option::Option<unsafe extern "system" fn(punkouter: ::windows_sys::core::IUnknown, pitexthost: ITextHost, ppunk: *mut ::windows_sys::core::IUnknown) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_UI_Controls_RichEdit\"`*"]
+pub type PShutdownTextServices = ::core::option::Option<unsafe extern "system" fn(ptextservices: ::windows_sys::core::IUnknown) -> ::windows_sys::core::HRESULT>;

@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -50,6 +50,12 @@ extern "system" {
     pub fn Toolhelp32ReadProcessMemory(th32processid: u32, lpbaseaddress: *const ::core::ffi::c_void, lpbuffer: *mut ::core::ffi::c_void, cbread: usize, lpnumberofbytesread: *mut usize) -> super::super::super::Foundation::BOOL;
 }
 #[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
+pub const HF32_DEFAULT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
+pub const HF32_SHARED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
+pub const MAX_MODULE_NAME32: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
 pub type CREATE_TOOLHELP_SNAPSHOT_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
 pub const TH32CS_INHERIT: CREATE_TOOLHELP_SNAPSHOT_FLAGS = 2147483648u32;
@@ -65,6 +71,14 @@ pub const TH32CS_SNAPMODULE32: CREATE_TOOLHELP_SNAPSHOT_FLAGS = 16u32;
 pub const TH32CS_SNAPPROCESS: CREATE_TOOLHELP_SNAPSHOT_FLAGS = 2u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
 pub const TH32CS_SNAPTHREAD: CREATE_TOOLHELP_SNAPSHOT_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
+pub type HEAPENTRY32_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
+pub const LF32_FIXED: HEAPENTRY32_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
+pub const LF32_FREE: HEAPENTRY32_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
+pub const LF32_MOVEABLE: HEAPENTRY32_FLAGS = 4u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -87,14 +101,6 @@ impl ::core::clone::Clone for HEAPENTRY32 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
-pub type HEAPENTRY32_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
-pub const LF32_FIXED: HEAPENTRY32_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
-pub const LF32_FREE: HEAPENTRY32_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
-pub const LF32_MOVEABLE: HEAPENTRY32_FLAGS = 4u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
 pub struct HEAPLIST32 {
@@ -109,12 +115,6 @@ impl ::core::clone::Clone for HEAPLIST32 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
-pub const HF32_DEFAULT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
-pub const HF32_SHARED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`*"]
-pub const MAX_MODULE_NAME32: u32 = 255u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_ToolHelp\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]

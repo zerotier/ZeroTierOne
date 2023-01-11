@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Graphics_Gdi\"`*"]
     #[cfg(feature = "Win32_Graphics_Gdi")]
@@ -58,14 +58,75 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
     pub fn SetWordList(hrc: HRECOCONTEXT, hwl: HRECOWORDLIST) -> ::windows_sys::core::HRESULT;
 }
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type ALT_BREAKS = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const ALT_BREAKS_SAME: ALT_BREAKS = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const ALT_BREAKS_UNIQUE: ALT_BREAKS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const ALT_BREAKS_FULL: ALT_BREAKS = 2i32;
+pub type IDynamicRenderer = *mut ::core::ffi::c_void;
+pub type IGestureRecognizer = *mut ::core::ffi::c_void;
+pub type IHandwrittenTextInsertion = *mut ::core::ffi::c_void;
+pub type IInk = *mut ::core::ffi::c_void;
+pub type IInkCollector = *mut ::core::ffi::c_void;
+pub type IInkCursor = *mut ::core::ffi::c_void;
+pub type IInkCursorButton = *mut ::core::ffi::c_void;
+pub type IInkCursorButtons = *mut ::core::ffi::c_void;
+pub type IInkCursors = *mut ::core::ffi::c_void;
+pub type IInkCustomStrokes = *mut ::core::ffi::c_void;
+pub type IInkDisp = *mut ::core::ffi::c_void;
+pub type IInkDivider = *mut ::core::ffi::c_void;
+pub type IInkDivisionResult = *mut ::core::ffi::c_void;
+pub type IInkDivisionUnit = *mut ::core::ffi::c_void;
+pub type IInkDivisionUnits = *mut ::core::ffi::c_void;
+pub type IInkDrawingAttributes = *mut ::core::ffi::c_void;
+pub type IInkEdit = *mut ::core::ffi::c_void;
+pub type IInkExtendedProperties = *mut ::core::ffi::c_void;
+pub type IInkExtendedProperty = *mut ::core::ffi::c_void;
+pub type IInkGesture = *mut ::core::ffi::c_void;
+pub type IInkLineInfo = *mut ::core::ffi::c_void;
+pub type IInkOverlay = *mut ::core::ffi::c_void;
+pub type IInkPicture = *mut ::core::ffi::c_void;
+pub type IInkRecognitionAlternate = *mut ::core::ffi::c_void;
+pub type IInkRecognitionAlternates = *mut ::core::ffi::c_void;
+pub type IInkRecognitionResult = *mut ::core::ffi::c_void;
+pub type IInkRecognizer = *mut ::core::ffi::c_void;
+pub type IInkRecognizer2 = *mut ::core::ffi::c_void;
+pub type IInkRecognizerContext = *mut ::core::ffi::c_void;
+pub type IInkRecognizerContext2 = *mut ::core::ffi::c_void;
+pub type IInkRecognizerGuide = *mut ::core::ffi::c_void;
+pub type IInkRecognizers = *mut ::core::ffi::c_void;
+pub type IInkRectangle = *mut ::core::ffi::c_void;
+pub type IInkRenderer = *mut ::core::ffi::c_void;
+pub type IInkStrokeDisp = *mut ::core::ffi::c_void;
+pub type IInkStrokes = *mut ::core::ffi::c_void;
+pub type IInkTablet = *mut ::core::ffi::c_void;
+pub type IInkTablet2 = *mut ::core::ffi::c_void;
+pub type IInkTablet3 = *mut ::core::ffi::c_void;
+pub type IInkTablets = *mut ::core::ffi::c_void;
+pub type IInkTransform = *mut ::core::ffi::c_void;
+pub type IInkWordList = *mut ::core::ffi::c_void;
+pub type IInkWordList2 = *mut ::core::ffi::c_void;
+pub type IInputPanelWindowHandle = *mut ::core::ffi::c_void;
+pub type IMathInputControl = *mut ::core::ffi::c_void;
+pub type IPenInputPanel = *mut ::core::ffi::c_void;
+pub type IRealTimeStylus = *mut ::core::ffi::c_void;
+pub type IRealTimeStylus2 = *mut ::core::ffi::c_void;
+pub type IRealTimeStylus3 = *mut ::core::ffi::c_void;
+pub type IRealTimeStylusSynchronization = *mut ::core::ffi::c_void;
+pub type ISketchInk = *mut ::core::ffi::c_void;
+pub type IStrokeBuilder = *mut ::core::ffi::c_void;
+pub type IStylusAsyncPlugin = *mut ::core::ffi::c_void;
+pub type IStylusPlugin = *mut ::core::ffi::c_void;
+pub type IStylusSyncPlugin = *mut ::core::ffi::c_void;
+pub type ITextInputPanel = *mut ::core::ffi::c_void;
+pub type ITextInputPanelEventSink = *mut ::core::ffi::c_void;
+pub type ITextInputPanelRunInfo = *mut ::core::ffi::c_void;
+pub type ITipAutoCompleteClient = *mut ::core::ffi::c_void;
+pub type ITipAutoCompleteProvider = *mut ::core::ffi::c_void;
+pub type _IInkCollectorEvents = *mut ::core::ffi::c_void;
+pub type _IInkEditEvents = *mut ::core::ffi::c_void;
+pub type _IInkEvents = *mut ::core::ffi::c_void;
+pub type _IInkOverlayEvents = *mut ::core::ffi::c_void;
+pub type _IInkPictureEvents = *mut ::core::ffi::c_void;
+pub type _IInkRecognitionEvents = *mut ::core::ffi::c_void;
+pub type _IInkStrokesEvents = *mut ::core::ffi::c_void;
+pub type _IMathInputControlEvents = *mut ::core::ffi::c_void;
+pub type _IPenInputPanelEvents = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const ASYNC_RECO_ADDSTROKE_FAILED: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -87,37 +148,676 @@ pub const ASYNC_RECO_SETTEXTCONTEXT_FAILED: u32 = 256u32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const ASYNC_RECO_SETWORDLIST_FAILED: u32 = 512u32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type AppearanceConstants = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const rtfFlat: AppearanceConstants = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const rtfThreeD: AppearanceConstants = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const BEST_COMPLETE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type BorderStyleConstants = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const rtfNoBorder: BorderStyleConstants = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const rtfFixedSingle: BorderStyleConstants = 1i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const CAC_FULL: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const CAC_PREFIX: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const CAC_RANDOM: u32 = 2u32;
-#[repr(C)]
+pub const DynamicRenderer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3973262058, data2: 29807, data3: 19915, data4: [191, 104, 8, 39, 87, 250, 255, 24] };
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub struct CHARACTER_RANGE {
-    pub wcLow: u16,
-    pub cChars: u16,
-}
-impl ::core::marker::Copy for CHARACTER_RANGE {}
-impl ::core::clone::Clone for CHARACTER_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const EM_GETDRAWATTR: u32 = 1541u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_GETFACTOID: u32 = 1549u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_GETGESTURESTATUS: u32 = 1545u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_GETINKINSERTMODE: u32 = 1539u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_GETINKMODE: u32 = 1537u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_GETMOUSEICON: u32 = 1553u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_GETMOUSEPOINTER: u32 = 1555u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_GETRECOGNIZER: u32 = 1547u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_GETRECOTIMEOUT: u32 = 1543u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_GETSELINK: u32 = 1551u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_GETSELINKDISPLAYMODE: u32 = 1562u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_GETSTATUS: u32 = 1557u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_GETUSEMOUSEFORINPUT: u32 = 1559u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_RECOGNIZE: u32 = 1558u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_SETDRAWATTR: u32 = 1542u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_SETFACTOID: u32 = 1550u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_SETGESTURESTATUS: u32 = 1546u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_SETINKINSERTMODE: u32 = 1540u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_SETINKMODE: u32 = 1538u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_SETMOUSEICON: u32 = 1554u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_SETMOUSEPOINTER: u32 = 1556u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_SETRECOGNIZER: u32 = 1548u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_SETRECOTIMEOUT: u32 = 1544u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_SETSELINK: u32 = 1552u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_SETSELINKDISPLAYMODE: u32 = 1561u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const EM_SETUSEMOUSEFORINPUT: u32 = 1560u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACILITY_INK: u32 = 40u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_BOPOMOFO: &str = "BOPOMOFO";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_CHINESESIMPLECOMMON: &str = "CHS_COMMON";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_CHINESETRADITIONALCOMMON: &str = "CHT_COMMON";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_CURRENCY: &str = "CURRENCY";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_DATE: &str = "DATE";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_DEFAULT: &str = "DEFAULT";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_DIGIT: &str = "DIGIT";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_EMAIL: &str = "EMAIL";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_FILENAME: &str = "FILENAME";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_HANGULCOMMON: &str = "HANGUL_COMMON";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_HANGULRARE: &str = "HANGUL_RARE";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_HIRAGANA: &str = "HIRAGANA";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_JAMO: &str = "JAMO";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_JAPANESECOMMON: &str = "JPN_COMMON";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_KANJICOMMON: &str = "KANJI_COMMON";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_KANJIRARE: &str = "KANJI_RARE";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_KATAKANA: &str = "KATAKANA";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_KOREANCOMMON: &str = "KOR_COMMON";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_LOWERCHAR: &str = "LOWERCHAR";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_NONE: &str = "NONE";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_NUMBER: &str = "NUMBER";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_NUMBERSIMPLE: &str = "NUMSIMPLE";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_ONECHAR: &str = "ONECHAR";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_PERCENT: &str = "PERCENT";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_POSTALCODE: &str = "POSTALCODE";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_PUNCCHAR: &str = "PUNCCHAR";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_SYSTEMDICTIONARY: &str = "SYSDICT";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_TELEPHONE: &str = "TELEPHONE";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_TIME: &str = "TIME";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_UPPERCHAR: &str = "UPPERCHAR";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_WEB: &str = "WEB";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FACTOID_WORDLIST: &str = "WORDLIST";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const FLICK_WM_HANDLED_MASK: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_ARROW_DOWN: u32 = 61497u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_ARROW_LEFT: u32 = 61498u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_ARROW_RIGHT: u32 = 61499u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_ARROW_UP: u32 = 61496u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_ASTERISK: u32 = 61608u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_BRACE_LEFT: u32 = 61674u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_BRACE_OVER: u32 = 61672u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_BRACE_RIGHT: u32 = 61675u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_BRACE_UNDER: u32 = 61673u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_BRACKET_LEFT: u32 = 61670u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_BRACKET_OVER: u32 = 61668u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_BRACKET_RIGHT: u32 = 61671u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_BRACKET_UNDER: u32 = 61669u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_BULLET: u32 = 61450u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_BULLET_CROSS: u32 = 61451u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CHECK: u32 = 61445u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CHEVRON_DOWN: u32 = 61489u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CHEVRON_LEFT: u32 = 61490u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CHEVRON_RIGHT: u32 = 61491u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CHEVRON_UP: u32 = 61488u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CIRCLE: u32 = 61472u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CIRCLE_CIRCLE: u32 = 61475u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CIRCLE_CROSS: u32 = 61477u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CIRCLE_LINE_HORZ: u32 = 61479u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CIRCLE_LINE_VERT: u32 = 61478u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CIRCLE_TAP: u32 = 61474u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CLOSEUP: u32 = 61455u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CROSS: u32 = 61447u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_CURLICUE: u32 = 61456u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIAGONAL_LEFTDOWN: u32 = 61534u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIAGONAL_LEFTUP: u32 = 61532u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIAGONAL_RIGHTDOWN: u32 = 61535u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIAGONAL_RIGHTUP: u32 = 61533u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIGIT_0: u32 = 61594u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIGIT_1: u32 = 61595u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIGIT_2: u32 = 61596u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIGIT_3: u32 = 61597u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIGIT_4: u32 = 61598u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIGIT_5: u32 = 61599u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIGIT_6: u32 = 61600u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIGIT_7: u32 = 61601u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIGIT_8: u32 = 61602u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DIGIT_9: u32 = 61603u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOLLAR: u32 = 61607u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOUBLE_ARROW_DOWN: u32 = 61501u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOUBLE_ARROW_LEFT: u32 = 61502u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOUBLE_ARROW_RIGHT: u32 = 61503u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOUBLE_ARROW_UP: u32 = 61500u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOUBLE_CIRCLE: u32 = 61473u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOUBLE_CURLICUE: u32 = 61457u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOUBLE_DOWN: u32 = 61625u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOUBLE_LEFT: u32 = 61626u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOUBLE_RIGHT: u32 = 61627u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOUBLE_TAP: u32 = 61681u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOUBLE_UP: u32 = 61624u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOWN: u32 = 61529u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOWN_ARROW_LEFT: u32 = 61506u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOWN_ARROW_RIGHT: u32 = 61507u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOWN_LEFT: u32 = 61546u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOWN_LEFT_LONG: u32 = 61542u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOWN_RIGHT: u32 = 61547u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOWN_RIGHT_LONG: u32 = 61543u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_DOWN_UP: u32 = 61537u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_EXCLAMATION: u32 = 61604u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_INFINITY: u32 = 61446u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LEFT: u32 = 61530u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LEFT_ARROW_DOWN: u32 = 61509u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LEFT_ARROW_UP: u32 = 61508u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LEFT_DOWN: u32 = 61549u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LEFT_RIGHT: u32 = 61538u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LEFT_UP: u32 = 61548u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_A: u32 = 61568u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_B: u32 = 61569u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_C: u32 = 61570u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_D: u32 = 61571u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_E: u32 = 61572u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_F: u32 = 61573u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_G: u32 = 61574u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_H: u32 = 61575u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_I: u32 = 61576u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_J: u32 = 61577u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_K: u32 = 61578u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_L: u32 = 61579u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_M: u32 = 61580u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_N: u32 = 61581u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_O: u32 = 61582u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_P: u32 = 61583u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_Q: u32 = 61584u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_R: u32 = 61585u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_S: u32 = 61586u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_T: u32 = 61587u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_U: u32 = 61588u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_V: u32 = 61589u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_W: u32 = 61590u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_X: u32 = 61591u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_Y: u32 = 61592u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_LETTER_Z: u32 = 61593u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_NULL: u32 = 61440u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_OPENUP: u32 = 61454u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_PARAGRAPH: u32 = 61448u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_PLUS: u32 = 61609u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_QUAD_TAP: u32 = 61683u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_QUESTION: u32 = 61605u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_RECTANGLE: u32 = 61458u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_RIGHT: u32 = 61531u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_RIGHT_ARROW_DOWN: u32 = 61511u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_RIGHT_ARROW_UP: u32 = 61510u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_RIGHT_DOWN: u32 = 61551u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_RIGHT_LEFT: u32 = 61539u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_RIGHT_UP: u32 = 61550u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_SCRATCHOUT: u32 = 61441u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_SECTION: u32 = 61449u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_SEMICIRCLE_LEFT: u32 = 61480u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_SEMICIRCLE_RIGHT: u32 = 61481u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_SHARP: u32 = 61606u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_SQUARE: u32 = 61443u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_SQUIGGLE: u32 = 61452u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_STAR: u32 = 61444u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_SWAP: u32 = 61453u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_TAP: u32 = 61680u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_TRIANGLE: u32 = 61442u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_TRIPLE_DOWN: u32 = 61629u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_TRIPLE_LEFT: u32 = 61630u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_TRIPLE_RIGHT: u32 = 61631u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_TRIPLE_TAP: u32 = 61682u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_TRIPLE_UP: u32 = 61628u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_UP: u32 = 61528u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_UP_ARROW_LEFT: u32 = 61504u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_UP_ARROW_RIGHT: u32 = 61505u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_UP_DOWN: u32 = 61536u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_UP_LEFT: u32 = 61544u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_UP_LEFT_LONG: u32 = 61540u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_UP_RIGHT: u32 = 61545u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const GESTURE_UP_RIGHT_LONG: u32 = 61541u32;
+pub const GUID_DYNAMIC_RENDERER_CACHED_DATA: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3209894802, data2: 9663, data3: 19093, data4: [137, 173, 14, 71, 107, 52, 180, 245] };
+pub const GUID_GESTURE_DATA: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1105521679, data2: 9898, data3: 17754, data4: [154, 165, 44, 211, 108, 246, 63, 185] };
+pub const GUID_PACKETPROPERTY_GUID_ALTITUDE_ORIENTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2195637703, data2: 63162, data3: 18694, data4: [137, 79, 102, 214, 141, 252, 69, 108] };
+pub const GUID_PACKETPROPERTY_GUID_AZIMUTH_ORIENTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 43066292, data2: 34856, data3: 16651, data4: [178, 80, 160, 83, 101, 149, 229, 220] };
+pub const GUID_PACKETPROPERTY_GUID_BUTTON_PRESSURE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2340417476, data2: 38570, data3: 19454, data4: [172, 38, 138, 95, 11, 224, 123, 245] };
+pub const GUID_PACKETPROPERTY_GUID_DEVICE_CONTACT_ID: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 39345041, data2: 1179, data3: 18256, data4: [150, 21, 223, 137, 72, 171, 60, 156] };
+pub const GUID_PACKETPROPERTY_GUID_FINGERCONTACTCONFIDENCE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3875981316, data2: 22512, data3: 20224, data4: [138, 12, 133, 61, 87, 120, 155, 233] };
+pub const GUID_PACKETPROPERTY_GUID_HEIGHT: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3860355282, data2: 58439, data3: 16920, data4: [157, 63, 24, 134, 92, 32, 61, 244] };
+pub const GUID_PACKETPROPERTY_GUID_NORMAL_PRESSURE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1929859117, data2: 63988, data3: 19992, data4: [179, 242, 44, 225, 177, 163, 97, 12] };
+pub const GUID_PACKETPROPERTY_GUID_PACKET_STATUS: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1846413247, data2: 45031, data3: 19703, data4: [135, 209, 175, 100, 70, 32, 132, 24] };
+pub const GUID_PACKETPROPERTY_GUID_PITCH_ROTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2138986423, data2: 48695, data3: 19425, data4: [163, 86, 122, 132, 22, 14, 24, 147] };
+pub const GUID_PACKETPROPERTY_GUID_ROLL_ROTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1566400086, data2: 27561, data3: 19547, data4: [159, 176, 133, 28, 145, 113, 78, 86] };
+pub const GUID_PACKETPROPERTY_GUID_SERIAL_NUMBER: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2024282966, data2: 2357, data3: 17555, data4: [186, 174, 0, 84, 26, 138, 22, 196] };
+pub const GUID_PACKETPROPERTY_GUID_TANGENT_PRESSURE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1839483019, data2: 21060, data3: 16876, data4: [144, 91, 50, 216, 154, 184, 8, 9] };
+pub const GUID_PACKETPROPERTY_GUID_TIMER_TICK: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1130696901, data2: 65235, data3: 17873, data4: [139, 118, 113, 211, 234, 122, 130, 157] };
+pub const GUID_PACKETPROPERTY_GUID_TWIST_ORIENTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 221399392, data2: 5042, data3: 16868, data4: [172, 230, 122, 233, 212, 61, 45, 59] };
+pub const GUID_PACKETPROPERTY_GUID_WIDTH: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3131828557, data2: 10002, data3: 18677, data4: [190, 157, 143, 139, 94, 160, 113, 26] };
+pub const GUID_PACKETPROPERTY_GUID_X: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1502243471, data2: 21184, data3: 19360, data4: [147, 175, 175, 53, 116, 17, 165, 97] };
+pub const GUID_PACKETPROPERTY_GUID_X_TILT_ORIENTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2832235322, data2: 35824, data3: 16560, data4: [149, 169, 184, 10, 107, 183, 135, 191] };
+pub const GUID_PACKETPROPERTY_GUID_Y: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3040845685, data2: 1248, data3: 17560, data4: [167, 238, 195, 13, 187, 90, 144, 17] };
+pub const GUID_PACKETPROPERTY_GUID_YAW_ROTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1787074944, data2: 31802, data3: 17847, data4: [170, 130, 144, 162, 98, 149, 14, 137] };
+pub const GUID_PACKETPROPERTY_GUID_Y_TILT_ORIENTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 244523913, data2: 7543, data3: 17327, data4: [172, 0, 91, 149, 13, 109, 75, 45] };
+pub const GUID_PACKETPROPERTY_GUID_Z: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1935334192, data2: 3771, data3: 18312, data4: [160, 228, 15, 49, 100, 144, 5, 93] };
+pub const GestureRecognizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3929065044, data2: 50732, data3: 17439, data4: [172, 0, 149, 249, 161, 150, 120, 44] };
+pub const HandwrittenTextInsertion: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2668056290, data2: 59113, data3: 19850, data4: [160, 71, 235, 91, 92, 60, 85, 218] };
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const IECN_GESTURE: u32 = 2050u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const IECN_RECOGNITIONRESULT: u32 = 2051u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const IECN_STROKE: u32 = 2049u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const IECN__BASE: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const IEC__BASE: u32 = 1536u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const INKEDIT_CLASS: &str = "INKEDIT";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const INKEDIT_CLASSW: &str = "INKEDIT";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const INKRECOGNITIONPROPERTY_BOXNUMBER: &str = "{2C243E3A-F733-4EB6-B1F8-B5DC5C2C4CDA}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const INKRECOGNITIONPROPERTY_CONFIDENCELEVEL: &str = "{7DFE11A7-FB5D-4958-8765-154ADF0D833F}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const INKRECOGNITIONPROPERTY_HOTPOINT: &str = "{CA6F40DC-5292-452a-91FB-2181C0BEC0DE}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const INKRECOGNITIONPROPERTY_LINEMETRICS: &str = "{8CC24B27-30A9-4b96-9056-2D3A90DA0727}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const INKRECOGNITIONPROPERTY_LINENUMBER: &str = "{DBF29F2C-5289-4BE8-B3D8-6EF63246253E}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const INKRECOGNITIONPROPERTY_MAXIMUMSTROKECOUNT: &str = "{BF0EEC4E-4B7D-47a9-8CFA-234DD24BD22A}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const INKRECOGNITIONPROPERTY_POINTSPERINCH: &str = "{7ED16B76-889C-468e-8276-0021B770187E}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const INKRECOGNITIONPROPERTY_SEGMENTATION: &str = "{B3C0FE6C-FB51-4164-BA2F-844AF8F983DA}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const INK_SERIALIZED_FORMAT: &str = "Ink Serialized Format";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const IP_CURSOR_DOWN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const IP_INVERTED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const IP_MARGIN: u32 = 4u32;
+pub const Ink: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 333335106, data2: 36129, data3: 19598, data4: [191, 156, 143, 105, 203, 6, 143, 202] };
+pub const InkCollector: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1140528467, data2: 44404, data3: 20200, data4: [136, 228, 62, 109, 170, 201, 21, 219] };
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const InkCollectorClipInkToMargin: i32 = 0i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const InkCollectorDefaultMargin: i32 = -2147483648i32;
+pub const InkDisp: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2474383924, data2: 5405, data3: 17936, data4: [156, 166, 168, 204, 155, 219, 93, 131] };
+pub const InkDivider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2287269536, data2: 18051, data3: 19175, data4: [145, 145, 117, 47, 230, 70, 18, 195] };
+pub const InkDrawingAttributes: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3636408994, data2: 1445, data3: 17603, data4: [179, 170, 94, 128, 172, 125, 37, 118] };
+pub const InkEdit: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3855243765, data2: 22468, data3: 19928, data4: [155, 214, 29, 238, 237, 210, 122, 244] };
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const InkMaxTransparencyValue: i32 = 255i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const InkMinTransparencyValue: i32 = 0i32;
+pub const InkOverlay: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1708131910, data2: 52707, data3: 19080, data4: [145, 99, 103, 105, 240, 241, 169, 125] };
+pub const InkPicture: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 77718867, data2: 65078, data3: 20446, data4: [134, 94, 52, 65, 148, 230, 148, 36] };
+pub const InkRecognizerContext: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2864998967, data2: 37417, data3: 20416, data4: [140, 206, 68, 151, 86, 155, 244, 209] };
+pub const InkRecognizerGuide: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2272319809, data2: 42554, data3: 18033, data4: [163, 117, 40, 85, 161, 142, 186, 115] };
+pub const InkRecognizers: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2681530376, data2: 63206, data3: 20069, data4: [152, 211, 170, 57, 5, 76, 18, 85] };
+pub const InkRectangle: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1135637286, data2: 43744, data3: 19298, data4: [168, 61, 95, 215, 104, 183, 53, 60] };
+pub const InkRenderer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2619131620, data2: 55275, data3: 20203, data4: [144, 145, 21, 167, 200, 121, 30, 217] };
+pub const InkStrokes: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1223987644, data2: 9230, data3: 18528, data4: [176, 121, 161, 233, 77, 61, 44, 134] };
+pub const InkTablets: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1850723090, data2: 20746, data3: 19776, data4: [147, 4, 29, 161, 10, 233, 20, 124] };
+pub const InkTransform: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3822442812, data2: 5731, data3: 19064, data4: [161, 167, 34, 55, 93, 254, 186, 238] };
+pub const InkWordList: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2649247892, data2: 63263, data3: 17649, data4: [132, 113, 21, 162, 250, 118, 252, 243] };
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const MAX_FRIENDLYNAME: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const MAX_LANGUAGES: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const MAX_PACKET_BUTTON_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const MAX_PACKET_PROPERTY_COUNT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const MAX_VENDORNAME: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const MICROSOFT_PENINPUT_PANEL_PROPERTY_T: &str = "Microsoft PenInputPanel 1.5";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const MICROSOFT_TIP_COMBOBOXLIST_PROPERTY: &str = "Microsoft TIP ComboBox List Window Identifier";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const MICROSOFT_TIP_NO_INSERT_BUTTON_PROPERTY: &str = "Microsoft TIP No Insert Option";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const MICROSOFT_TIP_OPENING_MSG: &str = "TabletInputPanelOpening";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const MICROSOFT_URL_EXPERIENCE_PROPERTY: &str = "Microsoft TIP URL Experience";
+pub const MathInputControl: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3311501676, data2: 5336, data3: 16528, data4: [131, 12, 152, 217, 148, 178, 28, 123] };
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const NUM_FLICK_DIRECTIONS: u32 = 8u32;
+pub const PenInputPanel: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4148487318, data2: 7002, data3: 18590, data4: [129, 220, 251, 215, 172, 98, 152, 168] };
+pub const PenInputPanel_Internal: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2150309817, data2: 1387, data3: 18208, data4: [176, 204, 128, 210, 59, 113, 23, 30] };
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RECOCONF_HIGHCONFIDENCE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RECOCONF_LOWCONFIDENCE: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RECOCONF_MEDIUMCONFIDENCE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RECOCONF_NOTSET: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RECOFLAG_AUTOSPACE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RECOFLAG_COERCE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RECOFLAG_DISABLEPERSONALIZATION: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RECOFLAG_LINEMODE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RECOFLAG_PREFIXOK: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RECOFLAG_SINGLESEG: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RECOFLAG_WORDMODE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_ADVISEINKCHANGE: i32 = 4096i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_ARBITRARY_ANGLE: i32 = 1024i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_BOXED_INPUT: i32 = 16i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_CAC_INPUT: i32 = 32i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_DONTCARE: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_DOWN_AND_LEFT: i32 = 256i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_DOWN_AND_RIGHT: i32 = 512i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_FREE_INPUT: i32 = 4i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_LATTICE: i32 = 2048i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_LEFT_AND_DOWN: i32 = 128i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_LINED_INPUT: i32 = 8i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_OBJECT: i32 = 2i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_PERFORMSLINEBREAKING: i32 = 65536i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_PERSONALIZABLE: i32 = 16384i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_REQUIRESSEGMENTATIONBREAKING: i32 = 131072i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_RIGHT_AND_DOWN: i32 = 64i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RF_STROKEREORDER: i32 = 8192i32;
+pub const RealTimeStylus: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3798677101, data2: 63896, data3: 17358, data4: [131, 111, 203, 109, 144, 68, 50, 176] };
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SAFE_PARTIAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_ALTITUDEORIENTATION: &str = "{82DEC5C7-F6BA-4906-894F-66D68DFC456C}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_AZIMUTHORIENTATION: &str = "{029123B4-8828-410B-B250-A0536595E5DC}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_BUTTONPRESSURE: &str = "{8B7FEFC4-96AA-4BFE-AC26-8A5F0BE07BF5}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_DEVICE_CONTACT_ID: &str = "{02585B91-049B-4750-9615-DF8948AB3C9C}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_FINGERCONTACTCONFIDENCE: &str = "{E706C804-57F0-4F00-8A0C-853D57789BE9}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_HEIGHT: &str = "{E61858D2-E447-4218-9D3F-18865C203DF4}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_NORMALPRESSURE: &str = "{7307502D-F9F4-4E18-B3F2-2CE1B1A3610C}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_PAKETSTATUS: &str = "{6E0E07BF-AFE7-4CF7-87D1-AF6446208418}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_PITCHROTATION: &str = "{7F7E57B7-BE37-4BE1-A356-7A84160E1893}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_ROLLROTATION: &str = "{5D5D5E56-6BA9-4C5B-9FB0-851C91714E56}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_SERIALNUMBER: &str = "{78A81B56-0935-4493-BAAE-00541A8A16C4}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_TANGENTPRESSURE: &str = "{6DA4488B-5244-41EC-905B-32D89AB80809}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_TIMERTICK: &str = "{436510C5-FED3-45D1-8B76-71D3EA7A829D}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_TWISTORIENTATION: &str = "{0D324960-13B2-41E4-ACE6-7AE9D43D2D3B}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_WIDTH: &str = "{BAABE94D-2712-48F5-BE9D-8F8B5EA0711A}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_X: &str = "{598A6A8F-52C0-4BA0-93AF-AF357411A561}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_XTILTORIENTATION: &str = "{A8D07B3A-8BF0-40B0-95A9-B80A6BB787BF}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_Y: &str = "{B53F9F75-04E0-4498-A7EE-C30DBB5A9011}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_YAWROTATION: &str = "{6A849980-7C3A-45B7-AA82-90A262950E89}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_YTILTORIENTATION: &str = "{0E932389-1D77-43AF-AC00-5B950D6D4B2D}";
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const STR_GUID_Z: &str = "{735ADB30-0EBB-4788-A0E4-0F316490055D}";
+pub const SketchInk: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4029223041, data2: 59516, data3: 19975, data4: [151, 218, 160, 160, 55, 97, 229, 134] };
+pub const StrokeBuilder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3893415655, data2: 28241, data3: 19632, data4: [170, 58, 11, 152, 91, 112, 218, 247] };
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TABLET_DISABLE_FLICKFALLBACKKEYS: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TABLET_DISABLE_FLICKS: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TABLET_DISABLE_PENBARRELFEEDBACK: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TABLET_DISABLE_PENTAPFEEDBACK: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TABLET_DISABLE_PRESSANDHOLD: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TABLET_DISABLE_SMOOTHSCROLLING: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TABLET_DISABLE_TOUCHSWITCH: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TABLET_DISABLE_TOUCHUIFORCEOFF: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TABLET_DISABLE_TOUCHUIFORCEON: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TABLET_ENABLE_FLICKLEARNINGMODE: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TABLET_ENABLE_FLICKSONCONTEXT: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TABLET_ENABLE_MULTITOUCHDATA: u32 = 16777216u32;
+pub const TextInputPanel: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4189161943, data2: 8843, data3: 20267, data4: [134, 80, 185, 127, 89, 224, 44, 140] };
+pub const TipAutoCompleteClient: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2155617900, data2: 7424, data3: 17727, data4: [185, 32, 182, 27, 183, 205, 217, 151] };
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const WM_TABLET_ADDED: u32 = 712u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const WM_TABLET_DEFBASE: u32 = 704u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const WM_TABLET_DELETED: u32 = 713u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const WM_TABLET_FLICK: u32 = 715u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const WM_TABLET_MAXOFFSET: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const WM_TABLET_QUERYSYSTEMGESTURESTATUS: u32 = 716u32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type ALT_BREAKS = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const ALT_BREAKS_SAME: ALT_BREAKS = 0i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const ALT_BREAKS_UNIQUE: ALT_BREAKS = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const ALT_BREAKS_FULL: ALT_BREAKS = 2i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type AppearanceConstants = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const rtfFlat: AppearanceConstants = 0i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const rtfThreeD: AppearanceConstants = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type BorderStyleConstants = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const rtfNoBorder: BorderStyleConstants = 0i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const rtfFixedSingle: BorderStyleConstants = 1i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type CONFIDENCE_LEVEL = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -1064,71 +1764,6 @@ pub type DISPID_StrokeEvent = i32;
 pub const DISPID_SEStrokesAdded: DISPID_StrokeEvent = 1i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const DISPID_SEStrokesRemoved: DISPID_StrokeEvent = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub struct DYNAMIC_RENDERER_CACHED_DATA {
-    pub strokeId: i32,
-    pub dynamicRenderer: IDynamicRenderer,
-}
-impl ::core::marker::Copy for DYNAMIC_RENDERER_CACHED_DATA {}
-impl ::core::clone::Clone for DYNAMIC_RENDERER_CACHED_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub const DynamicRenderer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3973262058, data2: 29807, data3: 19915, data4: [191, 104, 8, 39, 87, 250, 255, 24] };
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETDRAWATTR: u32 = 1541u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETFACTOID: u32 = 1549u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETGESTURESTATUS: u32 = 1545u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETINKINSERTMODE: u32 = 1539u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETINKMODE: u32 = 1537u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETMOUSEICON: u32 = 1553u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETMOUSEPOINTER: u32 = 1555u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETRECOGNIZER: u32 = 1547u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETRECOTIMEOUT: u32 = 1543u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETSELINK: u32 = 1551u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETSELINKDISPLAYMODE: u32 = 1562u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETSTATUS: u32 = 1557u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_GETUSEMOUSEFORINPUT: u32 = 1559u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_RECOGNIZE: u32 = 1558u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_SETDRAWATTR: u32 = 1542u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_SETFACTOID: u32 = 1550u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_SETGESTURESTATUS: u32 = 1546u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_SETINKINSERTMODE: u32 = 1540u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_SETINKMODE: u32 = 1538u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_SETMOUSEICON: u32 = 1554u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_SETMOUSEPOINTER: u32 = 1556u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_SETRECOGNIZER: u32 = 1548u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_SETRECOTIMEOUT: u32 = 1544u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_SETSELINK: u32 = 1552u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_SETSELINKDISPLAYMODE: u32 = 1561u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const EM_SETUSEMOUSEFORINPUT: u32 = 1560u32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type EventMask = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -1157,72 +1792,6 @@ pub const EventMask_TextInserting: EventMask = 1024i32;
 pub const EventMask_TextInserted: EventMask = 2048i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const EventMask_All: EventMask = 4095i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACILITY_INK: u32 = 40u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_BOPOMOFO: &str = "BOPOMOFO";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_CHINESESIMPLECOMMON: &str = "CHS_COMMON";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_CHINESETRADITIONALCOMMON: &str = "CHT_COMMON";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_CURRENCY: &str = "CURRENCY";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_DATE: &str = "DATE";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_DEFAULT: &str = "DEFAULT";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_DIGIT: &str = "DIGIT";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_EMAIL: &str = "EMAIL";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_FILENAME: &str = "FILENAME";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_HANGULCOMMON: &str = "HANGUL_COMMON";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_HANGULRARE: &str = "HANGUL_RARE";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_HIRAGANA: &str = "HIRAGANA";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_JAMO: &str = "JAMO";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_JAPANESECOMMON: &str = "JPN_COMMON";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_KANJICOMMON: &str = "KANJI_COMMON";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_KANJIRARE: &str = "KANJI_RARE";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_KATAKANA: &str = "KATAKANA";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_KOREANCOMMON: &str = "KOR_COMMON";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_LOWERCHAR: &str = "LOWERCHAR";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_NONE: &str = "NONE";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_NUMBER: &str = "NUMBER";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_NUMBERSIMPLE: &str = "NUMSIMPLE";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_ONECHAR: &str = "ONECHAR";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_PERCENT: &str = "PERCENT";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_POSTALCODE: &str = "POSTALCODE";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_PUNCCHAR: &str = "PUNCCHAR";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_SYSTEMDICTIONARY: &str = "SYSDICT";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_TELEPHONE: &str = "TELEPHONE";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_TIME: &str = "TIME";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_UPPERCHAR: &str = "UPPERCHAR";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_WEB: &str = "WEB";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FACTOID_WORDLIST: &str = "WORDLIST";
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type FLICKACTION_COMMANDCODE = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -1271,502 +1840,20 @@ pub const FLICKMODE_LEARNING: FLICKMODE = 2i32;
 pub const FLICKMODE_MAX: FLICKMODE = 2i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const FLICKMODE_DEFAULT: FLICKMODE = 1i32;
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub struct FLICK_DATA {
-    pub _bitfield: i32,
-}
-impl ::core::marker::Copy for FLICK_DATA {}
-impl ::core::clone::Clone for FLICK_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub type GET_DANDIDATE_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub struct FLICK_POINT {
-    pub _bitfield: i32,
-}
-impl ::core::marker::Copy for FLICK_POINT {}
-impl ::core::clone::Clone for FLICK_POINT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const TCF_ALLOW_RECOGNITION: GET_DANDIDATE_FLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const FLICK_WM_HANDLED_MASK: u32 = 1u32;
+pub const TCF_FORCE_RECOGNITION: GET_DANDIDATE_FLAGS = 2i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_ARROW_DOWN: u32 = 61497u32;
+pub type INK_METRIC_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_ARROW_LEFT: u32 = 61498u32;
+pub const IMF_FONT_SELECTED_IN_HDC: INK_METRIC_FLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_ARROW_RIGHT: u32 = 61499u32;
+pub const IMF_ITALIC: INK_METRIC_FLAGS = 2i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_ARROW_UP: u32 = 61496u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_ASTERISK: u32 = 61608u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_BRACE_LEFT: u32 = 61674u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_BRACE_OVER: u32 = 61672u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_BRACE_RIGHT: u32 = 61675u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_BRACE_UNDER: u32 = 61673u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_BRACKET_LEFT: u32 = 61670u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_BRACKET_OVER: u32 = 61668u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_BRACKET_RIGHT: u32 = 61671u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_BRACKET_UNDER: u32 = 61669u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_BULLET: u32 = 61450u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_BULLET_CROSS: u32 = 61451u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CHECK: u32 = 61445u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CHEVRON_DOWN: u32 = 61489u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CHEVRON_LEFT: u32 = 61490u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CHEVRON_RIGHT: u32 = 61491u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CHEVRON_UP: u32 = 61488u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CIRCLE: u32 = 61472u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CIRCLE_CIRCLE: u32 = 61475u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CIRCLE_CROSS: u32 = 61477u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CIRCLE_LINE_HORZ: u32 = 61479u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CIRCLE_LINE_VERT: u32 = 61478u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CIRCLE_TAP: u32 = 61474u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CLOSEUP: u32 = 61455u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CROSS: u32 = 61447u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_CURLICUE: u32 = 61456u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub struct GESTURE_DATA {
-    pub gestureId: i32,
-    pub recoConfidence: i32,
-    pub strokeCount: i32,
-}
-impl ::core::marker::Copy for GESTURE_DATA {}
-impl ::core::clone::Clone for GESTURE_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIAGONAL_LEFTDOWN: u32 = 61534u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIAGONAL_LEFTUP: u32 = 61532u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIAGONAL_RIGHTDOWN: u32 = 61535u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIAGONAL_RIGHTUP: u32 = 61533u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIGIT_0: u32 = 61594u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIGIT_1: u32 = 61595u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIGIT_2: u32 = 61596u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIGIT_3: u32 = 61597u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIGIT_4: u32 = 61598u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIGIT_5: u32 = 61599u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIGIT_6: u32 = 61600u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIGIT_7: u32 = 61601u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIGIT_8: u32 = 61602u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DIGIT_9: u32 = 61603u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOLLAR: u32 = 61607u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOUBLE_ARROW_DOWN: u32 = 61501u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOUBLE_ARROW_LEFT: u32 = 61502u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOUBLE_ARROW_RIGHT: u32 = 61503u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOUBLE_ARROW_UP: u32 = 61500u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOUBLE_CIRCLE: u32 = 61473u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOUBLE_CURLICUE: u32 = 61457u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOUBLE_DOWN: u32 = 61625u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOUBLE_LEFT: u32 = 61626u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOUBLE_RIGHT: u32 = 61627u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOUBLE_TAP: u32 = 61681u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOUBLE_UP: u32 = 61624u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOWN: u32 = 61529u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOWN_ARROW_LEFT: u32 = 61506u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOWN_ARROW_RIGHT: u32 = 61507u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOWN_LEFT: u32 = 61546u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOWN_LEFT_LONG: u32 = 61542u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOWN_RIGHT: u32 = 61547u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOWN_RIGHT_LONG: u32 = 61543u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_DOWN_UP: u32 = 61537u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_EXCLAMATION: u32 = 61604u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_INFINITY: u32 = 61446u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LEFT: u32 = 61530u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LEFT_ARROW_DOWN: u32 = 61509u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LEFT_ARROW_UP: u32 = 61508u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LEFT_DOWN: u32 = 61549u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LEFT_RIGHT: u32 = 61538u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LEFT_UP: u32 = 61548u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_A: u32 = 61568u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_B: u32 = 61569u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_C: u32 = 61570u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_D: u32 = 61571u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_E: u32 = 61572u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_F: u32 = 61573u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_G: u32 = 61574u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_H: u32 = 61575u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_I: u32 = 61576u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_J: u32 = 61577u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_K: u32 = 61578u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_L: u32 = 61579u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_M: u32 = 61580u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_N: u32 = 61581u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_O: u32 = 61582u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_P: u32 = 61583u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_Q: u32 = 61584u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_R: u32 = 61585u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_S: u32 = 61586u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_T: u32 = 61587u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_U: u32 = 61588u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_V: u32 = 61589u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_W: u32 = 61590u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_X: u32 = 61591u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_Y: u32 = 61592u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_LETTER_Z: u32 = 61593u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_NULL: u32 = 61440u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_OPENUP: u32 = 61454u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_PARAGRAPH: u32 = 61448u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_PLUS: u32 = 61609u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_QUAD_TAP: u32 = 61683u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_QUESTION: u32 = 61605u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_RECTANGLE: u32 = 61458u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_RIGHT: u32 = 61531u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_RIGHT_ARROW_DOWN: u32 = 61511u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_RIGHT_ARROW_UP: u32 = 61510u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_RIGHT_DOWN: u32 = 61551u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_RIGHT_LEFT: u32 = 61539u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_RIGHT_UP: u32 = 61550u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_SCRATCHOUT: u32 = 61441u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_SECTION: u32 = 61449u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_SEMICIRCLE_LEFT: u32 = 61480u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_SEMICIRCLE_RIGHT: u32 = 61481u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_SHARP: u32 = 61606u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_SQUARE: u32 = 61443u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_SQUIGGLE: u32 = 61452u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_STAR: u32 = 61444u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_SWAP: u32 = 61453u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_TAP: u32 = 61680u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_TRIANGLE: u32 = 61442u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_TRIPLE_DOWN: u32 = 61629u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_TRIPLE_LEFT: u32 = 61630u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_TRIPLE_RIGHT: u32 = 61631u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_TRIPLE_TAP: u32 = 61682u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_TRIPLE_UP: u32 = 61628u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_UP: u32 = 61528u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_UP_ARROW_LEFT: u32 = 61504u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_UP_ARROW_RIGHT: u32 = 61505u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_UP_DOWN: u32 = 61536u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_UP_LEFT: u32 = 61544u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_UP_LEFT_LONG: u32 = 61540u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_UP_RIGHT: u32 = 61545u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const GESTURE_UP_RIGHT_LONG: u32 = 61541u32;
-pub const GUID_DYNAMIC_RENDERER_CACHED_DATA: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3209894802, data2: 9663, data3: 19093, data4: [137, 173, 14, 71, 107, 52, 180, 245] };
-pub const GUID_GESTURE_DATA: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1105521679, data2: 9898, data3: 17754, data4: [154, 165, 44, 211, 108, 246, 63, 185] };
-pub const GUID_PACKETPROPERTY_GUID_ALTITUDE_ORIENTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2195637703, data2: 63162, data3: 18694, data4: [137, 79, 102, 214, 141, 252, 69, 108] };
-pub const GUID_PACKETPROPERTY_GUID_AZIMUTH_ORIENTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 43066292, data2: 34856, data3: 16651, data4: [178, 80, 160, 83, 101, 149, 229, 220] };
-pub const GUID_PACKETPROPERTY_GUID_BUTTON_PRESSURE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2340417476, data2: 38570, data3: 19454, data4: [172, 38, 138, 95, 11, 224, 123, 245] };
-pub const GUID_PACKETPROPERTY_GUID_DEVICE_CONTACT_ID: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 39345041, data2: 1179, data3: 18256, data4: [150, 21, 223, 137, 72, 171, 60, 156] };
-pub const GUID_PACKETPROPERTY_GUID_FINGERCONTACTCONFIDENCE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3875981316, data2: 22512, data3: 20224, data4: [138, 12, 133, 61, 87, 120, 155, 233] };
-pub const GUID_PACKETPROPERTY_GUID_HEIGHT: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3860355282, data2: 58439, data3: 16920, data4: [157, 63, 24, 134, 92, 32, 61, 244] };
-pub const GUID_PACKETPROPERTY_GUID_NORMAL_PRESSURE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1929859117, data2: 63988, data3: 19992, data4: [179, 242, 44, 225, 177, 163, 97, 12] };
-pub const GUID_PACKETPROPERTY_GUID_PACKET_STATUS: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1846413247, data2: 45031, data3: 19703, data4: [135, 209, 175, 100, 70, 32, 132, 24] };
-pub const GUID_PACKETPROPERTY_GUID_PITCH_ROTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2138986423, data2: 48695, data3: 19425, data4: [163, 86, 122, 132, 22, 14, 24, 147] };
-pub const GUID_PACKETPROPERTY_GUID_ROLL_ROTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1566400086, data2: 27561, data3: 19547, data4: [159, 176, 133, 28, 145, 113, 78, 86] };
-pub const GUID_PACKETPROPERTY_GUID_SERIAL_NUMBER: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2024282966, data2: 2357, data3: 17555, data4: [186, 174, 0, 84, 26, 138, 22, 196] };
-pub const GUID_PACKETPROPERTY_GUID_TANGENT_PRESSURE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1839483019, data2: 21060, data3: 16876, data4: [144, 91, 50, 216, 154, 184, 8, 9] };
-pub const GUID_PACKETPROPERTY_GUID_TIMER_TICK: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1130696901, data2: 65235, data3: 17873, data4: [139, 118, 113, 211, 234, 122, 130, 157] };
-pub const GUID_PACKETPROPERTY_GUID_TWIST_ORIENTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 221399392, data2: 5042, data3: 16868, data4: [172, 230, 122, 233, 212, 61, 45, 59] };
-pub const GUID_PACKETPROPERTY_GUID_WIDTH: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3131828557, data2: 10002, data3: 18677, data4: [190, 157, 143, 139, 94, 160, 113, 26] };
-pub const GUID_PACKETPROPERTY_GUID_X: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1502243471, data2: 21184, data3: 19360, data4: [147, 175, 175, 53, 116, 17, 165, 97] };
-pub const GUID_PACKETPROPERTY_GUID_X_TILT_ORIENTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2832235322, data2: 35824, data3: 16560, data4: [149, 169, 184, 10, 107, 183, 135, 191] };
-pub const GUID_PACKETPROPERTY_GUID_Y: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3040845685, data2: 1248, data3: 17560, data4: [167, 238, 195, 13, 187, 90, 144, 17] };
-pub const GUID_PACKETPROPERTY_GUID_YAW_ROTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1787074944, data2: 31802, data3: 17847, data4: [170, 130, 144, 162, 98, 149, 14, 137] };
-pub const GUID_PACKETPROPERTY_GUID_Y_TILT_ORIENTATION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 244523913, data2: 7543, data3: 17327, data4: [172, 0, 91, 149, 13, 109, 75, 45] };
-pub const GUID_PACKETPROPERTY_GUID_Z: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1935334192, data2: 3771, data3: 18312, data4: [160, 228, 15, 49, 100, 144, 5, 93] };
-pub const GestureRecognizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3929065044, data2: 50732, data3: 17439, data4: [172, 0, 149, 249, 161, 150, 120, 44] };
-pub type HRECOALT = isize;
-pub type HRECOCONTEXT = isize;
-pub type HRECOGNIZER = isize;
-pub type HRECOLATTICE = isize;
-pub type HRECOWORDLIST = isize;
-pub const HandwrittenTextInsertion: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2668056290, data2: 59113, data3: 19850, data4: [160, 71, 235, 91, 92, 60, 85, 218] };
-pub type IDynamicRenderer = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const IECN_GESTURE: u32 = 2050u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const IECN_RECOGNITIONRESULT: u32 = 2051u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const IECN_STROKE: u32 = 2049u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const IECN__BASE: u32 = 2048u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`, `\"Win32_UI_Controls\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Controls"))]
-pub struct IEC_GESTUREINFO {
-    pub nmhdr: super::Controls::NMHDR,
-    pub Cursor: IInkCursor,
-    pub Strokes: IInkStrokes,
-    pub Gestures: super::super::System::Com::VARIANT,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Controls"))]
-impl ::core::marker::Copy for IEC_GESTUREINFO {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Controls"))]
-impl ::core::clone::Clone for IEC_GESTUREINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_UI_Controls\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_UI_Controls"))]
-pub struct IEC_RECOGNITIONRESULTINFO {
-    pub nmhdr: super::Controls::NMHDR,
-    pub RecognitionResult: IInkRecognitionResult,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_UI_Controls"))]
-impl ::core::marker::Copy for IEC_RECOGNITIONRESULTINFO {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_UI_Controls"))]
-impl ::core::clone::Clone for IEC_RECOGNITIONRESULTINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_UI_Controls\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_UI_Controls"))]
-pub struct IEC_STROKEINFO {
-    pub nmhdr: super::Controls::NMHDR,
-    pub Cursor: IInkCursor,
-    pub Stroke: IInkStrokeDisp,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_UI_Controls"))]
-impl ::core::marker::Copy for IEC_STROKEINFO {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_UI_Controls"))]
-impl ::core::clone::Clone for IEC_STROKEINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const IEC__BASE: u32 = 1536u32;
-pub type IGestureRecognizer = *mut ::core::ffi::c_void;
-pub type IHandwrittenTextInsertion = *mut ::core::ffi::c_void;
-pub type IInk = *mut ::core::ffi::c_void;
-pub type IInkCollector = *mut ::core::ffi::c_void;
-pub type IInkCursor = *mut ::core::ffi::c_void;
-pub type IInkCursorButton = *mut ::core::ffi::c_void;
-pub type IInkCursorButtons = *mut ::core::ffi::c_void;
-pub type IInkCursors = *mut ::core::ffi::c_void;
-pub type IInkCustomStrokes = *mut ::core::ffi::c_void;
-pub type IInkDisp = *mut ::core::ffi::c_void;
-pub type IInkDivider = *mut ::core::ffi::c_void;
-pub type IInkDivisionResult = *mut ::core::ffi::c_void;
-pub type IInkDivisionUnit = *mut ::core::ffi::c_void;
-pub type IInkDivisionUnits = *mut ::core::ffi::c_void;
-pub type IInkDrawingAttributes = *mut ::core::ffi::c_void;
-pub type IInkEdit = *mut ::core::ffi::c_void;
-pub type IInkExtendedProperties = *mut ::core::ffi::c_void;
-pub type IInkExtendedProperty = *mut ::core::ffi::c_void;
-pub type IInkGesture = *mut ::core::ffi::c_void;
-pub type IInkLineInfo = *mut ::core::ffi::c_void;
-pub type IInkOverlay = *mut ::core::ffi::c_void;
-pub type IInkPicture = *mut ::core::ffi::c_void;
-pub type IInkRecognitionAlternate = *mut ::core::ffi::c_void;
-pub type IInkRecognitionAlternates = *mut ::core::ffi::c_void;
-pub type IInkRecognitionResult = *mut ::core::ffi::c_void;
-pub type IInkRecognizer = *mut ::core::ffi::c_void;
-pub type IInkRecognizer2 = *mut ::core::ffi::c_void;
-pub type IInkRecognizerContext = *mut ::core::ffi::c_void;
-pub type IInkRecognizerContext2 = *mut ::core::ffi::c_void;
-pub type IInkRecognizerGuide = *mut ::core::ffi::c_void;
-pub type IInkRecognizers = *mut ::core::ffi::c_void;
-pub type IInkRectangle = *mut ::core::ffi::c_void;
-pub type IInkRenderer = *mut ::core::ffi::c_void;
-pub type IInkStrokeDisp = *mut ::core::ffi::c_void;
-pub type IInkStrokes = *mut ::core::ffi::c_void;
-pub type IInkTablet = *mut ::core::ffi::c_void;
-pub type IInkTablet2 = *mut ::core::ffi::c_void;
-pub type IInkTablet3 = *mut ::core::ffi::c_void;
-pub type IInkTablets = *mut ::core::ffi::c_void;
-pub type IInkTransform = *mut ::core::ffi::c_void;
-pub type IInkWordList = *mut ::core::ffi::c_void;
-pub type IInkWordList2 = *mut ::core::ffi::c_void;
-pub type IInputPanelWindowHandle = *mut ::core::ffi::c_void;
-pub type IMathInputControl = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const INKEDIT_CLASS: &str = "INKEDIT";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const INKEDIT_CLASSW: &str = "INKEDIT";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub struct INKMETRIC {
-    pub iHeight: i32,
-    pub iFontAscent: i32,
-    pub iFontDescent: i32,
-    pub dwFlags: u32,
-    pub color: u32,
-}
-impl ::core::marker::Copy for INKMETRIC {}
-impl ::core::clone::Clone for INKMETRIC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const INKRECOGNITIONPROPERTY_BOXNUMBER: &str = "{2C243E3A-F733-4EB6-B1F8-B5DC5C2C4CDA}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const INKRECOGNITIONPROPERTY_CONFIDENCELEVEL: &str = "{7DFE11A7-FB5D-4958-8765-154ADF0D833F}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const INKRECOGNITIONPROPERTY_HOTPOINT: &str = "{CA6F40DC-5292-452a-91FB-2181C0BEC0DE}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const INKRECOGNITIONPROPERTY_LINEMETRICS: &str = "{8CC24B27-30A9-4b96-9056-2D3A90DA0727}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const INKRECOGNITIONPROPERTY_LINENUMBER: &str = "{DBF29F2C-5289-4BE8-B3D8-6EF63246253E}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const INKRECOGNITIONPROPERTY_MAXIMUMSTROKECOUNT: &str = "{BF0EEC4E-4B7D-47a9-8CFA-234DD24BD22A}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const INKRECOGNITIONPROPERTY_POINTSPERINCH: &str = "{7ED16B76-889C-468e-8276-0021B770187E}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const INKRECOGNITIONPROPERTY_SEGMENTATION: &str = "{B3C0FE6C-FB51-4164-BA2F-844AF8F983DA}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const INK_SERIALIZED_FORMAT: &str = "Ink Serialized Format";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const IP_CURSOR_DOWN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const IP_INVERTED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const IP_MARGIN: u32 = 4u32;
-pub type IPenInputPanel = *mut ::core::ffi::c_void;
-pub type IRealTimeStylus = *mut ::core::ffi::c_void;
-pub type IRealTimeStylus2 = *mut ::core::ffi::c_void;
-pub type IRealTimeStylus3 = *mut ::core::ffi::c_void;
-pub type IRealTimeStylusSynchronization = *mut ::core::ffi::c_void;
-pub type ISketchInk = *mut ::core::ffi::c_void;
-pub type IStrokeBuilder = *mut ::core::ffi::c_void;
-pub type IStylusAsyncPlugin = *mut ::core::ffi::c_void;
-pub type IStylusPlugin = *mut ::core::ffi::c_void;
-pub type IStylusSyncPlugin = *mut ::core::ffi::c_void;
-pub type ITextInputPanel = *mut ::core::ffi::c_void;
-pub type ITextInputPanelEventSink = *mut ::core::ffi::c_void;
-pub type ITextInputPanelRunInfo = *mut ::core::ffi::c_void;
-pub type ITipAutoCompleteClient = *mut ::core::ffi::c_void;
-pub type ITipAutoCompleteProvider = *mut ::core::ffi::c_void;
+pub const IMF_BOLD: INK_METRIC_FLAGS = 4i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InPlaceDirection = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -1783,7 +1870,6 @@ pub const InPlaceState_Auto: InPlaceState = 0i32;
 pub const InPlaceState_HoverTarget: InPlaceState = 1i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const InPlaceState_Expanded: InPlaceState = 2i32;
-pub const Ink: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 333335106, data2: 36129, data3: 19598, data4: [191, 156, 143, 105, 203, 6, 143, 202] };
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InkApplicationGesture = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -1928,11 +2014,6 @@ pub const ICM_InkOnly: InkCollectionMode = 0i32;
 pub const ICM_GestureOnly: InkCollectionMode = 1i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const ICM_InkAndGesture: InkCollectionMode = 2i32;
-pub const InkCollector: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1140528467, data2: 44404, data3: 20200, data4: [136, 228, 62, 109, 170, 201, 21, 219] };
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const InkCollectorClipInkToMargin: i32 = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const InkCollectorDefaultMargin: i32 = -2147483648i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InkCollectorEventInterest = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -1979,14 +2060,12 @@ pub const ICBS_Unavailable: InkCursorButtonState = 0i32;
 pub const ICBS_Up: InkCursorButtonState = 1i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const ICBS_Down: InkCursorButtonState = 2i32;
-pub const InkDisp: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2474383924, data2: 5405, data3: 17936, data4: [156, 166, 168, 204, 155, 219, 93, 131] };
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InkDisplayMode = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const IDM_Ink: InkDisplayMode = 0i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const IDM_Text: InkDisplayMode = 1i32;
-pub const InkDivider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2287269536, data2: 18051, data3: 19175, data4: [145, 145, 117, 47, 230, 70, 18, 195] };
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InkDivisionType = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -1997,8 +2076,6 @@ pub const IDT_Line: InkDivisionType = 1i32;
 pub const IDT_Paragraph: InkDivisionType = 2i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const IDT_Drawing: InkDivisionType = 3i32;
-pub const InkDrawingAttributes: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3636408994, data2: 1445, data3: 17603, data4: [179, 170, 94, 128, 172, 125, 37, 118] };
-pub const InkEdit: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3855243765, data2: 22468, data3: 19928, data4: [155, 214, 29, 238, 237, 210, 122, 244] };
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InkEditStatus = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -2021,10 +2098,6 @@ pub type InkInsertMode = i32;
 pub const IEM_InsertText: InkInsertMode = 0i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const IEM_InsertInk: InkInsertMode = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const InkMaxTransparencyValue: i32 = 255i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const InkMinTransparencyValue: i32 = 0i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InkMode = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -2075,7 +2148,6 @@ pub const IMP_SizeAll: InkMousePointer = 13i32;
 pub const IMP_Hand: InkMousePointer = 14i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const IMP_Custom: InkMousePointer = 99i32;
-pub const InkOverlay: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1708131910, data2: 52707, data3: 19080, data4: [145, 99, 103, 105, 240, 241, 169, 125] };
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InkOverlayAttachMode = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -2120,7 +2192,6 @@ pub const IPF_Base64InkSerializedFormat: InkPersistenceFormat = 1i32;
 pub const IPF_GIF: InkPersistenceFormat = 2i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const IPF_Base64GIF: InkPersistenceFormat = 3i32;
-pub const InkPicture: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 77718867, data2: 65078, data3: 20446, data4: [134, 94, 52, 65, 148, 230, 148, 36] };
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InkPictureSizeMode = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -2165,24 +2236,6 @@ pub const IRO_MergePenNot: InkRasterOperation = 14i32;
 pub const IRO_MergePen: InkRasterOperation = 15i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const IRO_White: InkRasterOperation = 16i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct InkRecoGuide {
-    pub rectWritingBox: super::super::Foundation::RECT,
-    pub rectDrawnBox: super::super::Foundation::RECT,
-    pub cRows: i32,
-    pub cColumns: i32,
-    pub midline: i32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for InkRecoGuide {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for InkRecoGuide {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InkRecognitionAlternatesSelection = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -2297,11 +2350,6 @@ pub const IRCACM_Full: InkRecognizerCharacterAutoCompletionMode = 0i32;
 pub const IRCACM_Prefix: InkRecognizerCharacterAutoCompletionMode = 1i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const IRCACM_Random: InkRecognizerCharacterAutoCompletionMode = 2i32;
-pub const InkRecognizerContext: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2864998967, data2: 37417, data3: 20416, data4: [140, 206, 68, 151, 86, 155, 244, 209] };
-pub const InkRecognizerGuide: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2272319809, data2: 42554, data3: 18033, data4: [163, 117, 40, 85, 161, 142, 186, 115] };
-pub const InkRecognizers: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2681530376, data2: 63206, data3: 20069, data4: [152, 211, 170, 57, 5, 76, 18, 85] };
-pub const InkRectangle: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1135637286, data2: 43744, data3: 19298, data4: [168, 61, 95, 215, 104, 183, 53, 60] };
-pub const InkRenderer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2619131620, data2: 55275, data3: 20203, data4: [144, 145, 21, 167, 200, 121, 30, 217] };
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InkSelectionConstants = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -2316,7 +2364,6 @@ pub const IKM_Shift: InkShiftKeyModifierFlags = 1i32;
 pub const IKM_Control: InkShiftKeyModifierFlags = 2i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const IKM_Alt: InkShiftKeyModifierFlags = 4i32;
-pub const InkStrokes: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1223987644, data2: 9230, data3: 18528, data4: [176, 121, 161, 233, 77, 61, 44, 134] };
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InkSystemGesture = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -2339,9 +2386,6 @@ pub const ISG_HoverEnter: InkSystemGesture = 23i32;
 pub const ISG_HoverLeave: InkSystemGesture = 24i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const ISG_Flick: InkSystemGesture = 31i32;
-pub const InkTablets: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1850723090, data2: 20746, data3: 19776, data4: [147, 4, 29, 161, 10, 233, 20, 124] };
-pub const InkTransform: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3822442812, data2: 5731, data3: 19064, data4: [161, 167, 34, 55, 93, 254, 186, 238] };
-pub const InkWordList: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2649247892, data2: 63263, data3: 17649, data4: [132, 113, 21, 162, 250, 118, 252, 243] };
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type InteractionMode = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -2366,21 +2410,6 @@ pub const KEYMODIFIER_WIN: KEYMODIFIER = 8i32;
 pub const KEYMODIFIER_ALTGR: KEYMODIFIER = 16i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const KEYMODIFIER_EXT: KEYMODIFIER = 32i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct LATTICE_METRICS {
-    pub lsBaseline: LINE_SEGMENT,
-    pub iMidlineOffset: i16,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for LATTICE_METRICS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for LATTICE_METRICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type LINE_METRICS = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -2391,41 +2420,6 @@ pub const LM_MIDLINE: LINE_METRICS = 1i32;
 pub const LM_ASCENDER: LINE_METRICS = 2i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const LM_DESCENDER: LINE_METRICS = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct LINE_SEGMENT {
-    pub PtA: super::super::Foundation::POINT,
-    pub PtB: super::super::Foundation::POINT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for LINE_SEGMENT {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for LINE_SEGMENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const MAX_FRIENDLYNAME: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const MAX_LANGUAGES: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const MAX_PACKET_BUTTON_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const MAX_PACKET_PROPERTY_COUNT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const MAX_VENDORNAME: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const MICROSOFT_PENINPUT_PANEL_PROPERTY_T: &str = "Microsoft PenInputPanel 1.5";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const MICROSOFT_TIP_COMBOBOXLIST_PROPERTY: &str = "Microsoft TIP ComboBox List Window Identifier";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const MICROSOFT_TIP_NO_INSERT_BUTTON_PROPERTY: &str = "Microsoft TIP No Insert Option";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const MICROSOFT_TIP_OPENING_MSG: &str = "TabletInputPanelOpening";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const MICROSOFT_URL_EXPERIENCE_PROPERTY: &str = "Microsoft TIP URL Experience";
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type MICUIELEMENT = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -2458,7 +2452,6 @@ pub const MICUIELEMENTSTATE_HOT: MICUIELEMENTSTATE = 2i32;
 pub const MICUIELEMENTSTATE_PRESSED: MICUIELEMENTSTATE = 3i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const MICUIELEMENTSTATE_DISABLED: MICUIELEMENTSTATE = 4i32;
-pub const MathInputControl: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3311501676, data2: 5336, data3: 16528, data4: [131, 12, 152, 217, 148, 178, 28, 123] };
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type MouseButton = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -2469,49 +2462,6 @@ pub const LEFT_BUTTON: MouseButton = 1i32;
 pub const RIGHT_BUTTON: MouseButton = 2i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const MIDDLE_BUTTON: MouseButton = 4i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const NUM_FLICK_DIRECTIONS: u32 = 8u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub struct PACKET_DESCRIPTION {
-    pub cbPacketSize: u32,
-    pub cPacketProperties: u32,
-    pub pPacketProperties: *mut PACKET_PROPERTY,
-    pub cButtons: u32,
-    pub pguidButtons: *mut ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for PACKET_DESCRIPTION {}
-impl ::core::clone::Clone for PACKET_DESCRIPTION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub struct PACKET_PROPERTY {
-    pub guid: ::windows_sys::core::GUID,
-    pub PropertyMetrics: PROPERTY_METRICS,
-}
-impl ::core::marker::Copy for PACKET_PROPERTY {}
-impl ::core::clone::Clone for PACKET_PROPERTY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub struct PROPERTY_METRICS {
-    pub nLogicalMin: i32,
-    pub nLogicalMax: i32,
-    pub Units: PROPERTY_UNITS,
-    pub fResolution: f32,
-}
-impl ::core::marker::Copy for PROPERTY_METRICS {}
-impl ::core::clone::Clone for PROPERTY_METRICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub type PROPERTY_UNITS = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
@@ -2568,32 +2518,389 @@ pub const PT_Inactive: PanelType = 1i32;
 pub const PT_Handwriting: PanelType = 2i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub const PT_Keyboard: PanelType = 3i32;
-pub const PenInputPanel: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4148487318, data2: 7002, data3: 18590, data4: [129, 220, 251, 215, 172, 98, 152, 168] };
-pub const PenInputPanel_Internal: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2150309817, data2: 1387, data3: 18208, data4: [176, 204, 128, 210, 59, 113, 23, 30] };
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type PfnRecoCallback = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: *mut u8, param2: HRECOCONTEXT) -> ::windows_sys::core::HRESULT>;
+pub type RECO_TYPE = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECOCONF_HIGHCONFIDENCE: u32 = 1u32;
+pub const RECO_TYPE_WSTRING: RECO_TYPE = 0i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECOCONF_LOWCONFIDENCE: i32 = -1i32;
+pub const RECO_TYPE_WCHAR: RECO_TYPE = 1i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECOCONF_MEDIUMCONFIDENCE: u32 = 0u32;
+pub type RealTimeStylusDataInterest = i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECOCONF_NOTSET: u32 = 128u32;
+pub const RTSDI_AllData: RealTimeStylusDataInterest = -1i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECOFLAG_AUTOSPACE: u32 = 64u32;
+pub const RTSDI_None: RealTimeStylusDataInterest = 0i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECOFLAG_COERCE: u32 = 2u32;
+pub const RTSDI_Error: RealTimeStylusDataInterest = 1i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECOFLAG_DISABLEPERSONALIZATION: u32 = 32u32;
+pub const RTSDI_RealTimeStylusEnabled: RealTimeStylusDataInterest = 2i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECOFLAG_LINEMODE: u32 = 16u32;
+pub const RTSDI_RealTimeStylusDisabled: RealTimeStylusDataInterest = 4i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECOFLAG_PREFIXOK: u32 = 8u32;
+pub const RTSDI_StylusNew: RealTimeStylusDataInterest = 8i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECOFLAG_SINGLESEG: u32 = 4u32;
+pub const RTSDI_StylusInRange: RealTimeStylusDataInterest = 16i32;
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECOFLAG_WORDMODE: u32 = 1u32;
+pub const RTSDI_InAirPackets: RealTimeStylusDataInterest = 32i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSDI_StylusOutOfRange: RealTimeStylusDataInterest = 64i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSDI_StylusDown: RealTimeStylusDataInterest = 128i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSDI_Packets: RealTimeStylusDataInterest = 256i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSDI_StylusUp: RealTimeStylusDataInterest = 512i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSDI_StylusButtonUp: RealTimeStylusDataInterest = 1024i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSDI_StylusButtonDown: RealTimeStylusDataInterest = 2048i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSDI_SystemEvents: RealTimeStylusDataInterest = 4096i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSDI_TabletAdded: RealTimeStylusDataInterest = 8192i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSDI_TabletRemoved: RealTimeStylusDataInterest = 16384i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSDI_CustomStylusDataAdded: RealTimeStylusDataInterest = 32768i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSDI_UpdateMapping: RealTimeStylusDataInterest = 65536i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSDI_DefaultEvents: RealTimeStylusDataInterest = 37766i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type RealTimeStylusLockType = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSLT_ObjLock: RealTimeStylusLockType = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSLT_SyncEventLock: RealTimeStylusLockType = 2i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSLT_AsyncEventLock: RealTimeStylusLockType = 4i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSLT_ExcludeCallback: RealTimeStylusLockType = 8i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSLT_SyncObjLock: RealTimeStylusLockType = 11i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const RTSLT_AsyncObjLock: RealTimeStylusLockType = 13i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type SCROLLDIRECTION = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SCROLLDIRECTION_UP: SCROLLDIRECTION = 0i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SCROLLDIRECTION_DOWN: SCROLLDIRECTION = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type ScrollBarsConstants = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const rtfNone: ScrollBarsConstants = 0i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const rtfHorizontal: ScrollBarsConstants = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const rtfVertical: ScrollBarsConstants = 2i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const rtfBoth: ScrollBarsConstants = 3i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type SelAlignmentConstants = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const rtfLeft: SelAlignmentConstants = 0i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const rtfRight: SelAlignmentConstants = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const rtfCenter: SelAlignmentConstants = 2i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type SelectionHitResult = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SHR_None: SelectionHitResult = 0i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SHR_NW: SelectionHitResult = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SHR_SE: SelectionHitResult = 2i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SHR_NE: SelectionHitResult = 3i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SHR_SW: SelectionHitResult = 4i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SHR_E: SelectionHitResult = 5i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SHR_W: SelectionHitResult = 6i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SHR_N: SelectionHitResult = 7i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SHR_S: SelectionHitResult = 8i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SHR_Selection: SelectionHitResult = 9i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type StylusQueue = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const SyncStylusQueue: StylusQueue = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const AsyncStylusQueueImmediate: StylusQueue = 2i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const AsyncStylusQueue: StylusQueue = 3i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type TabletDeviceKind = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TDK_Mouse: TabletDeviceKind = 0i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TDK_Pen: TabletDeviceKind = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TDK_Touch: TabletDeviceKind = 2i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type TabletHardwareCapabilities = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const THWC_Integrated: TabletHardwareCapabilities = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const THWC_CursorMustTouch: TabletHardwareCapabilities = 2i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const THWC_HardProximity: TabletHardwareCapabilities = 4i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const THWC_CursorsHavePhysicalIds: TabletHardwareCapabilities = 8i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type TabletPropertyMetricUnit = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TPMU_Default: TabletPropertyMetricUnit = 0i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TPMU_Inches: TabletPropertyMetricUnit = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TPMU_Centimeters: TabletPropertyMetricUnit = 2i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TPMU_Degrees: TabletPropertyMetricUnit = 3i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TPMU_Radians: TabletPropertyMetricUnit = 4i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TPMU_Seconds: TabletPropertyMetricUnit = 5i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TPMU_Pounds: TabletPropertyMetricUnit = 6i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const TPMU_Grams: TabletPropertyMetricUnit = 7i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub type VisualState = i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const InPlace: VisualState = 0i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const Floating: VisualState = 1i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const DockedTop: VisualState = 2i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const DockedBottom: VisualState = 3i32;
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub const Closed: VisualState = 4i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub struct CHARACTER_RANGE {
+    pub wcLow: u16,
+    pub cChars: u16,
+}
+impl ::core::marker::Copy for CHARACTER_RANGE {}
+impl ::core::clone::Clone for CHARACTER_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub struct DYNAMIC_RENDERER_CACHED_DATA {
+    pub strokeId: i32,
+    pub dynamicRenderer: IDynamicRenderer,
+}
+impl ::core::marker::Copy for DYNAMIC_RENDERER_CACHED_DATA {}
+impl ::core::clone::Clone for DYNAMIC_RENDERER_CACHED_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub struct FLICK_DATA {
+    pub _bitfield: i32,
+}
+impl ::core::marker::Copy for FLICK_DATA {}
+impl ::core::clone::Clone for FLICK_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub struct FLICK_POINT {
+    pub _bitfield: i32,
+}
+impl ::core::marker::Copy for FLICK_POINT {}
+impl ::core::clone::Clone for FLICK_POINT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub struct GESTURE_DATA {
+    pub gestureId: i32,
+    pub recoConfidence: i32,
+    pub strokeCount: i32,
+}
+impl ::core::marker::Copy for GESTURE_DATA {}
+impl ::core::clone::Clone for GESTURE_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type HRECOALT = isize;
+pub type HRECOCONTEXT = isize;
+pub type HRECOGNIZER = isize;
+pub type HRECOLATTICE = isize;
+pub type HRECOWORDLIST = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`, `\"Win32_UI_Controls\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Controls"))]
+pub struct IEC_GESTUREINFO {
+    pub nmhdr: super::Controls::NMHDR,
+    pub Cursor: IInkCursor,
+    pub Strokes: IInkStrokes,
+    pub Gestures: super::super::System::Com::VARIANT,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Controls"))]
+impl ::core::marker::Copy for IEC_GESTUREINFO {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole", feature = "Win32_UI_Controls"))]
+impl ::core::clone::Clone for IEC_GESTUREINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_UI_Controls\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_UI_Controls"))]
+pub struct IEC_RECOGNITIONRESULTINFO {
+    pub nmhdr: super::Controls::NMHDR,
+    pub RecognitionResult: IInkRecognitionResult,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_UI_Controls"))]
+impl ::core::marker::Copy for IEC_RECOGNITIONRESULTINFO {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_UI_Controls"))]
+impl ::core::clone::Clone for IEC_RECOGNITIONRESULTINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_UI_Controls\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_UI_Controls"))]
+pub struct IEC_STROKEINFO {
+    pub nmhdr: super::Controls::NMHDR,
+    pub Cursor: IInkCursor,
+    pub Stroke: IInkStrokeDisp,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_UI_Controls"))]
+impl ::core::marker::Copy for IEC_STROKEINFO {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_UI_Controls"))]
+impl ::core::clone::Clone for IEC_STROKEINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct INKMETRIC {
+    pub iHeight: i32,
+    pub iFontAscent: i32,
+    pub iFontDescent: i32,
+    pub dwFlags: u32,
+    pub color: super::super::Foundation::COLORREF,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for INKMETRIC {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for INKMETRIC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct InkRecoGuide {
+    pub rectWritingBox: super::super::Foundation::RECT,
+    pub rectDrawnBox: super::super::Foundation::RECT,
+    pub cRows: i32,
+    pub cColumns: i32,
+    pub midline: i32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for InkRecoGuide {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for InkRecoGuide {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct LATTICE_METRICS {
+    pub lsBaseline: LINE_SEGMENT,
+    pub iMidlineOffset: i16,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for LATTICE_METRICS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for LATTICE_METRICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct LINE_SEGMENT {
+    pub PtA: super::super::Foundation::POINT,
+    pub PtB: super::super::Foundation::POINT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for LINE_SEGMENT {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for LINE_SEGMENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub struct PACKET_DESCRIPTION {
+    pub cbPacketSize: u32,
+    pub cPacketProperties: u32,
+    pub pPacketProperties: *mut PACKET_PROPERTY,
+    pub cButtons: u32,
+    pub pguidButtons: *mut ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for PACKET_DESCRIPTION {}
+impl ::core::clone::Clone for PACKET_DESCRIPTION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub struct PACKET_PROPERTY {
+    pub guid: ::windows_sys::core::GUID,
+    pub PropertyMetrics: PROPERTY_METRICS,
+}
+impl ::core::marker::Copy for PACKET_PROPERTY {}
+impl ::core::clone::Clone for PACKET_PROPERTY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
+pub struct PROPERTY_METRICS {
+    pub nLogicalMin: i32,
+    pub nLogicalMax: i32,
+    pub Units: PROPERTY_UNITS,
+    pub fResolution: f32,
+}
+impl ::core::marker::Copy for PROPERTY_METRICS {}
+impl ::core::clone::Clone for PROPERTY_METRICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub struct RECO_ATTRS {
@@ -2713,105 +3020,6 @@ impl ::core::clone::Clone for RECO_RANGE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_ADVISEINKCHANGE: i32 = 4096i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_ARBITRARY_ANGLE: i32 = 1024i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_BOXED_INPUT: i32 = 16i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_CAC_INPUT: i32 = 32i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_DONTCARE: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_DOWN_AND_LEFT: i32 = 256i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_DOWN_AND_RIGHT: i32 = 512i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_FREE_INPUT: i32 = 4i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_LATTICE: i32 = 2048i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_LEFT_AND_DOWN: i32 = 128i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_LINED_INPUT: i32 = 8i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_OBJECT: i32 = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_PERFORMSLINEBREAKING: i32 = 65536i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_PERSONALIZABLE: i32 = 16384i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_REQUIRESSEGMENTATIONBREAKING: i32 = 131072i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_RIGHT_AND_DOWN: i32 = 64i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RF_STROKEREORDER: i32 = 8192i32;
-pub const RealTimeStylus: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3798677101, data2: 63896, data3: 17358, data4: [131, 111, 203, 109, 144, 68, 50, 176] };
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type RealTimeStylusDataInterest = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_AllData: RealTimeStylusDataInterest = -1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_None: RealTimeStylusDataInterest = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_Error: RealTimeStylusDataInterest = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_RealTimeStylusEnabled: RealTimeStylusDataInterest = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_RealTimeStylusDisabled: RealTimeStylusDataInterest = 4i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_StylusNew: RealTimeStylusDataInterest = 8i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_StylusInRange: RealTimeStylusDataInterest = 16i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_InAirPackets: RealTimeStylusDataInterest = 32i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_StylusOutOfRange: RealTimeStylusDataInterest = 64i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_StylusDown: RealTimeStylusDataInterest = 128i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_Packets: RealTimeStylusDataInterest = 256i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_StylusUp: RealTimeStylusDataInterest = 512i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_StylusButtonUp: RealTimeStylusDataInterest = 1024i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_StylusButtonDown: RealTimeStylusDataInterest = 2048i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_SystemEvents: RealTimeStylusDataInterest = 4096i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_TabletAdded: RealTimeStylusDataInterest = 8192i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_TabletRemoved: RealTimeStylusDataInterest = 16384i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_CustomStylusDataAdded: RealTimeStylusDataInterest = 32768i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_UpdateMapping: RealTimeStylusDataInterest = 65536i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSDI_DefaultEvents: RealTimeStylusDataInterest = 37766i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type RealTimeStylusLockType = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSLT_ObjLock: RealTimeStylusLockType = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSLT_SyncEventLock: RealTimeStylusLockType = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSLT_AsyncEventLock: RealTimeStylusLockType = 4i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSLT_ExcludeCallback: RealTimeStylusLockType = 8i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSLT_SyncObjLock: RealTimeStylusLockType = 11i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RTSLT_AsyncObjLock: RealTimeStylusLockType = 13i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SAFE_PARTIAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type SCROLLDIRECTION = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SCROLLDIRECTION_UP: SCROLLDIRECTION = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SCROLLDIRECTION_DOWN: SCROLLDIRECTION = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub struct STROKE_RANGE {
@@ -2824,48 +3032,6 @@ impl ::core::clone::Clone for STROKE_RANGE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_ALTITUDEORIENTATION: &str = "{82DEC5C7-F6BA-4906-894F-66D68DFC456C}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_AZIMUTHORIENTATION: &str = "{029123B4-8828-410B-B250-A0536595E5DC}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_BUTTONPRESSURE: &str = "{8B7FEFC4-96AA-4BFE-AC26-8A5F0BE07BF5}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_DEVICE_CONTACT_ID: &str = "{02585B91-049B-4750-9615-DF8948AB3C9C}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_FINGERCONTACTCONFIDENCE: &str = "{E706C804-57F0-4F00-8A0C-853D57789BE9}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_HEIGHT: &str = "{E61858D2-E447-4218-9D3F-18865C203DF4}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_NORMALPRESSURE: &str = "{7307502D-F9F4-4E18-B3F2-2CE1B1A3610C}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_PAKETSTATUS: &str = "{6E0E07BF-AFE7-4CF7-87D1-AF6446208418}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_PITCHROTATION: &str = "{7F7E57B7-BE37-4BE1-A356-7A84160E1893}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_ROLLROTATION: &str = "{5D5D5E56-6BA9-4C5B-9FB0-851C91714E56}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_SERIALNUMBER: &str = "{78A81B56-0935-4493-BAAE-00541A8A16C4}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_TANGENTPRESSURE: &str = "{6DA4488B-5244-41EC-905B-32D89AB80809}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_TIMERTICK: &str = "{436510C5-FED3-45D1-8B76-71D3EA7A829D}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_TWISTORIENTATION: &str = "{0D324960-13B2-41E4-ACE6-7AE9D43D2D3B}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_WIDTH: &str = "{BAABE94D-2712-48F5-BE9D-8F8B5EA0711A}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_X: &str = "{598A6A8F-52C0-4BA0-93AF-AF357411A561}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_XTILTORIENTATION: &str = "{A8D07B3A-8BF0-40B0-95A9-B80A6BB787BF}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_Y: &str = "{B53F9F75-04E0-4498-A7EE-C30DBB5A9011}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_YAWROTATION: &str = "{6A849980-7C3A-45B7-AA82-90A262950E89}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_YTILTORIENTATION: &str = "{0E932389-1D77-43AF-AC00-5B950D6D4B2D}";
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const STR_GUID_Z: &str = "{735ADB30-0EBB-4788-A0E4-0F316490055D}";
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
 pub struct SYSTEM_EVENT_DATA {
@@ -2882,48 +3048,6 @@ impl ::core::clone::Clone for SYSTEM_EVENT_DATA {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type ScrollBarsConstants = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const rtfNone: ScrollBarsConstants = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const rtfHorizontal: ScrollBarsConstants = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const rtfVertical: ScrollBarsConstants = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const rtfBoth: ScrollBarsConstants = 3i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type SelAlignmentConstants = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const rtfLeft: SelAlignmentConstants = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const rtfRight: SelAlignmentConstants = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const rtfCenter: SelAlignmentConstants = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type SelectionHitResult = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SHR_None: SelectionHitResult = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SHR_NW: SelectionHitResult = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SHR_SE: SelectionHitResult = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SHR_NE: SelectionHitResult = 3i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SHR_SW: SelectionHitResult = 4i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SHR_E: SelectionHitResult = 5i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SHR_W: SelectionHitResult = 6i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SHR_N: SelectionHitResult = 7i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SHR_S: SelectionHitResult = 8i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SHR_Selection: SelectionHitResult = 9i32;
-pub const SketchInk: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4029223041, data2: 59516, data3: 19975, data4: [151, 218, 160, 160, 55, 97, 229, 134] };
-pub const StrokeBuilder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3893415655, data2: 28241, data3: 19632, data4: [170, 58, 11, 152, 91, 112, 218, 247] };
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -2941,125 +3065,4 @@ impl ::core::clone::Clone for StylusInfo {
     }
 }
 #[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type StylusQueue = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const SyncStylusQueue: StylusQueue = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const AsyncStylusQueueImmediate: StylusQueue = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const AsyncStylusQueue: StylusQueue = 3i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TABLET_DISABLE_FLICKFALLBACKKEYS: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TABLET_DISABLE_FLICKS: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TABLET_DISABLE_PENBARRELFEEDBACK: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TABLET_DISABLE_PENTAPFEEDBACK: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TABLET_DISABLE_PRESSANDHOLD: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TABLET_DISABLE_SMOOTHSCROLLING: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TABLET_DISABLE_TOUCHSWITCH: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TABLET_DISABLE_TOUCHUIFORCEOFF: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TABLET_DISABLE_TOUCHUIFORCEON: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TABLET_ENABLE_FLICKLEARNINGMODE: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TABLET_ENABLE_FLICKSONCONTEXT: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TABLET_ENABLE_MULTITOUCHDATA: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type TabletDeviceKind = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TDK_Mouse: TabletDeviceKind = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TDK_Pen: TabletDeviceKind = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TDK_Touch: TabletDeviceKind = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type TabletHardwareCapabilities = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const THWC_Integrated: TabletHardwareCapabilities = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const THWC_CursorMustTouch: TabletHardwareCapabilities = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const THWC_HardProximity: TabletHardwareCapabilities = 4i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const THWC_CursorsHavePhysicalIds: TabletHardwareCapabilities = 8i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type TabletPropertyMetricUnit = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TPMU_Default: TabletPropertyMetricUnit = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TPMU_Inches: TabletPropertyMetricUnit = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TPMU_Centimeters: TabletPropertyMetricUnit = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TPMU_Degrees: TabletPropertyMetricUnit = 3i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TPMU_Radians: TabletPropertyMetricUnit = 4i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TPMU_Seconds: TabletPropertyMetricUnit = 5i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TPMU_Pounds: TabletPropertyMetricUnit = 6i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TPMU_Grams: TabletPropertyMetricUnit = 7i32;
-pub const TextInputPanel: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4189161943, data2: 8843, data3: 20267, data4: [134, 80, 185, 127, 89, 224, 44, 140] };
-pub const TipAutoCompleteClient: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2155617900, data2: 7424, data3: 17727, data4: [185, 32, 182, 27, 183, 205, 217, 151] };
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type VisualState = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const InPlace: VisualState = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const Floating: VisualState = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const DockedTop: VisualState = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const DockedBottom: VisualState = 3i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const Closed: VisualState = 4i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const WM_TABLET_ADDED: u32 = 712u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const WM_TABLET_DEFBASE: u32 = 704u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const WM_TABLET_DELETED: u32 = 713u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const WM_TABLET_FLICK: u32 = 715u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const WM_TABLET_MAXOFFSET: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const WM_TABLET_QUERYSYSTEMGESTURESTATUS: u32 = 716u32;
-pub type _IInkCollectorEvents = *mut ::core::ffi::c_void;
-pub type _IInkEditEvents = *mut ::core::ffi::c_void;
-pub type _IInkEvents = *mut ::core::ffi::c_void;
-pub type _IInkOverlayEvents = *mut ::core::ffi::c_void;
-pub type _IInkPictureEvents = *mut ::core::ffi::c_void;
-pub type _IInkRecognitionEvents = *mut ::core::ffi::c_void;
-pub type _IInkStrokesEvents = *mut ::core::ffi::c_void;
-pub type _IMathInputControlEvents = *mut ::core::ffi::c_void;
-pub type _IPenInputPanelEvents = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type enumGetCandidateFlags = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TCF_ALLOW_RECOGNITION: enumGetCandidateFlags = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const TCF_FORCE_RECOGNITION: enumGetCandidateFlags = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type enumINKMETRIC_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const IMF_FONT_SELECTED_IN_HDC: enumINKMETRIC_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const IMF_ITALIC: enumINKMETRIC_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const IMF_BOLD: enumINKMETRIC_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub type enumRECO_TYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECO_TYPE_WSTRING: enumRECO_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_TabletPC\"`*"]
-pub const RECO_TYPE_WCHAR: enumRECO_TYPE = 1i32;
+pub type PfnRecoCallback = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: *mut u8, param2: HRECOCONTEXT) -> ::windows_sys::core::HRESULT>;

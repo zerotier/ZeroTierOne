@@ -4,7 +4,7 @@ use std::task::Poll;
 /// runtime *if* the task's coop budget was exhausted.
 ///
 /// The task will only yield if its entire coop budget has been exhausted.
-/// This function can can be used in order to insert optional yield points into long
+/// This function can be used in order to insert optional yield points into long
 /// computations that do not use Tokio resources like sockets or semaphores,
 /// without redundantly yielding to the runtime each time.
 ///
@@ -36,7 +36,7 @@ pub async fn consume_budget() {
         if status.is_ready() {
             return status;
         }
-        status = crate::coop::poll_proceed(cx).map(|restore| {
+        status = crate::runtime::coop::poll_proceed(cx).map(|restore| {
             restore.made_progress();
         });
         status

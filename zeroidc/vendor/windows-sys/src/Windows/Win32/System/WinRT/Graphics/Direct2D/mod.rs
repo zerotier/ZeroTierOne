@@ -1,3 +1,5 @@
+pub type IGeometrySource2DInterop = *mut ::core::ffi::c_void;
+pub type IGraphicsEffectD2D1Interop = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_System_WinRT_Graphics_Direct2D\"`*"]
 pub type GRAPHICS_EFFECT_PROPERTY_MAPPING = i32;
 #[doc = "*Required features: `\"Win32_System_WinRT_Graphics_Direct2D\"`*"]
@@ -22,5 +24,3 @@ pub const GRAPHICS_EFFECT_PROPERTY_MAPPING_COLORMATRIX_ALPHA_MODE: GRAPHICS_EFFE
 pub const GRAPHICS_EFFECT_PROPERTY_MAPPING_COLOR_TO_VECTOR3: GRAPHICS_EFFECT_PROPERTY_MAPPING = 9i32;
 #[doc = "*Required features: `\"Win32_System_WinRT_Graphics_Direct2D\"`*"]
 pub const GRAPHICS_EFFECT_PROPERTY_MAPPING_COLOR_TO_VECTOR4: GRAPHICS_EFFECT_PROPERTY_MAPPING = 10i32;
-pub type IGeometrySource2DInterop = *mut ::core::ffi::c_void;
-pub type IGraphicsEffectD2D1Interop = *mut ::core::ffi::c_void;

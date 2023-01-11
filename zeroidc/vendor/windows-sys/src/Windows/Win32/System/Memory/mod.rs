@@ -1,6 +1,6 @@
 #[cfg(feature = "Win32_System_Memory_NonVolatile")]
 pub mod NonVolatile;
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_Memory\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -287,18 +287,6 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn VirtualUnlockEx(process: super::super::Foundation::HANDLE, address: *const ::core::ffi::c_void, size: usize) -> super::super::Foundation::BOOL;
 }
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub struct CFG_CALL_TARGET_INFO {
-    pub Offset: usize,
-    pub Flags: usize,
-}
-impl ::core::marker::Copy for CFG_CALL_TARGET_INFO {}
-impl ::core::clone::Clone for CFG_CALL_TARGET_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub const FILE_CACHE_MAX_HARD_DISABLE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
@@ -307,6 +295,8 @@ pub const FILE_CACHE_MAX_HARD_ENABLE: u32 = 1u32;
 pub const FILE_CACHE_MIN_HARD_DISABLE: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub const FILE_CACHE_MIN_HARD_ENABLE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEHC_PATROL_SCRUBBER_PRESENT: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub type FILE_MAP = u32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
@@ -383,22 +373,6 @@ pub const HeapEnableTerminationOnCorruption: HEAP_INFORMATION_CLASS = 1i32;
 pub const HeapOptimizeResources: HEAP_INFORMATION_CLASS = 3i32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub const HeapTag: HEAP_INFORMATION_CLASS = 7i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub struct HEAP_SUMMARY {
-    pub cb: u32,
-    pub cbAllocated: usize,
-    pub cbCommitted: usize,
-    pub cbReserved: usize,
-    pub cbMaxReserve: usize,
-}
-impl ::core::marker::Copy for HEAP_SUMMARY {}
-impl ::core::clone::Clone for HEAP_SUMMARY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type HeapHandle = isize;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub type LOCAL_ALLOC_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
@@ -416,150 +390,11 @@ pub const NONZEROLHND: LOCAL_ALLOC_FLAGS = 2u32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub const NONZEROLPTR: LOCAL_ALLOC_FLAGS = 0u32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEHC_PATROL_SCRUBBER_PRESENT: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct MEMORY_BASIC_INFORMATION {
-    pub BaseAddress: *mut ::core::ffi::c_void,
-    pub AllocationBase: *mut ::core::ffi::c_void,
-    pub AllocationProtect: PAGE_PROTECTION_FLAGS,
-    pub PartitionId: u16,
-    pub RegionSize: usize,
-    pub State: VIRTUAL_ALLOCATION_TYPE,
-    pub Protect: PAGE_PROTECTION_FLAGS,
-    pub Type: PAGE_TYPE,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for MEMORY_BASIC_INFORMATION {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for MEMORY_BASIC_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct MEMORY_BASIC_INFORMATION {
-    pub BaseAddress: *mut ::core::ffi::c_void,
-    pub AllocationBase: *mut ::core::ffi::c_void,
-    pub AllocationProtect: PAGE_PROTECTION_FLAGS,
-    pub RegionSize: usize,
-    pub State: VIRTUAL_ALLOCATION_TYPE,
-    pub Protect: PAGE_PROTECTION_FLAGS,
-    pub Type: PAGE_TYPE,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for MEMORY_BASIC_INFORMATION {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for MEMORY_BASIC_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub struct MEMORY_BASIC_INFORMATION32 {
-    pub BaseAddress: u32,
-    pub AllocationBase: u32,
-    pub AllocationProtect: PAGE_PROTECTION_FLAGS,
-    pub RegionSize: u32,
-    pub State: VIRTUAL_ALLOCATION_TYPE,
-    pub Protect: PAGE_PROTECTION_FLAGS,
-    pub Type: PAGE_TYPE,
-}
-impl ::core::marker::Copy for MEMORY_BASIC_INFORMATION32 {}
-impl ::core::clone::Clone for MEMORY_BASIC_INFORMATION32 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub struct MEMORY_BASIC_INFORMATION64 {
-    pub BaseAddress: u64,
-    pub AllocationBase: u64,
-    pub AllocationProtect: PAGE_PROTECTION_FLAGS,
-    pub __alignment1: u32,
-    pub RegionSize: u64,
-    pub State: VIRTUAL_ALLOCATION_TYPE,
-    pub Protect: PAGE_PROTECTION_FLAGS,
-    pub Type: PAGE_TYPE,
-    pub __alignment2: u32,
-}
-impl ::core::marker::Copy for MEMORY_BASIC_INFORMATION64 {}
-impl ::core::clone::Clone for MEMORY_BASIC_INFORMATION64 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub type MEMORY_RESOURCE_NOTIFICATION_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub const LowMemoryResourceNotification: MEMORY_RESOURCE_NOTIFICATION_TYPE = 0i32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub const HighMemoryResourceNotification: MEMORY_RESOURCE_NOTIFICATION_TYPE = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub struct MEM_ADDRESS_REQUIREMENTS {
-    pub LowestStartingAddress: *mut ::core::ffi::c_void,
-    pub HighestEndingAddress: *mut ::core::ffi::c_void,
-    pub Alignment: usize,
-}
-impl ::core::marker::Copy for MEM_ADDRESS_REQUIREMENTS {}
-impl ::core::clone::Clone for MEM_ADDRESS_REQUIREMENTS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Memory\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MEM_EXTENDED_PARAMETER {
-    pub Anonymous1: MEM_EXTENDED_PARAMETER_0,
-    pub Anonymous2: MEM_EXTENDED_PARAMETER_1,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MEM_EXTENDED_PARAMETER {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MEM_EXTENDED_PARAMETER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Memory\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MEM_EXTENDED_PARAMETER_0 {
-    pub _bitfield: u64,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MEM_EXTENDED_PARAMETER_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MEM_EXTENDED_PARAMETER_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Memory\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union MEM_EXTENDED_PARAMETER_1 {
-    pub ULong64: u64,
-    pub Pointer: *mut ::core::ffi::c_void,
-    pub Size: usize,
-    pub Handle: super::super::Foundation::HANDLE,
-    pub ULong: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MEM_EXTENDED_PARAMETER_1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MEM_EXTENDED_PARAMETER_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub type MEM_EXTENDED_PARAMETER_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
@@ -677,7 +512,212 @@ pub const MEM_MAPPED: PAGE_TYPE = 262144u32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub const MEM_IMAGE: PAGE_TYPE = 16777216u32;
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub type PBAD_MEMORY_CALLBACK_ROUTINE = ::core::option::Option<unsafe extern "system" fn()>;
+pub type UNMAP_VIEW_OF_FILE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_UNMAP_NONE: UNMAP_VIEW_OF_FILE_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_UNMAP_WITH_TRANSIENT_BOOST: UNMAP_VIEW_OF_FILE_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_PRESERVE_PLACEHOLDER: UNMAP_VIEW_OF_FILE_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub type VIRTUAL_ALLOCATION_TYPE = u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_COMMIT: VIRTUAL_ALLOCATION_TYPE = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_RESERVE: VIRTUAL_ALLOCATION_TYPE = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_RESET: VIRTUAL_ALLOCATION_TYPE = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_RESET_UNDO: VIRTUAL_ALLOCATION_TYPE = 16777216u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_REPLACE_PLACEHOLDER: VIRTUAL_ALLOCATION_TYPE = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_LARGE_PAGES: VIRTUAL_ALLOCATION_TYPE = 536870912u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_RESERVE_PLACEHOLDER: VIRTUAL_ALLOCATION_TYPE = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_FREE: VIRTUAL_ALLOCATION_TYPE = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub type VIRTUAL_FREE_TYPE = u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_DECOMMIT: VIRTUAL_FREE_TYPE = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MEM_RELEASE: VIRTUAL_FREE_TYPE = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub type WIN32_MEMORY_INFORMATION_CLASS = i32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MemoryRegionInfo: WIN32_MEMORY_INFORMATION_CLASS = 0i32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub type WIN32_MEMORY_PARTITION_INFORMATION_CLASS = i32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MemoryPartitionInfo: WIN32_MEMORY_PARTITION_INFORMATION_CLASS = 0i32;
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub const MemoryPartitionDedicatedMemoryInfo: WIN32_MEMORY_PARTITION_INFORMATION_CLASS = 1i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub struct CFG_CALL_TARGET_INFO {
+    pub Offset: usize,
+    pub Flags: usize,
+}
+impl ::core::marker::Copy for CFG_CALL_TARGET_INFO {}
+impl ::core::clone::Clone for CFG_CALL_TARGET_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub struct HEAP_SUMMARY {
+    pub cb: u32,
+    pub cbAllocated: usize,
+    pub cbCommitted: usize,
+    pub cbReserved: usize,
+    pub cbMaxReserve: usize,
+}
+impl ::core::marker::Copy for HEAP_SUMMARY {}
+impl ::core::clone::Clone for HEAP_SUMMARY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type HeapHandle = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct MEMORY_BASIC_INFORMATION {
+    pub BaseAddress: *mut ::core::ffi::c_void,
+    pub AllocationBase: *mut ::core::ffi::c_void,
+    pub AllocationProtect: PAGE_PROTECTION_FLAGS,
+    pub PartitionId: u16,
+    pub RegionSize: usize,
+    pub State: VIRTUAL_ALLOCATION_TYPE,
+    pub Protect: PAGE_PROTECTION_FLAGS,
+    pub Type: PAGE_TYPE,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for MEMORY_BASIC_INFORMATION {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for MEMORY_BASIC_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct MEMORY_BASIC_INFORMATION {
+    pub BaseAddress: *mut ::core::ffi::c_void,
+    pub AllocationBase: *mut ::core::ffi::c_void,
+    pub AllocationProtect: PAGE_PROTECTION_FLAGS,
+    pub RegionSize: usize,
+    pub State: VIRTUAL_ALLOCATION_TYPE,
+    pub Protect: PAGE_PROTECTION_FLAGS,
+    pub Type: PAGE_TYPE,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for MEMORY_BASIC_INFORMATION {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for MEMORY_BASIC_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub struct MEMORY_BASIC_INFORMATION32 {
+    pub BaseAddress: u32,
+    pub AllocationBase: u32,
+    pub AllocationProtect: PAGE_PROTECTION_FLAGS,
+    pub RegionSize: u32,
+    pub State: VIRTUAL_ALLOCATION_TYPE,
+    pub Protect: PAGE_PROTECTION_FLAGS,
+    pub Type: PAGE_TYPE,
+}
+impl ::core::marker::Copy for MEMORY_BASIC_INFORMATION32 {}
+impl ::core::clone::Clone for MEMORY_BASIC_INFORMATION32 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub struct MEMORY_BASIC_INFORMATION64 {
+    pub BaseAddress: u64,
+    pub AllocationBase: u64,
+    pub AllocationProtect: PAGE_PROTECTION_FLAGS,
+    pub __alignment1: u32,
+    pub RegionSize: u64,
+    pub State: VIRTUAL_ALLOCATION_TYPE,
+    pub Protect: PAGE_PROTECTION_FLAGS,
+    pub Type: PAGE_TYPE,
+    pub __alignment2: u32,
+}
+impl ::core::marker::Copy for MEMORY_BASIC_INFORMATION64 {}
+impl ::core::clone::Clone for MEMORY_BASIC_INFORMATION64 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub struct MEM_ADDRESS_REQUIREMENTS {
+    pub LowestStartingAddress: *mut ::core::ffi::c_void,
+    pub HighestEndingAddress: *mut ::core::ffi::c_void,
+    pub Alignment: usize,
+}
+impl ::core::marker::Copy for MEM_ADDRESS_REQUIREMENTS {}
+impl ::core::clone::Clone for MEM_ADDRESS_REQUIREMENTS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Memory\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MEM_EXTENDED_PARAMETER {
+    pub Anonymous1: MEM_EXTENDED_PARAMETER_0,
+    pub Anonymous2: MEM_EXTENDED_PARAMETER_1,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MEM_EXTENDED_PARAMETER {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MEM_EXTENDED_PARAMETER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Memory\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MEM_EXTENDED_PARAMETER_0 {
+    pub _bitfield: u64,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MEM_EXTENDED_PARAMETER_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MEM_EXTENDED_PARAMETER_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Memory\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub union MEM_EXTENDED_PARAMETER_1 {
+    pub ULong64: u64,
+    pub Pointer: *mut ::core::ffi::c_void,
+    pub Size: usize,
+    pub Handle: super::super::Foundation::HANDLE,
+    pub ULong: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MEM_EXTENDED_PARAMETER_1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MEM_EXTENDED_PARAMETER_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Memory\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -744,45 +784,6 @@ impl ::core::clone::Clone for PROCESS_HEAP_ENTRY_0_1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Memory\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSECURE_MEMORY_CACHE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(addr: *const ::core::ffi::c_void, range: usize) -> super::super::Foundation::BOOLEAN>;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub type UNMAP_VIEW_OF_FILE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_UNMAP_NONE: UNMAP_VIEW_OF_FILE_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_UNMAP_WITH_TRANSIENT_BOOST: UNMAP_VIEW_OF_FILE_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_PRESERVE_PLACEHOLDER: UNMAP_VIEW_OF_FILE_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub type VIRTUAL_ALLOCATION_TYPE = u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_COMMIT: VIRTUAL_ALLOCATION_TYPE = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_RESERVE: VIRTUAL_ALLOCATION_TYPE = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_RESET: VIRTUAL_ALLOCATION_TYPE = 524288u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_RESET_UNDO: VIRTUAL_ALLOCATION_TYPE = 16777216u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_REPLACE_PLACEHOLDER: VIRTUAL_ALLOCATION_TYPE = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_LARGE_PAGES: VIRTUAL_ALLOCATION_TYPE = 536870912u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_RESERVE_PLACEHOLDER: VIRTUAL_ALLOCATION_TYPE = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_FREE: VIRTUAL_ALLOCATION_TYPE = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub type VIRTUAL_FREE_TYPE = u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_DECOMMIT: VIRTUAL_FREE_TYPE = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MEM_RELEASE: VIRTUAL_FREE_TYPE = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub type WIN32_MEMORY_INFORMATION_CLASS = i32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MemoryRegionInfo: WIN32_MEMORY_INFORMATION_CLASS = 0i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub struct WIN32_MEMORY_PARTITION_INFORMATION {
@@ -810,12 +811,6 @@ impl ::core::clone::Clone for WIN32_MEMORY_PARTITION_INFORMATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub type WIN32_MEMORY_PARTITION_INFORMATION_CLASS = i32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MemoryPartitionInfo: WIN32_MEMORY_PARTITION_INFORMATION_CLASS = 0i32;
-#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
-pub const MemoryPartitionDedicatedMemoryInfo: WIN32_MEMORY_PARTITION_INFORMATION_CLASS = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Memory\"`*"]
 pub struct WIN32_MEMORY_RANGE_ENTRY {
@@ -866,3 +861,8 @@ impl ::core::clone::Clone for WIN32_MEMORY_REGION_INFORMATION_0_0 {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_System_Memory\"`*"]
+pub type PBAD_MEMORY_CALLBACK_ROUTINE = ::core::option::Option<unsafe extern "system" fn()>;
+#[doc = "*Required features: `\"Win32_System_Memory\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSECURE_MEMORY_CACHE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(addr: *const ::core::ffi::c_void, range: usize) -> super::super::Foundation::BOOLEAN>;

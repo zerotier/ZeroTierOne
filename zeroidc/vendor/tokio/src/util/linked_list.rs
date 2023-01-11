@@ -126,7 +126,7 @@ impl<L: Link> LinkedList<L, L::Target> {
     pub(crate) fn push_front(&mut self, val: L::Handle) {
         // The value should not be dropped, it is being inserted into the list
         let val = ManuallyDrop::new(val);
-        let ptr = L::as_raw(&*val);
+        let ptr = L::as_raw(&val);
         assert_ne!(self.head, Some(ptr));
         unsafe {
             L::pointers(ptr).as_mut().set_next(self.head);
@@ -623,7 +623,7 @@ mod tests {
         }
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(tokio_wasm))]
     proptest::proptest! {
         #[test]
         fn fuzz_linked_list(ops: Vec<usize>) {
@@ -631,6 +631,7 @@ mod tests {
         }
     }
 
+    #[cfg(not(tokio_wasm))]
     fn run_fuzz(ops: Vec<usize>) {
         use std::collections::VecDeque;
 

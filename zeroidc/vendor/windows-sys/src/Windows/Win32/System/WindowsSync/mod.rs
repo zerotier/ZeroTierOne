@@ -1,33 +1,3 @@
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub type CONFLICT_RESOLUTION_POLICY = i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const CRP_NONE: CONFLICT_RESOLUTION_POLICY = 0i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const CRP_DESTINATION_PROVIDER_WINS: CONFLICT_RESOLUTION_POLICY = 1i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const CRP_SOURCE_PROVIDER_WINS: CONFLICT_RESOLUTION_POLICY = 2i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const CRP_LAST: CONFLICT_RESOLUTION_POLICY = 3i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub type CONSTRAINT_CONFLICT_REASON = i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const CCR_OTHER: CONSTRAINT_CONFLICT_REASON = 0i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const CCR_COLLISION: CONSTRAINT_CONFLICT_REASON = 1i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const CCR_NOPARENT: CONSTRAINT_CONFLICT_REASON = 2i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const CCR_IDENTITY: CONSTRAINT_CONFLICT_REASON = 3i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub type FILTERING_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const FT_CURRENT_ITEMS_ONLY: FILTERING_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const FT_CURRENT_ITEMS_AND_VERSIONS_FOR_MOVED_OUT_ITEMS: FILTERING_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub type FILTER_COMBINATION_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const FCT_INTERSECTION: FILTER_COMBINATION_TYPE = 0i32;
 pub type IAsynchronousDataRetriever = *mut ::core::ffi::c_void;
 pub type IChangeConflict = *mut ::core::ffi::c_void;
 pub type IChangeUnitException = *mut ::core::ffi::c_void;
@@ -40,38 +10,6 @@ pub type IConstructReplicaKeyMap = *mut ::core::ffi::c_void;
 pub type ICoreFragment = *mut ::core::ffi::c_void;
 pub type ICoreFragmentInspector = *mut ::core::ffi::c_void;
 pub type ICustomFilterInfo = *mut ::core::ffi::c_void;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ID_PARAMETERS {
-    pub dwSize: u32,
-    pub replicaId: ID_PARAMETER_PAIR,
-    pub itemId: ID_PARAMETER_PAIR,
-    pub changeUnitId: ID_PARAMETER_PAIR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ID_PARAMETERS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ID_PARAMETERS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ID_PARAMETER_PAIR {
-    pub fIsVariable: super::super::Foundation::BOOL,
-    pub cbIdSize: u16,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ID_PARAMETER_PAIR {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ID_PARAMETER_PAIR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub type IDataRetrieverCallback = *mut ::core::ffi::c_void;
 pub type IEnumChangeUnitExceptions = *mut ::core::ffi::c_void;
 pub type IEnumClockVector = *mut ::core::ffi::c_void;
@@ -139,16 +77,6 @@ pub type ISyncSessionExtendedErrorInfo = *mut ::core::ffi::c_void;
 pub type ISyncSessionState = *mut ::core::ffi::c_void;
 pub type ISyncSessionState2 = *mut ::core::ffi::c_void;
 pub type ISynchronousDataRetriever = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub type KNOWLEDGE_COOKIE_COMPARISON_RESULT = i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const KCCR_COOKIE_KNOWLEDGE_EQUAL: KNOWLEDGE_COOKIE_COMPARISON_RESULT = 0i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const KCCR_COOKIE_KNOWLEDGE_CONTAINED: KNOWLEDGE_COOKIE_COMPARISON_RESULT = 1i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const KCCR_COOKIE_KNOWLEDGE_CONTAINS: KNOWLEDGE_COOKIE_COMPARISON_RESULT = 2i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const KCCR_COOKIE_KNOWLEDGE_NOT_COMPARABLE: KNOWLEDGE_COOKIE_COMPARISON_RESULT = 3i32;
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 #[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
 pub const PKEY_CONFIGUI_CAPABILITIES: super::super::UI::Shell::PropertiesSystem::PROPERTYKEY = super::super::UI::Shell::PropertiesSystem::PROPERTYKEY { fmtid: ::windows_sys::core::GUID { data1: 1430988010, data2: 59619, data3: 17850, data4: [147, 82, 223, 181, 97, 225, 113, 228] }, pid: 5u32 };
@@ -222,6 +150,61 @@ pub const SYNC_CHANGE_FLAG_DOES_NOT_EXIST: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
 pub const SYNC_CHANGE_FLAG_GHOST: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const SYNC_FILTER_INFO_COMBINED: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const SYNC_FILTER_INFO_FLAG_CHANGE_UNIT_LIST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const SYNC_FILTER_INFO_FLAG_CUSTOM: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const SYNC_FILTER_INFO_FLAG_ITEM_LIST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const SYNC_SERIALIZE_REPLICA_KEY_MAP: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const SYNC_VERSION_FLAG_FROM_FEED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const SYNC_VERSION_FLAG_HAS_BY: u32 = 2u32;
+pub const SyncProviderRegistration: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4163587825, data2: 37801, data3: 19934, data4: [128, 21, 247, 149, 10, 26, 110, 49] };
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub type CONFLICT_RESOLUTION_POLICY = i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const CRP_NONE: CONFLICT_RESOLUTION_POLICY = 0i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const CRP_DESTINATION_PROVIDER_WINS: CONFLICT_RESOLUTION_POLICY = 1i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const CRP_SOURCE_PROVIDER_WINS: CONFLICT_RESOLUTION_POLICY = 2i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const CRP_LAST: CONFLICT_RESOLUTION_POLICY = 3i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub type CONSTRAINT_CONFLICT_REASON = i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const CCR_OTHER: CONSTRAINT_CONFLICT_REASON = 0i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const CCR_COLLISION: CONSTRAINT_CONFLICT_REASON = 1i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const CCR_NOPARENT: CONSTRAINT_CONFLICT_REASON = 2i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const CCR_IDENTITY: CONSTRAINT_CONFLICT_REASON = 3i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub type FILTERING_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const FT_CURRENT_ITEMS_ONLY: FILTERING_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const FT_CURRENT_ITEMS_AND_VERSIONS_FOR_MOVED_OUT_ITEMS: FILTERING_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub type FILTER_COMBINATION_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const FCT_INTERSECTION: FILTER_COMBINATION_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub type KNOWLEDGE_COOKIE_COMPARISON_RESULT = i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const KCCR_COOKIE_KNOWLEDGE_EQUAL: KNOWLEDGE_COOKIE_COMPARISON_RESULT = 0i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const KCCR_COOKIE_KNOWLEDGE_CONTAINED: KNOWLEDGE_COOKIE_COMPARISON_RESULT = 1i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const KCCR_COOKIE_KNOWLEDGE_CONTAINS: KNOWLEDGE_COOKIE_COMPARISON_RESULT = 2i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const KCCR_COOKIE_KNOWLEDGE_NOT_COMPARABLE: KNOWLEDGE_COOKIE_COMPARISON_RESULT = 3i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
 pub type SYNC_CONSTRAINT_RESOLVE_ACTION = i32;
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
 pub const SCRA_DEFER: SYNC_CONSTRAINT_RESOLVE_ACTION = 0i32;
@@ -237,29 +220,6 @@ pub const SCRA_MERGE: SYNC_CONSTRAINT_RESOLVE_ACTION = 4i32;
 pub const SCRA_RENAME_SOURCE: SYNC_CONSTRAINT_RESOLVE_ACTION = 5i32;
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
 pub const SCRA_RENAME_DESTINATION: SYNC_CONSTRAINT_RESOLVE_ACTION = 6i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SYNC_FILTER_CHANGE {
-    pub fMoveIn: super::super::Foundation::BOOL,
-    pub moveVersion: SYNC_VERSION,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SYNC_FILTER_CHANGE {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SYNC_FILTER_CHANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const SYNC_FILTER_INFO_COMBINED: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const SYNC_FILTER_INFO_FLAG_CHANGE_UNIT_LIST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const SYNC_FILTER_INFO_FLAG_CUSTOM: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const SYNC_FILTER_INFO_FLAG_ITEM_LIST: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
 pub type SYNC_FULL_ENUMERATION_ACTION = i32;
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
@@ -282,18 +242,6 @@ pub type SYNC_PROVIDER_ROLE = i32;
 pub const SPR_SOURCE: SYNC_PROVIDER_ROLE = 0i32;
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
 pub const SPR_DESTINATION: SYNC_PROVIDER_ROLE = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub struct SYNC_RANGE {
-    pub pbClosedLowerBound: *mut u8,
-    pub pbClosedUpperBound: *mut u8,
-}
-impl ::core::marker::Copy for SYNC_RANGE {}
-impl ::core::clone::Clone for SYNC_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
 pub type SYNC_REGISTRATION_EVENT = i32;
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
@@ -333,7 +281,68 @@ pub const SYNC_SERIALIZATION_VERSION_V2: SYNC_SERIALIZATION_VERSION = 4i32;
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
 pub const SYNC_SERIALIZATION_VERSION_V3: SYNC_SERIALIZATION_VERSION = 5i32;
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const SYNC_SERIALIZE_REPLICA_KEY_MAP: u32 = 1u32;
+pub type SYNC_STATISTICS = i32;
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub const SYNC_STATISTICS_RANGE_COUNT: SYNC_STATISTICS = 0i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ID_PARAMETERS {
+    pub dwSize: u32,
+    pub replicaId: ID_PARAMETER_PAIR,
+    pub itemId: ID_PARAMETER_PAIR,
+    pub changeUnitId: ID_PARAMETER_PAIR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ID_PARAMETERS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ID_PARAMETERS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ID_PARAMETER_PAIR {
+    pub fIsVariable: super::super::Foundation::BOOL,
+    pub cbIdSize: u16,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ID_PARAMETER_PAIR {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ID_PARAMETER_PAIR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SYNC_FILTER_CHANGE {
+    pub fMoveIn: super::super::Foundation::BOOL,
+    pub moveVersion: SYNC_VERSION,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SYNC_FILTER_CHANGE {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SYNC_FILTER_CHANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
+pub struct SYNC_RANGE {
+    pub pbClosedLowerBound: *mut u8,
+    pub pbClosedUpperBound: *mut u8,
+}
+impl ::core::marker::Copy for SYNC_RANGE {}
+impl ::core::clone::Clone for SYNC_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
 pub struct SYNC_SESSION_STATISTICS {
@@ -346,10 +355,6 @@ impl ::core::clone::Clone for SYNC_SESSION_STATISTICS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub type SYNC_STATISTICS = i32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const SYNC_STATISTICS_RANGE_COUNT: SYNC_STATISTICS = 0i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
 pub struct SYNC_TIME {
@@ -374,10 +379,6 @@ impl ::core::clone::Clone for SYNC_VERSION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const SYNC_VERSION_FLAG_FROM_FEED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_WindowsSync\"`*"]
-pub const SYNC_VERSION_FLAG_HAS_BY: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_WindowsSync\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -415,4 +416,3 @@ impl ::core::clone::Clone for SyncProviderConfiguration {
         *self
     }
 }
-pub const SyncProviderRegistration: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4163587825, data2: 37801, data3: 19934, data4: [128, 21, 247, 149, 10, 26, 110, 49] };

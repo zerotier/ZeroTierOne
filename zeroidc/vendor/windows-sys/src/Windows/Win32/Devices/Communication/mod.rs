@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_Communication\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -90,207 +90,6 @@ extern "system" {
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_IO"))]
     pub fn WaitCommEvent(hfile: super::super::Foundation::HANDLE, lpevtmask: *mut COMM_EVENT_MASK, lpoverlapped: *mut super::super::System::IO::OVERLAPPED) -> super::super::Foundation::BOOL;
 }
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub type CLEAR_COMM_ERROR_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const CE_BREAK: CLEAR_COMM_ERROR_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const CE_FRAME: CLEAR_COMM_ERROR_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const CE_OVERRUN: CLEAR_COMM_ERROR_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const CE_RXOVER: CLEAR_COMM_ERROR_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const CE_RXPARITY: CLEAR_COMM_ERROR_FLAGS = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct COMMCONFIG {
-    pub dwSize: u32,
-    pub wVersion: u16,
-    pub wReserved: u16,
-    pub dcb: DCB,
-    pub dwProviderSubType: u32,
-    pub dwProviderOffset: u32,
-    pub dwProviderSize: u32,
-    pub wcProviderData: [u16; 1],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for COMMCONFIG {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for COMMCONFIG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub struct COMMPROP {
-    pub wPacketLength: u16,
-    pub wPacketVersion: u16,
-    pub dwServiceMask: u32,
-    pub dwReserved1: u32,
-    pub dwMaxTxQueue: u32,
-    pub dwMaxRxQueue: u32,
-    pub dwMaxBaud: u32,
-    pub dwProvSubType: u32,
-    pub dwProvCapabilities: u32,
-    pub dwSettableParams: u32,
-    pub dwSettableBaud: u32,
-    pub wSettableData: u16,
-    pub wSettableStopParity: COMMPROP_STOP_PARITY,
-    pub dwCurrentTxQueue: u32,
-    pub dwCurrentRxQueue: u32,
-    pub dwProvSpec1: u32,
-    pub dwProvSpec2: u32,
-    pub wcProvChar: [u16; 1],
-}
-impl ::core::marker::Copy for COMMPROP {}
-impl ::core::clone::Clone for COMMPROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub type COMMPROP_STOP_PARITY = u16;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const STOPBITS_10: COMMPROP_STOP_PARITY = 1u16;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const STOPBITS_15: COMMPROP_STOP_PARITY = 2u16;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const STOPBITS_20: COMMPROP_STOP_PARITY = 4u16;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const PARITY_NONE: COMMPROP_STOP_PARITY = 256u16;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const PARITY_ODD: COMMPROP_STOP_PARITY = 512u16;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const PARITY_EVEN: COMMPROP_STOP_PARITY = 1024u16;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const PARITY_MARK: COMMPROP_STOP_PARITY = 2048u16;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const PARITY_SPACE: COMMPROP_STOP_PARITY = 4096u16;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub struct COMMTIMEOUTS {
-    pub ReadIntervalTimeout: u32,
-    pub ReadTotalTimeoutMultiplier: u32,
-    pub ReadTotalTimeoutConstant: u32,
-    pub WriteTotalTimeoutMultiplier: u32,
-    pub WriteTotalTimeoutConstant: u32,
-}
-impl ::core::marker::Copy for COMMTIMEOUTS {}
-impl ::core::clone::Clone for COMMTIMEOUTS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub type COMM_EVENT_MASK = u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_BREAK: COMM_EVENT_MASK = 64u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_CTS: COMM_EVENT_MASK = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_DSR: COMM_EVENT_MASK = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_ERR: COMM_EVENT_MASK = 128u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_EVENT1: COMM_EVENT_MASK = 2048u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_EVENT2: COMM_EVENT_MASK = 4096u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_PERR: COMM_EVENT_MASK = 512u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_RING: COMM_EVENT_MASK = 256u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_RLSD: COMM_EVENT_MASK = 32u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_RX80FULL: COMM_EVENT_MASK = 1024u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_RXCHAR: COMM_EVENT_MASK = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_RXFLAG: COMM_EVENT_MASK = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EV_TXEMPTY: COMM_EVENT_MASK = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub struct COMSTAT {
-    pub _bitfield: u32,
-    pub cbInQue: u32,
-    pub cbOutQue: u32,
-}
-impl ::core::marker::Copy for COMSTAT {}
-impl ::core::clone::Clone for COMSTAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DCB {
-    pub DCBlength: u32,
-    pub BaudRate: u32,
-    pub _bitfield: u32,
-    pub wReserved: u16,
-    pub XonLim: u16,
-    pub XoffLim: u16,
-    pub ByteSize: u8,
-    pub Parity: DCB_PARITY,
-    pub StopBits: DCB_STOP_BITS,
-    pub XonChar: super::super::Foundation::CHAR,
-    pub XoffChar: super::super::Foundation::CHAR,
-    pub ErrorChar: super::super::Foundation::CHAR,
-    pub EofChar: super::super::Foundation::CHAR,
-    pub EvtChar: super::super::Foundation::CHAR,
-    pub wReserved1: u16,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DCB {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DCB {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub type DCB_PARITY = u8;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const EVENPARITY: DCB_PARITY = 2u8;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const MARKPARITY: DCB_PARITY = 3u8;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const NOPARITY: DCB_PARITY = 0u8;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const ODDPARITY: DCB_PARITY = 1u8;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const SPACEPARITY: DCB_PARITY = 4u8;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub type DCB_STOP_BITS = u8;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const ONESTOPBIT: DCB_STOP_BITS = 0u8;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const ONE5STOPBITS: DCB_STOP_BITS = 1u8;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const TWOSTOPBITS: DCB_STOP_BITS = 2u8;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub type ESCAPE_COMM_FUNCTION = u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const CLRBREAK: ESCAPE_COMM_FUNCTION = 9u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const CLRDTR: ESCAPE_COMM_FUNCTION = 6u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const CLRRTS: ESCAPE_COMM_FUNCTION = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const SETBREAK: ESCAPE_COMM_FUNCTION = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const SETDTR: ESCAPE_COMM_FUNCTION = 5u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const SETRTS: ESCAPE_COMM_FUNCTION = 3u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const SETXOFF: ESCAPE_COMM_FUNCTION = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub const SETXON: ESCAPE_COMM_FUNCTION = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
 pub const MAXLENGTH_NAI: u32 = 72u32;
 #[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
@@ -473,36 +272,103 @@ pub const MDM_X75_DATA_BTX: u32 = 4u32;
 pub const MDM_X75_DATA_DEFAULT: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
 pub const MDM_X75_DATA_T_70: u32 = 3u32;
-#[repr(C)]
+pub const SID_3GPP_SUPSVCMODEL: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3620769287, data2: 55143, data3: 17528, data4: [177, 74, 238, 204, 135, 234, 18, 247] };
 #[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub struct MODEMDEVCAPS {
-    pub dwActualSize: u32,
-    pub dwRequiredSize: u32,
-    pub dwDevSpecificOffset: u32,
-    pub dwDevSpecificSize: u32,
-    pub dwModemProviderVersion: u32,
-    pub dwModemManufacturerOffset: u32,
-    pub dwModemManufacturerSize: u32,
-    pub dwModemModelOffset: u32,
-    pub dwModemModelSize: u32,
-    pub dwModemVersionOffset: u32,
-    pub dwModemVersionSize: u32,
-    pub dwDialOptions: MODEMDEVCAPS_DIAL_OPTIONS,
-    pub dwCallSetupFailTimer: u32,
-    pub dwInactivityTimeout: u32,
-    pub dwSpeakerVolume: MODEMDEVCAPS_SPEAKER_VOLUME,
-    pub dwSpeakerMode: MODEMDEVCAPS_SPEAKER_MODE,
-    pub dwModemOptions: u32,
-    pub dwMaxDTERate: u32,
-    pub dwMaxDCERate: u32,
-    pub abVariablePortion: [u8; 1],
-}
-impl ::core::marker::Copy for MODEMDEVCAPS {}
-impl ::core::clone::Clone for MODEMDEVCAPS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub type CLEAR_COMM_ERROR_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const CE_BREAK: CLEAR_COMM_ERROR_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const CE_FRAME: CLEAR_COMM_ERROR_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const CE_OVERRUN: CLEAR_COMM_ERROR_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const CE_RXOVER: CLEAR_COMM_ERROR_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const CE_RXPARITY: CLEAR_COMM_ERROR_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub type COMMPROP_STOP_PARITY = u16;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const STOPBITS_10: COMMPROP_STOP_PARITY = 1u16;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const STOPBITS_15: COMMPROP_STOP_PARITY = 2u16;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const STOPBITS_20: COMMPROP_STOP_PARITY = 4u16;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const PARITY_NONE: COMMPROP_STOP_PARITY = 256u16;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const PARITY_ODD: COMMPROP_STOP_PARITY = 512u16;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const PARITY_EVEN: COMMPROP_STOP_PARITY = 1024u16;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const PARITY_MARK: COMMPROP_STOP_PARITY = 2048u16;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const PARITY_SPACE: COMMPROP_STOP_PARITY = 4096u16;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub type COMM_EVENT_MASK = u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_BREAK: COMM_EVENT_MASK = 64u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_CTS: COMM_EVENT_MASK = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_DSR: COMM_EVENT_MASK = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_ERR: COMM_EVENT_MASK = 128u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_EVENT1: COMM_EVENT_MASK = 2048u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_EVENT2: COMM_EVENT_MASK = 4096u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_PERR: COMM_EVENT_MASK = 512u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_RING: COMM_EVENT_MASK = 256u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_RLSD: COMM_EVENT_MASK = 32u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_RX80FULL: COMM_EVENT_MASK = 1024u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_RXCHAR: COMM_EVENT_MASK = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_RXFLAG: COMM_EVENT_MASK = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EV_TXEMPTY: COMM_EVENT_MASK = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub type DCB_PARITY = u8;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const EVENPARITY: DCB_PARITY = 2u8;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const MARKPARITY: DCB_PARITY = 3u8;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const NOPARITY: DCB_PARITY = 0u8;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const ODDPARITY: DCB_PARITY = 1u8;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const SPACEPARITY: DCB_PARITY = 4u8;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub type DCB_STOP_BITS = u8;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const ONESTOPBIT: DCB_STOP_BITS = 0u8;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const ONE5STOPBITS: DCB_STOP_BITS = 1u8;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const TWOSTOPBITS: DCB_STOP_BITS = 2u8;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub type ESCAPE_COMM_FUNCTION = u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const CLRBREAK: ESCAPE_COMM_FUNCTION = 9u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const CLRDTR: ESCAPE_COMM_FUNCTION = 6u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const CLRRTS: ESCAPE_COMM_FUNCTION = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const SETBREAK: ESCAPE_COMM_FUNCTION = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const SETDTR: ESCAPE_COMM_FUNCTION = 5u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const SETRTS: ESCAPE_COMM_FUNCTION = 3u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const SETXOFF: ESCAPE_COMM_FUNCTION = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub const SETXON: ESCAPE_COMM_FUNCTION = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
 pub type MODEMDEVCAPS_DIAL_OPTIONS = u32;
 #[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
@@ -529,28 +395,6 @@ pub const MDMVOLFLAG_HIGH: MODEMDEVCAPS_SPEAKER_VOLUME = 4u32;
 pub const MDMVOLFLAG_LOW: MODEMDEVCAPS_SPEAKER_VOLUME = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
 pub const MDMVOLFLAG_MEDIUM: MODEMDEVCAPS_SPEAKER_VOLUME = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
-pub struct MODEMSETTINGS {
-    pub dwActualSize: u32,
-    pub dwRequiredSize: u32,
-    pub dwDevSpecificOffset: u32,
-    pub dwDevSpecificSize: u32,
-    pub dwCallSetupFailTimer: u32,
-    pub dwInactivityTimeout: u32,
-    pub dwSpeakerVolume: MODEM_SPEAKER_VOLUME,
-    pub dwSpeakerMode: MODEMSETTINGS_SPEAKER_MODE,
-    pub dwPreferredModemOptions: u32,
-    pub dwNegotiatedModemOptions: u32,
-    pub dwNegotiatedDCERate: u32,
-    pub abVariablePortion: [u8; 1],
-}
-impl ::core::marker::Copy for MODEMSETTINGS {}
-impl ::core::clone::Clone for MODEMSETTINGS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
 pub type MODEMSETTINGS_SPEAKER_MODE = u32;
 #[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
@@ -589,4 +433,160 @@ pub const PURGE_RXCLEAR: PURGE_COMM_FLAGS = 8u32;
 pub const PURGE_TXABORT: PURGE_COMM_FLAGS = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
 pub const PURGE_TXCLEAR: PURGE_COMM_FLAGS = 4u32;
-pub const SID_3GPP_SUPSVCMODEL: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3620769287, data2: 55143, data3: 17528, data4: [177, 74, 238, 204, 135, 234, 18, 247] };
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct COMMCONFIG {
+    pub dwSize: u32,
+    pub wVersion: u16,
+    pub wReserved: u16,
+    pub dcb: DCB,
+    pub dwProviderSubType: u32,
+    pub dwProviderOffset: u32,
+    pub dwProviderSize: u32,
+    pub wcProviderData: [u16; 1],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for COMMCONFIG {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for COMMCONFIG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub struct COMMPROP {
+    pub wPacketLength: u16,
+    pub wPacketVersion: u16,
+    pub dwServiceMask: u32,
+    pub dwReserved1: u32,
+    pub dwMaxTxQueue: u32,
+    pub dwMaxRxQueue: u32,
+    pub dwMaxBaud: u32,
+    pub dwProvSubType: u32,
+    pub dwProvCapabilities: u32,
+    pub dwSettableParams: u32,
+    pub dwSettableBaud: u32,
+    pub wSettableData: u16,
+    pub wSettableStopParity: COMMPROP_STOP_PARITY,
+    pub dwCurrentTxQueue: u32,
+    pub dwCurrentRxQueue: u32,
+    pub dwProvSpec1: u32,
+    pub dwProvSpec2: u32,
+    pub wcProvChar: [u16; 1],
+}
+impl ::core::marker::Copy for COMMPROP {}
+impl ::core::clone::Clone for COMMPROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub struct COMMTIMEOUTS {
+    pub ReadIntervalTimeout: u32,
+    pub ReadTotalTimeoutMultiplier: u32,
+    pub ReadTotalTimeoutConstant: u32,
+    pub WriteTotalTimeoutMultiplier: u32,
+    pub WriteTotalTimeoutConstant: u32,
+}
+impl ::core::marker::Copy for COMMTIMEOUTS {}
+impl ::core::clone::Clone for COMMTIMEOUTS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub struct COMSTAT {
+    pub _bitfield: u32,
+    pub cbInQue: u32,
+    pub cbOutQue: u32,
+}
+impl ::core::marker::Copy for COMSTAT {}
+impl ::core::clone::Clone for COMSTAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DCB {
+    pub DCBlength: u32,
+    pub BaudRate: u32,
+    pub _bitfield: u32,
+    pub wReserved: u16,
+    pub XonLim: u16,
+    pub XoffLim: u16,
+    pub ByteSize: u8,
+    pub Parity: DCB_PARITY,
+    pub StopBits: DCB_STOP_BITS,
+    pub XonChar: super::super::Foundation::CHAR,
+    pub XoffChar: super::super::Foundation::CHAR,
+    pub ErrorChar: super::super::Foundation::CHAR,
+    pub EofChar: super::super::Foundation::CHAR,
+    pub EvtChar: super::super::Foundation::CHAR,
+    pub wReserved1: u16,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DCB {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DCB {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub struct MODEMDEVCAPS {
+    pub dwActualSize: u32,
+    pub dwRequiredSize: u32,
+    pub dwDevSpecificOffset: u32,
+    pub dwDevSpecificSize: u32,
+    pub dwModemProviderVersion: u32,
+    pub dwModemManufacturerOffset: u32,
+    pub dwModemManufacturerSize: u32,
+    pub dwModemModelOffset: u32,
+    pub dwModemModelSize: u32,
+    pub dwModemVersionOffset: u32,
+    pub dwModemVersionSize: u32,
+    pub dwDialOptions: MODEMDEVCAPS_DIAL_OPTIONS,
+    pub dwCallSetupFailTimer: u32,
+    pub dwInactivityTimeout: u32,
+    pub dwSpeakerVolume: MODEMDEVCAPS_SPEAKER_VOLUME,
+    pub dwSpeakerMode: MODEMDEVCAPS_SPEAKER_MODE,
+    pub dwModemOptions: u32,
+    pub dwMaxDTERate: u32,
+    pub dwMaxDCERate: u32,
+    pub abVariablePortion: [u8; 1],
+}
+impl ::core::marker::Copy for MODEMDEVCAPS {}
+impl ::core::clone::Clone for MODEMDEVCAPS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Communication\"`*"]
+pub struct MODEMSETTINGS {
+    pub dwActualSize: u32,
+    pub dwRequiredSize: u32,
+    pub dwDevSpecificOffset: u32,
+    pub dwDevSpecificSize: u32,
+    pub dwCallSetupFailTimer: u32,
+    pub dwInactivityTimeout: u32,
+    pub dwSpeakerVolume: MODEM_SPEAKER_VOLUME,
+    pub dwSpeakerMode: MODEMSETTINGS_SPEAKER_MODE,
+    pub dwPreferredModemOptions: u32,
+    pub dwNegotiatedModemOptions: u32,
+    pub dwNegotiatedDCERate: u32,
+    pub abVariablePortion: [u8; 1],
+}
+impl ::core::marker::Copy for MODEMSETTINGS {}
+impl ::core::clone::Clone for MODEMSETTINGS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}

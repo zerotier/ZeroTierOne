@@ -1,7 +1,3 @@
-pub const CLSID_VdsLoader: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2620976481, data2: 54629, data3: 18216, data4: [174, 238, 200, 9, 82, 240, 236, 222] };
-pub const CLSID_VdsService: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2098803659, data2: 34550, data3: 19096, data4: [134, 40, 1, 190, 148, 201, 165, 117] };
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const GPT_PARTITION_NAME_LENGTH: u32 = 36u32;
 pub type IEnumVdsObject = *mut ::core::ffi::c_void;
 pub type IVdsAdmin = *mut ::core::ffi::c_void;
 pub type IVdsAdviseSink = *mut ::core::ffi::c_void;
@@ -38,362 +34,18 @@ pub type IVdsSubSystem2 = *mut ::core::ffi::c_void;
 pub type IVdsSubSystemInterconnect = *mut ::core::ffi::c_void;
 pub type IVdsSubSystemIscsi = *mut ::core::ffi::c_void;
 pub type IVdsSubSystemNaming = *mut ::core::ffi::c_void;
+pub const CLSID_VdsLoader: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2620976481, data2: 54629, data3: 18216, data4: [174, 238, 200, 9, 82, 240, 236, 222] };
+pub const CLSID_VdsService: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2098803659, data2: 34550, data3: 19096, data4: [134, 40, 1, 190, 148, 201, 165, 117] };
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const GPT_PARTITION_NAME_LENGTH: u32 = 36u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const MAX_FS_ALLOWED_CLUSTER_SIZES_SIZE: u32 = 32u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const MAX_FS_FORMAT_SUPPORT_NAME_SIZE: u32 = 32u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const MAX_FS_NAME_SIZE: u32 = 8u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ASYNC_OUTPUT {
-    pub r#type: VDS_ASYNC_OUTPUT_TYPE,
-    pub Anonymous: VDS_ASYNC_OUTPUT_0,
-}
-impl ::core::marker::Copy for VDS_ASYNC_OUTPUT {}
-impl ::core::clone::Clone for VDS_ASYNC_OUTPUT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub union VDS_ASYNC_OUTPUT_0 {
-    pub cp: VDS_ASYNC_OUTPUT_0_2,
-    pub cv: VDS_ASYNC_OUTPUT_0_5,
-    pub bvp: VDS_ASYNC_OUTPUT_0_0,
-    pub sv: VDS_ASYNC_OUTPUT_0_7,
-    pub cl: VDS_ASYNC_OUTPUT_0_1,
-    pub ct: VDS_ASYNC_OUTPUT_0_4,
-    pub cpg: VDS_ASYNC_OUTPUT_0_3,
-    pub cvd: VDS_ASYNC_OUTPUT_0_6,
-}
-impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0 {}
-impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ASYNC_OUTPUT_0_0 {
-    pub pVolumeUnk: ::windows_sys::core::IUnknown,
-}
-impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_0 {}
-impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ASYNC_OUTPUT_0_1 {
-    pub pLunUnk: ::windows_sys::core::IUnknown,
-}
-impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_1 {}
-impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ASYNC_OUTPUT_0_2 {
-    pub ullOffset: u64,
-    pub volumeId: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_2 {}
-impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ASYNC_OUTPUT_0_3 {
-    pub pPortalGroupUnk: ::windows_sys::core::IUnknown,
-}
-impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_3 {}
-impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_3 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ASYNC_OUTPUT_0_4 {
-    pub pTargetUnk: ::windows_sys::core::IUnknown,
-}
-impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_4 {}
-impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_4 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ASYNC_OUTPUT_0_5 {
-    pub pVolumeUnk: ::windows_sys::core::IUnknown,
-}
-impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_5 {}
-impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_5 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ASYNC_OUTPUT_0_6 {
-    pub pVDiskUnk: ::windows_sys::core::IUnknown,
-}
-impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_6 {}
-impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_6 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ASYNC_OUTPUT_0_7 {
-    pub ullReclaimedBytes: u64,
-}
-impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_7 {}
-impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_7 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_ASYNC_OUTPUT_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_UNKNOWN: VDS_ASYNC_OUTPUT_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_CREATEVOLUME: VDS_ASYNC_OUTPUT_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_EXTENDVOLUME: VDS_ASYNC_OUTPUT_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_SHRINKVOLUME: VDS_ASYNC_OUTPUT_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_ADDVOLUMEPLEX: VDS_ASYNC_OUTPUT_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_BREAKVOLUMEPLEX: VDS_ASYNC_OUTPUT_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_REMOVEVOLUMEPLEX: VDS_ASYNC_OUTPUT_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_REPAIRVOLUMEPLEX: VDS_ASYNC_OUTPUT_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_RECOVERPACK: VDS_ASYNC_OUTPUT_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_REPLACEDISK: VDS_ASYNC_OUTPUT_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_CREATEPARTITION: VDS_ASYNC_OUTPUT_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_CLEAN: VDS_ASYNC_OUTPUT_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_CREATELUN: VDS_ASYNC_OUTPUT_TYPE = 50i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_ADDLUNPLEX: VDS_ASYNC_OUTPUT_TYPE = 52i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_REMOVELUNPLEX: VDS_ASYNC_OUTPUT_TYPE = 53i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_EXTENDLUN: VDS_ASYNC_OUTPUT_TYPE = 54i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_SHRINKLUN: VDS_ASYNC_OUTPUT_TYPE = 55i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_RECOVERLUN: VDS_ASYNC_OUTPUT_TYPE = 56i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_LOGINTOTARGET: VDS_ASYNC_OUTPUT_TYPE = 60i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_LOGOUTFROMTARGET: VDS_ASYNC_OUTPUT_TYPE = 61i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_CREATETARGET: VDS_ASYNC_OUTPUT_TYPE = 62i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_CREATEPORTALGROUP: VDS_ASYNC_OUTPUT_TYPE = 63i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_DELETETARGET: VDS_ASYNC_OUTPUT_TYPE = 64i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_ADDPORTAL: VDS_ASYNC_OUTPUT_TYPE = 65i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_REMOVEPORTAL: VDS_ASYNC_OUTPUT_TYPE = 66i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_DELETEPORTALGROUP: VDS_ASYNC_OUTPUT_TYPE = 67i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_FORMAT: VDS_ASYNC_OUTPUT_TYPE = 101i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_CREATE_VDISK: VDS_ASYNC_OUTPUT_TYPE = 200i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_ATTACH_VDISK: VDS_ASYNC_OUTPUT_TYPE = 201i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_COMPACT_VDISK: VDS_ASYNC_OUTPUT_TYPE = 202i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_MERGE_VDISK: VDS_ASYNC_OUTPUT_TYPE = 203i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_ASYNCOUT_EXPAND_VDISK: VDS_ASYNC_OUTPUT_TYPE = 204i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_ATTACH_VIRTUAL_DISK_FLAG_USE_FILE_ACL: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_CONTROLLER_NOTIFICATION {
-    pub ulEvent: VDS_NF_CONTROLLER,
-    pub controllerId: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for VDS_CONTROLLER_NOTIFICATION {}
-impl ::core::clone::Clone for VDS_CONTROLLER_NOTIFICATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_CONTROLLER_PROP {
-    pub id: ::windows_sys::core::GUID,
-    pub pwszFriendlyName: ::windows_sys::core::PWSTR,
-    pub pwszIdentification: ::windows_sys::core::PWSTR,
-    pub status: VDS_CONTROLLER_STATUS,
-    pub health: VDS_HEALTH,
-    pub sNumberOfPorts: i16,
-}
-impl ::core::marker::Copy for VDS_CONTROLLER_PROP {}
-impl ::core::clone::Clone for VDS_CONTROLLER_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_CONTROLLER_STATUS = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_CS_UNKNOWN: VDS_CONTROLLER_STATUS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_CS_ONLINE: VDS_CONTROLLER_STATUS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_CS_NOT_READY: VDS_CONTROLLER_STATUS = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_CS_OFFLINE: VDS_CONTROLLER_STATUS = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_CS_FAILED: VDS_CONTROLLER_STATUS = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_CS_REMOVED: VDS_CONTROLLER_STATUS = 8i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_DISK_NOTIFICATION {
-    pub ulEvent: VDS_NF_DISK,
-    pub diskId: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for VDS_DISK_NOTIFICATION {}
-impl ::core::clone::Clone for VDS_DISK_NOTIFICATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct VDS_DRIVE_EXTENT {
-    pub id: ::windows_sys::core::GUID,
-    pub LunId: ::windows_sys::core::GUID,
-    pub ullSize: u64,
-    pub bUsed: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for VDS_DRIVE_EXTENT {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for VDS_DRIVE_EXTENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_DRIVE_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_DRF_HOTSPARE: VDS_DRIVE_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_DRF_ASSIGNED: VDS_DRIVE_FLAG = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_DRF_UNASSIGNED: VDS_DRIVE_FLAG = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_DRF_HOTSPARE_IN_USE: VDS_DRIVE_FLAG = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_DRF_HOTSPARE_STANDBY: VDS_DRIVE_FLAG = 16i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_DRIVE_LETTER_NOTIFICATION {
-    pub ulEvent: u32,
-    pub wcLetter: u16,
-    pub volumeId: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for VDS_DRIVE_LETTER_NOTIFICATION {}
-impl ::core::clone::Clone for VDS_DRIVE_LETTER_NOTIFICATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_DRIVE_NOTIFICATION {
-    pub ulEvent: VDS_NF_DRIVE,
-    pub driveId: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for VDS_DRIVE_NOTIFICATION {}
-impl ::core::clone::Clone for VDS_DRIVE_NOTIFICATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_DRIVE_PROP {
-    pub id: ::windows_sys::core::GUID,
-    pub ullSize: u64,
-    pub pwszFriendlyName: ::windows_sys::core::PWSTR,
-    pub pwszIdentification: ::windows_sys::core::PWSTR,
-    pub ulFlags: u32,
-    pub status: VDS_DRIVE_STATUS,
-    pub health: VDS_HEALTH,
-    pub sInternalBusNumber: i16,
-    pub sSlotNumber: i16,
-}
-impl ::core::marker::Copy for VDS_DRIVE_PROP {}
-impl ::core::clone::Clone for VDS_DRIVE_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_DRIVE_PROP2 {
-    pub id: ::windows_sys::core::GUID,
-    pub ullSize: u64,
-    pub pwszFriendlyName: ::windows_sys::core::PWSTR,
-    pub pwszIdentification: ::windows_sys::core::PWSTR,
-    pub ulFlags: u32,
-    pub status: VDS_DRIVE_STATUS,
-    pub health: VDS_HEALTH,
-    pub sInternalBusNumber: i16,
-    pub sSlotNumber: i16,
-    pub ulEnclosureNumber: u32,
-    pub busType: VDS_STORAGE_BUS_TYPE,
-    pub ulSpindleSpeed: u32,
-}
-impl ::core::marker::Copy for VDS_DRIVE_PROP2 {}
-impl ::core::clone::Clone for VDS_DRIVE_PROP2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_DRIVE_STATUS = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_DRS_UNKNOWN: VDS_DRIVE_STATUS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_DRS_ONLINE: VDS_DRIVE_STATUS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_DRS_NOT_READY: VDS_DRIVE_STATUS = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_DRS_OFFLINE: VDS_DRIVE_STATUS = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_DRS_FAILED: VDS_DRIVE_STATUS = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_DRS_REMOVED: VDS_DRIVE_STATUS = 8i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_E_ACCESS_DENIED: ::windows_sys::core::HRESULT = -2147212249i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1092,19 +744,322 @@ pub const VDS_E_VOLUME_TEMPORARILY_DISMOUNTED: ::windows_sys::core::HRESULT = -2
 pub const VDS_E_VOLUME_TOO_BIG: ::windows_sys::core::HRESULT = -2147212243i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_E_VOLUME_TOO_SMALL: ::windows_sys::core::HRESULT = -2147212244i32;
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_FILE_SYSTEM_NOTIFICATION {
-    pub ulEvent: VDS_NF_FILE_SYSTEM,
-    pub volumeId: ::windows_sys::core::GUID,
-    pub dwPercentCompleted: u32,
-}
-impl ::core::marker::Copy for VDS_FILE_SYSTEM_NOTIFICATION {}
-impl ::core::clone::Clone for VDS_FILE_SYSTEM_NOTIFICATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const VDS_HINT_ALLOCATEHOTSPARE: i32 = 512i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_BUSTYPE: i32 = 1024i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_CONSISTENCYCHECKENABLED: i32 = 32768i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_FASTCRASHRECOVERYREQUIRED: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_HARDWARECHECKSUMENABLED: i32 = 128i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_ISYANKABLE: i32 = 256i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_MEDIASCANENABLED: i32 = 16384i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_MOSTLYREADS: i32 = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_OPTIMIZEFORSEQUENTIALREADS: i32 = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_OPTIMIZEFORSEQUENTIALWRITES: i32 = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_READBACKVERIFYENABLED: i32 = 16i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_READCACHINGENABLED: i32 = 4096i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_REMAPENABLED: i32 = 32i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_USEMIRROREDCACHE: i32 = 2048i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_WRITECACHINGENABLED: i32 = 8192i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_HINT_WRITETHROUGHCACHINGENABLED: i32 = 64i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_DRIVE_LETTER_ASSIGN: u32 = 202u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_DRIVE_LETTER_FREE: u32 = 201u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_FILE_SYSTEM_SHRINKING_PROGRESS: u32 = 206u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_MOUNT_POINTS_CHANGE: u32 = 205u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_PARTITION_ARRIVE: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_PARTITION_DEPART: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_PARTITION_MODIFY: u32 = 13u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_PORTAL_ARRIVE: u32 = 123u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_PORTAL_DEPART: u32 = 124u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_PORTAL_GROUP_ARRIVE: u32 = 129u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_PORTAL_GROUP_DEPART: u32 = 130u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_PORTAL_GROUP_MODIFY: u32 = 131u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_PORTAL_MODIFY: u32 = 125u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_SERVICE_OUT_OF_SYNC: u32 = 301u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_SUB_SYSTEM_ARRIVE: u32 = 101u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_SUB_SYSTEM_DEPART: u32 = 102u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_SUB_SYSTEM_MODIFY: u32 = 151u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_TARGET_ARRIVE: u32 = 126u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_TARGET_DEPART: u32 = 127u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_TARGET_MODIFY: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_VOLUME_ARRIVE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_VOLUME_DEPART: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_VOLUME_MODIFY: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_NF_VOLUME_REBUILDING_PROGRESS: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_ACCS_BDW_WT_HINT: i32 = 16777216i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_ACCS_DIR_HINT: i32 = 2097152i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_ACCS_LTNCY_HINT: i32 = 8388608i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_ACCS_RNDM_HINT: i32 = 1048576i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_ACCS_SIZE_HINT: i32 = 4194304i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_ALLOW_SPINDOWN: i32 = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_BUSTYPE: i32 = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_CUSTOM_ATTRIB: i32 = 134217728i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_DATA_AVL_HINT: i32 = 524288i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_DATA_RDNCY_DEF: i32 = 128i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_DATA_RDNCY_MAX: i32 = 32i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_DATA_RDNCY_MIN: i32 = 64i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_NO_SINGLE_POF: i32 = 16i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_NUM_CLMNS: i32 = 32768i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_NUM_CLMNS_DEF: i32 = 262144i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_NUM_CLMNS_MAX: i32 = 65536i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_NUM_CLMNS_MIN: i32 = 131072i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_PKG_RDNCY_DEF: i32 = 1024i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_PKG_RDNCY_MAX: i32 = 256i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_PKG_RDNCY_MIN: i32 = 512i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_RAIDTYPE: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_STOR_COST_HINT: i32 = 33554432i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_STOR_EFFCY_HINT: i32 = 67108864i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_STRIPE_SIZE: i32 = 2048i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_STRIPE_SIZE_DEF: i32 = 16384i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_STRIPE_SIZE_MAX: i32 = 4096i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_STRIPE_SIZE_MIN: i32 = 8192i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_POOL_ATTRIB_THIN_PROVISION: i32 = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_REBUILD_PRIORITY_MAX: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_REBUILD_PRIORITY_MIN: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_ACCESS_PATH_NOT_DELETED: ::windows_sys::core::HRESULT = 279108i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_ALREADY_EXISTS: ::windows_sys::core::HRESULT = 272148i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_BOOT_PARTITION_NUMBER_CHANGE: ::windows_sys::core::HRESULT = 271414i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_DEFAULT_PLEX_MEMBER_IDS: ::windows_sys::core::HRESULT = 271640i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_DISK_DISMOUNT_FAILED: ::windows_sys::core::HRESULT = 272393i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_DISK_IS_MISSING: ::windows_sys::core::HRESULT = 271624i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_DISK_MOUNT_FAILED: ::windows_sys::core::HRESULT = 272392i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_DISK_PARTIALLY_CLEANED: ::windows_sys::core::HRESULT = 271386i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_DISMOUNT_FAILED: ::windows_sys::core::HRESULT = 271735i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_EXTEND_FILE_SYSTEM_FAILED: ::windows_sys::core::HRESULT = 271461i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_FS_LOCK: ::windows_sys::core::HRESULT = 271747i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_GPT_BOOT_MIRRORED_TO_MBR: ::windows_sys::core::HRESULT = -2147212183i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_IA64_BOOT_MIRRORED_TO_MBR: ::windows_sys::core::HRESULT = 271450i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_IN_PROGRESS: ::windows_sys::core::HRESULT = 271437i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_ISCSI_LOGIN_ALREAD_EXISTS: ::windows_sys::core::HRESULT = 272386i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_ISCSI_PERSISTENT_LOGIN_MAY_NOT_BE_REMOVED: ::windows_sys::core::HRESULT = 272385i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_ISCSI_SESSION_NOT_FOUND_PERSISTENT_LOGIN_REMOVED: ::windows_sys::core::HRESULT = 272384i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_MBR_BOOT_MIRRORED_TO_GPT: ::windows_sys::core::HRESULT = 271463i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_NAME_TRUNCATED: ::windows_sys::core::HRESULT = 272128i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_NONCONFORMANT_PARTITION_INFO: ::windows_sys::core::HRESULT = 271626i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_NO_NOTIFICATION: ::windows_sys::core::HRESULT = 271639i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_PLEX_NOT_LOADED_TO_CACHE: ::windows_sys::core::HRESULT = 271755i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_PROPERTIES_INCOMPLETE: ::windows_sys::core::HRESULT = 272149i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_PROVIDER_ERROR_LOADING_CACHE: ::windows_sys::core::HRESULT = 271393i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_REMOUNT_FAILED: ::windows_sys::core::HRESULT = 271736i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_RESYNC_NOTIFICATION_TASK_FAILED: ::windows_sys::core::HRESULT = 271738i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_STATUSES_INCOMPLETELY_SET: ::windows_sys::core::HRESULT = 272130i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_SYSTEM_PARTITION: ::windows_sys::core::HRESULT = 271630i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_UNABLE_TO_GET_GPT_ATTRIBUTES: ::windows_sys::core::HRESULT = 271451i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_UPDATE_BOOTFILE_FAILED: ::windows_sys::core::HRESULT = 271412i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_VOLUME_COMPRESS_FAILED: ::windows_sys::core::HRESULT = 271427i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_VSS_FLUSH_AND_HOLD_WRITES: ::windows_sys::core::HRESULT = 271745i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_VSS_RELEASE_WRITES: ::windows_sys::core::HRESULT = 271746i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_S_WINPE_BOOTENTRY: ::windows_sys::core::HRESULT = 271758i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VER_VDS_LUN_INFORMATION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_ASYNC_OUTPUT_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_UNKNOWN: VDS_ASYNC_OUTPUT_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_CREATEVOLUME: VDS_ASYNC_OUTPUT_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_EXTENDVOLUME: VDS_ASYNC_OUTPUT_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_SHRINKVOLUME: VDS_ASYNC_OUTPUT_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_ADDVOLUMEPLEX: VDS_ASYNC_OUTPUT_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_BREAKVOLUMEPLEX: VDS_ASYNC_OUTPUT_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_REMOVEVOLUMEPLEX: VDS_ASYNC_OUTPUT_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_REPAIRVOLUMEPLEX: VDS_ASYNC_OUTPUT_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_RECOVERPACK: VDS_ASYNC_OUTPUT_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_REPLACEDISK: VDS_ASYNC_OUTPUT_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_CREATEPARTITION: VDS_ASYNC_OUTPUT_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_CLEAN: VDS_ASYNC_OUTPUT_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_CREATELUN: VDS_ASYNC_OUTPUT_TYPE = 50i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_ADDLUNPLEX: VDS_ASYNC_OUTPUT_TYPE = 52i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_REMOVELUNPLEX: VDS_ASYNC_OUTPUT_TYPE = 53i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_EXTENDLUN: VDS_ASYNC_OUTPUT_TYPE = 54i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_SHRINKLUN: VDS_ASYNC_OUTPUT_TYPE = 55i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_RECOVERLUN: VDS_ASYNC_OUTPUT_TYPE = 56i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_LOGINTOTARGET: VDS_ASYNC_OUTPUT_TYPE = 60i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_LOGOUTFROMTARGET: VDS_ASYNC_OUTPUT_TYPE = 61i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_CREATETARGET: VDS_ASYNC_OUTPUT_TYPE = 62i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_CREATEPORTALGROUP: VDS_ASYNC_OUTPUT_TYPE = 63i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_DELETETARGET: VDS_ASYNC_OUTPUT_TYPE = 64i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_ADDPORTAL: VDS_ASYNC_OUTPUT_TYPE = 65i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_REMOVEPORTAL: VDS_ASYNC_OUTPUT_TYPE = 66i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_DELETEPORTALGROUP: VDS_ASYNC_OUTPUT_TYPE = 67i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_FORMAT: VDS_ASYNC_OUTPUT_TYPE = 101i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_CREATE_VDISK: VDS_ASYNC_OUTPUT_TYPE = 200i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_ATTACH_VDISK: VDS_ASYNC_OUTPUT_TYPE = 201i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_COMPACT_VDISK: VDS_ASYNC_OUTPUT_TYPE = 202i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_MERGE_VDISK: VDS_ASYNC_OUTPUT_TYPE = 203i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_ASYNCOUT_EXPAND_VDISK: VDS_ASYNC_OUTPUT_TYPE = 204i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_CONTROLLER_STATUS = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_CS_UNKNOWN: VDS_CONTROLLER_STATUS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_CS_ONLINE: VDS_CONTROLLER_STATUS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_CS_NOT_READY: VDS_CONTROLLER_STATUS = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_CS_OFFLINE: VDS_CONTROLLER_STATUS = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_CS_FAILED: VDS_CONTROLLER_STATUS = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_CS_REMOVED: VDS_CONTROLLER_STATUS = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_DRIVE_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_DRF_HOTSPARE: VDS_DRIVE_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_DRF_ASSIGNED: VDS_DRIVE_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_DRF_UNASSIGNED: VDS_DRIVE_FLAG = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_DRF_HOTSPARE_IN_USE: VDS_DRIVE_FLAG = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_DRF_HOTSPARE_STANDBY: VDS_DRIVE_FLAG = 16i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_DRIVE_STATUS = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_DRS_UNKNOWN: VDS_DRIVE_STATUS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_DRS_ONLINE: VDS_DRIVE_STATUS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_DRS_NOT_READY: VDS_DRIVE_STATUS = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_DRS_OFFLINE: VDS_DRIVE_STATUS = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_DRS_FAILED: VDS_DRIVE_STATUS = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_DRS_REMOVED: VDS_DRIVE_STATUS = 8i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_FILE_SYSTEM_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1127,23 +1082,6 @@ pub const VDS_FST_EXFAT: VDS_FILE_SYSTEM_TYPE = 7i32;
 pub const VDS_FST_CSVFS: VDS_FILE_SYSTEM_TYPE = 8i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_FST_REFS: VDS_FILE_SYSTEM_TYPE = 9i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_HBAPORT_PROP {
-    pub id: ::windows_sys::core::GUID,
-    pub wwnNode: VDS_WWN,
-    pub wwnPort: VDS_WWN,
-    pub r#type: VDS_HBAPORT_TYPE,
-    pub status: VDS_HBAPORT_STATUS,
-    pub ulPortSpeed: u32,
-    pub ulSupportedPortSpeed: u32,
-}
-impl ::core::marker::Copy for VDS_HBAPORT_PROP {}
-impl ::core::clone::Clone for VDS_HBAPORT_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_HBAPORT_SPEED_FLAG = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1226,113 +1164,6 @@ pub const VDS_H_REPLACED: VDS_HEALTH = 9i32;
 pub const VDS_H_PENDING_FAILURE: VDS_HEALTH = 10i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_H_DEGRADED: VDS_HEALTH = 11i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct VDS_HINTS {
-    pub ullHintMask: u64,
-    pub ullExpectedMaximumSize: u64,
-    pub ulOptimalReadSize: u32,
-    pub ulOptimalReadAlignment: u32,
-    pub ulOptimalWriteSize: u32,
-    pub ulOptimalWriteAlignment: u32,
-    pub ulMaximumDriveCount: u32,
-    pub ulStripeSize: u32,
-    pub bFastCrashRecoveryRequired: super::super::Foundation::BOOL,
-    pub bMostlyReads: super::super::Foundation::BOOL,
-    pub bOptimizeForSequentialReads: super::super::Foundation::BOOL,
-    pub bOptimizeForSequentialWrites: super::super::Foundation::BOOL,
-    pub bRemapEnabled: super::super::Foundation::BOOL,
-    pub bReadBackVerifyEnabled: super::super::Foundation::BOOL,
-    pub bWriteThroughCachingEnabled: super::super::Foundation::BOOL,
-    pub bHardwareChecksumEnabled: super::super::Foundation::BOOL,
-    pub bIsYankable: super::super::Foundation::BOOL,
-    pub sRebuildPriority: i16,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for VDS_HINTS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for VDS_HINTS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct VDS_HINTS2 {
-    pub ullHintMask: u64,
-    pub ullExpectedMaximumSize: u64,
-    pub ulOptimalReadSize: u32,
-    pub ulOptimalReadAlignment: u32,
-    pub ulOptimalWriteSize: u32,
-    pub ulOptimalWriteAlignment: u32,
-    pub ulMaximumDriveCount: u32,
-    pub ulStripeSize: u32,
-    pub ulReserved1: u32,
-    pub ulReserved2: u32,
-    pub ulReserved3: u32,
-    pub bFastCrashRecoveryRequired: super::super::Foundation::BOOL,
-    pub bMostlyReads: super::super::Foundation::BOOL,
-    pub bOptimizeForSequentialReads: super::super::Foundation::BOOL,
-    pub bOptimizeForSequentialWrites: super::super::Foundation::BOOL,
-    pub bRemapEnabled: super::super::Foundation::BOOL,
-    pub bReadBackVerifyEnabled: super::super::Foundation::BOOL,
-    pub bWriteThroughCachingEnabled: super::super::Foundation::BOOL,
-    pub bHardwareChecksumEnabled: super::super::Foundation::BOOL,
-    pub bIsYankable: super::super::Foundation::BOOL,
-    pub bAllocateHotSpare: super::super::Foundation::BOOL,
-    pub bUseMirroredCache: super::super::Foundation::BOOL,
-    pub bReadCachingEnabled: super::super::Foundation::BOOL,
-    pub bWriteCachingEnabled: super::super::Foundation::BOOL,
-    pub bMediaScanEnabled: super::super::Foundation::BOOL,
-    pub bConsistencyCheckEnabled: super::super::Foundation::BOOL,
-    pub BusType: VDS_STORAGE_BUS_TYPE,
-    pub bReserved1: super::super::Foundation::BOOL,
-    pub bReserved2: super::super::Foundation::BOOL,
-    pub bReserved3: super::super::Foundation::BOOL,
-    pub sRebuildPriority: i16,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for VDS_HINTS2 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for VDS_HINTS2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_ALLOCATEHOTSPARE: i32 = 512i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_BUSTYPE: i32 = 1024i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_CONSISTENCYCHECKENABLED: i32 = 32768i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_FASTCRASHRECOVERYREQUIRED: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_HARDWARECHECKSUMENABLED: i32 = 128i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_ISYANKABLE: i32 = 256i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_MEDIASCANENABLED: i32 = 16384i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_MOSTLYREADS: i32 = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_OPTIMIZEFORSEQUENTIALREADS: i32 = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_OPTIMIZEFORSEQUENTIALWRITES: i32 = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_READBACKVERIFYENABLED: i32 = 16i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_READCACHINGENABLED: i32 = 4096i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_REMAPENABLED: i32 = 32i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_USEMIRROREDCACHE: i32 = 2048i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_WRITECACHINGENABLED: i32 = 8192i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_HINT_WRITETHROUGHCACHINGENABLED: i32 = 64i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_HWPROVIDER_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1347,21 +1178,6 @@ pub const VDS_HWT_ISCSI: VDS_HWPROVIDER_TYPE = 3i32;
 pub const VDS_HWT_SAS: VDS_HWPROVIDER_TYPE = 4i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_HWT_HYBRID: VDS_HWPROVIDER_TYPE = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_INTERCONNECT {
-    pub m_addressType: VDS_INTERCONNECT_ADDRESS_TYPE,
-    pub m_cbPort: u32,
-    pub m_pbPort: *mut u8,
-    pub m_cbAddress: u32,
-    pub m_pbAddress: *mut u8,
-}
-impl ::core::marker::Copy for VDS_INTERCONNECT {}
-impl ::core::clone::Clone for VDS_INTERCONNECT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_INTERCONNECT_ADDRESS_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1386,23 +1202,6 @@ pub const VDS_ITF_FIBRE_CHANNEL: VDS_INTERCONNECT_FLAG = 2i32;
 pub const VDS_ITF_ISCSI: VDS_INTERCONNECT_FLAG = 4i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_ITF_SAS: VDS_INTERCONNECT_FLAG = 8i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_IPADDRESS {
-    pub r#type: VDS_IPADDRESS_TYPE,
-    pub ipv4Address: u32,
-    pub ipv6Address: [u8; 16],
-    pub ulIpv6FlowInfo: u32,
-    pub ulIpv6ScopeId: u32,
-    pub wszTextAddress: [u16; 257],
-    pub ulPort: u32,
-}
-impl ::core::marker::Copy for VDS_IPADDRESS {}
-impl ::core::clone::Clone for VDS_IPADDRESS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_IPADDRESS_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1421,31 +1220,6 @@ pub const VDS_IAT_NONE: VDS_ISCSI_AUTH_TYPE = 0i32;
 pub const VDS_IAT_CHAP: VDS_ISCSI_AUTH_TYPE = 1i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_IAT_MUTUAL_CHAP: VDS_ISCSI_AUTH_TYPE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ISCSI_INITIATOR_ADAPTER_PROP {
-    pub id: ::windows_sys::core::GUID,
-    pub pwszName: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for VDS_ISCSI_INITIATOR_ADAPTER_PROP {}
-impl ::core::clone::Clone for VDS_ISCSI_INITIATOR_ADAPTER_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ISCSI_INITIATOR_PORTAL_PROP {
-    pub id: ::windows_sys::core::GUID,
-    pub address: VDS_IPADDRESS,
-    pub ulPortIndex: u32,
-}
-impl ::core::marker::Copy for VDS_ISCSI_INITIATOR_PORTAL_PROP {}
-impl ::core::clone::Clone for VDS_ISCSI_INITIATOR_PORTAL_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_ISCSI_IPSEC_FLAG = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1462,18 +1236,6 @@ pub const VDS_IIF_PFS_ENABLE: VDS_ISCSI_IPSEC_FLAG = 16i32;
 pub const VDS_IIF_TRANSPORT_MODE_PREFERRED: VDS_ISCSI_IPSEC_FLAG = 32i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_IIF_TUNNEL_MODE_PREFERRED: VDS_ISCSI_IPSEC_FLAG = 64i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ISCSI_IPSEC_KEY {
-    pub pKey: *mut u8,
-    pub ulKeySize: u32,
-}
-impl ::core::marker::Copy for VDS_ISCSI_IPSEC_KEY {}
-impl ::core::clone::Clone for VDS_ISCSI_IPSEC_KEY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_ISCSI_LOGIN_FLAG = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1488,31 +1250,6 @@ pub const VDS_ILT_MANUAL: VDS_ISCSI_LOGIN_TYPE = 0i32;
 pub const VDS_ILT_PERSISTENT: VDS_ISCSI_LOGIN_TYPE = 1i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_ILT_BOOT: VDS_ISCSI_LOGIN_TYPE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ISCSI_PORTALGROUP_PROP {
-    pub id: ::windows_sys::core::GUID,
-    pub tag: u16,
-}
-impl ::core::marker::Copy for VDS_ISCSI_PORTALGROUP_PROP {}
-impl ::core::clone::Clone for VDS_ISCSI_PORTALGROUP_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ISCSI_PORTAL_PROP {
-    pub id: ::windows_sys::core::GUID,
-    pub address: VDS_IPADDRESS,
-    pub status: VDS_ISCSI_PORTAL_STATUS,
-}
-impl ::core::marker::Copy for VDS_ISCSI_PORTAL_PROP {}
-impl ::core::clone::Clone for VDS_ISCSI_PORTAL_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_ISCSI_PORTAL_STATUS = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1525,35 +1262,6 @@ pub const VDS_IPS_NOT_READY: VDS_ISCSI_PORTAL_STATUS = 2i32;
 pub const VDS_IPS_OFFLINE: VDS_ISCSI_PORTAL_STATUS = 4i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_IPS_FAILED: VDS_ISCSI_PORTAL_STATUS = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_ISCSI_SHARED_SECRET {
-    pub pSharedSecret: *mut u8,
-    pub ulSharedSecretSize: u32,
-}
-impl ::core::marker::Copy for VDS_ISCSI_SHARED_SECRET {}
-impl ::core::clone::Clone for VDS_ISCSI_SHARED_SECRET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct VDS_ISCSI_TARGET_PROP {
-    pub id: ::windows_sys::core::GUID,
-    pub pwszIscsiName: ::windows_sys::core::PWSTR,
-    pub pwszFriendlyName: ::windows_sys::core::PWSTR,
-    pub bChapEnabled: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for VDS_ISCSI_TARGET_PROP {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for VDS_ISCSI_TARGET_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_LOADBALANCE_POLICY_ENUM = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1592,67 +1300,10 @@ pub const VDS_LF_MEDIA_SCAN_ENABLED: VDS_LUN_FLAG = 64i32;
 pub const VDS_LF_CONSISTENCY_CHECK_ENABLED: VDS_LUN_FLAG = 128i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_LF_SNAPSHOT: VDS_LUN_FLAG = 256i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct VDS_LUN_INFORMATION {
-    pub m_version: u32,
-    pub m_DeviceType: u8,
-    pub m_DeviceTypeModifier: u8,
-    pub m_bCommandQueueing: super::super::Foundation::BOOL,
-    pub m_BusType: VDS_STORAGE_BUS_TYPE,
-    pub m_szVendorId: *mut u8,
-    pub m_szProductId: *mut u8,
-    pub m_szProductRevision: *mut u8,
-    pub m_szSerialNumber: *mut u8,
-    pub m_diskSignature: ::windows_sys::core::GUID,
-    pub m_deviceIdDescriptor: VDS_STORAGE_DEVICE_ID_DESCRIPTOR,
-    pub m_cInterconnects: u32,
-    pub m_rgInterconnects: *mut VDS_INTERCONNECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for VDS_LUN_INFORMATION {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for VDS_LUN_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_LUN_NOTIFICATION {
-    pub ulEvent: VDS_NF_LUN,
-    pub LunId: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for VDS_LUN_NOTIFICATION {}
-impl ::core::clone::Clone for VDS_LUN_NOTIFICATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_LUN_PLEX_FLAG = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_LPF_LBN_REMAP_ENABLED: VDS_LUN_PLEX_FLAG = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_LUN_PLEX_PROP {
-    pub id: ::windows_sys::core::GUID,
-    pub ullSize: u64,
-    pub r#type: VDS_LUN_PLEX_TYPE,
-    pub status: VDS_LUN_PLEX_STATUS,
-    pub health: VDS_HEALTH,
-    pub TransitionState: VDS_TRANSITION_STATE,
-    pub ulFlags: u32,
-    pub ulStripeSize: u32,
-    pub sRebuildPriority: i16,
-}
-impl ::core::marker::Copy for VDS_LUN_PLEX_PROP {}
-impl ::core::clone::Clone for VDS_LUN_PLEX_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_LUN_PLEX_STATUS = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1703,27 +1354,6 @@ pub const VDS_LPT_RAID50: VDS_LUN_PLEX_TYPE = 26i32;
 pub const VDS_LPT_RAID53: VDS_LUN_PLEX_TYPE = 28i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_LPT_RAID60: VDS_LUN_PLEX_TYPE = 29i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_LUN_PROP {
-    pub id: ::windows_sys::core::GUID,
-    pub ullSize: u64,
-    pub pwszFriendlyName: ::windows_sys::core::PWSTR,
-    pub pwszIdentification: ::windows_sys::core::PWSTR,
-    pub pwszUnmaskingList: ::windows_sys::core::PWSTR,
-    pub ulFlags: u32,
-    pub r#type: VDS_LUN_TYPE,
-    pub status: VDS_LUN_STATUS,
-    pub health: VDS_HEALTH,
-    pub TransitionState: VDS_TRANSITION_STATE,
-    pub sRebuildPriority: i16,
-}
-impl ::core::marker::Copy for VDS_LUN_PROP {}
-impl ::core::clone::Clone for VDS_LUN_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_LUN_STATUS = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1800,18 +1430,6 @@ pub const SpinDown: VDS_MAINTENANCE_OPERATION = 3i32;
 pub const SpinUp: VDS_MAINTENANCE_OPERATION = 4i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const Ping: VDS_MAINTENANCE_OPERATION = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_MOUNT_POINT_NOTIFICATION {
-    pub ulEvent: u32,
-    pub volumeId: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for VDS_MOUNT_POINT_NOTIFICATION {}
-impl ::core::clone::Clone for VDS_MOUNT_POINT_NOTIFICATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_NF_CONTROLLER = u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1841,17 +1459,11 @@ pub const VDS_NF_DRIVE_MODIFY: VDS_NF_DRIVE = 107u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_NF_DRIVE_REMOVED: VDS_NF_DRIVE = 354u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_DRIVE_LETTER_ASSIGN: u32 = 202u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_DRIVE_LETTER_FREE: u32 = 201u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_NF_FILE_SYSTEM = u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_NF_FILE_SYSTEM_MODIFY: VDS_NF_FILE_SYSTEM = 203u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_NF_FILE_SYSTEM_FORMAT_PROGRESS: VDS_NF_FILE_SYSTEM = 204u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_FILE_SYSTEM_SHRINKING_PROGRESS: u32 = 206u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_NF_LUN = u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1861,8 +1473,6 @@ pub const VDS_NF_LUN_DEPART: VDS_NF_LUN = 109u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_NF_LUN_MODIFY: VDS_NF_LUN = 110u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_MOUNT_POINTS_CHANGE: u32 = 205u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_NF_PACK = u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_NF_PACK_ARRIVE: VDS_NF_PACK = 1u32;
@@ -1870,12 +1480,6 @@ pub const VDS_NF_PACK_ARRIVE: VDS_NF_PACK = 1u32;
 pub const VDS_NF_PACK_DEPART: VDS_NF_PACK = 2u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_NF_PACK_MODIFY: VDS_NF_PACK = 3u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_PARTITION_ARRIVE: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_PARTITION_DEPART: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_PARTITION_MODIFY: u32 = 13u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_NF_PORT = u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -1886,78 +1490,6 @@ pub const VDS_NF_PORT_DEPART: VDS_NF_PORT = 122u32;
 pub const VDS_NF_PORT_MODIFY: VDS_NF_PORT = 352u32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_NF_PORT_REMOVED: VDS_NF_PORT = 353u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_PORTAL_ARRIVE: u32 = 123u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_PORTAL_DEPART: u32 = 124u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_PORTAL_GROUP_ARRIVE: u32 = 129u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_PORTAL_GROUP_DEPART: u32 = 130u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_PORTAL_GROUP_MODIFY: u32 = 131u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_PORTAL_MODIFY: u32 = 125u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_SERVICE_OUT_OF_SYNC: u32 = 301u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_SUB_SYSTEM_ARRIVE: u32 = 101u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_SUB_SYSTEM_DEPART: u32 = 102u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_SUB_SYSTEM_MODIFY: u32 = 151u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_TARGET_ARRIVE: u32 = 126u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_TARGET_DEPART: u32 = 127u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_TARGET_MODIFY: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_VOLUME_ARRIVE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_VOLUME_DEPART: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_VOLUME_MODIFY: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_NF_VOLUME_REBUILDING_PROGRESS: u32 = 7u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub struct VDS_NOTIFICATION {
-    pub objectType: VDS_NOTIFICATION_TARGET_TYPE,
-    pub Anonymous: VDS_NOTIFICATION_0,
-}
-impl ::core::marker::Copy for VDS_NOTIFICATION {}
-impl ::core::clone::Clone for VDS_NOTIFICATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub union VDS_NOTIFICATION_0 {
-    pub Pack: VDS_PACK_NOTIFICATION,
-    pub Disk: VDS_DISK_NOTIFICATION,
-    pub Volume: VDS_VOLUME_NOTIFICATION,
-    pub Partition: VDS_PARTITION_NOTIFICATION,
-    pub Letter: VDS_DRIVE_LETTER_NOTIFICATION,
-    pub FileSystem: VDS_FILE_SYSTEM_NOTIFICATION,
-    pub MountPoint: VDS_MOUNT_POINT_NOTIFICATION,
-    pub SubSystem: VDS_SUB_SYSTEM_NOTIFICATION,
-    pub Controller: VDS_CONTROLLER_NOTIFICATION,
-    pub Drive: VDS_DRIVE_NOTIFICATION,
-    pub Lun: VDS_LUN_NOTIFICATION,
-    pub Port: VDS_PORT_NOTIFICATION,
-    pub Portal: VDS_PORTAL_NOTIFICATION,
-    pub Target: VDS_TARGET_NOTIFICATION,
-    pub PortalGroup: VDS_PORTAL_GROUP_NOTIFICATION,
-    pub Service: VDS_SERVICE_NOTIFICATION,
-}
-impl ::core::marker::Copy for VDS_NOTIFICATION_0 {}
-impl ::core::clone::Clone for VDS_NOTIFICATION_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub type VDS_NOTIFICATION_TARGET_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
@@ -2042,6 +1574,944 @@ pub const VDS_OT_ENUM: VDS_OBJECT_TYPE = 101i32;
 pub const VDS_OT_VDISK: VDS_OBJECT_TYPE = 200i32;
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub const VDS_OT_OPEN_VDISK: VDS_OBJECT_TYPE = 201i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_PATH_STATUS = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_MPS_UNKNOWN: VDS_PATH_STATUS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_MPS_ONLINE: VDS_PATH_STATUS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_MPS_FAILED: VDS_PATH_STATUS = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_MPS_STANDBY: VDS_PATH_STATUS = 7i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_PORT_STATUS = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PRS_UNKNOWN: VDS_PORT_STATUS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PRS_ONLINE: VDS_PORT_STATUS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PRS_NOT_READY: VDS_PORT_STATUS = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PRS_OFFLINE: VDS_PORT_STATUS = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PRS_FAILED: VDS_PORT_STATUS = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PRS_REMOVED: VDS_PORT_STATUS = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_PROVIDER_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PF_DYNAMIC: VDS_PROVIDER_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PF_INTERNAL_HARDWARE_PROVIDER: VDS_PROVIDER_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PF_ONE_DISK_ONLY_PER_PACK: VDS_PROVIDER_FLAG = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PF_ONE_PACK_ONLINE_ONLY: VDS_PROVIDER_FLAG = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PF_VOLUME_SPACE_MUST_BE_CONTIGUOUS: VDS_PROVIDER_FLAG = 16i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PF_SUPPORT_DYNAMIC: VDS_PROVIDER_FLAG = -2147483648i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PF_SUPPORT_FAULT_TOLERANT: VDS_PROVIDER_FLAG = 1073741824i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PF_SUPPORT_DYNAMIC_1394: VDS_PROVIDER_FLAG = 536870912i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PF_SUPPORT_MIRROR: VDS_PROVIDER_FLAG = 32i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PF_SUPPORT_RAID5: VDS_PROVIDER_FLAG = 64i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_PROVIDER_LBSUPPORT_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_LBF_FAILOVER: VDS_PROVIDER_LBSUPPORT_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_LBF_ROUND_ROBIN: VDS_PROVIDER_LBSUPPORT_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_LBF_ROUND_ROBIN_WITH_SUBSET: VDS_PROVIDER_LBSUPPORT_FLAG = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_LBF_DYN_LEAST_QUEUE_DEPTH: VDS_PROVIDER_LBSUPPORT_FLAG = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_LBF_WEIGHTED_PATHS: VDS_PROVIDER_LBSUPPORT_FLAG = 16i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_LBF_LEAST_BLOCKS: VDS_PROVIDER_LBSUPPORT_FLAG = 32i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_LBF_VENDOR_SPECIFIC: VDS_PROVIDER_LBSUPPORT_FLAG = 64i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_PROVIDER_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PT_UNKNOWN: VDS_PROVIDER_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PT_SOFTWARE: VDS_PROVIDER_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PT_HARDWARE: VDS_PROVIDER_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PT_VIRTUALDISK: VDS_PROVIDER_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_PT_MAX: VDS_PROVIDER_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_RAID_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_UNKNOWN: VDS_RAID_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID0: VDS_RAID_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID1: VDS_RAID_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID2: VDS_RAID_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID3: VDS_RAID_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID4: VDS_RAID_TYPE = 14i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID5: VDS_RAID_TYPE = 15i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID6: VDS_RAID_TYPE = 16i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID01: VDS_RAID_TYPE = 17i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID03: VDS_RAID_TYPE = 18i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID05: VDS_RAID_TYPE = 19i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID10: VDS_RAID_TYPE = 20i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID15: VDS_RAID_TYPE = 21i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID30: VDS_RAID_TYPE = 22i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID50: VDS_RAID_TYPE = 23i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID51: VDS_RAID_TYPE = 24i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID53: VDS_RAID_TYPE = 25i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID60: VDS_RAID_TYPE = 26i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RT_RAID61: VDS_RAID_TYPE = 27i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_RECOVER_ACTION = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RA_UNKNOWN: VDS_RECOVER_ACTION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RA_REFRESH: VDS_RECOVER_ACTION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_RA_RESTART: VDS_RECOVER_ACTION = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_STORAGE_BUS_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeUnknown: VDS_STORAGE_BUS_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeScsi: VDS_STORAGE_BUS_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeAtapi: VDS_STORAGE_BUS_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeAta: VDS_STORAGE_BUS_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusType1394: VDS_STORAGE_BUS_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeSsa: VDS_STORAGE_BUS_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeFibre: VDS_STORAGE_BUS_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeUsb: VDS_STORAGE_BUS_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeRAID: VDS_STORAGE_BUS_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeiScsi: VDS_STORAGE_BUS_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeSas: VDS_STORAGE_BUS_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeSata: VDS_STORAGE_BUS_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeSd: VDS_STORAGE_BUS_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeMmc: VDS_STORAGE_BUS_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeMax: VDS_STORAGE_BUS_TYPE = 14i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeVirtual: VDS_STORAGE_BUS_TYPE = 14i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeFileBackedVirtual: VDS_STORAGE_BUS_TYPE = 15i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeSpaces: VDS_STORAGE_BUS_TYPE = 16i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeNVMe: VDS_STORAGE_BUS_TYPE = 17i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeScm: VDS_STORAGE_BUS_TYPE = 18i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeUfs: VDS_STORAGE_BUS_TYPE = 19i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSBusTypeMaxReserved: VDS_STORAGE_BUS_TYPE = 127i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_STORAGE_IDENTIFIER_CODE_SET = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdCodeSetReserved: VDS_STORAGE_IDENTIFIER_CODE_SET = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdCodeSetBinary: VDS_STORAGE_IDENTIFIER_CODE_SET = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdCodeSetAscii: VDS_STORAGE_IDENTIFIER_CODE_SET = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdCodeSetUtf8: VDS_STORAGE_IDENTIFIER_CODE_SET = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_STORAGE_IDENTIFIER_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdTypeVendorSpecific: VDS_STORAGE_IDENTIFIER_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdTypeVendorId: VDS_STORAGE_IDENTIFIER_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdTypeEUI64: VDS_STORAGE_IDENTIFIER_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdTypeFCPHName: VDS_STORAGE_IDENTIFIER_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdTypePortRelative: VDS_STORAGE_IDENTIFIER_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdTypeTargetPortGroup: VDS_STORAGE_IDENTIFIER_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdTypeLogicalUnitGroup: VDS_STORAGE_IDENTIFIER_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdTypeMD5LogicalUnitIdentifier: VDS_STORAGE_IDENTIFIER_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDSStorageIdTypeScsiNameString: VDS_STORAGE_IDENTIFIER_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_STORAGE_POOL_STATUS = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SPS_UNKNOWN: VDS_STORAGE_POOL_STATUS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SPS_ONLINE: VDS_STORAGE_POOL_STATUS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SPS_NOT_READY: VDS_STORAGE_POOL_STATUS = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SPS_OFFLINE: VDS_STORAGE_POOL_STATUS = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_STORAGE_POOL_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SPT_UNKNOWN: VDS_STORAGE_POOL_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SPT_PRIMORDIAL: VDS_STORAGE_POOL_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SPT_CONCRETE: VDS_STORAGE_POOL_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_SUB_SYSTEM_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_LUN_MASKING_CAPABLE: VDS_SUB_SYSTEM_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_LUN_PLEXING_CAPABLE: VDS_SUB_SYSTEM_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_LUN_REMAPPING_CAPABLE: VDS_SUB_SYSTEM_FLAG = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_DRIVE_EXTENT_CAPABLE: VDS_SUB_SYSTEM_FLAG = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_HARDWARE_CHECKSUM_CAPABLE: VDS_SUB_SYSTEM_FLAG = 16i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_RADIUS_CAPABLE: VDS_SUB_SYSTEM_FLAG = 32i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_READ_BACK_VERIFY_CAPABLE: VDS_SUB_SYSTEM_FLAG = 64i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_WRITE_THROUGH_CACHING_CAPABLE: VDS_SUB_SYSTEM_FLAG = 128i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_FAULT_TOLERANT_LUNS: VDS_SUB_SYSTEM_FLAG = 512i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_NON_FAULT_TOLERANT_LUNS: VDS_SUB_SYSTEM_FLAG = 1024i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_SIMPLE_LUNS: VDS_SUB_SYSTEM_FLAG = 2048i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_SPAN_LUNS: VDS_SUB_SYSTEM_FLAG = 4096i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_STRIPE_LUNS: VDS_SUB_SYSTEM_FLAG = 8192i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_MIRROR_LUNS: VDS_SUB_SYSTEM_FLAG = 16384i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_PARITY_LUNS: VDS_SUB_SYSTEM_FLAG = 32768i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_AUTH_CHAP: VDS_SUB_SYSTEM_FLAG = 65536i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_AUTH_MUTUAL_CHAP: VDS_SUB_SYSTEM_FLAG = 131072i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_SIMPLE_TARGET_CONFIG: VDS_SUB_SYSTEM_FLAG = 262144i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_LUN_NUMBER: VDS_SUB_SYSTEM_FLAG = 524288i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_MIRRORED_CACHE: VDS_SUB_SYSTEM_FLAG = 1048576i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_READ_CACHING_CAPABLE: VDS_SUB_SYSTEM_FLAG = 2097152i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_WRITE_CACHING_CAPABLE: VDS_SUB_SYSTEM_FLAG = 4194304i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_MEDIA_SCAN_CAPABLE: VDS_SUB_SYSTEM_FLAG = 8388608i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_CONSISTENCY_CHECK_CAPABLE: VDS_SUB_SYSTEM_FLAG = 16777216i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_SUB_SYSTEM_STATUS = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SSS_UNKNOWN: VDS_SUB_SYSTEM_STATUS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SSS_ONLINE: VDS_SUB_SYSTEM_STATUS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SSS_NOT_READY: VDS_SUB_SYSTEM_STATUS = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SSS_OFFLINE: VDS_SUB_SYSTEM_STATUS = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SSS_FAILED: VDS_SUB_SYSTEM_STATUS = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SSS_PARTIALLY_MANAGED: VDS_SUB_SYSTEM_STATUS = 9i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID2_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID3_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID4_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID5_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID6_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 16i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID01_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 32i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID03_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 64i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID05_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 128i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID10_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 256i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID15_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 512i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID30_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 1024i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID50_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 2048i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID51_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 4096i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID53_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 8192i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID60_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 16384i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_SF_SUPPORTS_RAID61_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 32768i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_TRANSITION_STATE = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_TS_UNKNOWN: VDS_TRANSITION_STATE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_TS_STABLE: VDS_TRANSITION_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_TS_EXTENDING: VDS_TRANSITION_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_TS_SHRINKING: VDS_TRANSITION_STATE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_TS_RECONFIGING: VDS_TRANSITION_STATE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_TS_RESTRIPING: VDS_TRANSITION_STATE = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub type VDS_VERSION_SUPPORT_FLAG = i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_VSF_1_0: VDS_VERSION_SUPPORT_FLAG = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_VSF_1_1: VDS_VERSION_SUPPORT_FLAG = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_VSF_2_0: VDS_VERSION_SUPPORT_FLAG = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_VSF_2_1: VDS_VERSION_SUPPORT_FLAG = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub const VDS_VSF_3_0: VDS_VERSION_SUPPORT_FLAG = 16i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ASYNC_OUTPUT {
+    pub r#type: VDS_ASYNC_OUTPUT_TYPE,
+    pub Anonymous: VDS_ASYNC_OUTPUT_0,
+}
+impl ::core::marker::Copy for VDS_ASYNC_OUTPUT {}
+impl ::core::clone::Clone for VDS_ASYNC_OUTPUT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub union VDS_ASYNC_OUTPUT_0 {
+    pub cp: VDS_ASYNC_OUTPUT_0_2,
+    pub cv: VDS_ASYNC_OUTPUT_0_5,
+    pub bvp: VDS_ASYNC_OUTPUT_0_0,
+    pub sv: VDS_ASYNC_OUTPUT_0_7,
+    pub cl: VDS_ASYNC_OUTPUT_0_1,
+    pub ct: VDS_ASYNC_OUTPUT_0_4,
+    pub cpg: VDS_ASYNC_OUTPUT_0_3,
+    pub cvd: VDS_ASYNC_OUTPUT_0_6,
+}
+impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0 {}
+impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ASYNC_OUTPUT_0_0 {
+    pub pVolumeUnk: ::windows_sys::core::IUnknown,
+}
+impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_0 {}
+impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ASYNC_OUTPUT_0_1 {
+    pub pLunUnk: ::windows_sys::core::IUnknown,
+}
+impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_1 {}
+impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ASYNC_OUTPUT_0_2 {
+    pub ullOffset: u64,
+    pub volumeId: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_2 {}
+impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ASYNC_OUTPUT_0_3 {
+    pub pPortalGroupUnk: ::windows_sys::core::IUnknown,
+}
+impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_3 {}
+impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_3 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ASYNC_OUTPUT_0_4 {
+    pub pTargetUnk: ::windows_sys::core::IUnknown,
+}
+impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_4 {}
+impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_4 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ASYNC_OUTPUT_0_5 {
+    pub pVolumeUnk: ::windows_sys::core::IUnknown,
+}
+impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_5 {}
+impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_5 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ASYNC_OUTPUT_0_6 {
+    pub pVDiskUnk: ::windows_sys::core::IUnknown,
+}
+impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_6 {}
+impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_6 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ASYNC_OUTPUT_0_7 {
+    pub ullReclaimedBytes: u64,
+}
+impl ::core::marker::Copy for VDS_ASYNC_OUTPUT_0_7 {}
+impl ::core::clone::Clone for VDS_ASYNC_OUTPUT_0_7 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_CONTROLLER_NOTIFICATION {
+    pub ulEvent: VDS_NF_CONTROLLER,
+    pub controllerId: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for VDS_CONTROLLER_NOTIFICATION {}
+impl ::core::clone::Clone for VDS_CONTROLLER_NOTIFICATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_CONTROLLER_PROP {
+    pub id: ::windows_sys::core::GUID,
+    pub pwszFriendlyName: ::windows_sys::core::PWSTR,
+    pub pwszIdentification: ::windows_sys::core::PWSTR,
+    pub status: VDS_CONTROLLER_STATUS,
+    pub health: VDS_HEALTH,
+    pub sNumberOfPorts: i16,
+}
+impl ::core::marker::Copy for VDS_CONTROLLER_PROP {}
+impl ::core::clone::Clone for VDS_CONTROLLER_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_DISK_NOTIFICATION {
+    pub ulEvent: VDS_NF_DISK,
+    pub diskId: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for VDS_DISK_NOTIFICATION {}
+impl ::core::clone::Clone for VDS_DISK_NOTIFICATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct VDS_DRIVE_EXTENT {
+    pub id: ::windows_sys::core::GUID,
+    pub LunId: ::windows_sys::core::GUID,
+    pub ullSize: u64,
+    pub bUsed: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for VDS_DRIVE_EXTENT {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for VDS_DRIVE_EXTENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_DRIVE_LETTER_NOTIFICATION {
+    pub ulEvent: u32,
+    pub wcLetter: u16,
+    pub volumeId: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for VDS_DRIVE_LETTER_NOTIFICATION {}
+impl ::core::clone::Clone for VDS_DRIVE_LETTER_NOTIFICATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_DRIVE_NOTIFICATION {
+    pub ulEvent: VDS_NF_DRIVE,
+    pub driveId: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for VDS_DRIVE_NOTIFICATION {}
+impl ::core::clone::Clone for VDS_DRIVE_NOTIFICATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_DRIVE_PROP {
+    pub id: ::windows_sys::core::GUID,
+    pub ullSize: u64,
+    pub pwszFriendlyName: ::windows_sys::core::PWSTR,
+    pub pwszIdentification: ::windows_sys::core::PWSTR,
+    pub ulFlags: u32,
+    pub status: VDS_DRIVE_STATUS,
+    pub health: VDS_HEALTH,
+    pub sInternalBusNumber: i16,
+    pub sSlotNumber: i16,
+}
+impl ::core::marker::Copy for VDS_DRIVE_PROP {}
+impl ::core::clone::Clone for VDS_DRIVE_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_DRIVE_PROP2 {
+    pub id: ::windows_sys::core::GUID,
+    pub ullSize: u64,
+    pub pwszFriendlyName: ::windows_sys::core::PWSTR,
+    pub pwszIdentification: ::windows_sys::core::PWSTR,
+    pub ulFlags: u32,
+    pub status: VDS_DRIVE_STATUS,
+    pub health: VDS_HEALTH,
+    pub sInternalBusNumber: i16,
+    pub sSlotNumber: i16,
+    pub ulEnclosureNumber: u32,
+    pub busType: VDS_STORAGE_BUS_TYPE,
+    pub ulSpindleSpeed: u32,
+}
+impl ::core::marker::Copy for VDS_DRIVE_PROP2 {}
+impl ::core::clone::Clone for VDS_DRIVE_PROP2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_FILE_SYSTEM_NOTIFICATION {
+    pub ulEvent: VDS_NF_FILE_SYSTEM,
+    pub volumeId: ::windows_sys::core::GUID,
+    pub dwPercentCompleted: u32,
+}
+impl ::core::marker::Copy for VDS_FILE_SYSTEM_NOTIFICATION {}
+impl ::core::clone::Clone for VDS_FILE_SYSTEM_NOTIFICATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_HBAPORT_PROP {
+    pub id: ::windows_sys::core::GUID,
+    pub wwnNode: VDS_WWN,
+    pub wwnPort: VDS_WWN,
+    pub r#type: VDS_HBAPORT_TYPE,
+    pub status: VDS_HBAPORT_STATUS,
+    pub ulPortSpeed: u32,
+    pub ulSupportedPortSpeed: u32,
+}
+impl ::core::marker::Copy for VDS_HBAPORT_PROP {}
+impl ::core::clone::Clone for VDS_HBAPORT_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct VDS_HINTS {
+    pub ullHintMask: u64,
+    pub ullExpectedMaximumSize: u64,
+    pub ulOptimalReadSize: u32,
+    pub ulOptimalReadAlignment: u32,
+    pub ulOptimalWriteSize: u32,
+    pub ulOptimalWriteAlignment: u32,
+    pub ulMaximumDriveCount: u32,
+    pub ulStripeSize: u32,
+    pub bFastCrashRecoveryRequired: super::super::Foundation::BOOL,
+    pub bMostlyReads: super::super::Foundation::BOOL,
+    pub bOptimizeForSequentialReads: super::super::Foundation::BOOL,
+    pub bOptimizeForSequentialWrites: super::super::Foundation::BOOL,
+    pub bRemapEnabled: super::super::Foundation::BOOL,
+    pub bReadBackVerifyEnabled: super::super::Foundation::BOOL,
+    pub bWriteThroughCachingEnabled: super::super::Foundation::BOOL,
+    pub bHardwareChecksumEnabled: super::super::Foundation::BOOL,
+    pub bIsYankable: super::super::Foundation::BOOL,
+    pub sRebuildPriority: i16,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for VDS_HINTS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for VDS_HINTS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct VDS_HINTS2 {
+    pub ullHintMask: u64,
+    pub ullExpectedMaximumSize: u64,
+    pub ulOptimalReadSize: u32,
+    pub ulOptimalReadAlignment: u32,
+    pub ulOptimalWriteSize: u32,
+    pub ulOptimalWriteAlignment: u32,
+    pub ulMaximumDriveCount: u32,
+    pub ulStripeSize: u32,
+    pub ulReserved1: u32,
+    pub ulReserved2: u32,
+    pub ulReserved3: u32,
+    pub bFastCrashRecoveryRequired: super::super::Foundation::BOOL,
+    pub bMostlyReads: super::super::Foundation::BOOL,
+    pub bOptimizeForSequentialReads: super::super::Foundation::BOOL,
+    pub bOptimizeForSequentialWrites: super::super::Foundation::BOOL,
+    pub bRemapEnabled: super::super::Foundation::BOOL,
+    pub bReadBackVerifyEnabled: super::super::Foundation::BOOL,
+    pub bWriteThroughCachingEnabled: super::super::Foundation::BOOL,
+    pub bHardwareChecksumEnabled: super::super::Foundation::BOOL,
+    pub bIsYankable: super::super::Foundation::BOOL,
+    pub bAllocateHotSpare: super::super::Foundation::BOOL,
+    pub bUseMirroredCache: super::super::Foundation::BOOL,
+    pub bReadCachingEnabled: super::super::Foundation::BOOL,
+    pub bWriteCachingEnabled: super::super::Foundation::BOOL,
+    pub bMediaScanEnabled: super::super::Foundation::BOOL,
+    pub bConsistencyCheckEnabled: super::super::Foundation::BOOL,
+    pub BusType: VDS_STORAGE_BUS_TYPE,
+    pub bReserved1: super::super::Foundation::BOOL,
+    pub bReserved2: super::super::Foundation::BOOL,
+    pub bReserved3: super::super::Foundation::BOOL,
+    pub sRebuildPriority: i16,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for VDS_HINTS2 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for VDS_HINTS2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_INTERCONNECT {
+    pub m_addressType: VDS_INTERCONNECT_ADDRESS_TYPE,
+    pub m_cbPort: u32,
+    pub m_pbPort: *mut u8,
+    pub m_cbAddress: u32,
+    pub m_pbAddress: *mut u8,
+}
+impl ::core::marker::Copy for VDS_INTERCONNECT {}
+impl ::core::clone::Clone for VDS_INTERCONNECT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_IPADDRESS {
+    pub r#type: VDS_IPADDRESS_TYPE,
+    pub ipv4Address: u32,
+    pub ipv6Address: [u8; 16],
+    pub ulIpv6FlowInfo: u32,
+    pub ulIpv6ScopeId: u32,
+    pub wszTextAddress: [u16; 257],
+    pub ulPort: u32,
+}
+impl ::core::marker::Copy for VDS_IPADDRESS {}
+impl ::core::clone::Clone for VDS_IPADDRESS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ISCSI_INITIATOR_ADAPTER_PROP {
+    pub id: ::windows_sys::core::GUID,
+    pub pwszName: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for VDS_ISCSI_INITIATOR_ADAPTER_PROP {}
+impl ::core::clone::Clone for VDS_ISCSI_INITIATOR_ADAPTER_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ISCSI_INITIATOR_PORTAL_PROP {
+    pub id: ::windows_sys::core::GUID,
+    pub address: VDS_IPADDRESS,
+    pub ulPortIndex: u32,
+}
+impl ::core::marker::Copy for VDS_ISCSI_INITIATOR_PORTAL_PROP {}
+impl ::core::clone::Clone for VDS_ISCSI_INITIATOR_PORTAL_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ISCSI_IPSEC_KEY {
+    pub pKey: *mut u8,
+    pub ulKeySize: u32,
+}
+impl ::core::marker::Copy for VDS_ISCSI_IPSEC_KEY {}
+impl ::core::clone::Clone for VDS_ISCSI_IPSEC_KEY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ISCSI_PORTALGROUP_PROP {
+    pub id: ::windows_sys::core::GUID,
+    pub tag: u16,
+}
+impl ::core::marker::Copy for VDS_ISCSI_PORTALGROUP_PROP {}
+impl ::core::clone::Clone for VDS_ISCSI_PORTALGROUP_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ISCSI_PORTAL_PROP {
+    pub id: ::windows_sys::core::GUID,
+    pub address: VDS_IPADDRESS,
+    pub status: VDS_ISCSI_PORTAL_STATUS,
+}
+impl ::core::marker::Copy for VDS_ISCSI_PORTAL_PROP {}
+impl ::core::clone::Clone for VDS_ISCSI_PORTAL_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_ISCSI_SHARED_SECRET {
+    pub pSharedSecret: *mut u8,
+    pub ulSharedSecretSize: u32,
+}
+impl ::core::marker::Copy for VDS_ISCSI_SHARED_SECRET {}
+impl ::core::clone::Clone for VDS_ISCSI_SHARED_SECRET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct VDS_ISCSI_TARGET_PROP {
+    pub id: ::windows_sys::core::GUID,
+    pub pwszIscsiName: ::windows_sys::core::PWSTR,
+    pub pwszFriendlyName: ::windows_sys::core::PWSTR,
+    pub bChapEnabled: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for VDS_ISCSI_TARGET_PROP {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for VDS_ISCSI_TARGET_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct VDS_LUN_INFORMATION {
+    pub m_version: u32,
+    pub m_DeviceType: u8,
+    pub m_DeviceTypeModifier: u8,
+    pub m_bCommandQueueing: super::super::Foundation::BOOL,
+    pub m_BusType: VDS_STORAGE_BUS_TYPE,
+    pub m_szVendorId: *mut u8,
+    pub m_szProductId: *mut u8,
+    pub m_szProductRevision: *mut u8,
+    pub m_szSerialNumber: *mut u8,
+    pub m_diskSignature: ::windows_sys::core::GUID,
+    pub m_deviceIdDescriptor: VDS_STORAGE_DEVICE_ID_DESCRIPTOR,
+    pub m_cInterconnects: u32,
+    pub m_rgInterconnects: *mut VDS_INTERCONNECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for VDS_LUN_INFORMATION {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for VDS_LUN_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_LUN_NOTIFICATION {
+    pub ulEvent: VDS_NF_LUN,
+    pub LunId: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for VDS_LUN_NOTIFICATION {}
+impl ::core::clone::Clone for VDS_LUN_NOTIFICATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_LUN_PLEX_PROP {
+    pub id: ::windows_sys::core::GUID,
+    pub ullSize: u64,
+    pub r#type: VDS_LUN_PLEX_TYPE,
+    pub status: VDS_LUN_PLEX_STATUS,
+    pub health: VDS_HEALTH,
+    pub TransitionState: VDS_TRANSITION_STATE,
+    pub ulFlags: u32,
+    pub ulStripeSize: u32,
+    pub sRebuildPriority: i16,
+}
+impl ::core::marker::Copy for VDS_LUN_PLEX_PROP {}
+impl ::core::clone::Clone for VDS_LUN_PLEX_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_LUN_PROP {
+    pub id: ::windows_sys::core::GUID,
+    pub ullSize: u64,
+    pub pwszFriendlyName: ::windows_sys::core::PWSTR,
+    pub pwszIdentification: ::windows_sys::core::PWSTR,
+    pub pwszUnmaskingList: ::windows_sys::core::PWSTR,
+    pub ulFlags: u32,
+    pub r#type: VDS_LUN_TYPE,
+    pub status: VDS_LUN_STATUS,
+    pub health: VDS_HEALTH,
+    pub TransitionState: VDS_TRANSITION_STATE,
+    pub sRebuildPriority: i16,
+}
+impl ::core::marker::Copy for VDS_LUN_PROP {}
+impl ::core::clone::Clone for VDS_LUN_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_MOUNT_POINT_NOTIFICATION {
+    pub ulEvent: u32,
+    pub volumeId: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for VDS_MOUNT_POINT_NOTIFICATION {}
+impl ::core::clone::Clone for VDS_MOUNT_POINT_NOTIFICATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub struct VDS_NOTIFICATION {
+    pub objectType: VDS_NOTIFICATION_TARGET_TYPE,
+    pub Anonymous: VDS_NOTIFICATION_0,
+}
+impl ::core::marker::Copy for VDS_NOTIFICATION {}
+impl ::core::clone::Clone for VDS_NOTIFICATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
+pub union VDS_NOTIFICATION_0 {
+    pub Pack: VDS_PACK_NOTIFICATION,
+    pub Disk: VDS_DISK_NOTIFICATION,
+    pub Volume: VDS_VOLUME_NOTIFICATION,
+    pub Partition: VDS_PARTITION_NOTIFICATION,
+    pub Letter: VDS_DRIVE_LETTER_NOTIFICATION,
+    pub FileSystem: VDS_FILE_SYSTEM_NOTIFICATION,
+    pub MountPoint: VDS_MOUNT_POINT_NOTIFICATION,
+    pub SubSystem: VDS_SUB_SYSTEM_NOTIFICATION,
+    pub Controller: VDS_CONTROLLER_NOTIFICATION,
+    pub Drive: VDS_DRIVE_NOTIFICATION,
+    pub Lun: VDS_LUN_NOTIFICATION,
+    pub Port: VDS_PORT_NOTIFICATION,
+    pub Portal: VDS_PORTAL_NOTIFICATION,
+    pub Target: VDS_TARGET_NOTIFICATION,
+    pub PortalGroup: VDS_PORTAL_GROUP_NOTIFICATION,
+    pub Service: VDS_SERVICE_NOTIFICATION,
+}
+impl ::core::marker::Copy for VDS_NOTIFICATION_0 {}
+impl ::core::clone::Clone for VDS_NOTIFICATION_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub struct VDS_PACK_NOTIFICATION {
@@ -2147,16 +2617,6 @@ impl ::core::clone::Clone for VDS_PATH_POLICY {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_PATH_STATUS = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_MPS_UNKNOWN: VDS_PATH_STATUS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_MPS_ONLINE: VDS_PATH_STATUS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_MPS_FAILED: VDS_PATH_STATUS = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_MPS_STANDBY: VDS_PATH_STATUS = 7i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -2208,62 +2668,6 @@ impl ::core::clone::Clone for VDS_POOL_ATTRIBUTES {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_ACCS_BDW_WT_HINT: i32 = 16777216i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_ACCS_DIR_HINT: i32 = 2097152i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_ACCS_LTNCY_HINT: i32 = 8388608i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_ACCS_RNDM_HINT: i32 = 1048576i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_ACCS_SIZE_HINT: i32 = 4194304i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_ALLOW_SPINDOWN: i32 = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_BUSTYPE: i32 = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_CUSTOM_ATTRIB: i32 = 134217728i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_DATA_AVL_HINT: i32 = 524288i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_DATA_RDNCY_DEF: i32 = 128i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_DATA_RDNCY_MAX: i32 = 32i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_DATA_RDNCY_MIN: i32 = 64i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_NO_SINGLE_POF: i32 = 16i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_NUM_CLMNS: i32 = 32768i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_NUM_CLMNS_DEF: i32 = 262144i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_NUM_CLMNS_MAX: i32 = 65536i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_NUM_CLMNS_MIN: i32 = 131072i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_PKG_RDNCY_DEF: i32 = 1024i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_PKG_RDNCY_MAX: i32 = 256i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_PKG_RDNCY_MIN: i32 = 512i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_RAIDTYPE: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_STOR_COST_HINT: i32 = 33554432i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_STOR_EFFCY_HINT: i32 = 67108864i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_STRIPE_SIZE: i32 = 2048i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_STRIPE_SIZE_DEF: i32 = 16384i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_STRIPE_SIZE_MAX: i32 = 4096i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_STRIPE_SIZE_MIN: i32 = 8192i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_POOL_ATTRIB_THIN_PROVISION: i32 = 8i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub struct VDS_POOL_CUSTOM_ATTRIBUTES {
@@ -2326,58 +2730,6 @@ impl ::core::clone::Clone for VDS_PORT_PROP {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_PORT_STATUS = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PRS_UNKNOWN: VDS_PORT_STATUS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PRS_ONLINE: VDS_PORT_STATUS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PRS_NOT_READY: VDS_PORT_STATUS = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PRS_OFFLINE: VDS_PORT_STATUS = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PRS_FAILED: VDS_PORT_STATUS = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PRS_REMOVED: VDS_PORT_STATUS = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_PROVIDER_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PF_DYNAMIC: VDS_PROVIDER_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PF_INTERNAL_HARDWARE_PROVIDER: VDS_PROVIDER_FLAG = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PF_ONE_DISK_ONLY_PER_PACK: VDS_PROVIDER_FLAG = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PF_ONE_PACK_ONLINE_ONLY: VDS_PROVIDER_FLAG = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PF_VOLUME_SPACE_MUST_BE_CONTIGUOUS: VDS_PROVIDER_FLAG = 16i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PF_SUPPORT_DYNAMIC: VDS_PROVIDER_FLAG = -2147483648i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PF_SUPPORT_FAULT_TOLERANT: VDS_PROVIDER_FLAG = 1073741824i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PF_SUPPORT_DYNAMIC_1394: VDS_PROVIDER_FLAG = 536870912i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PF_SUPPORT_MIRROR: VDS_PROVIDER_FLAG = 32i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PF_SUPPORT_RAID5: VDS_PROVIDER_FLAG = 64i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_PROVIDER_LBSUPPORT_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_LBF_FAILOVER: VDS_PROVIDER_LBSUPPORT_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_LBF_ROUND_ROBIN: VDS_PROVIDER_LBSUPPORT_FLAG = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_LBF_ROUND_ROBIN_WITH_SUBSET: VDS_PROVIDER_LBSUPPORT_FLAG = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_LBF_DYN_LEAST_QUEUE_DEPTH: VDS_PROVIDER_LBSUPPORT_FLAG = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_LBF_WEIGHTED_PATHS: VDS_PROVIDER_LBSUPPORT_FLAG = 16i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_LBF_LEAST_BLOCKS: VDS_PROVIDER_LBSUPPORT_FLAG = 32i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_LBF_VENDOR_SPECIFIC: VDS_PROVIDER_LBSUPPORT_FLAG = 64i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub struct VDS_PROVIDER_PROP {
@@ -2396,70 +2748,6 @@ impl ::core::clone::Clone for VDS_PROVIDER_PROP {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_PROVIDER_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PT_UNKNOWN: VDS_PROVIDER_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PT_SOFTWARE: VDS_PROVIDER_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PT_HARDWARE: VDS_PROVIDER_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PT_VIRTUALDISK: VDS_PROVIDER_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_PT_MAX: VDS_PROVIDER_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_RAID_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_UNKNOWN: VDS_RAID_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID0: VDS_RAID_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID1: VDS_RAID_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID2: VDS_RAID_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID3: VDS_RAID_TYPE = 13i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID4: VDS_RAID_TYPE = 14i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID5: VDS_RAID_TYPE = 15i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID6: VDS_RAID_TYPE = 16i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID01: VDS_RAID_TYPE = 17i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID03: VDS_RAID_TYPE = 18i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID05: VDS_RAID_TYPE = 19i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID10: VDS_RAID_TYPE = 20i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID15: VDS_RAID_TYPE = 21i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID30: VDS_RAID_TYPE = 22i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID50: VDS_RAID_TYPE = 23i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID51: VDS_RAID_TYPE = 24i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID53: VDS_RAID_TYPE = 25i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID60: VDS_RAID_TYPE = 26i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RT_RAID61: VDS_RAID_TYPE = 27i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_REBUILD_PRIORITY_MAX: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_REBUILD_PRIORITY_MIN: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_RECOVER_ACTION = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RA_UNKNOWN: VDS_RECOVER_ACTION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RA_REFRESH: VDS_RECOVER_ACTION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_RA_RESTART: VDS_RECOVER_ACTION = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub struct VDS_SERVICE_NOTIFICATION {
@@ -2472,52 +2760,6 @@ impl ::core::clone::Clone for VDS_SERVICE_NOTIFICATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_STORAGE_BUS_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeUnknown: VDS_STORAGE_BUS_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeScsi: VDS_STORAGE_BUS_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeAtapi: VDS_STORAGE_BUS_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeAta: VDS_STORAGE_BUS_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusType1394: VDS_STORAGE_BUS_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeSsa: VDS_STORAGE_BUS_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeFibre: VDS_STORAGE_BUS_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeUsb: VDS_STORAGE_BUS_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeRAID: VDS_STORAGE_BUS_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeiScsi: VDS_STORAGE_BUS_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeSas: VDS_STORAGE_BUS_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeSata: VDS_STORAGE_BUS_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeSd: VDS_STORAGE_BUS_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeMmc: VDS_STORAGE_BUS_TYPE = 13i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeMax: VDS_STORAGE_BUS_TYPE = 14i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeVirtual: VDS_STORAGE_BUS_TYPE = 14i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeFileBackedVirtual: VDS_STORAGE_BUS_TYPE = 15i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeSpaces: VDS_STORAGE_BUS_TYPE = 16i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeNVMe: VDS_STORAGE_BUS_TYPE = 17i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeScm: VDS_STORAGE_BUS_TYPE = 18i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeUfs: VDS_STORAGE_BUS_TYPE = 19i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSBusTypeMaxReserved: VDS_STORAGE_BUS_TYPE = 127i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub struct VDS_STORAGE_DEVICE_ID_DESCRIPTOR {
@@ -2545,36 +2787,6 @@ impl ::core::clone::Clone for VDS_STORAGE_IDENTIFIER {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_STORAGE_IDENTIFIER_CODE_SET = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdCodeSetReserved: VDS_STORAGE_IDENTIFIER_CODE_SET = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdCodeSetBinary: VDS_STORAGE_IDENTIFIER_CODE_SET = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdCodeSetAscii: VDS_STORAGE_IDENTIFIER_CODE_SET = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdCodeSetUtf8: VDS_STORAGE_IDENTIFIER_CODE_SET = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_STORAGE_IDENTIFIER_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdTypeVendorSpecific: VDS_STORAGE_IDENTIFIER_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdTypeVendorId: VDS_STORAGE_IDENTIFIER_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdTypeEUI64: VDS_STORAGE_IDENTIFIER_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdTypeFCPHName: VDS_STORAGE_IDENTIFIER_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdTypePortRelative: VDS_STORAGE_IDENTIFIER_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdTypeTargetPortGroup: VDS_STORAGE_IDENTIFIER_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdTypeLogicalUnitGroup: VDS_STORAGE_IDENTIFIER_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdTypeMD5LogicalUnitIdentifier: VDS_STORAGE_IDENTIFIER_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDSStorageIdTypeScsiNameString: VDS_STORAGE_IDENTIFIER_TYPE = 8i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -2610,74 +2822,6 @@ impl ::core::clone::Clone for VDS_STORAGE_POOL_PROP {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_STORAGE_POOL_STATUS = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SPS_UNKNOWN: VDS_STORAGE_POOL_STATUS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SPS_ONLINE: VDS_STORAGE_POOL_STATUS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SPS_NOT_READY: VDS_STORAGE_POOL_STATUS = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SPS_OFFLINE: VDS_STORAGE_POOL_STATUS = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_STORAGE_POOL_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SPT_UNKNOWN: VDS_STORAGE_POOL_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SPT_PRIMORDIAL: VDS_STORAGE_POOL_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SPT_CONCRETE: VDS_STORAGE_POOL_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_SUB_SYSTEM_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_LUN_MASKING_CAPABLE: VDS_SUB_SYSTEM_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_LUN_PLEXING_CAPABLE: VDS_SUB_SYSTEM_FLAG = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_LUN_REMAPPING_CAPABLE: VDS_SUB_SYSTEM_FLAG = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_DRIVE_EXTENT_CAPABLE: VDS_SUB_SYSTEM_FLAG = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_HARDWARE_CHECKSUM_CAPABLE: VDS_SUB_SYSTEM_FLAG = 16i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_RADIUS_CAPABLE: VDS_SUB_SYSTEM_FLAG = 32i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_READ_BACK_VERIFY_CAPABLE: VDS_SUB_SYSTEM_FLAG = 64i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_WRITE_THROUGH_CACHING_CAPABLE: VDS_SUB_SYSTEM_FLAG = 128i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_FAULT_TOLERANT_LUNS: VDS_SUB_SYSTEM_FLAG = 512i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_NON_FAULT_TOLERANT_LUNS: VDS_SUB_SYSTEM_FLAG = 1024i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_SIMPLE_LUNS: VDS_SUB_SYSTEM_FLAG = 2048i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_SPAN_LUNS: VDS_SUB_SYSTEM_FLAG = 4096i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_STRIPE_LUNS: VDS_SUB_SYSTEM_FLAG = 8192i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_MIRROR_LUNS: VDS_SUB_SYSTEM_FLAG = 16384i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_PARITY_LUNS: VDS_SUB_SYSTEM_FLAG = 32768i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_AUTH_CHAP: VDS_SUB_SYSTEM_FLAG = 65536i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_AUTH_MUTUAL_CHAP: VDS_SUB_SYSTEM_FLAG = 131072i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_SIMPLE_TARGET_CONFIG: VDS_SUB_SYSTEM_FLAG = 262144i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_LUN_NUMBER: VDS_SUB_SYSTEM_FLAG = 524288i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_MIRRORED_CACHE: VDS_SUB_SYSTEM_FLAG = 1048576i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_READ_CACHING_CAPABLE: VDS_SUB_SYSTEM_FLAG = 2097152i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_WRITE_CACHING_CAPABLE: VDS_SUB_SYSTEM_FLAG = 4194304i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_MEDIA_SCAN_CAPABLE: VDS_SUB_SYSTEM_FLAG = 8388608i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_CONSISTENCY_CHECK_CAPABLE: VDS_SUB_SYSTEM_FLAG = 16777216i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub struct VDS_SUB_SYSTEM_NOTIFICATION {
@@ -2734,122 +2878,6 @@ impl ::core::clone::Clone for VDS_SUB_SYSTEM_PROP2 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_SUB_SYSTEM_STATUS = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SSS_UNKNOWN: VDS_SUB_SYSTEM_STATUS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SSS_ONLINE: VDS_SUB_SYSTEM_STATUS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SSS_NOT_READY: VDS_SUB_SYSTEM_STATUS = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SSS_OFFLINE: VDS_SUB_SYSTEM_STATUS = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SSS_FAILED: VDS_SUB_SYSTEM_STATUS = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SSS_PARTIALLY_MANAGED: VDS_SUB_SYSTEM_STATUS = 9i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID2_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID3_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID4_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID5_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID6_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 16i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID01_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 32i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID03_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 64i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID05_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 128i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID10_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 256i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID15_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 512i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID30_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 1024i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID50_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 2048i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID51_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 4096i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID53_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 8192i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID60_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 16384i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_SF_SUPPORTS_RAID61_LUNS: VDS_SUB_SYSTEM_SUPPORTED_RAID_TYPE_FLAG = 32768i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_ACCESS_PATH_NOT_DELETED: ::windows_sys::core::HRESULT = 279108i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_ALREADY_EXISTS: ::windows_sys::core::HRESULT = 272148i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_BOOT_PARTITION_NUMBER_CHANGE: ::windows_sys::core::HRESULT = 271414i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_DEFAULT_PLEX_MEMBER_IDS: ::windows_sys::core::HRESULT = 271640i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_DISK_DISMOUNT_FAILED: ::windows_sys::core::HRESULT = 272393i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_DISK_IS_MISSING: ::windows_sys::core::HRESULT = 271624i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_DISK_MOUNT_FAILED: ::windows_sys::core::HRESULT = 272392i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_DISK_PARTIALLY_CLEANED: ::windows_sys::core::HRESULT = 271386i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_DISMOUNT_FAILED: ::windows_sys::core::HRESULT = 271735i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_EXTEND_FILE_SYSTEM_FAILED: ::windows_sys::core::HRESULT = 271461i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_FS_LOCK: ::windows_sys::core::HRESULT = 271747i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_GPT_BOOT_MIRRORED_TO_MBR: ::windows_sys::core::HRESULT = -2147212183i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_IA64_BOOT_MIRRORED_TO_MBR: ::windows_sys::core::HRESULT = 271450i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_IN_PROGRESS: ::windows_sys::core::HRESULT = 271437i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_ISCSI_LOGIN_ALREAD_EXISTS: ::windows_sys::core::HRESULT = 272386i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_ISCSI_PERSISTENT_LOGIN_MAY_NOT_BE_REMOVED: ::windows_sys::core::HRESULT = 272385i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_ISCSI_SESSION_NOT_FOUND_PERSISTENT_LOGIN_REMOVED: ::windows_sys::core::HRESULT = 272384i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_MBR_BOOT_MIRRORED_TO_GPT: ::windows_sys::core::HRESULT = 271463i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_NAME_TRUNCATED: ::windows_sys::core::HRESULT = 272128i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_NONCONFORMANT_PARTITION_INFO: ::windows_sys::core::HRESULT = 271626i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_NO_NOTIFICATION: ::windows_sys::core::HRESULT = 271639i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_PLEX_NOT_LOADED_TO_CACHE: ::windows_sys::core::HRESULT = 271755i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_PROPERTIES_INCOMPLETE: ::windows_sys::core::HRESULT = 272149i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_PROVIDER_ERROR_LOADING_CACHE: ::windows_sys::core::HRESULT = 271393i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_REMOUNT_FAILED: ::windows_sys::core::HRESULT = 271736i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_RESYNC_NOTIFICATION_TASK_FAILED: ::windows_sys::core::HRESULT = 271738i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_STATUSES_INCOMPLETELY_SET: ::windows_sys::core::HRESULT = 272130i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_SYSTEM_PARTITION: ::windows_sys::core::HRESULT = 271630i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_UNABLE_TO_GET_GPT_ATTRIBUTES: ::windows_sys::core::HRESULT = 271451i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_UPDATE_BOOTFILE_FAILED: ::windows_sys::core::HRESULT = 271412i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_VOLUME_COMPRESS_FAILED: ::windows_sys::core::HRESULT = 271427i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_VSS_FLUSH_AND_HOLD_WRITES: ::windows_sys::core::HRESULT = 271745i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_VSS_RELEASE_WRITES: ::windows_sys::core::HRESULT = 271746i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_S_WINPE_BOOTENTRY: ::windows_sys::core::HRESULT = 271758i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub struct VDS_TARGET_NOTIFICATION {
@@ -2862,32 +2890,6 @@ impl ::core::clone::Clone for VDS_TARGET_NOTIFICATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_TRANSITION_STATE = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_TS_UNKNOWN: VDS_TRANSITION_STATE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_TS_STABLE: VDS_TRANSITION_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_TS_EXTENDING: VDS_TRANSITION_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_TS_SHRINKING: VDS_TRANSITION_STATE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_TS_RECONFIGING: VDS_TRANSITION_STATE = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_TS_RESTRIPING: VDS_TRANSITION_STATE = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub type VDS_VERSION_SUPPORT_FLAG = i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_VSF_1_0: VDS_VERSION_SUPPORT_FLAG = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_VSF_1_1: VDS_VERSION_SUPPORT_FLAG = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_VSF_2_0: VDS_VERSION_SUPPORT_FLAG = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_VSF_2_1: VDS_VERSION_SUPPORT_FLAG = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VDS_VSF_3_0: VDS_VERSION_SUPPORT_FLAG = 16i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
 pub struct VDS_VOLUME_NOTIFICATION {
@@ -2913,5 +2915,3 @@ impl ::core::clone::Clone for VDS_WWN {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_VirtualDiskService\"`*"]
-pub const VER_VDS_LUN_INFORMATION: u32 = 1u32;

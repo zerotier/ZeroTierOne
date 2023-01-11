@@ -1,6 +1,6 @@
 #[cfg(feature = "Win32_System_Search_Common")]
 pub mod Common;
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_Search\"`*"]
     pub fn ODBCGetTryWaitValue() -> u32;
@@ -489,64 +489,181 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_System_Search\"`*"]
     pub fn dbprtypeW(param0: i32) -> ::windows_sys::core::PWSTR;
 }
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type ACCESS_MASKENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_EXCLUSIVE: ACCESS_MASKENUM = 512i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_READDESIGN: ACCESS_MASKENUM = 1024i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_WRITEDESIGN: ACCESS_MASKENUM = 2048i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_WITHGRANT: ACCESS_MASKENUM = 4096i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_REFERENCE: ACCESS_MASKENUM = 8192i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_CREATE: ACCESS_MASKENUM = 16384i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_INSERT: ACCESS_MASKENUM = 32768i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_DELETE: ACCESS_MASKENUM = 65536i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_READCONTROL: ACCESS_MASKENUM = 131072i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_WRITEPERMISSIONS: ACCESS_MASKENUM = 262144i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_WRITEOWNER: ACCESS_MASKENUM = 524288i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_MAXIMUM_ALLOWED: ACCESS_MASKENUM = 33554432i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_ALL: ACCESS_MASKENUM = 268435456i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_EXECUTE: ACCESS_MASKENUM = 536870912i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_READ: ACCESS_MASKENUM = -2147483648i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_UPDATE: ACCESS_MASKENUM = 1073741824i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PERM_DROP: ACCESS_MASKENUM = 256i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct AUTHENTICATION_INFO {
-    pub dwSize: u32,
-    pub atAuthenticationType: AUTH_TYPE,
-    pub pcwszUser: ::windows_sys::core::PCWSTR,
-    pub pcwszPassword: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for AUTHENTICATION_INFO {}
-impl ::core::clone::Clone for AUTHENTICATION_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type AUTH_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const eAUTH_TYPE_ANONYMOUS: AUTH_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const eAUTH_TYPE_NTLM: AUTH_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const eAUTH_TYPE_BASIC: AUTH_TYPE = 2i32;
+pub type DataSource = *mut ::core::ffi::c_void;
+pub type DataSourceListener = *mut ::core::ffi::c_void;
+pub type DataSourceObject = *mut ::core::ffi::c_void;
+pub type IAccessor = *mut ::core::ffi::c_void;
+pub type IAlterIndex = *mut ::core::ffi::c_void;
+pub type IAlterTable = *mut ::core::ffi::c_void;
+pub type IBindResource = *mut ::core::ffi::c_void;
+pub type IChapteredRowset = *mut ::core::ffi::c_void;
+pub type IColumnMapper = *mut ::core::ffi::c_void;
+pub type IColumnMapperCreator = *mut ::core::ffi::c_void;
+pub type IColumnsInfo = *mut ::core::ffi::c_void;
+pub type IColumnsInfo2 = *mut ::core::ffi::c_void;
+pub type IColumnsRowset = *mut ::core::ffi::c_void;
+pub type ICommand = *mut ::core::ffi::c_void;
+pub type ICommandCost = *mut ::core::ffi::c_void;
+pub type ICommandPersist = *mut ::core::ffi::c_void;
+pub type ICommandPrepare = *mut ::core::ffi::c_void;
+pub type ICommandProperties = *mut ::core::ffi::c_void;
+pub type ICommandStream = *mut ::core::ffi::c_void;
+pub type ICommandText = *mut ::core::ffi::c_void;
+pub type ICommandValidate = *mut ::core::ffi::c_void;
+pub type ICommandWithParameters = *mut ::core::ffi::c_void;
+pub type ICondition = *mut ::core::ffi::c_void;
+pub type ICondition2 = *mut ::core::ffi::c_void;
+pub type IConditionFactory = *mut ::core::ffi::c_void;
+pub type IConditionFactory2 = *mut ::core::ffi::c_void;
+pub type IConditionGenerator = *mut ::core::ffi::c_void;
+pub type IConvertType = *mut ::core::ffi::c_void;
+pub type ICreateRow = *mut ::core::ffi::c_void;
+pub type IDBAsynchNotify = *mut ::core::ffi::c_void;
+pub type IDBAsynchStatus = *mut ::core::ffi::c_void;
+pub type IDBBinderProperties = *mut ::core::ffi::c_void;
+pub type IDBCreateCommand = *mut ::core::ffi::c_void;
+pub type IDBCreateSession = *mut ::core::ffi::c_void;
+pub type IDBDataSourceAdmin = *mut ::core::ffi::c_void;
+pub type IDBInfo = *mut ::core::ffi::c_void;
+pub type IDBInitialize = *mut ::core::ffi::c_void;
+pub type IDBPromptInitialize = *mut ::core::ffi::c_void;
+pub type IDBProperties = *mut ::core::ffi::c_void;
+pub type IDBSchemaCommand = *mut ::core::ffi::c_void;
+pub type IDBSchemaRowset = *mut ::core::ffi::c_void;
+pub type IDCInfo = *mut ::core::ffi::c_void;
+pub type IDataConvert = *mut ::core::ffi::c_void;
+pub type IDataInitialize = *mut ::core::ffi::c_void;
+pub type IDataSourceLocator = *mut ::core::ffi::c_void;
+pub type IEntity = *mut ::core::ffi::c_void;
+pub type IEnumItemProperties = *mut ::core::ffi::c_void;
+pub type IEnumSearchRoots = *mut ::core::ffi::c_void;
+pub type IEnumSearchScopeRules = *mut ::core::ffi::c_void;
+pub type IEnumSubscription = *mut ::core::ffi::c_void;
+pub type IErrorLookup = *mut ::core::ffi::c_void;
+pub type IErrorRecords = *mut ::core::ffi::c_void;
+pub type IGetDataSource = *mut ::core::ffi::c_void;
+pub type IGetRow = *mut ::core::ffi::c_void;
+pub type IGetSession = *mut ::core::ffi::c_void;
+pub type IGetSourceRow = *mut ::core::ffi::c_void;
+pub type IIndexDefinition = *mut ::core::ffi::c_void;
+pub type IInterval = *mut ::core::ffi::c_void;
+pub type ILoadFilter = *mut ::core::ffi::c_void;
+pub type ILoadFilterWithPrivateComActivation = *mut ::core::ffi::c_void;
+pub type IMDDataset = *mut ::core::ffi::c_void;
+pub type IMDFind = *mut ::core::ffi::c_void;
+pub type IMDRangeRowset = *mut ::core::ffi::c_void;
+pub type IMetaData = *mut ::core::ffi::c_void;
+pub type IMultipleResults = *mut ::core::ffi::c_void;
+pub type INamedEntity = *mut ::core::ffi::c_void;
+pub type INamedEntityCollector = *mut ::core::ffi::c_void;
+pub type IObjectAccessControl = *mut ::core::ffi::c_void;
+pub type IOpLockStatus = *mut ::core::ffi::c_void;
+pub type IOpenRowset = *mut ::core::ffi::c_void;
+pub type IParentRowset = *mut ::core::ffi::c_void;
+pub type IProtocolHandlerSite = *mut ::core::ffi::c_void;
+pub type IProvideMoniker = *mut ::core::ffi::c_void;
+pub type IQueryParser = *mut ::core::ffi::c_void;
+pub type IQueryParserManager = *mut ::core::ffi::c_void;
+pub type IQuerySolution = *mut ::core::ffi::c_void;
+pub type IReadData = *mut ::core::ffi::c_void;
+pub type IRegisterProvider = *mut ::core::ffi::c_void;
+pub type IRelationship = *mut ::core::ffi::c_void;
+pub type IRichChunk = *mut ::core::ffi::c_void;
+pub type IRow = *mut ::core::ffi::c_void;
+pub type IRowChange = *mut ::core::ffi::c_void;
+pub type IRowPosition = *mut ::core::ffi::c_void;
+pub type IRowPositionChange = *mut ::core::ffi::c_void;
+pub type IRowSchemaChange = *mut ::core::ffi::c_void;
+pub type IRowset = *mut ::core::ffi::c_void;
+pub type IRowsetAsynch = *mut ::core::ffi::c_void;
+pub type IRowsetBookmark = *mut ::core::ffi::c_void;
+pub type IRowsetChange = *mut ::core::ffi::c_void;
+pub type IRowsetChangeExtInfo = *mut ::core::ffi::c_void;
+pub type IRowsetChapterMember = *mut ::core::ffi::c_void;
+pub type IRowsetCopyRows = *mut ::core::ffi::c_void;
+pub type IRowsetCurrentIndex = *mut ::core::ffi::c_void;
+pub type IRowsetEvents = *mut ::core::ffi::c_void;
+pub type IRowsetFastLoad = *mut ::core::ffi::c_void;
+pub type IRowsetFind = *mut ::core::ffi::c_void;
+pub type IRowsetIdentity = *mut ::core::ffi::c_void;
+pub type IRowsetIndex = *mut ::core::ffi::c_void;
+pub type IRowsetInfo = *mut ::core::ffi::c_void;
+pub type IRowsetKeys = *mut ::core::ffi::c_void;
+pub type IRowsetLocate = *mut ::core::ffi::c_void;
+pub type IRowsetNewRowAfter = *mut ::core::ffi::c_void;
+pub type IRowsetNextRowset = *mut ::core::ffi::c_void;
+pub type IRowsetNotify = *mut ::core::ffi::c_void;
+pub type IRowsetPrioritization = *mut ::core::ffi::c_void;
+pub type IRowsetQueryStatus = *mut ::core::ffi::c_void;
+pub type IRowsetRefresh = *mut ::core::ffi::c_void;
+pub type IRowsetResynch = *mut ::core::ffi::c_void;
+pub type IRowsetScroll = *mut ::core::ffi::c_void;
+pub type IRowsetUpdate = *mut ::core::ffi::c_void;
+pub type IRowsetView = *mut ::core::ffi::c_void;
+pub type IRowsetWatchAll = *mut ::core::ffi::c_void;
+pub type IRowsetWatchNotify = *mut ::core::ffi::c_void;
+pub type IRowsetWatchRegion = *mut ::core::ffi::c_void;
+pub type IRowsetWithParameters = *mut ::core::ffi::c_void;
+pub type ISQLErrorInfo = *mut ::core::ffi::c_void;
+pub type ISQLGetDiagField = *mut ::core::ffi::c_void;
+pub type ISQLRequestDiagFields = *mut ::core::ffi::c_void;
+pub type ISQLServerErrorInfo = *mut ::core::ffi::c_void;
+pub type ISchemaLocalizerSupport = *mut ::core::ffi::c_void;
+pub type ISchemaLock = *mut ::core::ffi::c_void;
+pub type ISchemaProvider = *mut ::core::ffi::c_void;
+pub type IScopedOperations = *mut ::core::ffi::c_void;
+pub type ISearchCatalogManager = *mut ::core::ffi::c_void;
+pub type ISearchCatalogManager2 = *mut ::core::ffi::c_void;
+pub type ISearchCrawlScopeManager = *mut ::core::ffi::c_void;
+pub type ISearchCrawlScopeManager2 = *mut ::core::ffi::c_void;
+pub type ISearchItemsChangedSink = *mut ::core::ffi::c_void;
+pub type ISearchLanguageSupport = *mut ::core::ffi::c_void;
+pub type ISearchManager = *mut ::core::ffi::c_void;
+pub type ISearchManager2 = *mut ::core::ffi::c_void;
+pub type ISearchNotifyInlineSite = *mut ::core::ffi::c_void;
+pub type ISearchPersistentItemsChangedSink = *mut ::core::ffi::c_void;
+pub type ISearchProtocol = *mut ::core::ffi::c_void;
+pub type ISearchProtocol2 = *mut ::core::ffi::c_void;
+pub type ISearchProtocolThreadContext = *mut ::core::ffi::c_void;
+pub type ISearchQueryHelper = *mut ::core::ffi::c_void;
+pub type ISearchQueryHits = *mut ::core::ffi::c_void;
+pub type ISearchRoot = *mut ::core::ffi::c_void;
+pub type ISearchScopeRule = *mut ::core::ffi::c_void;
+pub type ISearchViewChangedSink = *mut ::core::ffi::c_void;
+pub type ISecurityInfo = *mut ::core::ffi::c_void;
+pub type IService = *mut ::core::ffi::c_void;
+pub type ISessionProperties = *mut ::core::ffi::c_void;
+pub type ISimpleCommandCreator = *mut ::core::ffi::c_void;
+pub type ISourcesRowset = *mut ::core::ffi::c_void;
+pub type IStemmer = *mut ::core::ffi::c_void;
+pub type ISubscriptionItem = *mut ::core::ffi::c_void;
+pub type ISubscriptionMgr = *mut ::core::ffi::c_void;
+pub type ISubscriptionMgr2 = *mut ::core::ffi::c_void;
+pub type ITableCreation = *mut ::core::ffi::c_void;
+pub type ITableDefinition = *mut ::core::ffi::c_void;
+pub type ITableDefinitionWithConstraints = *mut ::core::ffi::c_void;
+pub type ITableRename = *mut ::core::ffi::c_void;
+pub type ITokenCollection = *mut ::core::ffi::c_void;
+pub type ITransactionJoin = *mut ::core::ffi::c_void;
+pub type ITransactionLocal = *mut ::core::ffi::c_void;
+pub type ITransactionObject = *mut ::core::ffi::c_void;
+pub type ITrusteeAdmin = *mut ::core::ffi::c_void;
+pub type ITrusteeGroupAdmin = *mut ::core::ffi::c_void;
+pub type IUMS = *mut ::core::ffi::c_void;
+pub type IUMSInitialize = *mut ::core::ffi::c_void;
+pub type IUrlAccessor = *mut ::core::ffi::c_void;
+pub type IUrlAccessor2 = *mut ::core::ffi::c_void;
+pub type IUrlAccessor3 = *mut ::core::ffi::c_void;
+pub type IUrlAccessor4 = *mut ::core::ffi::c_void;
+pub type IViewChapter = *mut ::core::ffi::c_void;
+pub type IViewFilter = *mut ::core::ffi::c_void;
+pub type IViewRowset = *mut ::core::ffi::c_void;
+pub type IViewSort = *mut ::core::ffi::c_void;
+pub type IWordBreaker = *mut ::core::ffi::c_void;
+pub type IWordFormSink = *mut ::core::ffi::c_void;
+pub type IWordSink = *mut ::core::ffi::c_void;
+pub type OLEDBSimpleProvider = *mut ::core::ffi::c_void;
+pub type OLEDBSimpleProviderListener = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const BCP6xFILEFMT: u32 = 9u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -607,75 +724,10 @@ pub const BMK_DURABILITY_REORGANIZATION: i32 = 3i32;
 pub const BMK_DURABILITY_ROWSET: i32 = 0i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const BMK_DURABILITY_XTRANSACTION: i32 = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct BUCKETCATEGORIZE {
-    pub cBuckets: u32,
-    pub Distribution: u32,
-}
-impl ::core::marker::Copy for BUCKETCATEGORIZE {}
-impl ::core::clone::Clone for BUCKETCATEGORIZE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const BUCKET_EXPONENTIAL: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const BUCKET_LINEAR: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type CASE_REQUIREMENT = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CASE_REQUIREMENT_ANY: CASE_REQUIREMENT = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CASE_REQUIREMENT_UPPER_IF_AQS: CASE_REQUIREMENT = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct CATEGORIZATION {
-    pub ulCatType: u32,
-    pub Anonymous: CATEGORIZATION_0,
-    pub csColumns: COLUMNSET,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for CATEGORIZATION {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for CATEGORIZATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub union CATEGORIZATION_0 {
-    pub cClusters: u32,
-    pub bucket: BUCKETCATEGORIZE,
-    pub range: RANGECATEGORIZE,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for CATEGORIZATION_0 {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for CATEGORIZATION_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct CATEGORIZATIONSET {
-    pub cCat: u32,
-    pub aCat: *mut CATEGORIZATION,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for CATEGORIZATIONSET {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for CATEGORIZATIONSET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const CATEGORIZE_BUCKETS: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -700,16 +752,6 @@ pub const CDBCOLDISPIDS: u32 = 28u32;
 pub const CDBSELFDISPIDS: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const CERT_E_NOT_FOUND_OR_NO_PERMISSSION: i32 = -2147211263i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type CHANNEL_AGENT_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CHANNEL_AGENT_DYNAMIC_SCHEDULE: CHANNEL_AGENT_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CHANNEL_AGENT_PRECACHE_SOME: CHANNEL_AGENT_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CHANNEL_AGENT_PRECACHE_ALL: CHANNEL_AGENT_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CHANNEL_AGENT_PRECACHE_SCRNSAVER: CHANNEL_AGENT_FLAGS = 8i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const CI_E_CORRUPT_FWIDX: ::windows_sys::core::HRESULT = -1073473491i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -747,16 +789,6 @@ pub const CLSID_MSPersist: ::windows_sys::core::GUID = ::windows_sys::core::GUID
 pub const CLSID_SQLOLEDB: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 209711468, data2: 14563, data3: 4560, data4: [151, 171, 0, 192, 79, 194, 173, 152] };
 pub const CLSID_SQLOLEDB_ENUMERATOR: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3751947150, data2: 59021, data3: 4560, data4: [151, 228, 0, 192, 79, 194, 173, 152] };
 pub const CLSID_SQLOLEDB_ERROR: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3230870626, data2: 14565, data3: 4560, data4: [151, 171, 0, 192, 79, 194, 173, 152] };
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type CLUSION_REASON = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CLUSIONREASON_UNKNOWNSCOPE: CLUSION_REASON = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CLUSIONREASON_DEFAULT: CLUSION_REASON = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CLUSIONREASON_USER: CLUSION_REASON = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CLUSIONREASON_GROUPPOLICY: CLUSION_REASON = 3i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const CMDLINE_E_ALREADY_INIT: i32 = -2147216123i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -811,54 +843,6 @@ pub const COLL_E_NOMOREDATA: i32 = -2147220222i32;
 pub const COLL_E_NOSORTCOLUMN: i32 = -2147220217i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const COLL_E_TOOMANYMERGECOLUMNS: i32 = -2147220215i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct COLUMNSET {
-    pub cCol: u32,
-    pub aCol: *mut super::super::Storage::IndexServer::FULLPROPSPEC,
-}
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for COLUMNSET {}
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for COLUMNSET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type CONDITION_CREATION_OPTIONS = u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CONDITION_CREATION_DEFAULT: CONDITION_CREATION_OPTIONS = 0u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CONDITION_CREATION_NONE: CONDITION_CREATION_OPTIONS = 0u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CONDITION_CREATION_SIMPLIFY: CONDITION_CREATION_OPTIONS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CONDITION_CREATION_VECTOR_AND: CONDITION_CREATION_OPTIONS = 2u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CONDITION_CREATION_VECTOR_OR: CONDITION_CREATION_OPTIONS = 4u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CONDITION_CREATION_VECTOR_LEAF: CONDITION_CREATION_OPTIONS = 8u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CONDITION_CREATION_USE_CONTENT_LOCALE: CONDITION_CREATION_OPTIONS = 16u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct CONTENTRESTRICTION {
-    pub prop: super::super::Storage::IndexServer::FULLPROPSPEC,
-    pub pwcsPhrase: ::windows_sys::core::PWSTR,
-    pub lcid: u32,
-    pub ulGenerateMethod: u32,
-}
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for CONTENTRESTRICTION {}
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for CONTENTRESTRICTION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const CONTENT_SOURCE_E_CONTENT_CLASS_READ: i32 = -2147208188i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -883,18 +867,6 @@ pub const CQUERYDISPIDS: u32 = 11u32;
 pub const CQUERYMETADISPIDS: u32 = 10u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const CQUERYPROPERTY: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type CREATESUBSCRIPTIONFLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CREATESUBS_ADDTOFAVORITES: CREATESUBSCRIPTIONFLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CREATESUBS_FROMFAVORITES: CREATESUBSCRIPTIONFLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CREATESUBS_NOUI: CREATESUBSCRIPTIONFLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CREATESUBS_NOSAVE: CREATESUBSCRIPTIONFLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CREATESUBS_SOFTWAREUPDATE: CREATESUBSCRIPTIONFLAGS = 16i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const CRESTRICTIONS_DBSCHEMA_ASSERTIONS: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -997,1182 +969,18 @@ pub const CSearchLanguageSupport: ::windows_sys::core::GUID = ::windows_sys::cor
 pub const CSearchManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2097769567, data2: 44040, data3: 20255, data4: [190, 183, 92, 34, 197, 23, 206, 57] };
 pub const CSearchRoot: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 813067218, data2: 59932, data3: 20264, data4: [191, 39, 11, 68, 226, 246, 141, 183] };
 pub const CSearchScopeRule: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3862816592, data2: 15319, data3: 19429, data4: [156, 132, 107, 66, 129, 152, 140, 68] };
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type CatalogPausedReason = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_PAUSED_REASON_NONE: CatalogPausedReason = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_PAUSED_REASON_HIGH_IO: CatalogPausedReason = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_PAUSED_REASON_HIGH_CPU: CatalogPausedReason = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_PAUSED_REASON_HIGH_NTF_RATE: CatalogPausedReason = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_PAUSED_REASON_LOW_BATTERY: CatalogPausedReason = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_PAUSED_REASON_LOW_MEMORY: CatalogPausedReason = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_PAUSED_REASON_LOW_DISK: CatalogPausedReason = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_PAUSED_REASON_DELAYED_RECOVERY: CatalogPausedReason = 7i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_PAUSED_REASON_USER_ACTIVE: CatalogPausedReason = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_PAUSED_REASON_EXTERNAL: CatalogPausedReason = 9i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_PAUSED_REASON_UPGRADING: CatalogPausedReason = 10i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type CatalogStatus = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_STATUS_IDLE: CatalogStatus = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_STATUS_PAUSED: CatalogStatus = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_STATUS_RECOVERING: CatalogStatus = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_STATUS_FULL_CRAWL: CatalogStatus = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_STATUS_INCREMENTAL_CRAWL: CatalogStatus = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_STATUS_PROCESSING_NOTIFICATIONS: CatalogStatus = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const CATALOG_STATUS_SHUTTING_DOWN: CatalogStatus = 6i32;
 pub const CompoundCondition: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 292523283, data2: 4126, data3: 20389, data4: [132, 212, 255, 130, 121, 56, 25, 53] };
 pub const ConditionFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3762193840, data2: 31715, data3: 16384, data4: [186, 152, 108, 19, 222, 159, 164, 134] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct DATE_STRUCT {
-    pub year: i16,
-    pub month: u16,
-    pub day: u16,
-}
-impl ::core::marker::Copy for DATE_STRUCT {}
-impl ::core::clone::Clone for DATE_STRUCT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBACCESSORFLAGSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBACCESSOR_INVALID: DBACCESSORFLAGSENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBACCESSOR_PASSBYREF: DBACCESSORFLAGSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBACCESSOR_ROWDATA: DBACCESSORFLAGSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBACCESSOR_PARAMETERDATA: DBACCESSORFLAGSENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBACCESSOR_OPTIMIZED: DBACCESSORFLAGSENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBACCESSOR_INHERITED: DBACCESSORFLAGSENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBASYNCHOPENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBASYNCHOP_OPEN: DBASYNCHOPENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBASYNCHPHASEENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBASYNCHPHASE_INITIALIZATION: DBASYNCHPHASEENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBASYNCHPHASE_POPULATION: DBASYNCHPHASEENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBASYNCHPHASE_COMPLETE: DBASYNCHPHASEENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBASYNCHPHASE_CANCELED: DBASYNCHPHASEENUM = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct DBBINDEXT {
-    pub pExtension: *mut u8,
-    pub ulExtension: usize,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for DBBINDEXT {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for DBBINDEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct DBBINDEXT {
-    pub pExtension: *mut u8,
-    pub ulExtension: usize,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for DBBINDEXT {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for DBBINDEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBBINDFLAGENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDFLAG_HTML: DBBINDFLAGENUM = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_System_Com\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Com")]
-pub struct DBBINDING {
-    pub iOrdinal: usize,
-    pub obValue: usize,
-    pub obLength: usize,
-    pub obStatus: usize,
-    pub pTypeInfo: super::Com::ITypeInfo,
-    pub pObject: *mut DBOBJECT,
-    pub pBindExt: *mut DBBINDEXT,
-    pub dwPart: u32,
-    pub dwMemOwner: u32,
-    pub eParamIO: u32,
-    pub cbMaxLen: usize,
-    pub dwFlags: u32,
-    pub wType: u16,
-    pub bPrecision: u8,
-    pub bScale: u8,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::marker::Copy for DBBINDING {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::clone::Clone for DBBINDING {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_System_Com\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Com")]
-pub struct DBBINDING {
-    pub iOrdinal: usize,
-    pub obValue: usize,
-    pub obLength: usize,
-    pub obStatus: usize,
-    pub pTypeInfo: super::Com::ITypeInfo,
-    pub pObject: *mut DBOBJECT,
-    pub pBindExt: *mut DBBINDEXT,
-    pub dwPart: u32,
-    pub dwMemOwner: u32,
-    pub eParamIO: u32,
-    pub cbMaxLen: usize,
-    pub dwFlags: u32,
-    pub wType: u16,
-    pub bPrecision: u8,
-    pub bScale: u8,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::marker::Copy for DBBINDING {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::clone::Clone for DBBINDING {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBBINDSTATUSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDSTATUS_OK: DBBINDSTATUSENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDSTATUS_BADORDINAL: DBBINDSTATUSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDSTATUS_UNSUPPORTEDCONVERSION: DBBINDSTATUSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDSTATUS_BADBINDINFO: DBBINDSTATUSENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDSTATUS_BADSTORAGEFLAGS: DBBINDSTATUSENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDSTATUS_NOINTERFACE: DBBINDSTATUSENUM = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDSTATUS_MULTIPLESTORAGE: DBBINDSTATUSENUM = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBBINDURLFLAGENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_READ: DBBINDURLFLAGENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_WRITE: DBBINDURLFLAGENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_READWRITE: DBBINDURLFLAGENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_SHARE_DENY_READ: DBBINDURLFLAGENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_SHARE_DENY_WRITE: DBBINDURLFLAGENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_SHARE_EXCLUSIVE: DBBINDURLFLAGENUM = 12i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_SHARE_DENY_NONE: DBBINDURLFLAGENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_ASYNCHRONOUS: DBBINDURLFLAGENUM = 4096i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_COLLECTION: DBBINDURLFLAGENUM = 8192i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_DELAYFETCHSTREAM: DBBINDURLFLAGENUM = 16384i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_DELAYFETCHCOLUMNS: DBBINDURLFLAGENUM = 32768i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_RECURSIVE: DBBINDURLFLAGENUM = 4194304i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_OUTPUT: DBBINDURLFLAGENUM = 8388608i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_WAITFORINIT: DBBINDURLFLAGENUM = 16777216i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_OPENIFEXISTS: DBBINDURLFLAGENUM = 33554432i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_OVERWRITE: DBBINDURLFLAGENUM = 67108864i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLFLAG_ISSTRUCTUREDDOCUMENT: DBBINDURLFLAGENUM = 134217728i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBBINDURLSTATUSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLSTATUS_S_OK: DBBINDURLSTATUSENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLSTATUS_S_DENYNOTSUPPORTED: DBBINDURLSTATUSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLSTATUS_S_DENYTYPENOTSUPPORTED: DBBINDURLSTATUSENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBINDURLSTATUS_S_REDIRECTED: DBBINDURLSTATUSENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBBOOKMARK = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBMK_INVALID: DBBOOKMARK = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBMK_FIRST: DBBOOKMARK = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBBMK_LAST: DBBOOKMARK = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-pub struct DBCOLUMNACCESS {
-    pub pData: *mut ::core::ffi::c_void,
-    pub columnid: super::super::Storage::IndexServer::DBID,
-    pub cbDataLen: usize,
-    pub dwStatus: u32,
-    pub cbMaxLen: usize,
-    pub dwReserved: usize,
-    pub wType: u16,
-    pub bPrecision: u8,
-    pub bScale: u8,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::marker::Copy for DBCOLUMNACCESS {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::clone::Clone for DBCOLUMNACCESS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-pub struct DBCOLUMNACCESS {
-    pub pData: *mut ::core::ffi::c_void,
-    pub columnid: super::super::Storage::IndexServer::DBID,
-    pub cbDataLen: usize,
-    pub dwStatus: u32,
-    pub cbMaxLen: usize,
-    pub dwReserved: usize,
-    pub wType: u16,
-    pub bPrecision: u8,
-    pub bScale: u8,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::marker::Copy for DBCOLUMNACCESS {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::clone::Clone for DBCOLUMNACCESS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DBCOLUMNDESC {
-    pub pwszTypeName: ::windows_sys::core::PWSTR,
-    pub pTypeInfo: super::Com::ITypeInfo,
-    pub rgPropertySets: *mut DBPROPSET,
-    pub pclsid: *mut ::windows_sys::core::GUID,
-    pub cPropertySets: u32,
-    pub ulColumnSize: usize,
-    pub dbcid: super::super::Storage::IndexServer::DBID,
-    pub wType: u16,
-    pub bPrecision: u8,
-    pub bScale: u8,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DBCOLUMNDESC {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DBCOLUMNDESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DBCOLUMNDESC {
-    pub pwszTypeName: ::windows_sys::core::PWSTR,
-    pub pTypeInfo: super::Com::ITypeInfo,
-    pub rgPropertySets: *mut DBPROPSET,
-    pub pclsid: *mut ::windows_sys::core::GUID,
-    pub cPropertySets: u32,
-    pub ulColumnSize: usize,
-    pub dbcid: super::super::Storage::IndexServer::DBID,
-    pub wType: u16,
-    pub bPrecision: u8,
-    pub bScale: u8,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DBCOLUMNDESC {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DBCOLUMNDESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOLUMNDESCFLAGSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNDESCFLAGS_TYPENAME: DBCOLUMNDESCFLAGSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNDESCFLAGS_ITYPEINFO: DBCOLUMNDESCFLAGSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNDESCFLAGS_PROPERTIES: DBCOLUMNDESCFLAGSENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNDESCFLAGS_CLSID: DBCOLUMNDESCFLAGSENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNDESCFLAGS_COLSIZE: DBCOLUMNDESCFLAGSENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNDESCFLAGS_DBCID: DBCOLUMNDESCFLAGSENUM = 32i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNDESCFLAGS_WTYPE: DBCOLUMNDESCFLAGSENUM = 64i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNDESCFLAGS_PRECISION: DBCOLUMNDESCFLAGSENUM = 128i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNDESCFLAGS_SCALE: DBCOLUMNDESCFLAGSENUM = 256i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOLUMNFLAGS15ENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISCHAPTER: DBCOLUMNFLAGS15ENUM = 8192i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOLUMNFLAGSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISBOOKMARK: DBCOLUMNFLAGSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_MAYDEFER: DBCOLUMNFLAGSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_WRITE: DBCOLUMNFLAGSENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_WRITEUNKNOWN: DBCOLUMNFLAGSENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISFIXEDLENGTH: DBCOLUMNFLAGSENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISNULLABLE: DBCOLUMNFLAGSENUM = 32i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_MAYBENULL: DBCOLUMNFLAGSENUM = 64i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISLONG: DBCOLUMNFLAGSENUM = 128i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISROWID: DBCOLUMNFLAGSENUM = 256i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISROWVER: DBCOLUMNFLAGSENUM = 512i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_CACHEDEFERRED: DBCOLUMNFLAGSENUM = 4096i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOLUMNFLAGSENUM20 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_SCALEISNEGATIVE: DBCOLUMNFLAGSENUM20 = 16384i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_RESERVED: DBCOLUMNFLAGSENUM20 = 32768i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOLUMNFLAGSENUM21 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISROWURL: DBCOLUMNFLAGSENUM21 = 65536i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISDEFAULTSTREAM: DBCOLUMNFLAGSENUM21 = 131072i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISCOLLECTION: DBCOLUMNFLAGSENUM21 = 262144i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOLUMNFLAGSENUM26 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISSTREAM: DBCOLUMNFLAGSENUM26 = 524288i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISROWSET: DBCOLUMNFLAGSENUM26 = 1048576i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ISROW: DBCOLUMNFLAGSENUM26 = 2097152i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOLUMNFLAGS_ROWSPECIFICCOLUMN: DBCOLUMNFLAGSENUM26 = 4194304i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com"))]
-pub struct DBCOLUMNINFO {
-    pub pwszName: ::windows_sys::core::PWSTR,
-    pub pTypeInfo: super::Com::ITypeInfo,
-    pub iOrdinal: usize,
-    pub dwFlags: u32,
-    pub ulColumnSize: usize,
-    pub wType: u16,
-    pub bPrecision: u8,
-    pub bScale: u8,
-    pub columnid: super::super::Storage::IndexServer::DBID,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com"))]
-impl ::core::marker::Copy for DBCOLUMNINFO {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com"))]
-impl ::core::clone::Clone for DBCOLUMNINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com"))]
-pub struct DBCOLUMNINFO {
-    pub pwszName: ::windows_sys::core::PWSTR,
-    pub pTypeInfo: super::Com::ITypeInfo,
-    pub iOrdinal: usize,
-    pub dwFlags: u32,
-    pub ulColumnSize: usize,
-    pub wType: u16,
-    pub bPrecision: u8,
-    pub bScale: u8,
-    pub columnid: super::super::Storage::IndexServer::DBID,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com"))]
-impl ::core::marker::Copy for DBCOLUMNINFO {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com"))]
-impl ::core::clone::Clone for DBCOLUMNINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOMMANDPERSISTFLAGENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMMANDPERSISTFLAG_NOSAVE: DBCOMMANDPERSISTFLAGENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOMMANDPERSISTFLAGENUM21 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMMANDPERSISTFLAG_DEFAULT: DBCOMMANDPERSISTFLAGENUM21 = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMMANDPERSISTFLAG_PERSISTVIEW: DBCOMMANDPERSISTFLAGENUM21 = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMMANDPERSISTFLAG_PERSISTPROCEDURE: DBCOMMANDPERSISTFLAGENUM21 = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOMPAREENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPARE_LT: DBCOMPAREENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPARE_EQ: DBCOMPAREENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPARE_GT: DBCOMPAREENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPARE_NE: DBCOMPAREENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPARE_NOTCOMPARABLE: DBCOMPAREENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOMPAREOPSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_LT: DBCOMPAREOPSENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_LE: DBCOMPAREOPSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_EQ: DBCOMPAREOPSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_GE: DBCOMPAREOPSENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_GT: DBCOMPAREOPSENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_BEGINSWITH: DBCOMPAREOPSENUM = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_CONTAINS: DBCOMPAREOPSENUM = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_NE: DBCOMPAREOPSENUM = 7i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_IGNORE: DBCOMPAREOPSENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_CASESENSITIVE: DBCOMPAREOPSENUM = 4096i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_CASEINSENSITIVE: DBCOMPAREOPSENUM = 8192i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOMPAREOPSENUM20 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_NOTBEGINSWITH: DBCOMPAREOPSENUM20 = 9i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOMPAREOPS_NOTCONTAINS: DBCOMPAREOPSENUM20 = 10i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBCOMPUTEMODE_COMPUTED: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBCOMPUTEMODE_DYNAMIC: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBCOMPUTEMODE_NOTCOMPUTED: u32 = 3u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DBCONSTRAINTDESC {
-    pub pConstraintID: *mut super::super::Storage::IndexServer::DBID,
-    pub ConstraintType: u32,
-    pub cColumns: usize,
-    pub rgColumnList: *mut super::super::Storage::IndexServer::DBID,
-    pub pReferencedTableID: *mut super::super::Storage::IndexServer::DBID,
-    pub cForeignKeyColumns: usize,
-    pub rgForeignKeyColumnList: *mut super::super::Storage::IndexServer::DBID,
-    pub pwszConstraintText: ::windows_sys::core::PWSTR,
-    pub UpdateRule: u32,
-    pub DeleteRule: u32,
-    pub MatchType: u32,
-    pub Deferrability: u32,
-    pub cReserved: usize,
-    pub rgReserved: *mut DBPROPSET,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DBCONSTRAINTDESC {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DBCONSTRAINTDESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DBCONSTRAINTDESC {
-    pub pConstraintID: *mut super::super::Storage::IndexServer::DBID,
-    pub ConstraintType: u32,
-    pub cColumns: usize,
-    pub rgColumnList: *mut super::super::Storage::IndexServer::DBID,
-    pub pReferencedTableID: *mut super::super::Storage::IndexServer::DBID,
-    pub cForeignKeyColumns: usize,
-    pub rgForeignKeyColumnList: *mut super::super::Storage::IndexServer::DBID,
-    pub pwszConstraintText: ::windows_sys::core::PWSTR,
-    pub UpdateRule: u32,
-    pub DeleteRule: u32,
-    pub MatchType: u32,
-    pub Deferrability: u32,
-    pub cReserved: usize,
-    pub rgReserved: *mut DBPROPSET,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DBCONSTRAINTDESC {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DBCONSTRAINTDESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCONSTRAINTTYPEENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCONSTRAINTTYPE_UNIQUE: DBCONSTRAINTTYPEENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCONSTRAINTTYPE_FOREIGNKEY: DBCONSTRAINTTYPEENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCONSTRAINTTYPE_PRIMARYKEY: DBCONSTRAINTTYPEENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCONSTRAINTTYPE_CHECK: DBCONSTRAINTTYPEENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCONVERTFLAGSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCONVERTFLAGS_COLUMN: DBCONVERTFLAGSENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCONVERTFLAGS_PARAMETER: DBCONVERTFLAGSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCONVERTFLAGSENUM20 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCONVERTFLAGS_ISLONG: DBCONVERTFLAGSENUM20 = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCONVERTFLAGS_ISFIXEDLENGTH: DBCONVERTFLAGSENUM20 = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCONVERTFLAGS_FROMVARIANT: DBCONVERTFLAGSENUM20 = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOPYFLAGSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOPY_ASYNC: DBCOPYFLAGSENUM = 256i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOPY_REPLACE_EXISTING: DBCOPYFLAGSENUM = 512i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOPY_ALLOW_EMULATION: DBCOPYFLAGSENUM = 1024i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOPY_NON_RECURSIVE: DBCOPYFLAGSENUM = 2048i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBCOPY_ATOMIC: DBCOPYFLAGSENUM = 4096i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct DBCOST {
-    pub eKind: u32,
-    pub dwUnits: u32,
-    pub lValue: i32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for DBCOST {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for DBCOST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct DBCOST {
-    pub eKind: u32,
-    pub dwUnits: u32,
-    pub lValue: i32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for DBCOST {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for DBCOST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBCOSTUNITENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_INVALID: DBCOSTUNITENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_WEIGHT: DBCOSTUNITENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_PERCENT: DBCOSTUNITENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_MAXIMUM: DBCOSTUNITENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_MINIMUM: DBCOSTUNITENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_MICRO_SECOND: DBCOSTUNITENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_MILLI_SECOND: DBCOSTUNITENUM = 32i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_SECOND: DBCOSTUNITENUM = 64i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_MINUTE: DBCOSTUNITENUM = 128i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_HOUR: DBCOSTUNITENUM = 256i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_BYTE: DBCOSTUNITENUM = 512i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_KILO_BYTE: DBCOSTUNITENUM = 1024i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_MEGA_BYTE: DBCOSTUNITENUM = 2048i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_GIGA_BYTE: DBCOSTUNITENUM = 4096i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_NUM_MSGS: DBCOSTUNITENUM = 8192i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_NUM_LOCKS: DBCOSTUNITENUM = 16384i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_NUM_ROWS: DBCOSTUNITENUM = 32768i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUNIT_OTHER: DBCOSTUNITENUM = 65536i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBDATACONVERTENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBDATACONVERT_DEFAULT: DBDATACONVERTENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBDATACONVERT_SETDATABEHAVIOR: DBDATACONVERTENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBDATACONVERT_LENGTHFROMNTS: DBDATACONVERTENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBDATACONVERT_DSTISFIXEDLENGTH: DBDATACONVERTENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBDATACONVERT_DECIMALSCALE: DBDATACONVERTENUM = 8i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct DBDATE {
-    pub year: i16,
-    pub month: u16,
-    pub day: u16,
-}
-impl ::core::marker::Copy for DBDATE {}
-impl ::core::clone::Clone for DBDATE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBDEFERRABILITYENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBDEFERRABILITY_DEFERRED: DBDEFERRABILITYENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBDEFERRABILITY_DEFERRABLE: DBDEFERRABILITYENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBDELETEFLAGSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBDELETE_ASYNC: DBDELETEFLAGSENUM = 256i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBDELETE_ATOMIC: DBDELETEFLAGSENUM = 4096i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBEVENTPHASEENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBEVENTPHASE_OKTODO: DBEVENTPHASEENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBEVENTPHASE_ABOUTTODO: DBEVENTPHASEENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBEVENTPHASE_SYNCHAFTER: DBEVENTPHASEENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBEVENTPHASE_FAILEDTODO: DBEVENTPHASEENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBEVENTPHASE_DIDEVENT: DBEVENTPHASEENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBEXECLIMITSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBEXECLIMITS_ABORT: DBEXECLIMITSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBEXECLIMITS_STOP: DBEXECLIMITSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBEXECLIMITS_SUSPEND: DBEXECLIMITSENUM = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct DBFAILUREINFO {
-    pub hRow: usize,
-    pub iColumn: usize,
-    pub failure: ::windows_sys::core::HRESULT,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for DBFAILUREINFO {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for DBFAILUREINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct DBFAILUREINFO {
-    pub hRow: usize,
-    pub iColumn: usize,
-    pub failure: ::windows_sys::core::HRESULT,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for DBFAILUREINFO {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for DBFAILUREINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub const DBGUID_MSSQLXML: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1565727922, data2: 59117, data3: 4562, data4: [178, 82, 0, 192, 79, 104, 27, 113] };
 pub const DBGUID_XPATH: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3962192531, data2: 59544, data3: 4562, data4: [177, 183, 0, 192, 79, 104, 12, 86] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct DBIMPLICITSESSION {
-    pub pUnkOuter: ::windows_sys::core::IUnknown,
-    pub piid: *mut ::windows_sys::core::GUID,
-    pub pSession: ::windows_sys::core::IUnknown,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for DBIMPLICITSESSION {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for DBIMPLICITSESSION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct DBIMPLICITSESSION {
-    pub pUnkOuter: ::windows_sys::core::IUnknown,
-    pub piid: *mut ::windows_sys::core::GUID,
-    pub pSession: ::windows_sys::core::IUnknown,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for DBIMPLICITSESSION {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for DBIMPLICITSESSION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-pub struct DBINDEXCOLUMNDESC {
-    pub pColumnID: *mut super::super::Storage::IndexServer::DBID,
-    pub eIndexColOrder: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::marker::Copy for DBINDEXCOLUMNDESC {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::clone::Clone for DBINDEXCOLUMNDESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-pub struct DBINDEXCOLUMNDESC {
-    pub pColumnID: *mut super::super::Storage::IndexServer::DBID,
-    pub eIndexColOrder: u32,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::marker::Copy for DBINDEXCOLUMNDESC {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::clone::Clone for DBINDEXCOLUMNDESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBINDEX_COL_ORDERENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBINDEX_COL_ORDER_ASC: DBINDEX_COL_ORDERENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBINDEX_COL_ORDER_DESC: DBINDEX_COL_ORDERENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBLITERALENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_INVALID: DBLITERALENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_BINARY_LITERAL: DBLITERALENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_CATALOG_NAME: DBLITERALENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_CATALOG_SEPARATOR: DBLITERALENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_CHAR_LITERAL: DBLITERALENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_COLUMN_ALIAS: DBLITERALENUM = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_COLUMN_NAME: DBLITERALENUM = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_CORRELATION_NAME: DBLITERALENUM = 7i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_CURSOR_NAME: DBLITERALENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_ESCAPE_PERCENT: DBLITERALENUM = 9i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_ESCAPE_UNDERSCORE: DBLITERALENUM = 10i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_INDEX_NAME: DBLITERALENUM = 11i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_LIKE_PERCENT: DBLITERALENUM = 12i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_LIKE_UNDERSCORE: DBLITERALENUM = 13i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_PROCEDURE_NAME: DBLITERALENUM = 14i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_QUOTE: DBLITERALENUM = 15i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_SCHEMA_NAME: DBLITERALENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_TABLE_NAME: DBLITERALENUM = 17i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_TEXT_COMMAND: DBLITERALENUM = 18i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_USER_NAME: DBLITERALENUM = 19i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_VIEW_NAME: DBLITERALENUM = 20i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBLITERALENUM20 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_CUBE_NAME: DBLITERALENUM20 = 21i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_DIMENSION_NAME: DBLITERALENUM20 = 22i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_HIERARCHY_NAME: DBLITERALENUM20 = 23i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_LEVEL_NAME: DBLITERALENUM20 = 24i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_MEMBER_NAME: DBLITERALENUM20 = 25i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_PROPERTY_NAME: DBLITERALENUM20 = 26i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_SCHEMA_SEPARATOR: DBLITERALENUM20 = 27i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_QUOTE_SUFFIX: DBLITERALENUM20 = 28i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBLITERALENUM21 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_ESCAPE_PERCENT_SUFFIX: DBLITERALENUM21 = 29i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBLITERAL_ESCAPE_UNDERSCORE_SUFFIX: DBLITERALENUM21 = 30i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DBLITERALINFO {
-    pub pwszLiteralValue: ::windows_sys::core::PWSTR,
-    pub pwszInvalidChars: ::windows_sys::core::PWSTR,
-    pub pwszInvalidStartingChars: ::windows_sys::core::PWSTR,
-    pub lt: u32,
-    pub fSupported: super::super::Foundation::BOOL,
-    pub cchMaxLen: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DBLITERALINFO {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DBLITERALINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DBLITERALINFO {
-    pub pwszLiteralValue: ::windows_sys::core::PWSTR,
-    pub pwszInvalidChars: ::windows_sys::core::PWSTR,
-    pub pwszInvalidStartingChars: ::windows_sys::core::PWSTR,
-    pub lt: u32,
-    pub fSupported: super::super::Foundation::BOOL,
-    pub cchMaxLen: u32,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DBLITERALINFO {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DBLITERALINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBMATCHTYPEENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBMATCHTYPE_FULL: DBMATCHTYPEENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBMATCHTYPE_NONE: DBMATCHTYPEENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBMATCHTYPE_PARTIAL: DBMATCHTYPEENUM = 2i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBMAXCHAR: u32 = 8001u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBMEMOWNERENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBMEMOWNER_CLIENTOWNED: DBMEMOWNERENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBMEMOWNER_PROVIDEROWNED: DBMEMOWNERENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBMOVEFLAGSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBMOVE_REPLACE_EXISTING: DBMOVEFLAGSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBMOVE_ASYNC: DBMOVEFLAGSENUM = 256i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBMOVE_DONT_UPDATE_LINKS: DBMOVEFLAGSENUM = 512i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBMOVE_ALLOW_EMULATION: DBMOVEFLAGSENUM = 1024i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBMOVE_ATOMIC: DBMOVEFLAGSENUM = 4096i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct DBOBJECT {
-    pub dwFlags: u32,
-    pub iid: ::windows_sys::core::GUID,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for DBOBJECT {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for DBOBJECT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct DBOBJECT {
-    pub dwFlags: u32,
-    pub iid: ::windows_sys::core::GUID,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for DBOBJECT {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for DBOBJECT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct DBPARAMBINDINFO {
-    pub pwszDataSourceType: ::windows_sys::core::PWSTR,
-    pub pwszName: ::windows_sys::core::PWSTR,
-    pub ulParamSize: usize,
-    pub dwFlags: u32,
-    pub bPrecision: u8,
-    pub bScale: u8,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for DBPARAMBINDINFO {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for DBPARAMBINDINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct DBPARAMBINDINFO {
-    pub pwszDataSourceType: ::windows_sys::core::PWSTR,
-    pub pwszName: ::windows_sys::core::PWSTR,
-    pub ulParamSize: usize,
-    pub dwFlags: u32,
-    pub bPrecision: u8,
-    pub bScale: u8,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for DBPARAMBINDINFO {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for DBPARAMBINDINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPARAMFLAGSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPARAMFLAGS_ISINPUT: DBPARAMFLAGSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPARAMFLAGS_ISOUTPUT: DBPARAMFLAGSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPARAMFLAGS_ISSIGNED: DBPARAMFLAGSENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPARAMFLAGS_ISNULLABLE: DBPARAMFLAGSENUM = 64i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPARAMFLAGS_ISLONG: DBPARAMFLAGSENUM = 128i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPARAMFLAGSENUM20 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPARAMFLAGS_SCALEISNEGATIVE: DBPARAMFLAGSENUM20 = 256i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_System_Com\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Com")]
-pub struct DBPARAMINFO {
-    pub dwFlags: u32,
-    pub iOrdinal: usize,
-    pub pwszName: ::windows_sys::core::PWSTR,
-    pub pTypeInfo: super::Com::ITypeInfo,
-    pub ulParamSize: usize,
-    pub wType: u16,
-    pub bPrecision: u8,
-    pub bScale: u8,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::marker::Copy for DBPARAMINFO {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::clone::Clone for DBPARAMINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_System_Com\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Com")]
-pub struct DBPARAMINFO {
-    pub dwFlags: u32,
-    pub iOrdinal: usize,
-    pub pwszName: ::windows_sys::core::PWSTR,
-    pub pTypeInfo: super::Com::ITypeInfo,
-    pub ulParamSize: usize,
-    pub wType: u16,
-    pub bPrecision: u8,
-    pub bScale: u8,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::marker::Copy for DBPARAMINFO {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::clone::Clone for DBPARAMINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPARAMIOENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPARAMIO_NOTPARAM: DBPARAMIOENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPARAMIO_INPUT: DBPARAMIOENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPARAMIO_OUTPUT: DBPARAMIOENUM = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct DBPARAMS {
-    pub pData: *mut ::core::ffi::c_void,
-    pub cParamSets: usize,
-    pub hAccessor: usize,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for DBPARAMS {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for DBPARAMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct DBPARAMS {
-    pub pData: *mut ::core::ffi::c_void,
-    pub cParamSets: usize,
-    pub hAccessor: usize,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for DBPARAMS {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for DBPARAMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBPARAMTYPE_INPUT: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -2182,52 +990,6 @@ pub const DBPARAMTYPE_OUTPUT: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBPARAMTYPE_RETURNVALUE: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPARTENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPART_INVALID: DBPARTENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPART_VALUE: DBPARTENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPART_LENGTH: DBPARTENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPART_STATUS: DBPARTENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPENDINGSTATUSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPENDINGSTATUS_NEW: DBPENDINGSTATUSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPENDINGSTATUS_CHANGED: DBPENDINGSTATUSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPENDINGSTATUS_DELETED: DBPENDINGSTATUSENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPENDINGSTATUS_UNCHANGED: DBPENDINGSTATUSENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPENDINGSTATUS_INVALIDROW: DBPENDINGSTATUSENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPOSITIONFLAGSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPOSITION_OK: DBPOSITIONFLAGSENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPOSITION_NOROW: DBPOSITIONFLAGSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPOSITION_BOF: DBPOSITIONFLAGSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPOSITION_EOF: DBPOSITIONFLAGSENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROMPTOPTIONSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROMPTOPTIONS_NONE: DBPROMPTOPTIONSENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROMPTOPTIONS_WIZARDSHEET: DBPROMPTOPTIONSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROMPTOPTIONS_PROPERTYSHEET: DBPROMPTOPTIONSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROMPTOPTIONS_BROWSEONLY: DBPROMPTOPTIONSENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROMPTOPTIONS_DISABLE_PROVIDER_SELECTION: DBPROMPTOPTIONSENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROMPTOPTIONS_DISABLESAVEPASSWORD: DBPROMPTOPTIONSENUM = 32i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBPROMPT_COMPLETE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBPROMPT_COMPLETEREQUIRED: u32 = 3u32;
@@ -2235,796 +997,8 @@ pub const DBPROMPT_COMPLETEREQUIRED: u32 = 3u32;
 pub const DBPROMPT_NOPROMPT: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBPROMPT_PROMPT: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DBPROP {
-    pub dwPropertyID: u32,
-    pub dwOptions: u32,
-    pub dwStatus: u32,
-    pub colid: super::super::Storage::IndexServer::DBID,
-    pub vValue: super::Com::VARIANT,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DBPROP {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DBPROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DBPROP {
-    pub dwPropertyID: u32,
-    pub dwOptions: u32,
-    pub dwStatus: u32,
-    pub colid: super::super::Storage::IndexServer::DBID,
-    pub vValue: super::Com::VARIANT,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DBPROP {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DBPROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ABORTPRESERVE: DBPROPENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ACTIVESESSIONS: DBPROPENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_APPENDONLY: DBPROPENUM = 187i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ASYNCTXNABORT: DBPROPENUM = 168i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ASYNCTXNCOMMIT: DBPROPENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_AUTH_CACHE_AUTHINFO: DBPROPENUM = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_AUTH_ENCRYPT_PASSWORD: DBPROPENUM = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_AUTH_INTEGRATED: DBPROPENUM = 7i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_AUTH_MASK_PASSWORD: DBPROPENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_AUTH_PASSWORD: DBPROPENUM = 9i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_AUTH_PERSIST_ENCRYPTED: DBPROPENUM = 10i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_AUTH_PERSIST_SENSITIVE_AUTHINFO: DBPROPENUM = 11i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_AUTH_USERID: DBPROPENUM = 12i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_BLOCKINGSTORAGEOBJECTS: DBPROPENUM = 13i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_BOOKMARKS: DBPROPENUM = 14i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_BOOKMARKSKIPPED: DBPROPENUM = 15i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_BOOKMARKTYPE: DBPROPENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_BYREFACCESSORS: DBPROPENUM = 120i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_CACHEDEFERRED: DBPROPENUM = 17i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_CANFETCHBACKWARDS: DBPROPENUM = 18i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_CANHOLDROWS: DBPROPENUM = 19i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_CANSCROLLBACKWARDS: DBPROPENUM = 21i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_CATALOGLOCATION: DBPROPENUM = 22i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_CATALOGTERM: DBPROPENUM = 23i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_CATALOGUSAGE: DBPROPENUM = 24i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_CHANGEINSERTEDROWS: DBPROPENUM = 188i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COL_AUTOINCREMENT: DBPROPENUM = 26i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COL_DEFAULT: DBPROPENUM = 27i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COL_DESCRIPTION: DBPROPENUM = 28i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COL_FIXEDLENGTH: DBPROPENUM = 167i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COL_NULLABLE: DBPROPENUM = 29i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COL_PRIMARYKEY: DBPROPENUM = 30i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COL_UNIQUE: DBPROPENUM = 31i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COLUMNDEFINITION: DBPROPENUM = 32i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COLUMNRESTRICT: DBPROPENUM = 33i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COMMANDTIMEOUT: DBPROPENUM = 34i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COMMITPRESERVE: DBPROPENUM = 35i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_CONCATNULLBEHAVIOR: DBPROPENUM = 36i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_CURRENTCATALOG: DBPROPENUM = 37i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_DATASOURCENAME: DBPROPENUM = 38i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_DATASOURCEREADONLY: DBPROPENUM = 39i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_DBMSNAME: DBPROPENUM = 40i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_DBMSVER: DBPROPENUM = 41i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_DEFERRED: DBPROPENUM = 42i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_DELAYSTORAGEOBJECTS: DBPROPENUM = 43i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_DSOTHREADMODEL: DBPROPENUM = 169i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_GROUPBY: DBPROPENUM = 44i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_HETEROGENEOUSTABLES: DBPROPENUM = 45i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IAccessor: DBPROPENUM = 121i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IColumnsInfo: DBPROPENUM = 122i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IColumnsRowset: DBPROPENUM = 123i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IConnectionPointContainer: DBPROPENUM = 124i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IConvertType: DBPROPENUM = 194i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowset: DBPROPENUM = 126i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetChange: DBPROPENUM = 127i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetIdentity: DBPROPENUM = 128i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetIndex: DBPROPENUM = 159i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetInfo: DBPROPENUM = 129i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetLocate: DBPROPENUM = 130i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetResynch: DBPROPENUM = 132i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetScroll: DBPROPENUM = 133i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetUpdate: DBPROPENUM = 134i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ISupportErrorInfo: DBPROPENUM = 135i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ILockBytes: DBPROPENUM = 136i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ISequentialStream: DBPROPENUM = 137i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IStorage: DBPROPENUM = 138i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IStream: DBPROPENUM = 139i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IDENTIFIERCASE: DBPROPENUM = 46i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IMMOBILEROWS: DBPROPENUM = 47i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INDEX_AUTOUPDATE: DBPROPENUM = 48i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INDEX_CLUSTERED: DBPROPENUM = 49i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INDEX_FILLFACTOR: DBPROPENUM = 50i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INDEX_INITIALSIZE: DBPROPENUM = 51i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INDEX_NULLCOLLATION: DBPROPENUM = 52i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INDEX_NULLS: DBPROPENUM = 53i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INDEX_PRIMARYKEY: DBPROPENUM = 54i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INDEX_SORTBOOKMARKS: DBPROPENUM = 55i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INDEX_TEMPINDEX: DBPROPENUM = 163i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INDEX_TYPE: DBPROPENUM = 56i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INDEX_UNIQUE: DBPROPENUM = 57i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_DATASOURCE: DBPROPENUM = 59i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_HWND: DBPROPENUM = 60i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_IMPERSONATION_LEVEL: DBPROPENUM = 61i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_LCID: DBPROPENUM = 186i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_LOCATION: DBPROPENUM = 62i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_MODE: DBPROPENUM = 63i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_PROMPT: DBPROPENUM = 64i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_PROTECTION_LEVEL: DBPROPENUM = 65i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_PROVIDERSTRING: DBPROPENUM = 160i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_TIMEOUT: DBPROPENUM = 66i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_LITERALBOOKMARKS: DBPROPENUM = 67i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_LITERALIDENTITY: DBPROPENUM = 68i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MAXINDEXSIZE: DBPROPENUM = 70i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MAXOPENROWS: DBPROPENUM = 71i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MAXPENDINGROWS: DBPROPENUM = 72i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MAXROWS: DBPROPENUM = 73i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MAXROWSIZE: DBPROPENUM = 74i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MAXROWSIZEINCLUDESBLOB: DBPROPENUM = 75i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MAXTABLESINSELECT: DBPROPENUM = 76i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MAYWRITECOLUMN: DBPROPENUM = 77i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MEMORYUSAGE: DBPROPENUM = 78i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MULTIPLEPARAMSETS: DBPROPENUM = 191i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MULTIPLERESULTS: DBPROPENUM = 196i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MULTIPLESTORAGEOBJECTS: DBPROPENUM = 80i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MULTITABLEUPDATE: DBPROPENUM = 81i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFICATIONGRANULARITY: DBPROPENUM = 198i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFICATIONPHASES: DBPROPENUM = 82i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFYCOLUMNSET: DBPROPENUM = 171i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFYROWDELETE: DBPROPENUM = 173i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFYROWFIRSTCHANGE: DBPROPENUM = 174i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFYROWINSERT: DBPROPENUM = 175i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFYROWRESYNCH: DBPROPENUM = 177i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFYROWSETCHANGED: DBPROPENUM = 211i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFYROWSETRELEASE: DBPROPENUM = 178i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFYROWSETFETCHPOSITIONCHANGE: DBPROPENUM = 179i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFYROWUNDOCHANGE: DBPROPENUM = 180i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFYROWUNDODELETE: DBPROPENUM = 181i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFYROWUNDOINSERT: DBPROPENUM = 182i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NOTIFYROWUPDATE: DBPROPENUM = 183i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_NULLCOLLATION: DBPROPENUM = 83i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_OLEOBJECTS: DBPROPENUM = 84i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ORDERBYCOLUMNSINSELECT: DBPROPENUM = 85i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ORDEREDBOOKMARKS: DBPROPENUM = 86i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_OTHERINSERT: DBPROPENUM = 87i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_OTHERUPDATEDELETE: DBPROPENUM = 88i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_OUTPUTPARAMETERAVAILABILITY: DBPROPENUM = 184i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_OWNINSERT: DBPROPENUM = 89i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_OWNUPDATEDELETE: DBPROPENUM = 90i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_PERSISTENTIDTYPE: DBPROPENUM = 185i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_PREPAREABORTBEHAVIOR: DBPROPENUM = 91i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_PREPARECOMMITBEHAVIOR: DBPROPENUM = 92i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_PROCEDURETERM: DBPROPENUM = 93i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_PROVIDERNAME: DBPROPENUM = 96i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_PROVIDEROLEDBVER: DBPROPENUM = 97i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_PROVIDERVER: DBPROPENUM = 98i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_QUICKRESTART: DBPROPENUM = 99i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_QUOTEDIDENTIFIERCASE: DBPROPENUM = 100i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_REENTRANTEVENTS: DBPROPENUM = 101i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_REMOVEDELETED: DBPROPENUM = 102i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_REPORTMULTIPLECHANGES: DBPROPENUM = 103i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_RETURNPENDINGINSERTS: DBPROPENUM = 189i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ROWRESTRICT: DBPROPENUM = 104i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ROWSETCONVERSIONSONCOMMAND: DBPROPENUM = 192i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ROWTHREADMODEL: DBPROPENUM = 105i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SCHEMATERM: DBPROPENUM = 106i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SCHEMAUSAGE: DBPROPENUM = 107i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SERVERCURSOR: DBPROPENUM = 108i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SESS_AUTOCOMMITISOLEVELS: DBPROPENUM = 190i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SQLSUPPORT: DBPROPENUM = 109i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_STRONGIDENTITY: DBPROPENUM = 119i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_STRUCTUREDSTORAGE: DBPROPENUM = 111i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SUBQUERIES: DBPROPENUM = 112i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SUPPORTEDTXNDDL: DBPROPENUM = 161i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SUPPORTEDTXNISOLEVELS: DBPROPENUM = 113i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SUPPORTEDTXNISORETAIN: DBPROPENUM = 114i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_TABLETERM: DBPROPENUM = 115i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_TBL_TEMPTABLE: DBPROPENUM = 140i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_TRANSACTEDOBJECT: DBPROPENUM = 116i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_UPDATABILITY: DBPROPENUM = 117i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_USERNAME: DBPROPENUM = 118i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPENUM15 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_FILTERCOMPAREOPS: DBPROPENUM15 = 209i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_FINDCOMPAREOPS: DBPROPENUM15 = 210i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IChapteredRowset: DBPROPENUM15 = 202i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IDBAsynchStatus: DBPROPENUM15 = 203i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetFind: DBPROPENUM15 = 204i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetView: DBPROPENUM15 = 212i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IViewChapter: DBPROPENUM15 = 213i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IViewFilter: DBPROPENUM15 = 214i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IViewRowset: DBPROPENUM15 = 215i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IViewSort: DBPROPENUM15 = 216i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_ASYNCH: DBPROPENUM15 = 200i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MAXOPENCHAPTERS: DBPROPENUM15 = 199i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MAXORSINFILTER: DBPROPENUM15 = 205i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MAXSORTCOLUMNS: DBPROPENUM15 = 206i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ROWSET_ASYNCH: DBPROPENUM15 = 201i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SORTONINDEX: DBPROPENUM15 = 207i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPENUM20 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IMultipleResults: DBPROPENUM20 = 217i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_DATASOURCE_TYPE: DBPROPENUM20 = 251i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_AXES: DBPROPENUM20 = 252i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_FLATTENING_SUPPORT: DBPROPENUM20 = 253i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_JOINCUBES: DBPROPENUM20 = 254i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_NAMED_LEVELS: DBPROPENUM20 = 255i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_RANGEROWSET: DBPROPENUM20 = 256i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_SLICER: DBPROPENUM20 = 218i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_CUBEQUALIFICATION: DBPROPENUM20 = 219i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_OUTERREFERENCE: DBPROPENUM20 = 220i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_QUERYBYPROPERTY: DBPROPENUM20 = 221i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_CASESUPPORT: DBPROPENUM20 = 222i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_STRING_COMPOP: DBPROPENUM20 = 224i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_DESCFLAGS: DBPROPENUM20 = 225i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_SET_FUNCTIONS: DBPROPENUM20 = 226i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_MEMBER_FUNCTIONS: DBPROPENUM20 = 227i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_NUMERIC_FUNCTIONS: DBPROPENUM20 = 228i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_FORMULAS: DBPROPENUM20 = 229i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_AGGREGATECELL_UPDATE: DBPROPENUM20 = 230i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_AGGREGATECELL_UPDATE: DBPROPENUM20 = 230i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_OBJQUALIFICATION: DBPROPENUM20 = 261i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_MDX_NONMEASURE_EXPRESSIONS: DBPROPENUM20 = 262i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ACCESSORDER: DBPROPENUM20 = 231i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_BOOKMARKINFO: DBPROPENUM20 = 232i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_CATALOG: DBPROPENUM20 = 233i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ROW_BULKOPS: DBPROPENUM20 = 234i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_PROVIDERFRIENDLYNAME: DBPROPENUM20 = 235i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_LOCKMODE: DBPROPENUM20 = 236i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MULTIPLECONNECTIONS: DBPROPENUM20 = 237i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_UNIQUEROWS: DBPROPENUM20 = 238i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SERVERDATAONINSERT: DBPROPENUM20 = 239i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_STORAGEFLAGS: DBPROPENUM20 = 240i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_CONNECTIONSTATUS: DBPROPENUM20 = 244i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ALTERCOLUMN: DBPROPENUM20 = 245i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COLUMNLCID: DBPROPENUM20 = 246i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_RESETDATASOURCE: DBPROPENUM20 = 247i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_OLEDBSERVICES: DBPROPENUM20 = 248i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetRefresh: DBPROPENUM20 = 249i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SERVERNAME: DBPROPENUM20 = 250i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IParentRowset: DBPROPENUM20 = 257i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_HIDDENCOLUMNS: DBPROPENUM20 = 258i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_PROVIDERMEMORY: DBPROPENUM20 = 259i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_CLIENTCURSOR: DBPROPENUM20 = 260i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPENUM21 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_TRUSTEE_USERNAME: DBPROPENUM21 = 241i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_TRUSTEE_AUTHENTICATION: DBPROPENUM21 = 242i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_TRUSTEE_NEWAUTHENTICATION: DBPROPENUM21 = 243i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRow: DBPROPENUM21 = 263i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowChange: DBPROPENUM21 = 264i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowSchemaChange: DBPROPENUM21 = 265i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IGetRow: DBPROPENUM21 = 266i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IScopedOperations: DBPROPENUM21 = 267i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IBindResource: DBPROPENUM21 = 268i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ICreateRow: DBPROPENUM21 = 269i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_BINDFLAGS: DBPROPENUM21 = 270i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_LOCKOWNER: DBPROPENUM21 = 271i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_GENERATEURL: DBPROPENUM21 = 273i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IDBBinderProperties: DBPROPENUM21 = 274i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IColumnsInfo2: DBPROPENUM21 = 275i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRegisterProvider: DBPROPENUM21 = 276i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IGetSession: DBPROPENUM21 = 277i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IGetSourceRow: DBPROPENUM21 = 278i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetCurrentIndex: DBPROPENUM21 = 279i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_OPENROWSETSUPPORT: DBPROPENUM21 = 280i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COL_ISLONG: DBPROPENUM21 = 281i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPENUM25 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COL_SEED: DBPROPENUM25 = 282i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COL_INCREMENT: DBPROPENUM25 = 283i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_INIT_GENERALTIMEOUT: DBPROPENUM25 = 284i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_COMSERVICES: DBPROPENUM25 = 285i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPENUM25_DEPRECATED = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ICommandCost: DBPROPENUM25_DEPRECATED = 141i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ICommandTree: DBPROPENUM25_DEPRECATED = 142i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_ICommandValidate: DBPROPENUM25_DEPRECATED = 143i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IDBSchemaCommand: DBPROPENUM25_DEPRECATED = 144i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IProvideMoniker: DBPROPENUM25_DEPRECATED = 125i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IQuery: DBPROPENUM25_DEPRECATED = 146i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IReadData: DBPROPENUM25_DEPRECATED = 147i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetAsynch: DBPROPENUM25_DEPRECATED = 148i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetCopyRows: DBPROPENUM25_DEPRECATED = 149i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetKeys: DBPROPENUM25_DEPRECATED = 151i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetNewRowAfter: DBPROPENUM25_DEPRECATED = 152i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetNextRowset: DBPROPENUM25_DEPRECATED = 153i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetWatchAll: DBPROPENUM25_DEPRECATED = 155i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetWatchNotify: DBPROPENUM25_DEPRECATED = 156i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetWatchRegion: DBPROPENUM25_DEPRECATED = 157i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetWithParameters: DBPROPENUM25_DEPRECATED = 158i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPENUM26 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_OUTPUTSTREAM: DBPROPENUM26 = 286i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_OUTPUTENCODING: DBPROPENUM26 = 287i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_TABLESTATISTICS: DBPROPENUM26 = 288i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_SKIPROWCOUNTRESULTS: DBPROPENUM26 = 291i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_IRowsetBookmark: DBPROPENUM26 = 292i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDPROP_VISUALMODE: DBPROPENUM26 = 293i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPFLAGSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_NOTSUPPORTED: DBPROPFLAGSENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_COLUMN: DBPROPFLAGSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_DATASOURCE: DBPROPFLAGSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_DATASOURCECREATE: DBPROPFLAGSENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_DATASOURCEINFO: DBPROPFLAGSENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_DBINIT: DBPROPFLAGSENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_INDEX: DBPROPFLAGSENUM = 32i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_ROWSET: DBPROPFLAGSENUM = 64i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_TABLE: DBPROPFLAGSENUM = 128i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_COLUMNOK: DBPROPFLAGSENUM = 256i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_READ: DBPROPFLAGSENUM = 512i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_WRITE: DBPROPFLAGSENUM = 1024i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_REQUIRED: DBPROPFLAGSENUM = 2048i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_SESSION: DBPROPFLAGSENUM = 4096i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPFLAGSENUM21 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_TRUSTEE: DBPROPFLAGSENUM21 = 8192i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPFLAGSENUM25 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_VIEW: DBPROPFLAGSENUM25 = 16384i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPFLAGSENUM26 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPFLAGS_STREAM: DBPROPFLAGSENUM26 = 32768i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBPROPFLAGS_PERSIST: u32 = 8192u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct DBPROPIDSET {
-    pub rgPropertyIDs: *mut u32,
-    pub cPropertyIDs: u32,
-    pub guidPropertySet: ::windows_sys::core::GUID,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for DBPROPIDSET {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for DBPROPIDSET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct DBPROPIDSET {
-    pub rgPropertyIDs: *mut u32,
-    pub cPropertyIDs: u32,
-    pub guidPropertySet: ::windows_sys::core::GUID,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for DBPROPIDSET {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for DBPROPIDSET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DBPROPINFO {
-    pub pwszDescription: ::windows_sys::core::PWSTR,
-    pub dwPropertyID: u32,
-    pub dwFlags: u32,
-    pub vtType: u16,
-    pub vValues: super::Com::VARIANT,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DBPROPINFO {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DBPROPINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DBPROPINFO {
-    pub pwszDescription: ::windows_sys::core::PWSTR,
-    pub dwPropertyID: u32,
-    pub dwFlags: u32,
-    pub vtType: u16,
-    pub vValues: super::Com::VARIANT,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DBPROPINFO {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DBPROPINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DBPROPINFOSET {
-    pub rgPropertyInfos: *mut DBPROPINFO,
-    pub cPropertyInfos: u32,
-    pub guidPropertySet: ::windows_sys::core::GUID,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DBPROPINFOSET {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DBPROPINFOSET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DBPROPINFOSET {
-    pub rgPropertyInfos: *mut DBPROPINFO,
-    pub cPropertyInfos: u32,
-    pub guidPropertySet: ::windows_sys::core::GUID,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DBPROPINFOSET {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DBPROPINFOSET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPOPTIONSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPOPTIONS_REQUIRED: DBPROPOPTIONSENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPOPTIONS_SETIFCHEAP: DBPROPOPTIONSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPOPTIONS_OPTIONAL: DBPROPOPTIONSENUM = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DBPROPSET {
-    pub rgProperties: *mut DBPROP,
-    pub cProperties: u32,
-    pub guidPropertySet: ::windows_sys::core::GUID,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DBPROPSET {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DBPROPSET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DBPROPSET {
-    pub rgProperties: *mut DBPROP,
-    pub cProperties: u32,
-    pub guidPropertySet: ::windows_sys::core::GUID,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DBPROPSET {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DBPROPSET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub const DBPROPSET_MSDAORA8_ROWSET: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2131141493, data2: 56682, data3: 17371, data4: [180, 224, 31, 193, 33, 229, 230, 43] };
 pub const DBPROPSET_MSDAORA_ROWSET: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3905703101, data2: 65023, data3: 4560, data4: [184, 101, 0, 160, 201, 8, 28, 29] };
 pub const DBPROPSET_MSDSDBINIT: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1439404456, data2: 23674, data3: 4561, data4: [173, 173, 0, 192, 79, 194, 152, 99] };
@@ -3042,30 +1016,6 @@ pub const DBPROPSET_SQLSERVERDBINIT: ::windows_sys::core::GUID = ::windows_sys::
 pub const DBPROPSET_SQLSERVERROWSET: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1559546385, data2: 61217, data3: 4560, data4: [151, 231, 0, 192, 79, 194, 173, 152] };
 pub const DBPROPSET_SQLSERVERSESSION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 686796517, data2: 11564, data3: 4561, data4: [152, 7, 0, 192, 79, 194, 173, 152] };
 pub const DBPROPSET_SQLSERVERSTREAM: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2675556467, data2: 35437, data3: 19402, data4: [168, 168, 201, 183, 154, 155, 150, 45] };
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPSTATUSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPSTATUS_OK: DBPROPSTATUSENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPSTATUS_NOTSUPPORTED: DBPROPSTATUSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPSTATUS_BADVALUE: DBPROPSTATUSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPSTATUS_BADOPTION: DBPROPSTATUSENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPSTATUS_BADCOLUMN: DBPROPSTATUSENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPSTATUS_NOTALLSETTABLE: DBPROPSTATUSENUM = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPSTATUS_NOTSETTABLE: DBPROPSTATUSENUM = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPSTATUS_NOTSET: DBPROPSTATUSENUM = 7i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPSTATUS_CONFLICTING: DBPROPSTATUSENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBPROPSTATUSENUM21 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROPSTATUS_NOTAVAILABLE: DBPROPSTATUSENUM21 = 9i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBPROPVAL_AO_RANDOM: i32 = 2i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -3456,470 +1406,9 @@ pub const DBPROP_PersistFormat: u32 = 2u32;
 pub const DBPROP_PersistSchema: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBPROP_Unicode: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBRANGEENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRANGE_INCLUSIVESTART: DBRANGEENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRANGE_INCLUSIVEEND: DBRANGEENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRANGE_EXCLUSIVESTART: DBRANGEENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRANGE_EXCLUSIVEEND: DBRANGEENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRANGE_EXCLUDENULLS: DBRANGEENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRANGE_PREFIX: DBRANGEENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRANGE_MATCH: DBRANGEENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBRANGEENUM20 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRANGE_MATCH_N_SHIFT: DBRANGEENUM20 = 24i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRANGE_MATCH_N_MASK: DBRANGEENUM20 = 255i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBREASONENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROWSET_FETCHPOSITIONCHANGE: DBREASONENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROWSET_RELEASE: DBREASONENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_COLUMN_SET: DBREASONENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_COLUMN_RECALCULATED: DBREASONENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROW_ACTIVATE: DBREASONENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROW_RELEASE: DBREASONENUM = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROW_DELETE: DBREASONENUM = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROW_FIRSTCHANGE: DBREASONENUM = 7i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROW_INSERT: DBREASONENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROW_RESYNCH: DBREASONENUM = 9i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROW_UNDOCHANGE: DBREASONENUM = 10i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROW_UNDOINSERT: DBREASONENUM = 11i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROW_UNDODELETE: DBREASONENUM = 12i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROW_UPDATE: DBREASONENUM = 13i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROWSET_CHANGED: DBREASONENUM = 14i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBREASONENUM15 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROWPOSITION_CHANGED: DBREASONENUM15 = 15i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROWPOSITION_CHAPTERCHANGED: DBREASONENUM15 = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROWPOSITION_CLEARED: DBREASONENUM15 = 17i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROW_ASYNCHINSERT: DBREASONENUM15 = 18i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBREASONENUM25 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROWSET_ROWSADDED: DBREASONENUM25 = 19i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROWSET_POPULATIONCOMPLETE: DBREASONENUM25 = 20i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBREASON_ROWSET_POPULATIONSTOPPED: DBREASONENUM25 = 21i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBRESOURCEKINDENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRESOURCE_INVALID: DBRESOURCEKINDENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRESOURCE_TOTAL: DBRESOURCEKINDENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRESOURCE_CPU: DBRESOURCEKINDENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRESOURCE_MEMORY: DBRESOURCEKINDENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRESOURCE_DISK: DBRESOURCEKINDENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRESOURCE_NETWORK: DBRESOURCEKINDENUM = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRESOURCE_RESPONSE: DBRESOURCEKINDENUM = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRESOURCE_ROWS: DBRESOURCEKINDENUM = 7i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRESOURCE_OTHER: DBRESOURCEKINDENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBRESULTFLAGENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRESULTFLAG_DEFAULT: DBRESULTFLAGENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRESULTFLAG_ROWSET: DBRESULTFLAGENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBRESULTFLAG_ROW: DBRESULTFLAGENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBROWCHANGEKINDENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWCHANGEKIND_INSERT: DBROWCHANGEKINDENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWCHANGEKIND_DELETE: DBROWCHANGEKINDENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWCHANGEKIND_UPDATE: DBROWCHANGEKINDENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWCHANGEKIND_COUNT: DBROWCHANGEKINDENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBROWSTATUSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_S_OK: DBROWSTATUSENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_S_MULTIPLECHANGES: DBROWSTATUSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_S_PENDINGCHANGES: DBROWSTATUSENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_CANCELED: DBROWSTATUSENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_CANTRELEASE: DBROWSTATUSENUM = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_CONCURRENCYVIOLATION: DBROWSTATUSENUM = 7i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_DELETED: DBROWSTATUSENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_PENDINGINSERT: DBROWSTATUSENUM = 9i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_NEWLYINSERTED: DBROWSTATUSENUM = 10i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_INTEGRITYVIOLATION: DBROWSTATUSENUM = 11i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_INVALID: DBROWSTATUSENUM = 12i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_MAXPENDCHANGESEXCEEDED: DBROWSTATUSENUM = 13i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_OBJECTOPEN: DBROWSTATUSENUM = 14i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_OUTOFMEMORY: DBROWSTATUSENUM = 15i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_PERMISSIONDENIED: DBROWSTATUSENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_LIMITREACHED: DBROWSTATUSENUM = 17i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_SCHEMAVIOLATION: DBROWSTATUSENUM = 18i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_E_FAIL: DBROWSTATUSENUM = 19i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBROWSTATUSENUM20 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBROWSTATUS_S_NOCHANGE: DBROWSTATUSENUM20 = 20i32;
 pub const DBSCHEMA_LINKEDSERVERS: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2425604852, data2: 11948, data3: 4561, data4: [152, 9, 0, 192, 79, 194, 173, 152] };
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBSEEKENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSEEK_INVALID: DBSEEKENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSEEK_FIRSTEQ: DBSEEKENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSEEK_LASTEQ: DBSEEKENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSEEK_AFTEREQ: DBSEEKENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSEEK_AFTER: DBSEEKENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSEEK_BEFOREEQ: DBSEEKENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSEEK_BEFORE: DBSEEKENUM = 32i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBSORTENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSORT_ASCENDING: DBSORTENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSORT_DESCENDING: DBSORTENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBSOURCETYPEENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSOURCETYPE_DATASOURCE: DBSOURCETYPEENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSOURCETYPE_ENUMERATOR: DBSOURCETYPEENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBSOURCETYPEENUM20 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSOURCETYPE_DATASOURCE_TDP: DBSOURCETYPEENUM20 = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSOURCETYPE_DATASOURCE_MDP: DBSOURCETYPEENUM20 = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBSOURCETYPEENUM25 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSOURCETYPE_BINDER: DBSOURCETYPEENUM25 = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBSTATUSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_S_OK: DBSTATUSENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_BADACCESSOR: DBSTATUSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_CANTCONVERTVALUE: DBSTATUSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_S_ISNULL: DBSTATUSENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_S_TRUNCATED: DBSTATUSENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_SIGNMISMATCH: DBSTATUSENUM = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_DATAOVERFLOW: DBSTATUSENUM = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_CANTCREATE: DBSTATUSENUM = 7i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_UNAVAILABLE: DBSTATUSENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_PERMISSIONDENIED: DBSTATUSENUM = 9i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_INTEGRITYVIOLATION: DBSTATUSENUM = 10i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_SCHEMAVIOLATION: DBSTATUSENUM = 11i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_BADSTATUS: DBSTATUSENUM = 12i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_S_DEFAULT: DBSTATUSENUM = 13i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBSTATUSENUM20 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const MDSTATUS_S_CELLEMPTY: DBSTATUSENUM20 = 14i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_S_IGNORE: DBSTATUSENUM20 = 15i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBSTATUSENUM21 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_DOESNOTEXIST: DBSTATUSENUM21 = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_INVALIDURL: DBSTATUSENUM21 = 17i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_RESOURCELOCKED: DBSTATUSENUM21 = 18i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_RESOURCEEXISTS: DBSTATUSENUM21 = 19i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_CANNOTCOMPLETE: DBSTATUSENUM21 = 20i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_VOLUMENOTFOUND: DBSTATUSENUM21 = 21i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_OUTOFSPACE: DBSTATUSENUM21 = 22i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_S_CANNOTDELETESOURCE: DBSTATUSENUM21 = 23i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_READONLY: DBSTATUSENUM21 = 24i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_RESOURCEOUTOFSCOPE: DBSTATUSENUM21 = 25i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_S_ALREADYEXISTS: DBSTATUSENUM21 = 26i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBSTATUSENUM25 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_CANCELED: DBSTATUSENUM25 = 27i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_E_NOTCOLLECTION: DBSTATUSENUM25 = 28i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBSTATUSENUM26 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTATUS_S_ROWSETCOLUMN: DBSTATUSENUM26 = 29i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBTABLESTATISTICSTYPE26 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTAT_HISTOGRAM: DBTABLESTATISTICSTYPE26 = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTAT_COLUMN_CARDINALITY: DBTABLESTATISTICSTYPE26 = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBSTAT_TUPLE_CARDINALITY: DBTABLESTATISTICSTYPE26 = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct DBTIME {
-    pub hour: u16,
-    pub minute: u16,
-    pub second: u16,
-}
-impl ::core::marker::Copy for DBTIME {}
-impl ::core::clone::Clone for DBTIME {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct DBTIMESTAMP {
-    pub year: i16,
-    pub month: u16,
-    pub day: u16,
-    pub hour: u16,
-    pub minute: u16,
-    pub second: u16,
-    pub fraction: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for DBTIMESTAMP {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for DBTIMESTAMP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct DBTIMESTAMP {
-    pub year: i16,
-    pub month: u16,
-    pub day: u16,
-    pub hour: u16,
-    pub minute: u16,
-    pub second: u16,
-    pub fraction: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for DBTIMESTAMP {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for DBTIMESTAMP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBTYPEENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_EMPTY: DBTYPEENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_NULL: DBTYPEENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_I2: DBTYPEENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_I4: DBTYPEENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_R4: DBTYPEENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_R8: DBTYPEENUM = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_CY: DBTYPEENUM = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_DATE: DBTYPEENUM = 7i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_BSTR: DBTYPEENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_IDISPATCH: DBTYPEENUM = 9i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_ERROR: DBTYPEENUM = 10i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_BOOL: DBTYPEENUM = 11i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_VARIANT: DBTYPEENUM = 12i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_IUNKNOWN: DBTYPEENUM = 13i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_DECIMAL: DBTYPEENUM = 14i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_UI1: DBTYPEENUM = 17i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_ARRAY: DBTYPEENUM = 8192i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_BYREF: DBTYPEENUM = 16384i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_I1: DBTYPEENUM = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_UI2: DBTYPEENUM = 18i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_UI4: DBTYPEENUM = 19i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_I8: DBTYPEENUM = 20i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_UI8: DBTYPEENUM = 21i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_GUID: DBTYPEENUM = 72i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_VECTOR: DBTYPEENUM = 4096i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_RESERVED: DBTYPEENUM = 32768i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_BYTES: DBTYPEENUM = 128i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_STR: DBTYPEENUM = 129i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_WSTR: DBTYPEENUM = 130i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_NUMERIC: DBTYPEENUM = 131i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_UDT: DBTYPEENUM = 132i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_DBDATE: DBTYPEENUM = 133i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_DBTIME: DBTYPEENUM = 134i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_DBTIMESTAMP: DBTYPEENUM = 135i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBTYPEENUM15 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_HCHAPTER: DBTYPEENUM15 = 136i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBTYPEENUM20 = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_FILETIME: DBTYPEENUM20 = 64i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_PROPVARIANT: DBTYPEENUM20 = 138i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBTYPE_VARNUMERIC: DBTYPEENUM20 = 139i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DBTYPE_SQLVARIANT: u32 = 144u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBUPDELRULEENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUPDELRULE_NOACTION: DBUPDELRULEENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUPDELRULE_CASCADE: DBUPDELRULEENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUPDELRULE_SETNULL: DBUPDELRULEENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBUPDELRULE_SETDEFAULT: DBUPDELRULEENUM = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct DBVECTOR {
-    pub size: usize,
-    pub ptr: *mut ::core::ffi::c_void,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for DBVECTOR {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for DBVECTOR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct DBVECTOR {
-    pub size: usize,
-    pub ptr: *mut ::core::ffi::c_void,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for DBVECTOR {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for DBVECTOR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBWATCHMODEENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBWATCHMODE_ALL: DBWATCHMODEENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBWATCHMODE_EXTEND: DBWATCHMODEENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBWATCHMODE_MOVE: DBWATCHMODEENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBWATCHMODE_COUNT: DBWATCHMODEENUM = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DBWATCHNOTIFYENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBWATCHNOTIFY_ROWSCHANGED: DBWATCHNOTIFYENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBWATCHNOTIFY_QUERYDONE: DBWATCHNOTIFYENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBWATCHNOTIFY_QUERYREEXECUTED: DBWATCHNOTIFYENUM = 3i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DB_ALL_EXCEPT_LIKE: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -4246,20 +1735,6 @@ pub const DB_NULL_HACCESSOR: u32 = 0u32;
 pub const DB_NULL_HCHAPTER: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DB_NULL_HROW: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct DB_NUMERIC {
-    pub precision: u8,
-    pub scale: u8,
-    pub sign: u8,
-    pub val: [u8; 16],
-}
-impl ::core::marker::Copy for DB_NUMERIC {}
-impl ::core::clone::Clone for DB_NUMERIC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DB_OUT: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -4350,47 +1825,6 @@ pub const DB_S_UNWANTEDPHASE: ::windows_sys::core::HRESULT = 265934i32;
 pub const DB_S_UNWANTEDREASON: ::windows_sys::core::HRESULT = 265935i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DB_UNSEARCHABLE: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct DB_VARNUMERIC {
-    pub precision: u8,
-    pub scale: i8,
-    pub sign: u8,
-    pub val: [u8; 1],
-}
-impl ::core::marker::Copy for DB_VARNUMERIC {}
-impl ::core::clone::Clone for DB_VARNUMERIC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct DCINFO {
-    pub eInfoType: u32,
-    pub vData: super::Com::VARIANT,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for DCINFO {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for DCINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DCINFOTYPEENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DCINFOTYPE_VERSION: DCINFOTYPEENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type DELIVERY_AGENT_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DELIVERY_AGENT_FLAG_NO_BROADCAST: DELIVERY_AGENT_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DELIVERY_AGENT_FLAG_NO_RESTRICTIONS: DELIVERY_AGENT_FLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DELIVERY_AGENT_FLAG_SILENT_DIAL: DELIVERY_AGENT_FLAGS = 16i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DISPID_QUERY_ALL: u32 = 6u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -4496,49 +1930,6 @@ pub const DS_E_UNKNOWNREQUEST: i32 = -2147220476i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const DS_E_VALUETOOLARGE: i32 = -2147220451i32;
 pub const DataLinks: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 570871218, data2: 6593, data3: 4561, data4: [137, 224, 0, 192, 79, 215, 168, 41] };
-pub type DataSource = *mut ::core::ffi::c_void;
-pub type DataSourceListener = *mut ::core::ffi::c_void;
-pub type DataSourceObject = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type EBindInfoOptions = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const BIO_BINDER: EBindInfoOptions = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct ERRORINFO {
-    pub hrError: ::windows_sys::core::HRESULT,
-    pub dwMinor: u32,
-    pub clsid: ::windows_sys::core::GUID,
-    pub iid: ::windows_sys::core::GUID,
-    pub dispid: i32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for ERRORINFO {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for ERRORINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct ERRORINFO {
-    pub hrError: ::windows_sys::core::HRESULT,
-    pub dwMinor: u32,
-    pub clsid: ::windows_sys::core::GUID,
-    pub iid: ::windows_sys::core::GUID,
-    pub dispid: i32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for ERRORINFO {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for ERRORINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const ERROR_FTE: u32 = 13824u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -4981,20 +2372,6 @@ pub const EX_TYPE: u32 = 12u32;
 pub const EX_USER: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const FAIL: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct FILTERED_DATA_SOURCES {
-    pub pwcsExtension: ::windows_sys::core::PCWSTR,
-    pub pwcsMime: ::windows_sys::core::PCWSTR,
-    pub pClsid: *const ::windows_sys::core::GUID,
-    pub pwcsOverride: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for FILTERED_DATA_SOURCES {}
-impl ::core::clone::Clone for FILTERED_DATA_SOURCES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const FLTRDMN_E_CANNOT_DECRYPT_PASSWORD: i32 = -2147212282i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -5005,12 +2382,6 @@ pub const FLTRDMN_E_FILTER_INIT_FAILED: i32 = -2147212284i32;
 pub const FLTRDMN_E_QI_FILTER_FAILED: i32 = -2147212286i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const FLTRDMN_E_UNEXPECTED: i32 = -2147212287i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type FOLLOW_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const FF_INDEXCOMPLEXURLS: FOLLOW_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const FF_SUPPRESSINDEXING: FOLLOW_FLAGS = 2i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const FTE_E_ADMIN_BLOB_CORRUPT: i32 = -2147207676i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -5488,57 +2859,6 @@ pub const GTHR_S_STATUS_THROTTLE: i32 = 265503i32;
 pub const GTHR_S_TRANSACTION_IGNORED: i32 = 265577i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const GTHR_S_USE_MIME_FILTER: i32 = 265639i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct HITRANGE {
-    pub iPosition: u32,
-    pub cLength: u32,
-}
-impl ::core::marker::Copy for HITRANGE {}
-impl ::core::clone::Clone for HITRANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type IAccessor = *mut ::core::ffi::c_void;
-pub type IAlterIndex = *mut ::core::ffi::c_void;
-pub type IAlterTable = *mut ::core::ffi::c_void;
-pub type IBindResource = *mut ::core::ffi::c_void;
-pub type IChapteredRowset = *mut ::core::ffi::c_void;
-pub type IColumnMapper = *mut ::core::ffi::c_void;
-pub type IColumnMapperCreator = *mut ::core::ffi::c_void;
-pub type IColumnsInfo = *mut ::core::ffi::c_void;
-pub type IColumnsInfo2 = *mut ::core::ffi::c_void;
-pub type IColumnsRowset = *mut ::core::ffi::c_void;
-pub type ICommand = *mut ::core::ffi::c_void;
-pub type ICommandCost = *mut ::core::ffi::c_void;
-pub type ICommandPersist = *mut ::core::ffi::c_void;
-pub type ICommandPrepare = *mut ::core::ffi::c_void;
-pub type ICommandProperties = *mut ::core::ffi::c_void;
-pub type ICommandStream = *mut ::core::ffi::c_void;
-pub type ICommandText = *mut ::core::ffi::c_void;
-pub type ICommandValidate = *mut ::core::ffi::c_void;
-pub type ICommandWithParameters = *mut ::core::ffi::c_void;
-pub type ICondition = *mut ::core::ffi::c_void;
-pub type ICondition2 = *mut ::core::ffi::c_void;
-pub type IConditionFactory = *mut ::core::ffi::c_void;
-pub type IConditionFactory2 = *mut ::core::ffi::c_void;
-pub type IConditionGenerator = *mut ::core::ffi::c_void;
-pub type IConvertType = *mut ::core::ffi::c_void;
-pub type ICreateRow = *mut ::core::ffi::c_void;
-pub type IDBAsynchNotify = *mut ::core::ffi::c_void;
-pub type IDBAsynchStatus = *mut ::core::ffi::c_void;
-pub type IDBBinderProperties = *mut ::core::ffi::c_void;
-pub type IDBCreateCommand = *mut ::core::ffi::c_void;
-pub type IDBCreateSession = *mut ::core::ffi::c_void;
-pub type IDBDataSourceAdmin = *mut ::core::ffi::c_void;
-pub type IDBInfo = *mut ::core::ffi::c_void;
-pub type IDBInitialize = *mut ::core::ffi::c_void;
-pub type IDBPromptInitialize = *mut ::core::ffi::c_void;
-pub type IDBProperties = *mut ::core::ffi::c_void;
-pub type IDBSchemaCommand = *mut ::core::ffi::c_void;
-pub type IDBSchemaRowset = *mut ::core::ffi::c_void;
-pub type IDCInfo = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const IDENTIFIER_SDK_ERROR: u32 = 268435456u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -5655,44 +2975,6 @@ pub const IDX_S_NO_BUILD_IN_PROGRESS: i32 = 266516i32;
 pub const IDX_S_SEARCH_SERVER_ALREADY_EXISTS: i32 = 266517i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const IDX_S_SEARCH_SERVER_DOES_NOT_EXIST: i32 = 266518i32;
-pub type IDataConvert = *mut ::core::ffi::c_void;
-pub type IDataInitialize = *mut ::core::ffi::c_void;
-pub type IDataSourceLocator = *mut ::core::ffi::c_void;
-pub type IEntity = *mut ::core::ffi::c_void;
-pub type IEnumItemProperties = *mut ::core::ffi::c_void;
-pub type IEnumSearchRoots = *mut ::core::ffi::c_void;
-pub type IEnumSearchScopeRules = *mut ::core::ffi::c_void;
-pub type IEnumSubscription = *mut ::core::ffi::c_void;
-pub type IErrorLookup = *mut ::core::ffi::c_void;
-pub type IErrorRecords = *mut ::core::ffi::c_void;
-pub type IGetDataSource = *mut ::core::ffi::c_void;
-pub type IGetRow = *mut ::core::ffi::c_void;
-pub type IGetSession = *mut ::core::ffi::c_void;
-pub type IGetSourceRow = *mut ::core::ffi::c_void;
-pub type IIndexDefinition = *mut ::core::ffi::c_void;
-pub type IInterval = *mut ::core::ffi::c_void;
-pub type ILoadFilter = *mut ::core::ffi::c_void;
-pub type ILoadFilterWithPrivateComActivation = *mut ::core::ffi::c_void;
-pub type IMDDataset = *mut ::core::ffi::c_void;
-pub type IMDFind = *mut ::core::ffi::c_void;
-pub type IMDRangeRowset = *mut ::core::ffi::c_void;
-pub type IMetaData = *mut ::core::ffi::c_void;
-pub type IMultipleResults = *mut ::core::ffi::c_void;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct INCREMENTAL_ACCESS_INFO {
-    pub dwSize: u32,
-    pub ftLastModifiedTime: super::super::Foundation::FILETIME,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for INCREMENTAL_ACCESS_INFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for INCREMENTAL_ACCESS_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const INET_E_AGENT_CACHE_SIZE_EXCEEDED: ::windows_sys::core::HRESULT = -2146693246i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -5713,156 +2995,6 @@ pub const INET_E_SCHEDULED_UPDATE_INTERVAL: ::windows_sys::core::HRESULT = -2146
 pub const INET_S_AGENT_INCREASED_CACHE_SIZE: ::windows_sys::core::HRESULT = 790416i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const INET_S_AGENT_PART_FAIL: ::windows_sys::core::HRESULT = 790401i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type INTERVAL_LIMIT_KIND = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const ILK_EXPLICIT_INCLUDED: INTERVAL_LIMIT_KIND = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const ILK_EXPLICIT_EXCLUDED: INTERVAL_LIMIT_KIND = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const ILK_NEGATIVE_INFINITY: INTERVAL_LIMIT_KIND = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const ILK_POSITIVE_INFINITY: INTERVAL_LIMIT_KIND = 3i32;
-pub type INamedEntity = *mut ::core::ffi::c_void;
-pub type INamedEntityCollector = *mut ::core::ffi::c_void;
-pub type IObjectAccessControl = *mut ::core::ffi::c_void;
-pub type IOpLockStatus = *mut ::core::ffi::c_void;
-pub type IOpenRowset = *mut ::core::ffi::c_void;
-pub type IParentRowset = *mut ::core::ffi::c_void;
-pub type IProtocolHandlerSite = *mut ::core::ffi::c_void;
-pub type IProvideMoniker = *mut ::core::ffi::c_void;
-pub type IQueryParser = *mut ::core::ffi::c_void;
-pub type IQueryParserManager = *mut ::core::ffi::c_void;
-pub type IQuerySolution = *mut ::core::ffi::c_void;
-pub type IReadData = *mut ::core::ffi::c_void;
-pub type IRegisterProvider = *mut ::core::ffi::c_void;
-pub type IRelationship = *mut ::core::ffi::c_void;
-pub type IRichChunk = *mut ::core::ffi::c_void;
-pub type IRow = *mut ::core::ffi::c_void;
-pub type IRowChange = *mut ::core::ffi::c_void;
-pub type IRowPosition = *mut ::core::ffi::c_void;
-pub type IRowPositionChange = *mut ::core::ffi::c_void;
-pub type IRowSchemaChange = *mut ::core::ffi::c_void;
-pub type IRowset = *mut ::core::ffi::c_void;
-pub type IRowsetAsynch = *mut ::core::ffi::c_void;
-pub type IRowsetBookmark = *mut ::core::ffi::c_void;
-pub type IRowsetChange = *mut ::core::ffi::c_void;
-pub type IRowsetChangeExtInfo = *mut ::core::ffi::c_void;
-pub type IRowsetChapterMember = *mut ::core::ffi::c_void;
-pub type IRowsetCopyRows = *mut ::core::ffi::c_void;
-pub type IRowsetCurrentIndex = *mut ::core::ffi::c_void;
-pub type IRowsetEvents = *mut ::core::ffi::c_void;
-#[repr(C)]
-pub struct IRowsetExactScroll(pub u8);
-pub type IRowsetFastLoad = *mut ::core::ffi::c_void;
-pub type IRowsetFind = *mut ::core::ffi::c_void;
-pub type IRowsetIdentity = *mut ::core::ffi::c_void;
-pub type IRowsetIndex = *mut ::core::ffi::c_void;
-pub type IRowsetInfo = *mut ::core::ffi::c_void;
-pub type IRowsetKeys = *mut ::core::ffi::c_void;
-pub type IRowsetLocate = *mut ::core::ffi::c_void;
-pub type IRowsetNewRowAfter = *mut ::core::ffi::c_void;
-pub type IRowsetNextRowset = *mut ::core::ffi::c_void;
-pub type IRowsetNotify = *mut ::core::ffi::c_void;
-pub type IRowsetPrioritization = *mut ::core::ffi::c_void;
-pub type IRowsetQueryStatus = *mut ::core::ffi::c_void;
-pub type IRowsetRefresh = *mut ::core::ffi::c_void;
-pub type IRowsetResynch = *mut ::core::ffi::c_void;
-pub type IRowsetScroll = *mut ::core::ffi::c_void;
-pub type IRowsetUpdate = *mut ::core::ffi::c_void;
-pub type IRowsetView = *mut ::core::ffi::c_void;
-pub type IRowsetWatchAll = *mut ::core::ffi::c_void;
-pub type IRowsetWatchNotify = *mut ::core::ffi::c_void;
-pub type IRowsetWatchRegion = *mut ::core::ffi::c_void;
-pub type IRowsetWithParameters = *mut ::core::ffi::c_void;
-pub type ISQLErrorInfo = *mut ::core::ffi::c_void;
-pub type ISQLGetDiagField = *mut ::core::ffi::c_void;
-pub type ISQLRequestDiagFields = *mut ::core::ffi::c_void;
-pub type ISQLServerErrorInfo = *mut ::core::ffi::c_void;
-pub type ISchemaLocalizerSupport = *mut ::core::ffi::c_void;
-pub type ISchemaLock = *mut ::core::ffi::c_void;
-pub type ISchemaProvider = *mut ::core::ffi::c_void;
-pub type IScopedOperations = *mut ::core::ffi::c_void;
-pub type ISearchCatalogManager = *mut ::core::ffi::c_void;
-pub type ISearchCatalogManager2 = *mut ::core::ffi::c_void;
-pub type ISearchCrawlScopeManager = *mut ::core::ffi::c_void;
-pub type ISearchCrawlScopeManager2 = *mut ::core::ffi::c_void;
-pub type ISearchItemsChangedSink = *mut ::core::ffi::c_void;
-pub type ISearchLanguageSupport = *mut ::core::ffi::c_void;
-pub type ISearchManager = *mut ::core::ffi::c_void;
-pub type ISearchManager2 = *mut ::core::ffi::c_void;
-pub type ISearchNotifyInlineSite = *mut ::core::ffi::c_void;
-pub type ISearchPersistentItemsChangedSink = *mut ::core::ffi::c_void;
-pub type ISearchProtocol = *mut ::core::ffi::c_void;
-pub type ISearchProtocol2 = *mut ::core::ffi::c_void;
-pub type ISearchProtocolThreadContext = *mut ::core::ffi::c_void;
-pub type ISearchQueryHelper = *mut ::core::ffi::c_void;
-pub type ISearchQueryHits = *mut ::core::ffi::c_void;
-pub type ISearchRoot = *mut ::core::ffi::c_void;
-pub type ISearchScopeRule = *mut ::core::ffi::c_void;
-pub type ISearchViewChangedSink = *mut ::core::ffi::c_void;
-pub type ISecurityInfo = *mut ::core::ffi::c_void;
-pub type IService = *mut ::core::ffi::c_void;
-pub type ISessionProperties = *mut ::core::ffi::c_void;
-pub type ISimpleCommandCreator = *mut ::core::ffi::c_void;
-pub type ISourcesRowset = *mut ::core::ffi::c_void;
-pub type IStemmer = *mut ::core::ffi::c_void;
-pub type ISubscriptionItem = *mut ::core::ffi::c_void;
-pub type ISubscriptionMgr = *mut ::core::ffi::c_void;
-pub type ISubscriptionMgr2 = *mut ::core::ffi::c_void;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct ITEMPROP {
-    pub variantValue: super::Com::VARIANT,
-    pub pwszName: ::windows_sys::core::PWSTR,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for ITEMPROP {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for ITEMPROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct ITEM_INFO {
-    pub dwSize: u32,
-    pub pcwszFromEMail: ::windows_sys::core::PCWSTR,
-    pub pcwszApplicationName: ::windows_sys::core::PCWSTR,
-    pub pcwszCatalogName: ::windows_sys::core::PCWSTR,
-    pub pcwszContentClass: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for ITEM_INFO {}
-impl ::core::clone::Clone for ITEM_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type ITableCreation = *mut ::core::ffi::c_void;
-pub type ITableDefinition = *mut ::core::ffi::c_void;
-pub type ITableDefinitionWithConstraints = *mut ::core::ffi::c_void;
-pub type ITableRename = *mut ::core::ffi::c_void;
-pub type ITokenCollection = *mut ::core::ffi::c_void;
-pub type ITransactionJoin = *mut ::core::ffi::c_void;
-pub type ITransactionLocal = *mut ::core::ffi::c_void;
-pub type ITransactionObject = *mut ::core::ffi::c_void;
-pub type ITrusteeAdmin = *mut ::core::ffi::c_void;
-pub type ITrusteeGroupAdmin = *mut ::core::ffi::c_void;
-pub type IUMS = *mut ::core::ffi::c_void;
-pub type IUMSInitialize = *mut ::core::ffi::c_void;
-pub type IUrlAccessor = *mut ::core::ffi::c_void;
-pub type IUrlAccessor2 = *mut ::core::ffi::c_void;
-pub type IUrlAccessor3 = *mut ::core::ffi::c_void;
-pub type IUrlAccessor4 = *mut ::core::ffi::c_void;
-pub type IViewChapter = *mut ::core::ffi::c_void;
-pub type IViewFilter = *mut ::core::ffi::c_void;
-pub type IViewRowset = *mut ::core::ffi::c_void;
-pub type IViewSort = *mut ::core::ffi::c_void;
-pub type IWordBreaker = *mut ::core::ffi::c_void;
-pub type IWordFormSink = *mut ::core::ffi::c_void;
-pub type IWordSink = *mut ::core::ffi::c_void;
 pub const Interval: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3646363423, data2: 19449, data3: 19938, data4: [188, 213, 199, 10, 124, 165, 88, 54] };
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const JET_GET_PROP_STORE_ERROR: i32 = -1073732822i32;
@@ -5896,22 +3028,6 @@ pub const JPS_E_SCHEMA_ERROR: i32 = -2147217018i32;
 pub const JPS_E_SHARING_VIOLATION: i32 = -2147217014i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const JPS_S_DUPLICATE_DOC_DETECTED: i32 = 266624i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct KAGGETDIAG {
-    pub ulSize: u32,
-    pub vDiagInfo: super::Com::VARIANT,
-    pub sDiagField: i16,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for KAGGETDIAG {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for KAGGETDIAG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const KAGPROPVAL_CONCUR_LOCK: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -5994,33 +3110,6 @@ pub const KAGPROP_STRINGFUNCTIONS: u32 = 20u32;
 pub const KAGPROP_SYSTEMFUNCTIONS: u32 = 21u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const KAGPROP_TIMEDATEFUNCTIONS: u32 = 22u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct KAGREQDIAG {
-    pub ulDiagFlags: u32,
-    pub vt: u16,
-    pub sDiagField: i16,
-}
-impl ::core::marker::Copy for KAGREQDIAG {}
-impl ::core::clone::Clone for KAGREQDIAG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type KAGREQDIAGFLAGSENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const KAGREQDIAGFLAGS_HEADER: KAGREQDIAGFLAGSENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const KAGREQDIAGFLAGS_RECORD: KAGREQDIAGFLAGSENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type LOCKMODEENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const LOCKMODE_INVALID: LOCKMODEENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const LOCKMODE_EXCLUSIVE: LOCKMODEENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const LOCKMODE_SHARED: LOCKMODEENUM = 2i32;
 pub const LeafCondition: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1391549577, data2: 23063, data3: 18657, data4: [187, 205, 70, 163, 248, 156, 124, 194] };
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const MAXNAME: u32 = 129u32;
@@ -6030,44 +3119,6 @@ pub const MAXNUMERICLEN: u32 = 16u32;
 pub const MAXUSEVERITY: u32 = 18u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const MAX_QUERY_RANK: u32 = 1000u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct MDAXISINFO {
-    pub cbSize: usize,
-    pub iAxis: usize,
-    pub cDimensions: usize,
-    pub cCoordinates: usize,
-    pub rgcColumns: *mut usize,
-    pub rgpwszDimensionNames: *mut ::windows_sys::core::PWSTR,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for MDAXISINFO {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for MDAXISINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct MDAXISINFO {
-    pub cbSize: usize,
-    pub iAxis: usize,
-    pub cDimensions: usize,
-    pub cCoordinates: usize,
-    pub rgcColumns: *mut usize,
-    pub rgpwszDimensionNames: *mut ::windows_sys::core::PWSTR,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for MDAXISINFO {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for MDAXISINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const MDAXIS_CHAPTERS: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -6380,14 +3431,6 @@ pub const MSDAORA8: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data
 pub const MSDAORA8_ERROR: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2131141492, data2: 56682, data3: 17371, data4: [180, 224, 31, 193, 33, 229, 230, 43] };
 pub const MSDAORA_ERROR: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3905703103, data2: 65023, data3: 4560, data4: [184, 101, 0, 160, 201, 8, 28, 29] };
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type MSDSDBINITPROPENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MSDS_DBINIT_DATAPROVIDER: MSDSDBINITPROPENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type MSDSSESSIONPROPENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const DBPROP_MSDS_SESS_UNIQUENAMES: MSDSSESSIONPROPENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const MSG_CI_CORRUPT_INDEX_COMPONENT: ::windows_sys::core::HRESULT = 1073745962i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const MSG_CI_CREATE_SEVER_ITEM_FAILED: ::windows_sys::core::HRESULT = -2147479480i32;
@@ -6432,30 +3475,6 @@ pub const MSS_E_UNICODEFILEHEADERMISSING: i32 = -2147213051i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const MS_PERSIST_PROGID: &str = "MSPersist";
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type NAMED_ENTITY_CERTAINTY = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const NEC_LOW: NAMED_ENTITY_CERTAINTY = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const NEC_MEDIUM: NAMED_ENTITY_CERTAINTY = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const NEC_HIGH: NAMED_ENTITY_CERTAINTY = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct NATLANGUAGERESTRICTION {
-    pub prop: super::super::Storage::IndexServer::FULLPROPSPEC,
-    pub pwcsPhrase: ::windows_sys::core::PWSTR,
-    pub lcid: u32,
-}
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for NATLANGUAGERESTRICTION {}
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for NATLANGUAGERESTRICTION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const NET_E_DISCONNECTED: i32 = -2147220733i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const NET_E_GENERAL: i32 = -2147220736i32;
@@ -6471,22 +3490,6 @@ pub const NLADMIN_E_DUPLICATE_CATALOG: i32 = -2147215103i32;
 pub const NLADMIN_E_FAILED_TO_GIVE_ACCOUNT_PRIVILEGE: i32 = -2147215101i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const NLADMIN_S_NOT_ALL_BUILD_CATALOGS_INITIALIZED: i32 = 268546i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct NODERESTRICTION {
-    pub cRes: u32,
-    pub paRes: *mut *mut RESTRICTION,
-    pub reserved: u32,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for NODERESTRICTION {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for NODERESTRICTION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const NOTESPH_E_ATTACHMENTS: i32 = -2147211770i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -6509,20 +3512,6 @@ pub const NOTESPH_E_UNSUPPORTED_CONTENT_FIELD_TYPE: i32 = -2147211773i32;
 pub const NOTESPH_S_IGNORE_ID: i32 = 271874i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const NOTESPH_S_LISTKNOWNFIELDS: i32 = 271888i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct NOTRESTRICTION {
-    pub pRes: *mut RESTRICTION,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for NOTRESTRICTION {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for NOTRESTRICTION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const NOT_N_PARSE_ERROR: ::windows_sys::core::HRESULT = 526638i32;
 pub const NegationCondition: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2380908364, data2: 24666, data3: 19149, data4: [190, 227, 43, 34, 42, 162, 210, 61] };
@@ -6610,45 +3599,6 @@ pub const ODBC_REMOVE_SYS_DSN: u32 = 6u32;
 pub const ODBC_SYSTEM_DSN: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const ODBC_USER_DSN: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct ODBC_VS_ARGS {
-    pub pguidEvent: *const ::windows_sys::core::GUID,
-    pub dwFlags: u32,
-    pub Anonymous1: ODBC_VS_ARGS_0,
-    pub Anonymous2: ODBC_VS_ARGS_1,
-    pub RetCode: i16,
-}
-impl ::core::marker::Copy for ODBC_VS_ARGS {}
-impl ::core::clone::Clone for ODBC_VS_ARGS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub union ODBC_VS_ARGS_0 {
-    pub wszArg: ::windows_sys::core::PWSTR,
-    pub szArg: ::windows_sys::core::PSTR,
-}
-impl ::core::marker::Copy for ODBC_VS_ARGS_0 {}
-impl ::core::clone::Clone for ODBC_VS_ARGS_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub union ODBC_VS_ARGS_1 {
-    pub wszCorrelation: ::windows_sys::core::PWSTR,
-    pub szCorrelation: ::windows_sys::core::PSTR,
-}
-impl ::core::marker::Copy for ODBC_VS_ARGS_1 {}
-impl ::core::clone::Clone for ODBC_VS_ARGS_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const ODBC_VS_FLAG_RETCODE: i32 = 4i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -6657,66 +3607,10 @@ pub const ODBC_VS_FLAG_STOP: i32 = 8i32;
 pub const ODBC_VS_FLAG_UNICODE_ARG: i32 = 1i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const ODBC_VS_FLAG_UNICODE_COR: i32 = 2i32;
-pub type OLEDBSimpleProvider = *mut ::core::ffi::c_void;
-pub type OLEDBSimpleProviderListener = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const OLEDBVER: u32 = 624u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const OLEDB_BINDER_CUSTOM_ERROR: i32 = -2147212032i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type OSPCOMP = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPCOMP_EQ: OSPCOMP = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPCOMP_DEFAULT: OSPCOMP = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPCOMP_LT: OSPCOMP = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPCOMP_LE: OSPCOMP = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPCOMP_GE: OSPCOMP = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPCOMP_GT: OSPCOMP = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPCOMP_NE: OSPCOMP = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type OSPFIND = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPFIND_DEFAULT: OSPFIND = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPFIND_UP: OSPFIND = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPFIND_CASESENSITIVE: OSPFIND = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPFIND_UPCASESENSITIVE: OSPFIND = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type OSPFORMAT = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPFORMAT_RAW: OSPFORMAT = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPFORMAT_DEFAULT: OSPFORMAT = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPFORMAT_FORMATTED: OSPFORMAT = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPFORMAT_HTML: OSPFORMAT = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type OSPRW = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPRW_DEFAULT: OSPRW = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPRW_READONLY: OSPRW = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPRW_READWRITE: OSPRW = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPRW_MIXED: OSPRW = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type OSPXFER = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPXFER_COMPLETE: OSPXFER = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPXFER_ABORT: OSPXFER = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const OSPXFER_ERROR: OSPXFER = 2i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const OSP_IndexLabel: u32 = 0u32;
 pub const PDPO: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3434409056, data2: 47580, data3: 4561, data4: [172, 128, 0, 160, 201, 3, 72, 115] };
@@ -6757,83 +3651,21 @@ pub const PEOPLE_IMPORT_NODSDEFINED: i32 = -2147205119i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const PEOPLE_IMPORT_NOMAPPINGDEFINED: i32 = -2147205117i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type PFNFILLTEXTBUFFER = ::core::option::Option<unsafe extern "system" fn(ptextsource: *mut TEXT_SOURCE) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const PRAll: u32 = 256u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const PRAllBits: u32 = 7u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const PRAny: u32 = 512u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type PRIORITIZE_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PRIORITIZE_FLAG_RETRYFAILEDITEMS: PRIORITIZE_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PRIORITIZE_FLAG_IGNOREFAILURECOUNT: PRIORITIZE_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type PRIORITY_LEVEL = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PRIORITY_LEVEL_FOREGROUND: PRIORITY_LEVEL = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PRIORITY_LEVEL_HIGH: PRIORITY_LEVEL = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PRIORITY_LEVEL_LOW: PRIORITY_LEVEL = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PRIORITY_LEVEL_DEFAULT: PRIORITY_LEVEL = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const PROGID_MSPersist_Version_W: &str = "MSPersist.1";
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const PROGID_MSPersist_W: &str = "MSPersist";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct PROPERTYRESTRICTION {
-    pub rel: u32,
-    pub prop: super::super::Storage::IndexServer::FULLPROPSPEC,
-    pub prval: super::Com::StructuredStorage::PROPVARIANT,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for PROPERTYRESTRICTION {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for PROPERTYRESTRICTION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const PROPID_DBBMK_BOOKMARK: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const PROPID_DBBMK_CHAPTER: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const PROPID_DBSELF_SELF: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type PROXY_ACCESS = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PROXY_ACCESS_PRECONFIG: PROXY_ACCESS = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PROXY_ACCESS_DIRECT: PROXY_ACCESS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const PROXY_ACCESS_PROXY: PROXY_ACCESS = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PROXY_INFO {
-    pub dwSize: u32,
-    pub pcwszUserAgent: ::windows_sys::core::PCWSTR,
-    pub paUseProxy: PROXY_ACCESS,
-    pub fLocalBypass: super::super::Foundation::BOOL,
-    pub dwPortNumber: u32,
-    pub pcwszProxyName: ::windows_sys::core::PCWSTR,
-    pub pcwszBypassList: ::windows_sys::core::PCWSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PROXY_INFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PROXY_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const PRRE: u32 = 6u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -6971,20 +3803,6 @@ pub const QUERY_E_TOP_LEVEL_IN_GROUP: ::windows_sys::core::HRESULT = -2147215846
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const QUERY_E_UPGRADEINPROGRESS: ::windows_sys::core::HRESULT = -2147215848i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type QUERY_PARSER_MANAGER_OPTION = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const QPMO_SCHEMA_BINARY_NAME: QUERY_PARSER_MANAGER_OPTION = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const QPMO_PRELOCALIZED_SCHEMA_BINARY_PATH: QUERY_PARSER_MANAGER_OPTION = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const QPMO_UNLOCALIZED_SCHEMA_BINARY_PATH: QUERY_PARSER_MANAGER_OPTION = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const QPMO_LOCALIZED_SCHEMA_BINARY_PATH: QUERY_PARSER_MANAGER_OPTION = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const QPMO_APPEND_LCID_TO_LOCALIZED_PATH: QUERY_PARSER_MANAGER_OPTION = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const QPMO_LOCALIZER_SUPPORT: QUERY_PARSER_MANAGER_OPTION = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const QUERY_SORTDEFAULT: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const QUERY_SORTXASCEND: u32 = 2u32;
@@ -6994,58 +3812,6 @@ pub const QUERY_SORTXDESCEND: u32 = 3u32;
 pub const QUERY_VALIDBITS: u32 = 3u32;
 pub const QueryParser: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3073347544, data2: 4011, data3: 19929, data4: [189, 191, 36, 90, 108, 225, 72, 91] };
 pub const QueryParserManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1351136154, data2: 10676, data3: 19869, data4: [130, 69, 78, 226, 137, 34, 47, 102] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct RANGECATEGORIZE {
-    pub cRange: u32,
-    pub aRangeBegin: *mut super::Com::StructuredStorage::PROPVARIANT,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for RANGECATEGORIZE {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for RANGECATEGORIZE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct RESTRICTION {
-    pub rt: u32,
-    pub weight: u32,
-    pub res: RESTRICTION_0,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for RESTRICTION {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for RESTRICTION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub union RESTRICTION_0 {
-    pub ar: NODERESTRICTION,
-    pub orRestriction: NODERESTRICTION,
-    pub pxr: NODERESTRICTION,
-    pub vr: VECTORRESTRICTION,
-    pub nr: NOTRESTRICTION,
-    pub cr: CONTENTRESTRICTION,
-    pub nlr: NATLANGUAGERESTRICTION,
-    pub pr: PROPERTYRESTRICTION,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for RESTRICTION_0 {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for RESTRICTION_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const REXSPH_E_DUPLICATE_PROPERTY: i32 = -2147207927i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -7066,82 +3832,6 @@ pub const REXSPH_E_UNEXPECTED_FILTER_STATE: i32 = -2147207928i32;
 pub const REXSPH_E_UNKNOWN_DATA_TYPE: i32 = -2147207929i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const REXSPH_S_REDIRECTED: i32 = 275713i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
-pub struct RMTPACK {
-    pub pISeqStream: super::Com::ISequentialStream,
-    pub cbData: u32,
-    pub cBSTR: u32,
-    pub rgBSTR: *mut super::super::Foundation::BSTR,
-    pub cVARIANT: u32,
-    pub rgVARIANT: *mut super::Com::VARIANT,
-    pub cIDISPATCH: u32,
-    pub rgIDISPATCH: *mut super::Com::IDispatch,
-    pub cIUNKNOWN: u32,
-    pub rgIUNKNOWN: *mut ::windows_sys::core::IUnknown,
-    pub cPROPVARIANT: u32,
-    pub rgPROPVARIANT: *mut super::Com::StructuredStorage::PROPVARIANT,
-    pub cArray: u32,
-    pub rgArray: *mut super::Com::VARIANT,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for RMTPACK {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for RMTPACK {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
-pub struct RMTPACK {
-    pub pISeqStream: super::Com::ISequentialStream,
-    pub cbData: u32,
-    pub cBSTR: u32,
-    pub rgBSTR: *mut super::super::Foundation::BSTR,
-    pub cVARIANT: u32,
-    pub rgVARIANT: *mut super::Com::VARIANT,
-    pub cIDISPATCH: u32,
-    pub rgIDISPATCH: *mut super::Com::IDispatch,
-    pub cIUNKNOWN: u32,
-    pub rgIUNKNOWN: *mut ::windows_sys::core::IUnknown,
-    pub cPROPVARIANT: u32,
-    pub rgPROPVARIANT: *mut super::Com::StructuredStorage::PROPVARIANT,
-    pub cArray: u32,
-    pub rgArray: *mut super::Com::VARIANT,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for RMTPACK {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for RMTPACK {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type ROWSETEVENT_ITEMSTATE = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const ROWSETEVENT_ITEMSTATE_NOTINROWSET: ROWSETEVENT_ITEMSTATE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const ROWSETEVENT_ITEMSTATE_INROWSET: ROWSETEVENT_ITEMSTATE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const ROWSETEVENT_ITEMSTATE_UNKNOWN: ROWSETEVENT_ITEMSTATE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type ROWSETEVENT_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const ROWSETEVENT_TYPE_DATAEXPIRED: ROWSETEVENT_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const ROWSETEVENT_TYPE_FOREGROUNDLOST: ROWSETEVENT_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const ROWSETEVENT_TYPE_SCOPESTATISTICS: ROWSETEVENT_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const RS_COMPLETED: u32 = 2147483648u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -7231,111 +3921,6 @@ pub const SCRIPTPI_E_CHUNK_NOT_VALUE: i32 = -2147213309i32;
 pub const SCRIPTPI_E_PID_NOT_NAME: i32 = -2147213311i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SCRIPTPI_E_PID_NOT_NUMERIC: i32 = -2147213310i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct SEARCH_COLUMN_PROPERTIES {
-    pub Value: super::Com::StructuredStorage::PROPVARIANT,
-    pub lcid: u32,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for SEARCH_COLUMN_PROPERTIES {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for SEARCH_COLUMN_PROPERTIES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type SEARCH_INDEXING_PHASE = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_INDEXING_PHASE_GATHERER: SEARCH_INDEXING_PHASE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_INDEXING_PHASE_QUERYABLE: SEARCH_INDEXING_PHASE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_INDEXING_PHASE_PERSISTED: SEARCH_INDEXING_PHASE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_System_Com\"`*"]
-#[cfg(feature = "Win32_System_Com")]
-pub struct SEARCH_ITEM_CHANGE {
-    pub Change: SEARCH_KIND_OF_CHANGE,
-    pub Priority: SEARCH_NOTIFICATION_PRIORITY,
-    pub pUserData: *mut super::Com::BLOB,
-    pub lpwszURL: ::windows_sys::core::PWSTR,
-    pub lpwszOldURL: ::windows_sys::core::PWSTR,
-}
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::marker::Copy for SEARCH_ITEM_CHANGE {}
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::clone::Clone for SEARCH_ITEM_CHANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct SEARCH_ITEM_INDEXING_STATUS {
-    pub dwDocID: u32,
-    pub hrIndexingStatus: ::windows_sys::core::HRESULT,
-}
-impl ::core::marker::Copy for SEARCH_ITEM_INDEXING_STATUS {}
-impl ::core::clone::Clone for SEARCH_ITEM_INDEXING_STATUS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct SEARCH_ITEM_PERSISTENT_CHANGE {
-    pub Change: SEARCH_KIND_OF_CHANGE,
-    pub URL: ::windows_sys::core::PWSTR,
-    pub OldURL: ::windows_sys::core::PWSTR,
-    pub Priority: SEARCH_NOTIFICATION_PRIORITY,
-}
-impl ::core::marker::Copy for SEARCH_ITEM_PERSISTENT_CHANGE {}
-impl ::core::clone::Clone for SEARCH_ITEM_PERSISTENT_CHANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type SEARCH_KIND_OF_CHANGE = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_CHANGE_ADD: SEARCH_KIND_OF_CHANGE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_CHANGE_DELETE: SEARCH_KIND_OF_CHANGE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_CHANGE_MODIFY: SEARCH_KIND_OF_CHANGE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_CHANGE_MOVE_RENAME: SEARCH_KIND_OF_CHANGE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_CHANGE_SEMANTICS_DIRECTORY: SEARCH_KIND_OF_CHANGE = 262144i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_CHANGE_SEMANTICS_SHALLOW: SEARCH_KIND_OF_CHANGE = 524288i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_CHANGE_SEMANTICS_UPDATE_SECURITY: SEARCH_KIND_OF_CHANGE = 4194304i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type SEARCH_NOTIFICATION_PRIORITY = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_NORMAL_PRIORITY: SEARCH_NOTIFICATION_PRIORITY = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_HIGH_PRIORITY: SEARCH_NOTIFICATION_PRIORITY = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type SEARCH_QUERY_SYNTAX = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_NO_QUERY_SYNTAX: SEARCH_QUERY_SYNTAX = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_ADVANCED_QUERY_SYNTAX: SEARCH_QUERY_SYNTAX = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_NATURAL_QUERY_SYNTAX: SEARCH_QUERY_SYNTAX = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type SEARCH_TERM_EXPANSION = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_TERM_NO_EXPANSION: SEARCH_TERM_EXPANSION = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_TERM_PREFIX_ALL: SEARCH_TERM_EXPANSION = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SEARCH_TERM_STEM_ALL: SEARCH_TERM_EXPANSION = 2i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SEC_E_ACCESSDENIED: i32 = -2147216129i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -7362,111 +3947,8 @@ pub const SEC_E_NOTINITIALIZED: i32 = -2147216382i32;
 pub const SEC_E_NOTRUSTEEID: ::windows_sys::core::HRESULT = -2147217813i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SEC_E_PERMISSIONDENIED: i32 = -2147217911i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-pub struct SEC_OBJECT {
-    pub cObjects: u32,
-    pub prgObjects: *mut SEC_OBJECT_ELEMENT,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::marker::Copy for SEC_OBJECT {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::clone::Clone for SEC_OBJECT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-pub struct SEC_OBJECT {
-    pub cObjects: u32,
-    pub prgObjects: *mut SEC_OBJECT_ELEMENT,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::marker::Copy for SEC_OBJECT {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::clone::Clone for SEC_OBJECT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-pub struct SEC_OBJECT_ELEMENT {
-    pub guidObjectType: ::windows_sys::core::GUID,
-    pub ObjectID: super::super::Storage::IndexServer::DBID,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::marker::Copy for SEC_OBJECT_ELEMENT {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::clone::Clone for SEC_OBJECT_ELEMENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-pub struct SEC_OBJECT_ELEMENT {
-    pub guidObjectType: ::windows_sys::core::GUID,
-    pub ObjectID: super::super::Storage::IndexServer::DBID,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::marker::Copy for SEC_OBJECT_ELEMENT {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Storage_IndexServer")]
-impl ::core::clone::Clone for SEC_OBJECT_ELEMENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SI_TEMPORARY: u32 = 2147483648u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct SORTKEY {
-    pub propColumn: super::super::Storage::IndexServer::FULLPROPSPEC,
-    pub dwOrder: u32,
-    pub locale: u32,
-}
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for SORTKEY {}
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for SORTKEY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-pub struct SORTSET {
-    pub cCol: u32,
-    pub aCol: *mut SORTKEY,
-}
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::marker::Copy for SORTSET {}
-#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
-impl ::core::clone::Clone for SORTSET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SPS_WS_ERROR: i32 = -2147211753i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -7534,34 +4016,6 @@ pub const SQLINT4: u32 = 56u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SQLINT8: u32 = 127u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type SQLINTERVAL = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_YEAR: SQLINTERVAL = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_MONTH: SQLINTERVAL = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_DAY: SQLINTERVAL = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_HOUR: SQLINTERVAL = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_MINUTE: SQLINTERVAL = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_SECOND: SQLINTERVAL = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_YEAR_TO_MONTH: SQLINTERVAL = 7i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_DAY_TO_HOUR: SQLINTERVAL = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_DAY_TO_MINUTE: SQLINTERVAL = 9i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_DAY_TO_SECOND: SQLINTERVAL = 10i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_HOUR_TO_MINUTE: SQLINTERVAL = 11i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_HOUR_TO_SECOND: SQLINTERVAL = 12i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQL_IS_MINUTE_TO_SECOND: SQLINTERVAL = 13i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SQLINTN: u32 = 38u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SQLMONEY: u32 = 60u32;
@@ -7587,54 +4041,6 @@ pub const SQLUNIQUEID: u32 = 36u32;
 pub const SQLVARBINARY: u32 = 37u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SQLVARCHAR: u32 = 39u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type SQLVARENUM = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_EMPTY: SQLVARENUM = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_NULL: SQLVARENUM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_UI1: SQLVARENUM = 17i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_I2: SQLVARENUM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_I4: SQLVARENUM = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_I8: SQLVARENUM = 20i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_R4: SQLVARENUM = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_R8: SQLVARENUM = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_MONEY: SQLVARENUM = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_SMALLMONEY: SQLVARENUM = 200i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_WSTRING: SQLVARENUM = 201i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_WVARSTRING: SQLVARENUM = 202i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_STRING: SQLVARENUM = 203i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_VARSTRING: SQLVARENUM = 204i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_BIT: SQLVARENUM = 11i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_GUID: SQLVARENUM = 72i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_NUMERIC: SQLVARENUM = 131i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_DECIMAL: SQLVARENUM = 205i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_DATETIME: SQLVARENUM = 135i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_SMALLDATETIME: SQLVARENUM = 206i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_BINARY: SQLVARENUM = 207i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_VARBINARY: SQLVARENUM = 208i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const VT_SS_UNKNOWN: SQLVARENUM = 209i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SQLVARIANT: u32 = 98u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -7919,9 +4325,6 @@ pub const SQL_ASYNC_ENABLE_ON: u32 = 1u32;
 pub const SQL_ASYNC_MODE: u32 = 10021u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SQL_ASYNC_NOTIFICATION: u32 = 10025u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type SQL_ASYNC_NOTIFICATION_CALLBACK = ::core::option::Option<unsafe extern "system" fn(pcontext: *const ::core::ffi::c_void, flast: super::super::Foundation::BOOL) -> i16>;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SQL_ASYNC_NOTIFICATION_CAPABLE: i32 = 1i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -9596,31 +5999,6 @@ pub const SQL_INTERVAL_MINUTE_TO_SECOND: i32 = -92i32;
 pub const SQL_INTERVAL_MONTH: i32 = -81i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SQL_INTERVAL_SECOND: i32 = -86i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct SQL_INTERVAL_STRUCT {
-    pub interval_type: SQLINTERVAL,
-    pub interval_sign: i16,
-    pub intval: SQL_INTERVAL_STRUCT_0,
-}
-impl ::core::marker::Copy for SQL_INTERVAL_STRUCT {}
-impl ::core::clone::Clone for SQL_INTERVAL_STRUCT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub union SQL_INTERVAL_STRUCT_0 {
-    pub year_month: tagSQL_YEAR_MONTH,
-    pub day_second: tagSQL_DAY_SECOND,
-}
-impl ::core::marker::Copy for SQL_INTERVAL_STRUCT_0 {}
-impl ::core::clone::Clone for SQL_INTERVAL_STRUCT_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SQL_INTERVAL_YEAR: i32 = -80i32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -9937,20 +6315,6 @@ pub const SQL_NULL_HSTMT: u32 = 0u32;
 pub const SQL_NUMERIC: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SQL_NUMERIC_FUNCTIONS: u32 = 49u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct SQL_NUMERIC_STRUCT {
-    pub precision: u8,
-    pub scale: i8,
-    pub sign: u8,
-    pub val: [u8; 16],
-}
-impl ::core::marker::Copy for SQL_NUMERIC_STRUCT {}
-impl ::core::clone::Clone for SQL_NUMERIC_STRUCT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SQL_NUM_FUNCTIONS: u32 = 23u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
@@ -10947,6 +7311,4109 @@ pub const SSPROP_STREAM_XSL: u32 = 16u32;
 pub const SSPROP_UNICODECOMPARISONSTYLE: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub const SSPROP_UNICODELCID: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STD_BOOKMARKLENGTH: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STGM_COLLECTION: i32 = 8192i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STGM_OPEN: i32 = -2147483648i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STGM_OUTPUT: i32 = 32768i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STGM_RECURSIVE: i32 = 16777216i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STGM_STRICTOPEN: i32 = 1073741824i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STREAM_FLAGS_DISALLOW_ABSOLUTE_PATH: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STREAM_FLAGS_DISALLOW_QUERY: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STREAM_FLAGS_DISALLOW_UPDATEGRAMS: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STREAM_FLAGS_DISALLOW_URL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STREAM_FLAGS_DONTCACHEMAPPINGSCHEMA: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STREAM_FLAGS_DONTCACHETEMPLATE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STREAM_FLAGS_DONTCACHEXSL: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STREAM_FLAGS_RESERVED: u32 = 4294901760u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STS_ABORTXMLPARSE: i32 = -2147211756i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const STS_WS_ERROR: i32 = -2147211754i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_ALLFLAGS: u32 = 61311u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSMGRENUM_MASK: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSMGRENUM_TEMP: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSMGRUPDATE_MASK: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSMGRUPDATE_MINIMIZE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUCCEED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUCCEED_ABORT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUCCEED_ASYNC: u32 = 3u32;
+pub const SubscriptionMgr: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2881368528, data2: 28078, data3: 4560, data4: [190, 202, 0, 192, 79, 217, 64, 190] };
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const TRACE_ON: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const TRACE_VERSION: u32 = 1000u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const TRACE_VS_EVENT_ON: i32 = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const XML_E_BADSXQL: i32 = -2147212799i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const XML_E_NODEFAULTNS: i32 = -2147212800i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_ACCOUNT_DISABLED: i32 = -2147221212i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_BAD_CHARWIDTH: i32 = -2147221245i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_BAD_COLUMN: i32 = -2147221224i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_BUSY: i32 = -2147221237i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_COMPUTED: i32 = -2147221222i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_CORRUPT_DATA: i32 = -2147221221i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_DISK_ERROR: i32 = -2147221226i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_END_OF_SESSION: i32 = -2147220992i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_EXTENDED_ERROR: i32 = -2147221223i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_FAILONEPROVIDER: i32 = -2147221219i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_INVALID_ACCESS_TIME: i32 = -2147221213i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_INVALID_ENTRYID: i32 = -2147221241i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_INVALID_OBJECT: i32 = -2147221240i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_INVALID_WORKSTATION_ACCOUNT: i32 = -2147221214i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_LOGON_FAILED: i32 = -2147221231i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_MISSING_REQUIRED_COLUMN: i32 = -2147220990i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_NETWORK_ERROR: i32 = -2147221227i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_NOT_ENOUGH_DISK: i32 = -2147221235i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_NOT_ENOUGH_RESOURCES: i32 = -2147221234i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_NOT_FOUND: i32 = -2147221233i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_NO_SUPPORT: i32 = -2147221246i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_OBJECT_CHANGED: i32 = -2147221239i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_OBJECT_DELETED: i32 = -2147221238i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_PASSWORD_CHANGE_REQUIRED: i32 = -2147221216i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_PASSWORD_EXPIRED: i32 = -2147221215i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_SESSION_LIMIT: i32 = -2147221230i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_STRING_TOO_LONG: i32 = -2147221243i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_TOO_COMPLEX: i32 = -2147221225i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_UNABLE_TO_ABORT: i32 = -2147221228i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_UNCONFIGURED: i32 = -2147221220i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_UNKNOWN_CPID: i32 = -2147221218i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_UNKNOWN_ENTRYID: i32 = -2147220991i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_UNKNOWN_FLAGS: i32 = -2147221242i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_UNKNOWN_LCID: i32 = -2147221217i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_USER_CANCEL: i32 = -2147221229i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_E_VERSION: i32 = -2147221232i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const _MAPI_W_NO_SERVICE: i32 = 262659i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type ACCESS_MASKENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_EXCLUSIVE: ACCESS_MASKENUM = 512i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_READDESIGN: ACCESS_MASKENUM = 1024i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_WRITEDESIGN: ACCESS_MASKENUM = 2048i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_WITHGRANT: ACCESS_MASKENUM = 4096i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_REFERENCE: ACCESS_MASKENUM = 8192i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_CREATE: ACCESS_MASKENUM = 16384i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_INSERT: ACCESS_MASKENUM = 32768i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_DELETE: ACCESS_MASKENUM = 65536i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_READCONTROL: ACCESS_MASKENUM = 131072i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_WRITEPERMISSIONS: ACCESS_MASKENUM = 262144i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_WRITEOWNER: ACCESS_MASKENUM = 524288i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_MAXIMUM_ALLOWED: ACCESS_MASKENUM = 33554432i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_ALL: ACCESS_MASKENUM = 268435456i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_EXECUTE: ACCESS_MASKENUM = 536870912i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_READ: ACCESS_MASKENUM = -2147483648i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_UPDATE: ACCESS_MASKENUM = 1073741824i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PERM_DROP: ACCESS_MASKENUM = 256i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type AUTH_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const eAUTH_TYPE_ANONYMOUS: AUTH_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const eAUTH_TYPE_NTLM: AUTH_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const eAUTH_TYPE_BASIC: AUTH_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type CASE_REQUIREMENT = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CASE_REQUIREMENT_ANY: CASE_REQUIREMENT = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CASE_REQUIREMENT_UPPER_IF_AQS: CASE_REQUIREMENT = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type CHANNEL_AGENT_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CHANNEL_AGENT_DYNAMIC_SCHEDULE: CHANNEL_AGENT_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CHANNEL_AGENT_PRECACHE_SOME: CHANNEL_AGENT_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CHANNEL_AGENT_PRECACHE_ALL: CHANNEL_AGENT_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CHANNEL_AGENT_PRECACHE_SCRNSAVER: CHANNEL_AGENT_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type CLUSION_REASON = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CLUSIONREASON_UNKNOWNSCOPE: CLUSION_REASON = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CLUSIONREASON_DEFAULT: CLUSION_REASON = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CLUSIONREASON_USER: CLUSION_REASON = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CLUSIONREASON_GROUPPOLICY: CLUSION_REASON = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type CONDITION_CREATION_OPTIONS = u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CONDITION_CREATION_DEFAULT: CONDITION_CREATION_OPTIONS = 0u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CONDITION_CREATION_NONE: CONDITION_CREATION_OPTIONS = 0u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CONDITION_CREATION_SIMPLIFY: CONDITION_CREATION_OPTIONS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CONDITION_CREATION_VECTOR_AND: CONDITION_CREATION_OPTIONS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CONDITION_CREATION_VECTOR_OR: CONDITION_CREATION_OPTIONS = 4u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CONDITION_CREATION_VECTOR_LEAF: CONDITION_CREATION_OPTIONS = 8u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CONDITION_CREATION_USE_CONTENT_LOCALE: CONDITION_CREATION_OPTIONS = 16u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type CREATESUBSCRIPTIONFLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CREATESUBS_ADDTOFAVORITES: CREATESUBSCRIPTIONFLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CREATESUBS_FROMFAVORITES: CREATESUBSCRIPTIONFLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CREATESUBS_NOUI: CREATESUBSCRIPTIONFLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CREATESUBS_NOSAVE: CREATESUBSCRIPTIONFLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CREATESUBS_SOFTWAREUPDATE: CREATESUBSCRIPTIONFLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type CatalogPausedReason = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_PAUSED_REASON_NONE: CatalogPausedReason = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_PAUSED_REASON_HIGH_IO: CatalogPausedReason = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_PAUSED_REASON_HIGH_CPU: CatalogPausedReason = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_PAUSED_REASON_HIGH_NTF_RATE: CatalogPausedReason = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_PAUSED_REASON_LOW_BATTERY: CatalogPausedReason = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_PAUSED_REASON_LOW_MEMORY: CatalogPausedReason = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_PAUSED_REASON_LOW_DISK: CatalogPausedReason = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_PAUSED_REASON_DELAYED_RECOVERY: CatalogPausedReason = 7i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_PAUSED_REASON_USER_ACTIVE: CatalogPausedReason = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_PAUSED_REASON_EXTERNAL: CatalogPausedReason = 9i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_PAUSED_REASON_UPGRADING: CatalogPausedReason = 10i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type CatalogStatus = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_STATUS_IDLE: CatalogStatus = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_STATUS_PAUSED: CatalogStatus = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_STATUS_RECOVERING: CatalogStatus = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_STATUS_FULL_CRAWL: CatalogStatus = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_STATUS_INCREMENTAL_CRAWL: CatalogStatus = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_STATUS_PROCESSING_NOTIFICATIONS: CatalogStatus = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const CATALOG_STATUS_SHUTTING_DOWN: CatalogStatus = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBACCESSORFLAGSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBACCESSOR_INVALID: DBACCESSORFLAGSENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBACCESSOR_PASSBYREF: DBACCESSORFLAGSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBACCESSOR_ROWDATA: DBACCESSORFLAGSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBACCESSOR_PARAMETERDATA: DBACCESSORFLAGSENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBACCESSOR_OPTIMIZED: DBACCESSORFLAGSENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBACCESSOR_INHERITED: DBACCESSORFLAGSENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBASYNCHOPENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBASYNCHOP_OPEN: DBASYNCHOPENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBASYNCHPHASEENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBASYNCHPHASE_INITIALIZATION: DBASYNCHPHASEENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBASYNCHPHASE_POPULATION: DBASYNCHPHASEENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBASYNCHPHASE_COMPLETE: DBASYNCHPHASEENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBASYNCHPHASE_CANCELED: DBASYNCHPHASEENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBBINDFLAGENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDFLAG_HTML: DBBINDFLAGENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBBINDSTATUSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDSTATUS_OK: DBBINDSTATUSENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDSTATUS_BADORDINAL: DBBINDSTATUSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDSTATUS_UNSUPPORTEDCONVERSION: DBBINDSTATUSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDSTATUS_BADBINDINFO: DBBINDSTATUSENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDSTATUS_BADSTORAGEFLAGS: DBBINDSTATUSENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDSTATUS_NOINTERFACE: DBBINDSTATUSENUM = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDSTATUS_MULTIPLESTORAGE: DBBINDSTATUSENUM = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBBINDURLFLAGENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_READ: DBBINDURLFLAGENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_WRITE: DBBINDURLFLAGENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_READWRITE: DBBINDURLFLAGENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_SHARE_DENY_READ: DBBINDURLFLAGENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_SHARE_DENY_WRITE: DBBINDURLFLAGENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_SHARE_EXCLUSIVE: DBBINDURLFLAGENUM = 12i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_SHARE_DENY_NONE: DBBINDURLFLAGENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_ASYNCHRONOUS: DBBINDURLFLAGENUM = 4096i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_COLLECTION: DBBINDURLFLAGENUM = 8192i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_DELAYFETCHSTREAM: DBBINDURLFLAGENUM = 16384i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_DELAYFETCHCOLUMNS: DBBINDURLFLAGENUM = 32768i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_RECURSIVE: DBBINDURLFLAGENUM = 4194304i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_OUTPUT: DBBINDURLFLAGENUM = 8388608i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_WAITFORINIT: DBBINDURLFLAGENUM = 16777216i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_OPENIFEXISTS: DBBINDURLFLAGENUM = 33554432i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_OVERWRITE: DBBINDURLFLAGENUM = 67108864i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLFLAG_ISSTRUCTUREDDOCUMENT: DBBINDURLFLAGENUM = 134217728i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBBINDURLSTATUSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLSTATUS_S_OK: DBBINDURLSTATUSENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLSTATUS_S_DENYNOTSUPPORTED: DBBINDURLSTATUSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLSTATUS_S_DENYTYPENOTSUPPORTED: DBBINDURLSTATUSENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBINDURLSTATUS_S_REDIRECTED: DBBINDURLSTATUSENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBBOOKMARK = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBMK_INVALID: DBBOOKMARK = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBMK_FIRST: DBBOOKMARK = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBBMK_LAST: DBBOOKMARK = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOLUMNDESCFLAGSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNDESCFLAGS_TYPENAME: DBCOLUMNDESCFLAGSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNDESCFLAGS_ITYPEINFO: DBCOLUMNDESCFLAGSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNDESCFLAGS_PROPERTIES: DBCOLUMNDESCFLAGSENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNDESCFLAGS_CLSID: DBCOLUMNDESCFLAGSENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNDESCFLAGS_COLSIZE: DBCOLUMNDESCFLAGSENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNDESCFLAGS_DBCID: DBCOLUMNDESCFLAGSENUM = 32i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNDESCFLAGS_WTYPE: DBCOLUMNDESCFLAGSENUM = 64i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNDESCFLAGS_PRECISION: DBCOLUMNDESCFLAGSENUM = 128i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNDESCFLAGS_SCALE: DBCOLUMNDESCFLAGSENUM = 256i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOLUMNFLAGS15ENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISCHAPTER: DBCOLUMNFLAGS15ENUM = 8192i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOLUMNFLAGSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISBOOKMARK: DBCOLUMNFLAGSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_MAYDEFER: DBCOLUMNFLAGSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_WRITE: DBCOLUMNFLAGSENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_WRITEUNKNOWN: DBCOLUMNFLAGSENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISFIXEDLENGTH: DBCOLUMNFLAGSENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISNULLABLE: DBCOLUMNFLAGSENUM = 32i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_MAYBENULL: DBCOLUMNFLAGSENUM = 64i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISLONG: DBCOLUMNFLAGSENUM = 128i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISROWID: DBCOLUMNFLAGSENUM = 256i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISROWVER: DBCOLUMNFLAGSENUM = 512i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_CACHEDEFERRED: DBCOLUMNFLAGSENUM = 4096i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOLUMNFLAGSENUM20 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_SCALEISNEGATIVE: DBCOLUMNFLAGSENUM20 = 16384i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_RESERVED: DBCOLUMNFLAGSENUM20 = 32768i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOLUMNFLAGSENUM21 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISROWURL: DBCOLUMNFLAGSENUM21 = 65536i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISDEFAULTSTREAM: DBCOLUMNFLAGSENUM21 = 131072i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISCOLLECTION: DBCOLUMNFLAGSENUM21 = 262144i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOLUMNFLAGSENUM26 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISSTREAM: DBCOLUMNFLAGSENUM26 = 524288i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISROWSET: DBCOLUMNFLAGSENUM26 = 1048576i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ISROW: DBCOLUMNFLAGSENUM26 = 2097152i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOLUMNFLAGS_ROWSPECIFICCOLUMN: DBCOLUMNFLAGSENUM26 = 4194304i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOMMANDPERSISTFLAGENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMMANDPERSISTFLAG_NOSAVE: DBCOMMANDPERSISTFLAGENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOMMANDPERSISTFLAGENUM21 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMMANDPERSISTFLAG_DEFAULT: DBCOMMANDPERSISTFLAGENUM21 = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMMANDPERSISTFLAG_PERSISTVIEW: DBCOMMANDPERSISTFLAGENUM21 = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMMANDPERSISTFLAG_PERSISTPROCEDURE: DBCOMMANDPERSISTFLAGENUM21 = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOMPAREENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPARE_LT: DBCOMPAREENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPARE_EQ: DBCOMPAREENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPARE_GT: DBCOMPAREENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPARE_NE: DBCOMPAREENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPARE_NOTCOMPARABLE: DBCOMPAREENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOMPAREOPSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_LT: DBCOMPAREOPSENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_LE: DBCOMPAREOPSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_EQ: DBCOMPAREOPSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_GE: DBCOMPAREOPSENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_GT: DBCOMPAREOPSENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_BEGINSWITH: DBCOMPAREOPSENUM = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_CONTAINS: DBCOMPAREOPSENUM = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_NE: DBCOMPAREOPSENUM = 7i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_IGNORE: DBCOMPAREOPSENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_CASESENSITIVE: DBCOMPAREOPSENUM = 4096i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_CASEINSENSITIVE: DBCOMPAREOPSENUM = 8192i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOMPAREOPSENUM20 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_NOTBEGINSWITH: DBCOMPAREOPSENUM20 = 9i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOMPAREOPS_NOTCONTAINS: DBCOMPAREOPSENUM20 = 10i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCONSTRAINTTYPEENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCONSTRAINTTYPE_UNIQUE: DBCONSTRAINTTYPEENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCONSTRAINTTYPE_FOREIGNKEY: DBCONSTRAINTTYPEENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCONSTRAINTTYPE_PRIMARYKEY: DBCONSTRAINTTYPEENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCONSTRAINTTYPE_CHECK: DBCONSTRAINTTYPEENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCONVERTFLAGSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCONVERTFLAGS_COLUMN: DBCONVERTFLAGSENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCONVERTFLAGS_PARAMETER: DBCONVERTFLAGSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCONVERTFLAGSENUM20 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCONVERTFLAGS_ISLONG: DBCONVERTFLAGSENUM20 = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCONVERTFLAGS_ISFIXEDLENGTH: DBCONVERTFLAGSENUM20 = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCONVERTFLAGS_FROMVARIANT: DBCONVERTFLAGSENUM20 = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOPYFLAGSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOPY_ASYNC: DBCOPYFLAGSENUM = 256i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOPY_REPLACE_EXISTING: DBCOPYFLAGSENUM = 512i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOPY_ALLOW_EMULATION: DBCOPYFLAGSENUM = 1024i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOPY_NON_RECURSIVE: DBCOPYFLAGSENUM = 2048i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBCOPY_ATOMIC: DBCOPYFLAGSENUM = 4096i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBCOSTUNITENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_INVALID: DBCOSTUNITENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_WEIGHT: DBCOSTUNITENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_PERCENT: DBCOSTUNITENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_MAXIMUM: DBCOSTUNITENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_MINIMUM: DBCOSTUNITENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_MICRO_SECOND: DBCOSTUNITENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_MILLI_SECOND: DBCOSTUNITENUM = 32i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_SECOND: DBCOSTUNITENUM = 64i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_MINUTE: DBCOSTUNITENUM = 128i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_HOUR: DBCOSTUNITENUM = 256i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_BYTE: DBCOSTUNITENUM = 512i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_KILO_BYTE: DBCOSTUNITENUM = 1024i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_MEGA_BYTE: DBCOSTUNITENUM = 2048i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_GIGA_BYTE: DBCOSTUNITENUM = 4096i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_NUM_MSGS: DBCOSTUNITENUM = 8192i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_NUM_LOCKS: DBCOSTUNITENUM = 16384i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_NUM_ROWS: DBCOSTUNITENUM = 32768i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUNIT_OTHER: DBCOSTUNITENUM = 65536i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBDATACONVERTENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBDATACONVERT_DEFAULT: DBDATACONVERTENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBDATACONVERT_SETDATABEHAVIOR: DBDATACONVERTENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBDATACONVERT_LENGTHFROMNTS: DBDATACONVERTENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBDATACONVERT_DSTISFIXEDLENGTH: DBDATACONVERTENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBDATACONVERT_DECIMALSCALE: DBDATACONVERTENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBDEFERRABILITYENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBDEFERRABILITY_DEFERRED: DBDEFERRABILITYENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBDEFERRABILITY_DEFERRABLE: DBDEFERRABILITYENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBDELETEFLAGSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBDELETE_ASYNC: DBDELETEFLAGSENUM = 256i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBDELETE_ATOMIC: DBDELETEFLAGSENUM = 4096i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBEVENTPHASEENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBEVENTPHASE_OKTODO: DBEVENTPHASEENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBEVENTPHASE_ABOUTTODO: DBEVENTPHASEENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBEVENTPHASE_SYNCHAFTER: DBEVENTPHASEENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBEVENTPHASE_FAILEDTODO: DBEVENTPHASEENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBEVENTPHASE_DIDEVENT: DBEVENTPHASEENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBEXECLIMITSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBEXECLIMITS_ABORT: DBEXECLIMITSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBEXECLIMITS_STOP: DBEXECLIMITSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBEXECLIMITS_SUSPEND: DBEXECLIMITSENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBINDEX_COL_ORDERENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBINDEX_COL_ORDER_ASC: DBINDEX_COL_ORDERENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBINDEX_COL_ORDER_DESC: DBINDEX_COL_ORDERENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBLITERALENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_INVALID: DBLITERALENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_BINARY_LITERAL: DBLITERALENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_CATALOG_NAME: DBLITERALENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_CATALOG_SEPARATOR: DBLITERALENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_CHAR_LITERAL: DBLITERALENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_COLUMN_ALIAS: DBLITERALENUM = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_COLUMN_NAME: DBLITERALENUM = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_CORRELATION_NAME: DBLITERALENUM = 7i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_CURSOR_NAME: DBLITERALENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_ESCAPE_PERCENT: DBLITERALENUM = 9i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_ESCAPE_UNDERSCORE: DBLITERALENUM = 10i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_INDEX_NAME: DBLITERALENUM = 11i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_LIKE_PERCENT: DBLITERALENUM = 12i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_LIKE_UNDERSCORE: DBLITERALENUM = 13i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_PROCEDURE_NAME: DBLITERALENUM = 14i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_QUOTE: DBLITERALENUM = 15i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_SCHEMA_NAME: DBLITERALENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_TABLE_NAME: DBLITERALENUM = 17i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_TEXT_COMMAND: DBLITERALENUM = 18i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_USER_NAME: DBLITERALENUM = 19i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_VIEW_NAME: DBLITERALENUM = 20i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBLITERALENUM20 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_CUBE_NAME: DBLITERALENUM20 = 21i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_DIMENSION_NAME: DBLITERALENUM20 = 22i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_HIERARCHY_NAME: DBLITERALENUM20 = 23i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_LEVEL_NAME: DBLITERALENUM20 = 24i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_MEMBER_NAME: DBLITERALENUM20 = 25i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_PROPERTY_NAME: DBLITERALENUM20 = 26i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_SCHEMA_SEPARATOR: DBLITERALENUM20 = 27i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_QUOTE_SUFFIX: DBLITERALENUM20 = 28i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBLITERALENUM21 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_ESCAPE_PERCENT_SUFFIX: DBLITERALENUM21 = 29i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBLITERAL_ESCAPE_UNDERSCORE_SUFFIX: DBLITERALENUM21 = 30i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBMATCHTYPEENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBMATCHTYPE_FULL: DBMATCHTYPEENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBMATCHTYPE_NONE: DBMATCHTYPEENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBMATCHTYPE_PARTIAL: DBMATCHTYPEENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBMEMOWNERENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBMEMOWNER_CLIENTOWNED: DBMEMOWNERENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBMEMOWNER_PROVIDEROWNED: DBMEMOWNERENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBMOVEFLAGSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBMOVE_REPLACE_EXISTING: DBMOVEFLAGSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBMOVE_ASYNC: DBMOVEFLAGSENUM = 256i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBMOVE_DONT_UPDATE_LINKS: DBMOVEFLAGSENUM = 512i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBMOVE_ALLOW_EMULATION: DBMOVEFLAGSENUM = 1024i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBMOVE_ATOMIC: DBMOVEFLAGSENUM = 4096i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPARAMFLAGSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPARAMFLAGS_ISINPUT: DBPARAMFLAGSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPARAMFLAGS_ISOUTPUT: DBPARAMFLAGSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPARAMFLAGS_ISSIGNED: DBPARAMFLAGSENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPARAMFLAGS_ISNULLABLE: DBPARAMFLAGSENUM = 64i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPARAMFLAGS_ISLONG: DBPARAMFLAGSENUM = 128i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPARAMFLAGSENUM20 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPARAMFLAGS_SCALEISNEGATIVE: DBPARAMFLAGSENUM20 = 256i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPARAMIOENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPARAMIO_NOTPARAM: DBPARAMIOENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPARAMIO_INPUT: DBPARAMIOENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPARAMIO_OUTPUT: DBPARAMIOENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPARTENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPART_INVALID: DBPARTENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPART_VALUE: DBPARTENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPART_LENGTH: DBPARTENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPART_STATUS: DBPARTENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPENDINGSTATUSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPENDINGSTATUS_NEW: DBPENDINGSTATUSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPENDINGSTATUS_CHANGED: DBPENDINGSTATUSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPENDINGSTATUS_DELETED: DBPENDINGSTATUSENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPENDINGSTATUS_UNCHANGED: DBPENDINGSTATUSENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPENDINGSTATUS_INVALIDROW: DBPENDINGSTATUSENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPOSITIONFLAGSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPOSITION_OK: DBPOSITIONFLAGSENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPOSITION_NOROW: DBPOSITIONFLAGSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPOSITION_BOF: DBPOSITIONFLAGSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPOSITION_EOF: DBPOSITIONFLAGSENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROMPTOPTIONSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROMPTOPTIONS_NONE: DBPROMPTOPTIONSENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROMPTOPTIONS_WIZARDSHEET: DBPROMPTOPTIONSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROMPTOPTIONS_PROPERTYSHEET: DBPROMPTOPTIONSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROMPTOPTIONS_BROWSEONLY: DBPROMPTOPTIONSENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROMPTOPTIONS_DISABLE_PROVIDER_SELECTION: DBPROMPTOPTIONSENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROMPTOPTIONS_DISABLESAVEPASSWORD: DBPROMPTOPTIONSENUM = 32i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ABORTPRESERVE: DBPROPENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ACTIVESESSIONS: DBPROPENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_APPENDONLY: DBPROPENUM = 187i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ASYNCTXNABORT: DBPROPENUM = 168i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ASYNCTXNCOMMIT: DBPROPENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_AUTH_CACHE_AUTHINFO: DBPROPENUM = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_AUTH_ENCRYPT_PASSWORD: DBPROPENUM = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_AUTH_INTEGRATED: DBPROPENUM = 7i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_AUTH_MASK_PASSWORD: DBPROPENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_AUTH_PASSWORD: DBPROPENUM = 9i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_AUTH_PERSIST_ENCRYPTED: DBPROPENUM = 10i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_AUTH_PERSIST_SENSITIVE_AUTHINFO: DBPROPENUM = 11i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_AUTH_USERID: DBPROPENUM = 12i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_BLOCKINGSTORAGEOBJECTS: DBPROPENUM = 13i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_BOOKMARKS: DBPROPENUM = 14i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_BOOKMARKSKIPPED: DBPROPENUM = 15i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_BOOKMARKTYPE: DBPROPENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_BYREFACCESSORS: DBPROPENUM = 120i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_CACHEDEFERRED: DBPROPENUM = 17i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_CANFETCHBACKWARDS: DBPROPENUM = 18i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_CANHOLDROWS: DBPROPENUM = 19i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_CANSCROLLBACKWARDS: DBPROPENUM = 21i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_CATALOGLOCATION: DBPROPENUM = 22i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_CATALOGTERM: DBPROPENUM = 23i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_CATALOGUSAGE: DBPROPENUM = 24i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_CHANGEINSERTEDROWS: DBPROPENUM = 188i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COL_AUTOINCREMENT: DBPROPENUM = 26i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COL_DEFAULT: DBPROPENUM = 27i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COL_DESCRIPTION: DBPROPENUM = 28i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COL_FIXEDLENGTH: DBPROPENUM = 167i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COL_NULLABLE: DBPROPENUM = 29i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COL_PRIMARYKEY: DBPROPENUM = 30i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COL_UNIQUE: DBPROPENUM = 31i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COLUMNDEFINITION: DBPROPENUM = 32i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COLUMNRESTRICT: DBPROPENUM = 33i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COMMANDTIMEOUT: DBPROPENUM = 34i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COMMITPRESERVE: DBPROPENUM = 35i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_CONCATNULLBEHAVIOR: DBPROPENUM = 36i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_CURRENTCATALOG: DBPROPENUM = 37i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_DATASOURCENAME: DBPROPENUM = 38i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_DATASOURCEREADONLY: DBPROPENUM = 39i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_DBMSNAME: DBPROPENUM = 40i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_DBMSVER: DBPROPENUM = 41i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_DEFERRED: DBPROPENUM = 42i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_DELAYSTORAGEOBJECTS: DBPROPENUM = 43i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_DSOTHREADMODEL: DBPROPENUM = 169i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_GROUPBY: DBPROPENUM = 44i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_HETEROGENEOUSTABLES: DBPROPENUM = 45i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IAccessor: DBPROPENUM = 121i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IColumnsInfo: DBPROPENUM = 122i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IColumnsRowset: DBPROPENUM = 123i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IConnectionPointContainer: DBPROPENUM = 124i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IConvertType: DBPROPENUM = 194i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowset: DBPROPENUM = 126i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetChange: DBPROPENUM = 127i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetIdentity: DBPROPENUM = 128i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetIndex: DBPROPENUM = 159i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetInfo: DBPROPENUM = 129i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetLocate: DBPROPENUM = 130i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetResynch: DBPROPENUM = 132i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetScroll: DBPROPENUM = 133i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetUpdate: DBPROPENUM = 134i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ISupportErrorInfo: DBPROPENUM = 135i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ILockBytes: DBPROPENUM = 136i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ISequentialStream: DBPROPENUM = 137i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IStorage: DBPROPENUM = 138i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IStream: DBPROPENUM = 139i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IDENTIFIERCASE: DBPROPENUM = 46i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IMMOBILEROWS: DBPROPENUM = 47i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INDEX_AUTOUPDATE: DBPROPENUM = 48i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INDEX_CLUSTERED: DBPROPENUM = 49i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INDEX_FILLFACTOR: DBPROPENUM = 50i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INDEX_INITIALSIZE: DBPROPENUM = 51i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INDEX_NULLCOLLATION: DBPROPENUM = 52i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INDEX_NULLS: DBPROPENUM = 53i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INDEX_PRIMARYKEY: DBPROPENUM = 54i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INDEX_SORTBOOKMARKS: DBPROPENUM = 55i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INDEX_TEMPINDEX: DBPROPENUM = 163i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INDEX_TYPE: DBPROPENUM = 56i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INDEX_UNIQUE: DBPROPENUM = 57i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_DATASOURCE: DBPROPENUM = 59i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_HWND: DBPROPENUM = 60i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_IMPERSONATION_LEVEL: DBPROPENUM = 61i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_LCID: DBPROPENUM = 186i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_LOCATION: DBPROPENUM = 62i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_MODE: DBPROPENUM = 63i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_PROMPT: DBPROPENUM = 64i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_PROTECTION_LEVEL: DBPROPENUM = 65i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_PROVIDERSTRING: DBPROPENUM = 160i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_TIMEOUT: DBPROPENUM = 66i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_LITERALBOOKMARKS: DBPROPENUM = 67i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_LITERALIDENTITY: DBPROPENUM = 68i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MAXINDEXSIZE: DBPROPENUM = 70i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MAXOPENROWS: DBPROPENUM = 71i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MAXPENDINGROWS: DBPROPENUM = 72i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MAXROWS: DBPROPENUM = 73i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MAXROWSIZE: DBPROPENUM = 74i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MAXROWSIZEINCLUDESBLOB: DBPROPENUM = 75i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MAXTABLESINSELECT: DBPROPENUM = 76i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MAYWRITECOLUMN: DBPROPENUM = 77i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MEMORYUSAGE: DBPROPENUM = 78i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MULTIPLEPARAMSETS: DBPROPENUM = 191i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MULTIPLERESULTS: DBPROPENUM = 196i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MULTIPLESTORAGEOBJECTS: DBPROPENUM = 80i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MULTITABLEUPDATE: DBPROPENUM = 81i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFICATIONGRANULARITY: DBPROPENUM = 198i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFICATIONPHASES: DBPROPENUM = 82i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFYCOLUMNSET: DBPROPENUM = 171i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFYROWDELETE: DBPROPENUM = 173i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFYROWFIRSTCHANGE: DBPROPENUM = 174i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFYROWINSERT: DBPROPENUM = 175i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFYROWRESYNCH: DBPROPENUM = 177i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFYROWSETCHANGED: DBPROPENUM = 211i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFYROWSETRELEASE: DBPROPENUM = 178i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFYROWSETFETCHPOSITIONCHANGE: DBPROPENUM = 179i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFYROWUNDOCHANGE: DBPROPENUM = 180i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFYROWUNDODELETE: DBPROPENUM = 181i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFYROWUNDOINSERT: DBPROPENUM = 182i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NOTIFYROWUPDATE: DBPROPENUM = 183i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_NULLCOLLATION: DBPROPENUM = 83i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_OLEOBJECTS: DBPROPENUM = 84i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ORDERBYCOLUMNSINSELECT: DBPROPENUM = 85i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ORDEREDBOOKMARKS: DBPROPENUM = 86i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_OTHERINSERT: DBPROPENUM = 87i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_OTHERUPDATEDELETE: DBPROPENUM = 88i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_OUTPUTPARAMETERAVAILABILITY: DBPROPENUM = 184i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_OWNINSERT: DBPROPENUM = 89i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_OWNUPDATEDELETE: DBPROPENUM = 90i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_PERSISTENTIDTYPE: DBPROPENUM = 185i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_PREPAREABORTBEHAVIOR: DBPROPENUM = 91i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_PREPARECOMMITBEHAVIOR: DBPROPENUM = 92i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_PROCEDURETERM: DBPROPENUM = 93i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_PROVIDERNAME: DBPROPENUM = 96i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_PROVIDEROLEDBVER: DBPROPENUM = 97i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_PROVIDERVER: DBPROPENUM = 98i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_QUICKRESTART: DBPROPENUM = 99i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_QUOTEDIDENTIFIERCASE: DBPROPENUM = 100i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_REENTRANTEVENTS: DBPROPENUM = 101i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_REMOVEDELETED: DBPROPENUM = 102i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_REPORTMULTIPLECHANGES: DBPROPENUM = 103i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_RETURNPENDINGINSERTS: DBPROPENUM = 189i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ROWRESTRICT: DBPROPENUM = 104i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ROWSETCONVERSIONSONCOMMAND: DBPROPENUM = 192i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ROWTHREADMODEL: DBPROPENUM = 105i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SCHEMATERM: DBPROPENUM = 106i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SCHEMAUSAGE: DBPROPENUM = 107i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SERVERCURSOR: DBPROPENUM = 108i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SESS_AUTOCOMMITISOLEVELS: DBPROPENUM = 190i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SQLSUPPORT: DBPROPENUM = 109i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_STRONGIDENTITY: DBPROPENUM = 119i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_STRUCTUREDSTORAGE: DBPROPENUM = 111i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SUBQUERIES: DBPROPENUM = 112i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SUPPORTEDTXNDDL: DBPROPENUM = 161i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SUPPORTEDTXNISOLEVELS: DBPROPENUM = 113i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SUPPORTEDTXNISORETAIN: DBPROPENUM = 114i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_TABLETERM: DBPROPENUM = 115i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_TBL_TEMPTABLE: DBPROPENUM = 140i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_TRANSACTEDOBJECT: DBPROPENUM = 116i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_UPDATABILITY: DBPROPENUM = 117i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_USERNAME: DBPROPENUM = 118i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPENUM15 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_FILTERCOMPAREOPS: DBPROPENUM15 = 209i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_FINDCOMPAREOPS: DBPROPENUM15 = 210i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IChapteredRowset: DBPROPENUM15 = 202i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IDBAsynchStatus: DBPROPENUM15 = 203i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetFind: DBPROPENUM15 = 204i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetView: DBPROPENUM15 = 212i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IViewChapter: DBPROPENUM15 = 213i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IViewFilter: DBPROPENUM15 = 214i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IViewRowset: DBPROPENUM15 = 215i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IViewSort: DBPROPENUM15 = 216i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_ASYNCH: DBPROPENUM15 = 200i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MAXOPENCHAPTERS: DBPROPENUM15 = 199i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MAXORSINFILTER: DBPROPENUM15 = 205i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MAXSORTCOLUMNS: DBPROPENUM15 = 206i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ROWSET_ASYNCH: DBPROPENUM15 = 201i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SORTONINDEX: DBPROPENUM15 = 207i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPENUM20 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IMultipleResults: DBPROPENUM20 = 217i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_DATASOURCE_TYPE: DBPROPENUM20 = 251i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_AXES: DBPROPENUM20 = 252i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_FLATTENING_SUPPORT: DBPROPENUM20 = 253i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_JOINCUBES: DBPROPENUM20 = 254i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_NAMED_LEVELS: DBPROPENUM20 = 255i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_RANGEROWSET: DBPROPENUM20 = 256i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_SLICER: DBPROPENUM20 = 218i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_CUBEQUALIFICATION: DBPROPENUM20 = 219i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_OUTERREFERENCE: DBPROPENUM20 = 220i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_QUERYBYPROPERTY: DBPROPENUM20 = 221i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_CASESUPPORT: DBPROPENUM20 = 222i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_STRING_COMPOP: DBPROPENUM20 = 224i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_DESCFLAGS: DBPROPENUM20 = 225i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_SET_FUNCTIONS: DBPROPENUM20 = 226i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_MEMBER_FUNCTIONS: DBPROPENUM20 = 227i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_NUMERIC_FUNCTIONS: DBPROPENUM20 = 228i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_FORMULAS: DBPROPENUM20 = 229i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_AGGREGATECELL_UPDATE: DBPROPENUM20 = 230i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_AGGREGATECELL_UPDATE: DBPROPENUM20 = 230i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_OBJQUALIFICATION: DBPROPENUM20 = 261i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_MDX_NONMEASURE_EXPRESSIONS: DBPROPENUM20 = 262i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ACCESSORDER: DBPROPENUM20 = 231i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_BOOKMARKINFO: DBPROPENUM20 = 232i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_CATALOG: DBPROPENUM20 = 233i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ROW_BULKOPS: DBPROPENUM20 = 234i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_PROVIDERFRIENDLYNAME: DBPROPENUM20 = 235i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_LOCKMODE: DBPROPENUM20 = 236i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MULTIPLECONNECTIONS: DBPROPENUM20 = 237i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_UNIQUEROWS: DBPROPENUM20 = 238i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SERVERDATAONINSERT: DBPROPENUM20 = 239i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_STORAGEFLAGS: DBPROPENUM20 = 240i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_CONNECTIONSTATUS: DBPROPENUM20 = 244i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ALTERCOLUMN: DBPROPENUM20 = 245i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COLUMNLCID: DBPROPENUM20 = 246i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_RESETDATASOURCE: DBPROPENUM20 = 247i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_OLEDBSERVICES: DBPROPENUM20 = 248i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetRefresh: DBPROPENUM20 = 249i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SERVERNAME: DBPROPENUM20 = 250i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IParentRowset: DBPROPENUM20 = 257i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_HIDDENCOLUMNS: DBPROPENUM20 = 258i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_PROVIDERMEMORY: DBPROPENUM20 = 259i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_CLIENTCURSOR: DBPROPENUM20 = 260i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPENUM21 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_TRUSTEE_USERNAME: DBPROPENUM21 = 241i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_TRUSTEE_AUTHENTICATION: DBPROPENUM21 = 242i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_TRUSTEE_NEWAUTHENTICATION: DBPROPENUM21 = 243i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRow: DBPROPENUM21 = 263i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowChange: DBPROPENUM21 = 264i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowSchemaChange: DBPROPENUM21 = 265i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IGetRow: DBPROPENUM21 = 266i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IScopedOperations: DBPROPENUM21 = 267i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IBindResource: DBPROPENUM21 = 268i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ICreateRow: DBPROPENUM21 = 269i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_BINDFLAGS: DBPROPENUM21 = 270i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_LOCKOWNER: DBPROPENUM21 = 271i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_GENERATEURL: DBPROPENUM21 = 273i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IDBBinderProperties: DBPROPENUM21 = 274i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IColumnsInfo2: DBPROPENUM21 = 275i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRegisterProvider: DBPROPENUM21 = 276i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IGetSession: DBPROPENUM21 = 277i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IGetSourceRow: DBPROPENUM21 = 278i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetCurrentIndex: DBPROPENUM21 = 279i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_OPENROWSETSUPPORT: DBPROPENUM21 = 280i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COL_ISLONG: DBPROPENUM21 = 281i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPENUM25 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COL_SEED: DBPROPENUM25 = 282i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COL_INCREMENT: DBPROPENUM25 = 283i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_INIT_GENERALTIMEOUT: DBPROPENUM25 = 284i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_COMSERVICES: DBPROPENUM25 = 285i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPENUM25_DEPRECATED = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ICommandCost: DBPROPENUM25_DEPRECATED = 141i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ICommandTree: DBPROPENUM25_DEPRECATED = 142i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_ICommandValidate: DBPROPENUM25_DEPRECATED = 143i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IDBSchemaCommand: DBPROPENUM25_DEPRECATED = 144i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IProvideMoniker: DBPROPENUM25_DEPRECATED = 125i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IQuery: DBPROPENUM25_DEPRECATED = 146i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IReadData: DBPROPENUM25_DEPRECATED = 147i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetAsynch: DBPROPENUM25_DEPRECATED = 148i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetCopyRows: DBPROPENUM25_DEPRECATED = 149i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetKeys: DBPROPENUM25_DEPRECATED = 151i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetNewRowAfter: DBPROPENUM25_DEPRECATED = 152i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetNextRowset: DBPROPENUM25_DEPRECATED = 153i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetWatchAll: DBPROPENUM25_DEPRECATED = 155i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetWatchNotify: DBPROPENUM25_DEPRECATED = 156i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetWatchRegion: DBPROPENUM25_DEPRECATED = 157i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetWithParameters: DBPROPENUM25_DEPRECATED = 158i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPENUM26 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_OUTPUTSTREAM: DBPROPENUM26 = 286i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_OUTPUTENCODING: DBPROPENUM26 = 287i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_TABLESTATISTICS: DBPROPENUM26 = 288i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_SKIPROWCOUNTRESULTS: DBPROPENUM26 = 291i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_IRowsetBookmark: DBPROPENUM26 = 292i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDPROP_VISUALMODE: DBPROPENUM26 = 293i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPFLAGSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_NOTSUPPORTED: DBPROPFLAGSENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_COLUMN: DBPROPFLAGSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_DATASOURCE: DBPROPFLAGSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_DATASOURCECREATE: DBPROPFLAGSENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_DATASOURCEINFO: DBPROPFLAGSENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_DBINIT: DBPROPFLAGSENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_INDEX: DBPROPFLAGSENUM = 32i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_ROWSET: DBPROPFLAGSENUM = 64i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_TABLE: DBPROPFLAGSENUM = 128i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_COLUMNOK: DBPROPFLAGSENUM = 256i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_READ: DBPROPFLAGSENUM = 512i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_WRITE: DBPROPFLAGSENUM = 1024i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_REQUIRED: DBPROPFLAGSENUM = 2048i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_SESSION: DBPROPFLAGSENUM = 4096i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPFLAGSENUM21 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_TRUSTEE: DBPROPFLAGSENUM21 = 8192i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPFLAGSENUM25 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_VIEW: DBPROPFLAGSENUM25 = 16384i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPFLAGSENUM26 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPFLAGS_STREAM: DBPROPFLAGSENUM26 = 32768i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPOPTIONSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPOPTIONS_REQUIRED: DBPROPOPTIONSENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPOPTIONS_SETIFCHEAP: DBPROPOPTIONSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPOPTIONS_OPTIONAL: DBPROPOPTIONSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPSTATUSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPSTATUS_OK: DBPROPSTATUSENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPSTATUS_NOTSUPPORTED: DBPROPSTATUSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPSTATUS_BADVALUE: DBPROPSTATUSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPSTATUS_BADOPTION: DBPROPSTATUSENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPSTATUS_BADCOLUMN: DBPROPSTATUSENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPSTATUS_NOTALLSETTABLE: DBPROPSTATUSENUM = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPSTATUS_NOTSETTABLE: DBPROPSTATUSENUM = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPSTATUS_NOTSET: DBPROPSTATUSENUM = 7i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPSTATUS_CONFLICTING: DBPROPSTATUSENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBPROPSTATUSENUM21 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROPSTATUS_NOTAVAILABLE: DBPROPSTATUSENUM21 = 9i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBRANGEENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRANGE_INCLUSIVESTART: DBRANGEENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRANGE_INCLUSIVEEND: DBRANGEENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRANGE_EXCLUSIVESTART: DBRANGEENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRANGE_EXCLUSIVEEND: DBRANGEENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRANGE_EXCLUDENULLS: DBRANGEENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRANGE_PREFIX: DBRANGEENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRANGE_MATCH: DBRANGEENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBRANGEENUM20 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRANGE_MATCH_N_SHIFT: DBRANGEENUM20 = 24i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRANGE_MATCH_N_MASK: DBRANGEENUM20 = 255i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBREASONENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROWSET_FETCHPOSITIONCHANGE: DBREASONENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROWSET_RELEASE: DBREASONENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_COLUMN_SET: DBREASONENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_COLUMN_RECALCULATED: DBREASONENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROW_ACTIVATE: DBREASONENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROW_RELEASE: DBREASONENUM = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROW_DELETE: DBREASONENUM = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROW_FIRSTCHANGE: DBREASONENUM = 7i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROW_INSERT: DBREASONENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROW_RESYNCH: DBREASONENUM = 9i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROW_UNDOCHANGE: DBREASONENUM = 10i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROW_UNDOINSERT: DBREASONENUM = 11i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROW_UNDODELETE: DBREASONENUM = 12i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROW_UPDATE: DBREASONENUM = 13i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROWSET_CHANGED: DBREASONENUM = 14i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBREASONENUM15 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROWPOSITION_CHANGED: DBREASONENUM15 = 15i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROWPOSITION_CHAPTERCHANGED: DBREASONENUM15 = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROWPOSITION_CLEARED: DBREASONENUM15 = 17i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROW_ASYNCHINSERT: DBREASONENUM15 = 18i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBREASONENUM25 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROWSET_ROWSADDED: DBREASONENUM25 = 19i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROWSET_POPULATIONCOMPLETE: DBREASONENUM25 = 20i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBREASON_ROWSET_POPULATIONSTOPPED: DBREASONENUM25 = 21i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBRESOURCEKINDENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRESOURCE_INVALID: DBRESOURCEKINDENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRESOURCE_TOTAL: DBRESOURCEKINDENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRESOURCE_CPU: DBRESOURCEKINDENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRESOURCE_MEMORY: DBRESOURCEKINDENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRESOURCE_DISK: DBRESOURCEKINDENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRESOURCE_NETWORK: DBRESOURCEKINDENUM = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRESOURCE_RESPONSE: DBRESOURCEKINDENUM = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRESOURCE_ROWS: DBRESOURCEKINDENUM = 7i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRESOURCE_OTHER: DBRESOURCEKINDENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBRESULTFLAGENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRESULTFLAG_DEFAULT: DBRESULTFLAGENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRESULTFLAG_ROWSET: DBRESULTFLAGENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBRESULTFLAG_ROW: DBRESULTFLAGENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBROWCHANGEKINDENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWCHANGEKIND_INSERT: DBROWCHANGEKINDENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWCHANGEKIND_DELETE: DBROWCHANGEKINDENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWCHANGEKIND_UPDATE: DBROWCHANGEKINDENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWCHANGEKIND_COUNT: DBROWCHANGEKINDENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBROWSTATUSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_S_OK: DBROWSTATUSENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_S_MULTIPLECHANGES: DBROWSTATUSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_S_PENDINGCHANGES: DBROWSTATUSENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_CANCELED: DBROWSTATUSENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_CANTRELEASE: DBROWSTATUSENUM = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_CONCURRENCYVIOLATION: DBROWSTATUSENUM = 7i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_DELETED: DBROWSTATUSENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_PENDINGINSERT: DBROWSTATUSENUM = 9i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_NEWLYINSERTED: DBROWSTATUSENUM = 10i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_INTEGRITYVIOLATION: DBROWSTATUSENUM = 11i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_INVALID: DBROWSTATUSENUM = 12i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_MAXPENDCHANGESEXCEEDED: DBROWSTATUSENUM = 13i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_OBJECTOPEN: DBROWSTATUSENUM = 14i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_OUTOFMEMORY: DBROWSTATUSENUM = 15i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_PERMISSIONDENIED: DBROWSTATUSENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_LIMITREACHED: DBROWSTATUSENUM = 17i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_SCHEMAVIOLATION: DBROWSTATUSENUM = 18i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_E_FAIL: DBROWSTATUSENUM = 19i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBROWSTATUSENUM20 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBROWSTATUS_S_NOCHANGE: DBROWSTATUSENUM20 = 20i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBSEEKENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSEEK_INVALID: DBSEEKENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSEEK_FIRSTEQ: DBSEEKENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSEEK_LASTEQ: DBSEEKENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSEEK_AFTEREQ: DBSEEKENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSEEK_AFTER: DBSEEKENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSEEK_BEFOREEQ: DBSEEKENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSEEK_BEFORE: DBSEEKENUM = 32i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBSORTENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSORT_ASCENDING: DBSORTENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSORT_DESCENDING: DBSORTENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBSOURCETYPEENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSOURCETYPE_DATASOURCE: DBSOURCETYPEENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSOURCETYPE_ENUMERATOR: DBSOURCETYPEENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBSOURCETYPEENUM20 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSOURCETYPE_DATASOURCE_TDP: DBSOURCETYPEENUM20 = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSOURCETYPE_DATASOURCE_MDP: DBSOURCETYPEENUM20 = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBSOURCETYPEENUM25 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSOURCETYPE_BINDER: DBSOURCETYPEENUM25 = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBSTATUSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_S_OK: DBSTATUSENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_BADACCESSOR: DBSTATUSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_CANTCONVERTVALUE: DBSTATUSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_S_ISNULL: DBSTATUSENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_S_TRUNCATED: DBSTATUSENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_SIGNMISMATCH: DBSTATUSENUM = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_DATAOVERFLOW: DBSTATUSENUM = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_CANTCREATE: DBSTATUSENUM = 7i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_UNAVAILABLE: DBSTATUSENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_PERMISSIONDENIED: DBSTATUSENUM = 9i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_INTEGRITYVIOLATION: DBSTATUSENUM = 10i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_SCHEMAVIOLATION: DBSTATUSENUM = 11i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_BADSTATUS: DBSTATUSENUM = 12i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_S_DEFAULT: DBSTATUSENUM = 13i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBSTATUSENUM20 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const MDSTATUS_S_CELLEMPTY: DBSTATUSENUM20 = 14i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_S_IGNORE: DBSTATUSENUM20 = 15i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBSTATUSENUM21 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_DOESNOTEXIST: DBSTATUSENUM21 = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_INVALIDURL: DBSTATUSENUM21 = 17i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_RESOURCELOCKED: DBSTATUSENUM21 = 18i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_RESOURCEEXISTS: DBSTATUSENUM21 = 19i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_CANNOTCOMPLETE: DBSTATUSENUM21 = 20i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_VOLUMENOTFOUND: DBSTATUSENUM21 = 21i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_OUTOFSPACE: DBSTATUSENUM21 = 22i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_S_CANNOTDELETESOURCE: DBSTATUSENUM21 = 23i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_READONLY: DBSTATUSENUM21 = 24i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_RESOURCEOUTOFSCOPE: DBSTATUSENUM21 = 25i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_S_ALREADYEXISTS: DBSTATUSENUM21 = 26i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBSTATUSENUM25 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_CANCELED: DBSTATUSENUM25 = 27i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_E_NOTCOLLECTION: DBSTATUSENUM25 = 28i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBSTATUSENUM26 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTATUS_S_ROWSETCOLUMN: DBSTATUSENUM26 = 29i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBTABLESTATISTICSTYPE26 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTAT_HISTOGRAM: DBTABLESTATISTICSTYPE26 = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTAT_COLUMN_CARDINALITY: DBTABLESTATISTICSTYPE26 = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBSTAT_TUPLE_CARDINALITY: DBTABLESTATISTICSTYPE26 = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBTYPEENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_EMPTY: DBTYPEENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_NULL: DBTYPEENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_I2: DBTYPEENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_I4: DBTYPEENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_R4: DBTYPEENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_R8: DBTYPEENUM = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_CY: DBTYPEENUM = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_DATE: DBTYPEENUM = 7i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_BSTR: DBTYPEENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_IDISPATCH: DBTYPEENUM = 9i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_ERROR: DBTYPEENUM = 10i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_BOOL: DBTYPEENUM = 11i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_VARIANT: DBTYPEENUM = 12i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_IUNKNOWN: DBTYPEENUM = 13i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_DECIMAL: DBTYPEENUM = 14i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_UI1: DBTYPEENUM = 17i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_ARRAY: DBTYPEENUM = 8192i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_BYREF: DBTYPEENUM = 16384i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_I1: DBTYPEENUM = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_UI2: DBTYPEENUM = 18i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_UI4: DBTYPEENUM = 19i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_I8: DBTYPEENUM = 20i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_UI8: DBTYPEENUM = 21i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_GUID: DBTYPEENUM = 72i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_VECTOR: DBTYPEENUM = 4096i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_RESERVED: DBTYPEENUM = 32768i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_BYTES: DBTYPEENUM = 128i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_STR: DBTYPEENUM = 129i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_WSTR: DBTYPEENUM = 130i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_NUMERIC: DBTYPEENUM = 131i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_UDT: DBTYPEENUM = 132i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_DBDATE: DBTYPEENUM = 133i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_DBTIME: DBTYPEENUM = 134i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_DBTIMESTAMP: DBTYPEENUM = 135i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBTYPEENUM15 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_HCHAPTER: DBTYPEENUM15 = 136i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBTYPEENUM20 = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_FILETIME: DBTYPEENUM20 = 64i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_PROPVARIANT: DBTYPEENUM20 = 138i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBTYPE_VARNUMERIC: DBTYPEENUM20 = 139i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBUPDELRULEENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUPDELRULE_NOACTION: DBUPDELRULEENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUPDELRULE_CASCADE: DBUPDELRULEENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUPDELRULE_SETNULL: DBUPDELRULEENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBUPDELRULE_SETDEFAULT: DBUPDELRULEENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBWATCHMODEENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBWATCHMODE_ALL: DBWATCHMODEENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBWATCHMODE_EXTEND: DBWATCHMODEENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBWATCHMODE_MOVE: DBWATCHMODEENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBWATCHMODE_COUNT: DBWATCHMODEENUM = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DBWATCHNOTIFYENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBWATCHNOTIFY_ROWSCHANGED: DBWATCHNOTIFYENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBWATCHNOTIFY_QUERYDONE: DBWATCHNOTIFYENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBWATCHNOTIFY_QUERYREEXECUTED: DBWATCHNOTIFYENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DCINFOTYPEENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DCINFOTYPE_VERSION: DCINFOTYPEENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type DELIVERY_AGENT_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DELIVERY_AGENT_FLAG_NO_BROADCAST: DELIVERY_AGENT_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DELIVERY_AGENT_FLAG_NO_RESTRICTIONS: DELIVERY_AGENT_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DELIVERY_AGENT_FLAG_SILENT_DIAL: DELIVERY_AGENT_FLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type EBindInfoOptions = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const BIO_BINDER: EBindInfoOptions = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type FOLLOW_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const FF_INDEXCOMPLEXURLS: FOLLOW_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const FF_SUPPRESSINDEXING: FOLLOW_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type INTERVAL_LIMIT_KIND = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const ILK_EXPLICIT_INCLUDED: INTERVAL_LIMIT_KIND = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const ILK_EXPLICIT_EXCLUDED: INTERVAL_LIMIT_KIND = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const ILK_NEGATIVE_INFINITY: INTERVAL_LIMIT_KIND = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const ILK_POSITIVE_INFINITY: INTERVAL_LIMIT_KIND = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type KAGREQDIAGFLAGSENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const KAGREQDIAGFLAGS_HEADER: KAGREQDIAGFLAGSENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const KAGREQDIAGFLAGS_RECORD: KAGREQDIAGFLAGSENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type LOCKMODEENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const LOCKMODE_INVALID: LOCKMODEENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const LOCKMODE_EXCLUSIVE: LOCKMODEENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const LOCKMODE_SHARED: LOCKMODEENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type MSDSDBINITPROPENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MSDS_DBINIT_DATAPROVIDER: MSDSDBINITPROPENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type MSDSSESSIONPROPENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const DBPROP_MSDS_SESS_UNIQUENAMES: MSDSSESSIONPROPENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type NAMED_ENTITY_CERTAINTY = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const NEC_LOW: NAMED_ENTITY_CERTAINTY = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const NEC_MEDIUM: NAMED_ENTITY_CERTAINTY = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const NEC_HIGH: NAMED_ENTITY_CERTAINTY = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type OSPCOMP = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPCOMP_EQ: OSPCOMP = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPCOMP_DEFAULT: OSPCOMP = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPCOMP_LT: OSPCOMP = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPCOMP_LE: OSPCOMP = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPCOMP_GE: OSPCOMP = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPCOMP_GT: OSPCOMP = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPCOMP_NE: OSPCOMP = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type OSPFIND = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPFIND_DEFAULT: OSPFIND = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPFIND_UP: OSPFIND = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPFIND_CASESENSITIVE: OSPFIND = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPFIND_UPCASESENSITIVE: OSPFIND = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type OSPFORMAT = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPFORMAT_RAW: OSPFORMAT = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPFORMAT_DEFAULT: OSPFORMAT = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPFORMAT_FORMATTED: OSPFORMAT = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPFORMAT_HTML: OSPFORMAT = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type OSPRW = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPRW_DEFAULT: OSPRW = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPRW_READONLY: OSPRW = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPRW_READWRITE: OSPRW = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPRW_MIXED: OSPRW = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type OSPXFER = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPXFER_COMPLETE: OSPXFER = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPXFER_ABORT: OSPXFER = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const OSPXFER_ERROR: OSPXFER = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type PRIORITIZE_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PRIORITIZE_FLAG_RETRYFAILEDITEMS: PRIORITIZE_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PRIORITIZE_FLAG_IGNOREFAILURECOUNT: PRIORITIZE_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type PRIORITY_LEVEL = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PRIORITY_LEVEL_FOREGROUND: PRIORITY_LEVEL = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PRIORITY_LEVEL_HIGH: PRIORITY_LEVEL = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PRIORITY_LEVEL_LOW: PRIORITY_LEVEL = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PRIORITY_LEVEL_DEFAULT: PRIORITY_LEVEL = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type PROXY_ACCESS = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PROXY_ACCESS_PRECONFIG: PROXY_ACCESS = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PROXY_ACCESS_DIRECT: PROXY_ACCESS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const PROXY_ACCESS_PROXY: PROXY_ACCESS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type QUERY_PARSER_MANAGER_OPTION = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const QPMO_SCHEMA_BINARY_NAME: QUERY_PARSER_MANAGER_OPTION = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const QPMO_PRELOCALIZED_SCHEMA_BINARY_PATH: QUERY_PARSER_MANAGER_OPTION = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const QPMO_UNLOCALIZED_SCHEMA_BINARY_PATH: QUERY_PARSER_MANAGER_OPTION = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const QPMO_LOCALIZED_SCHEMA_BINARY_PATH: QUERY_PARSER_MANAGER_OPTION = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const QPMO_APPEND_LCID_TO_LOCALIZED_PATH: QUERY_PARSER_MANAGER_OPTION = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const QPMO_LOCALIZER_SUPPORT: QUERY_PARSER_MANAGER_OPTION = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type ROWSETEVENT_ITEMSTATE = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const ROWSETEVENT_ITEMSTATE_NOTINROWSET: ROWSETEVENT_ITEMSTATE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const ROWSETEVENT_ITEMSTATE_INROWSET: ROWSETEVENT_ITEMSTATE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const ROWSETEVENT_ITEMSTATE_UNKNOWN: ROWSETEVENT_ITEMSTATE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type ROWSETEVENT_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const ROWSETEVENT_TYPE_DATAEXPIRED: ROWSETEVENT_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const ROWSETEVENT_TYPE_FOREGROUNDLOST: ROWSETEVENT_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const ROWSETEVENT_TYPE_SCOPESTATISTICS: ROWSETEVENT_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type SEARCH_INDEXING_PHASE = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_INDEXING_PHASE_GATHERER: SEARCH_INDEXING_PHASE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_INDEXING_PHASE_QUERYABLE: SEARCH_INDEXING_PHASE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_INDEXING_PHASE_PERSISTED: SEARCH_INDEXING_PHASE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type SEARCH_KIND_OF_CHANGE = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_CHANGE_ADD: SEARCH_KIND_OF_CHANGE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_CHANGE_DELETE: SEARCH_KIND_OF_CHANGE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_CHANGE_MODIFY: SEARCH_KIND_OF_CHANGE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_CHANGE_MOVE_RENAME: SEARCH_KIND_OF_CHANGE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_CHANGE_SEMANTICS_DIRECTORY: SEARCH_KIND_OF_CHANGE = 262144i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_CHANGE_SEMANTICS_SHALLOW: SEARCH_KIND_OF_CHANGE = 524288i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_CHANGE_SEMANTICS_UPDATE_SECURITY: SEARCH_KIND_OF_CHANGE = 4194304i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type SEARCH_NOTIFICATION_PRIORITY = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_NORMAL_PRIORITY: SEARCH_NOTIFICATION_PRIORITY = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_HIGH_PRIORITY: SEARCH_NOTIFICATION_PRIORITY = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type SEARCH_QUERY_SYNTAX = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_NO_QUERY_SYNTAX: SEARCH_QUERY_SYNTAX = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_ADVANCED_QUERY_SYNTAX: SEARCH_QUERY_SYNTAX = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_NATURAL_QUERY_SYNTAX: SEARCH_QUERY_SYNTAX = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type SEARCH_TERM_EXPANSION = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_TERM_NO_EXPANSION: SEARCH_TERM_EXPANSION = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_TERM_PREFIX_ALL: SEARCH_TERM_EXPANSION = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SEARCH_TERM_STEM_ALL: SEARCH_TERM_EXPANSION = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type SQLINTERVAL = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_YEAR: SQLINTERVAL = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_MONTH: SQLINTERVAL = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_DAY: SQLINTERVAL = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_HOUR: SQLINTERVAL = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_MINUTE: SQLINTERVAL = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_SECOND: SQLINTERVAL = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_YEAR_TO_MONTH: SQLINTERVAL = 7i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_DAY_TO_HOUR: SQLINTERVAL = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_DAY_TO_MINUTE: SQLINTERVAL = 9i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_DAY_TO_SECOND: SQLINTERVAL = 10i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_HOUR_TO_MINUTE: SQLINTERVAL = 11i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_HOUR_TO_SECOND: SQLINTERVAL = 12i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQL_IS_MINUTE_TO_SECOND: SQLINTERVAL = 13i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type SQLVARENUM = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_EMPTY: SQLVARENUM = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_NULL: SQLVARENUM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_UI1: SQLVARENUM = 17i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_I2: SQLVARENUM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_I4: SQLVARENUM = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_I8: SQLVARENUM = 20i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_R4: SQLVARENUM = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_R8: SQLVARENUM = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_MONEY: SQLVARENUM = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_SMALLMONEY: SQLVARENUM = 200i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_WSTRING: SQLVARENUM = 201i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_WVARSTRING: SQLVARENUM = 202i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_STRING: SQLVARENUM = 203i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_VARSTRING: SQLVARENUM = 204i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_BIT: SQLVARENUM = 11i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_GUID: SQLVARENUM = 72i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_NUMERIC: SQLVARENUM = 131i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_DECIMAL: SQLVARENUM = 205i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_DATETIME: SQLVARENUM = 135i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_SMALLDATETIME: SQLVARENUM = 206i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_BINARY: SQLVARENUM = 207i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_VARBINARY: SQLVARENUM = 208i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const VT_SS_UNKNOWN: SQLVARENUM = 209i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type STRUCTURED_QUERY_MULTIOPTION = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQMO_VIRTUAL_PROPERTY: STRUCTURED_QUERY_MULTIOPTION = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQMO_DEFAULT_PROPERTY: STRUCTURED_QUERY_MULTIOPTION = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQMO_GENERATOR_FOR_TYPE: STRUCTURED_QUERY_MULTIOPTION = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQMO_MAP_PROPERTY: STRUCTURED_QUERY_MULTIOPTION = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type STRUCTURED_QUERY_PARSE_ERROR = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQPE_NONE: STRUCTURED_QUERY_PARSE_ERROR = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQPE_EXTRA_OPENING_PARENTHESIS: STRUCTURED_QUERY_PARSE_ERROR = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQPE_EXTRA_CLOSING_PARENTHESIS: STRUCTURED_QUERY_PARSE_ERROR = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQPE_IGNORED_MODIFIER: STRUCTURED_QUERY_PARSE_ERROR = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQPE_IGNORED_CONNECTOR: STRUCTURED_QUERY_PARSE_ERROR = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQPE_IGNORED_KEYWORD: STRUCTURED_QUERY_PARSE_ERROR = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQPE_UNHANDLED: STRUCTURED_QUERY_PARSE_ERROR = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type STRUCTURED_QUERY_RESOLVE_OPTION = u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQRO_DEFAULT: STRUCTURED_QUERY_RESOLVE_OPTION = 0u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQRO_DONT_RESOLVE_DATETIME: STRUCTURED_QUERY_RESOLVE_OPTION = 1u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQRO_ALWAYS_ONE_INTERVAL: STRUCTURED_QUERY_RESOLVE_OPTION = 2u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQRO_DONT_SIMPLIFY_CONDITION_TREES: STRUCTURED_QUERY_RESOLVE_OPTION = 4u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQRO_DONT_MAP_RELATIONS: STRUCTURED_QUERY_RESOLVE_OPTION = 8u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQRO_DONT_RESOLVE_RANGES: STRUCTURED_QUERY_RESOLVE_OPTION = 16u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQRO_DONT_REMOVE_UNRESTRICTED_KEYWORDS: STRUCTURED_QUERY_RESOLVE_OPTION = 32u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQRO_DONT_SPLIT_WORDS: STRUCTURED_QUERY_RESOLVE_OPTION = 64u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQRO_IGNORE_PHRASE_ORDER: STRUCTURED_QUERY_RESOLVE_OPTION = 128u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQRO_ADD_VALUE_TYPE_FOR_PLAIN_VALUES: STRUCTURED_QUERY_RESOLVE_OPTION = 256u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQRO_ADD_ROBUST_ITEM_NAME: STRUCTURED_QUERY_RESOLVE_OPTION = 512u32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type STRUCTURED_QUERY_SINGLE_OPTION = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQSO_SCHEMA: STRUCTURED_QUERY_SINGLE_OPTION = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQSO_LOCALE_WORD_BREAKING: STRUCTURED_QUERY_SINGLE_OPTION = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQSO_WORD_BREAKER: STRUCTURED_QUERY_SINGLE_OPTION = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQSO_NATURAL_SYNTAX: STRUCTURED_QUERY_SINGLE_OPTION = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQSO_AUTOMATIC_WILDCARD: STRUCTURED_QUERY_SINGLE_OPTION = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQSO_TRACE_LEVEL: STRUCTURED_QUERY_SINGLE_OPTION = 5i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQSO_LANGUAGE_KEYWORDS: STRUCTURED_QUERY_SINGLE_OPTION = 6i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQSO_SYNTAX: STRUCTURED_QUERY_SINGLE_OPTION = 7i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQSO_TIME_ZONE: STRUCTURED_QUERY_SINGLE_OPTION = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQSO_IMPLICIT_CONNECTOR: STRUCTURED_QUERY_SINGLE_OPTION = 9i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQSO_CONNECTOR_CASE: STRUCTURED_QUERY_SINGLE_OPTION = 10i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type STRUCTURED_QUERY_SYNTAX = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQS_NO_SYNTAX: STRUCTURED_QUERY_SYNTAX = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQS_ADVANCED_QUERY_SYNTAX: STRUCTURED_QUERY_SYNTAX = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SQS_NATURAL_QUERY_SYNTAX: STRUCTURED_QUERY_SYNTAX = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type SUBSCRIPTIONINFOFLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_SCHEDULE: SUBSCRIPTIONINFOFLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_RECURSE: SUBSCRIPTIONINFOFLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_WEBCRAWL: SUBSCRIPTIONINFOFLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_MAILNOT: SUBSCRIPTIONINFOFLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_MAXSIZEKB: SUBSCRIPTIONINFOFLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_USER: SUBSCRIPTIONINFOFLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_PASSWORD: SUBSCRIPTIONINFOFLAGS = 64i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_TASKFLAGS: SUBSCRIPTIONINFOFLAGS = 256i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_GLEAM: SUBSCRIPTIONINFOFLAGS = 512i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_CHANGESONLY: SUBSCRIPTIONINFOFLAGS = 1024i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_CHANNELFLAGS: SUBSCRIPTIONINFOFLAGS = 2048i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_FRIENDLYNAME: SUBSCRIPTIONINFOFLAGS = 8192i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_NEEDPASSWORD: SUBSCRIPTIONINFOFLAGS = 16384i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSINFO_TYPE: SUBSCRIPTIONINFOFLAGS = 32768i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type SUBSCRIPTIONSCHEDULE = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSSCHED_AUTO: SUBSCRIPTIONSCHEDULE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSSCHED_DAILY: SUBSCRIPTIONSCHEDULE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSSCHED_WEEKLY: SUBSCRIPTIONSCHEDULE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSSCHED_CUSTOM: SUBSCRIPTIONSCHEDULE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSSCHED_MANUAL: SUBSCRIPTIONSCHEDULE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type SUBSCRIPTIONTYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSTYPE_URL: SUBSCRIPTIONTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSTYPE_CHANNEL: SUBSCRIPTIONTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSTYPE_DESKTOPURL: SUBSCRIPTIONTYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSTYPE_EXTERNAL: SUBSCRIPTIONTYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const SUBSTYPE_DESKTOPCHANNEL: SUBSCRIPTIONTYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub type WEBCRAWL_RECURSEFLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const WEBCRAWL_DONT_MAKE_STICKY: WEBCRAWL_RECURSEFLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const WEBCRAWL_GET_IMAGES: WEBCRAWL_RECURSEFLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const WEBCRAWL_GET_VIDEOS: WEBCRAWL_RECURSEFLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const WEBCRAWL_GET_BGSOUNDS: WEBCRAWL_RECURSEFLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const WEBCRAWL_GET_CONTROLS: WEBCRAWL_RECURSEFLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const WEBCRAWL_LINKS_ELSEWHERE: WEBCRAWL_RECURSEFLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const WEBCRAWL_IGNORE_ROBOTSTXT: WEBCRAWL_RECURSEFLAGS = 128i32;
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub const WEBCRAWL_ONLY_LINKS_TO_HTML: WEBCRAWL_RECURSEFLAGS = 256i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct AUTHENTICATION_INFO {
+    pub dwSize: u32,
+    pub atAuthenticationType: AUTH_TYPE,
+    pub pcwszUser: ::windows_sys::core::PCWSTR,
+    pub pcwszPassword: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for AUTHENTICATION_INFO {}
+impl ::core::clone::Clone for AUTHENTICATION_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct BUCKETCATEGORIZE {
+    pub cBuckets: u32,
+    pub Distribution: u32,
+}
+impl ::core::marker::Copy for BUCKETCATEGORIZE {}
+impl ::core::clone::Clone for BUCKETCATEGORIZE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct CATEGORIZATION {
+    pub ulCatType: u32,
+    pub Anonymous: CATEGORIZATION_0,
+    pub csColumns: COLUMNSET,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for CATEGORIZATION {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for CATEGORIZATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub union CATEGORIZATION_0 {
+    pub cClusters: u32,
+    pub bucket: BUCKETCATEGORIZE,
+    pub range: RANGECATEGORIZE,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for CATEGORIZATION_0 {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for CATEGORIZATION_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct CATEGORIZATIONSET {
+    pub cCat: u32,
+    pub aCat: *mut CATEGORIZATION,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for CATEGORIZATIONSET {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for CATEGORIZATIONSET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct COLUMNSET {
+    pub cCol: u32,
+    pub aCol: *mut super::super::Storage::IndexServer::FULLPROPSPEC,
+}
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for COLUMNSET {}
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for COLUMNSET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct CONTENTRESTRICTION {
+    pub prop: super::super::Storage::IndexServer::FULLPROPSPEC,
+    pub pwcsPhrase: ::windows_sys::core::PWSTR,
+    pub lcid: u32,
+    pub ulGenerateMethod: u32,
+}
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for CONTENTRESTRICTION {}
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for CONTENTRESTRICTION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct DATE_STRUCT {
+    pub year: i16,
+    pub month: u16,
+    pub day: u16,
+}
+impl ::core::marker::Copy for DATE_STRUCT {}
+impl ::core::clone::Clone for DATE_STRUCT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct DBBINDEXT {
+    pub pExtension: *mut u8,
+    pub ulExtension: usize,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for DBBINDEXT {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for DBBINDEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct DBBINDEXT {
+    pub pExtension: *mut u8,
+    pub ulExtension: usize,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for DBBINDEXT {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for DBBINDEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_System_Com\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Com")]
+pub struct DBBINDING {
+    pub iOrdinal: usize,
+    pub obValue: usize,
+    pub obLength: usize,
+    pub obStatus: usize,
+    pub pTypeInfo: super::Com::ITypeInfo,
+    pub pObject: *mut DBOBJECT,
+    pub pBindExt: *mut DBBINDEXT,
+    pub dwPart: u32,
+    pub dwMemOwner: u32,
+    pub eParamIO: u32,
+    pub cbMaxLen: usize,
+    pub dwFlags: u32,
+    pub wType: u16,
+    pub bPrecision: u8,
+    pub bScale: u8,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for DBBINDING {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for DBBINDING {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_System_Com\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Com")]
+pub struct DBBINDING {
+    pub iOrdinal: usize,
+    pub obValue: usize,
+    pub obLength: usize,
+    pub obStatus: usize,
+    pub pTypeInfo: super::Com::ITypeInfo,
+    pub pObject: *mut DBOBJECT,
+    pub pBindExt: *mut DBBINDEXT,
+    pub dwPart: u32,
+    pub dwMemOwner: u32,
+    pub eParamIO: u32,
+    pub cbMaxLen: usize,
+    pub dwFlags: u32,
+    pub wType: u16,
+    pub bPrecision: u8,
+    pub bScale: u8,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for DBBINDING {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for DBBINDING {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+pub struct DBCOLUMNACCESS {
+    pub pData: *mut ::core::ffi::c_void,
+    pub columnid: super::super::Storage::IndexServer::DBID,
+    pub cbDataLen: usize,
+    pub dwStatus: u32,
+    pub cbMaxLen: usize,
+    pub dwReserved: usize,
+    pub wType: u16,
+    pub bPrecision: u8,
+    pub bScale: u8,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::marker::Copy for DBCOLUMNACCESS {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::clone::Clone for DBCOLUMNACCESS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+pub struct DBCOLUMNACCESS {
+    pub pData: *mut ::core::ffi::c_void,
+    pub columnid: super::super::Storage::IndexServer::DBID,
+    pub cbDataLen: usize,
+    pub dwStatus: u32,
+    pub cbMaxLen: usize,
+    pub dwReserved: usize,
+    pub wType: u16,
+    pub bPrecision: u8,
+    pub bScale: u8,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::marker::Copy for DBCOLUMNACCESS {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::clone::Clone for DBCOLUMNACCESS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DBCOLUMNDESC {
+    pub pwszTypeName: ::windows_sys::core::PWSTR,
+    pub pTypeInfo: super::Com::ITypeInfo,
+    pub rgPropertySets: *mut DBPROPSET,
+    pub pclsid: *mut ::windows_sys::core::GUID,
+    pub cPropertySets: u32,
+    pub ulColumnSize: usize,
+    pub dbcid: super::super::Storage::IndexServer::DBID,
+    pub wType: u16,
+    pub bPrecision: u8,
+    pub bScale: u8,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DBCOLUMNDESC {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DBCOLUMNDESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DBCOLUMNDESC {
+    pub pwszTypeName: ::windows_sys::core::PWSTR,
+    pub pTypeInfo: super::Com::ITypeInfo,
+    pub rgPropertySets: *mut DBPROPSET,
+    pub pclsid: *mut ::windows_sys::core::GUID,
+    pub cPropertySets: u32,
+    pub ulColumnSize: usize,
+    pub dbcid: super::super::Storage::IndexServer::DBID,
+    pub wType: u16,
+    pub bPrecision: u8,
+    pub bScale: u8,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DBCOLUMNDESC {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DBCOLUMNDESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com"))]
+pub struct DBCOLUMNINFO {
+    pub pwszName: ::windows_sys::core::PWSTR,
+    pub pTypeInfo: super::Com::ITypeInfo,
+    pub iOrdinal: usize,
+    pub dwFlags: u32,
+    pub ulColumnSize: usize,
+    pub wType: u16,
+    pub bPrecision: u8,
+    pub bScale: u8,
+    pub columnid: super::super::Storage::IndexServer::DBID,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com"))]
+impl ::core::marker::Copy for DBCOLUMNINFO {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com"))]
+impl ::core::clone::Clone for DBCOLUMNINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com"))]
+pub struct DBCOLUMNINFO {
+    pub pwszName: ::windows_sys::core::PWSTR,
+    pub pTypeInfo: super::Com::ITypeInfo,
+    pub iOrdinal: usize,
+    pub dwFlags: u32,
+    pub ulColumnSize: usize,
+    pub wType: u16,
+    pub bPrecision: u8,
+    pub bScale: u8,
+    pub columnid: super::super::Storage::IndexServer::DBID,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com"))]
+impl ::core::marker::Copy for DBCOLUMNINFO {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com"))]
+impl ::core::clone::Clone for DBCOLUMNINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DBCONSTRAINTDESC {
+    pub pConstraintID: *mut super::super::Storage::IndexServer::DBID,
+    pub ConstraintType: u32,
+    pub cColumns: usize,
+    pub rgColumnList: *mut super::super::Storage::IndexServer::DBID,
+    pub pReferencedTableID: *mut super::super::Storage::IndexServer::DBID,
+    pub cForeignKeyColumns: usize,
+    pub rgForeignKeyColumnList: *mut super::super::Storage::IndexServer::DBID,
+    pub pwszConstraintText: ::windows_sys::core::PWSTR,
+    pub UpdateRule: u32,
+    pub DeleteRule: u32,
+    pub MatchType: u32,
+    pub Deferrability: u32,
+    pub cReserved: usize,
+    pub rgReserved: *mut DBPROPSET,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DBCONSTRAINTDESC {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DBCONSTRAINTDESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DBCONSTRAINTDESC {
+    pub pConstraintID: *mut super::super::Storage::IndexServer::DBID,
+    pub ConstraintType: u32,
+    pub cColumns: usize,
+    pub rgColumnList: *mut super::super::Storage::IndexServer::DBID,
+    pub pReferencedTableID: *mut super::super::Storage::IndexServer::DBID,
+    pub cForeignKeyColumns: usize,
+    pub rgForeignKeyColumnList: *mut super::super::Storage::IndexServer::DBID,
+    pub pwszConstraintText: ::windows_sys::core::PWSTR,
+    pub UpdateRule: u32,
+    pub DeleteRule: u32,
+    pub MatchType: u32,
+    pub Deferrability: u32,
+    pub cReserved: usize,
+    pub rgReserved: *mut DBPROPSET,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DBCONSTRAINTDESC {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DBCONSTRAINTDESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct DBCOST {
+    pub eKind: u32,
+    pub dwUnits: u32,
+    pub lValue: i32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for DBCOST {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for DBCOST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct DBCOST {
+    pub eKind: u32,
+    pub dwUnits: u32,
+    pub lValue: i32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for DBCOST {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for DBCOST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct DBDATE {
+    pub year: i16,
+    pub month: u16,
+    pub day: u16,
+}
+impl ::core::marker::Copy for DBDATE {}
+impl ::core::clone::Clone for DBDATE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct DBDATETIM4 {
+    pub numdays: u16,
+    pub nummins: u16,
+}
+impl ::core::marker::Copy for DBDATETIM4 {}
+impl ::core::clone::Clone for DBDATETIM4 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct DBDATETIME {
+    pub dtdays: i32,
+    pub dttime: u32,
+}
+impl ::core::marker::Copy for DBDATETIME {}
+impl ::core::clone::Clone for DBDATETIME {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct DBFAILUREINFO {
+    pub hRow: usize,
+    pub iColumn: usize,
+    pub failure: ::windows_sys::core::HRESULT,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for DBFAILUREINFO {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for DBFAILUREINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct DBFAILUREINFO {
+    pub hRow: usize,
+    pub iColumn: usize,
+    pub failure: ::windows_sys::core::HRESULT,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for DBFAILUREINFO {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for DBFAILUREINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct DBIMPLICITSESSION {
+    pub pUnkOuter: ::windows_sys::core::IUnknown,
+    pub piid: *mut ::windows_sys::core::GUID,
+    pub pSession: ::windows_sys::core::IUnknown,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for DBIMPLICITSESSION {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for DBIMPLICITSESSION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct DBIMPLICITSESSION {
+    pub pUnkOuter: ::windows_sys::core::IUnknown,
+    pub piid: *mut ::windows_sys::core::GUID,
+    pub pSession: ::windows_sys::core::IUnknown,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for DBIMPLICITSESSION {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for DBIMPLICITSESSION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+pub struct DBINDEXCOLUMNDESC {
+    pub pColumnID: *mut super::super::Storage::IndexServer::DBID,
+    pub eIndexColOrder: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::marker::Copy for DBINDEXCOLUMNDESC {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::clone::Clone for DBINDEXCOLUMNDESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+pub struct DBINDEXCOLUMNDESC {
+    pub pColumnID: *mut super::super::Storage::IndexServer::DBID,
+    pub eIndexColOrder: u32,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::marker::Copy for DBINDEXCOLUMNDESC {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::clone::Clone for DBINDEXCOLUMNDESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DBLITERALINFO {
+    pub pwszLiteralValue: ::windows_sys::core::PWSTR,
+    pub pwszInvalidChars: ::windows_sys::core::PWSTR,
+    pub pwszInvalidStartingChars: ::windows_sys::core::PWSTR,
+    pub lt: u32,
+    pub fSupported: super::super::Foundation::BOOL,
+    pub cchMaxLen: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DBLITERALINFO {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DBLITERALINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DBLITERALINFO {
+    pub pwszLiteralValue: ::windows_sys::core::PWSTR,
+    pub pwszInvalidChars: ::windows_sys::core::PWSTR,
+    pub pwszInvalidStartingChars: ::windows_sys::core::PWSTR,
+    pub lt: u32,
+    pub fSupported: super::super::Foundation::BOOL,
+    pub cchMaxLen: u32,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DBLITERALINFO {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DBLITERALINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct DBMONEY {
+    pub mnyhigh: i32,
+    pub mnylow: u32,
+}
+impl ::core::marker::Copy for DBMONEY {}
+impl ::core::clone::Clone for DBMONEY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct DBOBJECT {
+    pub dwFlags: u32,
+    pub iid: ::windows_sys::core::GUID,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for DBOBJECT {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for DBOBJECT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct DBOBJECT {
+    pub dwFlags: u32,
+    pub iid: ::windows_sys::core::GUID,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for DBOBJECT {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for DBOBJECT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct DBPARAMBINDINFO {
+    pub pwszDataSourceType: ::windows_sys::core::PWSTR,
+    pub pwszName: ::windows_sys::core::PWSTR,
+    pub ulParamSize: usize,
+    pub dwFlags: u32,
+    pub bPrecision: u8,
+    pub bScale: u8,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for DBPARAMBINDINFO {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for DBPARAMBINDINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct DBPARAMBINDINFO {
+    pub pwszDataSourceType: ::windows_sys::core::PWSTR,
+    pub pwszName: ::windows_sys::core::PWSTR,
+    pub ulParamSize: usize,
+    pub dwFlags: u32,
+    pub bPrecision: u8,
+    pub bScale: u8,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for DBPARAMBINDINFO {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for DBPARAMBINDINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_System_Com\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Com")]
+pub struct DBPARAMINFO {
+    pub dwFlags: u32,
+    pub iOrdinal: usize,
+    pub pwszName: ::windows_sys::core::PWSTR,
+    pub pTypeInfo: super::Com::ITypeInfo,
+    pub ulParamSize: usize,
+    pub wType: u16,
+    pub bPrecision: u8,
+    pub bScale: u8,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for DBPARAMINFO {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for DBPARAMINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_System_Com\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Com")]
+pub struct DBPARAMINFO {
+    pub dwFlags: u32,
+    pub iOrdinal: usize,
+    pub pwszName: ::windows_sys::core::PWSTR,
+    pub pTypeInfo: super::Com::ITypeInfo,
+    pub ulParamSize: usize,
+    pub wType: u16,
+    pub bPrecision: u8,
+    pub bScale: u8,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for DBPARAMINFO {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for DBPARAMINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct DBPARAMS {
+    pub pData: *mut ::core::ffi::c_void,
+    pub cParamSets: usize,
+    pub hAccessor: HACCESSOR,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for DBPARAMS {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for DBPARAMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct DBPARAMS {
+    pub pData: *mut ::core::ffi::c_void,
+    pub cParamSets: usize,
+    pub hAccessor: HACCESSOR,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for DBPARAMS {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for DBPARAMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DBPROP {
+    pub dwPropertyID: u32,
+    pub dwOptions: u32,
+    pub dwStatus: u32,
+    pub colid: super::super::Storage::IndexServer::DBID,
+    pub vValue: super::Com::VARIANT,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DBPROP {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DBPROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DBPROP {
+    pub dwPropertyID: u32,
+    pub dwOptions: u32,
+    pub dwStatus: u32,
+    pub colid: super::super::Storage::IndexServer::DBID,
+    pub vValue: super::Com::VARIANT,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DBPROP {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DBPROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct DBPROPIDSET {
+    pub rgPropertyIDs: *mut u32,
+    pub cPropertyIDs: u32,
+    pub guidPropertySet: ::windows_sys::core::GUID,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for DBPROPIDSET {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for DBPROPIDSET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct DBPROPIDSET {
+    pub rgPropertyIDs: *mut u32,
+    pub cPropertyIDs: u32,
+    pub guidPropertySet: ::windows_sys::core::GUID,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for DBPROPIDSET {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for DBPROPIDSET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DBPROPINFO {
+    pub pwszDescription: ::windows_sys::core::PWSTR,
+    pub dwPropertyID: u32,
+    pub dwFlags: u32,
+    pub vtType: super::Com::VARENUM,
+    pub vValues: super::Com::VARIANT,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DBPROPINFO {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DBPROPINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DBPROPINFO {
+    pub pwszDescription: ::windows_sys::core::PWSTR,
+    pub dwPropertyID: u32,
+    pub dwFlags: u32,
+    pub vtType: super::Com::VARENUM,
+    pub vValues: super::Com::VARIANT,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DBPROPINFO {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DBPROPINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DBPROPINFOSET {
+    pub rgPropertyInfos: *mut DBPROPINFO,
+    pub cPropertyInfos: u32,
+    pub guidPropertySet: ::windows_sys::core::GUID,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DBPROPINFOSET {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DBPROPINFOSET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DBPROPINFOSET {
+    pub rgPropertyInfos: *mut DBPROPINFO,
+    pub cPropertyInfos: u32,
+    pub guidPropertySet: ::windows_sys::core::GUID,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DBPROPINFOSET {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DBPROPINFOSET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DBPROPSET {
+    pub rgProperties: *mut DBPROP,
+    pub cProperties: u32,
+    pub guidPropertySet: ::windows_sys::core::GUID,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DBPROPSET {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DBPROPSET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DBPROPSET {
+    pub rgProperties: *mut DBPROP,
+    pub cProperties: u32,
+    pub guidPropertySet: ::windows_sys::core::GUID,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DBPROPSET {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DBPROPSET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct DBROWWATCHCHANGE {
+    pub hRegion: usize,
+    pub eChangeKind: u32,
+    pub hRow: usize,
+    pub iRow: usize,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for DBROWWATCHCHANGE {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for DBROWWATCHCHANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct DBROWWATCHCHANGE {
+    pub hRegion: usize,
+    pub eChangeKind: u32,
+    pub hRow: usize,
+    pub iRow: usize,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for DBROWWATCHCHANGE {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for DBROWWATCHCHANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct DBTIME {
+    pub hour: u16,
+    pub minute: u16,
+    pub second: u16,
+}
+impl ::core::marker::Copy for DBTIME {}
+impl ::core::clone::Clone for DBTIME {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct DBTIMESTAMP {
+    pub year: i16,
+    pub month: u16,
+    pub day: u16,
+    pub hour: u16,
+    pub minute: u16,
+    pub second: u16,
+    pub fraction: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for DBTIMESTAMP {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for DBTIMESTAMP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct DBTIMESTAMP {
+    pub year: i16,
+    pub month: u16,
+    pub day: u16,
+    pub hour: u16,
+    pub minute: u16,
+    pub second: u16,
+    pub fraction: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for DBTIMESTAMP {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for DBTIMESTAMP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct DBVARYBIN {
+    pub len: i16,
+    pub array: [u8; 8001],
+}
+impl ::core::marker::Copy for DBVARYBIN {}
+impl ::core::clone::Clone for DBVARYBIN {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct DBVARYCHAR {
+    pub len: i16,
+    pub str: [i8; 8001],
+}
+impl ::core::marker::Copy for DBVARYCHAR {}
+impl ::core::clone::Clone for DBVARYCHAR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct DBVECTOR {
+    pub size: usize,
+    pub ptr: *mut ::core::ffi::c_void,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for DBVECTOR {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for DBVECTOR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct DBVECTOR {
+    pub size: usize,
+    pub ptr: *mut ::core::ffi::c_void,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for DBVECTOR {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for DBVECTOR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct DB_NUMERIC {
+    pub precision: u8,
+    pub scale: u8,
+    pub sign: u8,
+    pub val: [u8; 16],
+}
+impl ::core::marker::Copy for DB_NUMERIC {}
+impl ::core::clone::Clone for DB_NUMERIC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct DB_VARNUMERIC {
+    pub precision: u8,
+    pub scale: i8,
+    pub sign: u8,
+    pub val: [u8; 1],
+}
+impl ::core::marker::Copy for DB_VARNUMERIC {}
+impl ::core::clone::Clone for DB_VARNUMERIC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct DCINFO {
+    pub eInfoType: u32,
+    pub vData: super::Com::VARIANT,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for DCINFO {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for DCINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct ERRORINFO {
+    pub hrError: ::windows_sys::core::HRESULT,
+    pub dwMinor: u32,
+    pub clsid: ::windows_sys::core::GUID,
+    pub iid: ::windows_sys::core::GUID,
+    pub dispid: i32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for ERRORINFO {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for ERRORINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct ERRORINFO {
+    pub hrError: ::windows_sys::core::HRESULT,
+    pub dwMinor: u32,
+    pub clsid: ::windows_sys::core::GUID,
+    pub iid: ::windows_sys::core::GUID,
+    pub dispid: i32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for ERRORINFO {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for ERRORINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct FILTERED_DATA_SOURCES {
+    pub pwcsExtension: ::windows_sys::core::PCWSTR,
+    pub pwcsMime: ::windows_sys::core::PCWSTR,
+    pub pClsid: *const ::windows_sys::core::GUID,
+    pub pwcsOverride: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for FILTERED_DATA_SOURCES {}
+impl ::core::clone::Clone for FILTERED_DATA_SOURCES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type HACCESSOR = usize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct HITRANGE {
+    pub iPosition: u32,
+    pub cLength: u32,
+}
+impl ::core::marker::Copy for HITRANGE {}
+impl ::core::clone::Clone for HITRANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct INCREMENTAL_ACCESS_INFO {
+    pub dwSize: u32,
+    pub ftLastModifiedTime: super::super::Foundation::FILETIME,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for INCREMENTAL_ACCESS_INFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for INCREMENTAL_ACCESS_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct IRowsetExactScroll(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct ITEMPROP {
+    pub variantValue: super::Com::VARIANT,
+    pub pwszName: ::windows_sys::core::PWSTR,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for ITEMPROP {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for ITEMPROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct ITEM_INFO {
+    pub dwSize: u32,
+    pub pcwszFromEMail: ::windows_sys::core::PCWSTR,
+    pub pcwszApplicationName: ::windows_sys::core::PCWSTR,
+    pub pcwszCatalogName: ::windows_sys::core::PCWSTR,
+    pub pcwszContentClass: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for ITEM_INFO {}
+impl ::core::clone::Clone for ITEM_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct KAGGETDIAG {
+    pub ulSize: u32,
+    pub vDiagInfo: super::Com::VARIANT,
+    pub sDiagField: i16,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for KAGGETDIAG {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for KAGGETDIAG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct KAGREQDIAG {
+    pub ulDiagFlags: u32,
+    pub vt: super::Com::VARENUM,
+    pub sDiagField: i16,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for KAGREQDIAG {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for KAGREQDIAG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct MDAXISINFO {
+    pub cbSize: usize,
+    pub iAxis: usize,
+    pub cDimensions: usize,
+    pub cCoordinates: usize,
+    pub rgcColumns: *mut usize,
+    pub rgpwszDimensionNames: *mut ::windows_sys::core::PWSTR,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for MDAXISINFO {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for MDAXISINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct MDAXISINFO {
+    pub cbSize: usize,
+    pub iAxis: usize,
+    pub cDimensions: usize,
+    pub cCoordinates: usize,
+    pub rgcColumns: *mut usize,
+    pub rgpwszDimensionNames: *mut ::windows_sys::core::PWSTR,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for MDAXISINFO {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for MDAXISINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct NATLANGUAGERESTRICTION {
+    pub prop: super::super::Storage::IndexServer::FULLPROPSPEC,
+    pub pwcsPhrase: ::windows_sys::core::PWSTR,
+    pub lcid: u32,
+}
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for NATLANGUAGERESTRICTION {}
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for NATLANGUAGERESTRICTION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct NODERESTRICTION {
+    pub cRes: u32,
+    pub paRes: *mut *mut RESTRICTION,
+    pub reserved: u32,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for NODERESTRICTION {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for NODERESTRICTION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct NOTRESTRICTION {
+    pub pRes: *mut RESTRICTION,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for NOTRESTRICTION {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for NOTRESTRICTION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct ODBC_VS_ARGS {
+    pub pguidEvent: *const ::windows_sys::core::GUID,
+    pub dwFlags: u32,
+    pub Anonymous1: ODBC_VS_ARGS_0,
+    pub Anonymous2: ODBC_VS_ARGS_1,
+    pub RetCode: i16,
+}
+impl ::core::marker::Copy for ODBC_VS_ARGS {}
+impl ::core::clone::Clone for ODBC_VS_ARGS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub union ODBC_VS_ARGS_0 {
+    pub wszArg: ::windows_sys::core::PWSTR,
+    pub szArg: ::windows_sys::core::PSTR,
+}
+impl ::core::marker::Copy for ODBC_VS_ARGS_0 {}
+impl ::core::clone::Clone for ODBC_VS_ARGS_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub union ODBC_VS_ARGS_1 {
+    pub wszCorrelation: ::windows_sys::core::PWSTR,
+    pub szCorrelation: ::windows_sys::core::PSTR,
+}
+impl ::core::marker::Copy for ODBC_VS_ARGS_1 {}
+impl ::core::clone::Clone for ODBC_VS_ARGS_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct PROPERTYRESTRICTION {
+    pub rel: u32,
+    pub prop: super::super::Storage::IndexServer::FULLPROPSPEC,
+    pub prval: super::Com::StructuredStorage::PROPVARIANT,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for PROPERTYRESTRICTION {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for PROPERTYRESTRICTION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct PROXY_INFO {
+    pub dwSize: u32,
+    pub pcwszUserAgent: ::windows_sys::core::PCWSTR,
+    pub paUseProxy: PROXY_ACCESS,
+    pub fLocalBypass: super::super::Foundation::BOOL,
+    pub dwPortNumber: u32,
+    pub pcwszProxyName: ::windows_sys::core::PCWSTR,
+    pub pcwszBypassList: ::windows_sys::core::PCWSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for PROXY_INFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for PROXY_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct RANGECATEGORIZE {
+    pub cRange: u32,
+    pub aRangeBegin: *mut super::Com::StructuredStorage::PROPVARIANT,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for RANGECATEGORIZE {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for RANGECATEGORIZE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct RESTRICTION {
+    pub rt: u32,
+    pub weight: u32,
+    pub res: RESTRICTION_0,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for RESTRICTION {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for RESTRICTION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub union RESTRICTION_0 {
+    pub ar: NODERESTRICTION,
+    pub orRestriction: NODERESTRICTION,
+    pub pxr: NODERESTRICTION,
+    pub vr: VECTORRESTRICTION,
+    pub nr: NOTRESTRICTION,
+    pub cr: CONTENTRESTRICTION,
+    pub nlr: NATLANGUAGERESTRICTION,
+    pub pr: PROPERTYRESTRICTION,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for RESTRICTION_0 {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for RESTRICTION_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
+pub struct RMTPACK {
+    pub pISeqStream: super::Com::ISequentialStream,
+    pub cbData: u32,
+    pub cBSTR: u32,
+    pub rgBSTR: *mut ::windows_sys::core::BSTR,
+    pub cVARIANT: u32,
+    pub rgVARIANT: *mut super::Com::VARIANT,
+    pub cIDISPATCH: u32,
+    pub rgIDISPATCH: *mut super::Com::IDispatch,
+    pub cIUNKNOWN: u32,
+    pub rgIUNKNOWN: *mut ::windows_sys::core::IUnknown,
+    pub cPROPVARIANT: u32,
+    pub rgPROPVARIANT: *mut super::Com::StructuredStorage::PROPVARIANT,
+    pub cArray: u32,
+    pub rgArray: *mut super::Com::VARIANT,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for RMTPACK {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for RMTPACK {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
+pub struct RMTPACK {
+    pub pISeqStream: super::Com::ISequentialStream,
+    pub cbData: u32,
+    pub cBSTR: u32,
+    pub rgBSTR: *mut ::windows_sys::core::BSTR,
+    pub cVARIANT: u32,
+    pub rgVARIANT: *mut super::Com::VARIANT,
+    pub cIDISPATCH: u32,
+    pub rgIDISPATCH: *mut super::Com::IDispatch,
+    pub cIUNKNOWN: u32,
+    pub rgIUNKNOWN: *mut ::windows_sys::core::IUnknown,
+    pub cPROPVARIANT: u32,
+    pub rgPROPVARIANT: *mut super::Com::StructuredStorage::PROPVARIANT,
+    pub cArray: u32,
+    pub rgArray: *mut super::Com::VARIANT,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for RMTPACK {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for RMTPACK {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct SEARCH_COLUMN_PROPERTIES {
+    pub Value: super::Com::StructuredStorage::PROPVARIANT,
+    pub lcid: u32,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for SEARCH_COLUMN_PROPERTIES {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for SEARCH_COLUMN_PROPERTIES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct SEARCH_ITEM_CHANGE {
+    pub Change: SEARCH_KIND_OF_CHANGE,
+    pub Priority: SEARCH_NOTIFICATION_PRIORITY,
+    pub pUserData: *mut super::Com::BLOB,
+    pub lpwszURL: ::windows_sys::core::PWSTR,
+    pub lpwszOldURL: ::windows_sys::core::PWSTR,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for SEARCH_ITEM_CHANGE {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for SEARCH_ITEM_CHANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct SEARCH_ITEM_INDEXING_STATUS {
+    pub dwDocID: u32,
+    pub hrIndexingStatus: ::windows_sys::core::HRESULT,
+}
+impl ::core::marker::Copy for SEARCH_ITEM_INDEXING_STATUS {}
+impl ::core::clone::Clone for SEARCH_ITEM_INDEXING_STATUS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct SEARCH_ITEM_PERSISTENT_CHANGE {
+    pub Change: SEARCH_KIND_OF_CHANGE,
+    pub URL: ::windows_sys::core::PWSTR,
+    pub OldURL: ::windows_sys::core::PWSTR,
+    pub Priority: SEARCH_NOTIFICATION_PRIORITY,
+}
+impl ::core::marker::Copy for SEARCH_ITEM_PERSISTENT_CHANGE {}
+impl ::core::clone::Clone for SEARCH_ITEM_PERSISTENT_CHANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+pub struct SEC_OBJECT {
+    pub cObjects: u32,
+    pub prgObjects: *mut SEC_OBJECT_ELEMENT,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::marker::Copy for SEC_OBJECT {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::clone::Clone for SEC_OBJECT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+pub struct SEC_OBJECT {
+    pub cObjects: u32,
+    pub prgObjects: *mut SEC_OBJECT_ELEMENT,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::marker::Copy for SEC_OBJECT {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::clone::Clone for SEC_OBJECT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+pub struct SEC_OBJECT_ELEMENT {
+    pub guidObjectType: ::windows_sys::core::GUID,
+    pub ObjectID: super::super::Storage::IndexServer::DBID,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::marker::Copy for SEC_OBJECT_ELEMENT {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::clone::Clone for SEC_OBJECT_ELEMENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(2))]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+pub struct SEC_OBJECT_ELEMENT {
+    pub guidObjectType: ::windows_sys::core::GUID,
+    pub ObjectID: super::super::Storage::IndexServer::DBID,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::marker::Copy for SEC_OBJECT_ELEMENT {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Storage_IndexServer")]
+impl ::core::clone::Clone for SEC_OBJECT_ELEMENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct SORTKEY {
+    pub propColumn: super::super::Storage::IndexServer::FULLPROPSPEC,
+    pub dwOrder: u32,
+    pub locale: u32,
+}
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for SORTKEY {}
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for SORTKEY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+pub struct SORTSET {
+    pub cCol: u32,
+    pub aCol: *mut SORTKEY,
+}
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::marker::Copy for SORTSET {}
+#[cfg(all(feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
+impl ::core::clone::Clone for SORTSET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct SQLPERF {
+    pub TimerResolution: u32,
+    pub SQLidu: u32,
+    pub SQLiduRows: u32,
+    pub SQLSelects: u32,
+    pub SQLSelectRows: u32,
+    pub Transactions: u32,
+    pub SQLPrepares: u32,
+    pub ExecDirects: u32,
+    pub SQLExecutes: u32,
+    pub CursorOpens: u32,
+    pub CursorSize: u32,
+    pub CursorUsed: u32,
+    pub PercentCursorUsed: f64,
+    pub AvgFetchTime: f64,
+    pub AvgCursorSize: f64,
+    pub AvgCursorUsed: f64,
+    pub SQLFetchTime: u32,
+    pub SQLFetchCount: u32,
+    pub CurrentStmtCount: u32,
+    pub MaxOpenStmt: u32,
+    pub SumOpenStmt: u32,
+    pub CurrentConnectionCount: u32,
+    pub MaxConnectionsOpened: u32,
+    pub SumConnectionsOpened: u32,
+    pub SumConnectiontime: u32,
+    pub AvgTimeOpened: f64,
+    pub ServerRndTrips: u32,
+    pub BuffersSent: u32,
+    pub BuffersRec: u32,
+    pub BytesSent: u32,
+    pub BytesRec: u32,
+    pub msExecutionTime: u32,
+    pub msNetWorkServerTime: u32,
+}
+impl ::core::marker::Copy for SQLPERF {}
+impl ::core::clone::Clone for SQLPERF {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct SQL_DAY_SECOND_STRUCT {
+    pub day: u32,
+    pub hour: u32,
+    pub minute: u32,
+    pub second: u32,
+    pub fraction: u32,
+}
+impl ::core::marker::Copy for SQL_DAY_SECOND_STRUCT {}
+impl ::core::clone::Clone for SQL_DAY_SECOND_STRUCT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct SQL_INTERVAL_STRUCT {
+    pub interval_type: SQLINTERVAL,
+    pub interval_sign: i16,
+    pub intval: SQL_INTERVAL_STRUCT_0,
+}
+impl ::core::marker::Copy for SQL_INTERVAL_STRUCT {}
+impl ::core::clone::Clone for SQL_INTERVAL_STRUCT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub union SQL_INTERVAL_STRUCT_0 {
+    pub year_month: SQL_YEAR_MONTH_STRUCT,
+    pub day_second: SQL_DAY_SECOND_STRUCT,
+}
+impl ::core::marker::Copy for SQL_INTERVAL_STRUCT_0 {}
+impl ::core::clone::Clone for SQL_INTERVAL_STRUCT_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct SQL_NUMERIC_STRUCT {
+    pub precision: u8,
+    pub scale: i8,
+    pub sign: u8,
+    pub val: [u8; 16],
+}
+impl ::core::marker::Copy for SQL_NUMERIC_STRUCT {}
+impl ::core::clone::Clone for SQL_NUMERIC_STRUCT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct SQL_YEAR_MONTH_STRUCT {
+    pub year: u32,
+    pub month: u32,
+}
+impl ::core::marker::Copy for SQL_YEAR_MONTH_STRUCT {}
+impl ::core::clone::Clone for SQL_YEAR_MONTH_STRUCT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Search\"`*"]
+pub struct SSERRORINFO {
+    pub pwszMessage: ::windows_sys::core::PWSTR,
+    pub pwszServer: ::windows_sys::core::PWSTR,
+    pub pwszProcedure: ::windows_sys::core::PWSTR,
+    pub lNative: i32,
+    pub bState: u8,
+    pub bClass: u8,
+    pub wLineNumber: u16,
+}
+impl ::core::marker::Copy for SSERRORINFO {}
+impl ::core::clone::Clone for SSERRORINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_System_Com\"`*"]
 #[cfg(feature = "Win32_System_Com")]
@@ -11079,120 +11546,6 @@ impl ::core::clone::Clone for SSVARIANT_0_4 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STD_BOOKMARKLENGTH: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STGM_COLLECTION: i32 = 8192i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STGM_OPEN: i32 = -2147483648i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STGM_OUTPUT: i32 = 32768i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STGM_RECURSIVE: i32 = 16777216i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STGM_STRICTOPEN: i32 = 1073741824i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STREAM_FLAGS_DISALLOW_ABSOLUTE_PATH: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STREAM_FLAGS_DISALLOW_QUERY: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STREAM_FLAGS_DISALLOW_UPDATEGRAMS: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STREAM_FLAGS_DISALLOW_URL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STREAM_FLAGS_DONTCACHEMAPPINGSCHEMA: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STREAM_FLAGS_DONTCACHETEMPLATE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STREAM_FLAGS_DONTCACHEXSL: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STREAM_FLAGS_RESERVED: u32 = 4294901760u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type STRUCTURED_QUERY_MULTIOPTION = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQMO_VIRTUAL_PROPERTY: STRUCTURED_QUERY_MULTIOPTION = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQMO_DEFAULT_PROPERTY: STRUCTURED_QUERY_MULTIOPTION = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQMO_GENERATOR_FOR_TYPE: STRUCTURED_QUERY_MULTIOPTION = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQMO_MAP_PROPERTY: STRUCTURED_QUERY_MULTIOPTION = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type STRUCTURED_QUERY_PARSE_ERROR = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQPE_NONE: STRUCTURED_QUERY_PARSE_ERROR = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQPE_EXTRA_OPENING_PARENTHESIS: STRUCTURED_QUERY_PARSE_ERROR = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQPE_EXTRA_CLOSING_PARENTHESIS: STRUCTURED_QUERY_PARSE_ERROR = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQPE_IGNORED_MODIFIER: STRUCTURED_QUERY_PARSE_ERROR = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQPE_IGNORED_CONNECTOR: STRUCTURED_QUERY_PARSE_ERROR = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQPE_IGNORED_KEYWORD: STRUCTURED_QUERY_PARSE_ERROR = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQPE_UNHANDLED: STRUCTURED_QUERY_PARSE_ERROR = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type STRUCTURED_QUERY_RESOLVE_OPTION = u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQRO_DEFAULT: STRUCTURED_QUERY_RESOLVE_OPTION = 0u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQRO_DONT_RESOLVE_DATETIME: STRUCTURED_QUERY_RESOLVE_OPTION = 1u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQRO_ALWAYS_ONE_INTERVAL: STRUCTURED_QUERY_RESOLVE_OPTION = 2u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQRO_DONT_SIMPLIFY_CONDITION_TREES: STRUCTURED_QUERY_RESOLVE_OPTION = 4u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQRO_DONT_MAP_RELATIONS: STRUCTURED_QUERY_RESOLVE_OPTION = 8u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQRO_DONT_RESOLVE_RANGES: STRUCTURED_QUERY_RESOLVE_OPTION = 16u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQRO_DONT_REMOVE_UNRESTRICTED_KEYWORDS: STRUCTURED_QUERY_RESOLVE_OPTION = 32u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQRO_DONT_SPLIT_WORDS: STRUCTURED_QUERY_RESOLVE_OPTION = 64u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQRO_IGNORE_PHRASE_ORDER: STRUCTURED_QUERY_RESOLVE_OPTION = 128u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQRO_ADD_VALUE_TYPE_FOR_PLAIN_VALUES: STRUCTURED_QUERY_RESOLVE_OPTION = 256u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQRO_ADD_ROBUST_ITEM_NAME: STRUCTURED_QUERY_RESOLVE_OPTION = 512u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type STRUCTURED_QUERY_SINGLE_OPTION = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQSO_SCHEMA: STRUCTURED_QUERY_SINGLE_OPTION = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQSO_LOCALE_WORD_BREAKING: STRUCTURED_QUERY_SINGLE_OPTION = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQSO_WORD_BREAKER: STRUCTURED_QUERY_SINGLE_OPTION = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQSO_NATURAL_SYNTAX: STRUCTURED_QUERY_SINGLE_OPTION = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQSO_AUTOMATIC_WILDCARD: STRUCTURED_QUERY_SINGLE_OPTION = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQSO_TRACE_LEVEL: STRUCTURED_QUERY_SINGLE_OPTION = 5i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQSO_LANGUAGE_KEYWORDS: STRUCTURED_QUERY_SINGLE_OPTION = 6i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQSO_SYNTAX: STRUCTURED_QUERY_SINGLE_OPTION = 7i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQSO_TIME_ZONE: STRUCTURED_QUERY_SINGLE_OPTION = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQSO_IMPLICIT_CONNECTOR: STRUCTURED_QUERY_SINGLE_OPTION = 9i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQSO_CONNECTOR_CASE: STRUCTURED_QUERY_SINGLE_OPTION = 10i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type STRUCTURED_QUERY_SYNTAX = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQS_NO_SYNTAX: STRUCTURED_QUERY_SYNTAX = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQS_ADVANCED_QUERY_SYNTAX: STRUCTURED_QUERY_SYNTAX = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SQS_NATURAL_QUERY_SYNTAX: STRUCTURED_QUERY_SYNTAX = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STS_ABORTXMLPARSE: i32 = -2147211756i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const STS_WS_ERROR: i32 = -2147211754i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -11209,9 +11562,9 @@ pub struct SUBSCRIPTIONINFO {
     pub bChangesOnly: super::super::Foundation::BOOL,
     pub bNeedPassword: super::super::Foundation::BOOL,
     pub fChannelFlags: u32,
-    pub bstrUserName: super::super::Foundation::BSTR,
-    pub bstrPassword: super::super::Foundation::BSTR,
-    pub bstrFriendlyName: super::super::Foundation::BSTR,
+    pub bstrUserName: ::windows_sys::core::BSTR,
+    pub bstrPassword: ::windows_sys::core::BSTR,
+    pub bstrFriendlyName: ::windows_sys::core::BSTR,
     pub dwMaxSizeKB: u32,
     pub subType: SUBSCRIPTIONTYPE,
     pub fTaskFlags: u32,
@@ -11225,36 +11578,6 @@ impl ::core::clone::Clone for SUBSCRIPTIONINFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type SUBSCRIPTIONINFOFLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_SCHEDULE: SUBSCRIPTIONINFOFLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_RECURSE: SUBSCRIPTIONINFOFLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_WEBCRAWL: SUBSCRIPTIONINFOFLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_MAILNOT: SUBSCRIPTIONINFOFLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_MAXSIZEKB: SUBSCRIPTIONINFOFLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_USER: SUBSCRIPTIONINFOFLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_PASSWORD: SUBSCRIPTIONINFOFLAGS = 64i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_TASKFLAGS: SUBSCRIPTIONINFOFLAGS = 256i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_GLEAM: SUBSCRIPTIONINFOFLAGS = 512i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_CHANGESONLY: SUBSCRIPTIONINFOFLAGS = 1024i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_CHANNELFLAGS: SUBSCRIPTIONINFOFLAGS = 2048i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_FRIENDLYNAME: SUBSCRIPTIONINFOFLAGS = 8192i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_NEEDPASSWORD: SUBSCRIPTIONINFOFLAGS = 16384i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_TYPE: SUBSCRIPTIONINFOFLAGS = 32768i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub struct SUBSCRIPTIONITEMINFO {
@@ -11270,47 +11593,6 @@ impl ::core::clone::Clone for SUBSCRIPTIONITEMINFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type SUBSCRIPTIONSCHEDULE = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSSCHED_AUTO: SUBSCRIPTIONSCHEDULE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSSCHED_DAILY: SUBSCRIPTIONSCHEDULE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSSCHED_WEEKLY: SUBSCRIPTIONSCHEDULE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSSCHED_CUSTOM: SUBSCRIPTIONSCHEDULE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSSCHED_MANUAL: SUBSCRIPTIONSCHEDULE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type SUBSCRIPTIONTYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSTYPE_URL: SUBSCRIPTIONTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSTYPE_CHANNEL: SUBSCRIPTIONTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSTYPE_DESKTOPURL: SUBSCRIPTIONTYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSTYPE_EXTERNAL: SUBSCRIPTIONTYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSTYPE_DESKTOPCHANNEL: SUBSCRIPTIONTYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSINFO_ALLFLAGS: u32 = 61311u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSMGRENUM_MASK: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSMGRENUM_TEMP: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSMGRUPDATE_MASK: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUBSMGRUPDATE_MINIMIZE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUCCEED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUCCEED_ABORT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const SUCCEED_ASYNC: u32 = 3u32;
-pub const SubscriptionMgr: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2881368528, data2: 28078, data3: 4560, data4: [190, 202, 0, 192, 79, 217, 64, 190] };
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
 pub struct TEXT_SOURCE {
@@ -11368,12 +11650,6 @@ impl ::core::clone::Clone for TIME_STRUCT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const TRACE_ON: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const TRACE_VERSION: u32 = 1000u32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const TRACE_VS_EVENT_ON: i32 = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_IndexServer\"`, `\"Win32_System_Com_StructuredStorage\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_IndexServer", feature = "Win32_System_Com_StructuredStorage"))]
@@ -11390,279 +11666,7 @@ impl ::core::clone::Clone for VECTORRESTRICTION {
     }
 }
 #[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub type WEBCRAWL_RECURSEFLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const WEBCRAWL_DONT_MAKE_STICKY: WEBCRAWL_RECURSEFLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const WEBCRAWL_GET_IMAGES: WEBCRAWL_RECURSEFLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const WEBCRAWL_GET_VIDEOS: WEBCRAWL_RECURSEFLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const WEBCRAWL_GET_BGSOUNDS: WEBCRAWL_RECURSEFLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const WEBCRAWL_GET_CONTROLS: WEBCRAWL_RECURSEFLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const WEBCRAWL_LINKS_ELSEWHERE: WEBCRAWL_RECURSEFLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const WEBCRAWL_IGNORE_ROBOTSTXT: WEBCRAWL_RECURSEFLAGS = 128i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const WEBCRAWL_ONLY_LINKS_TO_HTML: WEBCRAWL_RECURSEFLAGS = 256i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const XML_E_BADSXQL: i32 = -2147212799i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const XML_E_NODEFAULTNS: i32 = -2147212800i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_ACCOUNT_DISABLED: i32 = -2147221212i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_BAD_CHARWIDTH: i32 = -2147221245i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_BAD_COLUMN: i32 = -2147221224i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_BUSY: i32 = -2147221237i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_COMPUTED: i32 = -2147221222i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_CORRUPT_DATA: i32 = -2147221221i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_DISK_ERROR: i32 = -2147221226i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_END_OF_SESSION: i32 = -2147220992i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_EXTENDED_ERROR: i32 = -2147221223i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_FAILONEPROVIDER: i32 = -2147221219i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_INVALID_ACCESS_TIME: i32 = -2147221213i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_INVALID_ENTRYID: i32 = -2147221241i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_INVALID_OBJECT: i32 = -2147221240i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_INVALID_WORKSTATION_ACCOUNT: i32 = -2147221214i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_LOGON_FAILED: i32 = -2147221231i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_MISSING_REQUIRED_COLUMN: i32 = -2147220990i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_NETWORK_ERROR: i32 = -2147221227i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_NOT_ENOUGH_DISK: i32 = -2147221235i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_NOT_ENOUGH_RESOURCES: i32 = -2147221234i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_NOT_FOUND: i32 = -2147221233i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_NO_SUPPORT: i32 = -2147221246i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_OBJECT_CHANGED: i32 = -2147221239i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_OBJECT_DELETED: i32 = -2147221238i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_PASSWORD_CHANGE_REQUIRED: i32 = -2147221216i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_PASSWORD_EXPIRED: i32 = -2147221215i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_SESSION_LIMIT: i32 = -2147221230i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_STRING_TOO_LONG: i32 = -2147221243i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_TOO_COMPLEX: i32 = -2147221225i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_UNABLE_TO_ABORT: i32 = -2147221228i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_UNCONFIGURED: i32 = -2147221220i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_UNKNOWN_CPID: i32 = -2147221218i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_UNKNOWN_ENTRYID: i32 = -2147220991i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_UNKNOWN_FLAGS: i32 = -2147221242i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_UNKNOWN_LCID: i32 = -2147221217i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_USER_CANCEL: i32 = -2147221229i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_E_VERSION: i32 = -2147221232i32;
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub const _MAPI_W_NO_SERVICE: i32 = 262659i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct dbdatetime {
-    pub dtdays: i32,
-    pub dttime: u32,
-}
-impl ::core::marker::Copy for dbdatetime {}
-impl ::core::clone::Clone for dbdatetime {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct dbdatetime4 {
-    pub numdays: u16,
-    pub nummins: u16,
-}
-impl ::core::marker::Copy for dbdatetime4 {}
-impl ::core::clone::Clone for dbdatetime4 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct dbmoney {
-    pub mnyhigh: i32,
-    pub mnylow: u32,
-}
-impl ::core::marker::Copy for dbmoney {}
-impl ::core::clone::Clone for dbmoney {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct dbvarybin {
-    pub len: i16,
-    pub array: [u8; 8001],
-}
-impl ::core::marker::Copy for dbvarybin {}
-impl ::core::clone::Clone for dbvarybin {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct dbvarychar {
-    pub len: i16,
-    pub str: [i8; 8001],
-}
-impl ::core::marker::Copy for dbvarychar {}
-impl ::core::clone::Clone for dbvarychar {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct sqlperf {
-    pub TimerResolution: u32,
-    pub SQLidu: u32,
-    pub SQLiduRows: u32,
-    pub SQLSelects: u32,
-    pub SQLSelectRows: u32,
-    pub Transactions: u32,
-    pub SQLPrepares: u32,
-    pub ExecDirects: u32,
-    pub SQLExecutes: u32,
-    pub CursorOpens: u32,
-    pub CursorSize: u32,
-    pub CursorUsed: u32,
-    pub PercentCursorUsed: f64,
-    pub AvgFetchTime: f64,
-    pub AvgCursorSize: f64,
-    pub AvgCursorUsed: f64,
-    pub SQLFetchTime: u32,
-    pub SQLFetchCount: u32,
-    pub CurrentStmtCount: u32,
-    pub MaxOpenStmt: u32,
-    pub SumOpenStmt: u32,
-    pub CurrentConnectionCount: u32,
-    pub MaxConnectionsOpened: u32,
-    pub SumConnectionsOpened: u32,
-    pub SumConnectiontime: u32,
-    pub AvgTimeOpened: f64,
-    pub ServerRndTrips: u32,
-    pub BuffersSent: u32,
-    pub BuffersRec: u32,
-    pub BytesSent: u32,
-    pub BytesRec: u32,
-    pub msExecutionTime: u32,
-    pub msNetWorkServerTime: u32,
-}
-impl ::core::marker::Copy for sqlperf {}
-impl ::core::clone::Clone for sqlperf {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct tagDBROWWATCHRANGE {
-    pub hRegion: usize,
-    pub eChangeKind: u32,
-    pub hRow: usize,
-    pub iRow: usize,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for tagDBROWWATCHRANGE {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for tagDBROWWATCHRANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(2))]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct tagDBROWWATCHRANGE {
-    pub hRegion: usize,
-    pub eChangeKind: u32,
-    pub hRow: usize,
-    pub iRow: usize,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for tagDBROWWATCHRANGE {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for tagDBROWWATCHRANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct tagSQL_DAY_SECOND {
-    pub day: u32,
-    pub hour: u32,
-    pub minute: u32,
-    pub second: u32,
-    pub fraction: u32,
-}
-impl ::core::marker::Copy for tagSQL_DAY_SECOND {}
-impl ::core::clone::Clone for tagSQL_DAY_SECOND {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct tagSQL_YEAR_MONTH {
-    pub year: u32,
-    pub month: u32,
-}
-impl ::core::marker::Copy for tagSQL_YEAR_MONTH {}
-impl ::core::clone::Clone for tagSQL_YEAR_MONTH {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Search\"`*"]
-pub struct tagSSErrorInfo {
-    pub pwszMessage: ::windows_sys::core::PWSTR,
-    pub pwszServer: ::windows_sys::core::PWSTR,
-    pub pwszProcedure: ::windows_sys::core::PWSTR,
-    pub lNative: i32,
-    pub bState: u8,
-    pub bClass: u8,
-    pub wLineNumber: u16,
-}
-impl ::core::marker::Copy for tagSSErrorInfo {}
-impl ::core::clone::Clone for tagSSErrorInfo {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub type PFNFILLTEXTBUFFER = ::core::option::Option<unsafe extern "system" fn(ptextsource: *mut TEXT_SOURCE) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_Search\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type SQL_ASYNC_NOTIFICATION_CALLBACK = ::core::option::Option<unsafe extern "system" fn(pcontext: *const ::core::ffi::c_void, flast: super::super::Foundation::BOOL) -> i16>;

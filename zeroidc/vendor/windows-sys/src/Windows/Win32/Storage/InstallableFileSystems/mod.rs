@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
     pub fn FilterAttach(lpfiltername: ::windows_sys::core::PCWSTR, lpvolumename: ::windows_sys::core::PCWSTR, lpinstancename: ::windows_sys::core::PCWSTR, dwcreatedinstancenamelength: u32, lpcreatedinstancename: ::windows_sys::core::PWSTR) -> ::windows_sys::core::HRESULT;
@@ -69,202 +69,8 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn FilterVolumeInstanceFindNext(hvolumeinstancefind: super::super::Foundation::HANDLE, dwinformationclass: INSTANCE_INFORMATION_CLASS, lpbuffer: *mut ::core::ffi::c_void, dwbuffersize: u32, lpbytesreturned: *mut u32) -> ::windows_sys::core::HRESULT;
 }
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct FILTER_AGGREGATE_BASIC_INFORMATION {
-    pub NextEntryOffset: u32,
-    pub Flags: u32,
-    pub Type: FILTER_AGGREGATE_BASIC_INFORMATION_0,
-}
-impl ::core::marker::Copy for FILTER_AGGREGATE_BASIC_INFORMATION {}
-impl ::core::clone::Clone for FILTER_AGGREGATE_BASIC_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub union FILTER_AGGREGATE_BASIC_INFORMATION_0 {
-    pub MiniFilter: FILTER_AGGREGATE_BASIC_INFORMATION_0_1,
-    pub LegacyFilter: FILTER_AGGREGATE_BASIC_INFORMATION_0_0,
-}
-impl ::core::marker::Copy for FILTER_AGGREGATE_BASIC_INFORMATION_0 {}
-impl ::core::clone::Clone for FILTER_AGGREGATE_BASIC_INFORMATION_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct FILTER_AGGREGATE_BASIC_INFORMATION_0_0 {
-    pub FilterNameLength: u16,
-    pub FilterNameBufferOffset: u16,
-}
-impl ::core::marker::Copy for FILTER_AGGREGATE_BASIC_INFORMATION_0_0 {}
-impl ::core::clone::Clone for FILTER_AGGREGATE_BASIC_INFORMATION_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct FILTER_AGGREGATE_BASIC_INFORMATION_0_1 {
-    pub FrameID: u32,
-    pub NumberOfInstances: u32,
-    pub FilterNameLength: u16,
-    pub FilterNameBufferOffset: u16,
-    pub FilterAltitudeLength: u16,
-    pub FilterAltitudeBufferOffset: u16,
-}
-impl ::core::marker::Copy for FILTER_AGGREGATE_BASIC_INFORMATION_0_1 {}
-impl ::core::clone::Clone for FILTER_AGGREGATE_BASIC_INFORMATION_0_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct FILTER_AGGREGATE_STANDARD_INFORMATION {
-    pub NextEntryOffset: u32,
-    pub Flags: u32,
-    pub Type: FILTER_AGGREGATE_STANDARD_INFORMATION_0,
-}
-impl ::core::marker::Copy for FILTER_AGGREGATE_STANDARD_INFORMATION {}
-impl ::core::clone::Clone for FILTER_AGGREGATE_STANDARD_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub union FILTER_AGGREGATE_STANDARD_INFORMATION_0 {
-    pub MiniFilter: FILTER_AGGREGATE_STANDARD_INFORMATION_0_1,
-    pub LegacyFilter: FILTER_AGGREGATE_STANDARD_INFORMATION_0_0,
-}
-impl ::core::marker::Copy for FILTER_AGGREGATE_STANDARD_INFORMATION_0 {}
-impl ::core::clone::Clone for FILTER_AGGREGATE_STANDARD_INFORMATION_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct FILTER_AGGREGATE_STANDARD_INFORMATION_0_0 {
-    pub Flags: u32,
-    pub FilterNameLength: u16,
-    pub FilterNameBufferOffset: u16,
-    pub FilterAltitudeLength: u16,
-    pub FilterAltitudeBufferOffset: u16,
-}
-impl ::core::marker::Copy for FILTER_AGGREGATE_STANDARD_INFORMATION_0_0 {}
-impl ::core::clone::Clone for FILTER_AGGREGATE_STANDARD_INFORMATION_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct FILTER_AGGREGATE_STANDARD_INFORMATION_0_1 {
-    pub Flags: u32,
-    pub FrameID: u32,
-    pub NumberOfInstances: u32,
-    pub FilterNameLength: u16,
-    pub FilterNameBufferOffset: u16,
-    pub FilterAltitudeLength: u16,
-    pub FilterAltitudeBufferOffset: u16,
-}
-impl ::core::marker::Copy for FILTER_AGGREGATE_STANDARD_INFORMATION_0_1 {}
-impl ::core::clone::Clone for FILTER_AGGREGATE_STANDARD_INFORMATION_0_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct FILTER_FULL_INFORMATION {
-    pub NextEntryOffset: u32,
-    pub FrameID: u32,
-    pub NumberOfInstances: u32,
-    pub FilterNameLength: u16,
-    pub FilterNameBuffer: [u16; 1],
-}
-impl ::core::marker::Copy for FILTER_FULL_INFORMATION {}
-impl ::core::clone::Clone for FILTER_FULL_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub type FILTER_INFORMATION_CLASS = i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FilterFullInformation: FILTER_INFORMATION_CLASS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FilterAggregateBasicInformation: FILTER_INFORMATION_CLASS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FilterAggregateStandardInformation: FILTER_INFORMATION_CLASS = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct FILTER_MESSAGE_HEADER {
-    pub ReplyLength: u32,
-    pub MessageId: u64,
-}
-impl ::core::marker::Copy for FILTER_MESSAGE_HEADER {}
-impl ::core::clone::Clone for FILTER_MESSAGE_HEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
 pub const FILTER_NAME_MAX_CHARS: u32 = 255u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct FILTER_REPLY_HEADER {
-    pub Status: super::super::Foundation::NTSTATUS,
-    pub MessageId: u64,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for FILTER_REPLY_HEADER {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for FILTER_REPLY_HEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct FILTER_VOLUME_BASIC_INFORMATION {
-    pub FilterVolumeNameLength: u16,
-    pub FilterVolumeName: [u16; 1],
-}
-impl ::core::marker::Copy for FILTER_VOLUME_BASIC_INFORMATION {}
-impl ::core::clone::Clone for FILTER_VOLUME_BASIC_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub type FILTER_VOLUME_INFORMATION_CLASS = i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FilterVolumeBasicInformation: FILTER_VOLUME_INFORMATION_CLASS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FilterVolumeStandardInformation: FILTER_VOLUME_INFORMATION_CLASS = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct FILTER_VOLUME_STANDARD_INFORMATION {
-    pub NextEntryOffset: u32,
-    pub Flags: u32,
-    pub FrameID: u32,
-    pub FileSystemType: FLT_FILESYSTEM_TYPE,
-    pub FilterVolumeNameLength: u16,
-    pub FilterVolumeName: [u16; 1],
-}
-impl ::core::marker::Copy for FILTER_VOLUME_STANDARD_INFORMATION {}
-impl ::core::clone::Clone for FILTER_VOLUME_STANDARD_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
 pub const FLTFL_AGGREGATE_INFO_IS_LEGACYFILTER: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
@@ -284,201 +90,9 @@ pub const FLTFL_IASI_IS_MINIFILTER: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
 pub const FLTFL_VSI_DETACHED_VOLUME: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub type FLT_FILESYSTEM_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_UNKNOWN: FLT_FILESYSTEM_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_RAW: FLT_FILESYSTEM_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_NTFS: FLT_FILESYSTEM_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_FAT: FLT_FILESYSTEM_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_CDFS: FLT_FILESYSTEM_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_UDFS: FLT_FILESYSTEM_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_LANMAN: FLT_FILESYSTEM_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_WEBDAV: FLT_FILESYSTEM_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_RDPDR: FLT_FILESYSTEM_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_NFS: FLT_FILESYSTEM_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_MS_NETWARE: FLT_FILESYSTEM_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_NETWARE: FLT_FILESYSTEM_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_BSUDF: FLT_FILESYSTEM_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_MUP: FLT_FILESYSTEM_TYPE = 13i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_RSFX: FLT_FILESYSTEM_TYPE = 14i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_ROXIO_UDF1: FLT_FILESYSTEM_TYPE = 15i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_ROXIO_UDF2: FLT_FILESYSTEM_TYPE = 16i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_ROXIO_UDF3: FLT_FILESYSTEM_TYPE = 17i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_TACIT: FLT_FILESYSTEM_TYPE = 18i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_FS_REC: FLT_FILESYSTEM_TYPE = 19i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_INCD: FLT_FILESYSTEM_TYPE = 20i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_INCD_FAT: FLT_FILESYSTEM_TYPE = 21i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_EXFAT: FLT_FILESYSTEM_TYPE = 22i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_PSFS: FLT_FILESYSTEM_TYPE = 23i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_GPFS: FLT_FILESYSTEM_TYPE = 24i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_NPFS: FLT_FILESYSTEM_TYPE = 25i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_MSFS: FLT_FILESYSTEM_TYPE = 26i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_CSVFS: FLT_FILESYSTEM_TYPE = 27i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_REFS: FLT_FILESYSTEM_TYPE = 28i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_OPENAFS: FLT_FILESYSTEM_TYPE = 29i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const FLT_FSTYPE_CIMFS: FLT_FILESYSTEM_TYPE = 30i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
 pub const FLT_PORT_FLAG_SYNC_HANDLE: u32 = 1u32;
-pub type FilterFindHandle = isize;
-pub type FilterInstanceFindHandle = isize;
-pub type FilterVolumeFindHandle = isize;
-pub type FilterVolumeInstanceFindHandle = isize;
-pub type HFILTER = isize;
-pub type HFILTER_INSTANCE = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct INSTANCE_AGGREGATE_STANDARD_INFORMATION {
-    pub NextEntryOffset: u32,
-    pub Flags: u32,
-    pub Type: INSTANCE_AGGREGATE_STANDARD_INFORMATION_0,
-}
-impl ::core::marker::Copy for INSTANCE_AGGREGATE_STANDARD_INFORMATION {}
-impl ::core::clone::Clone for INSTANCE_AGGREGATE_STANDARD_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub union INSTANCE_AGGREGATE_STANDARD_INFORMATION_0 {
-    pub MiniFilter: INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_1,
-    pub LegacyFilter: INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_0,
-}
-impl ::core::marker::Copy for INSTANCE_AGGREGATE_STANDARD_INFORMATION_0 {}
-impl ::core::clone::Clone for INSTANCE_AGGREGATE_STANDARD_INFORMATION_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_0 {
-    pub Flags: u32,
-    pub AltitudeLength: u16,
-    pub AltitudeBufferOffset: u16,
-    pub VolumeNameLength: u16,
-    pub VolumeNameBufferOffset: u16,
-    pub FilterNameLength: u16,
-    pub FilterNameBufferOffset: u16,
-    pub SupportedFeatures: u32,
-}
-impl ::core::marker::Copy for INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_0 {}
-impl ::core::clone::Clone for INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_1 {
-    pub Flags: u32,
-    pub FrameID: u32,
-    pub VolumeFileSystemType: FLT_FILESYSTEM_TYPE,
-    pub InstanceNameLength: u16,
-    pub InstanceNameBufferOffset: u16,
-    pub AltitudeLength: u16,
-    pub AltitudeBufferOffset: u16,
-    pub VolumeNameLength: u16,
-    pub VolumeNameBufferOffset: u16,
-    pub FilterNameLength: u16,
-    pub FilterNameBufferOffset: u16,
-    pub SupportedFeatures: u32,
-}
-impl ::core::marker::Copy for INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_1 {}
-impl ::core::clone::Clone for INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct INSTANCE_BASIC_INFORMATION {
-    pub NextEntryOffset: u32,
-    pub InstanceNameLength: u16,
-    pub InstanceNameBufferOffset: u16,
-}
-impl ::core::marker::Copy for INSTANCE_BASIC_INFORMATION {}
-impl ::core::clone::Clone for INSTANCE_BASIC_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct INSTANCE_FULL_INFORMATION {
-    pub NextEntryOffset: u32,
-    pub InstanceNameLength: u16,
-    pub InstanceNameBufferOffset: u16,
-    pub AltitudeLength: u16,
-    pub AltitudeBufferOffset: u16,
-    pub VolumeNameLength: u16,
-    pub VolumeNameBufferOffset: u16,
-    pub FilterNameLength: u16,
-    pub FilterNameBufferOffset: u16,
-}
-impl ::core::marker::Copy for INSTANCE_FULL_INFORMATION {}
-impl ::core::clone::Clone for INSTANCE_FULL_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub type INSTANCE_INFORMATION_CLASS = i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const InstanceBasicInformation: INSTANCE_INFORMATION_CLASS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const InstancePartialInformation: INSTANCE_INFORMATION_CLASS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const InstanceFullInformation: INSTANCE_INFORMATION_CLASS = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub const InstanceAggregateStandardInformation: INSTANCE_INFORMATION_CLASS = 3i32;
 #[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
 pub const INSTANCE_NAME_MAX_CHARS: u32 = 255u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
-pub struct INSTANCE_PARTIAL_INFORMATION {
-    pub NextEntryOffset: u32,
-    pub InstanceNameLength: u16,
-    pub InstanceNameBufferOffset: u16,
-    pub AltitudeLength: u16,
-    pub AltitudeBufferOffset: u16,
-}
-impl ::core::marker::Copy for INSTANCE_PARTIAL_INFORMATION {}
-impl ::core::clone::Clone for INSTANCE_PARTIAL_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
 pub const VOLUME_NAME_MAX_CHARS: u32 = 1024u32;
 #[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
@@ -627,3 +241,389 @@ pub const WNNC_NET_VMWARE: u32 = 4128768u32;
 pub const WNNC_NET_YAHOO: u32 = 2883584u32;
 #[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
 pub const WNNC_NET_ZENWORKS: u32 = 3997696u32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub type FILTER_INFORMATION_CLASS = i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FilterFullInformation: FILTER_INFORMATION_CLASS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FilterAggregateBasicInformation: FILTER_INFORMATION_CLASS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FilterAggregateStandardInformation: FILTER_INFORMATION_CLASS = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub type FILTER_VOLUME_INFORMATION_CLASS = i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FilterVolumeBasicInformation: FILTER_VOLUME_INFORMATION_CLASS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FilterVolumeStandardInformation: FILTER_VOLUME_INFORMATION_CLASS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub type FLT_FILESYSTEM_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_UNKNOWN: FLT_FILESYSTEM_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_RAW: FLT_FILESYSTEM_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_NTFS: FLT_FILESYSTEM_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_FAT: FLT_FILESYSTEM_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_CDFS: FLT_FILESYSTEM_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_UDFS: FLT_FILESYSTEM_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_LANMAN: FLT_FILESYSTEM_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_WEBDAV: FLT_FILESYSTEM_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_RDPDR: FLT_FILESYSTEM_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_NFS: FLT_FILESYSTEM_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_MS_NETWARE: FLT_FILESYSTEM_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_NETWARE: FLT_FILESYSTEM_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_BSUDF: FLT_FILESYSTEM_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_MUP: FLT_FILESYSTEM_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_RSFX: FLT_FILESYSTEM_TYPE = 14i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_ROXIO_UDF1: FLT_FILESYSTEM_TYPE = 15i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_ROXIO_UDF2: FLT_FILESYSTEM_TYPE = 16i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_ROXIO_UDF3: FLT_FILESYSTEM_TYPE = 17i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_TACIT: FLT_FILESYSTEM_TYPE = 18i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_FS_REC: FLT_FILESYSTEM_TYPE = 19i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_INCD: FLT_FILESYSTEM_TYPE = 20i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_INCD_FAT: FLT_FILESYSTEM_TYPE = 21i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_EXFAT: FLT_FILESYSTEM_TYPE = 22i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_PSFS: FLT_FILESYSTEM_TYPE = 23i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_GPFS: FLT_FILESYSTEM_TYPE = 24i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_NPFS: FLT_FILESYSTEM_TYPE = 25i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_MSFS: FLT_FILESYSTEM_TYPE = 26i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_CSVFS: FLT_FILESYSTEM_TYPE = 27i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_REFS: FLT_FILESYSTEM_TYPE = 28i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_OPENAFS: FLT_FILESYSTEM_TYPE = 29i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const FLT_FSTYPE_CIMFS: FLT_FILESYSTEM_TYPE = 30i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub type INSTANCE_INFORMATION_CLASS = i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const InstanceBasicInformation: INSTANCE_INFORMATION_CLASS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const InstancePartialInformation: INSTANCE_INFORMATION_CLASS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const InstanceFullInformation: INSTANCE_INFORMATION_CLASS = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub const InstanceAggregateStandardInformation: INSTANCE_INFORMATION_CLASS = 3i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct FILTER_AGGREGATE_BASIC_INFORMATION {
+    pub NextEntryOffset: u32,
+    pub Flags: u32,
+    pub Type: FILTER_AGGREGATE_BASIC_INFORMATION_0,
+}
+impl ::core::marker::Copy for FILTER_AGGREGATE_BASIC_INFORMATION {}
+impl ::core::clone::Clone for FILTER_AGGREGATE_BASIC_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub union FILTER_AGGREGATE_BASIC_INFORMATION_0 {
+    pub MiniFilter: FILTER_AGGREGATE_BASIC_INFORMATION_0_1,
+    pub LegacyFilter: FILTER_AGGREGATE_BASIC_INFORMATION_0_0,
+}
+impl ::core::marker::Copy for FILTER_AGGREGATE_BASIC_INFORMATION_0 {}
+impl ::core::clone::Clone for FILTER_AGGREGATE_BASIC_INFORMATION_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct FILTER_AGGREGATE_BASIC_INFORMATION_0_0 {
+    pub FilterNameLength: u16,
+    pub FilterNameBufferOffset: u16,
+}
+impl ::core::marker::Copy for FILTER_AGGREGATE_BASIC_INFORMATION_0_0 {}
+impl ::core::clone::Clone for FILTER_AGGREGATE_BASIC_INFORMATION_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct FILTER_AGGREGATE_BASIC_INFORMATION_0_1 {
+    pub FrameID: u32,
+    pub NumberOfInstances: u32,
+    pub FilterNameLength: u16,
+    pub FilterNameBufferOffset: u16,
+    pub FilterAltitudeLength: u16,
+    pub FilterAltitudeBufferOffset: u16,
+}
+impl ::core::marker::Copy for FILTER_AGGREGATE_BASIC_INFORMATION_0_1 {}
+impl ::core::clone::Clone for FILTER_AGGREGATE_BASIC_INFORMATION_0_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct FILTER_AGGREGATE_STANDARD_INFORMATION {
+    pub NextEntryOffset: u32,
+    pub Flags: u32,
+    pub Type: FILTER_AGGREGATE_STANDARD_INFORMATION_0,
+}
+impl ::core::marker::Copy for FILTER_AGGREGATE_STANDARD_INFORMATION {}
+impl ::core::clone::Clone for FILTER_AGGREGATE_STANDARD_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub union FILTER_AGGREGATE_STANDARD_INFORMATION_0 {
+    pub MiniFilter: FILTER_AGGREGATE_STANDARD_INFORMATION_0_1,
+    pub LegacyFilter: FILTER_AGGREGATE_STANDARD_INFORMATION_0_0,
+}
+impl ::core::marker::Copy for FILTER_AGGREGATE_STANDARD_INFORMATION_0 {}
+impl ::core::clone::Clone for FILTER_AGGREGATE_STANDARD_INFORMATION_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct FILTER_AGGREGATE_STANDARD_INFORMATION_0_0 {
+    pub Flags: u32,
+    pub FilterNameLength: u16,
+    pub FilterNameBufferOffset: u16,
+    pub FilterAltitudeLength: u16,
+    pub FilterAltitudeBufferOffset: u16,
+}
+impl ::core::marker::Copy for FILTER_AGGREGATE_STANDARD_INFORMATION_0_0 {}
+impl ::core::clone::Clone for FILTER_AGGREGATE_STANDARD_INFORMATION_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct FILTER_AGGREGATE_STANDARD_INFORMATION_0_1 {
+    pub Flags: u32,
+    pub FrameID: u32,
+    pub NumberOfInstances: u32,
+    pub FilterNameLength: u16,
+    pub FilterNameBufferOffset: u16,
+    pub FilterAltitudeLength: u16,
+    pub FilterAltitudeBufferOffset: u16,
+}
+impl ::core::marker::Copy for FILTER_AGGREGATE_STANDARD_INFORMATION_0_1 {}
+impl ::core::clone::Clone for FILTER_AGGREGATE_STANDARD_INFORMATION_0_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct FILTER_FULL_INFORMATION {
+    pub NextEntryOffset: u32,
+    pub FrameID: u32,
+    pub NumberOfInstances: u32,
+    pub FilterNameLength: u16,
+    pub FilterNameBuffer: [u16; 1],
+}
+impl ::core::marker::Copy for FILTER_FULL_INFORMATION {}
+impl ::core::clone::Clone for FILTER_FULL_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct FILTER_MESSAGE_HEADER {
+    pub ReplyLength: u32,
+    pub MessageId: u64,
+}
+impl ::core::marker::Copy for FILTER_MESSAGE_HEADER {}
+impl ::core::clone::Clone for FILTER_MESSAGE_HEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct FILTER_REPLY_HEADER {
+    pub Status: super::super::Foundation::NTSTATUS,
+    pub MessageId: u64,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for FILTER_REPLY_HEADER {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for FILTER_REPLY_HEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct FILTER_VOLUME_BASIC_INFORMATION {
+    pub FilterVolumeNameLength: u16,
+    pub FilterVolumeName: [u16; 1],
+}
+impl ::core::marker::Copy for FILTER_VOLUME_BASIC_INFORMATION {}
+impl ::core::clone::Clone for FILTER_VOLUME_BASIC_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct FILTER_VOLUME_STANDARD_INFORMATION {
+    pub NextEntryOffset: u32,
+    pub Flags: u32,
+    pub FrameID: u32,
+    pub FileSystemType: FLT_FILESYSTEM_TYPE,
+    pub FilterVolumeNameLength: u16,
+    pub FilterVolumeName: [u16; 1],
+}
+impl ::core::marker::Copy for FILTER_VOLUME_STANDARD_INFORMATION {}
+impl ::core::clone::Clone for FILTER_VOLUME_STANDARD_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type FilterFindHandle = isize;
+pub type FilterInstanceFindHandle = isize;
+pub type FilterVolumeFindHandle = isize;
+pub type FilterVolumeInstanceFindHandle = isize;
+pub type HFILTER = isize;
+pub type HFILTER_INSTANCE = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct INSTANCE_AGGREGATE_STANDARD_INFORMATION {
+    pub NextEntryOffset: u32,
+    pub Flags: u32,
+    pub Type: INSTANCE_AGGREGATE_STANDARD_INFORMATION_0,
+}
+impl ::core::marker::Copy for INSTANCE_AGGREGATE_STANDARD_INFORMATION {}
+impl ::core::clone::Clone for INSTANCE_AGGREGATE_STANDARD_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub union INSTANCE_AGGREGATE_STANDARD_INFORMATION_0 {
+    pub MiniFilter: INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_1,
+    pub LegacyFilter: INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_0,
+}
+impl ::core::marker::Copy for INSTANCE_AGGREGATE_STANDARD_INFORMATION_0 {}
+impl ::core::clone::Clone for INSTANCE_AGGREGATE_STANDARD_INFORMATION_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_0 {
+    pub Flags: u32,
+    pub AltitudeLength: u16,
+    pub AltitudeBufferOffset: u16,
+    pub VolumeNameLength: u16,
+    pub VolumeNameBufferOffset: u16,
+    pub FilterNameLength: u16,
+    pub FilterNameBufferOffset: u16,
+    pub SupportedFeatures: u32,
+}
+impl ::core::marker::Copy for INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_0 {}
+impl ::core::clone::Clone for INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_1 {
+    pub Flags: u32,
+    pub FrameID: u32,
+    pub VolumeFileSystemType: FLT_FILESYSTEM_TYPE,
+    pub InstanceNameLength: u16,
+    pub InstanceNameBufferOffset: u16,
+    pub AltitudeLength: u16,
+    pub AltitudeBufferOffset: u16,
+    pub VolumeNameLength: u16,
+    pub VolumeNameBufferOffset: u16,
+    pub FilterNameLength: u16,
+    pub FilterNameBufferOffset: u16,
+    pub SupportedFeatures: u32,
+}
+impl ::core::marker::Copy for INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_1 {}
+impl ::core::clone::Clone for INSTANCE_AGGREGATE_STANDARD_INFORMATION_0_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct INSTANCE_BASIC_INFORMATION {
+    pub NextEntryOffset: u32,
+    pub InstanceNameLength: u16,
+    pub InstanceNameBufferOffset: u16,
+}
+impl ::core::marker::Copy for INSTANCE_BASIC_INFORMATION {}
+impl ::core::clone::Clone for INSTANCE_BASIC_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct INSTANCE_FULL_INFORMATION {
+    pub NextEntryOffset: u32,
+    pub InstanceNameLength: u16,
+    pub InstanceNameBufferOffset: u16,
+    pub AltitudeLength: u16,
+    pub AltitudeBufferOffset: u16,
+    pub VolumeNameLength: u16,
+    pub VolumeNameBufferOffset: u16,
+    pub FilterNameLength: u16,
+    pub FilterNameBufferOffset: u16,
+}
+impl ::core::marker::Copy for INSTANCE_FULL_INFORMATION {}
+impl ::core::clone::Clone for INSTANCE_FULL_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_InstallableFileSystems\"`*"]
+pub struct INSTANCE_PARTIAL_INFORMATION {
+    pub NextEntryOffset: u32,
+    pub InstanceNameLength: u16,
+    pub InstanceNameBufferOffset: u16,
+    pub AltitudeLength: u16,
+    pub AltitudeBufferOffset: u16,
+}
+impl ::core::marker::Copy for INSTANCE_PARTIAL_INFORMATION {}
+impl ::core::clone::Clone for INSTANCE_PARTIAL_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}

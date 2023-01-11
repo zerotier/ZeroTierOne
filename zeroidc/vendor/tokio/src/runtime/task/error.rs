@@ -82,6 +82,7 @@ impl JoinError {
     ///     }
     /// }
     /// ```
+    #[track_caller]
     pub fn into_panic(self) -> Box<dyn Any + Send + 'static> {
         self.try_into_panic()
             .expect("`JoinError` reason is not a panic.")
@@ -127,7 +128,7 @@ impl JoinError {
     #[cfg(tokio_unstable)]
     #[cfg_attr(docsrs, doc(cfg(tokio_unstable)))]
     pub fn id(&self) -> Id {
-        self.id.clone()
+        self.id
     }
 }
 

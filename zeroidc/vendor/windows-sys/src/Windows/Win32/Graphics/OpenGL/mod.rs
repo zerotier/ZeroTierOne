@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Graphics_Gdi\"`*"]
     #[cfg(feature = "Win32_Graphics_Gdi")]
@@ -814,9 +814,9 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Graphics_Gdi\"`*"]
     #[cfg(feature = "Win32_Graphics_Gdi")]
     pub fn wglGetCurrentDC() -> super::Gdi::HDC;
-    #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn wglGetLayerPaletteEntries(param0: super::Gdi::HDC, param1: i32, param2: i32, param3: i32, param4: *mut u32) -> i32;
+    #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+    pub fn wglGetLayerPaletteEntries(param0: super::Gdi::HDC, param1: i32, param2: i32, param3: i32, param4: *mut super::super::Foundation::COLORREF) -> i32;
     #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn wglGetProcAddress(param0: ::windows_sys::core::PCSTR) -> super::super::Foundation::PROC;
@@ -826,9 +826,9 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
     pub fn wglRealizeLayerPalette(param0: super::Gdi::HDC, param1: i32, param2: super::super::Foundation::BOOL) -> super::super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn wglSetLayerPaletteEntries(param0: super::Gdi::HDC, param1: i32, param2: i32, param3: i32, param4: *const u32) -> i32;
+    #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+    pub fn wglSetLayerPaletteEntries(param0: super::Gdi::HDC, param1: i32, param2: i32, param3: i32, param4: *const super::super::Foundation::COLORREF) -> i32;
     #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn wglShareLists(param0: HGLRC, param1: HGLRC) -> super::super::Foundation::BOOL;
@@ -847,21 +847,6 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
     pub fn wglUseFontOutlinesW(param0: super::Gdi::HDC, param1: u32, param2: u32, param3: u32, param4: f32, param5: f32, param6: i32, param7: *mut GLYPHMETRICSFLOAT) -> super::super::Foundation::BOOL;
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct EMRPIXELFORMAT {
-    pub emr: super::Gdi::EMR,
-    pub pfd: PIXELFORMATDESCRIPTOR,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for EMRPIXELFORMAT {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for EMRPIXELFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
 }
 #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
 pub const GLU_AUTO_LOAD_MATRIX: u32 = 100200u32;
@@ -1093,55 +1078,6 @@ pub const GLU_VERSION_1_2: u32 = 1u32;
 pub const GLU_VERTEX: u32 = 100101u32;
 #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
 pub const GLU_V_STEP: u32 = 100207u32;
-#[repr(C)]
-pub struct GLUnurbs(pub u8);
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUnurbsErrorProc = ::core::option::Option<unsafe extern "system" fn(param0: u32)>;
-#[repr(C)]
-pub struct GLUquadric(pub u8);
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUquadricErrorProc = ::core::option::Option<unsafe extern "system" fn(param0: u32)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUtessBeginDataProc = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUtessBeginProc = ::core::option::Option<unsafe extern "system" fn(param0: u32)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUtessCombineDataProc = ::core::option::Option<unsafe extern "system" fn(param0: *mut f64, param1: *mut *mut ::core::ffi::c_void, param2: *mut f32, param3: *mut *mut ::core::ffi::c_void, param4: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUtessCombineProc = ::core::option::Option<unsafe extern "system" fn(param0: *mut f64, param1: *mut *mut ::core::ffi::c_void, param2: *mut f32, param3: *mut *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUtessEdgeFlagDataProc = ::core::option::Option<unsafe extern "system" fn(param0: u8, param1: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUtessEdgeFlagProc = ::core::option::Option<unsafe extern "system" fn(param0: u8)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUtessEndDataProc = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUtessEndProc = ::core::option::Option<unsafe extern "system" fn()>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUtessErrorDataProc = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUtessErrorProc = ::core::option::Option<unsafe extern "system" fn(param0: u32)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUtessVertexDataProc = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void, param1: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type GLUtessVertexProc = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void)>;
-#[repr(C)]
-pub struct GLUtesselator(pub u8);
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub struct GLYPHMETRICSFLOAT {
-    pub gmfBlackBoxX: f32,
-    pub gmfBlackBoxY: f32,
-    pub gmfptGlyphOrigin: POINTFLOAT,
-    pub gmfCellIncX: f32,
-    pub gmfCellIncY: f32,
-}
-impl ::core::marker::Copy for GLYPHMETRICSFLOAT {}
-impl ::core::clone::Clone for GLYPHMETRICSFLOAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
 pub const GL_2D: u32 = 1536u32;
 #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
@@ -2318,41 +2254,6 @@ pub const GL_ZERO: u32 = 0u32;
 pub const GL_ZOOM_X: u32 = 3350u32;
 #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
 pub const GL_ZOOM_Y: u32 = 3351u32;
-pub type HGLRC = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub struct LAYERPLANEDESCRIPTOR {
-    pub nSize: u16,
-    pub nVersion: u16,
-    pub dwFlags: u32,
-    pub iPixelType: u8,
-    pub cColorBits: u8,
-    pub cRedBits: u8,
-    pub cRedShift: u8,
-    pub cGreenBits: u8,
-    pub cGreenShift: u8,
-    pub cBlueBits: u8,
-    pub cBlueShift: u8,
-    pub cAlphaBits: u8,
-    pub cAlphaShift: u8,
-    pub cAccumBits: u8,
-    pub cAccumRedBits: u8,
-    pub cAccumGreenBits: u8,
-    pub cAccumBlueBits: u8,
-    pub cAccumAlphaBits: u8,
-    pub cDepthBits: u8,
-    pub cStencilBits: u8,
-    pub cAuxBuffers: u8,
-    pub iLayerPlane: u8,
-    pub bReserved: u8,
-    pub crTransparent: u32,
-}
-impl ::core::marker::Copy for LAYERPLANEDESCRIPTOR {}
-impl ::core::clone::Clone for LAYERPLANEDESCRIPTOR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
 pub type PFD_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
@@ -2407,40 +2308,80 @@ pub type PFD_PIXEL_TYPE = i8;
 pub const PFD_TYPE_RGBA: PFD_PIXEL_TYPE = 0i8;
 #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
 pub const PFD_TYPE_COLORINDEX: PFD_PIXEL_TYPE = 1i8;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct EMRPIXELFORMAT {
+    pub emr: super::Gdi::EMR,
+    pub pfd: PIXELFORMATDESCRIPTOR,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for EMRPIXELFORMAT {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for EMRPIXELFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct GLUnurbs(pub u8);
+#[repr(C)]
+pub struct GLUquadric(pub u8);
+#[repr(C)]
+pub struct GLUtesselator(pub u8);
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLADDSWAPHINTRECTWINPROC = ::core::option::Option<unsafe extern "system" fn(x: i32, y: i32, width: i32, height: i32)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLARRAYELEMENTARRAYEXTPROC = ::core::option::Option<unsafe extern "system" fn(mode: u32, count: i32, pi: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLARRAYELEMENTEXTPROC = ::core::option::Option<unsafe extern "system" fn(i: i32)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLCOLORPOINTEREXTPROC = ::core::option::Option<unsafe extern "system" fn(size: i32, r#type: u32, stride: i32, count: i32, pointer: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLCOLORSUBTABLEEXTPROC = ::core::option::Option<unsafe extern "system" fn(target: u32, start: i32, count: i32, format: u32, r#type: u32, data: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLCOLORTABLEEXTPROC = ::core::option::Option<unsafe extern "system" fn(target: u32, internalformat: u32, width: i32, format: u32, r#type: u32, data: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLDRAWARRAYSEXTPROC = ::core::option::Option<unsafe extern "system" fn(mode: u32, first: i32, count: i32)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLDRAWRANGEELEMENTSWINPROC = ::core::option::Option<unsafe extern "system" fn(mode: u32, start: u32, end: u32, count: i32, r#type: u32, indices: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLEDGEFLAGPOINTEREXTPROC = ::core::option::Option<unsafe extern "system" fn(stride: i32, count: i32, pointer: *const u8)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLGETCOLORTABLEEXTPROC = ::core::option::Option<unsafe extern "system" fn(target: u32, format: u32, r#type: u32, data: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLGETCOLORTABLEPARAMETERFVEXTPROC = ::core::option::Option<unsafe extern "system" fn(target: u32, pname: u32, params: *mut f32)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLGETCOLORTABLEPARAMETERIVEXTPROC = ::core::option::Option<unsafe extern "system" fn(target: u32, pname: u32, params: *mut i32)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLGETPOINTERVEXTPROC = ::core::option::Option<unsafe extern "system" fn(pname: u32, params: *mut *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLINDEXPOINTEREXTPROC = ::core::option::Option<unsafe extern "system" fn(r#type: u32, stride: i32, count: i32, pointer: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLNORMALPOINTEREXTPROC = ::core::option::Option<unsafe extern "system" fn(r#type: u32, stride: i32, count: i32, pointer: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLTEXCOORDPOINTEREXTPROC = ::core::option::Option<unsafe extern "system" fn(size: i32, r#type: u32, stride: i32, count: i32, pointer: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
-pub type PFNGLVERTEXPOINTEREXTPROC = ::core::option::Option<unsafe extern "system" fn(size: i32, r#type: u32, stride: i32, count: i32, pointer: *const ::core::ffi::c_void)>;
+pub struct GLYPHMETRICSFLOAT {
+    pub gmfBlackBoxX: f32,
+    pub gmfBlackBoxY: f32,
+    pub gmfptGlyphOrigin: POINTFLOAT,
+    pub gmfCellIncX: f32,
+    pub gmfCellIncY: f32,
+}
+impl ::core::marker::Copy for GLYPHMETRICSFLOAT {}
+impl ::core::clone::Clone for GLYPHMETRICSFLOAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type HGLRC = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct LAYERPLANEDESCRIPTOR {
+    pub nSize: u16,
+    pub nVersion: u16,
+    pub dwFlags: u32,
+    pub iPixelType: u8,
+    pub cColorBits: u8,
+    pub cRedBits: u8,
+    pub cRedShift: u8,
+    pub cGreenBits: u8,
+    pub cGreenShift: u8,
+    pub cBlueBits: u8,
+    pub cBlueShift: u8,
+    pub cAlphaBits: u8,
+    pub cAlphaShift: u8,
+    pub cAccumBits: u8,
+    pub cAccumRedBits: u8,
+    pub cAccumGreenBits: u8,
+    pub cAccumBlueBits: u8,
+    pub cAccumAlphaBits: u8,
+    pub cDepthBits: u8,
+    pub cStencilBits: u8,
+    pub cAuxBuffers: u8,
+    pub iLayerPlane: u8,
+    pub bReserved: u8,
+    pub crTransparent: super::super::Foundation::COLORREF,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for LAYERPLANEDESCRIPTOR {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for LAYERPLANEDESCRIPTOR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
 pub struct PIXELFORMATDESCRIPTOR {
@@ -2489,3 +2430,65 @@ impl ::core::clone::Clone for POINTFLOAT {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUnurbsErrorProc = ::core::option::Option<unsafe extern "system" fn(param0: u32)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUquadricErrorProc = ::core::option::Option<unsafe extern "system" fn(param0: u32)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUtessBeginDataProc = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUtessBeginProc = ::core::option::Option<unsafe extern "system" fn(param0: u32)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUtessCombineDataProc = ::core::option::Option<unsafe extern "system" fn(param0: *mut f64, param1: *mut *mut ::core::ffi::c_void, param2: *mut f32, param3: *mut *mut ::core::ffi::c_void, param4: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUtessCombineProc = ::core::option::Option<unsafe extern "system" fn(param0: *mut f64, param1: *mut *mut ::core::ffi::c_void, param2: *mut f32, param3: *mut *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUtessEdgeFlagDataProc = ::core::option::Option<unsafe extern "system" fn(param0: u8, param1: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUtessEdgeFlagProc = ::core::option::Option<unsafe extern "system" fn(param0: u8)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUtessEndDataProc = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUtessEndProc = ::core::option::Option<unsafe extern "system" fn()>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUtessErrorDataProc = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUtessErrorProc = ::core::option::Option<unsafe extern "system" fn(param0: u32)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUtessVertexDataProc = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void, param1: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type GLUtessVertexProc = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLADDSWAPHINTRECTWINPROC = ::core::option::Option<unsafe extern "system" fn(x: i32, y: i32, width: i32, height: i32)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLARRAYELEMENTARRAYEXTPROC = ::core::option::Option<unsafe extern "system" fn(mode: u32, count: i32, pi: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLARRAYELEMENTEXTPROC = ::core::option::Option<unsafe extern "system" fn(i: i32)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLCOLORPOINTEREXTPROC = ::core::option::Option<unsafe extern "system" fn(size: i32, r#type: u32, stride: i32, count: i32, pointer: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLCOLORSUBTABLEEXTPROC = ::core::option::Option<unsafe extern "system" fn(target: u32, start: i32, count: i32, format: u32, r#type: u32, data: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLCOLORTABLEEXTPROC = ::core::option::Option<unsafe extern "system" fn(target: u32, internalformat: u32, width: i32, format: u32, r#type: u32, data: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLDRAWARRAYSEXTPROC = ::core::option::Option<unsafe extern "system" fn(mode: u32, first: i32, count: i32)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLDRAWRANGEELEMENTSWINPROC = ::core::option::Option<unsafe extern "system" fn(mode: u32, start: u32, end: u32, count: i32, r#type: u32, indices: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLEDGEFLAGPOINTEREXTPROC = ::core::option::Option<unsafe extern "system" fn(stride: i32, count: i32, pointer: *const u8)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLGETCOLORTABLEEXTPROC = ::core::option::Option<unsafe extern "system" fn(target: u32, format: u32, r#type: u32, data: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLGETCOLORTABLEPARAMETERFVEXTPROC = ::core::option::Option<unsafe extern "system" fn(target: u32, pname: u32, params: *mut f32)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLGETCOLORTABLEPARAMETERIVEXTPROC = ::core::option::Option<unsafe extern "system" fn(target: u32, pname: u32, params: *mut i32)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLGETPOINTERVEXTPROC = ::core::option::Option<unsafe extern "system" fn(pname: u32, params: *mut *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLINDEXPOINTEREXTPROC = ::core::option::Option<unsafe extern "system" fn(r#type: u32, stride: i32, count: i32, pointer: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLNORMALPOINTEREXTPROC = ::core::option::Option<unsafe extern "system" fn(r#type: u32, stride: i32, count: i32, pointer: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLTEXCOORDPOINTEREXTPROC = ::core::option::Option<unsafe extern "system" fn(size: i32, r#type: u32, stride: i32, count: i32, pointer: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Graphics_OpenGL\"`*"]
+pub type PFNGLVERTEXPOINTEREXTPROC = ::core::option::Option<unsafe extern "system" fn(size: i32, r#type: u32, stride: i32, count: i32, pointer: *const ::core::ffi::c_void)>;

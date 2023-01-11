@@ -1,4 +1,9 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
+extern "cdecl" {
+    #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+    pub fn SnmpUtilDbgPrint(nloglevel: SNMP_LOG, szformat: ::windows_sys::core::PCSTR);
+}
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
     pub fn SnmpCancelMsg(session: isize, reqid: i32) -> u32;
@@ -140,8 +145,6 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn SnmpUtilAsnAnyFree(pany: *mut AsnAny);
     #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-    pub fn SnmpUtilDbgPrint(nloglevel: SNMP_LOG, szformat: ::windows_sys::core::PCSTR);
-    #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
     pub fn SnmpUtilIdsToA(ids: *mut u32, idlength: u32) -> ::windows_sys::core::PSTR;
     #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
     pub fn SnmpUtilMemAlloc(nbytes: u32) -> *mut ::core::ffi::c_void;
@@ -207,74 +210,6 @@ pub const ASN_PRIMITIVE: u32 = 0u32;
 pub const ASN_PRIVATE: u32 = 192u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const ASN_UNIVERSAL: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct AsnAny {
-    pub asnType: u8,
-    pub asnValue: AsnAny_0,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for AsnAny {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for AsnAny {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union AsnAny_0 {
-    pub number: i32,
-    pub unsigned32: u32,
-    pub counter64: u64,
-    pub string: AsnOctetString,
-    pub bits: AsnOctetString,
-    pub object: AsnObjectIdentifier,
-    pub sequence: AsnOctetString,
-    pub address: AsnOctetString,
-    pub counter: u32,
-    pub gauge: u32,
-    pub ticks: u32,
-    pub arbitrary: AsnOctetString,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for AsnAny_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for AsnAny_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub struct AsnObjectIdentifier {
-    pub idLength: u32,
-    pub ids: *mut u32,
-}
-impl ::core::marker::Copy for AsnObjectIdentifier {}
-impl ::core::clone::Clone for AsnObjectIdentifier {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct AsnOctetString {
-    pub stream: *mut u8,
-    pub length: u32,
-    pub dynamic: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for AsnOctetString {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for AsnOctetString {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const DEFAULT_SNMPTRAP_PORT_IPX: u32 = 36880u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
@@ -292,34 +227,7 @@ pub const MAXVENDORINFO: u32 = 32u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const MGMCTL_SETAGENTPORT: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub type PFNSNMPCLEANUPEX = ::core::option::Option<unsafe extern "system" fn() -> u32>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub type PFNSNMPEXTENSIONCLOSE = ::core::option::Option<unsafe extern "system" fn()>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFNSNMPEXTENSIONINIT = ::core::option::Option<unsafe extern "system" fn(dwuptimereference: u32, phsubagenttrapevent: *mut super::super::Foundation::HANDLE, pfirstsupportedregion: *mut AsnObjectIdentifier) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFNSNMPEXTENSIONINITEX = ::core::option::Option<unsafe extern "system" fn(pnextsupportedregion: *mut AsnObjectIdentifier) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFNSNMPEXTENSIONMONITOR = ::core::option::Option<unsafe extern "system" fn(pagentmgmtdata: *mut ::core::ffi::c_void) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFNSNMPEXTENSIONQUERY = ::core::option::Option<unsafe extern "system" fn(bpdutype: u8, pvarbindlist: *mut SnmpVarBindList, perrorstatus: *mut i32, perrorindex: *mut i32) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFNSNMPEXTENSIONQUERYEX = ::core::option::Option<unsafe extern "system" fn(nrequesttype: u32, ntransactionid: u32, pvarbindlist: *mut SnmpVarBindList, pcontextinfo: *mut AsnOctetString, perrorstatus: *mut i32, perrorindex: *mut i32) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFNSNMPEXTENSIONTRAP = ::core::option::Option<unsafe extern "system" fn(penterpriseoid: *mut AsnObjectIdentifier, pgenerictrapid: *mut i32, pspecifictrapid: *mut i32, ptimestamp: *mut u32, pvarbindlist: *mut SnmpVarBindList) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub type PFNSNMPSTARTUPEX = ::core::option::Option<unsafe extern "system" fn(param0: *mut u32, param1: *mut u32, param2: *mut u32, param3: *mut u32, param4: *mut u32) -> u32>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const SNMPAPI_ALLOC_ERROR: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type SNMPAPI_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hsession: isize, hwnd: super::super::Foundation::HWND, wmsg: u32, wparam: super::super::Foundation::WPARAM, lparam: super::super::Foundation::LPARAM, lpclientdata: *mut ::core::ffi::c_void) -> u32>;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const SNMPAPI_CONTEXT_INVALID: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
@@ -411,14 +319,6 @@ pub const SNMP_ACCESS_READ_ONLY: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const SNMP_ACCESS_READ_WRITE: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub type SNMP_API_TRANSLATE_MODE = u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMPAPI_TRANSLATED: SNMP_API_TRANSLATE_MODE = 0u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMPAPI_UNTRANSLATED_V1: SNMP_API_TRANSLATE_MODE = 1u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMPAPI_UNTRANSLATED_V2: SNMP_API_TRANSLATE_MODE = 2u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const SNMP_AUTHAPI_INVALID_MSG_TYPE: u32 = 31u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const SNMP_AUTHAPI_INVALID_VERSION: u32 = 30u32;
@@ -434,6 +334,58 @@ pub const SNMP_BERAPI_INVALID_TAG: u32 = 11u32;
 pub const SNMP_BERAPI_OVERFLOW: u32 = 12u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const SNMP_BERAPI_SHORT_BUFFER: u32 = 13u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_MAX_OID_LEN: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_MEM_ALLOC_ERROR: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_MGMTAPI_AGAIN: u32 = 45u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_MGMTAPI_INVALID_BUFFER: u32 = 48u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_MGMTAPI_INVALID_CTL: u32 = 46u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_MGMTAPI_INVALID_SESSION: u32 = 47u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_MGMTAPI_NOTRAPS: u32 = 44u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_MGMTAPI_SELECT_FDERRORS: u32 = 41u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_MGMTAPI_TIMEOUT: u32 = 40u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_MGMTAPI_TRAP_DUPINIT: u32 = 43u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_MGMTAPI_TRAP_ERRORS: u32 = 42u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_OUTPUT_TO_EVENTLOG: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_PDUAPI_INVALID_ES: u32 = 21u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_PDUAPI_INVALID_GT: u32 = 22u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_PDUAPI_UNRECOGNIZED_PDU: u32 = 20u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_TRAP_AUTHFAIL: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_TRAP_COLDSTART: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_TRAP_EGPNEIGHBORLOSS: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_TRAP_ENTERPRISESPECIFIC: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_TRAP_LINKDOWN: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_TRAP_LINKUP: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMP_TRAP_WARMSTART: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub type SNMP_API_TRANSLATE_MODE = u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMPAPI_TRANSLATED: SNMP_API_TRANSLATE_MODE = 0u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMPAPI_UNTRANSLATED_V1: SNMP_API_TRANSLATE_MODE = 1u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub const SNMPAPI_UNTRANSLATED_V2: SNMP_API_TRANSLATE_MODE = 2u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub type SNMP_ERROR = u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
@@ -559,28 +511,6 @@ pub const SNMP_LOG_TRACE: SNMP_LOG = 4u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const SNMP_LOG_VERBOSE: SNMP_LOG = 5u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_MAX_OID_LEN: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_MEM_ALLOC_ERROR: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_MGMTAPI_AGAIN: u32 = 45u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_MGMTAPI_INVALID_BUFFER: u32 = 48u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_MGMTAPI_INVALID_CTL: u32 = 46u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_MGMTAPI_INVALID_SESSION: u32 = 47u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_MGMTAPI_NOTRAPS: u32 = 44u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_MGMTAPI_SELECT_FDERRORS: u32 = 41u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_MGMTAPI_TIMEOUT: u32 = 40u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_MGMTAPI_TRAP_DUPINIT: u32 = 43u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_MGMTAPI_TRAP_ERRORS: u32 = 42u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub type SNMP_OUTPUT_LOG_TYPE = u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const SNMP_OUTPUT_TO_CONSOLE: SNMP_OUTPUT_LOG_TYPE = 1u32;
@@ -588,14 +518,6 @@ pub const SNMP_OUTPUT_TO_CONSOLE: SNMP_OUTPUT_LOG_TYPE = 1u32;
 pub const SNMP_OUTPUT_TO_LOGFILE: SNMP_OUTPUT_LOG_TYPE = 2u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const SNMP_OUTPUT_TO_DEBUGGER: SNMP_OUTPUT_LOG_TYPE = 8u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_OUTPUT_TO_EVENTLOG: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_PDUAPI_INVALID_ES: u32 = 21u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_PDUAPI_INVALID_GT: u32 = 22u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_PDUAPI_UNRECOGNIZED_PDU: u32 = 20u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub type SNMP_PDU_TYPE = u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
@@ -616,21 +538,75 @@ pub type SNMP_STATUS = u32;
 pub const SNMPAPI_ON: SNMP_STATUS = 1u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
 pub const SNMPAPI_OFF: SNMP_STATUS = 0u32;
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct AsnAny {
+    pub asnType: u8,
+    pub asnValue: AsnAny_0,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for AsnAny {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for AsnAny {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub union AsnAny_0 {
+    pub number: i32,
+    pub unsigned32: u32,
+    pub counter64: u64,
+    pub string: AsnOctetString,
+    pub bits: AsnOctetString,
+    pub object: AsnObjectIdentifier,
+    pub sequence: AsnOctetString,
+    pub address: AsnOctetString,
+    pub counter: u32,
+    pub gauge: u32,
+    pub ticks: u32,
+    pub arbitrary: AsnOctetString,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for AsnAny_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for AsnAny_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_TRAP_AUTHFAIL: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_TRAP_COLDSTART: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_TRAP_EGPNEIGHBORLOSS: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_TRAP_ENTERPRISESPECIFIC: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_TRAP_LINKDOWN: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_TRAP_LINKUP: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
-pub const SNMP_TRAP_WARMSTART: u32 = 1u32;
-#[repr(C)]
+pub struct AsnObjectIdentifier {
+    pub idLength: u32,
+    pub ids: *mut u32,
+}
+impl ::core::marker::Copy for AsnObjectIdentifier {}
+impl ::core::clone::Clone for AsnObjectIdentifier {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct AsnOctetString {
+    pub stream: *mut u8,
+    pub length: u32,
+    pub dynamic: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for AsnOctetString {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for AsnOctetString {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
 pub struct SnmpVarBind {
@@ -742,3 +718,30 @@ impl ::core::clone::Clone for smiVENDORINFO {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub type PFNSNMPCLEANUPEX = ::core::option::Option<unsafe extern "system" fn() -> u32>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub type PFNSNMPEXTENSIONCLOSE = ::core::option::Option<unsafe extern "system" fn()>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFNSNMPEXTENSIONINIT = ::core::option::Option<unsafe extern "system" fn(dwuptimereference: u32, phsubagenttrapevent: *mut super::super::Foundation::HANDLE, pfirstsupportedregion: *mut AsnObjectIdentifier) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFNSNMPEXTENSIONINITEX = ::core::option::Option<unsafe extern "system" fn(pnextsupportedregion: *mut AsnObjectIdentifier) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFNSNMPEXTENSIONMONITOR = ::core::option::Option<unsafe extern "system" fn(pagentmgmtdata: *mut ::core::ffi::c_void) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFNSNMPEXTENSIONQUERY = ::core::option::Option<unsafe extern "system" fn(bpdutype: u8, pvarbindlist: *mut SnmpVarBindList, perrorstatus: *mut i32, perrorindex: *mut i32) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFNSNMPEXTENSIONQUERYEX = ::core::option::Option<unsafe extern "system" fn(nrequesttype: u32, ntransactionid: u32, pvarbindlist: *mut SnmpVarBindList, pcontextinfo: *mut AsnOctetString, perrorstatus: *mut i32, perrorindex: *mut i32) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFNSNMPEXTENSIONTRAP = ::core::option::Option<unsafe extern "system" fn(penterpriseoid: *mut AsnObjectIdentifier, pgenerictrapid: *mut i32, pspecifictrapid: *mut i32, ptimestamp: *mut u32, pvarbindlist: *mut SnmpVarBindList) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`*"]
+pub type PFNSNMPSTARTUPEX = ::core::option::Option<unsafe extern "system" fn(param0: *mut u32, param1: *mut u32, param2: *mut u32, param3: *mut u32, param4: *mut u32) -> u32>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_Snmp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type SNMPAPI_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hsession: isize, hwnd: super::super::Foundation::HWND, wmsg: u32, wparam: super::super::Foundation::WPARAM, lparam: super::super::Foundation::LPARAM, lpclientdata: *mut ::core::ffi::c_void) -> u32>;

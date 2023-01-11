@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
     pub fn DRMAcquireAdvisories(hlicensestorage: u32, wszlicense: ::windows_sys::core::PCWSTR, wszurl: ::windows_sys::core::PCWSTR, pvcontext: *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
@@ -189,80 +189,19 @@ extern "system" {
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRMACTSERVINFOVERSION: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub type DRMATTESTTYPE = i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMATTESTTYPE_FULLENVIRONMENT: DRMATTESTTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMATTESTTYPE_HASHONLY: DRMATTESTTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRMBINDINGFLAGS_IGNORE_VALIDITY_INTERVALS: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub struct DRMBOUNDLICENSEPARAMS {
-    pub uVersion: u32,
-    pub hEnablingPrincipal: u32,
-    pub hSecureStore: u32,
-    pub wszRightsRequested: ::windows_sys::core::PWSTR,
-    pub wszRightsGroup: ::windows_sys::core::PWSTR,
-    pub idResource: DRMID,
-    pub cAuthenticatorCount: u32,
-    pub rghAuthenticators: *mut u32,
-    pub wszDefaultEnablingPrincipalCredentials: ::windows_sys::core::PWSTR,
-    pub dwFlags: u32,
-}
-impl ::core::marker::Copy for DRMBOUNDLICENSEPARAMS {}
-impl ::core::clone::Clone for DRMBOUNDLICENSEPARAMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRMBOUNDLICENSEPARAMSVERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub type DRMCALLBACK = ::core::option::Option<unsafe extern "system" fn(param0: DRM_STATUS_MSG, param1: ::windows_sys::core::HRESULT, param2: *mut ::core::ffi::c_void, param3: *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRMCALLBACKVERSION: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRMCLIENTSTRUCTVERSION: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub type DRMENCODINGTYPE = i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMENCODINGTYPE_BASE64: DRMENCODINGTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMENCODINGTYPE_STRING: DRMENCODINGTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMENCODINGTYPE_LONG: DRMENCODINGTYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMENCODINGTYPE_TIME: DRMENCODINGTYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMENCODINGTYPE_UINT: DRMENCODINGTYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMENCODINGTYPE_RAW: DRMENCODINGTYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRMENVHANDLE_INVALID: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub type DRMGLOBALOPTIONS = i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMGLOBALOPTIONS_USE_WINHTTP: DRMGLOBALOPTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMGLOBALOPTIONS_USE_SERVERSECURITYPROCESSOR: DRMGLOBALOPTIONS = 1i32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRMHANDLE_INVALID: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRMHSESSION_INVALID: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub struct DRMID {
-    pub uVersion: u32,
-    pub wszIDType: ::windows_sys::core::PWSTR,
-    pub wszID: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for DRMID {}
-impl ::core::clone::Clone for DRMID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRMIDVERSION: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
@@ -271,22 +210,6 @@ pub const DRMLICENSEACQDATAVERSION: u32 = 0u32;
 pub const DRMPUBHANDLE_INVALID: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRMQUERYHANDLE_INVALID: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub type DRMSECURITYPROVIDERTYPE = i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMSECURITYPROVIDERTYPE_SOFTWARESECREP: DRMSECURITYPROVIDERTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub type DRMSPECTYPE = i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMSPECTYPE_UNKNOWN: DRMSPECTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMSPECTYPE_FILENAME: DRMSPECTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub type DRMTIMETYPE = i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMTIMETYPE_SYSTEMUTC: DRMTIMETYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRMTIMETYPE_SYSTEMLOCAL: DRMTIMETYPE = 1i32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRM_ACTIVATE_CANCEL: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
@@ -301,19 +224,6 @@ pub const DRM_ACTIVATE_SHARED_GROUPIDENTITY: u32 = 32u32;
 pub const DRM_ACTIVATE_SILENT: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRM_ACTIVATE_TEMPORARY: u32 = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub struct DRM_ACTSERV_INFO {
-    pub uVersion: u32,
-    pub wszPubKey: ::windows_sys::core::PWSTR,
-    pub wszURL: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for DRM_ACTSERV_INFO {}
-impl ::core::clone::Clone for DRM_ACTSERV_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRM_ADD_LICENSE_NOPERSIST: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
@@ -336,33 +246,10 @@ pub const DRM_AL_NOPERSIST: u32 = 2u32;
 pub const DRM_AL_NOUI: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRM_AUTO_GENERATE_KEY: u32 = 16u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub struct DRM_CLIENT_VERSION_INFO {
-    pub uStructVersion: u32,
-    pub dwVersion: [u32; 4],
-    pub wszHierarchy: [u16; 256],
-    pub wszProductId: [u16; 256],
-    pub wszProductDescription: [u16; 256],
-}
-impl ::core::marker::Copy for DRM_CLIENT_VERSION_INFO {}
-impl ::core::clone::Clone for DRM_CLIENT_VERSION_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRM_DEFAULTGROUPIDTYPE_PASSPORT: &str = "PassportAuthProvider";
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRM_DEFAULTGROUPIDTYPE_WINDOWSAUTH: &str = "WindowsAuthProvider";
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub type DRM_DISTRIBUTION_POINT_INFO = i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRM_DISTRIBUTION_POINT_LICENSE_ACQUISITION: DRM_DISTRIBUTION_POINT_INFO = 0i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRM_DISTRIBUTION_POINT_PUBLISHING: DRM_DISTRIBUTION_POINT_INFO = 1i32;
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const DRM_DISTRIBUTION_POINT_REFERRAL_INFO: DRM_DISTRIBUTION_POINT_INFO = 2i32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRM_EL_CLIENTLICENSOR: u32 = 128u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
@@ -395,22 +282,6 @@ pub const DRM_EL_REVOCATIONLIST_LID: u32 = 2048u32;
 pub const DRM_EL_SPECIFIED_CLIENTLICENSOR: u32 = 512u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRM_EL_SPECIFIED_GROUPIDENTITY: u32 = 16u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub struct DRM_LICENSE_ACQ_DATA {
-    pub uVersion: u32,
-    pub wszURL: ::windows_sys::core::PWSTR,
-    pub wszLocalFilename: ::windows_sys::core::PWSTR,
-    pub pbPostData: *mut u8,
-    pub dwPostDataSize: u32,
-    pub wszFriendlyName: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for DRM_LICENSE_ACQ_DATA {}
-impl ::core::clone::Clone for DRM_LICENSE_ACQ_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRM_LOCKBOXTYPE_BLACKBOX: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
@@ -446,6 +317,60 @@ pub const DRM_SIGN_OFFLINE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRM_SIGN_ONLINE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const MSDRM_CLIENT_ZONE: u32 = 52992u32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const MSDRM_POLICY_ZONE: u32 = 37632u32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub type DRMATTESTTYPE = i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMATTESTTYPE_FULLENVIRONMENT: DRMATTESTTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMATTESTTYPE_HASHONLY: DRMATTESTTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub type DRMENCODINGTYPE = i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMENCODINGTYPE_BASE64: DRMENCODINGTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMENCODINGTYPE_STRING: DRMENCODINGTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMENCODINGTYPE_LONG: DRMENCODINGTYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMENCODINGTYPE_TIME: DRMENCODINGTYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMENCODINGTYPE_UINT: DRMENCODINGTYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMENCODINGTYPE_RAW: DRMENCODINGTYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub type DRMGLOBALOPTIONS = i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMGLOBALOPTIONS_USE_WINHTTP: DRMGLOBALOPTIONS = 0i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMGLOBALOPTIONS_USE_SERVERSECURITYPROCESSOR: DRMGLOBALOPTIONS = 1i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub type DRMSECURITYPROVIDERTYPE = i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMSECURITYPROVIDERTYPE_SOFTWARESECREP: DRMSECURITYPROVIDERTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub type DRMSPECTYPE = i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMSPECTYPE_UNKNOWN: DRMSPECTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMSPECTYPE_FILENAME: DRMSPECTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub type DRMTIMETYPE = i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMTIMETYPE_SYSTEMUTC: DRMTIMETYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRMTIMETYPE_SYSTEMLOCAL: DRMTIMETYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub type DRM_DISTRIBUTION_POINT_INFO = i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRM_DISTRIBUTION_POINT_LICENSE_ACQUISITION: DRM_DISTRIBUTION_POINT_INFO = 0i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRM_DISTRIBUTION_POINT_PUBLISHING: DRM_DISTRIBUTION_POINT_INFO = 1i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub const DRM_DISTRIBUTION_POINT_REFERRAL_INFO: DRM_DISTRIBUTION_POINT_INFO = 2i32;
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub type DRM_STATUS_MSG = i32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRM_MSG_ACTIVATE_MACHINE: DRM_STATUS_MSG = 0i32;
@@ -471,7 +396,82 @@ pub const DRM_USAGEPOLICY_TYPE_BYPUBLICKEY: DRM_USAGEPOLICY_TYPE = 1i32;
 pub const DRM_USAGEPOLICY_TYPE_BYDIGEST: DRM_USAGEPOLICY_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
 pub const DRM_USAGEPOLICY_TYPE_OSEXCLUSION: DRM_USAGEPOLICY_TYPE = 3i32;
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const MSDRM_CLIENT_ZONE: u32 = 52992u32;
+pub struct DRMBOUNDLICENSEPARAMS {
+    pub uVersion: u32,
+    pub hEnablingPrincipal: u32,
+    pub hSecureStore: u32,
+    pub wszRightsRequested: ::windows_sys::core::PWSTR,
+    pub wszRightsGroup: ::windows_sys::core::PWSTR,
+    pub idResource: DRMID,
+    pub cAuthenticatorCount: u32,
+    pub rghAuthenticators: *mut u32,
+    pub wszDefaultEnablingPrincipalCredentials: ::windows_sys::core::PWSTR,
+    pub dwFlags: u32,
+}
+impl ::core::marker::Copy for DRMBOUNDLICENSEPARAMS {}
+impl ::core::clone::Clone for DRMBOUNDLICENSEPARAMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
-pub const MSDRM_POLICY_ZONE: u32 = 37632u32;
+pub struct DRMID {
+    pub uVersion: u32,
+    pub wszIDType: ::windows_sys::core::PWSTR,
+    pub wszID: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for DRMID {}
+impl ::core::clone::Clone for DRMID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub struct DRM_ACTSERV_INFO {
+    pub uVersion: u32,
+    pub wszPubKey: ::windows_sys::core::PWSTR,
+    pub wszURL: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for DRM_ACTSERV_INFO {}
+impl ::core::clone::Clone for DRM_ACTSERV_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub struct DRM_CLIENT_VERSION_INFO {
+    pub uStructVersion: u32,
+    pub dwVersion: [u32; 4],
+    pub wszHierarchy: [u16; 256],
+    pub wszProductId: [u16; 256],
+    pub wszProductDescription: [u16; 256],
+}
+impl ::core::marker::Copy for DRM_CLIENT_VERSION_INFO {}
+impl ::core::clone::Clone for DRM_CLIENT_VERSION_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub struct DRM_LICENSE_ACQ_DATA {
+    pub uVersion: u32,
+    pub wszURL: ::windows_sys::core::PWSTR,
+    pub wszLocalFilename: ::windows_sys::core::PWSTR,
+    pub pbPostData: *mut u8,
+    pub dwPostDataSize: u32,
+    pub wszFriendlyName: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for DRM_LICENSE_ACQ_DATA {}
+impl ::core::clone::Clone for DRM_LICENSE_ACQ_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[doc = "*Required features: `\"Win32_Data_RightsManagement\"`*"]
+pub type DRMCALLBACK = ::core::option::Option<unsafe extern "system" fn(param0: DRM_STATUS_MSG, param1: ::windows_sys::core::HRESULT, param2: *mut ::core::ffi::c_void, param3: *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;

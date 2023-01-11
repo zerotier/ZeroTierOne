@@ -1,5 +1,6 @@
 #![warn(rust_2018_idioms)]
-#![cfg(feature = "full")]
+// Wasi does not support panic recovery or threading
+#![cfg(all(feature = "full", not(tokio_wasi)))]
 
 use tokio::net::TcpListener;
 use tokio::runtime;
@@ -79,7 +80,7 @@ fn test_drop_on_notify() {
     drop(task);
 
     // Establish a connection to the acceptor
-    let _s = TcpStream::connect(&addr).unwrap();
+    let _s = TcpStream::connect(addr).unwrap();
 
     // Force the reactor to turn
     rt.block_on(async {});

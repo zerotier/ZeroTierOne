@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_SystemInformation\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -80,9 +80,9 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
     pub fn GetSystemWindowsDirectoryW(lpbuffer: ::windows_sys::core::PWSTR, usize: u32) -> u32;
     #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-    pub fn GetSystemWow64Directory2A(lpbuffer: ::windows_sys::core::PSTR, usize: u32, imagefilemachinetype: u16) -> u32;
+    pub fn GetSystemWow64Directory2A(lpbuffer: ::windows_sys::core::PSTR, usize: u32, imagefilemachinetype: IMAGE_FILE_MACHINE) -> u32;
     #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-    pub fn GetSystemWow64Directory2W(lpbuffer: ::windows_sys::core::PWSTR, usize: u32, imagefilemachinetype: u16) -> u32;
+    pub fn GetSystemWow64Directory2W(lpbuffer: ::windows_sys::core::PWSTR, usize: u32, imagefilemachinetype: IMAGE_FILE_MACHINE) -> u32;
     #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
     pub fn GetSystemWow64DirectoryA(lpbuffer: ::windows_sys::core::PSTR, usize: u32) -> u32;
     #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
@@ -113,7 +113,7 @@ extern "system" {
     pub fn IsUserCetAvailableInEnvironment(usercetenvironment: USER_CET_ENVIRONMENT) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_System_SystemInformation\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn IsWow64GuestMachineSupported(wowguestmachine: u16, machineissupported: *mut super::super::Foundation::BOOL) -> ::windows_sys::core::HRESULT;
+    pub fn IsWow64GuestMachineSupported(wowguestmachine: IMAGE_FILE_MACHINE, machineissupported: *mut super::super::Foundation::BOOL) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
     pub fn RtlConvertDeviceFamilyInfoToString(puldevicefamilybuffersize: *mut u32, puldeviceformbuffersize: *mut u32, devicefamily: ::windows_sys::core::PWSTR, deviceform: ::windows_sys::core::PWSTR) -> u32;
     #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
@@ -163,51 +163,232 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn VerifyVersionInfoW(lpversioninformation: *mut OSVERSIONINFOEXW, dwtypemask: VER_FLAGS, dwlconditionmask: u64) -> super::super::Foundation::BOOL;
 }
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub struct CACHE_DESCRIPTOR {
-    pub Level: u8,
-    pub Associativity: u8,
-    pub LineSize: u16,
-    pub Size: u32,
-    pub Type: PROCESSOR_CACHE_TYPE,
-}
-impl ::core::marker::Copy for CACHE_DESCRIPTOR {}
-impl ::core::clone::Clone for CACHE_DESCRIPTOR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub const NTDDI_LONGHORN: u32 = 100663296u32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub struct CACHE_RELATIONSHIP {
-    pub Level: u8,
-    pub Associativity: u8,
-    pub LineSize: u16,
-    pub CacheSize: u32,
-    pub Type: PROCESSOR_CACHE_TYPE,
-    pub Reserved: [u8; 18],
-    pub GroupCount: u16,
-    pub Anonymous: CACHE_RELATIONSHIP_0,
-}
-impl ::core::marker::Copy for CACHE_RELATIONSHIP {}
-impl ::core::clone::Clone for CACHE_RELATIONSHIP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub const NTDDI_VERSION: u32 = 167772171u32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub union CACHE_RELATIONSHIP_0 {
-    pub GroupMask: GROUP_AFFINITY,
-    pub GroupMasks: [GROUP_AFFINITY; 1],
-}
-impl ::core::marker::Copy for CACHE_RELATIONSHIP_0 {}
-impl ::core::clone::Clone for CACHE_RELATIONSHIP_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const NTDDI_VISTA: u32 = 100663296u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_VISTASP1: u32 = 100663552u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_VISTASP2: u32 = 100663808u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_VISTASP3: u32 = 100664064u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_VISTASP4: u32 = 100664320u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN10: u32 = 167772160u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN10_19H1: u32 = 167772167u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN10_CO: u32 = 167772171u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN10_FE: u32 = 167772170u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN10_MN: u32 = 167772169u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN10_RS1: u32 = 167772162u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN10_RS2: u32 = 167772163u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN10_RS3: u32 = 167772164u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN10_RS4: u32 = 167772165u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN10_RS5: u32 = 167772166u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN10_TH2: u32 = 167772161u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN10_VB: u32 = 167772168u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN2K: u32 = 83886080u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN2KSP1: u32 = 83886336u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN2KSP2: u32 = 83886592u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN2KSP3: u32 = 83886848u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN2KSP4: u32 = 83887104u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN4: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN6: u32 = 100663296u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN6SP1: u32 = 100663552u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN6SP2: u32 = 100663808u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN6SP3: u32 = 100664064u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN6SP4: u32 = 100664320u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN7: u32 = 100728832u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WIN8: u32 = 100794368u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WINBLUE: u32 = 100859904u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WINTHRESHOLD: u32 = 167772160u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WINXP: u32 = 83951616u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WINXPSP1: u32 = 83951872u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WINXPSP2: u32 = 83952128u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WINXPSP3: u32 = 83952384u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WINXPSP4: u32 = 83952640u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WS03: u32 = 84017152u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WS03SP1: u32 = 84017408u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WS03SP2: u32 = 84017664u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WS03SP3: u32 = 84017920u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WS03SP4: u32 = 84018176u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WS08: u32 = 100663552u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WS08SP2: u32 = 100663808u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WS08SP3: u32 = 100664064u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const NTDDI_WS08SP4: u32 = 100664320u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const OSVERSION_MASK: u32 = 4294901760u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const SCEX2_ALT_NETBIOS_NAME: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const SPVERSION_MASK: u32 = 65280u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const SUBVERSION_MASK: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const SYSTEM_CPU_SET_INFORMATION_ALLOCATED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const SYSTEM_CPU_SET_INFORMATION_ALLOCATED_TO_TARGET_PROCESS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const SYSTEM_CPU_SET_INFORMATION_PARKED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const SYSTEM_CPU_SET_INFORMATION_REALTIME: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const WDK_NTDDI_VERSION: u32 = 167772171u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE100: u32 = 2560u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE110: u32 = 2560u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE20: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE30: u32 = 768u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE302: u32 = 770u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE40: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE401: u32 = 1025u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE50: u32 = 1280u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE501: u32 = 1281u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE55: u32 = 1360u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE60: u32 = 1536u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE60SP1: u32 = 1537u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE60SP2: u32 = 1539u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE70: u32 = 1792u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE80: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_IE90: u32 = 2304u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_LONGHORN: u32 = 1792u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_NT4: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_NT4SP1: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_NT4SP2: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_NT4SP3: u32 = 770u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_NT4SP4: u32 = 1025u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_NT4SP5: u32 = 1025u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_NT4SP6: u32 = 1280u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WIN10: u32 = 2560u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WIN2K: u32 = 1281u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WIN2KSP1: u32 = 1281u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WIN2KSP2: u32 = 1281u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WIN2KSP3: u32 = 1281u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WIN2KSP4: u32 = 1281u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WIN6: u32 = 1792u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WIN7: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WIN8: u32 = 2560u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WIN98: u32 = 1025u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WIN98SE: u32 = 1280u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WINBLUE: u32 = 2560u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WINME: u32 = 1360u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WINTHRESHOLD: u32 = 2560u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WS03: u32 = 1538u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_WS03SP1: u32 = 1539u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_XP: u32 = 1536u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_XPSP1: u32 = 1537u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_IE_XPSP2: u32 = 1539u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_LONGHORN: u32 = 1536u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_NT4: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_VISTA: u32 = 1536u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_WIN10: u32 = 2560u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_WIN2K: u32 = 1280u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_WIN6: u32 = 1536u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_WIN7: u32 = 1537u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_WIN8: u32 = 1538u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_WINBLUE: u32 = 1539u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_WINTHRESHOLD: u32 = 2560u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_WINXP: u32 = 1281u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_WS03: u32 = 1282u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const _WIN32_WINNT_WS08: u32 = 1536u32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub type COMPUTER_NAME_FORMAT = i32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
@@ -380,7 +561,6 @@ pub const DEVICEFAMILYINFOENUM_WINDOWS_CORE: DEVICEFAMILYINFOENUM = 16u32;
 pub const DEVICEFAMILYINFOENUM_WINDOWS_CORE_HEADLESS: DEVICEFAMILYINFOENUM = 17u32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub const DEVICEFAMILYINFOENUM_MAX: DEVICEFAMILYINFOENUM = 17u32;
-pub type FIRMWARE_TABLE_ID = u32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub type FIRMWARE_TABLE_PROVIDER = u32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
@@ -399,33 +579,72 @@ pub const FirmwareTypeBios: FIRMWARE_TYPE = 1i32;
 pub const FirmwareTypeUefi: FIRMWARE_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub const FirmwareTypeMax: FIRMWARE_TYPE = 3i32;
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub struct GROUP_AFFINITY {
-    pub Mask: usize,
-    pub Group: u16,
-    pub Reserved: [u16; 3],
-}
-impl ::core::marker::Copy for GROUP_AFFINITY {}
-impl ::core::clone::Clone for GROUP_AFFINITY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub type IMAGE_FILE_MACHINE = u16;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub struct GROUP_RELATIONSHIP {
-    pub MaximumGroupCount: u16,
-    pub ActiveGroupCount: u16,
-    pub Reserved: [u8; 20],
-    pub GroupInfo: [PROCESSOR_GROUP_INFO; 1],
-}
-impl ::core::marker::Copy for GROUP_RELATIONSHIP {}
-impl ::core::clone::Clone for GROUP_RELATIONSHIP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const IMAGE_FILE_MACHINE_AXP64: IMAGE_FILE_MACHINE = 644u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_I386: IMAGE_FILE_MACHINE = 332u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_IA64: IMAGE_FILE_MACHINE = 512u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_AMD64: IMAGE_FILE_MACHINE = 34404u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_UNKNOWN: IMAGE_FILE_MACHINE = 0u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_TARGET_HOST: IMAGE_FILE_MACHINE = 1u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_R3000: IMAGE_FILE_MACHINE = 354u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_R4000: IMAGE_FILE_MACHINE = 358u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_R10000: IMAGE_FILE_MACHINE = 360u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_WCEMIPSV2: IMAGE_FILE_MACHINE = 361u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_ALPHA: IMAGE_FILE_MACHINE = 388u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_SH3: IMAGE_FILE_MACHINE = 418u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_SH3DSP: IMAGE_FILE_MACHINE = 419u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_SH3E: IMAGE_FILE_MACHINE = 420u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_SH4: IMAGE_FILE_MACHINE = 422u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_SH5: IMAGE_FILE_MACHINE = 424u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_ARM: IMAGE_FILE_MACHINE = 448u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_THUMB: IMAGE_FILE_MACHINE = 450u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_ARMNT: IMAGE_FILE_MACHINE = 452u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_AM33: IMAGE_FILE_MACHINE = 467u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_POWERPC: IMAGE_FILE_MACHINE = 496u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_POWERPCFP: IMAGE_FILE_MACHINE = 497u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_MIPS16: IMAGE_FILE_MACHINE = 614u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_ALPHA64: IMAGE_FILE_MACHINE = 644u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_MIPSFPU: IMAGE_FILE_MACHINE = 870u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_MIPSFPU16: IMAGE_FILE_MACHINE = 1126u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_TRICORE: IMAGE_FILE_MACHINE = 1312u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_CEF: IMAGE_FILE_MACHINE = 3311u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_EBC: IMAGE_FILE_MACHINE = 3772u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_M32R: IMAGE_FILE_MACHINE = 36929u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_ARM64: IMAGE_FILE_MACHINE = 43620u16;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const IMAGE_FILE_MACHINE_CEE: IMAGE_FILE_MACHINE = 49390u16;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub type LOGICAL_PROCESSOR_RELATIONSHIP = i32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
@@ -446,247 +665,6 @@ pub const RelationNumaNodeEx: LOGICAL_PROCESSOR_RELATIONSHIP = 6i32;
 pub const RelationProcessorModule: LOGICAL_PROCESSOR_RELATIONSHIP = 7i32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub const RelationAll: LOGICAL_PROCESSOR_RELATIONSHIP = 65535i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub struct MEMORYSTATUS {
-    pub dwLength: u32,
-    pub dwMemoryLoad: u32,
-    pub dwTotalPhys: usize,
-    pub dwAvailPhys: usize,
-    pub dwTotalPageFile: usize,
-    pub dwAvailPageFile: usize,
-    pub dwTotalVirtual: usize,
-    pub dwAvailVirtual: usize,
-}
-impl ::core::marker::Copy for MEMORYSTATUS {}
-impl ::core::clone::Clone for MEMORYSTATUS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub struct MEMORYSTATUSEX {
-    pub dwLength: u32,
-    pub dwMemoryLoad: u32,
-    pub ullTotalPhys: u64,
-    pub ullAvailPhys: u64,
-    pub ullTotalPageFile: u64,
-    pub ullAvailPageFile: u64,
-    pub ullTotalVirtual: u64,
-    pub ullAvailVirtual: u64,
-    pub ullAvailExtendedVirtual: u64,
-}
-impl ::core::marker::Copy for MEMORYSTATUSEX {}
-impl ::core::clone::Clone for MEMORYSTATUSEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_LONGHORN: u32 = 100663296u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_VERSION: u32 = 167772171u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_VISTA: u32 = 100663296u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_VISTASP1: u32 = 100663552u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_VISTASP2: u32 = 100663808u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_VISTASP3: u32 = 100664064u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_VISTASP4: u32 = 100664320u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN10: u32 = 167772160u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN10_19H1: u32 = 167772167u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN10_CO: u32 = 167772171u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN10_FE: u32 = 167772170u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN10_MN: u32 = 167772169u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN10_RS1: u32 = 167772162u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN10_RS2: u32 = 167772163u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN10_RS3: u32 = 167772164u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN10_RS4: u32 = 167772165u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN10_RS5: u32 = 167772166u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN10_TH2: u32 = 167772161u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN10_VB: u32 = 167772168u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN2K: u32 = 83886080u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN2KSP1: u32 = 83886336u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN2KSP2: u32 = 83886592u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN2KSP3: u32 = 83886848u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN2KSP4: u32 = 83887104u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN4: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN6: u32 = 100663296u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN6SP1: u32 = 100663552u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN6SP2: u32 = 100663808u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN6SP3: u32 = 100664064u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN6SP4: u32 = 100664320u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN7: u32 = 100728832u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WIN8: u32 = 100794368u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WINBLUE: u32 = 100859904u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WINTHRESHOLD: u32 = 167772160u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WINXP: u32 = 83951616u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WINXPSP1: u32 = 83951872u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WINXPSP2: u32 = 83952128u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WINXPSP3: u32 = 83952384u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WINXPSP4: u32 = 83952640u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WS03: u32 = 84017152u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WS03SP1: u32 = 84017408u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WS03SP2: u32 = 84017664u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WS03SP3: u32 = 84017920u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WS03SP4: u32 = 84018176u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WS08: u32 = 100663552u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WS08SP2: u32 = 100663808u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WS08SP3: u32 = 100664064u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const NTDDI_WS08SP4: u32 = 100664320u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub struct NUMA_NODE_RELATIONSHIP {
-    pub NodeNumber: u32,
-    pub Reserved: [u8; 18],
-    pub GroupCount: u16,
-    pub Anonymous: NUMA_NODE_RELATIONSHIP_0,
-}
-impl ::core::marker::Copy for NUMA_NODE_RELATIONSHIP {}
-impl ::core::clone::Clone for NUMA_NODE_RELATIONSHIP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub union NUMA_NODE_RELATIONSHIP_0 {
-    pub GroupMask: GROUP_AFFINITY,
-    pub GroupMasks: [GROUP_AFFINITY; 1],
-}
-impl ::core::marker::Copy for NUMA_NODE_RELATIONSHIP_0 {}
-impl ::core::clone::Clone for NUMA_NODE_RELATIONSHIP_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct OSVERSIONINFOA {
-    pub dwOSVersionInfoSize: u32,
-    pub dwMajorVersion: u32,
-    pub dwMinorVersion: u32,
-    pub dwBuildNumber: u32,
-    pub dwPlatformId: u32,
-    pub szCSDVersion: [super::super::Foundation::CHAR; 128],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for OSVERSIONINFOA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for OSVERSIONINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct OSVERSIONINFOEXA {
-    pub dwOSVersionInfoSize: u32,
-    pub dwMajorVersion: u32,
-    pub dwMinorVersion: u32,
-    pub dwBuildNumber: u32,
-    pub dwPlatformId: u32,
-    pub szCSDVersion: [super::super::Foundation::CHAR; 128],
-    pub wServicePackMajor: u16,
-    pub wServicePackMinor: u16,
-    pub wSuiteMask: u16,
-    pub wProductType: u8,
-    pub wReserved: u8,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for OSVERSIONINFOEXA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for OSVERSIONINFOEXA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub struct OSVERSIONINFOEXW {
-    pub dwOSVersionInfoSize: u32,
-    pub dwMajorVersion: u32,
-    pub dwMinorVersion: u32,
-    pub dwBuildNumber: u32,
-    pub dwPlatformId: u32,
-    pub szCSDVersion: [u16; 128],
-    pub wServicePackMajor: u16,
-    pub wServicePackMinor: u16,
-    pub wSuiteMask: u16,
-    pub wProductType: u8,
-    pub wReserved: u8,
-}
-impl ::core::marker::Copy for OSVERSIONINFOEXW {}
-impl ::core::clone::Clone for OSVERSIONINFOEXW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub struct OSVERSIONINFOW {
-    pub dwOSVersionInfoSize: u32,
-    pub dwMajorVersion: u32,
-    pub dwMinorVersion: u32,
-    pub dwBuildNumber: u32,
-    pub dwPlatformId: u32,
-    pub szCSDVersion: [u16; 128],
-}
-impl ::core::marker::Copy for OSVERSIONINFOW {}
-impl ::core::clone::Clone for OSVERSIONINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const OSVERSION_MASK: u32 = 4294901760u32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub type OS_DEPLOYEMENT_STATE_VALUES = i32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
@@ -888,10 +866,6 @@ pub const PRODUCT_WEB_SERVER: OS_PRODUCT_TYPE = 17u32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub const PRODUCT_WEB_SERVER_CORE: OS_PRODUCT_TYPE = 29u32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub type PGET_SYSTEM_WOW64_DIRECTORY_A = ::core::option::Option<unsafe extern "system" fn(lpbuffer: ::windows_sys::core::PSTR, usize: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub type PGET_SYSTEM_WOW64_DIRECTORY_W = ::core::option::Option<unsafe extern "system" fn(lpbuffer: ::windows_sys::core::PWSTR, usize: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub type PROCESSOR_CACHE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub const CacheUnified: PROCESSOR_CACHE_TYPE = 0i32;
@@ -901,35 +875,6 @@ pub const CacheInstruction: PROCESSOR_CACHE_TYPE = 1i32;
 pub const CacheData: PROCESSOR_CACHE_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub const CacheTrace: PROCESSOR_CACHE_TYPE = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub struct PROCESSOR_GROUP_INFO {
-    pub MaximumProcessorCount: u8,
-    pub ActiveProcessorCount: u8,
-    pub Reserved: [u8; 38],
-    pub ActiveProcessorMask: usize,
-}
-impl ::core::marker::Copy for PROCESSOR_GROUP_INFO {}
-impl ::core::clone::Clone for PROCESSOR_GROUP_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub struct PROCESSOR_RELATIONSHIP {
-    pub Flags: u8,
-    pub EfficiencyClass: u8,
-    pub Reserved: [u8; 20],
-    pub GroupCount: u16,
-    pub GroupMask: [GROUP_AFFINITY; 1],
-}
-impl ::core::marker::Copy for PROCESSOR_RELATIONSHIP {}
-impl ::core::clone::Clone for PROCESSOR_RELATIONSHIP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub type RTL_SYSTEM_GLOBAL_DATA_ID = i32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
@@ -961,11 +906,278 @@ pub const GlobalDataIdSafeBootMode: RTL_SYSTEM_GLOBAL_DATA_ID = 12i32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub const GlobalDataIdLastSystemRITEventTickCount: RTL_SYSTEM_GLOBAL_DATA_ID = 13i32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const SCEX2_ALT_NETBIOS_NAME: u32 = 1u32;
+pub type USER_CET_ENVIRONMENT = u32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const SPVERSION_MASK: u32 = 65280u32;
+pub const USER_CET_ENVIRONMENT_WIN32_PROCESS: USER_CET_ENVIRONMENT = 0u32;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const SUBVERSION_MASK: u32 = 255u32;
+pub const USER_CET_ENVIRONMENT_SGX2_ENCLAVE: USER_CET_ENVIRONMENT = 2u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const USER_CET_ENVIRONMENT_VBS_ENCLAVE: USER_CET_ENVIRONMENT = 16u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const USER_CET_ENVIRONMENT_VBS_BASIC_ENCLAVE: USER_CET_ENVIRONMENT = 17u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub type VER_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const VER_MINORVERSION: VER_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const VER_MAJORVERSION: VER_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const VER_BUILDNUMBER: VER_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const VER_PLATFORMID: VER_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const VER_SERVICEPACKMINOR: VER_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const VER_SERVICEPACKMAJOR: VER_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const VER_SUITENAME: VER_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub const VER_PRODUCT_TYPE: VER_FLAGS = 128u32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub struct CACHE_DESCRIPTOR {
+    pub Level: u8,
+    pub Associativity: u8,
+    pub LineSize: u16,
+    pub Size: u32,
+    pub Type: PROCESSOR_CACHE_TYPE,
+}
+impl ::core::marker::Copy for CACHE_DESCRIPTOR {}
+impl ::core::clone::Clone for CACHE_DESCRIPTOR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub struct CACHE_RELATIONSHIP {
+    pub Level: u8,
+    pub Associativity: u8,
+    pub LineSize: u16,
+    pub CacheSize: u32,
+    pub Type: PROCESSOR_CACHE_TYPE,
+    pub Reserved: [u8; 18],
+    pub GroupCount: u16,
+    pub Anonymous: CACHE_RELATIONSHIP_0,
+}
+impl ::core::marker::Copy for CACHE_RELATIONSHIP {}
+impl ::core::clone::Clone for CACHE_RELATIONSHIP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub union CACHE_RELATIONSHIP_0 {
+    pub GroupMask: GROUP_AFFINITY,
+    pub GroupMasks: [GROUP_AFFINITY; 1],
+}
+impl ::core::marker::Copy for CACHE_RELATIONSHIP_0 {}
+impl ::core::clone::Clone for CACHE_RELATIONSHIP_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type FIRMWARE_TABLE_ID = u32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub struct GROUP_AFFINITY {
+    pub Mask: usize,
+    pub Group: u16,
+    pub Reserved: [u16; 3],
+}
+impl ::core::marker::Copy for GROUP_AFFINITY {}
+impl ::core::clone::Clone for GROUP_AFFINITY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub struct GROUP_RELATIONSHIP {
+    pub MaximumGroupCount: u16,
+    pub ActiveGroupCount: u16,
+    pub Reserved: [u8; 20],
+    pub GroupInfo: [PROCESSOR_GROUP_INFO; 1],
+}
+impl ::core::marker::Copy for GROUP_RELATIONSHIP {}
+impl ::core::clone::Clone for GROUP_RELATIONSHIP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub struct MEMORYSTATUS {
+    pub dwLength: u32,
+    pub dwMemoryLoad: u32,
+    pub dwTotalPhys: usize,
+    pub dwAvailPhys: usize,
+    pub dwTotalPageFile: usize,
+    pub dwAvailPageFile: usize,
+    pub dwTotalVirtual: usize,
+    pub dwAvailVirtual: usize,
+}
+impl ::core::marker::Copy for MEMORYSTATUS {}
+impl ::core::clone::Clone for MEMORYSTATUS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub struct MEMORYSTATUSEX {
+    pub dwLength: u32,
+    pub dwMemoryLoad: u32,
+    pub ullTotalPhys: u64,
+    pub ullAvailPhys: u64,
+    pub ullTotalPageFile: u64,
+    pub ullAvailPageFile: u64,
+    pub ullTotalVirtual: u64,
+    pub ullAvailVirtual: u64,
+    pub ullAvailExtendedVirtual: u64,
+}
+impl ::core::marker::Copy for MEMORYSTATUSEX {}
+impl ::core::clone::Clone for MEMORYSTATUSEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub struct NUMA_NODE_RELATIONSHIP {
+    pub NodeNumber: u32,
+    pub Reserved: [u8; 18],
+    pub GroupCount: u16,
+    pub Anonymous: NUMA_NODE_RELATIONSHIP_0,
+}
+impl ::core::marker::Copy for NUMA_NODE_RELATIONSHIP {}
+impl ::core::clone::Clone for NUMA_NODE_RELATIONSHIP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub union NUMA_NODE_RELATIONSHIP_0 {
+    pub GroupMask: GROUP_AFFINITY,
+    pub GroupMasks: [GROUP_AFFINITY; 1],
+}
+impl ::core::marker::Copy for NUMA_NODE_RELATIONSHIP_0 {}
+impl ::core::clone::Clone for NUMA_NODE_RELATIONSHIP_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct OSVERSIONINFOA {
+    pub dwOSVersionInfoSize: u32,
+    pub dwMajorVersion: u32,
+    pub dwMinorVersion: u32,
+    pub dwBuildNumber: u32,
+    pub dwPlatformId: u32,
+    pub szCSDVersion: [super::super::Foundation::CHAR; 128],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for OSVERSIONINFOA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for OSVERSIONINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct OSVERSIONINFOEXA {
+    pub dwOSVersionInfoSize: u32,
+    pub dwMajorVersion: u32,
+    pub dwMinorVersion: u32,
+    pub dwBuildNumber: u32,
+    pub dwPlatformId: u32,
+    pub szCSDVersion: [super::super::Foundation::CHAR; 128],
+    pub wServicePackMajor: u16,
+    pub wServicePackMinor: u16,
+    pub wSuiteMask: u16,
+    pub wProductType: u8,
+    pub wReserved: u8,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for OSVERSIONINFOEXA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for OSVERSIONINFOEXA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub struct OSVERSIONINFOEXW {
+    pub dwOSVersionInfoSize: u32,
+    pub dwMajorVersion: u32,
+    pub dwMinorVersion: u32,
+    pub dwBuildNumber: u32,
+    pub dwPlatformId: u32,
+    pub szCSDVersion: [u16; 128],
+    pub wServicePackMajor: u16,
+    pub wServicePackMinor: u16,
+    pub wSuiteMask: u16,
+    pub wProductType: u8,
+    pub wReserved: u8,
+}
+impl ::core::marker::Copy for OSVERSIONINFOEXW {}
+impl ::core::clone::Clone for OSVERSIONINFOEXW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub struct OSVERSIONINFOW {
+    pub dwOSVersionInfoSize: u32,
+    pub dwMajorVersion: u32,
+    pub dwMinorVersion: u32,
+    pub dwBuildNumber: u32,
+    pub dwPlatformId: u32,
+    pub szCSDVersion: [u16; 128],
+}
+impl ::core::marker::Copy for OSVERSIONINFOW {}
+impl ::core::clone::Clone for OSVERSIONINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub struct PROCESSOR_GROUP_INFO {
+    pub MaximumProcessorCount: u8,
+    pub ActiveProcessorCount: u8,
+    pub Reserved: [u8; 38],
+    pub ActiveProcessorMask: usize,
+}
+impl ::core::marker::Copy for PROCESSOR_GROUP_INFO {}
+impl ::core::clone::Clone for PROCESSOR_GROUP_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
+pub struct PROCESSOR_RELATIONSHIP {
+    pub Flags: u8,
+    pub EfficiencyClass: u8,
+    pub Reserved: [u8; 20],
+    pub GroupCount: u16,
+    pub GroupMask: [GROUP_AFFINITY; 1],
+}
+impl ::core::marker::Copy for PROCESSOR_RELATIONSHIP {}
+impl ::core::clone::Clone for PROCESSOR_RELATIONSHIP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
 pub struct SYSTEM_CPU_SET_INFORMATION {
@@ -1045,14 +1257,6 @@ impl ::core::clone::Clone for SYSTEM_CPU_SET_INFORMATION_0_0_1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const SYSTEM_CPU_SET_INFORMATION_ALLOCATED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const SYSTEM_CPU_SET_INFORMATION_ALLOCATED_TO_TARGET_PROCESS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const SYSTEM_CPU_SET_INFORMATION_PARKED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const SYSTEM_CPU_SET_INFORMATION_REALTIME: u32 = 8u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`, `\"Win32_System_Diagnostics_Debug\"`*"]
 #[cfg(feature = "Win32_System_Diagnostics_Debug")]
@@ -1219,144 +1423,6 @@ impl ::core::clone::Clone for SYSTEM_SUPPORTED_PROCESSOR_ARCHITECTURES_INFORMATI
     }
 }
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub type USER_CET_ENVIRONMENT = u32;
+pub type PGET_SYSTEM_WOW64_DIRECTORY_A = ::core::option::Option<unsafe extern "system" fn(lpbuffer: ::windows_sys::core::PSTR, usize: u32) -> u32>;
 #[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const USER_CET_ENVIRONMENT_WIN32_PROCESS: USER_CET_ENVIRONMENT = 0u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const USER_CET_ENVIRONMENT_SGX2_ENCLAVE: USER_CET_ENVIRONMENT = 2u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const USER_CET_ENVIRONMENT_VBS_ENCLAVE: USER_CET_ENVIRONMENT = 16u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const USER_CET_ENVIRONMENT_VBS_BASIC_ENCLAVE: USER_CET_ENVIRONMENT = 17u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub type VER_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const VER_MINORVERSION: VER_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const VER_MAJORVERSION: VER_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const VER_BUILDNUMBER: VER_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const VER_PLATFORMID: VER_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const VER_SERVICEPACKMINOR: VER_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const VER_SERVICEPACKMAJOR: VER_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const VER_SUITENAME: VER_FLAGS = 64u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const VER_PRODUCT_TYPE: VER_FLAGS = 128u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const WDK_NTDDI_VERSION: u32 = 167772171u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE100: u32 = 2560u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE110: u32 = 2560u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE20: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE30: u32 = 768u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE302: u32 = 770u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE40: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE401: u32 = 1025u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE50: u32 = 1280u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE501: u32 = 1281u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE55: u32 = 1360u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE60: u32 = 1536u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE60SP1: u32 = 1537u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE60SP2: u32 = 1539u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE70: u32 = 1792u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE80: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_IE90: u32 = 2304u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_LONGHORN: u32 = 1792u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_NT4: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_NT4SP1: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_NT4SP2: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_NT4SP3: u32 = 770u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_NT4SP4: u32 = 1025u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_NT4SP5: u32 = 1025u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_NT4SP6: u32 = 1280u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WIN10: u32 = 2560u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WIN2K: u32 = 1281u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WIN2KSP1: u32 = 1281u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WIN2KSP2: u32 = 1281u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WIN2KSP3: u32 = 1281u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WIN2KSP4: u32 = 1281u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WIN6: u32 = 1792u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WIN7: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WIN8: u32 = 2560u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WIN98: u32 = 1025u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WIN98SE: u32 = 1280u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WINBLUE: u32 = 2560u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WINME: u32 = 1360u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WINTHRESHOLD: u32 = 2560u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WS03: u32 = 1538u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_WS03SP1: u32 = 1539u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_XP: u32 = 1536u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_XPSP1: u32 = 1537u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_IE_XPSP2: u32 = 1539u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_LONGHORN: u32 = 1536u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_NT4: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_VISTA: u32 = 1536u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_WIN10: u32 = 2560u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_WIN2K: u32 = 1280u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_WIN6: u32 = 1536u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_WIN7: u32 = 1537u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_WIN8: u32 = 1538u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_WINBLUE: u32 = 1539u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_WINTHRESHOLD: u32 = 2560u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_WINXP: u32 = 1281u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_WS03: u32 = 1282u32;
-#[doc = "*Required features: `\"Win32_System_SystemInformation\"`*"]
-pub const _WIN32_WINNT_WS08: u32 = 1536u32;
+pub type PGET_SYSTEM_WOW64_DIRECTORY_W = ::core::option::Option<unsafe extern "system" fn(lpbuffer: ::windows_sys::core::PWSTR, usize: u32) -> u32>;

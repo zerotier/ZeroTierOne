@@ -47,7 +47,8 @@
 //!
 //!  * JOIN_INTEREST - Is set to one if there exists a JoinHandle.
 //!
-//!  * JOIN_WAKER - Is set to one if the JoinHandle has set a waker.
+//!  * JOIN_WAKER - Acts as an access control bit for the join handle waker. The
+//!    protocol for its usage is described below.
 //!
 //! The rest of the bits are used for the ref-count.
 //!
@@ -71,10 +72,38 @@
 //!    a lock for the stage field, and it can be accessed only by the thread
 //!    that set RUNNING to one.
 //!
-//!  * If JOIN_WAKER is zero, then the JoinHandle has exclusive access to the
-//!    join handle waker. If JOIN_WAKER and COMPLETE are both one, then the
-//!    thread that set COMPLETE to one has exclusive access to the join handle
-//!    waker.
+//!  * The waker field may be concurrently accessed by different threads: in one
+//!    thread the runtime may complete a task and *read* the waker field to
+//!    invoke the waker, and in another thread the task's JoinHandle may be
+//!    polled, and if the task hasn't yet completed, the JoinHandle may *write*
+//!    a waker to the waker field. The JOIN_WAKER bit ensures safe access by
+//!    multiple threads to the waker field using the following rules:
+//!
+//!    1. JOIN_WAKER is initialized to zero.
+//!
+//!    2. If JOIN_WAKER is zero, then the JoinHandle has exclusive (mutable)
+//!       access to the waker field.
+//!
+//!    3. If JOIN_WAKER is one, then the JoinHandle has shared (read-only)
+//!       access to the waker field.
+//!
+//!    4. If JOIN_WAKER is one and COMPLETE is one, then the runtime has shared
+//!       (read-only) access to the waker field.
+//!
+//!    5. If the JoinHandle needs to write to the waker field, then the
+//!       JoinHandle needs to (i) successfully set JOIN_WAKER to zero if it is
+//!       not already zero to gain exclusive access to the waker field per rule
+//!       2, (ii) write a waker, and (iii) successfully set JOIN_WAKER to one.
+//!
+//!    6. The JoinHandle can change JOIN_WAKER only if COMPLETE is zero (i.e.
+//!       the task hasn't yet completed).
+//!
+//!    Rule 6 implies that the steps (i) or (iii) of rule 5 may fail due to a
+//!    race. If step (i) fails, then the attempt to write a waker is aborted. If
+//!    step (iii) fails because COMPLETE is set to one by another thread after
+//!    step (i), then the waker field is cleared. Once COMPLETE is one (i.e.
+//!    task has completed), the JoinHandle will not modify JOIN_WAKER. After the
+//!    runtime sets COMPLETE to one, it invokes the waker if there is one.
 //!
 //! All other fields are immutable and can be accessed immutably without
 //! synchronization by anyone.
@@ -121,7 +150,7 @@
 //!  1. The output is created on the thread that the future was polled on. Since
 //!     only non-Send futures can have non-Send output, the future was polled on
 //!     the thread that the future was spawned from.
-//!  2. Since JoinHandle<Output> is not Send if Output is not Send, the
+//!  2. Since `JoinHandle<Output>` is not Send if Output is not Send, the
 //!     JoinHandle is also on the thread that the future was spawned from.
 //!  3. Thus, the JoinHandle will not move the output across threads when it
 //!     takes or drops the output.
@@ -144,26 +173,27 @@ use self::core::Cell;
 use self::core::Header;
 
 mod error;
-#[allow(unreachable_pub)] // https://github.com/rust-lang/rust/issues/57411
 pub use self::error::JoinError;
 
 mod harness;
 use self::harness::Harness;
+
+mod id;
+#[cfg_attr(not(tokio_unstable), allow(unreachable_pub))]
+pub use id::{id, try_id, Id};
 
 cfg_rt_multi_thread! {
     mod inject;
     pub(super) use self::inject::Inject;
 }
 
-#[cfg(all(feature = "rt", any(tokio_unstable, test)))]
+#[cfg(feature = "rt")]
 mod abort;
 mod join;
 
-#[cfg(all(feature = "rt", any(tokio_unstable, test)))]
-#[allow(unreachable_pub)] // https://github.com/rust-lang/rust/issues/57411
+#[cfg(feature = "rt")]
 pub use self::abort::AbortHandle;
 
-#[allow(unreachable_pub)] // https://github.com/rust-lang/rust/issues/57411
 pub use self::join::JoinHandle;
 
 mod list;
@@ -183,27 +213,6 @@ use crate::util::linked_list;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 use std::{fmt, mem};
-
-/// An opaque ID that uniquely identifies a task relative to all other currently
-/// running tasks.
-///
-/// # Notes
-///
-/// - Task IDs are unique relative to other *currently running* tasks. When a
-///   task completes, the same ID may be used for another task.
-/// - Task IDs are *not* sequential, and do not indicate the order in which
-///   tasks are spawned, what runtime a task is spawned on, or any other data.
-///
-/// **Note**: This is an [unstable API][unstable]. The public API of this type
-/// may break in 1.x releases. See [the documentation on unstable
-/// features][unstable] for details.
-///
-/// [unstable]: crate#unstable-features
-#[cfg_attr(docsrs, doc(cfg(all(feature = "rt", tokio_unstable))))]
-#[cfg_attr(not(tokio_unstable), allow(unreachable_pub))]
-// TODO(eliza): there's almost certainly no reason not to make this `Copy` as well...
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub struct Id(u64);
 
 /// An owned handle to the task, tracked by ref count.
 #[repr(transparent)]
@@ -262,6 +271,11 @@ pub(crate) trait Schedule: Sync + Sized + 'static {
     fn yield_now(&self, task: Notified<Self>) {
         self.schedule(task);
     }
+
+    /// Polling the task resulted in a panic. Should the runtime shutdown?
+    fn unhandled_panic(&self) {
+        // By default, do nothing. This maintains the 1.0 behavior.
+    }
 }
 
 cfg_rt! {
@@ -279,7 +293,7 @@ cfg_rt! {
         T: Future + 'static,
         T::Output: 'static,
     {
-        let raw = RawTask::new::<T, S>(task, scheduler, id.clone());
+        let raw = RawTask::new::<T, S>(task, scheduler, id);
         let task = Task {
             raw,
             _p: PhantomData,
@@ -288,7 +302,7 @@ cfg_rt! {
             raw,
             _p: PhantomData,
         });
-        let join = JoinHandle::new(raw, id);
+        let join = JoinHandle::new(raw);
 
         (task, notified, join)
     }
@@ -329,6 +343,10 @@ impl<S: 'static> Task<S> {
     fn header(&self) -> &Header {
         self.raw.header()
     }
+
+    fn header_ptr(&self) -> NonNull<Header> {
+        self.raw.header_ptr()
+    }
 }
 
 impl<S: 'static> Notified<S> {
@@ -360,7 +378,7 @@ cfg_rt_multi_thread! {
 }
 
 impl<S: Schedule> Task<S> {
-    /// Pre-emptively cancels the task as part of the shutdown process.
+    /// Preemptively cancels the task as part of the shutdown process.
     pub(crate) fn shutdown(self) {
         let raw = self.raw;
         mem::forget(self);
@@ -380,7 +398,7 @@ impl<S: Schedule> LocalNotified<S> {
 impl<S: Schedule> UnownedTask<S> {
     // Used in test of the inject queue.
     #[cfg(test)]
-    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
+    #[cfg_attr(tokio_wasm, allow(dead_code))]
     pub(super) fn into_notified(self) -> Notified<S> {
         Notified(self.into_task())
     }
@@ -468,50 +486,6 @@ unsafe impl<S> linked_list::Link for Task<S> {
     }
 
     unsafe fn pointers(target: NonNull<Header>) -> NonNull<linked_list::Pointers<Header>> {
-        // Not super great as it avoids some of looms checking...
-        NonNull::from(target.as_ref().owned.with_mut(|ptr| &mut *ptr))
-    }
-}
-
-impl fmt::Display for Id {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Id {
-    // When 64-bit atomics are available, use a static `AtomicU64` counter to
-    // generate task IDs.
-    //
-    // Note(eliza): we _could_ just use `crate::loom::AtomicU64`, which switches
-    // between an atomic and mutex-based implementation here, rather than having
-    // two separate functions for targets with and without 64-bit atomics.
-    // However, because we can't use the mutex-based implementation in a static
-    // initializer directly, the 32-bit impl also has to use a `OnceCell`, and I
-    // thought it was nicer to avoid the `OnceCell` overhead on 64-bit
-    // platforms...
-    cfg_has_atomic_u64! {
-        pub(crate) fn next() -> Self {
-            use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
-            static NEXT_ID: AtomicU64 = AtomicU64::new(1);
-            Self(NEXT_ID.fetch_add(1, Relaxed))
-        }
-    }
-
-    cfg_not_has_atomic_u64! {
-        pub(crate) fn next() -> Self {
-            use once_cell::sync::Lazy;
-            use crate::loom::sync::Mutex;
-
-            static NEXT_ID: Lazy<Mutex<u64>> = Lazy::new(|| Mutex::new(1));
-            let mut lock = NEXT_ID.lock();
-            let id = *lock;
-            *lock += 1;
-            Self(id)
-        }
-    }
-
-    pub(crate) fn as_u64(&self) -> u64 {
-        self.0
+        self::core::Trailer::addr_of_owned(Header::get_trailer(target))
     }
 }

@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -344,18 +344,6 @@ pub const HTTP_STATUS_USE_PROXY: u32 = 305u32;
 pub const HTTP_STATUS_VERSION_NOT_SUP: u32 = 505u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const HTTP_STATUS_WEBDAV_MULTI_STATUS: u32 = 207u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct HTTP_VERSION_INFO {
-    pub dwMajorVersion: u32,
-    pub dwMinorVersion: u32,
-}
-impl ::core::marker::Copy for HTTP_VERSION_INFO {}
-impl ::core::clone::Clone for HTTP_VERSION_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const ICU_BROWSER_MODE: u32 = 33554432u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -368,14 +356,6 @@ pub const ICU_ESCAPE_AUTHORITY: u32 = 8192u32;
 pub const ICU_NO_ENCODE: u32 = 536870912u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const ICU_NO_META: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub type INTERNET_PORT = u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const INTERNET_DEFAULT_HTTP_PORT: INTERNET_PORT = 80u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const INTERNET_DEFAULT_HTTPS_PORT: INTERNET_PORT = 443u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const INTERNET_DEFAULT_PORT: INTERNET_PORT = 0u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const NETWORKING_KEY_BUFSIZE: u32 = 128u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -394,41 +374,6 @@ pub const SECURITY_FLAG_STRENGTH_MEDIUM: u32 = 1073741824u32;
 pub const SECURITY_FLAG_STRENGTH_STRONG: u32 = 536870912u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const SECURITY_FLAG_STRENGTH_WEAK: u32 = 268435456u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct URL_COMPONENTS {
-    pub dwStructSize: u32,
-    pub lpszScheme: ::windows_sys::core::PWSTR,
-    pub dwSchemeLength: u32,
-    pub nScheme: WINHTTP_INTERNET_SCHEME,
-    pub lpszHostName: ::windows_sys::core::PWSTR,
-    pub dwHostNameLength: u32,
-    pub nPort: u16,
-    pub lpszUserName: ::windows_sys::core::PWSTR,
-    pub dwUserNameLength: u32,
-    pub lpszPassword: ::windows_sys::core::PWSTR,
-    pub dwPasswordLength: u32,
-    pub lpszUrlPath: ::windows_sys::core::PWSTR,
-    pub dwUrlPathLength: u32,
-    pub lpszExtraInfo: ::windows_sys::core::PWSTR,
-    pub dwExtraInfoLength: u32,
-}
-impl ::core::marker::Copy for URL_COMPONENTS {}
-impl ::core::clone::Clone for URL_COMPONENTS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub type WINHTTP_ACCESS_TYPE = u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_ACCESS_TYPE_NO_PROXY: WINHTTP_ACCESS_TYPE = 1u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_ACCESS_TYPE_DEFAULT_PROXY: WINHTTP_ACCESS_TYPE = 0u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_ACCESS_TYPE_NAMED_PROXY: WINHTTP_ACCESS_TYPE = 3u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY: WINHTTP_ACCESS_TYPE = 4u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_ADDREQ_FLAGS_MASK: u32 = 4294901760u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -445,18 +390,6 @@ pub const WINHTTP_ADDREQ_FLAG_COALESCE_WITH_SEMICOLON: u32 = 16777216u32;
 pub const WINHTTP_ADDREQ_FLAG_REPLACE: u32 = 2147483648u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_ADDREQ_INDEX_MASK: u32 = 65535u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct WINHTTP_ASYNC_RESULT {
-    pub dwResult: usize,
-    pub dwError: u32,
-}
-impl ::core::marker::Copy for WINHTTP_ASYNC_RESULT {}
-impl ::core::clone::Clone for WINHTTP_ASYNC_RESULT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_AUTH_SCHEME_DIGEST: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -493,25 +426,6 @@ pub const WINHTTP_AUTOPROXY_NO_CACHE_CLIENT: u32 = 524288u32;
 pub const WINHTTP_AUTOPROXY_NO_CACHE_SVC: u32 = 1048576u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_AUTOPROXY_NO_DIRECTACCESS: u32 = 262144u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WINHTTP_AUTOPROXY_OPTIONS {
-    pub dwFlags: u32,
-    pub dwAutoDetectFlags: u32,
-    pub lpszAutoConfigUrl: ::windows_sys::core::PCWSTR,
-    pub lpvReserved: *mut ::core::ffi::c_void,
-    pub dwReserved: u32,
-    pub fAutoLogonIfChallenged: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WINHTTP_AUTOPROXY_OPTIONS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WINHTTP_AUTOPROXY_OPTIONS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_AUTOPROXY_RUN_INPROCESS: u32 = 65536u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -616,77 +530,6 @@ pub const WINHTTP_CALLBACK_STATUS_SETTINGS_WRITE_COMPLETE: u32 = 268435456u32;
 pub const WINHTTP_CALLBACK_STATUS_SHUTDOWN_COMPLETE: u32 = 67108864u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_CALLBACK_STATUS_WRITE_COMPLETE: u32 = 1048576u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WINHTTP_CERTIFICATE_INFO {
-    pub ftExpiry: super::super::Foundation::FILETIME,
-    pub ftStart: super::super::Foundation::FILETIME,
-    pub lpszSubjectInfo: ::windows_sys::core::PWSTR,
-    pub lpszIssuerInfo: ::windows_sys::core::PWSTR,
-    pub lpszProtocolName: ::windows_sys::core::PWSTR,
-    pub lpszSignatureAlgName: ::windows_sys::core::PWSTR,
-    pub lpszEncryptionAlgName: ::windows_sys::core::PWSTR,
-    pub dwKeySize: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WINHTTP_CERTIFICATE_INFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WINHTTP_CERTIFICATE_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct WINHTTP_CONNECTION_GROUP {
-    pub cConnections: u32,
-    pub guidGroup: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for WINHTTP_CONNECTION_GROUP {}
-impl ::core::clone::Clone for WINHTTP_CONNECTION_GROUP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`, `\"Win32_Networking_WinSock\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Networking_WinSock"))]
-pub struct WINHTTP_CONNECTION_INFO {
-    pub cbSize: u32,
-    pub LocalAddress: super::WinSock::SOCKADDR_STORAGE,
-    pub RemoteAddress: super::WinSock::SOCKADDR_STORAGE,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Networking_WinSock"))]
-impl ::core::marker::Copy for WINHTTP_CONNECTION_INFO {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Networking_WinSock"))]
-impl ::core::clone::Clone for WINHTTP_CONNECTION_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`, `\"Win32_Networking_WinSock\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Networking_WinSock"))]
-pub struct WINHTTP_CONNECTION_INFO {
-    pub cbSize: u32,
-    pub LocalAddress: super::WinSock::SOCKADDR_STORAGE,
-    pub RemoteAddress: super::WinSock::SOCKADDR_STORAGE,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Networking_WinSock"))]
-impl ::core::marker::Copy for WINHTTP_CONNECTION_INFO {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Networking_WinSock"))]
-impl ::core::clone::Clone for WINHTTP_CONNECTION_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_CONNECTION_RETRY_CONDITION_408: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -695,64 +538,6 @@ pub const WINHTTP_CONNECTION_RETRY_CONDITION_SSL_HANDSHAKE: u32 = 2u32;
 pub const WINHTTP_CONNECTION_RETRY_CONDITION_STALE_CONNECTION: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_CONNS_PER_SERVER_UNLIMITED: u32 = 4294967295u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct WINHTTP_CREDS {
-    pub lpszUserName: ::windows_sys::core::PSTR,
-    pub lpszPassword: ::windows_sys::core::PSTR,
-    pub lpszRealm: ::windows_sys::core::PSTR,
-    pub dwAuthScheme: WINHTTP_CREDS_AUTHSCHEME,
-    pub lpszHostName: ::windows_sys::core::PSTR,
-    pub dwPort: u32,
-}
-impl ::core::marker::Copy for WINHTTP_CREDS {}
-impl ::core::clone::Clone for WINHTTP_CREDS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub type WINHTTP_CREDS_AUTHSCHEME = u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_AUTH_SCHEME_BASIC: WINHTTP_CREDS_AUTHSCHEME = 1u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_AUTH_SCHEME_NTLM: WINHTTP_CREDS_AUTHSCHEME = 2u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_AUTH_SCHEME_NEGOTIATE: WINHTTP_CREDS_AUTHSCHEME = 16u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct WINHTTP_CREDS_EX {
-    pub lpszUserName: ::windows_sys::core::PSTR,
-    pub lpszPassword: ::windows_sys::core::PSTR,
-    pub lpszRealm: ::windows_sys::core::PSTR,
-    pub dwAuthScheme: WINHTTP_CREDS_AUTHSCHEME,
-    pub lpszHostName: ::windows_sys::core::PSTR,
-    pub dwPort: u32,
-    pub lpszUrl: ::windows_sys::core::PSTR,
-}
-impl ::core::marker::Copy for WINHTTP_CREDS_EX {}
-impl ::core::clone::Clone for WINHTTP_CREDS_EX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WINHTTP_CURRENT_USER_IE_PROXY_CONFIG {
-    pub fAutoDetect: super::super::Foundation::BOOL,
-    pub lpszAutoConfigUrl: ::windows_sys::core::PWSTR,
-    pub lpszProxy: ::windows_sys::core::PWSTR,
-    pub lpszProxyBypass: ::windows_sys::core::PWSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WINHTTP_CURRENT_USER_IE_PROXY_CONFIG {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WINHTTP_CURRENT_USER_IE_PROXY_CONFIG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_DECOMPRESSION_FLAG_DEFLATE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -785,56 +570,8 @@ pub const WINHTTP_ENABLE_SSL_REVOCATION: u32 = 1u32;
 pub const WINHTTP_ERROR_BASE: u32 = 12000u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_ERROR_LAST: u32 = 12192u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct WINHTTP_EXTENDED_HEADER {
-    pub Anonymous1: WINHTTP_EXTENDED_HEADER_0,
-    pub Anonymous2: WINHTTP_EXTENDED_HEADER_1,
-}
-impl ::core::marker::Copy for WINHTTP_EXTENDED_HEADER {}
-impl ::core::clone::Clone for WINHTTP_EXTENDED_HEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub union WINHTTP_EXTENDED_HEADER_0 {
-    pub pwszName: ::windows_sys::core::PCWSTR,
-    pub pszName: ::windows_sys::core::PCSTR,
-}
-impl ::core::marker::Copy for WINHTTP_EXTENDED_HEADER_0 {}
-impl ::core::clone::Clone for WINHTTP_EXTENDED_HEADER_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub union WINHTTP_EXTENDED_HEADER_1 {
-    pub pwszValue: ::windows_sys::core::PCWSTR,
-    pub pszValue: ::windows_sys::core::PCSTR,
-}
-impl ::core::marker::Copy for WINHTTP_EXTENDED_HEADER_1 {}
-impl ::core::clone::Clone for WINHTTP_EXTENDED_HEADER_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_EXTENDED_HEADER_FLAG_UNICODE: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct WINHTTP_FAILED_CONNECTION_RETRIES {
-    pub dwMaxRetries: u32,
-    pub dwAllowedRetryConditions: u32,
-}
-impl ::core::marker::Copy for WINHTTP_FAILED_CONNECTION_RETRIES {}
-impl ::core::clone::Clone for WINHTTP_FAILED_CONNECTION_RETRIES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_FLAG_ASYNC: u32 = 268435456u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -857,107 +594,14 @@ pub const WINHTTP_HANDLE_TYPE_CONNECT: u32 = 2u32;
 pub const WINHTTP_HANDLE_TYPE_REQUEST: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_HANDLE_TYPE_SESSION: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub union WINHTTP_HEADER_NAME {
-    pub pwszName: ::windows_sys::core::PCWSTR,
-    pub pszName: ::windows_sys::core::PCSTR,
-}
-impl ::core::marker::Copy for WINHTTP_HEADER_NAME {}
-impl ::core::clone::Clone for WINHTTP_HEADER_NAME {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct WINHTTP_HOST_CONNECTION_GROUP {
-    pub pwszHost: ::windows_sys::core::PCWSTR,
-    pub cConnectionGroups: u32,
-    pub pConnectionGroups: *mut WINHTTP_CONNECTION_GROUP,
-}
-impl ::core::marker::Copy for WINHTTP_HOST_CONNECTION_GROUP {}
-impl ::core::clone::Clone for WINHTTP_HOST_CONNECTION_GROUP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct WINHTTP_HTTP2_RECEIVE_WINDOW {
-    pub ulStreamWindow: u32,
-    pub ulStreamWindowUpdateDelta: u32,
-}
-impl ::core::marker::Copy for WINHTTP_HTTP2_RECEIVE_WINDOW {}
-impl ::core::clone::Clone for WINHTTP_HTTP2_RECEIVE_WINDOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub type WINHTTP_INTERNET_SCHEME = u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_INTERNET_SCHEME_HTTP: WINHTTP_INTERNET_SCHEME = 1u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_INTERNET_SCHEME_HTTPS: WINHTTP_INTERNET_SCHEME = 2u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_INTERNET_SCHEME_FTP: WINHTTP_INTERNET_SCHEME = 3u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_INTERNET_SCHEME_SOCKS: WINHTTP_INTERNET_SCHEME = 4u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_LAST_OPTION: u32 = 183u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct WINHTTP_MATCH_CONNECTION_GUID {
-    pub ConnectionGuid: ::windows_sys::core::GUID,
-    pub ullFlags: u64,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for WINHTTP_MATCH_CONNECTION_GUID {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for WINHTTP_MATCH_CONNECTION_GUID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct WINHTTP_MATCH_CONNECTION_GUID {
-    pub ConnectionGuid: ::windows_sys::core::GUID,
-    pub ullFlags: u64,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for WINHTTP_MATCH_CONNECTION_GUID {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for WINHTTP_MATCH_CONNECTION_GUID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_MATCH_CONNECTION_GUID_FLAGS_MASK: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_MATCH_CONNECTION_GUID_FLAG_REQUIRE_MARKED_CONNECTION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub type WINHTTP_OPEN_REQUEST_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_FLAG_BYPASS_PROXY_CACHE: WINHTTP_OPEN_REQUEST_FLAGS = 256u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_FLAG_ESCAPE_DISABLE: WINHTTP_OPEN_REQUEST_FLAGS = 64u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_FLAG_ESCAPE_DISABLE_QUERY: WINHTTP_OPEN_REQUEST_FLAGS = 128u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_FLAG_ESCAPE_PERCENT: WINHTTP_OPEN_REQUEST_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_FLAG_NULL_CODEPAGE: WINHTTP_OPEN_REQUEST_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_FLAG_REFRESH: WINHTTP_OPEN_REQUEST_FLAGS = 256u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_FLAG_SECURE: WINHTTP_OPEN_REQUEST_FLAGS = 8388608u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_OPTION_AGGREGATE_PROXY_CONFIG: u32 = 181u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -1210,98 +854,6 @@ pub const WINHTTP_OPTION_WRITE_BUFFER_SIZE: u32 = 13u32;
 pub const WINHTTP_PROTOCOL_FLAG_HTTP2: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_PROTOCOL_FLAG_HTTP3: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct WINHTTP_PROXY_INFO {
-    pub dwAccessType: WINHTTP_ACCESS_TYPE,
-    pub lpszProxy: ::windows_sys::core::PWSTR,
-    pub lpszProxyBypass: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for WINHTTP_PROXY_INFO {}
-impl ::core::clone::Clone for WINHTTP_PROXY_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WINHTTP_PROXY_RESULT {
-    pub cEntries: u32,
-    pub pEntries: *mut WINHTTP_PROXY_RESULT_ENTRY,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WINHTTP_PROXY_RESULT {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WINHTTP_PROXY_RESULT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WINHTTP_PROXY_RESULT_ENTRY {
-    pub fProxy: super::super::Foundation::BOOL,
-    pub fBypass: super::super::Foundation::BOOL,
-    pub ProxyScheme: WINHTTP_INTERNET_SCHEME,
-    pub pwszProxy: ::windows_sys::core::PWSTR,
-    pub ProxyPort: u16,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WINHTTP_PROXY_RESULT_ENTRY {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WINHTTP_PROXY_RESULT_ENTRY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WINHTTP_PROXY_RESULT_EX {
-    pub cEntries: u32,
-    pub pEntries: *mut WINHTTP_PROXY_RESULT_ENTRY,
-    pub hProxyDetectionHandle: super::super::Foundation::HANDLE,
-    pub dwProxyInterfaceAffinity: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WINHTTP_PROXY_RESULT_EX {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WINHTTP_PROXY_RESULT_EX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WINHTTP_PROXY_SETTINGS {
-    pub dwStructSize: u32,
-    pub dwFlags: u32,
-    pub dwCurrentSettingsVersion: u32,
-    pub pwszConnectionName: ::windows_sys::core::PWSTR,
-    pub pwszProxy: ::windows_sys::core::PWSTR,
-    pub pwszProxyBypass: ::windows_sys::core::PWSTR,
-    pub pwszAutoconfigUrl: ::windows_sys::core::PWSTR,
-    pub pwszAutoconfigSecondaryUrl: ::windows_sys::core::PWSTR,
-    pub dwAutoDiscoveryFlags: u32,
-    pub pwszLastKnownGoodAutoConfigUrl: ::windows_sys::core::PWSTR,
-    pub dwAutoconfigReloadDelayMins: u32,
-    pub ftLastKnownDetectTime: super::super::Foundation::FILETIME,
-    pub dwDetectedInterfaceIpCount: u32,
-    pub pdwDetectedInterfaceIp: *mut u32,
-    pub cNetworkKeys: u32,
-    pub pNetworkKeys: *mut _WinHttpProxyNetworkKey,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WINHTTP_PROXY_SETTINGS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WINHTTP_PROXY_SETTINGS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_PROXY_TYPE_AUTO_DETECT: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -1332,18 +884,6 @@ pub const WINHTTP_QUERY_AUTHORIZATION: u32 = 28u32;
 pub const WINHTTP_QUERY_CACHE_CONTROL: u32 = 49u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_QUERY_CONNECTION: u32 = 23u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct WINHTTP_QUERY_CONNECTION_GROUP_RESULT {
-    pub cHosts: u32,
-    pub pHostConnectionGroups: *mut WINHTTP_HOST_CONNECTION_GROUP,
-}
-impl ::core::marker::Copy for WINHTTP_QUERY_CONNECTION_GROUP_RESULT {}
-impl ::core::clone::Clone for WINHTTP_QUERY_CONNECTION_GROUP_RESULT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_QUERY_CONTENT_BASE: u32 = 50u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -1490,40 +1030,100 @@ pub const WINHTTP_QUERY_VIA: u32 = 66u32;
 pub const WINHTTP_QUERY_WARNING: u32 = 67u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_QUERY_WWW_AUTHENTICATE: u32 = 40u32;
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct WINHTTP_REQUEST_STATS {
-    pub ullFlags: u64,
-    pub ulIndex: u32,
-    pub cStats: u32,
-    pub rgullStats: [u64; 32],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for WINHTTP_REQUEST_STATS {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for WINHTTP_REQUEST_STATS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
+pub const WINHTTP_REQUEST_STAT_FLAG_FIRST_REQUEST: u32 = 32u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct WINHTTP_REQUEST_STATS {
-    pub ullFlags: u64,
-    pub ulIndex: u32,
-    pub cStats: u32,
-    pub rgullStats: [u64; 32],
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for WINHTTP_REQUEST_STATS {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for WINHTTP_REQUEST_STATS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const WINHTTP_REQUEST_STAT_FLAG_PROXY_TLS_FALSE_START: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_REQUEST_STAT_FLAG_PROXY_TLS_SESSION_RESUMPTION: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_REQUEST_STAT_FLAG_TCP_FAST_OPEN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_REQUEST_STAT_FLAG_TLS_FALSE_START: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_REQUEST_STAT_FLAG_TLS_SESSION_RESUMPTION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_RESET_ALL: u32 = 65535u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_RESET_DISCARD_RESOLVERS: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_RESET_NOTIFY_NETWORK_CHANGED: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_RESET_OUT_OF_PROC: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_RESET_SCRIPT_CACHE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_RESET_STATE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_RESET_SWPAD_ALL: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_RESET_SWPAD_CURRENT_NETWORK: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_RESOLVER_CACHE_CONFIG_FLAG_BYPASS_CACHE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_RESOLVER_CACHE_CONFIG_FLAG_CONN_USE_TTL: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_RESOLVER_CACHE_CONFIG_FLAG_SOFT_LIMIT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_RESOLVER_CACHE_CONFIG_FLAG_USE_DNS_TTL: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_TIME_FORMAT_BUFSIZE: u32 = 62u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_WEB_SOCKET_MAX_CLOSE_REASON_LENGTH: u32 = 123u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_WEB_SOCKET_MIN_KEEPALIVE_VALUE: u32 = 15000u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub type INTERNET_PORT = u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const INTERNET_DEFAULT_HTTP_PORT: INTERNET_PORT = 80u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const INTERNET_DEFAULT_HTTPS_PORT: INTERNET_PORT = 443u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const INTERNET_DEFAULT_PORT: INTERNET_PORT = 0u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub type WINHTTP_ACCESS_TYPE = u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_ACCESS_TYPE_NO_PROXY: WINHTTP_ACCESS_TYPE = 1u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_ACCESS_TYPE_DEFAULT_PROXY: WINHTTP_ACCESS_TYPE = 0u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_ACCESS_TYPE_NAMED_PROXY: WINHTTP_ACCESS_TYPE = 3u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY: WINHTTP_ACCESS_TYPE = 4u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub type WINHTTP_CREDS_AUTHSCHEME = u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_AUTH_SCHEME_BASIC: WINHTTP_CREDS_AUTHSCHEME = 1u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_AUTH_SCHEME_NTLM: WINHTTP_CREDS_AUTHSCHEME = 2u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_AUTH_SCHEME_NEGOTIATE: WINHTTP_CREDS_AUTHSCHEME = 16u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub type WINHTTP_INTERNET_SCHEME = u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_INTERNET_SCHEME_HTTP: WINHTTP_INTERNET_SCHEME = 1u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_INTERNET_SCHEME_HTTPS: WINHTTP_INTERNET_SCHEME = 2u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_INTERNET_SCHEME_FTP: WINHTTP_INTERNET_SCHEME = 3u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_INTERNET_SCHEME_SOCKS: WINHTTP_INTERNET_SCHEME = 4u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub type WINHTTP_OPEN_REQUEST_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_FLAG_BYPASS_PROXY_CACHE: WINHTTP_OPEN_REQUEST_FLAGS = 256u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_FLAG_ESCAPE_DISABLE: WINHTTP_OPEN_REQUEST_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_FLAG_ESCAPE_DISABLE_QUERY: WINHTTP_OPEN_REQUEST_FLAGS = 128u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_FLAG_ESCAPE_PERCENT: WINHTTP_OPEN_REQUEST_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_FLAG_NULL_CODEPAGE: WINHTTP_OPEN_REQUEST_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_FLAG_REFRESH: WINHTTP_OPEN_REQUEST_FLAGS = 256u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const WINHTTP_FLAG_SECURE: WINHTTP_OPEN_REQUEST_FLAGS = 8388608u32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub type WINHTTP_REQUEST_STAT_ENTRY = i32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -1562,48 +1162,6 @@ pub const WinHttpProxyTlsHandshakeServerLeg2Size: WINHTTP_REQUEST_STAT_ENTRY = 1
 pub const WinHttpRequestStatLast: WINHTTP_REQUEST_STAT_ENTRY = 16i32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WinHttpRequestStatMax: WINHTTP_REQUEST_STAT_ENTRY = 32i32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_REQUEST_STAT_FLAG_FIRST_REQUEST: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_REQUEST_STAT_FLAG_PROXY_TLS_FALSE_START: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_REQUEST_STAT_FLAG_PROXY_TLS_SESSION_RESUMPTION: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_REQUEST_STAT_FLAG_TCP_FAST_OPEN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_REQUEST_STAT_FLAG_TLS_FALSE_START: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_REQUEST_STAT_FLAG_TLS_SESSION_RESUMPTION: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct WINHTTP_REQUEST_TIMES {
-    pub cTimes: u32,
-    pub rgullTimes: [u64; 64],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for WINHTTP_REQUEST_TIMES {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for WINHTTP_REQUEST_TIMES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct WINHTTP_REQUEST_TIMES {
-    pub cTimes: u32,
-    pub rgullTimes: [u64; 64],
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for WINHTTP_REQUEST_TIMES {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for WINHTTP_REQUEST_TIMES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub type WINHTTP_REQUEST_TIME_ENTRY = i32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -1683,68 +1241,6 @@ pub const WinHttpRequestTimeLast: WINHTTP_REQUEST_TIME_ENTRY = 36i32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WinHttpRequestTimeMax: WINHTTP_REQUEST_TIME_ENTRY = 64i32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_RESET_ALL: u32 = 65535u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_RESET_DISCARD_RESOLVERS: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_RESET_NOTIFY_NETWORK_CHANGED: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_RESET_OUT_OF_PROC: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_RESET_SCRIPT_CACHE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_RESET_STATE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_RESET_SWPAD_ALL: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_RESET_SWPAD_CURRENT_NETWORK: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct WINHTTP_RESOLVER_CACHE_CONFIG {
-    pub ulMaxResolverCacheEntries: u32,
-    pub ulMaxCacheEntryAge: u32,
-    pub ulMinCacheEntryTtl: u32,
-    pub SecureDnsSetting: WINHTTP_SECURE_DNS_SETTING,
-    pub ullConnResolutionWaitTime: u64,
-    pub ullFlags: u64,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for WINHTTP_RESOLVER_CACHE_CONFIG {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for WINHTTP_RESOLVER_CACHE_CONFIG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct WINHTTP_RESOLVER_CACHE_CONFIG {
-    pub ulMaxResolverCacheEntries: u32,
-    pub ulMaxCacheEntryAge: u32,
-    pub ulMinCacheEntryTtl: u32,
-    pub SecureDnsSetting: WINHTTP_SECURE_DNS_SETTING,
-    pub ullConnResolutionWaitTime: u64,
-    pub ullFlags: u64,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for WINHTTP_RESOLVER_CACHE_CONFIG {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for WINHTTP_RESOLVER_CACHE_CONFIG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_RESOLVER_CACHE_CONFIG_FLAG_BYPASS_CACHE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_RESOLVER_CACHE_CONFIG_FLAG_CONN_USE_TTL: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_RESOLVER_CACHE_CONFIG_FLAG_SOFT_LIMIT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_RESOLVER_CACHE_CONFIG_FLAG_USE_DNS_TTL: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub type WINHTTP_SECURE_DNS_SETTING = i32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WinHttpSecureDnsSettingDefault: WINHTTP_SECURE_DNS_SETTING = 0i32;
@@ -1756,22 +1252,6 @@ pub const WinHttpSecureDnsSettingRequireEncryption: WINHTTP_SECURE_DNS_SETTING =
 pub const WinHttpSecureDnsSettingTryEncryptionWithFallback: WINHTTP_SECURE_DNS_SETTING = 3i32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WinHttpSecureDnsSettingMax: WINHTTP_SECURE_DNS_SETTING = 4i32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub type WINHTTP_STATUS_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hinternet: *mut ::core::ffi::c_void, dwcontext: usize, dwinternetstatus: u32, lpvstatusinformation: *mut ::core::ffi::c_void, dwstatusinformationlength: u32)>;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_TIME_FORMAT_BUFSIZE: u32 = 62u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct WINHTTP_WEB_SOCKET_ASYNC_RESULT {
-    pub AsyncResult: WINHTTP_ASYNC_RESULT,
-    pub Operation: WINHTTP_WEB_SOCKET_OPERATION,
-}
-impl ::core::marker::Copy for WINHTTP_WEB_SOCKET_ASYNC_RESULT {}
-impl ::core::clone::Clone for WINHTTP_WEB_SOCKET_ASYNC_RESULT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub type WINHTTP_WEB_SOCKET_BUFFER_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
@@ -1811,10 +1291,6 @@ pub const WINHTTP_WEB_SOCKET_SERVER_ERROR_CLOSE_STATUS: WINHTTP_WEB_SOCKET_CLOSE
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_WEB_SOCKET_SECURE_HANDSHAKE_ERROR_CLOSE_STATUS: WINHTTP_WEB_SOCKET_CLOSE_STATUS = 1015i32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_WEB_SOCKET_MAX_CLOSE_REASON_LENGTH: u32 = 123u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const WINHTTP_WEB_SOCKET_MIN_KEEPALIVE_VALUE: u32 = 15000u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub type WINHTTP_WEB_SOCKET_OPERATION = i32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_WEB_SOCKET_SEND_OPERATION: WINHTTP_WEB_SOCKET_OPERATION = 0i32;
@@ -1824,6 +1300,547 @@ pub const WINHTTP_WEB_SOCKET_RECEIVE_OPERATION: WINHTTP_WEB_SOCKET_OPERATION = 1
 pub const WINHTTP_WEB_SOCKET_CLOSE_OPERATION: WINHTTP_WEB_SOCKET_OPERATION = 2i32;
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub const WINHTTP_WEB_SOCKET_SHUTDOWN_OPERATION: WINHTTP_WEB_SOCKET_OPERATION = 3i32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub type WIN_HTTP_CREATE_URL_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const ICU_ESCAPE: WIN_HTTP_CREATE_URL_FLAGS = 2147483648u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const ICU_REJECT_USERPWD: WIN_HTTP_CREATE_URL_FLAGS = 16384u32;
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub const ICU_DECODE: WIN_HTTP_CREATE_URL_FLAGS = 268435456u32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct HTTP_VERSION_INFO {
+    pub dwMajorVersion: u32,
+    pub dwMinorVersion: u32,
+}
+impl ::core::marker::Copy for HTTP_VERSION_INFO {}
+impl ::core::clone::Clone for HTTP_VERSION_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct URL_COMPONENTS {
+    pub dwStructSize: u32,
+    pub lpszScheme: ::windows_sys::core::PWSTR,
+    pub dwSchemeLength: u32,
+    pub nScheme: WINHTTP_INTERNET_SCHEME,
+    pub lpszHostName: ::windows_sys::core::PWSTR,
+    pub dwHostNameLength: u32,
+    pub nPort: u16,
+    pub lpszUserName: ::windows_sys::core::PWSTR,
+    pub dwUserNameLength: u32,
+    pub lpszPassword: ::windows_sys::core::PWSTR,
+    pub dwPasswordLength: u32,
+    pub lpszUrlPath: ::windows_sys::core::PWSTR,
+    pub dwUrlPathLength: u32,
+    pub lpszExtraInfo: ::windows_sys::core::PWSTR,
+    pub dwExtraInfoLength: u32,
+}
+impl ::core::marker::Copy for URL_COMPONENTS {}
+impl ::core::clone::Clone for URL_COMPONENTS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct WINHTTP_ASYNC_RESULT {
+    pub dwResult: usize,
+    pub dwError: u32,
+}
+impl ::core::marker::Copy for WINHTTP_ASYNC_RESULT {}
+impl ::core::clone::Clone for WINHTTP_ASYNC_RESULT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct WINHTTP_AUTOPROXY_OPTIONS {
+    pub dwFlags: u32,
+    pub dwAutoDetectFlags: u32,
+    pub lpszAutoConfigUrl: ::windows_sys::core::PCWSTR,
+    pub lpvReserved: *mut ::core::ffi::c_void,
+    pub dwReserved: u32,
+    pub fAutoLogonIfChallenged: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for WINHTTP_AUTOPROXY_OPTIONS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for WINHTTP_AUTOPROXY_OPTIONS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct WINHTTP_CERTIFICATE_INFO {
+    pub ftExpiry: super::super::Foundation::FILETIME,
+    pub ftStart: super::super::Foundation::FILETIME,
+    pub lpszSubjectInfo: ::windows_sys::core::PWSTR,
+    pub lpszIssuerInfo: ::windows_sys::core::PWSTR,
+    pub lpszProtocolName: ::windows_sys::core::PWSTR,
+    pub lpszSignatureAlgName: ::windows_sys::core::PWSTR,
+    pub lpszEncryptionAlgName: ::windows_sys::core::PWSTR,
+    pub dwKeySize: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for WINHTTP_CERTIFICATE_INFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for WINHTTP_CERTIFICATE_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct WINHTTP_CONNECTION_GROUP {
+    pub cConnections: u32,
+    pub guidGroup: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for WINHTTP_CONNECTION_GROUP {}
+impl ::core::clone::Clone for WINHTTP_CONNECTION_GROUP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`, `\"Win32_Networking_WinSock\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Networking_WinSock"))]
+pub struct WINHTTP_CONNECTION_INFO {
+    pub cbSize: u32,
+    pub LocalAddress: super::WinSock::SOCKADDR_STORAGE,
+    pub RemoteAddress: super::WinSock::SOCKADDR_STORAGE,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Networking_WinSock"))]
+impl ::core::marker::Copy for WINHTTP_CONNECTION_INFO {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Networking_WinSock"))]
+impl ::core::clone::Clone for WINHTTP_CONNECTION_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`, `\"Win32_Networking_WinSock\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Networking_WinSock"))]
+pub struct WINHTTP_CONNECTION_INFO {
+    pub cbSize: u32,
+    pub LocalAddress: super::WinSock::SOCKADDR_STORAGE,
+    pub RemoteAddress: super::WinSock::SOCKADDR_STORAGE,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Networking_WinSock"))]
+impl ::core::marker::Copy for WINHTTP_CONNECTION_INFO {}
+#[cfg(target_arch = "x86")]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Networking_WinSock"))]
+impl ::core::clone::Clone for WINHTTP_CONNECTION_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct WINHTTP_CREDS {
+    pub lpszUserName: ::windows_sys::core::PSTR,
+    pub lpszPassword: ::windows_sys::core::PSTR,
+    pub lpszRealm: ::windows_sys::core::PSTR,
+    pub dwAuthScheme: WINHTTP_CREDS_AUTHSCHEME,
+    pub lpszHostName: ::windows_sys::core::PSTR,
+    pub dwPort: u32,
+}
+impl ::core::marker::Copy for WINHTTP_CREDS {}
+impl ::core::clone::Clone for WINHTTP_CREDS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct WINHTTP_CREDS_EX {
+    pub lpszUserName: ::windows_sys::core::PSTR,
+    pub lpszPassword: ::windows_sys::core::PSTR,
+    pub lpszRealm: ::windows_sys::core::PSTR,
+    pub dwAuthScheme: WINHTTP_CREDS_AUTHSCHEME,
+    pub lpszHostName: ::windows_sys::core::PSTR,
+    pub dwPort: u32,
+    pub lpszUrl: ::windows_sys::core::PSTR,
+}
+impl ::core::marker::Copy for WINHTTP_CREDS_EX {}
+impl ::core::clone::Clone for WINHTTP_CREDS_EX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct WINHTTP_CURRENT_USER_IE_PROXY_CONFIG {
+    pub fAutoDetect: super::super::Foundation::BOOL,
+    pub lpszAutoConfigUrl: ::windows_sys::core::PWSTR,
+    pub lpszProxy: ::windows_sys::core::PWSTR,
+    pub lpszProxyBypass: ::windows_sys::core::PWSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for WINHTTP_CURRENT_USER_IE_PROXY_CONFIG {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for WINHTTP_CURRENT_USER_IE_PROXY_CONFIG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct WINHTTP_EXTENDED_HEADER {
+    pub Anonymous1: WINHTTP_EXTENDED_HEADER_0,
+    pub Anonymous2: WINHTTP_EXTENDED_HEADER_1,
+}
+impl ::core::marker::Copy for WINHTTP_EXTENDED_HEADER {}
+impl ::core::clone::Clone for WINHTTP_EXTENDED_HEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub union WINHTTP_EXTENDED_HEADER_0 {
+    pub pwszName: ::windows_sys::core::PCWSTR,
+    pub pszName: ::windows_sys::core::PCSTR,
+}
+impl ::core::marker::Copy for WINHTTP_EXTENDED_HEADER_0 {}
+impl ::core::clone::Clone for WINHTTP_EXTENDED_HEADER_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub union WINHTTP_EXTENDED_HEADER_1 {
+    pub pwszValue: ::windows_sys::core::PCWSTR,
+    pub pszValue: ::windows_sys::core::PCSTR,
+}
+impl ::core::marker::Copy for WINHTTP_EXTENDED_HEADER_1 {}
+impl ::core::clone::Clone for WINHTTP_EXTENDED_HEADER_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct WINHTTP_FAILED_CONNECTION_RETRIES {
+    pub dwMaxRetries: u32,
+    pub dwAllowedRetryConditions: u32,
+}
+impl ::core::marker::Copy for WINHTTP_FAILED_CONNECTION_RETRIES {}
+impl ::core::clone::Clone for WINHTTP_FAILED_CONNECTION_RETRIES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub union WINHTTP_HEADER_NAME {
+    pub pwszName: ::windows_sys::core::PCWSTR,
+    pub pszName: ::windows_sys::core::PCSTR,
+}
+impl ::core::marker::Copy for WINHTTP_HEADER_NAME {}
+impl ::core::clone::Clone for WINHTTP_HEADER_NAME {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct WINHTTP_HOST_CONNECTION_GROUP {
+    pub pwszHost: ::windows_sys::core::PCWSTR,
+    pub cConnectionGroups: u32,
+    pub pConnectionGroups: *mut WINHTTP_CONNECTION_GROUP,
+}
+impl ::core::marker::Copy for WINHTTP_HOST_CONNECTION_GROUP {}
+impl ::core::clone::Clone for WINHTTP_HOST_CONNECTION_GROUP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct WINHTTP_HTTP2_RECEIVE_WINDOW {
+    pub ulStreamWindow: u32,
+    pub ulStreamWindowUpdateDelta: u32,
+}
+impl ::core::marker::Copy for WINHTTP_HTTP2_RECEIVE_WINDOW {}
+impl ::core::clone::Clone for WINHTTP_HTTP2_RECEIVE_WINDOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct WINHTTP_MATCH_CONNECTION_GUID {
+    pub ConnectionGuid: ::windows_sys::core::GUID,
+    pub ullFlags: u64,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for WINHTTP_MATCH_CONNECTION_GUID {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for WINHTTP_MATCH_CONNECTION_GUID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct WINHTTP_MATCH_CONNECTION_GUID {
+    pub ConnectionGuid: ::windows_sys::core::GUID,
+    pub ullFlags: u64,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for WINHTTP_MATCH_CONNECTION_GUID {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for WINHTTP_MATCH_CONNECTION_GUID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct WINHTTP_PROXY_INFO {
+    pub dwAccessType: WINHTTP_ACCESS_TYPE,
+    pub lpszProxy: ::windows_sys::core::PWSTR,
+    pub lpszProxyBypass: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for WINHTTP_PROXY_INFO {}
+impl ::core::clone::Clone for WINHTTP_PROXY_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct WINHTTP_PROXY_NETWORKING_KEY {
+    pub pbBuffer: [u8; 128],
+}
+impl ::core::marker::Copy for WINHTTP_PROXY_NETWORKING_KEY {}
+impl ::core::clone::Clone for WINHTTP_PROXY_NETWORKING_KEY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct WINHTTP_PROXY_RESULT {
+    pub cEntries: u32,
+    pub pEntries: *mut WINHTTP_PROXY_RESULT_ENTRY,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for WINHTTP_PROXY_RESULT {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for WINHTTP_PROXY_RESULT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct WINHTTP_PROXY_RESULT_ENTRY {
+    pub fProxy: super::super::Foundation::BOOL,
+    pub fBypass: super::super::Foundation::BOOL,
+    pub ProxyScheme: WINHTTP_INTERNET_SCHEME,
+    pub pwszProxy: ::windows_sys::core::PWSTR,
+    pub ProxyPort: u16,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for WINHTTP_PROXY_RESULT_ENTRY {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for WINHTTP_PROXY_RESULT_ENTRY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct WINHTTP_PROXY_RESULT_EX {
+    pub cEntries: u32,
+    pub pEntries: *mut WINHTTP_PROXY_RESULT_ENTRY,
+    pub hProxyDetectionHandle: super::super::Foundation::HANDLE,
+    pub dwProxyInterfaceAffinity: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for WINHTTP_PROXY_RESULT_EX {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for WINHTTP_PROXY_RESULT_EX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct WINHTTP_PROXY_SETTINGS {
+    pub dwStructSize: u32,
+    pub dwFlags: u32,
+    pub dwCurrentSettingsVersion: u32,
+    pub pwszConnectionName: ::windows_sys::core::PWSTR,
+    pub pwszProxy: ::windows_sys::core::PWSTR,
+    pub pwszProxyBypass: ::windows_sys::core::PWSTR,
+    pub pwszAutoconfigUrl: ::windows_sys::core::PWSTR,
+    pub pwszAutoconfigSecondaryUrl: ::windows_sys::core::PWSTR,
+    pub dwAutoDiscoveryFlags: u32,
+    pub pwszLastKnownGoodAutoConfigUrl: ::windows_sys::core::PWSTR,
+    pub dwAutoconfigReloadDelayMins: u32,
+    pub ftLastKnownDetectTime: super::super::Foundation::FILETIME,
+    pub dwDetectedInterfaceIpCount: u32,
+    pub pdwDetectedInterfaceIp: *mut u32,
+    pub cNetworkKeys: u32,
+    pub pNetworkKeys: *mut WINHTTP_PROXY_NETWORKING_KEY,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for WINHTTP_PROXY_SETTINGS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for WINHTTP_PROXY_SETTINGS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct WINHTTP_QUERY_CONNECTION_GROUP_RESULT {
+    pub cHosts: u32,
+    pub pHostConnectionGroups: *mut WINHTTP_HOST_CONNECTION_GROUP,
+}
+impl ::core::marker::Copy for WINHTTP_QUERY_CONNECTION_GROUP_RESULT {}
+impl ::core::clone::Clone for WINHTTP_QUERY_CONNECTION_GROUP_RESULT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct WINHTTP_REQUEST_STATS {
+    pub ullFlags: u64,
+    pub ulIndex: u32,
+    pub cStats: u32,
+    pub rgullStats: [u64; 32],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for WINHTTP_REQUEST_STATS {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for WINHTTP_REQUEST_STATS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct WINHTTP_REQUEST_STATS {
+    pub ullFlags: u64,
+    pub ulIndex: u32,
+    pub cStats: u32,
+    pub rgullStats: [u64; 32],
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for WINHTTP_REQUEST_STATS {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for WINHTTP_REQUEST_STATS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct WINHTTP_REQUEST_TIMES {
+    pub cTimes: u32,
+    pub rgullTimes: [u64; 64],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for WINHTTP_REQUEST_TIMES {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for WINHTTP_REQUEST_TIMES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct WINHTTP_REQUEST_TIMES {
+    pub cTimes: u32,
+    pub rgullTimes: [u64; 64],
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for WINHTTP_REQUEST_TIMES {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for WINHTTP_REQUEST_TIMES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct WINHTTP_RESOLVER_CACHE_CONFIG {
+    pub ulMaxResolverCacheEntries: u32,
+    pub ulMaxCacheEntryAge: u32,
+    pub ulMinCacheEntryTtl: u32,
+    pub SecureDnsSetting: WINHTTP_SECURE_DNS_SETTING,
+    pub ullConnResolutionWaitTime: u64,
+    pub ullFlags: u64,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for WINHTTP_RESOLVER_CACHE_CONFIG {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for WINHTTP_RESOLVER_CACHE_CONFIG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct WINHTTP_RESOLVER_CACHE_CONFIG {
+    pub ulMaxResolverCacheEntries: u32,
+    pub ulMaxCacheEntryAge: u32,
+    pub ulMinCacheEntryTtl: u32,
+    pub SecureDnsSetting: WINHTTP_SECURE_DNS_SETTING,
+    pub ullConnResolutionWaitTime: u64,
+    pub ullFlags: u64,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for WINHTTP_RESOLVER_CACHE_CONFIG {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for WINHTTP_RESOLVER_CACHE_CONFIG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
+pub struct WINHTTP_WEB_SOCKET_ASYNC_RESULT {
+    pub AsyncResult: WINHTTP_ASYNC_RESULT,
+    pub Operation: WINHTTP_WEB_SOCKET_OPERATION,
+}
+impl ::core::marker::Copy for WINHTTP_WEB_SOCKET_ASYNC_RESULT {}
+impl ::core::clone::Clone for WINHTTP_WEB_SOCKET_ASYNC_RESULT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
 pub struct WINHTTP_WEB_SOCKET_STATUS {
@@ -1837,21 +1854,4 @@ impl ::core::clone::Clone for WINHTTP_WEB_SOCKET_STATUS {
     }
 }
 #[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub type WIN_HTTP_CREATE_URL_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const ICU_ESCAPE: WIN_HTTP_CREATE_URL_FLAGS = 2147483648u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const ICU_REJECT_USERPWD: WIN_HTTP_CREATE_URL_FLAGS = 16384u32;
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub const ICU_DECODE: WIN_HTTP_CREATE_URL_FLAGS = 268435456u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_WinHttp\"`*"]
-pub struct _WinHttpProxyNetworkKey {
-    pub pbBuffer: [u8; 128],
-}
-impl ::core::marker::Copy for _WinHttpProxyNetworkKey {}
-impl ::core::clone::Clone for _WinHttpProxyNetworkKey {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub type WINHTTP_STATUS_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hinternet: *mut ::core::ffi::c_void, dwcontext: usize, dwinternetstatus: u32, lpvstatusinformation: *mut ::core::ffi::c_void, dwstatusinformationlength: u32)>;

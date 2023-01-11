@@ -28,5 +28,3 @@ pub mod Storage;
 pub mod System;
 #[cfg(feature = "Win32_UI")]
 pub mod UI;
-#[cfg(feature = "Win32_Web")]
-pub mod Web;

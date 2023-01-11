@@ -1,29 +1,21 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
-    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn BSTR_UserFree(param0: *const u32, param1: *const super::super::super::Foundation::BSTR);
-    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn BSTR_UserFree64(param0: *const u32, param1: *const super::super::super::Foundation::BSTR);
-    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn BSTR_UserMarshal(param0: *const u32, param1: *mut u8, param2: *const super::super::super::Foundation::BSTR) -> *mut u8;
-    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn BSTR_UserMarshal64(param0: *const u32, param1: *mut u8, param2: *const super::super::super::Foundation::BSTR) -> *mut u8;
-    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn BSTR_UserSize(param0: *const u32, param1: u32, param2: *const super::super::super::Foundation::BSTR) -> u32;
-    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn BSTR_UserSize64(param0: *const u32, param1: u32, param2: *const super::super::super::Foundation::BSTR) -> u32;
-    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn BSTR_UserUnmarshal(param0: *const u32, param1: *const u8, param2: *mut super::super::super::Foundation::BSTR) -> *mut u8;
-    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn BSTR_UserUnmarshal64(param0: *const u32, param1: *const u8, param2: *mut super::super::super::Foundation::BSTR) -> *mut u8;
+    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`*"]
+    pub fn BSTR_UserFree(param0: *const u32, param1: *const ::windows_sys::core::BSTR);
+    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`*"]
+    pub fn BSTR_UserFree64(param0: *const u32, param1: *const ::windows_sys::core::BSTR);
+    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`*"]
+    pub fn BSTR_UserMarshal(param0: *const u32, param1: *mut u8, param2: *const ::windows_sys::core::BSTR) -> *mut u8;
+    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`*"]
+    pub fn BSTR_UserMarshal64(param0: *const u32, param1: *mut u8, param2: *const ::windows_sys::core::BSTR) -> *mut u8;
+    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`*"]
+    pub fn BSTR_UserSize(param0: *const u32, param1: u32, param2: *const ::windows_sys::core::BSTR) -> u32;
+    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`*"]
+    pub fn BSTR_UserSize64(param0: *const u32, param1: u32, param2: *const ::windows_sys::core::BSTR) -> u32;
+    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`*"]
+    pub fn BSTR_UserUnmarshal(param0: *const u32, param1: *const u8, param2: *mut ::windows_sys::core::BSTR) -> *mut u8;
+    #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`*"]
+    pub fn BSTR_UserUnmarshal64(param0: *const u32, param1: *const u8, param2: *mut ::windows_sys::core::BSTR) -> *mut u8;
     #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`*"]
     pub fn CLIPFORMAT_UserFree(param0: *const u32, param1: *const u16);
     #[doc = "*Required features: `\"Win32_System_Com_Marshal\"`*"]

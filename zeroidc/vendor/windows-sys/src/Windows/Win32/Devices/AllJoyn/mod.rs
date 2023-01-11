@@ -1,4 +1,25 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
+extern "cdecl" {
+    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+    pub fn alljoyn_message_parseargs(msg: alljoyn_message, signature: ::windows_sys::core::PCSTR) -> QStatus;
+    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+    pub fn alljoyn_msgarg_array_get(args: alljoyn_msgarg, numargs: usize, signature: ::windows_sys::core::PCSTR) -> QStatus;
+    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+    pub fn alljoyn_msgarg_array_set(args: alljoyn_msgarg, numargs: *mut usize, signature: ::windows_sys::core::PCSTR) -> QStatus;
+    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+    pub fn alljoyn_msgarg_array_set_offset(args: alljoyn_msgarg, argoffset: usize, numargs: *mut usize, signature: ::windows_sys::core::PCSTR) -> QStatus;
+    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+    pub fn alljoyn_msgarg_create_and_set(signature: ::windows_sys::core::PCSTR) -> alljoyn_msgarg;
+    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+    pub fn alljoyn_msgarg_get(arg: alljoyn_msgarg, signature: ::windows_sys::core::PCSTR) -> QStatus;
+    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+    pub fn alljoyn_msgarg_getdictelement(arg: alljoyn_msgarg, elemsig: ::windows_sys::core::PCSTR) -> QStatus;
+    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+    pub fn alljoyn_msgarg_set(arg: alljoyn_msgarg, signature: ::windows_sys::core::PCSTR) -> QStatus;
+    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+    pub fn alljoyn_msgarg_set_and_stabilize(arg: alljoyn_msgarg, signature: ::windows_sys::core::PCSTR) -> QStatus;
+}
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -661,8 +682,6 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_message_isunreliable(msg: alljoyn_message) -> i32;
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-    pub fn alljoyn_message_parseargs(msg: alljoyn_message, signature: ::windows_sys::core::PCSTR) -> QStatus;
-    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_message_setendianess(endian: i8);
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_message_tostring(msg: alljoyn_message, str: ::windows_sys::core::PCSTR, buf: usize) -> usize;
@@ -670,12 +689,6 @@ extern "system" {
     pub fn alljoyn_msgarg_array_create(size: usize) -> alljoyn_msgarg;
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_msgarg_array_element(arg: alljoyn_msgarg, index: usize) -> alljoyn_msgarg;
-    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-    pub fn alljoyn_msgarg_array_get(args: alljoyn_msgarg, numargs: usize, signature: ::windows_sys::core::PCSTR) -> QStatus;
-    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-    pub fn alljoyn_msgarg_array_set(args: alljoyn_msgarg, numargs: *mut usize, signature: ::windows_sys::core::PCSTR) -> QStatus;
-    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-    pub fn alljoyn_msgarg_array_set_offset(args: alljoyn_msgarg, argoffset: usize, numargs: *mut usize, signature: ::windows_sys::core::PCSTR) -> QStatus;
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_msgarg_array_signature(values: alljoyn_msgarg, numvalues: usize, str: ::windows_sys::core::PCSTR, buf: usize) -> usize;
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
@@ -689,13 +702,9 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_msgarg_create() -> alljoyn_msgarg;
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-    pub fn alljoyn_msgarg_create_and_set(signature: ::windows_sys::core::PCSTR) -> alljoyn_msgarg;
-    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_msgarg_destroy(arg: alljoyn_msgarg);
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_msgarg_equal(lhv: alljoyn_msgarg, rhv: alljoyn_msgarg) -> i32;
-    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-    pub fn alljoyn_msgarg_get(arg: alljoyn_msgarg, signature: ::windows_sys::core::PCSTR) -> QStatus;
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_msgarg_get_array_element(arg: alljoyn_msgarg, index: usize, element: *mut alljoyn_msgarg);
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
@@ -749,8 +758,6 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_msgarg_get_variant_array(arg: alljoyn_msgarg, signature: ::windows_sys::core::PCSTR, length: *mut usize, av: *mut alljoyn_msgarg) -> QStatus;
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-    pub fn alljoyn_msgarg_getdictelement(arg: alljoyn_msgarg, elemsig: ::windows_sys::core::PCSTR) -> QStatus;
-    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_msgarg_getkey(arg: alljoyn_msgarg) -> alljoyn_msgarg;
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_msgarg_getmember(arg: alljoyn_msgarg, index: usize) -> alljoyn_msgarg;
@@ -762,10 +769,6 @@ extern "system" {
     pub fn alljoyn_msgarg_getvalue(arg: alljoyn_msgarg) -> alljoyn_msgarg;
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_msgarg_hassignature(arg: alljoyn_msgarg, signature: ::windows_sys::core::PCSTR) -> i32;
-    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-    pub fn alljoyn_msgarg_set(arg: alljoyn_msgarg, signature: ::windows_sys::core::PCSTR) -> QStatus;
-    #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-    pub fn alljoyn_msgarg_set_and_stabilize(arg: alljoyn_msgarg, signature: ::windows_sys::core::PCSTR) -> QStatus;
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
     pub fn alljoyn_msgarg_set_bool(arg: alljoyn_msgarg, b: i32) -> QStatus;
     #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
@@ -1971,53 +1974,12 @@ pub const ER_MANAGEMENT_ALREADY_STARTED: QStatus = 37186i32;
 pub const ER_MANAGEMENT_NOT_STARTED: QStatus = 37187i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub const ER_BUS_DESCRIPTION_ALREADY_EXISTS: QStatus = 37188i32;
-#[repr(C)]
-pub struct _alljoyn_abouticon_handle(pub u8);
-#[repr(C)]
-pub struct _alljoyn_abouticonobj_handle(pub u8);
-#[repr(C)]
-pub struct _alljoyn_abouticonproxy_handle(pub u8);
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_about_announced_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, busname: ::windows_sys::core::PCSTR, version: u16, port: u16, objectdescriptionarg: alljoyn_msgarg, aboutdataarg: alljoyn_msgarg)>;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub type alljoyn_about_announceflag = i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub const UNANNOUNCED: alljoyn_about_announceflag = 0i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub const ANNOUNCED: alljoyn_about_announceflag = 1i32;
-pub type alljoyn_aboutdata = isize;
-pub type alljoyn_aboutdatalistener = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_aboutdatalistener_callbacks {
-    pub about_datalistener_getaboutdata: alljoyn_aboutdatalistener_getaboutdata_ptr,
-    pub about_datalistener_getannouncedaboutdata: alljoyn_aboutdatalistener_getannouncedaboutdata_ptr,
-}
-impl ::core::marker::Copy for alljoyn_aboutdatalistener_callbacks {}
-impl ::core::clone::Clone for alljoyn_aboutdatalistener_callbacks {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_aboutdatalistener_getaboutdata_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, msgarg: alljoyn_msgarg, language: ::windows_sys::core::PCSTR) -> QStatus>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_aboutdatalistener_getannouncedaboutdata_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, msgarg: alljoyn_msgarg) -> QStatus>;
-pub type alljoyn_aboutlistener = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_aboutlistener_callback {
-    pub about_listener_announced: alljoyn_about_announced_ptr,
-}
-impl ::core::marker::Copy for alljoyn_aboutlistener_callback {}
-impl ::core::clone::Clone for alljoyn_aboutlistener_callback {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type alljoyn_aboutobj = isize;
-pub type alljoyn_aboutobjectdescription = isize;
-pub type alljoyn_aboutproxy = isize;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub type alljoyn_applicationstate = i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
@@ -2028,166 +1990,6 @@ pub const CLAIMABLE: alljoyn_applicationstate = 1i32;
 pub const CLAIMED: alljoyn_applicationstate = 2i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub const NEED_UPDATE: alljoyn_applicationstate = 3i32;
-pub type alljoyn_applicationstatelistener = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_applicationstatelistener_callbacks {
-    pub state: alljoyn_applicationstatelistener_state_ptr,
-}
-impl ::core::marker::Copy for alljoyn_applicationstatelistener_callbacks {}
-impl ::core::clone::Clone for alljoyn_applicationstatelistener_callbacks {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_applicationstatelistener_state_ptr = ::core::option::Option<unsafe extern "system" fn(busname: *mut i8, publickey: *mut i8, applicationstate: alljoyn_applicationstate, context: *mut ::core::ffi::c_void)>;
-pub type alljoyn_authlistener = isize;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_authlistener_authenticationcomplete_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, authmechanism: ::windows_sys::core::PCSTR, peername: ::windows_sys::core::PCSTR, success: i32)>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_authlistener_callbacks {
-    pub request_credentials: alljoyn_authlistener_requestcredentials_ptr,
-    pub verify_credentials: alljoyn_authlistener_verifycredentials_ptr,
-    pub security_violation: alljoyn_authlistener_securityviolation_ptr,
-    pub authentication_complete: alljoyn_authlistener_authenticationcomplete_ptr,
-}
-impl ::core::marker::Copy for alljoyn_authlistener_callbacks {}
-impl ::core::clone::Clone for alljoyn_authlistener_callbacks {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_authlistener_requestcredentials_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, authmechanism: ::windows_sys::core::PCSTR, peername: ::windows_sys::core::PCSTR, authcount: u16, username: ::windows_sys::core::PCSTR, credmask: u16, credentials: alljoyn_credentials) -> i32>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_authlistener_requestcredentialsasync_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, listener: alljoyn_authlistener, authmechanism: ::windows_sys::core::PCSTR, peername: ::windows_sys::core::PCSTR, authcount: u16, username: ::windows_sys::core::PCSTR, credmask: u16, authcontext: *mut ::core::ffi::c_void) -> QStatus>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_authlistener_securityviolation_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, status: QStatus, msg: alljoyn_message)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_authlistener_verifycredentials_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, authmechanism: ::windows_sys::core::PCSTR, peername: ::windows_sys::core::PCSTR, credentials: alljoyn_credentials) -> i32>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_authlistener_verifycredentialsasync_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, listener: alljoyn_authlistener, authmechanism: ::windows_sys::core::PCSTR, peername: ::windows_sys::core::PCSTR, credentials: alljoyn_credentials, authcontext: *mut ::core::ffi::c_void) -> QStatus>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_authlistenerasync_callbacks {
-    pub request_credentials: alljoyn_authlistener_requestcredentialsasync_ptr,
-    pub verify_credentials: alljoyn_authlistener_verifycredentialsasync_ptr,
-    pub security_violation: alljoyn_authlistener_securityviolation_ptr,
-    pub authentication_complete: alljoyn_authlistener_authenticationcomplete_ptr,
-}
-impl ::core::marker::Copy for alljoyn_authlistenerasync_callbacks {}
-impl ::core::clone::Clone for alljoyn_authlistenerasync_callbacks {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type alljoyn_autopinger = isize;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_autopinger_destination_found_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, group: ::windows_sys::core::PCSTR, destination: ::windows_sys::core::PCSTR)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_autopinger_destination_lost_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, group: ::windows_sys::core::PCSTR, destination: ::windows_sys::core::PCSTR)>;
-pub type alljoyn_busattachment = isize;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_busattachment_joinsessioncb_ptr = ::core::option::Option<unsafe extern "system" fn(status: QStatus, sessionid: u32, opts: alljoyn_sessionopts, context: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_busattachment_setlinktimeoutcb_ptr = ::core::option::Option<unsafe extern "system" fn(status: QStatus, timeout: u32, context: *mut ::core::ffi::c_void)>;
-pub type alljoyn_buslistener = isize;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_buslistener_bus_disconnected_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_buslistener_bus_prop_changed_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, prop_name: ::windows_sys::core::PCSTR, prop_value: alljoyn_msgarg)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_buslistener_bus_stopping_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_buslistener_callbacks {
-    pub listener_registered: alljoyn_buslistener_listener_registered_ptr,
-    pub listener_unregistered: alljoyn_buslistener_listener_unregistered_ptr,
-    pub found_advertised_name: alljoyn_buslistener_found_advertised_name_ptr,
-    pub lost_advertised_name: alljoyn_buslistener_lost_advertised_name_ptr,
-    pub name_owner_changed: alljoyn_buslistener_name_owner_changed_ptr,
-    pub bus_stopping: alljoyn_buslistener_bus_stopping_ptr,
-    pub bus_disconnected: alljoyn_buslistener_bus_disconnected_ptr,
-    pub property_changed: alljoyn_buslistener_bus_prop_changed_ptr,
-}
-impl ::core::marker::Copy for alljoyn_buslistener_callbacks {}
-impl ::core::clone::Clone for alljoyn_buslistener_callbacks {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_buslistener_found_advertised_name_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, name: ::windows_sys::core::PCSTR, transport: u16, nameprefix: ::windows_sys::core::PCSTR)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_buslistener_listener_registered_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, bus: alljoyn_busattachment)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_buslistener_listener_unregistered_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_buslistener_lost_advertised_name_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, name: ::windows_sys::core::PCSTR, transport: u16, nameprefix: ::windows_sys::core::PCSTR)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_buslistener_name_owner_changed_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, busname: ::windows_sys::core::PCSTR, previousowner: ::windows_sys::core::PCSTR, newowner: ::windows_sys::core::PCSTR)>;
-pub type alljoyn_busobject = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_busobject_callbacks {
-    pub property_get: alljoyn_busobject_prop_get_ptr,
-    pub property_set: alljoyn_busobject_prop_set_ptr,
-    pub object_registered: alljoyn_busobject_object_registration_ptr,
-    pub object_unregistered: alljoyn_busobject_object_registration_ptr,
-}
-impl ::core::marker::Copy for alljoyn_busobject_callbacks {}
-impl ::core::clone::Clone for alljoyn_busobject_callbacks {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_busobject_methodentry {
-    pub member: *const alljoyn_interfacedescription_member,
-    pub method_handler: alljoyn_messagereceiver_methodhandler_ptr,
-}
-impl ::core::marker::Copy for alljoyn_busobject_methodentry {}
-impl ::core::clone::Clone for alljoyn_busobject_methodentry {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_busobject_object_registration_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_busobject_prop_get_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, ifcname: ::windows_sys::core::PCSTR, propname: ::windows_sys::core::PCSTR, val: alljoyn_msgarg) -> QStatus>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_busobject_prop_set_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, ifcname: ::windows_sys::core::PCSTR, propname: ::windows_sys::core::PCSTR, val: alljoyn_msgarg) -> QStatus>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_certificateid {
-    pub serial: *mut u8,
-    pub serialLen: usize,
-    pub issuerPublicKey: *mut i8,
-    pub issuerAki: *mut u8,
-    pub issuerAkiLen: usize,
-}
-impl ::core::marker::Copy for alljoyn_certificateid {}
-impl ::core::clone::Clone for alljoyn_certificateid {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_certificateidarray {
-    pub count: usize,
-    pub ids: *mut alljoyn_certificateid,
-}
-impl ::core::marker::Copy for alljoyn_certificateidarray {}
-impl ::core::clone::Clone for alljoyn_certificateidarray {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub type alljoyn_claimcapability_masks = i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
@@ -2202,39 +2004,6 @@ pub type alljoyn_claimcapabilityadditionalinfo_masks = i32;
 pub const PASSWORD_GENERATED_BY_SECURITY_MANAGER: alljoyn_claimcapabilityadditionalinfo_masks = 1i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub const PASSWORD_GENERATED_BY_APPLICATION: alljoyn_claimcapabilityadditionalinfo_masks = 2i32;
-pub type alljoyn_credentials = isize;
-pub type alljoyn_interfacedescription = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_interfacedescription_member {
-    pub iface: alljoyn_interfacedescription,
-    pub memberType: alljoyn_messagetype,
-    pub name: ::windows_sys::core::PCSTR,
-    pub signature: ::windows_sys::core::PCSTR,
-    pub returnSignature: ::windows_sys::core::PCSTR,
-    pub argNames: ::windows_sys::core::PCSTR,
-    pub internal_member: *const ::core::ffi::c_void,
-}
-impl ::core::marker::Copy for alljoyn_interfacedescription_member {}
-impl ::core::clone::Clone for alljoyn_interfacedescription_member {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_interfacedescription_property {
-    pub name: ::windows_sys::core::PCSTR,
-    pub signature: ::windows_sys::core::PCSTR,
-    pub access: u8,
-    pub internal_property: *const ::core::ffi::c_void,
-}
-impl ::core::marker::Copy for alljoyn_interfacedescription_property {}
-impl ::core::clone::Clone for alljoyn_interfacedescription_property {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub type alljoyn_interfacedescription_securitypolicy = i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
@@ -2243,63 +2012,6 @@ pub const AJ_IFC_SECURITY_INHERIT: alljoyn_interfacedescription_securitypolicy =
 pub const AJ_IFC_SECURITY_REQUIRED: alljoyn_interfacedescription_securitypolicy = 1i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub const AJ_IFC_SECURITY_OFF: alljoyn_interfacedescription_securitypolicy = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_interfacedescription_translation_callback_ptr = ::core::option::Option<unsafe extern "system" fn(sourcelanguage: ::windows_sys::core::PCSTR, targetlanguage: ::windows_sys::core::PCSTR, sourcetext: ::windows_sys::core::PCSTR) -> ::windows_sys::core::PSTR>;
-pub type alljoyn_keystore = isize;
-pub type alljoyn_keystorelistener = isize;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_keystorelistener_acquireexclusivelock_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, listener: alljoyn_keystorelistener) -> QStatus>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_keystorelistener_callbacks {
-    pub load_request: alljoyn_keystorelistener_loadrequest_ptr,
-    pub store_request: alljoyn_keystorelistener_storerequest_ptr,
-}
-impl ::core::marker::Copy for alljoyn_keystorelistener_callbacks {}
-impl ::core::clone::Clone for alljoyn_keystorelistener_callbacks {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_keystorelistener_loadrequest_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, listener: alljoyn_keystorelistener, keystore: alljoyn_keystore) -> QStatus>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_keystorelistener_releaseexclusivelock_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, listener: alljoyn_keystorelistener)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_keystorelistener_storerequest_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, listener: alljoyn_keystorelistener, keystore: alljoyn_keystore) -> QStatus>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_keystorelistener_with_synchronization_callbacks {
-    pub load_request: alljoyn_keystorelistener_loadrequest_ptr,
-    pub store_request: alljoyn_keystorelistener_storerequest_ptr,
-    pub acquire_exclusive_lock: alljoyn_keystorelistener_acquireexclusivelock_ptr,
-    pub release_exclusive_lock: alljoyn_keystorelistener_releaseexclusivelock_ptr,
-}
-impl ::core::marker::Copy for alljoyn_keystorelistener_with_synchronization_callbacks {}
-impl ::core::clone::Clone for alljoyn_keystorelistener_with_synchronization_callbacks {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_manifestarray {
-    pub count: usize,
-    pub xmls: *mut *mut i8,
-}
-impl ::core::marker::Copy for alljoyn_manifestarray {}
-impl ::core::clone::Clone for alljoyn_manifestarray {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type alljoyn_message = isize;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_messagereceiver_methodhandler_ptr = ::core::option::Option<unsafe extern "system" fn(bus: alljoyn_busobject, member: *const alljoyn_interfacedescription_member, message: alljoyn_message)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_messagereceiver_replyhandler_ptr = ::core::option::Option<unsafe extern "system" fn(message: alljoyn_message, context: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_messagereceiver_signalhandler_ptr = ::core::option::Option<unsafe extern "system" fn(member: *const alljoyn_interfacedescription_member, srcpath: ::windows_sys::core::PCSTR, message: alljoyn_message)>;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub type alljoyn_messagetype = i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
@@ -2312,95 +2024,6 @@ pub const ALLJOYN_MESSAGE_METHOD_RET: alljoyn_messagetype = 2i32;
 pub const ALLJOYN_MESSAGE_ERROR: alljoyn_messagetype = 3i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub const ALLJOYN_MESSAGE_SIGNAL: alljoyn_messagetype = 4i32;
-pub type alljoyn_msgarg = isize;
-pub type alljoyn_observer = isize;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_observer_object_discovered_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, proxyref: alljoyn_proxybusobject_ref)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_observer_object_lost_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, proxyref: alljoyn_proxybusobject_ref)>;
-pub type alljoyn_observerlistener = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_observerlistener_callback {
-    pub object_discovered: alljoyn_observer_object_discovered_ptr,
-    pub object_lost: alljoyn_observer_object_lost_ptr,
-}
-impl ::core::marker::Copy for alljoyn_observerlistener_callback {}
-impl ::core::clone::Clone for alljoyn_observerlistener_callback {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type alljoyn_permissionconfigurationlistener = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_permissionconfigurationlistener_callbacks {
-    pub factory_reset: alljoyn_permissionconfigurationlistener_factoryreset_ptr,
-    pub policy_changed: alljoyn_permissionconfigurationlistener_policychanged_ptr,
-    pub start_management: alljoyn_permissionconfigurationlistener_startmanagement_ptr,
-    pub end_management: alljoyn_permissionconfigurationlistener_endmanagement_ptr,
-}
-impl ::core::marker::Copy for alljoyn_permissionconfigurationlistener_callbacks {}
-impl ::core::clone::Clone for alljoyn_permissionconfigurationlistener_callbacks {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_permissionconfigurationlistener_endmanagement_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_permissionconfigurationlistener_factoryreset_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void) -> QStatus>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_permissionconfigurationlistener_policychanged_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_permissionconfigurationlistener_startmanagement_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
-pub type alljoyn_permissionconfigurator = isize;
-pub type alljoyn_pinglistener = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_pinglistener_callback {
-    pub destination_found: alljoyn_autopinger_destination_found_ptr,
-    pub destination_lost: alljoyn_autopinger_destination_lost_ptr,
-}
-impl ::core::marker::Copy for alljoyn_pinglistener_callback {}
-impl ::core::clone::Clone for alljoyn_pinglistener_callback {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type alljoyn_proxybusobject = isize;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_proxybusobject_listener_getallpropertiescb_ptr = ::core::option::Option<unsafe extern "system" fn(status: QStatus, obj: alljoyn_proxybusobject, values: alljoyn_msgarg, context: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_proxybusobject_listener_getpropertycb_ptr = ::core::option::Option<unsafe extern "system" fn(status: QStatus, obj: alljoyn_proxybusobject, value: alljoyn_msgarg, context: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_proxybusobject_listener_introspectcb_ptr = ::core::option::Option<unsafe extern "system" fn(status: QStatus, obj: alljoyn_proxybusobject, context: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_proxybusobject_listener_propertieschanged_ptr = ::core::option::Option<unsafe extern "system" fn(obj: alljoyn_proxybusobject, ifacename: ::windows_sys::core::PCSTR, changed: alljoyn_msgarg, invalidated: alljoyn_msgarg, context: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_proxybusobject_listener_setpropertycb_ptr = ::core::option::Option<unsafe extern "system" fn(status: QStatus, obj: alljoyn_proxybusobject, context: *mut ::core::ffi::c_void)>;
-pub type alljoyn_proxybusobject_ref = isize;
-pub type alljoyn_securityapplicationproxy = isize;
-pub type alljoyn_sessionlistener = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_sessionlistener_callbacks {
-    pub session_lost: alljoyn_sessionlistener_sessionlost_ptr,
-    pub session_member_added: alljoyn_sessionlistener_sessionmemberadded_ptr,
-    pub session_member_removed: alljoyn_sessionlistener_sessionmemberremoved_ptr,
-}
-impl ::core::marker::Copy for alljoyn_sessionlistener_callbacks {}
-impl ::core::clone::Clone for alljoyn_sessionlistener_callbacks {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_sessionlistener_sessionlost_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, sessionid: u32, reason: alljoyn_sessionlostreason)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_sessionlistener_sessionmemberadded_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, sessionid: u32, uniquename: ::windows_sys::core::PCSTR)>;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_sessionlistener_sessionmemberremoved_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, sessionid: u32, uniquename: ::windows_sys::core::PCSTR)>;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub type alljoyn_sessionlostreason = i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
@@ -2415,24 +2038,6 @@ pub const ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER: alljoyn_sessionlostreason = 3i3
 pub const ALLJOYN_SESSIONLOST_LINK_TIMEOUT: alljoyn_sessionlostreason = 4i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub const ALLJOYN_SESSIONLOST_REASON_OTHER: alljoyn_sessionlostreason = 5i32;
-pub type alljoyn_sessionopts = isize;
-pub type alljoyn_sessionportlistener = isize;
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_sessionportlistener_acceptsessionjoiner_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, sessionport: u16, joiner: ::windows_sys::core::PCSTR, opts: alljoyn_sessionopts) -> i32>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub struct alljoyn_sessionportlistener_callbacks {
-    pub accept_session_joiner: alljoyn_sessionportlistener_acceptsessionjoiner_ptr,
-    pub session_joined: alljoyn_sessionportlistener_sessionjoined_ptr,
-}
-impl ::core::marker::Copy for alljoyn_sessionportlistener_callbacks {}
-impl ::core::clone::Clone for alljoyn_sessionportlistener_callbacks {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
-pub type alljoyn_sessionportlistener_sessionjoined_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, sessionport: u16, id: u32, joiner: ::windows_sys::core::PCSTR)>;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub type alljoyn_typeid = i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
@@ -2499,3 +2104,401 @@ pub const ALLJOYN_INT64_ARRAY: alljoyn_typeid = 30817i32;
 pub const ALLJOYN_BYTE_ARRAY: alljoyn_typeid = 31073i32;
 #[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
 pub const ALLJOYN_WILDCARD: alljoyn_typeid = 42i32;
+#[repr(C)]
+pub struct _alljoyn_abouticon_handle(pub u8);
+#[repr(C)]
+pub struct _alljoyn_abouticonobj_handle(pub u8);
+#[repr(C)]
+pub struct _alljoyn_abouticonproxy_handle(pub u8);
+pub type alljoyn_aboutdata = isize;
+pub type alljoyn_aboutdatalistener = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_aboutdatalistener_callbacks {
+    pub about_datalistener_getaboutdata: alljoyn_aboutdatalistener_getaboutdata_ptr,
+    pub about_datalistener_getannouncedaboutdata: alljoyn_aboutdatalistener_getannouncedaboutdata_ptr,
+}
+impl ::core::marker::Copy for alljoyn_aboutdatalistener_callbacks {}
+impl ::core::clone::Clone for alljoyn_aboutdatalistener_callbacks {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type alljoyn_aboutlistener = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_aboutlistener_callback {
+    pub about_listener_announced: alljoyn_about_announced_ptr,
+}
+impl ::core::marker::Copy for alljoyn_aboutlistener_callback {}
+impl ::core::clone::Clone for alljoyn_aboutlistener_callback {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type alljoyn_aboutobj = isize;
+pub type alljoyn_aboutobjectdescription = isize;
+pub type alljoyn_aboutproxy = isize;
+pub type alljoyn_applicationstatelistener = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_applicationstatelistener_callbacks {
+    pub state: alljoyn_applicationstatelistener_state_ptr,
+}
+impl ::core::marker::Copy for alljoyn_applicationstatelistener_callbacks {}
+impl ::core::clone::Clone for alljoyn_applicationstatelistener_callbacks {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type alljoyn_authlistener = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_authlistener_callbacks {
+    pub request_credentials: alljoyn_authlistener_requestcredentials_ptr,
+    pub verify_credentials: alljoyn_authlistener_verifycredentials_ptr,
+    pub security_violation: alljoyn_authlistener_securityviolation_ptr,
+    pub authentication_complete: alljoyn_authlistener_authenticationcomplete_ptr,
+}
+impl ::core::marker::Copy for alljoyn_authlistener_callbacks {}
+impl ::core::clone::Clone for alljoyn_authlistener_callbacks {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_authlistenerasync_callbacks {
+    pub request_credentials: alljoyn_authlistener_requestcredentialsasync_ptr,
+    pub verify_credentials: alljoyn_authlistener_verifycredentialsasync_ptr,
+    pub security_violation: alljoyn_authlistener_securityviolation_ptr,
+    pub authentication_complete: alljoyn_authlistener_authenticationcomplete_ptr,
+}
+impl ::core::marker::Copy for alljoyn_authlistenerasync_callbacks {}
+impl ::core::clone::Clone for alljoyn_authlistenerasync_callbacks {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type alljoyn_autopinger = isize;
+pub type alljoyn_busattachment = isize;
+pub type alljoyn_buslistener = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_buslistener_callbacks {
+    pub listener_registered: alljoyn_buslistener_listener_registered_ptr,
+    pub listener_unregistered: alljoyn_buslistener_listener_unregistered_ptr,
+    pub found_advertised_name: alljoyn_buslistener_found_advertised_name_ptr,
+    pub lost_advertised_name: alljoyn_buslistener_lost_advertised_name_ptr,
+    pub name_owner_changed: alljoyn_buslistener_name_owner_changed_ptr,
+    pub bus_stopping: alljoyn_buslistener_bus_stopping_ptr,
+    pub bus_disconnected: alljoyn_buslistener_bus_disconnected_ptr,
+    pub property_changed: alljoyn_buslistener_bus_prop_changed_ptr,
+}
+impl ::core::marker::Copy for alljoyn_buslistener_callbacks {}
+impl ::core::clone::Clone for alljoyn_buslistener_callbacks {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type alljoyn_busobject = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_busobject_callbacks {
+    pub property_get: alljoyn_busobject_prop_get_ptr,
+    pub property_set: alljoyn_busobject_prop_set_ptr,
+    pub object_registered: alljoyn_busobject_object_registration_ptr,
+    pub object_unregistered: alljoyn_busobject_object_registration_ptr,
+}
+impl ::core::marker::Copy for alljoyn_busobject_callbacks {}
+impl ::core::clone::Clone for alljoyn_busobject_callbacks {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_busobject_methodentry {
+    pub member: *const alljoyn_interfacedescription_member,
+    pub method_handler: alljoyn_messagereceiver_methodhandler_ptr,
+}
+impl ::core::marker::Copy for alljoyn_busobject_methodentry {}
+impl ::core::clone::Clone for alljoyn_busobject_methodentry {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_certificateid {
+    pub serial: *mut u8,
+    pub serialLen: usize,
+    pub issuerPublicKey: *mut i8,
+    pub issuerAki: *mut u8,
+    pub issuerAkiLen: usize,
+}
+impl ::core::marker::Copy for alljoyn_certificateid {}
+impl ::core::clone::Clone for alljoyn_certificateid {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_certificateidarray {
+    pub count: usize,
+    pub ids: *mut alljoyn_certificateid,
+}
+impl ::core::marker::Copy for alljoyn_certificateidarray {}
+impl ::core::clone::Clone for alljoyn_certificateidarray {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type alljoyn_credentials = isize;
+pub type alljoyn_interfacedescription = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_interfacedescription_member {
+    pub iface: alljoyn_interfacedescription,
+    pub memberType: alljoyn_messagetype,
+    pub name: ::windows_sys::core::PCSTR,
+    pub signature: ::windows_sys::core::PCSTR,
+    pub returnSignature: ::windows_sys::core::PCSTR,
+    pub argNames: ::windows_sys::core::PCSTR,
+    pub internal_member: *const ::core::ffi::c_void,
+}
+impl ::core::marker::Copy for alljoyn_interfacedescription_member {}
+impl ::core::clone::Clone for alljoyn_interfacedescription_member {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_interfacedescription_property {
+    pub name: ::windows_sys::core::PCSTR,
+    pub signature: ::windows_sys::core::PCSTR,
+    pub access: u8,
+    pub internal_property: *const ::core::ffi::c_void,
+}
+impl ::core::marker::Copy for alljoyn_interfacedescription_property {}
+impl ::core::clone::Clone for alljoyn_interfacedescription_property {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type alljoyn_keystore = isize;
+pub type alljoyn_keystorelistener = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_keystorelistener_callbacks {
+    pub load_request: alljoyn_keystorelistener_loadrequest_ptr,
+    pub store_request: alljoyn_keystorelistener_storerequest_ptr,
+}
+impl ::core::marker::Copy for alljoyn_keystorelistener_callbacks {}
+impl ::core::clone::Clone for alljoyn_keystorelistener_callbacks {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_keystorelistener_with_synchronization_callbacks {
+    pub load_request: alljoyn_keystorelistener_loadrequest_ptr,
+    pub store_request: alljoyn_keystorelistener_storerequest_ptr,
+    pub acquire_exclusive_lock: alljoyn_keystorelistener_acquireexclusivelock_ptr,
+    pub release_exclusive_lock: alljoyn_keystorelistener_releaseexclusivelock_ptr,
+}
+impl ::core::marker::Copy for alljoyn_keystorelistener_with_synchronization_callbacks {}
+impl ::core::clone::Clone for alljoyn_keystorelistener_with_synchronization_callbacks {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_manifestarray {
+    pub count: usize,
+    pub xmls: *mut *mut i8,
+}
+impl ::core::marker::Copy for alljoyn_manifestarray {}
+impl ::core::clone::Clone for alljoyn_manifestarray {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type alljoyn_message = isize;
+pub type alljoyn_msgarg = isize;
+pub type alljoyn_observer = isize;
+pub type alljoyn_observerlistener = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_observerlistener_callback {
+    pub object_discovered: alljoyn_observer_object_discovered_ptr,
+    pub object_lost: alljoyn_observer_object_lost_ptr,
+}
+impl ::core::marker::Copy for alljoyn_observerlistener_callback {}
+impl ::core::clone::Clone for alljoyn_observerlistener_callback {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type alljoyn_permissionconfigurationlistener = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_permissionconfigurationlistener_callbacks {
+    pub factory_reset: alljoyn_permissionconfigurationlistener_factoryreset_ptr,
+    pub policy_changed: alljoyn_permissionconfigurationlistener_policychanged_ptr,
+    pub start_management: alljoyn_permissionconfigurationlistener_startmanagement_ptr,
+    pub end_management: alljoyn_permissionconfigurationlistener_endmanagement_ptr,
+}
+impl ::core::marker::Copy for alljoyn_permissionconfigurationlistener_callbacks {}
+impl ::core::clone::Clone for alljoyn_permissionconfigurationlistener_callbacks {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type alljoyn_permissionconfigurator = isize;
+pub type alljoyn_pinglistener = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_pinglistener_callback {
+    pub destination_found: alljoyn_autopinger_destination_found_ptr,
+    pub destination_lost: alljoyn_autopinger_destination_lost_ptr,
+}
+impl ::core::marker::Copy for alljoyn_pinglistener_callback {}
+impl ::core::clone::Clone for alljoyn_pinglistener_callback {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type alljoyn_proxybusobject = isize;
+pub type alljoyn_proxybusobject_ref = isize;
+pub type alljoyn_securityapplicationproxy = isize;
+pub type alljoyn_sessionlistener = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_sessionlistener_callbacks {
+    pub session_lost: alljoyn_sessionlistener_sessionlost_ptr,
+    pub session_member_added: alljoyn_sessionlistener_sessionmemberadded_ptr,
+    pub session_member_removed: alljoyn_sessionlistener_sessionmemberremoved_ptr,
+}
+impl ::core::marker::Copy for alljoyn_sessionlistener_callbacks {}
+impl ::core::clone::Clone for alljoyn_sessionlistener_callbacks {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type alljoyn_sessionopts = isize;
+pub type alljoyn_sessionportlistener = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub struct alljoyn_sessionportlistener_callbacks {
+    pub accept_session_joiner: alljoyn_sessionportlistener_acceptsessionjoiner_ptr,
+    pub session_joined: alljoyn_sessionportlistener_sessionjoined_ptr,
+}
+impl ::core::marker::Copy for alljoyn_sessionportlistener_callbacks {}
+impl ::core::clone::Clone for alljoyn_sessionportlistener_callbacks {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_about_announced_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, busname: ::windows_sys::core::PCSTR, version: u16, port: u16, objectdescriptionarg: alljoyn_msgarg, aboutdataarg: alljoyn_msgarg)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_aboutdatalistener_getaboutdata_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, msgarg: alljoyn_msgarg, language: ::windows_sys::core::PCSTR) -> QStatus>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_aboutdatalistener_getannouncedaboutdata_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, msgarg: alljoyn_msgarg) -> QStatus>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_applicationstatelistener_state_ptr = ::core::option::Option<unsafe extern "system" fn(busname: *mut i8, publickey: *mut i8, applicationstate: alljoyn_applicationstate, context: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_authlistener_authenticationcomplete_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, authmechanism: ::windows_sys::core::PCSTR, peername: ::windows_sys::core::PCSTR, success: i32)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_authlistener_requestcredentials_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, authmechanism: ::windows_sys::core::PCSTR, peername: ::windows_sys::core::PCSTR, authcount: u16, username: ::windows_sys::core::PCSTR, credmask: u16, credentials: alljoyn_credentials) -> i32>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_authlistener_requestcredentialsasync_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, listener: alljoyn_authlistener, authmechanism: ::windows_sys::core::PCSTR, peername: ::windows_sys::core::PCSTR, authcount: u16, username: ::windows_sys::core::PCSTR, credmask: u16, authcontext: *mut ::core::ffi::c_void) -> QStatus>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_authlistener_securityviolation_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, status: QStatus, msg: alljoyn_message)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_authlistener_verifycredentials_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, authmechanism: ::windows_sys::core::PCSTR, peername: ::windows_sys::core::PCSTR, credentials: alljoyn_credentials) -> i32>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_authlistener_verifycredentialsasync_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, listener: alljoyn_authlistener, authmechanism: ::windows_sys::core::PCSTR, peername: ::windows_sys::core::PCSTR, credentials: alljoyn_credentials, authcontext: *mut ::core::ffi::c_void) -> QStatus>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_autopinger_destination_found_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, group: ::windows_sys::core::PCSTR, destination: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_autopinger_destination_lost_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, group: ::windows_sys::core::PCSTR, destination: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_busattachment_joinsessioncb_ptr = ::core::option::Option<unsafe extern "system" fn(status: QStatus, sessionid: u32, opts: alljoyn_sessionopts, context: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_busattachment_setlinktimeoutcb_ptr = ::core::option::Option<unsafe extern "system" fn(status: QStatus, timeout: u32, context: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_buslistener_bus_disconnected_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_buslistener_bus_prop_changed_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, prop_name: ::windows_sys::core::PCSTR, prop_value: alljoyn_msgarg)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_buslistener_bus_stopping_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_buslistener_found_advertised_name_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, name: ::windows_sys::core::PCSTR, transport: u16, nameprefix: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_buslistener_listener_registered_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, bus: alljoyn_busattachment)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_buslistener_listener_unregistered_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_buslistener_lost_advertised_name_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, name: ::windows_sys::core::PCSTR, transport: u16, nameprefix: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_buslistener_name_owner_changed_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, busname: ::windows_sys::core::PCSTR, previousowner: ::windows_sys::core::PCSTR, newowner: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_busobject_object_registration_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_busobject_prop_get_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, ifcname: ::windows_sys::core::PCSTR, propname: ::windows_sys::core::PCSTR, val: alljoyn_msgarg) -> QStatus>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_busobject_prop_set_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, ifcname: ::windows_sys::core::PCSTR, propname: ::windows_sys::core::PCSTR, val: alljoyn_msgarg) -> QStatus>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_interfacedescription_translation_callback_ptr = ::core::option::Option<unsafe extern "system" fn(sourcelanguage: ::windows_sys::core::PCSTR, targetlanguage: ::windows_sys::core::PCSTR, sourcetext: ::windows_sys::core::PCSTR) -> ::windows_sys::core::PSTR>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_keystorelistener_acquireexclusivelock_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, listener: alljoyn_keystorelistener) -> QStatus>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_keystorelistener_loadrequest_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, listener: alljoyn_keystorelistener, keystore: alljoyn_keystore) -> QStatus>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_keystorelistener_releaseexclusivelock_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, listener: alljoyn_keystorelistener)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_keystorelistener_storerequest_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, listener: alljoyn_keystorelistener, keystore: alljoyn_keystore) -> QStatus>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_messagereceiver_methodhandler_ptr = ::core::option::Option<unsafe extern "system" fn(bus: alljoyn_busobject, member: *const alljoyn_interfacedescription_member, message: alljoyn_message)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_messagereceiver_replyhandler_ptr = ::core::option::Option<unsafe extern "system" fn(message: alljoyn_message, context: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_messagereceiver_signalhandler_ptr = ::core::option::Option<unsafe extern "system" fn(member: *const alljoyn_interfacedescription_member, srcpath: ::windows_sys::core::PCSTR, message: alljoyn_message)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_observer_object_discovered_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, proxyref: alljoyn_proxybusobject_ref)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_observer_object_lost_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, proxyref: alljoyn_proxybusobject_ref)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_permissionconfigurationlistener_endmanagement_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_permissionconfigurationlistener_factoryreset_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void) -> QStatus>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_permissionconfigurationlistener_policychanged_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_permissionconfigurationlistener_startmanagement_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_proxybusobject_listener_getallpropertiescb_ptr = ::core::option::Option<unsafe extern "system" fn(status: QStatus, obj: alljoyn_proxybusobject, values: alljoyn_msgarg, context: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_proxybusobject_listener_getpropertycb_ptr = ::core::option::Option<unsafe extern "system" fn(status: QStatus, obj: alljoyn_proxybusobject, value: alljoyn_msgarg, context: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_proxybusobject_listener_introspectcb_ptr = ::core::option::Option<unsafe extern "system" fn(status: QStatus, obj: alljoyn_proxybusobject, context: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_proxybusobject_listener_propertieschanged_ptr = ::core::option::Option<unsafe extern "system" fn(obj: alljoyn_proxybusobject, ifacename: ::windows_sys::core::PCSTR, changed: alljoyn_msgarg, invalidated: alljoyn_msgarg, context: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_proxybusobject_listener_setpropertycb_ptr = ::core::option::Option<unsafe extern "system" fn(status: QStatus, obj: alljoyn_proxybusobject, context: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_sessionlistener_sessionlost_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, sessionid: u32, reason: alljoyn_sessionlostreason)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_sessionlistener_sessionmemberadded_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, sessionid: u32, uniquename: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_sessionlistener_sessionmemberremoved_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, sessionid: u32, uniquename: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_sessionportlistener_acceptsessionjoiner_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, sessionport: u16, joiner: ::windows_sys::core::PCSTR, opts: alljoyn_sessionopts) -> i32>;
+#[doc = "*Required features: `\"Win32_Devices_AllJoyn\"`*"]
+pub type alljoyn_sessionportlistener_sessionjoined_ptr = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, sessionport: u16, id: u32, joiner: ::windows_sys::core::PCSTR)>;

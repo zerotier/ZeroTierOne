@@ -1,4 +1,33 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
+extern "cdecl" {
+    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn AVISaveA(szfile: ::windows_sys::core::PCSTR, pclsidhandler: *const ::windows_sys::core::GUID, lpfncallback: AVISAVECALLBACK, nstreams: i32, pfile: IAVIStream, lpoptions: *const AVICOMPRESSOPTIONS) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn AVISaveW(szfile: ::windows_sys::core::PCWSTR, pclsidhandler: *const ::windows_sys::core::GUID, lpfncallback: AVISAVECALLBACK, nstreams: i32, pfile: IAVIStream, lpoptions: *const AVICOMPRESSOPTIONS) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ICCompress(hic: HIC, dwflags: u32, lpbioutput: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, lpdata: *mut ::core::ffi::c_void, lpbiinput: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, lpbits: *const ::core::ffi::c_void, lpckid: *mut u32, lpdwflags: *mut u32, lframenum: i32, dwframesize: u32, dwquality: u32, lpbiprev: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, lpprev: *const ::core::ffi::c_void) -> u32;
+    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ICDecompress(hic: HIC, dwflags: u32, lpbiformat: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, lpdata: *const ::core::ffi::c_void, lpbi: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, lpbits: *mut ::core::ffi::c_void) -> u32;
+    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+    pub fn ICDraw(hic: HIC, dwflags: u32, lpformat: *const ::core::ffi::c_void, lpdata: *const ::core::ffi::c_void, cbdata: u32, ltime: i32) -> u32;
+    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+    pub fn ICDrawBegin(hic: HIC, dwflags: u32, hpal: super::super::Graphics::Gdi::HPALETTE, hwnd: super::super::Foundation::HWND, hdc: super::super::Graphics::Gdi::HDC, xdst: i32, ydst: i32, dxdst: i32, dydst: i32, lpbi: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, xsrc: i32, ysrc: i32, dxsrc: i32, dysrc: i32, dwrate: u32, dwscale: u32) -> u32;
+    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn MCIWndCreateA(hwndparent: super::super::Foundation::HWND, hinstance: super::super::Foundation::HINSTANCE, dwstyle: u32, szfile: ::windows_sys::core::PCSTR) -> super::super::Foundation::HWND;
+    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn MCIWndCreateW(hwndparent: super::super::Foundation::HWND, hinstance: super::super::Foundation::HINSTANCE, dwstyle: u32, szfile: ::windows_sys::core::PCWSTR) -> super::super::Foundation::HWND;
+    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn MCIWndRegisterClass() -> super::super::Foundation::BOOL;
+}
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -52,9 +81,6 @@ extern "system" {
     pub fn AVIPutFileOnClipboard(pf: IAVIFile) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn AVISaveA(szfile: ::windows_sys::core::PCSTR, pclsidhandler: *const ::windows_sys::core::GUID, lpfncallback: AVISAVECALLBACK, nstreams: i32, pfile: IAVIStream, lpoptions: *const AVICOMPRESSOPTIONS) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
     pub fn AVISaveOptions(hwnd: super::super::Foundation::HWND, uiflags: u32, nstreams: i32, ppavi: *const IAVIStream, plpoptions: *mut *mut AVICOMPRESSOPTIONS) -> isize;
     #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
     pub fn AVISaveOptionsFree(nstreams: i32, plpoptions: *const *const AVICOMPRESSOPTIONS) -> ::windows_sys::core::HRESULT;
@@ -64,9 +90,6 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn AVISaveVW(szfile: ::windows_sys::core::PCWSTR, pclsidhandler: *const ::windows_sys::core::GUID, lpfncallback: AVISAVECALLBACK, nstreams: i32, ppavi: *const IAVIStream, plpoptions: *const *const AVICOMPRESSOPTIONS) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn AVISaveW(szfile: ::windows_sys::core::PCWSTR, pclsidhandler: *const ::windows_sys::core::GUID, lpfncallback: AVISAVECALLBACK, nstreams: i32, pfile: IAVIStream, lpoptions: *const AVICOMPRESSOPTIONS) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
     pub fn AVIStreamAddRef(pavi: IAVIStream) -> u32;
     #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -207,23 +230,12 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn ICClose(hic: HIC) -> super::super::Foundation::LRESULT;
-    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ICCompress(hic: HIC, dwflags: u32, lpbioutput: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, lpdata: *mut ::core::ffi::c_void, lpbiinput: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, lpbits: *const ::core::ffi::c_void, lpckid: *mut u32, lpdwflags: *mut u32, lframenum: i32, dwframesize: u32, dwquality: u32, lpbiprev: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, lpprev: *const ::core::ffi::c_void) -> u32;
     #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
     pub fn ICCompressorChoose(hwnd: super::super::Foundation::HWND, uiflags: u32, pvin: *const ::core::ffi::c_void, lpdata: *const ::core::ffi::c_void, pc: *mut COMPVARS, lpsztitle: ::windows_sys::core::PCSTR) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
     #[cfg(feature = "Win32_Graphics_Gdi")]
     pub fn ICCompressorFree(pc: *const COMPVARS);
-    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ICDecompress(hic: HIC, dwflags: u32, lpbiformat: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, lpdata: *const ::core::ffi::c_void, lpbi: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, lpbits: *mut ::core::ffi::c_void) -> u32;
-    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-    pub fn ICDraw(hic: HIC, dwflags: u32, lpformat: *const ::core::ffi::c_void, lpdata: *const ::core::ffi::c_void, cbdata: u32, ltime: i32) -> u32;
-    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-    pub fn ICDrawBegin(hic: HIC, dwflags: u32, hpal: super::super::Graphics::Gdi::HPALETTE, hwnd: super::super::Foundation::HWND, hdc: super::super::Graphics::Gdi::HDC, xdst: i32, ydst: i32, dxdst: i32, dydst: i32, lpbi: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, xsrc: i32, ysrc: i32, dxsrc: i32, dysrc: i32, dwrate: u32, dwscale: u32) -> u32;
     #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
     #[cfg(feature = "Win32_Graphics_Gdi")]
     pub fn ICGetDisplayFormat(hic: HIC, lpbiin: *const super::super::Graphics::Gdi::BITMAPINFOHEADER, lpbiout: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER, bitdepth: i32, dx: i32, dy: i32) -> HIC;
@@ -265,15 +277,6 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
     pub fn ICSeqCompressFrameStart(pc: *const COMPVARS, lpbiin: *const super::super::Graphics::Gdi::BITMAPINFO) -> super::super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn MCIWndCreateA(hwndparent: super::super::Foundation::HWND, hinstance: super::super::Foundation::HINSTANCE, dwstyle: u32, szfile: ::windows_sys::core::PCSTR) -> super::super::Foundation::HWND;
-    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn MCIWndCreateW(hwndparent: super::super::Foundation::HWND, hinstance: super::super::Foundation::HINSTANCE, dwstyle: u32, szfile: ::windows_sys::core::PCWSTR) -> super::super::Foundation::HWND;
-    #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn MCIWndRegisterClass() -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn OpenDriver(szdrivername: ::windows_sys::core::PCWSTR, szsectionname: ::windows_sys::core::PCWSTR, lparam2: super::super::Foundation::LPARAM) -> HDRVR;
@@ -431,6 +434,12 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn sndOpenSound(eventname: ::windows_sys::core::PCWSTR, appname: ::windows_sys::core::PCWSTR, flags: i32, filehandle: *mut super::super::Foundation::HANDLE) -> i32;
 }
+pub type IAVIEditStream = *mut ::core::ffi::c_void;
+pub type IAVIFile = *mut ::core::ffi::c_void;
+pub type IAVIPersistFile = *mut ::core::ffi::c_void;
+pub type IAVIStream = *mut ::core::ffi::c_void;
+pub type IAVIStreaming = *mut ::core::ffi::c_void;
+pub type IGetFrame = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ACMDM_BASE: u32 = 24576u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -457,92 +466,6 @@ pub const ACM_MPEG_PROTECTIONBIT: u32 = 8u32;
 pub const ACM_MPEG_SINGLECHANNEL: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ACM_MPEG_STEREO: u32 = 1u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct ADPCMCOEFSET {
-    pub iCoef1: i16,
-    pub iCoef2: i16,
-}
-impl ::core::marker::Copy for ADPCMCOEFSET {}
-impl ::core::clone::Clone for ADPCMCOEFSET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct ADPCMEWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wSamplesPerBlock: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for ADPCMEWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for ADPCMEWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct ADPCMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wSamplesPerBlock: u16,
-    pub wNumCoef: u16,
-    pub aCoef: [ADPCMCOEFSET; 1],
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for ADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for ADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct APTXWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for APTXWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for APTXWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct AUDIOFILE_AF10WAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for AUDIOFILE_AF10WAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for AUDIOFILE_AF10WAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct AUDIOFILE_AF36WAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for AUDIOFILE_AF36WAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for AUDIOFILE_AF36WAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const AUXDM_GETDEVCAPS: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -563,27 +486,6 @@ pub const AVICOMPRESSF_INTERLEAVE: u32 = 1u32;
 pub const AVICOMPRESSF_KEYFRAMES: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const AVICOMPRESSF_VALID: u32 = 8u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct AVICOMPRESSOPTIONS {
-    pub fccType: u32,
-    pub fccHandler: u32,
-    pub dwKeyFrameEvery: u32,
-    pub dwQuality: u32,
-    pub dwBytesPerSecond: u32,
-    pub dwFlags: u32,
-    pub lpFormat: *mut ::core::ffi::c_void,
-    pub cbFormat: u32,
-    pub lpParms: *mut ::core::ffi::c_void,
-    pub cbParms: u32,
-    pub dwInterleaveEvery: u32,
-}
-impl ::core::marker::Copy for AVICOMPRESSOPTIONS {}
-impl ::core::clone::Clone for AVICOMPRESSOPTIONS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const AVIERR_OK: i32 = 0i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -600,53 +502,6 @@ pub const AVIFILEHANDLER_CANACCEPTNONRGB: u32 = 4u32;
 pub const AVIFILEHANDLER_CANREAD: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const AVIFILEHANDLER_CANWRITE: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct AVIFILEINFOA {
-    pub dwMaxBytesPerSec: u32,
-    pub dwFlags: u32,
-    pub dwCaps: u32,
-    pub dwStreams: u32,
-    pub dwSuggestedBufferSize: u32,
-    pub dwWidth: u32,
-    pub dwHeight: u32,
-    pub dwScale: u32,
-    pub dwRate: u32,
-    pub dwLength: u32,
-    pub dwEditCount: u32,
-    pub szFileType: [super::super::Foundation::CHAR; 64],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for AVIFILEINFOA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for AVIFILEINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct AVIFILEINFOW {
-    pub dwMaxBytesPerSec: u32,
-    pub dwFlags: u32,
-    pub dwCaps: u32,
-    pub dwStreams: u32,
-    pub dwSuggestedBufferSize: u32,
-    pub dwWidth: u32,
-    pub dwHeight: u32,
-    pub dwScale: u32,
-    pub dwRate: u32,
-    pub dwLength: u32,
-    pub dwEditCount: u32,
-    pub szFileType: [u16; 64],
-}
-impl ::core::marker::Copy for AVIFILEINFOW {}
-impl ::core::clone::Clone for AVIFILEINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const AVIFILEINFO_COPYRIGHTED: u32 = 131072u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -663,71 +518,6 @@ pub const AVIGETFRAMEF_BESTDISPLAYFMT: u32 = 1u32;
 pub const AVIIF_CONTROLFRAME: i32 = 512i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const AVIIF_TWOCC: i32 = 2i32;
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type AVISAVECALLBACK = ::core::option::Option<unsafe extern "system" fn(param0: i32) -> super::super::Foundation::BOOL>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct AVISTREAMINFOA {
-    pub fccType: u32,
-    pub fccHandler: u32,
-    pub dwFlags: u32,
-    pub dwCaps: u32,
-    pub wPriority: u16,
-    pub wLanguage: u16,
-    pub dwScale: u32,
-    pub dwRate: u32,
-    pub dwStart: u32,
-    pub dwLength: u32,
-    pub dwInitialFrames: u32,
-    pub dwSuggestedBufferSize: u32,
-    pub dwQuality: u32,
-    pub dwSampleSize: u32,
-    pub rcFrame: super::super::Foundation::RECT,
-    pub dwEditCount: u32,
-    pub dwFormatChangeCount: u32,
-    pub szName: [super::super::Foundation::CHAR; 64],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for AVISTREAMINFOA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for AVISTREAMINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct AVISTREAMINFOW {
-    pub fccType: u32,
-    pub fccHandler: u32,
-    pub dwFlags: u32,
-    pub dwCaps: u32,
-    pub wPriority: u16,
-    pub wLanguage: u16,
-    pub dwScale: u32,
-    pub dwRate: u32,
-    pub dwStart: u32,
-    pub dwLength: u32,
-    pub dwInitialFrames: u32,
-    pub dwSuggestedBufferSize: u32,
-    pub dwQuality: u32,
-    pub dwSampleSize: u32,
-    pub rcFrame: super::super::Foundation::RECT,
-    pub dwEditCount: u32,
-    pub dwFormatChangeCount: u32,
-    pub szName: [u16; 64],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for AVISTREAMINFOW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for AVISTREAMINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const AVISTREAMINFO_DISABLED: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -740,280 +530,14 @@ pub const AVSTREAMMASTER_AUDIO: u32 = 0u32;
 pub const AVSTREAMMASTER_NONE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const BI_1632: u32 = 842217009u32;
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CAPCONTROLCALLBACK = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, nstate: i32) -> super::super::Foundation::LRESULT>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CAPDRIVERCAPS {
-    pub wDeviceIndex: u32,
-    pub fHasOverlay: super::super::Foundation::BOOL,
-    pub fHasDlgVideoSource: super::super::Foundation::BOOL,
-    pub fHasDlgVideoFormat: super::super::Foundation::BOOL,
-    pub fHasDlgVideoDisplay: super::super::Foundation::BOOL,
-    pub fCaptureInitialized: super::super::Foundation::BOOL,
-    pub fDriverSuppliesPalettes: super::super::Foundation::BOOL,
-    pub hVideoIn: super::super::Foundation::HANDLE,
-    pub hVideoOut: super::super::Foundation::HANDLE,
-    pub hVideoExtIn: super::super::Foundation::HANDLE,
-    pub hVideoExtOut: super::super::Foundation::HANDLE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CAPDRIVERCAPS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CAPDRIVERCAPS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CAPERRORCALLBACKA = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, nid: i32, lpsz: ::windows_sys::core::PCSTR) -> super::super::Foundation::LRESULT>;
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CAPERRORCALLBACKW = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, nid: i32, lpsz: ::windows_sys::core::PCWSTR) -> super::super::Foundation::LRESULT>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct CAPINFOCHUNK {
-    pub fccInfoID: u32,
-    pub lpData: *mut ::core::ffi::c_void,
-    pub cbData: i32,
-}
-impl ::core::marker::Copy for CAPINFOCHUNK {}
-impl ::core::clone::Clone for CAPINFOCHUNK {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-pub struct CAPSTATUS {
-    pub uiImageWidth: u32,
-    pub uiImageHeight: u32,
-    pub fLiveWindow: super::super::Foundation::BOOL,
-    pub fOverlayWindow: super::super::Foundation::BOOL,
-    pub fScale: super::super::Foundation::BOOL,
-    pub ptScroll: super::super::Foundation::POINT,
-    pub fUsingDefaultPalette: super::super::Foundation::BOOL,
-    pub fAudioHardware: super::super::Foundation::BOOL,
-    pub fCapFileExists: super::super::Foundation::BOOL,
-    pub dwCurrentVideoFrame: u32,
-    pub dwCurrentVideoFramesDropped: u32,
-    pub dwCurrentWaveSamples: u32,
-    pub dwCurrentTimeElapsedMS: u32,
-    pub hPalCurrent: super::super::Graphics::Gdi::HPALETTE,
-    pub fCapturingNow: super::super::Foundation::BOOL,
-    pub dwReturn: u32,
-    pub wNumVideoAllocated: u32,
-    pub wNumAudioAllocated: u32,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::marker::Copy for CAPSTATUS {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::clone::Clone for CAPSTATUS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CAPSTATUSCALLBACKA = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, nid: i32, lpsz: ::windows_sys::core::PCSTR) -> super::super::Foundation::LRESULT>;
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CAPSTATUSCALLBACKW = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, nid: i32, lpsz: ::windows_sys::core::PCWSTR) -> super::super::Foundation::LRESULT>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CAPTUREPARMS {
-    pub dwRequestMicroSecPerFrame: u32,
-    pub fMakeUserHitOKToCapture: super::super::Foundation::BOOL,
-    pub wPercentDropForError: u32,
-    pub fYield: super::super::Foundation::BOOL,
-    pub dwIndexSize: u32,
-    pub wChunkGranularity: u32,
-    pub fUsingDOSMemory: super::super::Foundation::BOOL,
-    pub wNumVideoRequested: u32,
-    pub fCaptureAudio: super::super::Foundation::BOOL,
-    pub wNumAudioRequested: u32,
-    pub vKeyAbort: u32,
-    pub fAbortLeftMouse: super::super::Foundation::BOOL,
-    pub fAbortRightMouse: super::super::Foundation::BOOL,
-    pub fLimitEnabled: super::super::Foundation::BOOL,
-    pub wTimeLimit: u32,
-    pub fMCIControl: super::super::Foundation::BOOL,
-    pub fStepMCIDevice: super::super::Foundation::BOOL,
-    pub dwMCIStartTime: u32,
-    pub dwMCIStopTime: u32,
-    pub fStepCaptureAt2x: super::super::Foundation::BOOL,
-    pub wStepCaptureAverageFrames: u32,
-    pub dwAudioBufferSize: u32,
-    pub fDisableWriteCache: super::super::Foundation::BOOL,
-    pub AVStreamMaster: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CAPTUREPARMS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CAPTUREPARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CAPVIDEOCALLBACK = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, lpvhdr: *const VIDEOHDR) -> super::super::Foundation::LRESULT>;
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Media_Audio"))]
-pub type CAPWAVECALLBACK = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, lpwhdr: *const super::Audio::WAVEHDR) -> super::super::Foundation::LRESULT>;
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CAPYIELDCALLBACK = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND) -> super::super::Foundation::LRESULT>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct CHANNEL_CAPS {
-    pub dwFlags: u32,
-    pub dwSrcRectXMod: u32,
-    pub dwSrcRectYMod: u32,
-    pub dwSrcRectWidthMod: u32,
-    pub dwSrcRectHeightMod: u32,
-    pub dwDstRectXMod: u32,
-    pub dwDstRectYMod: u32,
-    pub dwDstRectWidthMod: u32,
-    pub dwDstRectHeightMod: u32,
-}
-impl ::core::marker::Copy for CHANNEL_CAPS {}
-impl ::core::clone::Clone for CHANNEL_CAPS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub const CLSID_AVIFile: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 131072, data2: 0, data3: 0, data4: [192, 0, 0, 0, 0, 0, 0, 70] };
 pub const CLSID_AVISimpleUnMarshal: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 131081, data2: 0, data3: 0, data4: [192, 0, 0, 0, 0, 0, 0, 70] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct COMPVARS {
-    pub cbSize: i32,
-    pub dwFlags: u32,
-    pub hic: HIC,
-    pub fccType: u32,
-    pub fccHandler: u32,
-    pub lpbiIn: *mut super::super::Graphics::Gdi::BITMAPINFO,
-    pub lpbiOut: *mut super::super::Graphics::Gdi::BITMAPINFO,
-    pub lpBitsOut: *mut ::core::ffi::c_void,
-    pub lpBitsPrev: *mut ::core::ffi::c_void,
-    pub lFrame: i32,
-    pub lKey: i32,
-    pub lDataRate: i32,
-    pub lQ: i32,
-    pub lKeyCount: i32,
-    pub lpState: *mut ::core::ffi::c_void,
-    pub cbState: i32,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for COMPVARS {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for COMPVARS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct CONTRESCR10WAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wSamplesPerBlock: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for CONTRESCR10WAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for CONTRESCR10WAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct CONTRESVQLPCWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wSamplesPerBlock: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for CONTRESVQLPCWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for CONTRESVQLPCWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const CONTROLCALLBACK_CAPTURING: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const CONTROLCALLBACK_PREROLL: u32 = 1u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct CREATIVEADPCMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wRevision: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for CREATIVEADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for CREATIVEADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct CREATIVEFASTSPEECH10WAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wRevision: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for CREATIVEFASTSPEECH10WAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for CREATIVEFASTSPEECH10WAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct CREATIVEFASTSPEECH8WAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wRevision: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for CREATIVEFASTSPEECH8WAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for CREATIVEFASTSPEECH8WAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const CRYSTAL_NET_SFM_CODEC: u32 = 1u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct CSIMAADPCMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for CSIMAADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for CSIMAADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DCB_EVENT: u32 = 5u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -1062,171 +586,18 @@ pub const DDF_SAME_HDC: u32 = 4u32;
 pub const DDF_SAME_SIZE: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DDF_UPDATE: u32 = 2u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct DIALOGICOKIADPCMWAVEFORMAT {
-    pub ewf: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for DIALOGICOKIADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for DIALOGICOKIADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct DIGIADPCMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wSamplesPerBlock: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for DIGIADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for DIGIADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct DIGIFIXWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for DIGIFIXWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for DIGIFIXWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct DIGIREALWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wSamplesPerBlock: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for DIGIREALWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for DIGIREALWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct DIGISTDWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for DIGISTDWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for DIGISTDWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DLG_ACMFILTERCHOOSE_ID: u32 = 71u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DLG_ACMFORMATCHOOSE_ID: u32 = 70u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct DOLBYAC2WAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub nAuxBitsCode: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for DOLBYAC2WAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for DOLBYAC2WAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct DRAWDIBTIME {
-    pub timeCount: i32,
-    pub timeDraw: i32,
-    pub timeDecompress: i32,
-    pub timeDither: i32,
-    pub timeStretch: i32,
-    pub timeBlt: i32,
-    pub timeSetDIBits: i32,
-}
-impl ::core::marker::Copy for DRAWDIBTIME {}
-impl ::core::clone::Clone for DRAWDIBTIME {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub type DRIVERMSGPROC = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: u32, param2: usize, param3: usize, param4: usize) -> u32>;
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type DRIVERPROC = ::core::option::Option<unsafe extern "system" fn(param0: usize, param1: HDRVR, param2: u32, param3: super::super::Foundation::LPARAM, param4: super::super::Foundation::LPARAM) -> super::super::Foundation::LRESULT>;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DRIVERS_SECTION: &str = "DRIVERS32";
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct DRMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wReserved: u16,
-    pub ulContentId: u32,
-    pub wfxSecure: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for DRMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for DRMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DRVCNF_CANCEL: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DRVCNF_OK: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DRVCNF_RESTART: u32 = 2u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct DRVCONFIGINFO {
-    pub dwDCISize: u32,
-    pub lpszDCISectionName: ::windows_sys::core::PCWSTR,
-    pub lpszDCIAliasName: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for DRVCONFIGINFO {}
-impl ::core::clone::Clone for DRVCONFIGINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct DRVCONFIGINFOEX {
-    pub dwDCISize: u32,
-    pub lpszDCISectionName: ::windows_sys::core::PCWSTR,
-    pub lpszDCIAliasName: ::windows_sys::core::PCWSTR,
-    pub dnDevNode: u32,
-}
-impl ::core::marker::Copy for DRVCONFIGINFOEX {}
-impl ::core::clone::Clone for DRVCONFIGINFOEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DRVM_ADD_THRU: u32 = 257u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -1245,18 +616,6 @@ pub const DRVM_IOCTL: u32 = 256u32;
 pub const DRVM_IOCTL_CMD_SYSTEM: i32 = -2147483648i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DRVM_IOCTL_CMD_USER: i32 = 0i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct DRVM_IOCTL_DATA {
-    pub dwSize: u32,
-    pub dwCmd: u32,
-}
-impl ::core::marker::Copy for DRVM_IOCTL_DATA {}
-impl ::core::clone::Clone for DRVM_IOCTL_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DRVM_IOCTL_LAST: u32 = 261u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -1331,21 +690,6 @@ pub const DRV_RESERVED: u32 = 2048u32;
 pub const DRV_RESTART: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DRV_USER: u32 = 16384u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct DVIADPCMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wSamplesPerBlock: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for DVIADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for DVIADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DVM_CONFIGURE_END: u32 = 8191u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -1434,35 +778,6 @@ pub const DV_VM_DATA: u32 = 978u32;
 pub const DV_VM_ERROR: u32 = 979u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const DV_VM_OPEN: u32 = 976u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct ECHOSC1WAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for ECHOSC1WAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for ECHOSC1WAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct EXBMINFOHEADER {
-    pub bmi: super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub biExtDataOffset: u32,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for EXBMINFOHEADER {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for EXBMINFOHEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const FACILITY_NS: u32 = 13u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -1495,179 +810,10 @@ pub const FIND_RET: i32 = 61440i32;
 pub const FIND_SIZE: i32 = 12288i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const FIND_TYPE: i32 = 240i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct FMTOWNS_SND_WAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wRevision: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for FMTOWNS_SND_WAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for FMTOWNS_SND_WAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct G721_ADPCMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub nAuxBlockSize: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for G721_ADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for G721_ADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct G723_ADPCMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub cbExtraSize: u16,
-    pub nAuxBlockSize: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for G723_ADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for G723_ADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct GSM610WAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wSamplesPerBlock: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for GSM610WAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for GSM610WAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type HDRVR = isize;
-pub type HIC = isize;
-pub type HMMIO = isize;
-pub type HVIDEO = isize;
-pub type IAVIEditStream = *mut ::core::ffi::c_void;
-pub type IAVIFile = *mut ::core::ffi::c_void;
-pub type IAVIPersistFile = *mut ::core::ffi::c_void;
-pub type IAVIStream = *mut ::core::ffi::c_void;
-pub type IAVIStreaming = *mut ::core::ffi::c_void;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct ICCOMPRESS {
-    pub dwFlags: u32,
-    pub lpbiOutput: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub lpOutput: *mut ::core::ffi::c_void,
-    pub lpbiInput: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub lpInput: *mut ::core::ffi::c_void,
-    pub lpckid: *mut u32,
-    pub lpdwFlags: *mut u32,
-    pub lFrameNum: i32,
-    pub dwFrameSize: u32,
-    pub dwQuality: u32,
-    pub lpbiPrev: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub lpPrev: *mut ::core::ffi::c_void,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for ICCOMPRESS {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for ICCOMPRESS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-pub struct ICCOMPRESSFRAMES {
-    pub dwFlags: u32,
-    pub lpbiOutput: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub lOutput: super::super::Foundation::LPARAM,
-    pub lpbiInput: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub lInput: super::super::Foundation::LPARAM,
-    pub lStartFrame: i32,
-    pub lFrameCount: i32,
-    pub lQuality: i32,
-    pub lDataRate: i32,
-    pub lKeyRate: i32,
-    pub dwRate: u32,
-    pub dwScale: u32,
-    pub dwOverheadPerFrame: u32,
-    pub dwReserved2: u32,
-    pub GetData: isize,
-    pub PutData: isize,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::marker::Copy for ICCOMPRESSFRAMES {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::clone::Clone for ICCOMPRESSFRAMES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ICCOMPRESSFRAMES_PADDING: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ICCOMPRESS_KEYFRAME: i32 = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct ICDECOMPRESS {
-    pub dwFlags: u32,
-    pub lpbiInput: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub lpInput: *mut ::core::ffi::c_void,
-    pub lpbiOutput: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub lpOutput: *mut ::core::ffi::c_void,
-    pub ckid: u32,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for ICDECOMPRESS {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for ICDECOMPRESS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct ICDECOMPRESSEX {
-    pub dwFlags: u32,
-    pub lpbiSrc: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub lpSrc: *mut ::core::ffi::c_void,
-    pub lpbiDst: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub lpDst: *mut ::core::ffi::c_void,
-    pub xDst: i32,
-    pub yDst: i32,
-    pub dxDst: i32,
-    pub dyDst: i32,
-    pub xSrc: i32,
-    pub ySrc: i32,
-    pub dxSrc: i32,
-    pub dySrc: i32,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for ICDECOMPRESSEX {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for ICDECOMPRESSEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ICDECOMPRESS_HURRYUP: i32 = -2147483648i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -1678,69 +824,6 @@ pub const ICDECOMPRESS_NULLFRAME: i32 = 268435456i32;
 pub const ICDECOMPRESS_PREROLL: i32 = 536870912i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ICDECOMPRESS_UPDATE: i32 = 1073741824i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct ICDRAW {
-    pub dwFlags: u32,
-    pub lpFormat: *mut ::core::ffi::c_void,
-    pub lpData: *mut ::core::ffi::c_void,
-    pub cbData: u32,
-    pub lTime: i32,
-}
-impl ::core::marker::Copy for ICDRAW {}
-impl ::core::clone::Clone for ICDRAW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-pub struct ICDRAWBEGIN {
-    pub dwFlags: u32,
-    pub hpal: super::super::Graphics::Gdi::HPALETTE,
-    pub hwnd: super::super::Foundation::HWND,
-    pub hdc: super::super::Graphics::Gdi::HDC,
-    pub xDst: i32,
-    pub yDst: i32,
-    pub dxDst: i32,
-    pub dyDst: i32,
-    pub lpbi: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub xSrc: i32,
-    pub ySrc: i32,
-    pub dxSrc: i32,
-    pub dySrc: i32,
-    pub dwRate: u32,
-    pub dwScale: u32,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::marker::Copy for ICDRAWBEGIN {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::clone::Clone for ICDRAWBEGIN {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct ICDRAWSUGGEST {
-    pub lpbiIn: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub lpbiSuggest: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
-    pub dxSrc: i32,
-    pub dySrc: i32,
-    pub dxDst: i32,
-    pub dyDst: i32,
-    pub hicDecompressor: HIC,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for ICDRAWSUGGEST {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for ICDRAWSUGGEST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ICDRAW_ANIMATE: i32 = 8i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -1807,25 +890,6 @@ pub const ICERR_OK: i32 = 0i32;
 pub const ICERR_STOPDRAWING: i32 = 4i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ICERR_UNSUPPORTED: i32 = -1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct ICINFO {
-    pub dwSize: u32,
-    pub fccType: u32,
-    pub fccHandler: u32,
-    pub dwFlags: u32,
-    pub dwVersion: u32,
-    pub dwVersionICM: u32,
-    pub szName: [u16; 16],
-    pub szDescription: [u16; 128],
-    pub szDriver: [u16; 128],
-}
-impl ::core::marker::Copy for ICINFO {}
-impl ::core::clone::Clone for ICINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ICINSTALL_DRIVER: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -1984,67 +1048,12 @@ pub const ICM_SETSTATE: u32 = 20481u32;
 pub const ICM_SET_STATUS_PROC: u32 = 16456u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ICM_USER: u32 = 16384u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ICOPEN {
-    pub dwSize: u32,
-    pub fccType: u32,
-    pub fccHandler: u32,
-    pub dwVersion: u32,
-    pub dwFlags: u32,
-    pub dwError: super::super::Foundation::LRESULT,
-    pub pV1Reserved: *mut ::core::ffi::c_void,
-    pub pV2Reserved: *mut ::core::ffi::c_void,
-    pub dnDevNode: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ICOPEN {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ICOPEN {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct ICPALETTE {
-    pub dwFlags: u32,
-    pub iStart: i32,
-    pub iLen: i32,
-    pub lppe: *mut super::super::Graphics::Gdi::PALETTEENTRY,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for ICPALETTE {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for ICPALETTE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ICQUALITY_DEFAULT: i32 = -1i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ICQUALITY_HIGH: u32 = 10000u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ICQUALITY_LOW: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ICSETSTATUSPROC {
-    pub dwFlags: u32,
-    pub lParam: super::super::Foundation::LPARAM,
-    pub Status: isize,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ICSETSTATUSPROC {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ICSETSTATUSPROC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const ICSTATUS_END: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -2197,22 +1206,6 @@ pub const IDS_CAP_WAVE_PREPARE_ERROR: u32 = 421u32;
 pub const IDS_CAP_WAVE_SIZE_ERROR: u32 = 423u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const IDS_CAP_WRITEERROR: u32 = 414u32;
-pub type IGetFrame = *mut ::core::ffi::c_void;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct IMAADPCMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wSamplesPerBlock: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for IMAADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for IMAADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const JDD_CONFIGCHANGED: u32 = 2307u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -2343,154 +1336,6 @@ pub const JIFMK_SOI: u32 = 65496u32;
 pub const JIFMK_SOS: u32 = 65498u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const JIFMK_TEM: u32 = 65281u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JOYCAPS2A {
-    pub wMid: u16,
-    pub wPid: u16,
-    pub szPname: [super::super::Foundation::CHAR; 32],
-    pub wXmin: u32,
-    pub wXmax: u32,
-    pub wYmin: u32,
-    pub wYmax: u32,
-    pub wZmin: u32,
-    pub wZmax: u32,
-    pub wNumButtons: u32,
-    pub wPeriodMin: u32,
-    pub wPeriodMax: u32,
-    pub wRmin: u32,
-    pub wRmax: u32,
-    pub wUmin: u32,
-    pub wUmax: u32,
-    pub wVmin: u32,
-    pub wVmax: u32,
-    pub wCaps: u32,
-    pub wMaxAxes: u32,
-    pub wNumAxes: u32,
-    pub wMaxButtons: u32,
-    pub szRegKey: [super::super::Foundation::CHAR; 32],
-    pub szOEMVxD: [super::super::Foundation::CHAR; 260],
-    pub ManufacturerGuid: ::windows_sys::core::GUID,
-    pub ProductGuid: ::windows_sys::core::GUID,
-    pub NameGuid: ::windows_sys::core::GUID,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JOYCAPS2A {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JOYCAPS2A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct JOYCAPS2W {
-    pub wMid: u16,
-    pub wPid: u16,
-    pub szPname: [u16; 32],
-    pub wXmin: u32,
-    pub wXmax: u32,
-    pub wYmin: u32,
-    pub wYmax: u32,
-    pub wZmin: u32,
-    pub wZmax: u32,
-    pub wNumButtons: u32,
-    pub wPeriodMin: u32,
-    pub wPeriodMax: u32,
-    pub wRmin: u32,
-    pub wRmax: u32,
-    pub wUmin: u32,
-    pub wUmax: u32,
-    pub wVmin: u32,
-    pub wVmax: u32,
-    pub wCaps: u32,
-    pub wMaxAxes: u32,
-    pub wNumAxes: u32,
-    pub wMaxButtons: u32,
-    pub szRegKey: [u16; 32],
-    pub szOEMVxD: [u16; 260],
-    pub ManufacturerGuid: ::windows_sys::core::GUID,
-    pub ProductGuid: ::windows_sys::core::GUID,
-    pub NameGuid: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for JOYCAPS2W {}
-impl ::core::clone::Clone for JOYCAPS2W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JOYCAPSA {
-    pub wMid: u16,
-    pub wPid: u16,
-    pub szPname: [super::super::Foundation::CHAR; 32],
-    pub wXmin: u32,
-    pub wXmax: u32,
-    pub wYmin: u32,
-    pub wYmax: u32,
-    pub wZmin: u32,
-    pub wZmax: u32,
-    pub wNumButtons: u32,
-    pub wPeriodMin: u32,
-    pub wPeriodMax: u32,
-    pub wRmin: u32,
-    pub wRmax: u32,
-    pub wUmin: u32,
-    pub wUmax: u32,
-    pub wVmin: u32,
-    pub wVmax: u32,
-    pub wCaps: u32,
-    pub wMaxAxes: u32,
-    pub wNumAxes: u32,
-    pub wMaxButtons: u32,
-    pub szRegKey: [super::super::Foundation::CHAR; 32],
-    pub szOEMVxD: [super::super::Foundation::CHAR; 260],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JOYCAPSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JOYCAPSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct JOYCAPSW {
-    pub wMid: u16,
-    pub wPid: u16,
-    pub szPname: [u16; 32],
-    pub wXmin: u32,
-    pub wXmax: u32,
-    pub wYmin: u32,
-    pub wYmax: u32,
-    pub wZmin: u32,
-    pub wZmax: u32,
-    pub wNumButtons: u32,
-    pub wPeriodMin: u32,
-    pub wPeriodMax: u32,
-    pub wRmin: u32,
-    pub wRmax: u32,
-    pub wUmin: u32,
-    pub wUmax: u32,
-    pub wVmin: u32,
-    pub wVmax: u32,
-    pub wCaps: u32,
-    pub wMaxAxes: u32,
-    pub wNumAxes: u32,
-    pub wMaxButtons: u32,
-    pub szRegKey: [u16; 32],
-    pub szOEMVxD: [u16; 260],
-}
-impl ::core::marker::Copy for JOYCAPSW {}
-impl ::core::clone::Clone for JOYCAPSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const JOYCAPS_HASPOV: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -2513,43 +1358,6 @@ pub const JOYERR_NOERROR: u32 = 0u32;
 pub const JOYERR_PARMS: u32 = 165u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const JOYERR_UNPLUGGED: u32 = 167u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct JOYINFO {
-    pub wXpos: u32,
-    pub wYpos: u32,
-    pub wZpos: u32,
-    pub wButtons: u32,
-}
-impl ::core::marker::Copy for JOYINFO {}
-impl ::core::clone::Clone for JOYINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct JOYINFOEX {
-    pub dwSize: u32,
-    pub dwFlags: u32,
-    pub dwXpos: u32,
-    pub dwYpos: u32,
-    pub dwZpos: u32,
-    pub dwRpos: u32,
-    pub dwUpos: u32,
-    pub dwVpos: u32,
-    pub dwButtons: u32,
-    pub dwButtonNumber: u32,
-    pub dwPOV: u32,
-    pub dwReserved1: u32,
-    pub dwReserved2: u32,
-}
-impl ::core::marker::Copy for JOYINFOEX {}
-impl ::core::clone::Clone for JOYINFOEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const JOYSTICKID1: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -2684,22 +1492,6 @@ pub const JOY_RETURNY: i32 = 2i32;
 pub const JOY_RETURNZ: i32 = 4i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const JOY_USEDEADZONE: i32 = 2048i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct JPEGINFOHEADER {
-    pub JPEGSize: u32,
-    pub JPEGProcess: u32,
-    pub JPEGColorSpaceID: u32,
-    pub JPEGBitsPerSample: u32,
-    pub JPEGHSubSampling: u32,
-    pub JPEGVSubSampling: u32,
-}
-impl ::core::marker::Copy for JPEGINFOHEADER {}
-impl ::core::clone::Clone for JPEGINFOHEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const JPEG_PROCESS_BASELINE: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -2709,14 +1501,6 @@ pub const JPEG_Y: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const JPEG_YCbCr: u32 = 2u32;
 pub const KSDATAFORMAT_SUBTYPE_IEEE_FLOAT: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3, data2: 0, data3: 16, data4: [128, 0, 0, 170, 0, 56, 155, 113] };
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_System_IO\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_IO"))]
-pub type LPFNEXTDEVIO = ::core::option::Option<unsafe extern "system" fn(lparam: super::super::Foundation::LPARAM, dwflags: u32, dwiocontrolcode: u32, lpinbuffer: *mut ::core::ffi::c_void, ninbuffersize: u32, lpoutbuffer: *mut ::core::ffi::c_void, noutbuffersize: u32, lpbytesreturned: *mut u32, lpoverlapped: *mut super::super::System::IO::OVERLAPPED) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LPMMIOPROC = ::core::option::Option<unsafe extern "system" fn(lpmmioinfo: ::windows_sys::core::PCSTR, umsg: u32, lparam1: super::super::Foundation::LPARAM, lparam2: super::super::Foundation::LPARAM) -> super::super::Foundation::LRESULT>;
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub type LPTASKCALLBACK = ::core::option::Option<unsafe extern "system" fn(dwinst: usize)>;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCIERR_AVI_AUDIOERROR: u32 = 619u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3125,64 +1909,10 @@ pub const MCI_ANIM_INFO_TEXT: i32 = 65536i32;
 pub const MCI_ANIM_OPEN_NOSTATIC: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_ANIM_OPEN_PARENT: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_ANIM_OPEN_PARMSA {
-    pub dwCallback: usize,
-    pub wDeviceID: u32,
-    pub lpstrDeviceType: ::windows_sys::core::PCSTR,
-    pub lpstrElementName: ::windows_sys::core::PCSTR,
-    pub lpstrAlias: ::windows_sys::core::PCSTR,
-    pub dwStyle: u32,
-    pub hWndParent: super::super::Foundation::HWND,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_ANIM_OPEN_PARMSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_ANIM_OPEN_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_ANIM_OPEN_PARMSW {
-    pub dwCallback: usize,
-    pub wDeviceID: u32,
-    pub lpstrDeviceType: ::windows_sys::core::PCWSTR,
-    pub lpstrElementName: ::windows_sys::core::PCWSTR,
-    pub lpstrAlias: ::windows_sys::core::PCWSTR,
-    pub dwStyle: u32,
-    pub hWndParent: super::super::Foundation::HWND,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_ANIM_OPEN_PARMSW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_ANIM_OPEN_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_ANIM_OPEN_WS: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_ANIM_PLAY_FAST: i32 = 262144i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_ANIM_PLAY_PARMS {
-    pub dwCallback: usize,
-    pub dwFrom: u32,
-    pub dwTo: u32,
-    pub dwSpeed: u32,
-}
-impl ::core::marker::Copy for MCI_ANIM_PLAY_PARMS {}
-impl ::core::clone::Clone for MCI_ANIM_PLAY_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_ANIM_PLAY_REVERSE: i32 = 131072i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3201,21 +1931,6 @@ pub const MCI_ANIM_REALIZE_BKGD: i32 = 131072i32;
 pub const MCI_ANIM_REALIZE_NORM: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_ANIM_RECT: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_ANIM_RECT_PARMS {
-    pub dwCallback: usize,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_ANIM_RECT_PARMS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_ANIM_RECT_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_ANIM_STATUS_FORWARD: i32 = 16386i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3228,38 +1943,10 @@ pub const MCI_ANIM_STATUS_SPEED: i32 = 16385i32;
 pub const MCI_ANIM_STATUS_STRETCH: i32 = 16389i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_ANIM_STEP_FRAMES: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_ANIM_STEP_PARMS {
-    pub dwCallback: usize,
-    pub dwFrames: u32,
-}
-impl ::core::marker::Copy for MCI_ANIM_STEP_PARMS {}
-impl ::core::clone::Clone for MCI_ANIM_STEP_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_ANIM_STEP_REVERSE: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_ANIM_UPDATE_HDC: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-pub struct MCI_ANIM_UPDATE_PARMS {
-    pub dwCallback: usize,
-    pub rc: super::super::Foundation::RECT,
-    pub hDC: super::super::Graphics::Gdi::HDC,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::marker::Copy for MCI_ANIM_UPDATE_PARMS {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::clone::Clone for MCI_ANIM_UPDATE_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_ANIM_WHERE_DESTINATION: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3272,40 +1959,6 @@ pub const MCI_ANIM_WINDOW_DISABLE_STRETCH: i32 = 2097152i32;
 pub const MCI_ANIM_WINDOW_ENABLE_STRETCH: i32 = 1048576i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_ANIM_WINDOW_HWND: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_ANIM_WINDOW_PARMSA {
-    pub dwCallback: usize,
-    pub hWnd: super::super::Foundation::HWND,
-    pub nCmdShow: u32,
-    pub lpstrText: ::windows_sys::core::PCSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_ANIM_WINDOW_PARMSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_ANIM_WINDOW_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_ANIM_WINDOW_PARMSW {
-    pub dwCallback: usize,
-    pub hWnd: super::super::Foundation::HWND,
-    pub nCmdShow: u32,
-    pub lpstrText: ::windows_sys::core::PCWSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_ANIM_WINDOW_PARMSW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_ANIM_WINDOW_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_ANIM_WINDOW_STATE: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3330,22 +1983,6 @@ pub const MCI_BREAK_HWND: i32 = 512i32;
 pub const MCI_BREAK_KEY: i32 = 256i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_BREAK_OFF: i32 = 1024i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_BREAK_PARMS {
-    pub dwCallback: usize,
-    pub nVirtKey: i32,
-    pub hwndBreak: super::super::Foundation::HWND,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_BREAK_PARMS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_BREAK_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_CAPTURE: u32 = 2160u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3408,61 +2045,10 @@ pub const MCI_DEVTYPE_WAVEFORM_AUDIO: u32 = 522u32;
 pub const MCI_DGV_CAPTURE_AS: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_CAPTURE_AT: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_CAPTURE_PARMSA {
-    pub dwCallback: usize,
-    pub lpstrFileName: ::windows_sys::core::PSTR,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_CAPTURE_PARMSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_CAPTURE_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_CAPTURE_PARMSW {
-    pub dwCallback: usize,
-    pub lpstrFileName: ::windows_sys::core::PWSTR,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_CAPTURE_PARMSW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_CAPTURE_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_COPY_AT: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_COPY_AUDIO_STREAM: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_COPY_PARMS {
-    pub dwCallback: usize,
-    pub dwFrom: u32,
-    pub dwTo: u32,
-    pub rc: super::super::Foundation::RECT,
-    pub dwAudioStream: u32,
-    pub dwVideoStream: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_COPY_PARMS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_COPY_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_COPY_VIDEO_STREAM: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3471,66 +2057,16 @@ pub const MCI_DGV_CUE_INPUT: i32 = 65536i32;
 pub const MCI_DGV_CUE_NOSHOW: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_CUE_OUTPUT: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_CUE_PARMS {
-    pub dwCallback: usize,
-    pub dwTo: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_CUE_PARMS {}
-impl ::core::clone::Clone for MCI_DGV_CUE_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_CUT_AT: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_CUT_AUDIO_STREAM: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_CUT_PARMS {
-    pub dwCallback: usize,
-    pub dwFrom: u32,
-    pub dwTo: u32,
-    pub rc: super::super::Foundation::RECT,
-    pub dwAudioStream: u32,
-    pub dwVideoStream: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_CUT_PARMS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_CUT_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_CUT_VIDEO_STREAM: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_DELETE_AT: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_DELETE_AUDIO_STREAM: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_DELETE_PARMS {
-    pub dwCallback: usize,
-    pub dwFrom: u32,
-    pub dwTo: u32,
-    pub rc: super::super::Foundation::RECT,
-    pub dwAudioStream: u32,
-    pub dwVideoStream: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_DELETE_PARMS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_DELETE_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_DELETE_VIDEO_STREAM: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3599,34 +2135,6 @@ pub const MCI_DGV_INFO_AUDIO_ALG: i32 = 16388i32;
 pub const MCI_DGV_INFO_AUDIO_QUALITY: i32 = 16385i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_INFO_ITEM: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_INFO_PARMSA {
-    pub dwCallback: usize,
-    pub lpstrReturn: ::windows_sys::core::PSTR,
-    pub dwRetSize: u32,
-    pub dwItem: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_INFO_PARMSA {}
-impl ::core::clone::Clone for MCI_DGV_INFO_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_INFO_PARMSW {
-    pub dwCallback: usize,
-    pub lpstrReturn: ::windows_sys::core::PWSTR,
-    pub dwRetSize: u32,
-    pub dwItem: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_INFO_PARMSW {}
-impl ::core::clone::Clone for MCI_DGV_INFO_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_INFO_STILL_ALG: i32 = 16389i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3655,38 +2163,6 @@ pub const MCI_DGV_LIST_COUNT: i32 = 131072i32;
 pub const MCI_DGV_LIST_ITEM: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_LIST_NUMBER: i32 = 262144i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_LIST_PARMSA {
-    pub dwCallback: usize,
-    pub lpstrReturn: ::windows_sys::core::PSTR,
-    pub dwLength: u32,
-    pub dwNumber: u32,
-    pub dwItem: u32,
-    pub lpstrAlgorithm: ::windows_sys::core::PSTR,
-}
-impl ::core::marker::Copy for MCI_DGV_LIST_PARMSA {}
-impl ::core::clone::Clone for MCI_DGV_LIST_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_LIST_PARMSW {
-    pub dwCallback: usize,
-    pub lpstrReturn: ::windows_sys::core::PWSTR,
-    pub dwLength: u32,
-    pub dwNumber: u32,
-    pub dwItem: u32,
-    pub lpstrAlgorithm: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for MCI_DGV_LIST_PARMSW {}
-impl ::core::clone::Clone for MCI_DGV_LIST_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_LIST_STILL_ALG: i32 = 16387i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3711,19 +2187,6 @@ pub const MCI_DGV_MONITOR_FILE: i32 = 16385i32;
 pub const MCI_DGV_MONITOR_INPUT: i32 = 16384i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_MONITOR_METHOD: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_MONITOR_PARMS {
-    pub dwCallback: usize,
-    pub dwSource: u32,
-    pub dwMethod: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_MONITOR_PARMS {}
-impl ::core::clone::Clone for MCI_DGV_MONITOR_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_MONITOR_SOURCE: i32 = 131072i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3734,46 +2197,6 @@ pub const MCI_DGV_OPEN_32BIT: i32 = 1048576i32;
 pub const MCI_DGV_OPEN_NOSTATIC: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_OPEN_PARENT: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_OPEN_PARMSA {
-    pub dwCallback: usize,
-    pub wDeviceID: u32,
-    pub lpstrDeviceType: ::windows_sys::core::PSTR,
-    pub lpstrElementName: ::windows_sys::core::PSTR,
-    pub lpstrAlias: ::windows_sys::core::PSTR,
-    pub dwStyle: u32,
-    pub hWndParent: super::super::Foundation::HWND,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_OPEN_PARMSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_OPEN_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_OPEN_PARMSW {
-    pub dwCallback: usize,
-    pub wDeviceID: u32,
-    pub lpstrDeviceType: ::windows_sys::core::PWSTR,
-    pub lpstrElementName: ::windows_sys::core::PWSTR,
-    pub lpstrAlias: ::windows_sys::core::PWSTR,
-    pub dwStyle: u32,
-    pub hWndParent: super::super::Foundation::HWND,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_OPEN_PARMSW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_OPEN_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_OPEN_WS: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3784,24 +2207,6 @@ pub const MCI_DGV_PASTE_AUDIO_STREAM: i32 = 131072i32;
 pub const MCI_DGV_PASTE_INSERT: i32 = 524288i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_PASTE_OVERWRITE: i32 = 1048576i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_PASTE_PARMS {
-    pub dwCallback: usize,
-    pub dwTo: u32,
-    pub rc: super::super::Foundation::RECT,
-    pub dwAudioStream: u32,
-    pub dwVideoStream: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_PASTE_PARMS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_PASTE_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_PASTE_VIDEO_STREAM: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3820,36 +2225,6 @@ pub const MCI_DGV_PUT_SOURCE: i32 = 131072i32;
 pub const MCI_DGV_PUT_VIDEO: i32 = 1048576i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_PUT_WINDOW: i32 = 2097152i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_QUALITY_PARMSA {
-    pub dwCallback: usize,
-    pub dwItem: u32,
-    pub lpstrName: ::windows_sys::core::PSTR,
-    pub lpstrAlgorithm: u32,
-    pub dwHandle: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_QUALITY_PARMSA {}
-impl ::core::clone::Clone for MCI_DGV_QUALITY_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_QUALITY_PARMSW {
-    pub dwCallback: usize,
-    pub dwItem: u32,
-    pub lpstrName: ::windows_sys::core::PWSTR,
-    pub lpstrAlgorithm: u32,
-    pub dwHandle: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_QUALITY_PARMSW {}
-impl ::core::clone::Clone for MCI_DGV_QUALITY_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_REALIZE_BKGD: i32 = 131072i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -3858,146 +2233,22 @@ pub const MCI_DGV_REALIZE_NORM: i32 = 65536i32;
 pub const MCI_DGV_RECORD_AUDIO_STREAM: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_RECORD_HOLD: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_RECORD_PARMS {
-    pub dwCallback: usize,
-    pub dwFrom: u32,
-    pub dwTo: u32,
-    pub rc: super::super::Foundation::RECT,
-    pub dwAudioStream: u32,
-    pub dwVideoStream: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_RECORD_PARMS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_RECORD_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_RECORD_VIDEO_STREAM: i32 = 524288i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_RECT: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_RECT_PARMS {
-    pub dwCallback: usize,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_RECT_PARMS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_RECT_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_RESERVE_IN: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_RESERVE_PARMSA {
-    pub dwCallback: usize,
-    pub lpstrPath: ::windows_sys::core::PSTR,
-    pub dwSize: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_RESERVE_PARMSA {}
-impl ::core::clone::Clone for MCI_DGV_RESERVE_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_RESERVE_PARMSW {
-    pub dwCallback: usize,
-    pub lpstrPath: ::windows_sys::core::PWSTR,
-    pub dwSize: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_RESERVE_PARMSW {}
-impl ::core::clone::Clone for MCI_DGV_RESERVE_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_RESERVE_SIZE: i32 = 131072i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_RESTORE_AT: i32 = 131072i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_RESTORE_FROM: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_RESTORE_PARMSA {
-    pub dwCallback: usize,
-    pub lpstrFileName: ::windows_sys::core::PSTR,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_RESTORE_PARMSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_RESTORE_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_RESTORE_PARMSW {
-    pub dwCallback: usize,
-    pub lpstrFileName: ::windows_sys::core::PWSTR,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_RESTORE_PARMSW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_RESTORE_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_SAVE_ABORT: i32 = 131072i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_SAVE_KEEPRESERVE: i32 = 262144i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_SAVE_PARMSA {
-    pub dwCallback: usize,
-    pub lpstrFileName: ::windows_sys::core::PSTR,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_SAVE_PARMSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_SAVE_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_SAVE_PARMSW {
-    pub dwCallback: usize,
-    pub lpstrFileName: ::windows_sys::core::PWSTR,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_SAVE_PARMSW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_SAVE_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_SETAUDIO_ALG: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4020,38 +2271,6 @@ pub const MCI_DGV_SETAUDIO_LEFT: i32 = 2097152i32;
 pub const MCI_DGV_SETAUDIO_OUTPUT: i32 = 67108864i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_SETAUDIO_OVER: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_SETAUDIO_PARMSA {
-    pub dwCallback: usize,
-    pub dwItem: u32,
-    pub dwValue: u32,
-    pub dwOver: u32,
-    pub lpstrAlgorithm: ::windows_sys::core::PSTR,
-    pub lpstrQuality: ::windows_sys::core::PSTR,
-}
-impl ::core::marker::Copy for MCI_DGV_SETAUDIO_PARMSA {}
-impl ::core::clone::Clone for MCI_DGV_SETAUDIO_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_SETAUDIO_PARMSW {
-    pub dwCallback: usize,
-    pub dwItem: u32,
-    pub dwValue: u32,
-    pub dwOver: u32,
-    pub lpstrAlgorithm: ::windows_sys::core::PWSTR,
-    pub lpstrQuality: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for MCI_DGV_SETAUDIO_PARMSW {}
-impl ::core::clone::Clone for MCI_DGV_SETAUDIO_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_SETAUDIO_QUALITY: i32 = 524288i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4116,40 +2335,6 @@ pub const MCI_DGV_SETVIDEO_OUTPUT: i32 = 67108864i32;
 pub const MCI_DGV_SETVIDEO_OVER: i32 = 2097152i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_SETVIDEO_PALHANDLE: i32 = 16391i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_SETVIDEO_PARMSA {
-    pub dwCallback: usize,
-    pub dwItem: u32,
-    pub dwValue: u32,
-    pub dwOver: u32,
-    pub lpstrAlgorithm: ::windows_sys::core::PSTR,
-    pub lpstrQuality: ::windows_sys::core::PSTR,
-    pub dwSourceNumber: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_SETVIDEO_PARMSA {}
-impl ::core::clone::Clone for MCI_DGV_SETVIDEO_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_SETVIDEO_PARMSW {
-    pub dwCallback: usize,
-    pub dwItem: u32,
-    pub dwValue: u32,
-    pub dwOver: u32,
-    pub lpstrAlgorithm: ::windows_sys::core::PWSTR,
-    pub lpstrQuality: ::windows_sys::core::PWSTR,
-    pub dwSourceNumber: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_SETVIDEO_PARMSW {}
-impl ::core::clone::Clone for MCI_DGV_SETVIDEO_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_SETVIDEO_QUALITY: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4194,21 +2379,6 @@ pub const MCI_DGV_SETVIDEO_TINT: i32 = 16387i32;
 pub const MCI_DGV_SETVIDEO_VALUE: i32 = 16777216i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_SET_FILEFORMAT: i32 = 524288i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_SET_PARMS {
-    pub dwCallback: usize,
-    pub dwTimeFormat: u32,
-    pub dwAudio: u32,
-    pub dwFileFormat: u32,
-    pub dwSpeed: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_SET_PARMS {}
-impl ::core::clone::Clone for MCI_DGV_SET_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_SET_SEEK_EXACTLY: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4221,20 +2391,6 @@ pub const MCI_DGV_SIGNAL_AT: i32 = 65536i32;
 pub const MCI_DGV_SIGNAL_CANCEL: i32 = 524288i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_SIGNAL_EVERY: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_SIGNAL_PARMS {
-    pub dwCallback: usize,
-    pub dwPosition: u32,
-    pub dwPeriod: u32,
-    pub dwUserParm: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_SIGNAL_PARMS {}
-impl ::core::clone::Clone for MCI_DGV_SIGNAL_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_SIGNAL_POSITION: i32 = 1048576i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4299,38 +2455,6 @@ pub const MCI_DGV_STATUS_MONITOR_METHOD: i32 = 16396i32;
 pub const MCI_DGV_STATUS_NOMINAL: i32 = 131072i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_STATUS_OUTPUT: i32 = 8388608i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_STATUS_PARMSA {
-    pub dwCallback: usize,
-    pub dwReturn: usize,
-    pub dwItem: u32,
-    pub dwTrack: u32,
-    pub lpstrDrive: ::windows_sys::core::PSTR,
-    pub dwReference: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_STATUS_PARMSA {}
-impl ::core::clone::Clone for MCI_DGV_STATUS_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_STATUS_PARMSW {
-    pub dwCallback: usize,
-    pub dwReturn: usize,
-    pub dwItem: u32,
-    pub dwTrack: u32,
-    pub lpstrDrive: ::windows_sys::core::PWSTR,
-    pub dwReference: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_STATUS_PARMSW {}
-impl ::core::clone::Clone for MCI_DGV_STATUS_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_STATUS_PAUSE_MODE: i32 = 16422i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4379,18 +2503,6 @@ pub const MCI_DGV_STATUS_WINDOW_MINIMIZED: i32 = 16418i32;
 pub const MCI_DGV_STATUS_WINDOW_VISIBLE: i32 = 16417i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_STEP_FRAMES: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_DGV_STEP_PARMS {
-    pub dwCallback: usize,
-    pub dwFrames: u32,
-}
-impl ::core::marker::Copy for MCI_DGV_STEP_PARMS {}
-impl ::core::clone::Clone for MCI_DGV_STEP_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_STEP_REVERSE: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4399,22 +2511,6 @@ pub const MCI_DGV_STOP_HOLD: i32 = 65536i32;
 pub const MCI_DGV_UPDATE_HDC: i32 = 131072i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_UPDATE_PAINT: i32 = 262144i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-pub struct MCI_DGV_UPDATE_PARMS {
-    pub dwCallback: usize,
-    pub rc: super::super::Foundation::RECT,
-    pub hDC: super::super::Graphics::Gdi::HDC,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::marker::Copy for MCI_DGV_UPDATE_PARMS {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-impl ::core::clone::Clone for MCI_DGV_UPDATE_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_WHERE_DESTINATION: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4431,40 +2527,6 @@ pub const MCI_DGV_WHERE_WINDOW: i32 = 2097152i32;
 pub const MCI_DGV_WINDOW_DEFAULT: i32 = 0i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_WINDOW_HWND: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_WINDOW_PARMSA {
-    pub dwCallback: usize,
-    pub hWnd: super::super::Foundation::HWND,
-    pub nCmdShow: u32,
-    pub lpstrText: ::windows_sys::core::PSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_WINDOW_PARMSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_WINDOW_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_DGV_WINDOW_PARMSW {
-    pub dwCallback: usize,
-    pub hWnd: super::super::Foundation::HWND,
-    pub nCmdShow: u32,
-    pub lpstrText: ::windows_sys::core::PWSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_DGV_WINDOW_PARMSW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_DGV_WINDOW_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_DGV_WINDOW_STATE: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4531,17 +2593,6 @@ pub const MCI_FORMAT_TMSF_S: u32 = 543u32;
 pub const MCI_FREEZE: u32 = 2116u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_FROM: i32 = 4i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_GENERIC_PARMS {
-    pub dwCallback: usize,
-}
-impl ::core::marker::Copy for MCI_GENERIC_PARMS {}
-impl ::core::clone::Clone for MCI_GENERIC_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_GETDEVCAPS: u32 = 2059u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4562,19 +2613,6 @@ pub const MCI_GETDEVCAPS_HAS_AUDIO: i32 = 2i32;
 pub const MCI_GETDEVCAPS_HAS_VIDEO: i32 = 3i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_GETDEVCAPS_ITEM: i32 = 256i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_GETDEVCAPS_PARMS {
-    pub dwCallback: usize,
-    pub dwReturn: u32,
-    pub dwItem: u32,
-}
-impl ::core::marker::Copy for MCI_GETDEVCAPS_PARMS {}
-impl ::core::clone::Clone for MCI_GETDEVCAPS_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_GETDEVCAPS_USES_FILES: i32 = 5i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4595,32 +2633,6 @@ pub const MCI_INFO_MEDIA_IDENTITY: i32 = 2048i32;
 pub const MCI_INFO_MEDIA_UPC: i32 = 1024i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_INFO_NAME: i32 = 4096i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_INFO_PARMSA {
-    pub dwCallback: usize,
-    pub lpstrReturn: ::windows_sys::core::PSTR,
-    pub dwRetSize: u32,
-}
-impl ::core::marker::Copy for MCI_INFO_PARMSA {}
-impl ::core::clone::Clone for MCI_INFO_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_INFO_PARMSW {
-    pub dwCallback: usize,
-    pub lpstrReturn: ::windows_sys::core::PWSTR,
-    pub dwRetSize: u32,
-}
-impl ::core::marker::Copy for MCI_INFO_PARMSW {}
-impl ::core::clone::Clone for MCI_INFO_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_INFO_PRODUCT: i32 = 256i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4639,30 +2651,6 @@ pub const MCI_LIST: u32 = 2168u32;
 pub const MCI_LOAD: u32 = 2128u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_LOAD_FILE: i32 = 256i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_LOAD_PARMSA {
-    pub dwCallback: usize,
-    pub lpfilename: ::windows_sys::core::PCSTR,
-}
-impl ::core::marker::Copy for MCI_LOAD_PARMSA {}
-impl ::core::clone::Clone for MCI_LOAD_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_LOAD_PARMSW {
-    pub dwCallback: usize,
-    pub lpfilename: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for MCI_LOAD_PARMSW {}
-impl ::core::clone::Clone for MCI_LOAD_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_MAX_DEVICE_TYPE_LENGTH: u32 = 80u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4711,54 +2699,10 @@ pub const MCI_OPEN: u32 = 2051u32;
 pub const MCI_OPEN_ALIAS: i32 = 1024i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_OPEN_DRIVER: u32 = 2049u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_OPEN_DRIVER_PARMS {
-    pub wDeviceID: u32,
-    pub lpstrParams: ::windows_sys::core::PCWSTR,
-    pub wCustomCommandTable: u32,
-    pub wType: u32,
-}
-impl ::core::marker::Copy for MCI_OPEN_DRIVER_PARMS {}
-impl ::core::clone::Clone for MCI_OPEN_DRIVER_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_OPEN_ELEMENT: i32 = 512i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_OPEN_ELEMENT_ID: i32 = 2048i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_OPEN_PARMSA {
-    pub dwCallback: usize,
-    pub wDeviceID: u32,
-    pub lpstrDeviceType: ::windows_sys::core::PCSTR,
-    pub lpstrElementName: ::windows_sys::core::PCSTR,
-    pub lpstrAlias: ::windows_sys::core::PCSTR,
-}
-impl ::core::marker::Copy for MCI_OPEN_PARMSA {}
-impl ::core::clone::Clone for MCI_OPEN_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_OPEN_PARMSW {
-    pub dwCallback: usize,
-    pub wDeviceID: u32,
-    pub lpstrDeviceType: ::windows_sys::core::PCWSTR,
-    pub lpstrElementName: ::windows_sys::core::PCWSTR,
-    pub lpstrAlias: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for MCI_OPEN_PARMSW {}
-impl ::core::clone::Clone for MCI_OPEN_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_OPEN_SHAREABLE: i32 = 256i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4773,80 +2717,8 @@ pub const MCI_OVLY_GETDEVCAPS_CAN_STRETCH: i32 = 16385i32;
 pub const MCI_OVLY_GETDEVCAPS_MAX_WINDOWS: i32 = 16387i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_OVLY_INFO_TEXT: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_OVLY_LOAD_PARMSA {
-    pub dwCallback: usize,
-    pub lpfilename: ::windows_sys::core::PCSTR,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_OVLY_LOAD_PARMSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_OVLY_LOAD_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_OVLY_LOAD_PARMSW {
-    pub dwCallback: usize,
-    pub lpfilename: ::windows_sys::core::PCWSTR,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_OVLY_LOAD_PARMSW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_OVLY_LOAD_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_OVLY_OPEN_PARENT: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_OVLY_OPEN_PARMSA {
-    pub dwCallback: usize,
-    pub wDeviceID: u32,
-    pub lpstrDeviceType: ::windows_sys::core::PCSTR,
-    pub lpstrElementName: ::windows_sys::core::PCSTR,
-    pub lpstrAlias: ::windows_sys::core::PCSTR,
-    pub dwStyle: u32,
-    pub hWndParent: super::super::Foundation::HWND,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_OVLY_OPEN_PARMSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_OVLY_OPEN_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_OVLY_OPEN_PARMSW {
-    pub dwCallback: usize,
-    pub wDeviceID: u32,
-    pub lpstrDeviceType: ::windows_sys::core::PCWSTR,
-    pub lpstrElementName: ::windows_sys::core::PCWSTR,
-    pub lpstrAlias: ::windows_sys::core::PCWSTR,
-    pub dwStyle: u32,
-    pub hWndParent: super::super::Foundation::HWND,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_OVLY_OPEN_PARMSW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_OVLY_OPEN_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_OVLY_OPEN_WS: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4859,53 +2731,6 @@ pub const MCI_OVLY_PUT_SOURCE: i32 = 131072i32;
 pub const MCI_OVLY_PUT_VIDEO: i32 = 1048576i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_OVLY_RECT: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_OVLY_RECT_PARMS {
-    pub dwCallback: usize,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_OVLY_RECT_PARMS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_OVLY_RECT_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_OVLY_SAVE_PARMSA {
-    pub dwCallback: usize,
-    pub lpfilename: ::windows_sys::core::PCSTR,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_OVLY_SAVE_PARMSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_OVLY_SAVE_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_OVLY_SAVE_PARMSW {
-    pub dwCallback: usize,
-    pub lpfilename: ::windows_sys::core::PCWSTR,
-    pub rc: super::super::Foundation::RECT,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_OVLY_SAVE_PARMSW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_OVLY_SAVE_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_OVLY_STATUS_HWND: i32 = 16385i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4926,40 +2751,6 @@ pub const MCI_OVLY_WINDOW_DISABLE_STRETCH: i32 = 2097152i32;
 pub const MCI_OVLY_WINDOW_ENABLE_STRETCH: i32 = 1048576i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_OVLY_WINDOW_HWND: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_OVLY_WINDOW_PARMSA {
-    pub dwCallback: usize,
-    pub hWnd: super::super::Foundation::HWND,
-    pub nCmdShow: u32,
-    pub lpstrText: ::windows_sys::core::PCSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_OVLY_WINDOW_PARMSA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_OVLY_WINDOW_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MCI_OVLY_WINDOW_PARMSW {
-    pub dwCallback: usize,
-    pub hWnd: super::super::Foundation::HWND,
-    pub nCmdShow: u32,
-    pub lpstrText: ::windows_sys::core::PCWSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MCI_OVLY_WINDOW_PARMSW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MCI_OVLY_WINDOW_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_OVLY_WINDOW_STATE: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -4970,19 +2761,6 @@ pub const MCI_PASTE: u32 = 2131u32;
 pub const MCI_PAUSE: u32 = 2057u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_PLAY: u32 = 2054u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_PLAY_PARMS {
-    pub dwCallback: usize,
-    pub dwFrom: u32,
-    pub dwTo: u32,
-}
-impl ::core::marker::Copy for MCI_PLAY_PARMS {}
-impl ::core::clone::Clone for MCI_PLAY_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_PUT: u32 = 2114u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5011,19 +2789,6 @@ pub const MCI_RECORD: u32 = 2063u32;
 pub const MCI_RECORD_INSERT: i32 = 256i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_RECORD_OVERWRITE: i32 = 512i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_RECORD_PARMS {
-    pub dwCallback: usize,
-    pub dwFrom: u32,
-    pub dwTo: u32,
-}
-impl ::core::marker::Copy for MCI_RECORD_PARMS {}
-impl ::core::clone::Clone for MCI_RECORD_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_RECT: u32 = 7u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5042,46 +2807,10 @@ pub const MCI_RETURN: u32 = 4u32;
 pub const MCI_SAVE: u32 = 2067u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_SAVE_FILE: i32 = 256i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_SAVE_PARMSA {
-    pub dwCallback: usize,
-    pub lpfilename: ::windows_sys::core::PCSTR,
-}
-impl ::core::marker::Copy for MCI_SAVE_PARMSA {}
-impl ::core::clone::Clone for MCI_SAVE_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_SAVE_PARMSW {
-    pub dwCallback: usize,
-    pub lpfilename: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for MCI_SAVE_PARMSW {}
-impl ::core::clone::Clone for MCI_SAVE_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_SECTION: &str = "MCI32";
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_SEEK: u32 = 2055u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_SEEK_PARMS {
-    pub dwCallback: usize,
-    pub dwTo: u32,
-}
-impl ::core::marker::Copy for MCI_SEEK_PARMS {}
-impl ::core::clone::Clone for MCI_SEEK_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_SEEK_TO_END: i32 = 512i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5110,24 +2839,6 @@ pub const MCI_SEQ_NONE_S: u32 = 1226u32;
 pub const MCI_SEQ_SET_MASTER: i32 = 524288i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_SEQ_SET_OFFSET: i32 = 16777216i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_SEQ_SET_PARMS {
-    pub dwCallback: usize,
-    pub dwTimeFormat: u32,
-    pub dwAudio: u32,
-    pub dwTempo: u32,
-    pub dwPort: u32,
-    pub dwSlave: u32,
-    pub dwMaster: u32,
-    pub dwOffset: u32,
-}
-impl ::core::marker::Copy for MCI_SEQ_SET_PARMS {}
-impl ::core::clone::Clone for MCI_SEQ_SET_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_SEQ_SET_PORT: i32 = 131072i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5176,19 +2887,6 @@ pub const MCI_SET_DOOR_OPEN: i32 = 256i32;
 pub const MCI_SET_OFF: i32 = 16384i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_SET_ON: i32 = 8192i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_SET_PARMS {
-    pub dwCallback: usize,
-    pub dwTimeFormat: u32,
-    pub dwAudio: u32,
-}
-impl ::core::marker::Copy for MCI_SET_PARMS {}
-impl ::core::clone::Clone for MCI_SET_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_SET_TIME_FORMAT: i32 = 1024i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5211,20 +2909,6 @@ pub const MCI_STATUS_MEDIA_PRESENT: i32 = 5i32;
 pub const MCI_STATUS_MODE: i32 = 4i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_STATUS_NUMBER_OF_TRACKS: i32 = 3i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_STATUS_PARMS {
-    pub dwCallback: usize,
-    pub dwReturn: usize,
-    pub dwItem: u32,
-    pub dwTrack: u32,
-}
-impl ::core::marker::Copy for MCI_STATUS_PARMS {}
-impl ::core::clone::Clone for MCI_STATUS_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_STATUS_POSITION: i32 = 2i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5247,36 +2931,6 @@ pub const MCI_SYSINFO_INSTALLNAME: i32 = 2048i32;
 pub const MCI_SYSINFO_NAME: i32 = 1024i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_SYSINFO_OPEN: i32 = 512i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_SYSINFO_PARMSA {
-    pub dwCallback: usize,
-    pub lpstrReturn: ::windows_sys::core::PSTR,
-    pub dwRetSize: u32,
-    pub dwNumber: u32,
-    pub wDeviceType: u32,
-}
-impl ::core::marker::Copy for MCI_SYSINFO_PARMSA {}
-impl ::core::clone::Clone for MCI_SYSINFO_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_SYSINFO_PARMSW {
-    pub dwCallback: usize,
-    pub lpstrReturn: ::windows_sys::core::PWSTR,
-    pub dwRetSize: u32,
-    pub dwNumber: u32,
-    pub wDeviceType: u32,
-}
-impl ::core::marker::Copy for MCI_SYSINFO_PARMSW {}
-impl ::core::clone::Clone for MCI_SYSINFO_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_SYSINFO_QUANTITY: i32 = 256i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5295,30 +2949,6 @@ pub const MCI_UNFREEZE: u32 = 2117u32;
 pub const MCI_UPDATE: u32 = 2132u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_USER_MESSAGES: u32 = 3072u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_VD_ESCAPE_PARMSA {
-    pub dwCallback: usize,
-    pub lpstrCommand: ::windows_sys::core::PCSTR,
-}
-impl ::core::marker::Copy for MCI_VD_ESCAPE_PARMSA {}
-impl ::core::clone::Clone for MCI_VD_ESCAPE_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_VD_ESCAPE_PARMSW {
-    pub dwCallback: usize,
-    pub lpstrCommand: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for MCI_VD_ESCAPE_PARMSW {}
-impl ::core::clone::Clone for MCI_VD_ESCAPE_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_VD_ESCAPE_STRING: i32 = 256i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5347,20 +2977,6 @@ pub const MCI_VD_MEDIA_OTHER: u32 = 1028u32;
 pub const MCI_VD_MODE_PARK: u32 = 1025u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_VD_PLAY_FAST: i32 = 131072i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_VD_PLAY_PARMS {
-    pub dwCallback: usize,
-    pub dwFrom: u32,
-    pub dwTo: u32,
-    pub dwSpeed: u32,
-}
-impl ::core::marker::Copy for MCI_VD_PLAY_PARMS {}
-impl ::core::clone::Clone for MCI_VD_PLAY_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_VD_PLAY_REVERSE: i32 = 65536i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5387,35 +3003,10 @@ pub const MCI_VD_STATUS_SIDE: i32 = 16389i32;
 pub const MCI_VD_STATUS_SPEED: i32 = 16386i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_VD_STEP_FRAMES: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_VD_STEP_PARMS {
-    pub dwCallback: usize,
-    pub dwFrames: u32,
-}
-impl ::core::marker::Copy for MCI_VD_STEP_PARMS {}
-impl ::core::clone::Clone for MCI_VD_STEP_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_VD_STEP_REVERSE: i32 = 131072i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_WAIT: i32 = 2i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_WAVE_DELETE_PARMS {
-    pub dwCallback: usize,
-    pub dwFrom: u32,
-    pub dwTo: u32,
-}
-impl ::core::marker::Copy for MCI_WAVE_DELETE_PARMS {}
-impl ::core::clone::Clone for MCI_WAVE_DELETE_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_WAVE_GETDEVCAPS_INPUTS: i32 = 16385i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5426,38 +3017,6 @@ pub const MCI_WAVE_INPUT: i32 = 4194304i32;
 pub const MCI_WAVE_MAPPER: u32 = 1153u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_WAVE_OPEN_BUFFER: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_WAVE_OPEN_PARMSA {
-    pub dwCallback: usize,
-    pub wDeviceID: u32,
-    pub lpstrDeviceType: ::windows_sys::core::PCSTR,
-    pub lpstrElementName: ::windows_sys::core::PCSTR,
-    pub lpstrAlias: ::windows_sys::core::PCSTR,
-    pub dwBufferSeconds: u32,
-}
-impl ::core::marker::Copy for MCI_WAVE_OPEN_PARMSA {}
-impl ::core::clone::Clone for MCI_WAVE_OPEN_PARMSA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_WAVE_OPEN_PARMSW {
-    pub dwCallback: usize,
-    pub wDeviceID: u32,
-    pub lpstrDeviceType: ::windows_sys::core::PCWSTR,
-    pub lpstrElementName: ::windows_sys::core::PCWSTR,
-    pub lpstrAlias: ::windows_sys::core::PCWSTR,
-    pub dwBufferSeconds: u32,
-}
-impl ::core::marker::Copy for MCI_WAVE_OPEN_PARMSW {}
-impl ::core::clone::Clone for MCI_WAVE_OPEN_PARMSW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_WAVE_OUTPUT: i32 = 8388608i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5476,31 +3035,6 @@ pub const MCI_WAVE_SET_BLOCKALIGN: i32 = 1048576i32;
 pub const MCI_WAVE_SET_CHANNELS: i32 = 131072i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_WAVE_SET_FORMATTAG: i32 = 65536i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MCI_WAVE_SET_PARMS {
-    pub dwCallback: usize,
-    pub dwTimeFormat: u32,
-    pub dwAudio: u32,
-    pub wInput: u32,
-    pub wOutput: u32,
-    pub wFormatTag: u16,
-    pub wReserved2: u16,
-    pub nChannels: u16,
-    pub wReserved3: u16,
-    pub nSamplesPerSec: u32,
-    pub nAvgBytesPerSec: u32,
-    pub nBlockAlign: u16,
-    pub wReserved4: u16,
-    pub wBitsPerSample: u16,
-    pub wReserved5: u16,
-}
-impl ::core::marker::Copy for MCI_WAVE_SET_PARMS {}
-impl ::core::clone::Clone for MCI_WAVE_SET_PARMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCI_WAVE_SET_SAMPLESPERSEC: i32 = 262144i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5525,35 +3059,8 @@ pub const MCI_WINDOW: u32 = 2113u32;
 pub const MCMADM_E_REGKEY_NOT_FOUND: ::windows_sys::core::HRESULT = -1072889750i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MCMADM_I_NO_EVENTS: ::windows_sys::core::HRESULT = 1074593897i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct MEDIASPACEADPCMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wRevision: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for MEDIASPACEADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for MEDIASPACEADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MIDIMAPPER_S: u32 = 1227u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MIDIOPENSTRMID {
-    pub dwStreamID: u32,
-    pub uDeviceID: u32,
-}
-impl ::core::marker::Copy for MIDIOPENSTRMID {}
-impl ::core::clone::Clone for MIDIOPENSTRMID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MIDI_IO_COOKED: i32 = 2i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5592,39 +3099,6 @@ pub const MIXERCONTROL_CONTROLTYPE_SRS_MTS: u32 = 536936454u32;
 pub const MIXERCONTROL_CONTROLTYPE_SRS_ONOFF: u32 = 536936455u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MIXERCONTROL_CONTROLTYPE_SRS_SYNTHSELECT: u32 = 536936456u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct MIXEROPENDESC {
-    pub hmx: super::Audio::HMIXER,
-    pub pReserved0: *mut ::core::ffi::c_void,
-    pub dwCallback: usize,
-    pub dwInstance: usize,
-    pub dnDevNode: usize,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for MIXEROPENDESC {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for MIXEROPENDESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct MMCKINFO {
-    pub ckid: u32,
-    pub cksize: u32,
-    pub fccType: u32,
-    pub dwDataOffset: u32,
-    pub dwFlags: u32,
-}
-impl ::core::marker::Copy for MMCKINFO {}
-impl ::core::clone::Clone for MMCKINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MMIOERR_ACCESSDENIED: u32 = 268u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -5659,35 +3133,6 @@ pub const MMIOERR_SHARINGVIOLATION: u32 = 269u32;
 pub const MMIOERR_TOOMANYOPENFILES: u32 = 271u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MMIOERR_UNBUFFERED: u32 = 266u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MMIOINFO {
-    pub dwFlags: u32,
-    pub fccIOProc: u32,
-    pub pIOProc: LPMMIOPROC,
-    pub wErrorRet: u32,
-    pub htask: super::HTASK,
-    pub cchBuffer: i32,
-    pub pchBuffer: *mut i8,
-    pub pchNext: *mut i8,
-    pub pchEndRead: *mut i8,
-    pub pchEndWrite: *mut i8,
-    pub lBufOffset: i32,
-    pub lDiskOffset: i32,
-    pub adwInfo: [u32; 3],
-    pub dwReserved1: u32,
-    pub dwReserved2: u32,
-    pub hmmio: HMMIO,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MMIOINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MMIOINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MMIOM_CLOSE: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -8842,22 +6287,6 @@ pub const MPEGLAYER3_ID_MPEG: u32 = 1u32;
 pub const MPEGLAYER3_ID_UNKNOWN: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MPEGLAYER3_WFX_EXTRA_BYTES: u32 = 12u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct MSAUDIO1WAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wSamplesPerBlock: u16,
-    pub wEncodeOptions: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for MSAUDIO1WAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for MSAUDIO1WAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MSAUDIO1_BITS_PER_SAMPLE: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -8886,21 +6315,6 @@ pub const MXDM_OPEN: u32 = 3u32;
 pub const MXDM_SETCONTROLDETAILS: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const MXDM_USER: u32 = 16384u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct NMS_VBXADPCMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wSamplesPerBlock: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for NMS_VBXADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for NMS_VBXADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const NS_DRM_E_MIGRATION_IMAGE_ALREADY_EXISTS: ::windows_sys::core::HRESULT = -1072879730i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -11311,76 +8725,6 @@ pub const NS_W_FILE_BANDWIDTH_LIMIT: ::windows_sys::core::HRESULT = -2146631676i
 pub const NS_W_SERVER_BANDWIDTH_LIMIT: ::windows_sys::core::HRESULT = -2146631677i32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const NS_W_UNKNOWN_EVENT: ::windows_sys::core::HRESULT = -2146631584i32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct OLIADPCMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for OLIADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for OLIADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct OLICELPWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for OLICELPWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for OLICELPWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct OLIGSMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for OLIGSMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for OLIGSMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct OLIOPRWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for OLIOPRWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for OLIOPRWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct OLISBCWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for OLISBCWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for OLISBCWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const PD_CAN_DRAW_DIB: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -11431,36 +8775,6 @@ pub const SEEK_CUR: u32 = 1u32;
 pub const SEEK_END: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const SEEK_SET: u32 = 0u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct SIERRAADPCMWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wRevision: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for SIERRAADPCMWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for SIERRAADPCMWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct SONARCWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wCompType: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for SONARCWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for SONARCWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const TARGET_DEVICE_FRIENDLY_NAME: &str = "TargetDeviceFriendlyName";
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -11481,39 +8795,6 @@ pub const TDD_GETSYSTEMTIME: u32 = 2056u32;
 pub const TDD_KILLTIMEREVENT: u32 = 2048u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const TDD_SETTIMEREVENT: u32 = 2052u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct TIMEREVENT {
-    pub wDelay: u16,
-    pub wResolution: u16,
-    pub lpFunction: super::LPTIMECALLBACK,
-    pub dwUser: u32,
-    pub wFlags: u16,
-    pub wReserved1: u16,
-}
-impl ::core::marker::Copy for TIMEREVENT {}
-impl ::core::clone::Clone for TIMEREVENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct TRUESPEECHWAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wRevision: u16,
-    pub nSamplesPerBlock: u16,
-    pub abReserved: [u8; 28],
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for TRUESPEECHWAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for TRUESPEECHWAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const VADMAD_Device_ID: u32 = 1092u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -11524,9 +8805,6 @@ pub const VCAPS_DST_CAN_CLIP: u32 = 4u32;
 pub const VCAPS_OVERLAY: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const VCAPS_SRC_CAN_CLIP: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Controls\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Controls"))]
-pub type VFWWDMExtensionProc = ::core::option::Option<unsafe extern "system" fn(pfndeviceiocontrol: *mut ::core::ffi::c_void, pfnaddpropertypage: super::super::UI::Controls::LPFNSVADDPROPSHEETPAGE, lparam: super::super::Foundation::LPARAM) -> u32>;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const VFW_HIDE_CAMERACONTROL_PAGE: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -11565,23 +8843,6 @@ pub const VIDCF_FASTTEMPORALD: u32 = 128u32;
 pub const VIDCF_QUALITY: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const VIDCF_TEMPORAL: u32 = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub struct VIDEOHDR {
-    pub lpData: *mut u8,
-    pub dwBufferLength: u32,
-    pub dwBytesUsed: u32,
-    pub dwTimeCaptured: u32,
-    pub dwUser: usize,
-    pub dwFlags: u32,
-    pub dwReserved: [usize; 4],
-}
-impl ::core::marker::Copy for VIDEOHDR {}
-impl ::core::clone::Clone for VIDEOHDR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const VIDEO_CONFIGURE_CURRENT: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -11684,25 +8945,6 @@ pub const VP_TV_STANDARD_SECAM_L: u32 = 16384u32;
 pub const VP_TV_STANDARD_SECAM_L1: u32 = 524288u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const VP_TV_STANDARD_WIN_VGA: u32 = 32768u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct WAVEOPENDESC {
-    pub hWave: super::Audio::HWAVE,
-    pub lpFormat: *mut super::Audio::WAVEFORMAT,
-    pub dwCallback: usize,
-    pub dwInstance: usize,
-    pub uMappedDeviceID: u32,
-    pub dnDevNode: usize,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for WAVEOPENDESC {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for WAVEOPENDESC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const WAVE_FILTER_DEVELOPMENT: u32 = 65535u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -12277,47 +9519,10 @@ pub const WIDM_START: u32 = 57u32;
 pub const WIDM_STOP: u32 = 58u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const WIDM_UNPREPARE: u32 = 55u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct WMAUDIO2WAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub dwSamplesPerBlock: u32,
-    pub wEncodeOptions: u16,
-    pub dwSuperBlockAlign: u32,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for WMAUDIO2WAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for WMAUDIO2WAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const WMAUDIO2_BITS_PER_SAMPLE: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const WMAUDIO2_MAX_CHANNELS: u32 = 2u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
-#[cfg(feature = "Win32_Media_Audio")]
-pub struct WMAUDIO3WAVEFORMAT {
-    pub wfx: super::Audio::WAVEFORMATEX,
-    pub wValidBitsPerSample: u16,
-    pub dwChannelMask: u32,
-    pub dwReserved1: u32,
-    pub dwReserved2: u32,
-    pub wEncodeOptions: u16,
-    pub wReserved3: u16,
-}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::marker::Copy for WMAUDIO3WAVEFORMAT {}
-#[cfg(feature = "Win32_Media_Audio")]
-impl ::core::clone::Clone for WMAUDIO3WAVEFORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const WMAUDIO_BITS_PER_SAMPLE: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
@@ -12531,6 +9736,2761 @@ pub const WODM_UNPREPARE: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
 pub const WODM_WRITE: u32 = 9u32;
 #[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct ADPCMCOEFSET {
+    pub iCoef1: i16,
+    pub iCoef2: i16,
+}
+impl ::core::marker::Copy for ADPCMCOEFSET {}
+impl ::core::clone::Clone for ADPCMCOEFSET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct ADPCMEWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wSamplesPerBlock: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for ADPCMEWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for ADPCMEWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct ADPCMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wSamplesPerBlock: u16,
+    pub wNumCoef: u16,
+    pub aCoef: [ADPCMCOEFSET; 1],
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for ADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for ADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct APTXWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for APTXWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for APTXWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct AUDIOFILE_AF10WAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for AUDIOFILE_AF10WAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for AUDIOFILE_AF10WAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct AUDIOFILE_AF36WAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for AUDIOFILE_AF36WAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for AUDIOFILE_AF36WAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct AVICOMPRESSOPTIONS {
+    pub fccType: u32,
+    pub fccHandler: u32,
+    pub dwKeyFrameEvery: u32,
+    pub dwQuality: u32,
+    pub dwBytesPerSecond: u32,
+    pub dwFlags: u32,
+    pub lpFormat: *mut ::core::ffi::c_void,
+    pub cbFormat: u32,
+    pub lpParms: *mut ::core::ffi::c_void,
+    pub cbParms: u32,
+    pub dwInterleaveEvery: u32,
+}
+impl ::core::marker::Copy for AVICOMPRESSOPTIONS {}
+impl ::core::clone::Clone for AVICOMPRESSOPTIONS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct AVIFILEINFOA {
+    pub dwMaxBytesPerSec: u32,
+    pub dwFlags: u32,
+    pub dwCaps: u32,
+    pub dwStreams: u32,
+    pub dwSuggestedBufferSize: u32,
+    pub dwWidth: u32,
+    pub dwHeight: u32,
+    pub dwScale: u32,
+    pub dwRate: u32,
+    pub dwLength: u32,
+    pub dwEditCount: u32,
+    pub szFileType: [super::super::Foundation::CHAR; 64],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for AVIFILEINFOA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for AVIFILEINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct AVIFILEINFOW {
+    pub dwMaxBytesPerSec: u32,
+    pub dwFlags: u32,
+    pub dwCaps: u32,
+    pub dwStreams: u32,
+    pub dwSuggestedBufferSize: u32,
+    pub dwWidth: u32,
+    pub dwHeight: u32,
+    pub dwScale: u32,
+    pub dwRate: u32,
+    pub dwLength: u32,
+    pub dwEditCount: u32,
+    pub szFileType: [u16; 64],
+}
+impl ::core::marker::Copy for AVIFILEINFOW {}
+impl ::core::clone::Clone for AVIFILEINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct AVISTREAMINFOA {
+    pub fccType: u32,
+    pub fccHandler: u32,
+    pub dwFlags: u32,
+    pub dwCaps: u32,
+    pub wPriority: u16,
+    pub wLanguage: u16,
+    pub dwScale: u32,
+    pub dwRate: u32,
+    pub dwStart: u32,
+    pub dwLength: u32,
+    pub dwInitialFrames: u32,
+    pub dwSuggestedBufferSize: u32,
+    pub dwQuality: u32,
+    pub dwSampleSize: u32,
+    pub rcFrame: super::super::Foundation::RECT,
+    pub dwEditCount: u32,
+    pub dwFormatChangeCount: u32,
+    pub szName: [super::super::Foundation::CHAR; 64],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for AVISTREAMINFOA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for AVISTREAMINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct AVISTREAMINFOW {
+    pub fccType: u32,
+    pub fccHandler: u32,
+    pub dwFlags: u32,
+    pub dwCaps: u32,
+    pub wPriority: u16,
+    pub wLanguage: u16,
+    pub dwScale: u32,
+    pub dwRate: u32,
+    pub dwStart: u32,
+    pub dwLength: u32,
+    pub dwInitialFrames: u32,
+    pub dwSuggestedBufferSize: u32,
+    pub dwQuality: u32,
+    pub dwSampleSize: u32,
+    pub rcFrame: super::super::Foundation::RECT,
+    pub dwEditCount: u32,
+    pub dwFormatChangeCount: u32,
+    pub szName: [u16; 64],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for AVISTREAMINFOW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for AVISTREAMINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct CAPDRIVERCAPS {
+    pub wDeviceIndex: u32,
+    pub fHasOverlay: super::super::Foundation::BOOL,
+    pub fHasDlgVideoSource: super::super::Foundation::BOOL,
+    pub fHasDlgVideoFormat: super::super::Foundation::BOOL,
+    pub fHasDlgVideoDisplay: super::super::Foundation::BOOL,
+    pub fCaptureInitialized: super::super::Foundation::BOOL,
+    pub fDriverSuppliesPalettes: super::super::Foundation::BOOL,
+    pub hVideoIn: super::super::Foundation::HANDLE,
+    pub hVideoOut: super::super::Foundation::HANDLE,
+    pub hVideoExtIn: super::super::Foundation::HANDLE,
+    pub hVideoExtOut: super::super::Foundation::HANDLE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CAPDRIVERCAPS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CAPDRIVERCAPS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct CAPINFOCHUNK {
+    pub fccInfoID: u32,
+    pub lpData: *mut ::core::ffi::c_void,
+    pub cbData: i32,
+}
+impl ::core::marker::Copy for CAPINFOCHUNK {}
+impl ::core::clone::Clone for CAPINFOCHUNK {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct CAPSTATUS {
+    pub uiImageWidth: u32,
+    pub uiImageHeight: u32,
+    pub fLiveWindow: super::super::Foundation::BOOL,
+    pub fOverlayWindow: super::super::Foundation::BOOL,
+    pub fScale: super::super::Foundation::BOOL,
+    pub ptScroll: super::super::Foundation::POINT,
+    pub fUsingDefaultPalette: super::super::Foundation::BOOL,
+    pub fAudioHardware: super::super::Foundation::BOOL,
+    pub fCapFileExists: super::super::Foundation::BOOL,
+    pub dwCurrentVideoFrame: u32,
+    pub dwCurrentVideoFramesDropped: u32,
+    pub dwCurrentWaveSamples: u32,
+    pub dwCurrentTimeElapsedMS: u32,
+    pub hPalCurrent: super::super::Graphics::Gdi::HPALETTE,
+    pub fCapturingNow: super::super::Foundation::BOOL,
+    pub dwReturn: u32,
+    pub wNumVideoAllocated: u32,
+    pub wNumAudioAllocated: u32,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for CAPSTATUS {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for CAPSTATUS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct CAPTUREPARMS {
+    pub dwRequestMicroSecPerFrame: u32,
+    pub fMakeUserHitOKToCapture: super::super::Foundation::BOOL,
+    pub wPercentDropForError: u32,
+    pub fYield: super::super::Foundation::BOOL,
+    pub dwIndexSize: u32,
+    pub wChunkGranularity: u32,
+    pub fUsingDOSMemory: super::super::Foundation::BOOL,
+    pub wNumVideoRequested: u32,
+    pub fCaptureAudio: super::super::Foundation::BOOL,
+    pub wNumAudioRequested: u32,
+    pub vKeyAbort: u32,
+    pub fAbortLeftMouse: super::super::Foundation::BOOL,
+    pub fAbortRightMouse: super::super::Foundation::BOOL,
+    pub fLimitEnabled: super::super::Foundation::BOOL,
+    pub wTimeLimit: u32,
+    pub fMCIControl: super::super::Foundation::BOOL,
+    pub fStepMCIDevice: super::super::Foundation::BOOL,
+    pub dwMCIStartTime: u32,
+    pub dwMCIStopTime: u32,
+    pub fStepCaptureAt2x: super::super::Foundation::BOOL,
+    pub wStepCaptureAverageFrames: u32,
+    pub dwAudioBufferSize: u32,
+    pub fDisableWriteCache: super::super::Foundation::BOOL,
+    pub AVStreamMaster: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CAPTUREPARMS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CAPTUREPARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct CHANNEL_CAPS {
+    pub dwFlags: u32,
+    pub dwSrcRectXMod: u32,
+    pub dwSrcRectYMod: u32,
+    pub dwSrcRectWidthMod: u32,
+    pub dwSrcRectHeightMod: u32,
+    pub dwDstRectXMod: u32,
+    pub dwDstRectYMod: u32,
+    pub dwDstRectWidthMod: u32,
+    pub dwDstRectHeightMod: u32,
+}
+impl ::core::marker::Copy for CHANNEL_CAPS {}
+impl ::core::clone::Clone for CHANNEL_CAPS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct COMPVARS {
+    pub cbSize: i32,
+    pub dwFlags: u32,
+    pub hic: HIC,
+    pub fccType: u32,
+    pub fccHandler: u32,
+    pub lpbiIn: *mut super::super::Graphics::Gdi::BITMAPINFO,
+    pub lpbiOut: *mut super::super::Graphics::Gdi::BITMAPINFO,
+    pub lpBitsOut: *mut ::core::ffi::c_void,
+    pub lpBitsPrev: *mut ::core::ffi::c_void,
+    pub lFrame: i32,
+    pub lKey: i32,
+    pub lDataRate: i32,
+    pub lQ: i32,
+    pub lKeyCount: i32,
+    pub lpState: *mut ::core::ffi::c_void,
+    pub cbState: i32,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for COMPVARS {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for COMPVARS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct CONTRESCR10WAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wSamplesPerBlock: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for CONTRESCR10WAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for CONTRESCR10WAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct CONTRESVQLPCWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wSamplesPerBlock: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for CONTRESVQLPCWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for CONTRESVQLPCWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct CREATIVEADPCMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wRevision: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for CREATIVEADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for CREATIVEADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct CREATIVEFASTSPEECH10WAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wRevision: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for CREATIVEFASTSPEECH10WAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for CREATIVEFASTSPEECH10WAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct CREATIVEFASTSPEECH8WAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wRevision: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for CREATIVEFASTSPEECH8WAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for CREATIVEFASTSPEECH8WAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct CSIMAADPCMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for CSIMAADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for CSIMAADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct DIALOGICOKIADPCMWAVEFORMAT {
+    pub ewf: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for DIALOGICOKIADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for DIALOGICOKIADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct DIGIADPCMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wSamplesPerBlock: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for DIGIADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for DIGIADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct DIGIFIXWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for DIGIFIXWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for DIGIFIXWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct DIGIREALWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wSamplesPerBlock: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for DIGIREALWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for DIGIREALWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct DIGISTDWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for DIGISTDWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for DIGISTDWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct DOLBYAC2WAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub nAuxBitsCode: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for DOLBYAC2WAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for DOLBYAC2WAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct DRAWDIBTIME {
+    pub timeCount: i32,
+    pub timeDraw: i32,
+    pub timeDecompress: i32,
+    pub timeDither: i32,
+    pub timeStretch: i32,
+    pub timeBlt: i32,
+    pub timeSetDIBits: i32,
+}
+impl ::core::marker::Copy for DRAWDIBTIME {}
+impl ::core::clone::Clone for DRAWDIBTIME {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct DRMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wReserved: u16,
+    pub ulContentId: u32,
+    pub wfxSecure: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for DRMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for DRMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct DRVCONFIGINFO {
+    pub dwDCISize: u32,
+    pub lpszDCISectionName: ::windows_sys::core::PCWSTR,
+    pub lpszDCIAliasName: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for DRVCONFIGINFO {}
+impl ::core::clone::Clone for DRVCONFIGINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct DRVCONFIGINFOEX {
+    pub dwDCISize: u32,
+    pub lpszDCISectionName: ::windows_sys::core::PCWSTR,
+    pub lpszDCIAliasName: ::windows_sys::core::PCWSTR,
+    pub dnDevNode: u32,
+}
+impl ::core::marker::Copy for DRVCONFIGINFOEX {}
+impl ::core::clone::Clone for DRVCONFIGINFOEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct DRVM_IOCTL_DATA {
+    pub dwSize: u32,
+    pub dwCmd: u32,
+}
+impl ::core::marker::Copy for DRVM_IOCTL_DATA {}
+impl ::core::clone::Clone for DRVM_IOCTL_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct DVIADPCMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wSamplesPerBlock: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for DVIADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for DVIADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct ECHOSC1WAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for ECHOSC1WAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for ECHOSC1WAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct EXBMINFOHEADER {
+    pub bmi: super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub biExtDataOffset: u32,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for EXBMINFOHEADER {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for EXBMINFOHEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct FMTOWNS_SND_WAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wRevision: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for FMTOWNS_SND_WAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for FMTOWNS_SND_WAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct G721_ADPCMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub nAuxBlockSize: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for G721_ADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for G721_ADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct G723_ADPCMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub cbExtraSize: u16,
+    pub nAuxBlockSize: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for G723_ADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for G723_ADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct GSM610WAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wSamplesPerBlock: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for GSM610WAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for GSM610WAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type HDRVR = isize;
+pub type HIC = isize;
+pub type HMMIO = isize;
+pub type HVIDEO = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct ICCOMPRESS {
+    pub dwFlags: u32,
+    pub lpbiOutput: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub lpOutput: *mut ::core::ffi::c_void,
+    pub lpbiInput: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub lpInput: *mut ::core::ffi::c_void,
+    pub lpckid: *mut u32,
+    pub lpdwFlags: *mut u32,
+    pub lFrameNum: i32,
+    pub dwFrameSize: u32,
+    pub dwQuality: u32,
+    pub lpbiPrev: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub lpPrev: *mut ::core::ffi::c_void,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for ICCOMPRESS {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for ICCOMPRESS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct ICCOMPRESSFRAMES {
+    pub dwFlags: u32,
+    pub lpbiOutput: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub lOutput: super::super::Foundation::LPARAM,
+    pub lpbiInput: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub lInput: super::super::Foundation::LPARAM,
+    pub lStartFrame: i32,
+    pub lFrameCount: i32,
+    pub lQuality: i32,
+    pub lDataRate: i32,
+    pub lKeyRate: i32,
+    pub dwRate: u32,
+    pub dwScale: u32,
+    pub dwOverheadPerFrame: u32,
+    pub dwReserved2: u32,
+    pub GetData: isize,
+    pub PutData: isize,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for ICCOMPRESSFRAMES {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for ICCOMPRESSFRAMES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct ICDECOMPRESS {
+    pub dwFlags: u32,
+    pub lpbiInput: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub lpInput: *mut ::core::ffi::c_void,
+    pub lpbiOutput: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub lpOutput: *mut ::core::ffi::c_void,
+    pub ckid: u32,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for ICDECOMPRESS {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for ICDECOMPRESS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct ICDECOMPRESSEX {
+    pub dwFlags: u32,
+    pub lpbiSrc: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub lpSrc: *mut ::core::ffi::c_void,
+    pub lpbiDst: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub lpDst: *mut ::core::ffi::c_void,
+    pub xDst: i32,
+    pub yDst: i32,
+    pub dxDst: i32,
+    pub dyDst: i32,
+    pub xSrc: i32,
+    pub ySrc: i32,
+    pub dxSrc: i32,
+    pub dySrc: i32,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for ICDECOMPRESSEX {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for ICDECOMPRESSEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct ICDRAW {
+    pub dwFlags: u32,
+    pub lpFormat: *mut ::core::ffi::c_void,
+    pub lpData: *mut ::core::ffi::c_void,
+    pub cbData: u32,
+    pub lTime: i32,
+}
+impl ::core::marker::Copy for ICDRAW {}
+impl ::core::clone::Clone for ICDRAW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct ICDRAWBEGIN {
+    pub dwFlags: u32,
+    pub hpal: super::super::Graphics::Gdi::HPALETTE,
+    pub hwnd: super::super::Foundation::HWND,
+    pub hdc: super::super::Graphics::Gdi::HDC,
+    pub xDst: i32,
+    pub yDst: i32,
+    pub dxDst: i32,
+    pub dyDst: i32,
+    pub lpbi: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub xSrc: i32,
+    pub ySrc: i32,
+    pub dxSrc: i32,
+    pub dySrc: i32,
+    pub dwRate: u32,
+    pub dwScale: u32,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for ICDRAWBEGIN {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for ICDRAWBEGIN {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct ICDRAWSUGGEST {
+    pub lpbiIn: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub lpbiSuggest: *mut super::super::Graphics::Gdi::BITMAPINFOHEADER,
+    pub dxSrc: i32,
+    pub dySrc: i32,
+    pub dxDst: i32,
+    pub dyDst: i32,
+    pub hicDecompressor: HIC,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for ICDRAWSUGGEST {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for ICDRAWSUGGEST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct ICINFO {
+    pub dwSize: u32,
+    pub fccType: u32,
+    pub fccHandler: u32,
+    pub dwFlags: u32,
+    pub dwVersion: u32,
+    pub dwVersionICM: u32,
+    pub szName: [u16; 16],
+    pub szDescription: [u16; 128],
+    pub szDriver: [u16; 128],
+}
+impl ::core::marker::Copy for ICINFO {}
+impl ::core::clone::Clone for ICINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ICOPEN {
+    pub dwSize: u32,
+    pub fccType: u32,
+    pub fccHandler: u32,
+    pub dwVersion: u32,
+    pub dwFlags: u32,
+    pub dwError: super::super::Foundation::LRESULT,
+    pub pV1Reserved: *mut ::core::ffi::c_void,
+    pub pV2Reserved: *mut ::core::ffi::c_void,
+    pub dnDevNode: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ICOPEN {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ICOPEN {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct ICPALETTE {
+    pub dwFlags: u32,
+    pub iStart: i32,
+    pub iLen: i32,
+    pub lppe: *mut super::super::Graphics::Gdi::PALETTEENTRY,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for ICPALETTE {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for ICPALETTE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ICSETSTATUSPROC {
+    pub dwFlags: u32,
+    pub lParam: super::super::Foundation::LPARAM,
+    pub Status: isize,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ICSETSTATUSPROC {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ICSETSTATUSPROC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct IMAADPCMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wSamplesPerBlock: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for IMAADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for IMAADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JOYCAPS2A {
+    pub wMid: u16,
+    pub wPid: u16,
+    pub szPname: [super::super::Foundation::CHAR; 32],
+    pub wXmin: u32,
+    pub wXmax: u32,
+    pub wYmin: u32,
+    pub wYmax: u32,
+    pub wZmin: u32,
+    pub wZmax: u32,
+    pub wNumButtons: u32,
+    pub wPeriodMin: u32,
+    pub wPeriodMax: u32,
+    pub wRmin: u32,
+    pub wRmax: u32,
+    pub wUmin: u32,
+    pub wUmax: u32,
+    pub wVmin: u32,
+    pub wVmax: u32,
+    pub wCaps: u32,
+    pub wMaxAxes: u32,
+    pub wNumAxes: u32,
+    pub wMaxButtons: u32,
+    pub szRegKey: [super::super::Foundation::CHAR; 32],
+    pub szOEMVxD: [super::super::Foundation::CHAR; 260],
+    pub ManufacturerGuid: ::windows_sys::core::GUID,
+    pub ProductGuid: ::windows_sys::core::GUID,
+    pub NameGuid: ::windows_sys::core::GUID,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JOYCAPS2A {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JOYCAPS2A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct JOYCAPS2W {
+    pub wMid: u16,
+    pub wPid: u16,
+    pub szPname: [u16; 32],
+    pub wXmin: u32,
+    pub wXmax: u32,
+    pub wYmin: u32,
+    pub wYmax: u32,
+    pub wZmin: u32,
+    pub wZmax: u32,
+    pub wNumButtons: u32,
+    pub wPeriodMin: u32,
+    pub wPeriodMax: u32,
+    pub wRmin: u32,
+    pub wRmax: u32,
+    pub wUmin: u32,
+    pub wUmax: u32,
+    pub wVmin: u32,
+    pub wVmax: u32,
+    pub wCaps: u32,
+    pub wMaxAxes: u32,
+    pub wNumAxes: u32,
+    pub wMaxButtons: u32,
+    pub szRegKey: [u16; 32],
+    pub szOEMVxD: [u16; 260],
+    pub ManufacturerGuid: ::windows_sys::core::GUID,
+    pub ProductGuid: ::windows_sys::core::GUID,
+    pub NameGuid: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for JOYCAPS2W {}
+impl ::core::clone::Clone for JOYCAPS2W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JOYCAPSA {
+    pub wMid: u16,
+    pub wPid: u16,
+    pub szPname: [super::super::Foundation::CHAR; 32],
+    pub wXmin: u32,
+    pub wXmax: u32,
+    pub wYmin: u32,
+    pub wYmax: u32,
+    pub wZmin: u32,
+    pub wZmax: u32,
+    pub wNumButtons: u32,
+    pub wPeriodMin: u32,
+    pub wPeriodMax: u32,
+    pub wRmin: u32,
+    pub wRmax: u32,
+    pub wUmin: u32,
+    pub wUmax: u32,
+    pub wVmin: u32,
+    pub wVmax: u32,
+    pub wCaps: u32,
+    pub wMaxAxes: u32,
+    pub wNumAxes: u32,
+    pub wMaxButtons: u32,
+    pub szRegKey: [super::super::Foundation::CHAR; 32],
+    pub szOEMVxD: [super::super::Foundation::CHAR; 260],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JOYCAPSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JOYCAPSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct JOYCAPSW {
+    pub wMid: u16,
+    pub wPid: u16,
+    pub szPname: [u16; 32],
+    pub wXmin: u32,
+    pub wXmax: u32,
+    pub wYmin: u32,
+    pub wYmax: u32,
+    pub wZmin: u32,
+    pub wZmax: u32,
+    pub wNumButtons: u32,
+    pub wPeriodMin: u32,
+    pub wPeriodMax: u32,
+    pub wRmin: u32,
+    pub wRmax: u32,
+    pub wUmin: u32,
+    pub wUmax: u32,
+    pub wVmin: u32,
+    pub wVmax: u32,
+    pub wCaps: u32,
+    pub wMaxAxes: u32,
+    pub wNumAxes: u32,
+    pub wMaxButtons: u32,
+    pub szRegKey: [u16; 32],
+    pub szOEMVxD: [u16; 260],
+}
+impl ::core::marker::Copy for JOYCAPSW {}
+impl ::core::clone::Clone for JOYCAPSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct JOYINFO {
+    pub wXpos: u32,
+    pub wYpos: u32,
+    pub wZpos: u32,
+    pub wButtons: u32,
+}
+impl ::core::marker::Copy for JOYINFO {}
+impl ::core::clone::Clone for JOYINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct JOYINFOEX {
+    pub dwSize: u32,
+    pub dwFlags: u32,
+    pub dwXpos: u32,
+    pub dwYpos: u32,
+    pub dwZpos: u32,
+    pub dwRpos: u32,
+    pub dwUpos: u32,
+    pub dwVpos: u32,
+    pub dwButtons: u32,
+    pub dwButtonNumber: u32,
+    pub dwPOV: u32,
+    pub dwReserved1: u32,
+    pub dwReserved2: u32,
+}
+impl ::core::marker::Copy for JOYINFOEX {}
+impl ::core::clone::Clone for JOYINFOEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct JPEGINFOHEADER {
+    pub JPEGSize: u32,
+    pub JPEGProcess: u32,
+    pub JPEGColorSpaceID: u32,
+    pub JPEGBitsPerSample: u32,
+    pub JPEGHSubSampling: u32,
+    pub JPEGVSubSampling: u32,
+}
+impl ::core::marker::Copy for JPEGINFOHEADER {}
+impl ::core::clone::Clone for JPEGINFOHEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_ANIM_OPEN_PARMSA {
+    pub dwCallback: usize,
+    pub wDeviceID: u32,
+    pub lpstrDeviceType: ::windows_sys::core::PCSTR,
+    pub lpstrElementName: ::windows_sys::core::PCSTR,
+    pub lpstrAlias: ::windows_sys::core::PCSTR,
+    pub dwStyle: u32,
+    pub hWndParent: super::super::Foundation::HWND,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_ANIM_OPEN_PARMSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_ANIM_OPEN_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_ANIM_OPEN_PARMSW {
+    pub dwCallback: usize,
+    pub wDeviceID: u32,
+    pub lpstrDeviceType: ::windows_sys::core::PCWSTR,
+    pub lpstrElementName: ::windows_sys::core::PCWSTR,
+    pub lpstrAlias: ::windows_sys::core::PCWSTR,
+    pub dwStyle: u32,
+    pub hWndParent: super::super::Foundation::HWND,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_ANIM_OPEN_PARMSW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_ANIM_OPEN_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_ANIM_PLAY_PARMS {
+    pub dwCallback: usize,
+    pub dwFrom: u32,
+    pub dwTo: u32,
+    pub dwSpeed: u32,
+}
+impl ::core::marker::Copy for MCI_ANIM_PLAY_PARMS {}
+impl ::core::clone::Clone for MCI_ANIM_PLAY_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_ANIM_RECT_PARMS {
+    pub dwCallback: usize,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_ANIM_RECT_PARMS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_ANIM_RECT_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_ANIM_STEP_PARMS {
+    pub dwCallback: usize,
+    pub dwFrames: u32,
+}
+impl ::core::marker::Copy for MCI_ANIM_STEP_PARMS {}
+impl ::core::clone::Clone for MCI_ANIM_STEP_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct MCI_ANIM_UPDATE_PARMS {
+    pub dwCallback: usize,
+    pub rc: super::super::Foundation::RECT,
+    pub hDC: super::super::Graphics::Gdi::HDC,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for MCI_ANIM_UPDATE_PARMS {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for MCI_ANIM_UPDATE_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_ANIM_WINDOW_PARMSA {
+    pub dwCallback: usize,
+    pub hWnd: super::super::Foundation::HWND,
+    pub nCmdShow: u32,
+    pub lpstrText: ::windows_sys::core::PCSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_ANIM_WINDOW_PARMSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_ANIM_WINDOW_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_ANIM_WINDOW_PARMSW {
+    pub dwCallback: usize,
+    pub hWnd: super::super::Foundation::HWND,
+    pub nCmdShow: u32,
+    pub lpstrText: ::windows_sys::core::PCWSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_ANIM_WINDOW_PARMSW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_ANIM_WINDOW_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_BREAK_PARMS {
+    pub dwCallback: usize,
+    pub nVirtKey: i32,
+    pub hwndBreak: super::super::Foundation::HWND,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_BREAK_PARMS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_BREAK_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_CAPTURE_PARMSA {
+    pub dwCallback: usize,
+    pub lpstrFileName: ::windows_sys::core::PSTR,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_CAPTURE_PARMSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_CAPTURE_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_CAPTURE_PARMSW {
+    pub dwCallback: usize,
+    pub lpstrFileName: ::windows_sys::core::PWSTR,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_CAPTURE_PARMSW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_CAPTURE_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_COPY_PARMS {
+    pub dwCallback: usize,
+    pub dwFrom: u32,
+    pub dwTo: u32,
+    pub rc: super::super::Foundation::RECT,
+    pub dwAudioStream: u32,
+    pub dwVideoStream: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_COPY_PARMS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_COPY_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_CUE_PARMS {
+    pub dwCallback: usize,
+    pub dwTo: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_CUE_PARMS {}
+impl ::core::clone::Clone for MCI_DGV_CUE_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_CUT_PARMS {
+    pub dwCallback: usize,
+    pub dwFrom: u32,
+    pub dwTo: u32,
+    pub rc: super::super::Foundation::RECT,
+    pub dwAudioStream: u32,
+    pub dwVideoStream: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_CUT_PARMS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_CUT_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_DELETE_PARMS {
+    pub dwCallback: usize,
+    pub dwFrom: u32,
+    pub dwTo: u32,
+    pub rc: super::super::Foundation::RECT,
+    pub dwAudioStream: u32,
+    pub dwVideoStream: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_DELETE_PARMS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_DELETE_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_INFO_PARMSA {
+    pub dwCallback: usize,
+    pub lpstrReturn: ::windows_sys::core::PSTR,
+    pub dwRetSize: u32,
+    pub dwItem: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_INFO_PARMSA {}
+impl ::core::clone::Clone for MCI_DGV_INFO_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_INFO_PARMSW {
+    pub dwCallback: usize,
+    pub lpstrReturn: ::windows_sys::core::PWSTR,
+    pub dwRetSize: u32,
+    pub dwItem: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_INFO_PARMSW {}
+impl ::core::clone::Clone for MCI_DGV_INFO_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_LIST_PARMSA {
+    pub dwCallback: usize,
+    pub lpstrReturn: ::windows_sys::core::PSTR,
+    pub dwLength: u32,
+    pub dwNumber: u32,
+    pub dwItem: u32,
+    pub lpstrAlgorithm: ::windows_sys::core::PSTR,
+}
+impl ::core::marker::Copy for MCI_DGV_LIST_PARMSA {}
+impl ::core::clone::Clone for MCI_DGV_LIST_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_LIST_PARMSW {
+    pub dwCallback: usize,
+    pub lpstrReturn: ::windows_sys::core::PWSTR,
+    pub dwLength: u32,
+    pub dwNumber: u32,
+    pub dwItem: u32,
+    pub lpstrAlgorithm: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for MCI_DGV_LIST_PARMSW {}
+impl ::core::clone::Clone for MCI_DGV_LIST_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_MONITOR_PARMS {
+    pub dwCallback: usize,
+    pub dwSource: u32,
+    pub dwMethod: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_MONITOR_PARMS {}
+impl ::core::clone::Clone for MCI_DGV_MONITOR_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_OPEN_PARMSA {
+    pub dwCallback: usize,
+    pub wDeviceID: u32,
+    pub lpstrDeviceType: ::windows_sys::core::PSTR,
+    pub lpstrElementName: ::windows_sys::core::PSTR,
+    pub lpstrAlias: ::windows_sys::core::PSTR,
+    pub dwStyle: u32,
+    pub hWndParent: super::super::Foundation::HWND,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_OPEN_PARMSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_OPEN_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_OPEN_PARMSW {
+    pub dwCallback: usize,
+    pub wDeviceID: u32,
+    pub lpstrDeviceType: ::windows_sys::core::PWSTR,
+    pub lpstrElementName: ::windows_sys::core::PWSTR,
+    pub lpstrAlias: ::windows_sys::core::PWSTR,
+    pub dwStyle: u32,
+    pub hWndParent: super::super::Foundation::HWND,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_OPEN_PARMSW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_OPEN_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_PASTE_PARMS {
+    pub dwCallback: usize,
+    pub dwTo: u32,
+    pub rc: super::super::Foundation::RECT,
+    pub dwAudioStream: u32,
+    pub dwVideoStream: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_PASTE_PARMS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_PASTE_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_QUALITY_PARMSA {
+    pub dwCallback: usize,
+    pub dwItem: u32,
+    pub lpstrName: ::windows_sys::core::PSTR,
+    pub lpstrAlgorithm: u32,
+    pub dwHandle: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_QUALITY_PARMSA {}
+impl ::core::clone::Clone for MCI_DGV_QUALITY_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_QUALITY_PARMSW {
+    pub dwCallback: usize,
+    pub dwItem: u32,
+    pub lpstrName: ::windows_sys::core::PWSTR,
+    pub lpstrAlgorithm: u32,
+    pub dwHandle: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_QUALITY_PARMSW {}
+impl ::core::clone::Clone for MCI_DGV_QUALITY_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_RECORD_PARMS {
+    pub dwCallback: usize,
+    pub dwFrom: u32,
+    pub dwTo: u32,
+    pub rc: super::super::Foundation::RECT,
+    pub dwAudioStream: u32,
+    pub dwVideoStream: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_RECORD_PARMS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_RECORD_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_RECT_PARMS {
+    pub dwCallback: usize,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_RECT_PARMS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_RECT_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_RESERVE_PARMSA {
+    pub dwCallback: usize,
+    pub lpstrPath: ::windows_sys::core::PSTR,
+    pub dwSize: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_RESERVE_PARMSA {}
+impl ::core::clone::Clone for MCI_DGV_RESERVE_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_RESERVE_PARMSW {
+    pub dwCallback: usize,
+    pub lpstrPath: ::windows_sys::core::PWSTR,
+    pub dwSize: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_RESERVE_PARMSW {}
+impl ::core::clone::Clone for MCI_DGV_RESERVE_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_RESTORE_PARMSA {
+    pub dwCallback: usize,
+    pub lpstrFileName: ::windows_sys::core::PSTR,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_RESTORE_PARMSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_RESTORE_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_RESTORE_PARMSW {
+    pub dwCallback: usize,
+    pub lpstrFileName: ::windows_sys::core::PWSTR,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_RESTORE_PARMSW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_RESTORE_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_SAVE_PARMSA {
+    pub dwCallback: usize,
+    pub lpstrFileName: ::windows_sys::core::PSTR,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_SAVE_PARMSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_SAVE_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_SAVE_PARMSW {
+    pub dwCallback: usize,
+    pub lpstrFileName: ::windows_sys::core::PWSTR,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_SAVE_PARMSW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_SAVE_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_SETAUDIO_PARMSA {
+    pub dwCallback: usize,
+    pub dwItem: u32,
+    pub dwValue: u32,
+    pub dwOver: u32,
+    pub lpstrAlgorithm: ::windows_sys::core::PSTR,
+    pub lpstrQuality: ::windows_sys::core::PSTR,
+}
+impl ::core::marker::Copy for MCI_DGV_SETAUDIO_PARMSA {}
+impl ::core::clone::Clone for MCI_DGV_SETAUDIO_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_SETAUDIO_PARMSW {
+    pub dwCallback: usize,
+    pub dwItem: u32,
+    pub dwValue: u32,
+    pub dwOver: u32,
+    pub lpstrAlgorithm: ::windows_sys::core::PWSTR,
+    pub lpstrQuality: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for MCI_DGV_SETAUDIO_PARMSW {}
+impl ::core::clone::Clone for MCI_DGV_SETAUDIO_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_SETVIDEO_PARMSA {
+    pub dwCallback: usize,
+    pub dwItem: u32,
+    pub dwValue: u32,
+    pub dwOver: u32,
+    pub lpstrAlgorithm: ::windows_sys::core::PSTR,
+    pub lpstrQuality: ::windows_sys::core::PSTR,
+    pub dwSourceNumber: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_SETVIDEO_PARMSA {}
+impl ::core::clone::Clone for MCI_DGV_SETVIDEO_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_SETVIDEO_PARMSW {
+    pub dwCallback: usize,
+    pub dwItem: u32,
+    pub dwValue: u32,
+    pub dwOver: u32,
+    pub lpstrAlgorithm: ::windows_sys::core::PWSTR,
+    pub lpstrQuality: ::windows_sys::core::PWSTR,
+    pub dwSourceNumber: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_SETVIDEO_PARMSW {}
+impl ::core::clone::Clone for MCI_DGV_SETVIDEO_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_SET_PARMS {
+    pub dwCallback: usize,
+    pub dwTimeFormat: u32,
+    pub dwAudio: u32,
+    pub dwFileFormat: u32,
+    pub dwSpeed: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_SET_PARMS {}
+impl ::core::clone::Clone for MCI_DGV_SET_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_SIGNAL_PARMS {
+    pub dwCallback: usize,
+    pub dwPosition: u32,
+    pub dwPeriod: u32,
+    pub dwUserParm: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_SIGNAL_PARMS {}
+impl ::core::clone::Clone for MCI_DGV_SIGNAL_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_STATUS_PARMSA {
+    pub dwCallback: usize,
+    pub dwReturn: usize,
+    pub dwItem: u32,
+    pub dwTrack: u32,
+    pub lpstrDrive: ::windows_sys::core::PSTR,
+    pub dwReference: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_STATUS_PARMSA {}
+impl ::core::clone::Clone for MCI_DGV_STATUS_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_STATUS_PARMSW {
+    pub dwCallback: usize,
+    pub dwReturn: usize,
+    pub dwItem: u32,
+    pub dwTrack: u32,
+    pub lpstrDrive: ::windows_sys::core::PWSTR,
+    pub dwReference: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_STATUS_PARMSW {}
+impl ::core::clone::Clone for MCI_DGV_STATUS_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_DGV_STEP_PARMS {
+    pub dwCallback: usize,
+    pub dwFrames: u32,
+}
+impl ::core::marker::Copy for MCI_DGV_STEP_PARMS {}
+impl ::core::clone::Clone for MCI_DGV_STEP_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+pub struct MCI_DGV_UPDATE_PARMS {
+    pub dwCallback: usize,
+    pub rc: super::super::Foundation::RECT,
+    pub hDC: super::super::Graphics::Gdi::HDC,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::marker::Copy for MCI_DGV_UPDATE_PARMS {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+impl ::core::clone::Clone for MCI_DGV_UPDATE_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_WINDOW_PARMSA {
+    pub dwCallback: usize,
+    pub hWnd: super::super::Foundation::HWND,
+    pub nCmdShow: u32,
+    pub lpstrText: ::windows_sys::core::PSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_WINDOW_PARMSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_WINDOW_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_DGV_WINDOW_PARMSW {
+    pub dwCallback: usize,
+    pub hWnd: super::super::Foundation::HWND,
+    pub nCmdShow: u32,
+    pub lpstrText: ::windows_sys::core::PWSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_DGV_WINDOW_PARMSW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_DGV_WINDOW_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_GENERIC_PARMS {
+    pub dwCallback: usize,
+}
+impl ::core::marker::Copy for MCI_GENERIC_PARMS {}
+impl ::core::clone::Clone for MCI_GENERIC_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_GETDEVCAPS_PARMS {
+    pub dwCallback: usize,
+    pub dwReturn: u32,
+    pub dwItem: u32,
+}
+impl ::core::marker::Copy for MCI_GETDEVCAPS_PARMS {}
+impl ::core::clone::Clone for MCI_GETDEVCAPS_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_INFO_PARMSA {
+    pub dwCallback: usize,
+    pub lpstrReturn: ::windows_sys::core::PSTR,
+    pub dwRetSize: u32,
+}
+impl ::core::marker::Copy for MCI_INFO_PARMSA {}
+impl ::core::clone::Clone for MCI_INFO_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_INFO_PARMSW {
+    pub dwCallback: usize,
+    pub lpstrReturn: ::windows_sys::core::PWSTR,
+    pub dwRetSize: u32,
+}
+impl ::core::marker::Copy for MCI_INFO_PARMSW {}
+impl ::core::clone::Clone for MCI_INFO_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_LOAD_PARMSA {
+    pub dwCallback: usize,
+    pub lpfilename: ::windows_sys::core::PCSTR,
+}
+impl ::core::marker::Copy for MCI_LOAD_PARMSA {}
+impl ::core::clone::Clone for MCI_LOAD_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_LOAD_PARMSW {
+    pub dwCallback: usize,
+    pub lpfilename: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for MCI_LOAD_PARMSW {}
+impl ::core::clone::Clone for MCI_LOAD_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_OPEN_DRIVER_PARMS {
+    pub wDeviceID: u32,
+    pub lpstrParams: ::windows_sys::core::PCWSTR,
+    pub wCustomCommandTable: u32,
+    pub wType: u32,
+}
+impl ::core::marker::Copy for MCI_OPEN_DRIVER_PARMS {}
+impl ::core::clone::Clone for MCI_OPEN_DRIVER_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_OPEN_PARMSA {
+    pub dwCallback: usize,
+    pub wDeviceID: u32,
+    pub lpstrDeviceType: ::windows_sys::core::PCSTR,
+    pub lpstrElementName: ::windows_sys::core::PCSTR,
+    pub lpstrAlias: ::windows_sys::core::PCSTR,
+}
+impl ::core::marker::Copy for MCI_OPEN_PARMSA {}
+impl ::core::clone::Clone for MCI_OPEN_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_OPEN_PARMSW {
+    pub dwCallback: usize,
+    pub wDeviceID: u32,
+    pub lpstrDeviceType: ::windows_sys::core::PCWSTR,
+    pub lpstrElementName: ::windows_sys::core::PCWSTR,
+    pub lpstrAlias: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for MCI_OPEN_PARMSW {}
+impl ::core::clone::Clone for MCI_OPEN_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_OVLY_LOAD_PARMSA {
+    pub dwCallback: usize,
+    pub lpfilename: ::windows_sys::core::PCSTR,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_OVLY_LOAD_PARMSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_OVLY_LOAD_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_OVLY_LOAD_PARMSW {
+    pub dwCallback: usize,
+    pub lpfilename: ::windows_sys::core::PCWSTR,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_OVLY_LOAD_PARMSW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_OVLY_LOAD_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_OVLY_OPEN_PARMSA {
+    pub dwCallback: usize,
+    pub wDeviceID: u32,
+    pub lpstrDeviceType: ::windows_sys::core::PCSTR,
+    pub lpstrElementName: ::windows_sys::core::PCSTR,
+    pub lpstrAlias: ::windows_sys::core::PCSTR,
+    pub dwStyle: u32,
+    pub hWndParent: super::super::Foundation::HWND,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_OVLY_OPEN_PARMSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_OVLY_OPEN_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_OVLY_OPEN_PARMSW {
+    pub dwCallback: usize,
+    pub wDeviceID: u32,
+    pub lpstrDeviceType: ::windows_sys::core::PCWSTR,
+    pub lpstrElementName: ::windows_sys::core::PCWSTR,
+    pub lpstrAlias: ::windows_sys::core::PCWSTR,
+    pub dwStyle: u32,
+    pub hWndParent: super::super::Foundation::HWND,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_OVLY_OPEN_PARMSW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_OVLY_OPEN_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_OVLY_RECT_PARMS {
+    pub dwCallback: usize,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_OVLY_RECT_PARMS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_OVLY_RECT_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_OVLY_SAVE_PARMSA {
+    pub dwCallback: usize,
+    pub lpfilename: ::windows_sys::core::PCSTR,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_OVLY_SAVE_PARMSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_OVLY_SAVE_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_OVLY_SAVE_PARMSW {
+    pub dwCallback: usize,
+    pub lpfilename: ::windows_sys::core::PCWSTR,
+    pub rc: super::super::Foundation::RECT,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_OVLY_SAVE_PARMSW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_OVLY_SAVE_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_OVLY_WINDOW_PARMSA {
+    pub dwCallback: usize,
+    pub hWnd: super::super::Foundation::HWND,
+    pub nCmdShow: u32,
+    pub lpstrText: ::windows_sys::core::PCSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_OVLY_WINDOW_PARMSA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_OVLY_WINDOW_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MCI_OVLY_WINDOW_PARMSW {
+    pub dwCallback: usize,
+    pub hWnd: super::super::Foundation::HWND,
+    pub nCmdShow: u32,
+    pub lpstrText: ::windows_sys::core::PCWSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MCI_OVLY_WINDOW_PARMSW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MCI_OVLY_WINDOW_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_PLAY_PARMS {
+    pub dwCallback: usize,
+    pub dwFrom: u32,
+    pub dwTo: u32,
+}
+impl ::core::marker::Copy for MCI_PLAY_PARMS {}
+impl ::core::clone::Clone for MCI_PLAY_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_RECORD_PARMS {
+    pub dwCallback: usize,
+    pub dwFrom: u32,
+    pub dwTo: u32,
+}
+impl ::core::marker::Copy for MCI_RECORD_PARMS {}
+impl ::core::clone::Clone for MCI_RECORD_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_SAVE_PARMSA {
+    pub dwCallback: usize,
+    pub lpfilename: ::windows_sys::core::PCSTR,
+}
+impl ::core::marker::Copy for MCI_SAVE_PARMSA {}
+impl ::core::clone::Clone for MCI_SAVE_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_SAVE_PARMSW {
+    pub dwCallback: usize,
+    pub lpfilename: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for MCI_SAVE_PARMSW {}
+impl ::core::clone::Clone for MCI_SAVE_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_SEEK_PARMS {
+    pub dwCallback: usize,
+    pub dwTo: u32,
+}
+impl ::core::marker::Copy for MCI_SEEK_PARMS {}
+impl ::core::clone::Clone for MCI_SEEK_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_SEQ_SET_PARMS {
+    pub dwCallback: usize,
+    pub dwTimeFormat: u32,
+    pub dwAudio: u32,
+    pub dwTempo: u32,
+    pub dwPort: u32,
+    pub dwSlave: u32,
+    pub dwMaster: u32,
+    pub dwOffset: u32,
+}
+impl ::core::marker::Copy for MCI_SEQ_SET_PARMS {}
+impl ::core::clone::Clone for MCI_SEQ_SET_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_SET_PARMS {
+    pub dwCallback: usize,
+    pub dwTimeFormat: u32,
+    pub dwAudio: u32,
+}
+impl ::core::marker::Copy for MCI_SET_PARMS {}
+impl ::core::clone::Clone for MCI_SET_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_STATUS_PARMS {
+    pub dwCallback: usize,
+    pub dwReturn: usize,
+    pub dwItem: u32,
+    pub dwTrack: u32,
+}
+impl ::core::marker::Copy for MCI_STATUS_PARMS {}
+impl ::core::clone::Clone for MCI_STATUS_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_SYSINFO_PARMSA {
+    pub dwCallback: usize,
+    pub lpstrReturn: ::windows_sys::core::PSTR,
+    pub dwRetSize: u32,
+    pub dwNumber: u32,
+    pub wDeviceType: u32,
+}
+impl ::core::marker::Copy for MCI_SYSINFO_PARMSA {}
+impl ::core::clone::Clone for MCI_SYSINFO_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_SYSINFO_PARMSW {
+    pub dwCallback: usize,
+    pub lpstrReturn: ::windows_sys::core::PWSTR,
+    pub dwRetSize: u32,
+    pub dwNumber: u32,
+    pub wDeviceType: u32,
+}
+impl ::core::marker::Copy for MCI_SYSINFO_PARMSW {}
+impl ::core::clone::Clone for MCI_SYSINFO_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_VD_ESCAPE_PARMSA {
+    pub dwCallback: usize,
+    pub lpstrCommand: ::windows_sys::core::PCSTR,
+}
+impl ::core::marker::Copy for MCI_VD_ESCAPE_PARMSA {}
+impl ::core::clone::Clone for MCI_VD_ESCAPE_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_VD_ESCAPE_PARMSW {
+    pub dwCallback: usize,
+    pub lpstrCommand: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for MCI_VD_ESCAPE_PARMSW {}
+impl ::core::clone::Clone for MCI_VD_ESCAPE_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_VD_PLAY_PARMS {
+    pub dwCallback: usize,
+    pub dwFrom: u32,
+    pub dwTo: u32,
+    pub dwSpeed: u32,
+}
+impl ::core::marker::Copy for MCI_VD_PLAY_PARMS {}
+impl ::core::clone::Clone for MCI_VD_PLAY_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_VD_STEP_PARMS {
+    pub dwCallback: usize,
+    pub dwFrames: u32,
+}
+impl ::core::marker::Copy for MCI_VD_STEP_PARMS {}
+impl ::core::clone::Clone for MCI_VD_STEP_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_WAVE_DELETE_PARMS {
+    pub dwCallback: usize,
+    pub dwFrom: u32,
+    pub dwTo: u32,
+}
+impl ::core::marker::Copy for MCI_WAVE_DELETE_PARMS {}
+impl ::core::clone::Clone for MCI_WAVE_DELETE_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_WAVE_OPEN_PARMSA {
+    pub dwCallback: usize,
+    pub wDeviceID: u32,
+    pub lpstrDeviceType: ::windows_sys::core::PCSTR,
+    pub lpstrElementName: ::windows_sys::core::PCSTR,
+    pub lpstrAlias: ::windows_sys::core::PCSTR,
+    pub dwBufferSeconds: u32,
+}
+impl ::core::marker::Copy for MCI_WAVE_OPEN_PARMSA {}
+impl ::core::clone::Clone for MCI_WAVE_OPEN_PARMSA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_WAVE_OPEN_PARMSW {
+    pub dwCallback: usize,
+    pub wDeviceID: u32,
+    pub lpstrDeviceType: ::windows_sys::core::PCWSTR,
+    pub lpstrElementName: ::windows_sys::core::PCWSTR,
+    pub lpstrAlias: ::windows_sys::core::PCWSTR,
+    pub dwBufferSeconds: u32,
+}
+impl ::core::marker::Copy for MCI_WAVE_OPEN_PARMSW {}
+impl ::core::clone::Clone for MCI_WAVE_OPEN_PARMSW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MCI_WAVE_SET_PARMS {
+    pub dwCallback: usize,
+    pub dwTimeFormat: u32,
+    pub dwAudio: u32,
+    pub wInput: u32,
+    pub wOutput: u32,
+    pub wFormatTag: u16,
+    pub wReserved2: u16,
+    pub nChannels: u16,
+    pub wReserved3: u16,
+    pub nSamplesPerSec: u32,
+    pub nAvgBytesPerSec: u32,
+    pub nBlockAlign: u16,
+    pub wReserved4: u16,
+    pub wBitsPerSample: u16,
+    pub wReserved5: u16,
+}
+impl ::core::marker::Copy for MCI_WAVE_SET_PARMS {}
+impl ::core::clone::Clone for MCI_WAVE_SET_PARMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct MEDIASPACEADPCMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wRevision: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for MEDIASPACEADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for MEDIASPACEADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MIDIOPENSTRMID {
+    pub dwStreamID: u32,
+    pub uDeviceID: u32,
+}
+impl ::core::marker::Copy for MIDIOPENSTRMID {}
+impl ::core::clone::Clone for MIDIOPENSTRMID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct MIXEROPENDESC {
+    pub hmx: super::Audio::HMIXER,
+    pub pReserved0: *mut ::core::ffi::c_void,
+    pub dwCallback: usize,
+    pub dwInstance: usize,
+    pub dnDevNode: usize,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for MIXEROPENDESC {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for MIXEROPENDESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct MMCKINFO {
+    pub ckid: u32,
+    pub cksize: u32,
+    pub fccType: u32,
+    pub dwDataOffset: u32,
+    pub dwFlags: u32,
+}
+impl ::core::marker::Copy for MMCKINFO {}
+impl ::core::clone::Clone for MMCKINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MMIOINFO {
+    pub dwFlags: u32,
+    pub fccIOProc: u32,
+    pub pIOProc: LPMMIOPROC,
+    pub wErrorRet: u32,
+    pub htask: super::HTASK,
+    pub cchBuffer: i32,
+    pub pchBuffer: *mut i8,
+    pub pchNext: *mut i8,
+    pub pchEndRead: *mut i8,
+    pub pchEndWrite: *mut i8,
+    pub lBufOffset: i32,
+    pub lDiskOffset: i32,
+    pub adwInfo: [u32; 3],
+    pub dwReserved1: u32,
+    pub dwReserved2: u32,
+    pub hmmio: HMMIO,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MMIOINFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MMIOINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct MSAUDIO1WAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wSamplesPerBlock: u16,
+    pub wEncodeOptions: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for MSAUDIO1WAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for MSAUDIO1WAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct NMS_VBXADPCMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wSamplesPerBlock: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for NMS_VBXADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for NMS_VBXADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct OLIADPCMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for OLIADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for OLIADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct OLICELPWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for OLICELPWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for OLICELPWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct OLIGSMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for OLIGSMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for OLIGSMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct OLIOPRWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for OLIOPRWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for OLIOPRWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct OLISBCWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for OLISBCWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for OLISBCWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct SIERRAADPCMWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wRevision: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for SIERRAADPCMWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for SIERRAADPCMWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct SONARCWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wCompType: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for SONARCWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for SONARCWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct TIMEREVENT {
+    pub wDelay: u16,
+    pub wResolution: u16,
+    pub lpFunction: super::LPTIMECALLBACK,
+    pub dwUser: u32,
+    pub wFlags: u16,
+    pub wReserved1: u16,
+}
+impl ::core::marker::Copy for TIMEREVENT {}
+impl ::core::clone::Clone for TIMEREVENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct TRUESPEECHWAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wRevision: u16,
+    pub nSamplesPerBlock: u16,
+    pub abReserved: [u8; 28],
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for TRUESPEECHWAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for TRUESPEECHWAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub struct VIDEOHDR {
+    pub lpData: *mut u8,
+    pub dwBufferLength: u32,
+    pub dwBytesUsed: u32,
+    pub dwTimeCaptured: u32,
+    pub dwUser: usize,
+    pub dwFlags: u32,
+    pub dwReserved: [usize; 4],
+}
+impl ::core::marker::Copy for VIDEOHDR {}
+impl ::core::clone::Clone for VIDEOHDR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct WAVEOPENDESC {
+    pub hWave: super::Audio::HWAVE,
+    pub lpFormat: *mut super::Audio::WAVEFORMAT,
+    pub dwCallback: usize,
+    pub dwInstance: usize,
+    pub uMappedDeviceID: u32,
+    pub dnDevNode: usize,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for WAVEOPENDESC {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for WAVEOPENDESC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct WMAUDIO2WAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub dwSamplesPerBlock: u32,
+    pub wEncodeOptions: u16,
+    pub dwSuperBlockAlign: u32,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for WMAUDIO2WAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for WMAUDIO2WAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(feature = "Win32_Media_Audio")]
+pub struct WMAUDIO3WAVEFORMAT {
+    pub wfx: super::Audio::WAVEFORMATEX,
+    pub wValidBitsPerSample: u16,
+    pub dwChannelMask: u32,
+    pub dwReserved1: u32,
+    pub dwReserved2: u32,
+    pub wEncodeOptions: u16,
+    pub wReserved3: u16,
+}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::marker::Copy for WMAUDIO3WAVEFORMAT {}
+#[cfg(feature = "Win32_Media_Audio")]
+impl ::core::clone::Clone for WMAUDIO3WAVEFORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Media_Audio\"`*"]
 #[cfg(feature = "Win32_Media_Audio")]
 pub struct YAMAHA_ADPCMWAVEFORMAT {
@@ -12544,8 +12504,6 @@ impl ::core::clone::Clone for YAMAHA_ADPCMWAVEFORMAT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
-pub type YIELDPROC = ::core::option::Option<unsafe extern "system" fn(mciid: u32, dwyielddata: u32) -> u32>;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -12566,3 +12524,48 @@ impl ::core::clone::Clone for s_RIFFWAVE_inst {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type AVISAVECALLBACK = ::core::option::Option<unsafe extern "system" fn(param0: i32) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CAPCONTROLCALLBACK = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, nstate: i32) -> super::super::Foundation::LRESULT>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CAPERRORCALLBACKA = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, nid: i32, lpsz: ::windows_sys::core::PCSTR) -> super::super::Foundation::LRESULT>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CAPERRORCALLBACKW = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, nid: i32, lpsz: ::windows_sys::core::PCWSTR) -> super::super::Foundation::LRESULT>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CAPSTATUSCALLBACKA = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, nid: i32, lpsz: ::windows_sys::core::PCSTR) -> super::super::Foundation::LRESULT>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CAPSTATUSCALLBACKW = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, nid: i32, lpsz: ::windows_sys::core::PCWSTR) -> super::super::Foundation::LRESULT>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CAPVIDEOCALLBACK = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, lpvhdr: *const VIDEOHDR) -> super::super::Foundation::LRESULT>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_Media_Audio\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Media_Audio"))]
+pub type CAPWAVECALLBACK = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, lpwhdr: *const super::Audio::WAVEHDR) -> super::super::Foundation::LRESULT>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CAPYIELDCALLBACK = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND) -> super::super::Foundation::LRESULT>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub type DRIVERMSGPROC = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: u32, param2: usize, param3: usize, param4: usize) -> u32>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type DRIVERPROC = ::core::option::Option<unsafe extern "system" fn(param0: usize, param1: HDRVR, param2: u32, param3: super::super::Foundation::LPARAM, param4: super::super::Foundation::LPARAM) -> super::super::Foundation::LRESULT>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_System_IO\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_IO"))]
+pub type LPFNEXTDEVIO = ::core::option::Option<unsafe extern "system" fn(lparam: super::super::Foundation::LPARAM, dwflags: u32, dwiocontrolcode: u32, lpinbuffer: *mut ::core::ffi::c_void, ninbuffersize: u32, lpoutbuffer: *mut ::core::ffi::c_void, noutbuffersize: u32, lpbytesreturned: *mut u32, lpoverlapped: *mut super::super::System::IO::OVERLAPPED) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LPMMIOPROC = ::core::option::Option<unsafe extern "system" fn(lpmmioinfo: ::windows_sys::core::PCSTR, umsg: u32, lparam1: super::super::Foundation::LPARAM, lparam2: super::super::Foundation::LPARAM) -> super::super::Foundation::LRESULT>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub type LPTASKCALLBACK = ::core::option::Option<unsafe extern "system" fn(dwinst: usize)>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`, `\"Win32_Foundation\"`, `\"Win32_UI_Controls\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_Controls"))]
+pub type VFWWDMExtensionProc = ::core::option::Option<unsafe extern "system" fn(pfndeviceiocontrol: *mut ::core::ffi::c_void, pfnaddpropertypage: super::super::UI::Controls::LPFNSVADDPROPSHEETPAGE, lparam: super::super::Foundation::LPARAM) -> u32>;
+#[doc = "*Required features: `\"Win32_Media_Multimedia\"`*"]
+pub type YIELDPROC = ::core::option::Option<unsafe extern "system" fn(mciid: u32, dwyielddata: u32) -> u32>;
