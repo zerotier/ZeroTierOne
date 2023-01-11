@@ -149,7 +149,7 @@ public:
 	/**
 	 * Get the ZeroTier address for this MAC on this network (assuming no bridging of course, basic unicast)
 	 *
-	 * This just XORs the next-lest-significant 5 bytes of the network ID again to unmask.
+	 * This just XORs the next-least-significant 5 bytes of the network ID again to unmask.
 	 *
 	 * @param nwid Network ID
 	 */

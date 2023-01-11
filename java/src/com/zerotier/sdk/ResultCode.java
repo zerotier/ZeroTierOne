@@ -41,7 +41,7 @@ public enum ResultCode {
      */
 	RESULT_OK(0),
 
-    // Fatal errors (> 0, < 1000)
+    // Fatal errors (>=100, <1000)
     /**
      * Ran out of memory
      */
