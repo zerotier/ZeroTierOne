@@ -308,8 +308,8 @@ public:
 				_idc = zeroidc::zeroidc_new(
 					_config.issuerURL,
 					_config.ssoClientID,
-					_config.ssoProvider,
 					_config.centralAuthURL,
+					_config.ssoProvider,
 					_webPort
 				);
 
