@@ -52,7 +52,7 @@ pub fn http_client(request: HttpRequest) -> Result<HttpResponse, Error> {
     }
 
     let response = if let Method::POST = request.method {
-        req.send(&*request.body)
+        req.send_bytes(&request.body)
     } else {
         req.call()
     }

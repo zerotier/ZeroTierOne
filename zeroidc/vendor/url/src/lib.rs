@@ -118,12 +118,16 @@ See [serde documentation](https://serde.rs) for more information.
 ```toml
 url = { version = "2", features = ["serde"] }
 ```
+
 */
 
-#![doc(html_root_url = "https://docs.rs/url/2.2.2")]
+#![doc(html_root_url = "https://docs.rs/url/2.3.1")]
+#![cfg_attr(
+    feature = "debugger_visualizer",
+    feature(debugger_visualizer),
+    debugger_visualizer(natvis_file = "../../debug_metadata/url.natvis")
+)]
 
-#[macro_use]
-extern crate matches;
 pub use form_urlencoded;
 
 #[cfg(feature = "serde")]
@@ -460,7 +464,7 @@ impl Url {
         }
 
         // Add the filename if they are not the same
-        if base_filename != url_filename {
+        if !relative.is_empty() || base_filename != url_filename {
             // If the URIs filename is empty this means that it was a directory
             // so we'll have to append a '/'.
             //
@@ -1234,14 +1238,9 @@ impl Url {
     /// # }
     /// # run().unwrap();
     /// ```
-    #[allow(clippy::manual_strip)] // introduced in 1.45, MSRV is 1.36
     pub fn path_segments(&self) -> Option<str::Split<'_, char>> {
         let path = self.path();
-        if path.starts_with('/') {
-            Some(path[1..].split('/'))
-        } else {
-            None
-        }
+        path.strip_prefix('/').map(|remainder| remainder.split('/'))
     }
 
     /// Return this URL’s query string, if any, as a percent-encoded ASCII string.
@@ -1304,7 +1303,7 @@ impl Url {
     /// # Ok(())
     /// # }
     /// # run().unwrap();
-    ///
+    /// ```
 
     #[inline]
     pub fn query_pairs(&self) -> form_urlencoded::Parse<'_> {
@@ -1351,7 +1350,7 @@ impl Url {
     }
 
     fn mutate<F: FnOnce(&mut Parser<'_>) -> R, R>(&mut self, f: F) -> R {
-        let mut parser = Parser::for_setter(mem::replace(&mut self.serialization, String::new()));
+        let mut parser = Parser::for_setter(mem::take(&mut self.serialization));
         let result = f(&mut parser);
         self.serialization = parser.serialization;
         result
@@ -1541,6 +1540,19 @@ impl Url {
     /// url.set_path("data/report.csv");
     /// assert_eq!(url.as_str(), "https://example.com/data/report.csv");
     /// assert_eq!(url.path(), "/data/report.csv");
+    ///
+    /// // `set_path` percent-encodes the given string if it's not already percent-encoded.
+    /// let mut url = Url::parse("https://example.com")?;
+    /// url.set_path("api/some comments");
+    /// assert_eq!(url.as_str(), "https://example.com/api/some%20comments");
+    /// assert_eq!(url.path(), "/api/some%20comments");
+    ///
+    /// // `set_path` will not double percent-encode the string if it's already percent-encoded.
+    /// let mut url = Url::parse("https://example.com")?;
+    /// url.set_path("api/some%20comments");
+    /// assert_eq!(url.as_str(), "https://example.com/api/some%20comments");
+    /// assert_eq!(url.path(), "/api/some%20comments");
+    ///
     /// # Ok(())
     /// # }
     /// # run().unwrap();
@@ -1792,8 +1804,10 @@ impl Url {
             return Err(ParseError::SetHostOnCannotBeABaseUrl);
         }
 
+        let scheme_type = SchemeType::from(self.scheme());
+
         if let Some(host) = host {
-            if host.is_empty() && SchemeType::from(self.scheme()).is_special() {
+            if host.is_empty() && scheme_type.is_special() && !scheme_type.is_file() {
                 return Err(ParseError::EmptyHost);
             }
             let mut host_substr = host;
@@ -1817,15 +1831,20 @@ impl Url {
                 self.set_host_internal(Host::parse_opaque(host_substr)?, None);
             }
         } else if self.has_host() {
-            let scheme_type = SchemeType::from(self.scheme());
-            if scheme_type.is_special() {
+            if scheme_type.is_special() && !scheme_type.is_file() {
                 return Err(ParseError::EmptyHost);
             } else if self.serialization.len() == self.path_start as usize {
                 self.serialization.push('/');
             }
             debug_assert!(self.byte_at(self.scheme_end) == b':');
             debug_assert!(self.byte_at(self.path_start) == b'/');
-            let new_path_start = self.scheme_end + 1;
+
+            let new_path_start = if scheme_type.is_file() {
+                self.scheme_end + 3
+            } else {
+                self.scheme_end + 1
+            };
+
             self.serialization
                 .drain(new_path_start as usize..self.path_start as usize);
             let offset = self.path_start - new_path_start;
@@ -2127,7 +2146,7 @@ impl Url {
     ///
     /// # Examples
     ///
-    /// Change the URL’s scheme from `https` to `foo`:
+    /// Change the URL’s scheme from `https` to `http`:
     ///
     /// ```
     /// use url::Url;
@@ -2298,7 +2317,7 @@ impl Url {
     /// # run().unwrap();
     /// # }
     /// ```
-    #[cfg(any(unix, windows, target_os = "redox"))]
+    #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
     #[allow(clippy::result_unit_err)]
     pub fn from_file_path<P: AsRef<Path>>(path: P) -> Result<Url, ()> {
         let mut serialization = "file://".to_owned();
@@ -2335,7 +2354,7 @@ impl Url {
     ///
     /// Note that `std::path` does not consider trailing slashes significant
     /// and usually does not include them (e.g. in `Path::parent()`).
-    #[cfg(any(unix, windows, target_os = "redox"))]
+    #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
     #[allow(clippy::result_unit_err)]
     pub fn from_directory_path<P: AsRef<Path>>(path: P) -> Result<Url, ()> {
         let mut url = Url::from_file_path(path)?;
@@ -2452,7 +2471,7 @@ impl Url {
     /// (That is, if the percent-decoded path contains a NUL byte or,
     /// for a Windows path, is not UTF-8.)
     #[inline]
-    #[cfg(any(unix, windows, target_os = "redox"))]
+    #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
     #[allow(clippy::result_unit_err)]
     pub fn to_file_path(&self) -> Result<PathBuf, ()> {
         if let Some(segments) = self.path_segments() {
@@ -2511,7 +2530,7 @@ impl fmt::Display for Url {
     }
 }
 
-/// String converstion.
+/// String conversion.
 impl From<Url> for String {
     fn from(value: Url) -> String {
         value.serialization
@@ -2656,12 +2675,15 @@ impl<'de> serde::Deserialize<'de> for Url {
     }
 }
 
-#[cfg(any(unix, target_os = "redox"))]
+#[cfg(any(unix, target_os = "redox", target_os = "wasi"))]
 fn path_to_file_url_segments(
     path: &Path,
     serialization: &mut String,
 ) -> Result<(u32, HostInternal), ()> {
+    #[cfg(any(unix, target_os = "redox"))]
     use std::os::unix::prelude::OsStrExt;
+    #[cfg(target_os = "wasi")]
+    use std::os::wasi::prelude::OsStrExt;
     if !path.is_absolute() {
         return Err(());
     }
@@ -2706,6 +2728,7 @@ fn path_to_file_url_segments_windows(
     let host_start = serialization.len() + 1;
     let host_end;
     let host_internal;
+
     match components.next() {
         Some(Component::Prefix(ref p)) => match p.kind() {
             Prefix::Disk(letter) | Prefix::VerbatimDisk(letter) => {
@@ -2726,7 +2749,6 @@ fn path_to_file_url_segments_windows(
             }
             _ => return Err(()),
         },
-
         _ => return Err(()),
     }
 
@@ -2735,12 +2757,15 @@ fn path_to_file_url_segments_windows(
         if component == Component::RootDir {
             continue;
         }
+
         path_only_has_prefix = false;
         // FIXME: somehow work with non-unicode?
         let component = component.as_os_str().to_str().ok_or(())?;
+
         serialization.push('/');
         serialization.extend(percent_encode(component.as_bytes(), PATH_SEGMENT));
     }
+
     // A windows drive letter must end with a slash.
     if serialization.len() > host_start
         && parser::is_windows_drive_letter(&serialization[host_start..])
@@ -2748,16 +2773,20 @@ fn path_to_file_url_segments_windows(
     {
         serialization.push('/');
     }
+
     Ok((host_end, host_internal))
 }
 
-#[cfg(any(unix, target_os = "redox"))]
+#[cfg(any(unix, target_os = "redox", target_os = "wasi"))]
 fn file_url_segments_to_pathbuf(
     host: Option<&str>,
     segments: str::Split<'_, char>,
 ) -> Result<PathBuf, ()> {
     use std::ffi::OsStr;
+    #[cfg(any(unix, target_os = "redox"))]
     use std::os::unix::prelude::OsStrExt;
+    #[cfg(target_os = "wasi")]
+    use std::os::wasi::prelude::OsStrExt;
 
     if host.is_some() {
         return Err(());
@@ -2768,10 +2797,12 @@ fn file_url_segments_to_pathbuf(
     } else {
         Vec::new()
     };
+
     for segment in segments {
         bytes.push(b'/');
         bytes.extend(percent_decode(segment.as_bytes()));
     }
+
     // A windows drive letter must end with a slash.
     if bytes.len() > 2
         && matches!(bytes[bytes.len() - 2], b'a'..=b'z' | b'A'..=b'Z')
@@ -2779,12 +2810,15 @@ fn file_url_segments_to_pathbuf(
     {
         bytes.push(b'/');
     }
+
     let os_str = OsStr::from_bytes(&bytes);
     let path = PathBuf::from(os_str);
+
     debug_assert!(
         path.is_absolute(),
         "to_file_path() failed to produce an absolute Path"
     );
+
     Ok(path)
 }
 

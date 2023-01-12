@@ -52,15 +52,12 @@ macro_rules! simple_enum_error {
         ///
         /// This may be extended in the future so exhaustive matching is
         /// discouraged with an unused variant.
-        #[allow(clippy::manual_non_exhaustive)] // introduced in 1.40, MSRV is 1.36
         #[derive(PartialEq, Eq, Clone, Copy, Debug)]
+        #[non_exhaustive]
         pub enum ParseError {
             $(
                 $name,
             )+
-            /// Unused variant enable non-exhaustive matching
-            #[doc(hidden)]
-            __FutureProof,
         }
 
         impl fmt::Display for ParseError {
@@ -69,9 +66,6 @@ macro_rules! simple_enum_error {
                     $(
                         ParseError::$name => fmt.write_str($description),
                     )+
-                    ParseError::__FutureProof => {
-                        unreachable!("Don't abuse the FutureProof!");
-                    }
                 }
             }
         }
@@ -105,15 +99,12 @@ macro_rules! syntax_violation_enum {
         ///
         /// This may be extended in the future so exhaustive matching is
         /// discouraged with an unused variant.
-        #[allow(clippy::manual_non_exhaustive)] // introduced in 1.40, MSRV is 1.36
         #[derive(PartialEq, Eq, Clone, Copy, Debug)]
+        #[non_exhaustive]
         pub enum SyntaxViolation {
             $(
                 $name,
             )+
-            /// Unused variant enable non-exhaustive matching
-            #[doc(hidden)]
-            __FutureProof,
         }
 
         impl SyntaxViolation {
@@ -122,9 +113,6 @@ macro_rules! syntax_violation_enum {
                     $(
                         SyntaxViolation::$name => $description,
                     )+
-                    SyntaxViolation::__FutureProof => {
-                        unreachable!("Don't abuse the FutureProof!");
-                    }
                 }
             }
         }
@@ -154,7 +142,7 @@ impl fmt::Display for SyntaxViolation {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum SchemeType {
     File,
     SpecialNotFile,
@@ -1227,13 +1215,11 @@ impl<'a> Parser<'a> {
                     }
                 }
             }
-            // Going from &str to String to &str to please the 1.33.0 borrow checker
-            let before_slash_string = if ends_with_slash {
-                self.serialization[segment_start..self.serialization.len() - 1].to_owned()
+            let segment_before_slash = if ends_with_slash {
+                &self.serialization[segment_start..self.serialization.len() - 1]
             } else {
-                self.serialization[segment_start..self.serialization.len()].to_owned()
+                &self.serialization[segment_start..self.serialization.len()]
             };
-            let segment_before_slash: &str = &before_slash_string;
             match segment_before_slash {
                 // If buffer is a double-dot path segment, shorten url’s path,
                 ".." | "%2e%2e" | "%2e%2E" | "%2E%2e" | "%2E%2E" | "%2e." | "%2E." | ".%2e"
@@ -1292,7 +1278,7 @@ impl<'a> Parser<'a> {
             //FIXME: log violation
             let path = self.serialization.split_off(path_start);
             self.serialization.push('/');
-            self.serialization.push_str(&path.trim_start_matches('/'));
+            self.serialization.push_str(path.trim_start_matches('/'));
         }
 
         input
@@ -1423,7 +1409,8 @@ impl<'a> Parser<'a> {
         scheme_end: u32,
         mut input: Input<'i>,
     ) -> Option<Input<'i>> {
-        let mut query = String::new(); // FIXME: use a streaming decoder instead
+        let len = input.chars.as_str().len();
+        let mut query = String::with_capacity(len); // FIXME: use a streaming decoder instead
         let mut remaining = None;
         while let Some(c) = input.next() {
             if c == '#' && self.context == Context::UrlParser {
@@ -1563,17 +1550,17 @@ fn is_normalized_windows_drive_letter(segment: &str) -> bool {
     is_windows_drive_letter(segment) && segment.as_bytes()[1] == b':'
 }
 
-/// Wether the scheme is file:, the path has a single segment, and that segment
+/// Whether the scheme is file:, the path has a single segment, and that segment
 /// is a Windows drive letter
 #[inline]
 pub fn is_windows_drive_letter(segment: &str) -> bool {
     segment.len() == 2 && starts_with_windows_drive_letter(segment)
 }
 
-/// Wether path starts with a root slash
+/// Whether path starts with a root slash
 /// and a windows drive letter eg: "/c:" or "/a:/"
 fn path_starts_with_windows_drive_letter(s: &str) -> bool {
-    if let Some(c) = s.as_bytes().get(0) {
+    if let Some(c) = s.as_bytes().first() {
         matches!(c, b'/' | b'\\' | b'?' | b'#') && starts_with_windows_drive_letter(&s[1..])
     } else {
         false

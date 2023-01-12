@@ -63,9 +63,9 @@ pub fn collect_tests<F: FnMut(String, TestFn)>(add_test: &mut F) {
                         };
                         add_test(
                             test_name,
-                            TestFn::dyn_test_fn(move || {
+                            TestFn::DynTestFn(Box::new(move || {
                                 one_test(get_string(&o, "decoded"), get_string(&o, "encoded"))
-                            }),
+                            })),
                         )
                     }
                     _ => panic!(),

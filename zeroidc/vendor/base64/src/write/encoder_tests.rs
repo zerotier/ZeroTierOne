@@ -1,29 +1,39 @@
-use super::EncoderWriter;
-use crate::tests::random_config;
-use crate::{encode_config, encode_config_buf, STANDARD_NO_PAD, URL_SAFE};
-
 use std::io::{Cursor, Write};
 use std::{cmp, io, str};
 
 use rand::Rng;
 
+use crate::{
+    alphabet::{STANDARD, URL_SAFE},
+    engine::{
+        general_purpose::{GeneralPurpose, NO_PAD, PAD},
+        Engine,
+    },
+    tests::random_engine,
+};
+
+use super::EncoderWriter;
+
+const URL_SAFE_ENGINE: GeneralPurpose = GeneralPurpose::new(&URL_SAFE, PAD);
+const NO_PAD_ENGINE: GeneralPurpose = GeneralPurpose::new(&STANDARD, NO_PAD);
+
 #[test]
 fn encode_three_bytes() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, URL_SAFE);
+        let mut enc = EncoderWriter::new(&mut c, &URL_SAFE_ENGINE);
 
         let sz = enc.write(b"abc").unwrap();
         assert_eq!(sz, 3);
     }
-    assert_eq!(&c.get_ref()[..], encode_config("abc", URL_SAFE).as_bytes());
+    assert_eq!(&c.get_ref()[..], URL_SAFE_ENGINE.encode("abc").as_bytes());
 }
 
 #[test]
 fn encode_nine_bytes_two_writes() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, URL_SAFE);
+        let mut enc = EncoderWriter::new(&mut c, &URL_SAFE_ENGINE);
 
         let sz = enc.write(b"abcdef").unwrap();
         assert_eq!(sz, 6);
@@ -32,7 +42,7 @@ fn encode_nine_bytes_two_writes() {
     }
     assert_eq!(
         &c.get_ref()[..],
-        encode_config("abcdefghi", URL_SAFE).as_bytes()
+        URL_SAFE_ENGINE.encode("abcdefghi").as_bytes()
     );
 }
 
@@ -40,21 +50,21 @@ fn encode_nine_bytes_two_writes() {
 fn encode_one_then_two_bytes() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, URL_SAFE);
+        let mut enc = EncoderWriter::new(&mut c, &URL_SAFE_ENGINE);
 
         let sz = enc.write(b"a").unwrap();
         assert_eq!(sz, 1);
         let sz = enc.write(b"bc").unwrap();
         assert_eq!(sz, 2);
     }
-    assert_eq!(&c.get_ref()[..], encode_config("abc", URL_SAFE).as_bytes());
+    assert_eq!(&c.get_ref()[..], URL_SAFE_ENGINE.encode("abc").as_bytes());
 }
 
 #[test]
 fn encode_one_then_five_bytes() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, URL_SAFE);
+        let mut enc = EncoderWriter::new(&mut c, &URL_SAFE_ENGINE);
 
         let sz = enc.write(b"a").unwrap();
         assert_eq!(sz, 1);
@@ -63,7 +73,7 @@ fn encode_one_then_five_bytes() {
     }
     assert_eq!(
         &c.get_ref()[..],
-        encode_config("abcdef", URL_SAFE).as_bytes()
+        URL_SAFE_ENGINE.encode("abcdef").as_bytes()
     );
 }
 
@@ -71,7 +81,7 @@ fn encode_one_then_five_bytes() {
 fn encode_1_2_3_bytes() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, URL_SAFE);
+        let mut enc = EncoderWriter::new(&mut c, &URL_SAFE_ENGINE);
 
         let sz = enc.write(b"a").unwrap();
         assert_eq!(sz, 1);
@@ -82,7 +92,7 @@ fn encode_1_2_3_bytes() {
     }
     assert_eq!(
         &c.get_ref()[..],
-        encode_config("abcdef", URL_SAFE).as_bytes()
+        URL_SAFE_ENGINE.encode("abcdef").as_bytes()
     );
 }
 
@@ -90,20 +100,20 @@ fn encode_1_2_3_bytes() {
 fn encode_with_padding() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, URL_SAFE);
+        let mut enc = EncoderWriter::new(&mut c, &URL_SAFE_ENGINE);
 
         enc.write_all(b"abcd").unwrap();
 
         enc.flush().unwrap();
     }
-    assert_eq!(&c.get_ref()[..], encode_config("abcd", URL_SAFE).as_bytes());
+    assert_eq!(&c.get_ref()[..], URL_SAFE_ENGINE.encode("abcd").as_bytes());
 }
 
 #[test]
 fn encode_with_padding_multiple_writes() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, URL_SAFE);
+        let mut enc = EncoderWriter::new(&mut c, &URL_SAFE_ENGINE);
 
         assert_eq!(1, enc.write(b"a").unwrap());
         assert_eq!(2, enc.write(b"bc").unwrap());
@@ -114,7 +124,7 @@ fn encode_with_padding_multiple_writes() {
     }
     assert_eq!(
         &c.get_ref()[..],
-        encode_config("abcdefg", URL_SAFE).as_bytes()
+        URL_SAFE_ENGINE.encode("abcdefg").as_bytes()
     );
 }
 
@@ -122,7 +132,7 @@ fn encode_with_padding_multiple_writes() {
 fn finish_writes_extra_byte() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, URL_SAFE);
+        let mut enc = EncoderWriter::new(&mut c, &URL_SAFE_ENGINE);
 
         assert_eq!(6, enc.write(b"abcdef").unwrap());
 
@@ -134,7 +144,7 @@ fn finish_writes_extra_byte() {
     }
     assert_eq!(
         &c.get_ref()[..],
-        encode_config("abcdefg", URL_SAFE).as_bytes()
+        URL_SAFE_ENGINE.encode("abcdefg").as_bytes()
     );
 }
 
@@ -142,17 +152,14 @@ fn finish_writes_extra_byte() {
 fn write_partial_chunk_encodes_partial_chunk() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, STANDARD_NO_PAD);
+        let mut enc = EncoderWriter::new(&mut c, &NO_PAD_ENGINE);
 
         // nothing encoded yet
         assert_eq!(2, enc.write(b"ab").unwrap());
         // encoded here
         let _ = enc.finish().unwrap();
     }
-    assert_eq!(
-        &c.get_ref()[..],
-        encode_config("ab", STANDARD_NO_PAD).as_bytes()
-    );
+    assert_eq!(&c.get_ref()[..], NO_PAD_ENGINE.encode("ab").as_bytes());
     assert_eq!(3, c.get_ref().len());
 }
 
@@ -160,15 +167,12 @@ fn write_partial_chunk_encodes_partial_chunk() {
 fn write_1_chunk_encodes_complete_chunk() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, STANDARD_NO_PAD);
+        let mut enc = EncoderWriter::new(&mut c, &NO_PAD_ENGINE);
 
         assert_eq!(3, enc.write(b"abc").unwrap());
         let _ = enc.finish().unwrap();
     }
-    assert_eq!(
-        &c.get_ref()[..],
-        encode_config("abc", STANDARD_NO_PAD).as_bytes()
-    );
+    assert_eq!(&c.get_ref()[..], NO_PAD_ENGINE.encode("abc").as_bytes());
     assert_eq!(4, c.get_ref().len());
 }
 
@@ -176,16 +180,13 @@ fn write_1_chunk_encodes_complete_chunk() {
 fn write_1_chunk_and_partial_encodes_only_complete_chunk() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, STANDARD_NO_PAD);
+        let mut enc = EncoderWriter::new(&mut c, &NO_PAD_ENGINE);
 
-        // "d" not written
+        // "d" not consumed since it's not a full chunk
         assert_eq!(3, enc.write(b"abcd").unwrap());
         let _ = enc.finish().unwrap();
     }
-    assert_eq!(
-        &c.get_ref()[..],
-        encode_config("abc", STANDARD_NO_PAD).as_bytes()
-    );
+    assert_eq!(&c.get_ref()[..], NO_PAD_ENGINE.encode("abc").as_bytes());
     assert_eq!(4, c.get_ref().len());
 }
 
@@ -193,16 +194,13 @@ fn write_1_chunk_and_partial_encodes_only_complete_chunk() {
 fn write_2_partials_to_exactly_complete_chunk_encodes_complete_chunk() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, STANDARD_NO_PAD);
+        let mut enc = EncoderWriter::new(&mut c, &NO_PAD_ENGINE);
 
         assert_eq!(1, enc.write(b"a").unwrap());
         assert_eq!(2, enc.write(b"bc").unwrap());
         let _ = enc.finish().unwrap();
     }
-    assert_eq!(
-        &c.get_ref()[..],
-        encode_config("abc", STANDARD_NO_PAD).as_bytes()
-    );
+    assert_eq!(&c.get_ref()[..], NO_PAD_ENGINE.encode("abc").as_bytes());
     assert_eq!(4, c.get_ref().len());
 }
 
@@ -211,17 +209,14 @@ fn write_partial_then_enough_to_complete_chunk_but_not_complete_another_chunk_en
 ) {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, STANDARD_NO_PAD);
+        let mut enc = EncoderWriter::new(&mut c, &NO_PAD_ENGINE);
 
         assert_eq!(1, enc.write(b"a").unwrap());
         // doesn't consume "d"
         assert_eq!(2, enc.write(b"bcd").unwrap());
         let _ = enc.finish().unwrap();
     }
-    assert_eq!(
-        &c.get_ref()[..],
-        encode_config("abc", STANDARD_NO_PAD).as_bytes()
-    );
+    assert_eq!(&c.get_ref()[..], NO_PAD_ENGINE.encode("abc").as_bytes());
     assert_eq!(4, c.get_ref().len());
 }
 
@@ -229,17 +224,14 @@ fn write_partial_then_enough_to_complete_chunk_but_not_complete_another_chunk_en
 fn write_partial_then_enough_to_complete_chunk_and_another_chunk_encodes_complete_chunks() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, STANDARD_NO_PAD);
+        let mut enc = EncoderWriter::new(&mut c, &NO_PAD_ENGINE);
 
         assert_eq!(1, enc.write(b"a").unwrap());
         // completes partial chunk, and another chunk
         assert_eq!(5, enc.write(b"bcdef").unwrap());
         let _ = enc.finish().unwrap();
     }
-    assert_eq!(
-        &c.get_ref()[..],
-        encode_config("abcdef", STANDARD_NO_PAD).as_bytes()
-    );
+    assert_eq!(&c.get_ref()[..], NO_PAD_ENGINE.encode("abcdef").as_bytes());
     assert_eq!(8, c.get_ref().len());
 }
 
@@ -248,7 +240,7 @@ fn write_partial_then_enough_to_complete_chunk_and_another_chunk_and_another_par
 ) {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, STANDARD_NO_PAD);
+        let mut enc = EncoderWriter::new(&mut c, &NO_PAD_ENGINE);
 
         assert_eq!(1, enc.write(b"a").unwrap());
         // completes partial chunk, and another chunk, with one more partial chunk that's not
@@ -256,10 +248,7 @@ fn write_partial_then_enough_to_complete_chunk_and_another_chunk_and_another_par
         assert_eq!(5, enc.write(b"bcdefe").unwrap());
         let _ = enc.finish().unwrap();
     }
-    assert_eq!(
-        &c.get_ref()[..],
-        encode_config("abcdef", STANDARD_NO_PAD).as_bytes()
-    );
+    assert_eq!(&c.get_ref()[..], NO_PAD_ENGINE.encode("abcdef").as_bytes());
     assert_eq!(8, c.get_ref().len());
 }
 
@@ -267,13 +256,10 @@ fn write_partial_then_enough_to_complete_chunk_and_another_chunk_and_another_par
 fn drop_calls_finish_for_you() {
     let mut c = Cursor::new(Vec::new());
     {
-        let mut enc = EncoderWriter::new(&mut c, STANDARD_NO_PAD);
+        let mut enc = EncoderWriter::new(&mut c, &NO_PAD_ENGINE);
         assert_eq!(1, enc.write(b"a").unwrap());
     }
-    assert_eq!(
-        &c.get_ref()[..],
-        encode_config("a", STANDARD_NO_PAD).as_bytes()
-    );
+    assert_eq!(&c.get_ref()[..], NO_PAD_ENGINE.encode("a").as_bytes());
     assert_eq!(2, c.get_ref().len());
 }
 
@@ -295,11 +281,11 @@ fn every_possible_split_of_input() {
             orig_data.push(rng.gen());
         }
 
-        let config = random_config(&mut rng);
-        encode_config_buf(&orig_data, config, &mut normal_encoded);
+        let engine = random_engine(&mut rng);
+        engine.encode_string(&orig_data, &mut normal_encoded);
 
         {
-            let mut stream_encoder = EncoderWriter::new(&mut stream_encoded, config);
+            let mut stream_encoder = EncoderWriter::new(&mut stream_encoded, &engine);
             // Write the first i bytes, then the rest
             stream_encoder.write_all(&orig_data[0..i]).unwrap();
             stream_encoder.write_all(&orig_data[i..]).unwrap();
@@ -312,12 +298,12 @@ fn every_possible_split_of_input() {
 #[test]
 fn encode_random_config_matches_normal_encode_reasonable_input_len() {
     // choose up to 2 * buf size, so ~half the time it'll use a full buffer
-    do_encode_random_config_matches_normal_encode(super::encoder::BUF_SIZE * 2)
+    do_encode_random_config_matches_normal_encode(super::encoder::BUF_SIZE * 2);
 }
 
 #[test]
 fn encode_random_config_matches_normal_encode_tiny_input_len() {
-    do_encode_random_config_matches_normal_encode(10)
+    do_encode_random_config_matches_normal_encode(10);
 }
 
 #[test]
@@ -332,14 +318,14 @@ fn retrying_writes_that_error_with_interrupted_works() {
         stream_encoded.clear();
         normal_encoded.clear();
 
-        let orig_len: usize = rng.gen_range(100, 20_000);
+        let orig_len: usize = rng.gen_range(100..20_000);
         for _ in 0..orig_len {
             orig_data.push(rng.gen());
         }
 
         // encode the normal way
-        let config = random_config(&mut rng);
-        encode_config_buf(&orig_data, config, &mut normal_encoded);
+        let engine = random_engine(&mut rng);
+        engine.encode_string(&orig_data, &mut normal_encoded);
 
         // encode via the stream encoder
         {
@@ -350,12 +336,12 @@ fn retrying_writes_that_error_with_interrupted_works() {
                 fraction: 0.8,
             };
 
-            let mut stream_encoder = EncoderWriter::new(&mut interrupting_writer, config);
+            let mut stream_encoder = EncoderWriter::new(&mut interrupting_writer, &engine);
             let mut bytes_consumed = 0;
             while bytes_consumed < orig_len {
                 // use short inputs since we want to use `extra` a lot as that's what needs rollback
                 // when errors occur
-                let input_len: usize = cmp::min(rng.gen_range(0, 10), orig_len - bytes_consumed);
+                let input_len: usize = cmp::min(rng.gen_range(0..10), orig_len - bytes_consumed);
 
                 retry_interrupted_write_all(
                     &mut stream_encoder,
@@ -396,14 +382,14 @@ fn writes_that_only_write_part_of_input_and_sometimes_interrupt_produce_correct_
         stream_encoded.clear();
         normal_encoded.clear();
 
-        let orig_len: usize = rng.gen_range(100, 20_000);
+        let orig_len: usize = rng.gen_range(100..20_000);
         for _ in 0..orig_len {
             orig_data.push(rng.gen());
         }
 
         // encode the normal way
-        let config = random_config(&mut rng);
-        encode_config_buf(&orig_data, config, &mut normal_encoded);
+        let engine = random_engine(&mut rng);
+        engine.encode_string(&orig_data, &mut normal_encoded);
 
         // encode via the stream encoder
         {
@@ -415,11 +401,11 @@ fn writes_that_only_write_part_of_input_and_sometimes_interrupt_produce_correct_
                 no_interrupt_fraction: 0.1,
             };
 
-            let mut stream_encoder = EncoderWriter::new(&mut partial_writer, config);
+            let mut stream_encoder = EncoderWriter::new(&mut partial_writer, &engine);
             let mut bytes_consumed = 0;
             while bytes_consumed < orig_len {
                 // use at most medium-length inputs to exercise retry logic more aggressively
-                let input_len: usize = cmp::min(rng.gen_range(0, 100), orig_len - bytes_consumed);
+                let input_len: usize = cmp::min(rng.gen_range(0..100), orig_len - bytes_consumed);
 
                 let res =
                     stream_encoder.write(&orig_data[bytes_consumed..bytes_consumed + input_len]);
@@ -475,22 +461,22 @@ fn do_encode_random_config_matches_normal_encode(max_input_len: usize) {
         stream_encoded.clear();
         normal_encoded.clear();
 
-        let orig_len: usize = rng.gen_range(100, 20_000);
+        let orig_len: usize = rng.gen_range(100..20_000);
         for _ in 0..orig_len {
             orig_data.push(rng.gen());
         }
 
         // encode the normal way
-        let config = random_config(&mut rng);
-        encode_config_buf(&orig_data, config, &mut normal_encoded);
+        let engine = random_engine(&mut rng);
+        engine.encode_string(&orig_data, &mut normal_encoded);
 
         // encode via the stream encoder
         {
-            let mut stream_encoder = EncoderWriter::new(&mut stream_encoded, config);
+            let mut stream_encoder = EncoderWriter::new(&mut stream_encoded, &engine);
             let mut bytes_consumed = 0;
             while bytes_consumed < orig_len {
                 let input_len: usize =
-                    cmp::min(rng.gen_range(0, max_input_len), orig_len - bytes_consumed);
+                    cmp::min(rng.gen_range(0..max_input_len), orig_len - bytes_consumed);
 
                 // write a little bit of the data
                 stream_encoder
@@ -520,7 +506,7 @@ struct InterruptingWriter<'a, W: 'a + Write, R: 'a + Rng> {
 
 impl<'a, W: Write, R: Rng> Write for InterruptingWriter<'a, W, R> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        if self.rng.gen_range(0.0, 1.0) <= self.fraction {
+        if self.rng.gen_range(0.0..1.0) <= self.fraction {
             return Err(io::Error::new(io::ErrorKind::Interrupted, "interrupted"));
         }
 
@@ -528,7 +514,7 @@ impl<'a, W: Write, R: Rng> Write for InterruptingWriter<'a, W, R> {
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        if self.rng.gen_range(0.0, 1.0) <= self.fraction {
+        if self.rng.gen_range(0.0..1.0) <= self.fraction {
             return Err(io::Error::new(io::ErrorKind::Interrupted, "interrupted"));
         }
 
@@ -548,17 +534,17 @@ struct PartialInterruptingWriter<'a, W: 'a + Write, R: 'a + Rng> {
 
 impl<'a, W: Write, R: Rng> Write for PartialInterruptingWriter<'a, W, R> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        if self.rng.gen_range(0.0, 1.0) > self.no_interrupt_fraction {
+        if self.rng.gen_range(0.0..1.0) > self.no_interrupt_fraction {
             return Err(io::Error::new(io::ErrorKind::Interrupted, "interrupted"));
         }
 
-        if self.rng.gen_range(0.0, 1.0) <= self.full_input_fraction || buf.len() == 0 {
+        if self.rng.gen_range(0.0..1.0) <= self.full_input_fraction || buf.is_empty() {
             // pass through the buf untouched
             self.w.write(buf)
         } else {
             // only use a prefix of it
             self.w
-                .write(&buf[0..(self.rng.gen_range(0, buf.len() - 1))])
+                .write(&buf[0..(self.rng.gen_range(0..(buf.len() - 1)))])
         }
     }
 

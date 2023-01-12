@@ -456,6 +456,51 @@ fn test_exchange_client_credentials_with_basic_auth() {
 }
 
 #[test]
+fn test_exchange_client_credentials_with_basic_auth_but_no_client_secret() {
+    let client = BasicClient::new(
+        ClientId::new("aaa/;&".to_string()),
+        None,
+        AuthUrl::new("https://example.com/auth".to_string()).unwrap(),
+        Some(TokenUrl::new("https://example.com/token".to_string()).unwrap()),
+    )
+    .set_auth_type(AuthType::BasicAuth);
+    let token = client
+        .exchange_client_credentials()
+        .request(mock_http_client(
+            vec![
+                (ACCEPT, "application/json"),
+                (CONTENT_TYPE, "application/x-www-form-urlencoded"),
+            ],
+            "grant_type=client_credentials&client_id=aaa%2F%3B%26",
+            None,
+            HttpResponse {
+                status_code: StatusCode::OK,
+                headers: HeaderMap::new(),
+                body: "{\
+                       \"access_token\": \"12/34\", \
+                       \"token_type\": \"bearer\", \
+                       \"scope\": \"read write\"\
+                       }"
+                .to_string()
+                .into_bytes(),
+            },
+        ))
+        .unwrap();
+
+    assert_eq!("12/34", token.access_token().secret());
+    assert_eq!(BasicTokenType::Bearer, *token.token_type());
+    assert_eq!(
+        Some(&vec![
+            Scope::new("read".to_string()),
+            Scope::new("write".to_string()),
+        ]),
+        token.scopes()
+    );
+    assert_eq!(None, token.expires_in());
+    assert!(token.refresh_token().is_none());
+}
+
+#[test]
 fn test_exchange_client_credentials_with_body_auth_and_scope() {
     let client = new_client().set_auth_type(AuthType::RequestBody);
     let token = client
@@ -1060,9 +1105,8 @@ fn test_exchange_code_with_invalid_token_type() {
             vec![
                 (ACCEPT, "application/json"),
                 (CONTENT_TYPE, "application/x-www-form-urlencoded"),
-                (AUTHORIZATION, "Basic YWFhOg=="),
             ],
-            "grant_type=authorization_code&code=ccc",
+            "grant_type=authorization_code&code=ccc&client_id=aaa",
             None,
             HttpResponse {
                 status_code: StatusCode::OK,
@@ -2159,7 +2203,14 @@ fn test_device_token_authorization_timeout() {
         .err()
         .unwrap();
     match token {
-        RequestTokenError::Other(msg) => assert_eq!(msg, "Device code expired"),
+        RequestTokenError::ServerResponse(msg) => assert_eq!(
+            msg,
+            DeviceCodeErrorResponse::new(
+                DeviceCodeErrorResponseType::ExpiredToken,
+                Some(String::from("This device code has expired.")),
+                None,
+            )
+        ),
         _ => unreachable!("Error should be an expiry"),
     }
 }
