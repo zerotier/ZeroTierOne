@@ -98,7 +98,7 @@ pub fn verify_rsa_signature(
     let (n, e) = rsa_public_key(key).map_err(SignatureVerificationError::InvalidKey)?;
     // let's n and e as a big integers to prevent issues with leading zeros
     // according to https://datatracker.ietf.org/doc/html/rfc7518#section-6.3.1.1
-    // `n` is alwasy unsigned (hence has sign plus)
+    // `n` is always unsigned (hence has sign plus)
 
     let n_bigint = BigInt::from_bytes_be(Sign::Plus, n.deref());
     let e_bigint = BigInt::from_bytes_be(Sign::Plus, e.deref());

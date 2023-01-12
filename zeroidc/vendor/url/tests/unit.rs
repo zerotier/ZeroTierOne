@@ -43,6 +43,14 @@ fn test_set_empty_host() {
     assert_eq!(base.as_str(), "moz:/baz");
     base.set_host(Some("servo")).unwrap();
     assert_eq!(base.as_str(), "moz://servo/baz");
+
+    let mut base: Url = "file://server/share/foo/bar".parse().unwrap();
+    base.set_host(None).unwrap();
+    assert_eq!(base.as_str(), "file:///share/foo/bar");
+
+    let mut base: Url = "file://server/share/foo/bar".parse().unwrap();
+    base.set_host(Some("foo")).unwrap();
+    assert_eq!(base.as_str(), "file://foo/share/foo/bar");
 }
 
 #[test]
@@ -256,7 +264,6 @@ fn host() {
             0x2001, 0x0db8, 0x85a3, 0x08d3, 0x1319, 0x8a2e, 0x0370, 0x7344,
         )),
     );
-    assert_host("http://1.35.+33.49", Host::Domain("1.35.+33.49"));
     assert_host(
         "http://[::]",
         Host::Ipv6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0)),
@@ -271,7 +278,8 @@ fn host() {
     );
     assert_host("http://0x1232131", Host::Ipv4(Ipv4Addr::new(1, 35, 33, 49)));
     assert_host("http://111", Host::Ipv4(Ipv4Addr::new(0, 0, 0, 111)));
-    assert_host("http://2..2.3", Host::Domain("2..2.3"));
+    assert!(Url::parse("http://1.35.+33.49").is_err());
+    assert!(Url::parse("http://2..2.3").is_err());
     assert!(Url::parse("http://42.0x1232131").is_err());
     assert!(Url::parse("http://192.168.0.257").is_err());
 
@@ -720,6 +728,34 @@ fn test_domain_encoding_quirks() {
     }
 }
 
+#[cfg(feature = "expose_internals")]
+#[test]
+fn test_expose_internals() {
+    use url::quirks::internal_components;
+    use url::quirks::InternalComponents;
+
+    let url = Url::parse("https://example.com/path/file.ext?key=val&key2=val2#fragment").unwrap();
+    let InternalComponents {
+        scheme_end,
+        username_end,
+        host_start,
+        host_end,
+        port,
+        path_start,
+        query_start,
+        fragment_start,
+    } = internal_components(&url);
+
+    assert_eq!(scheme_end, 5);
+    assert_eq!(username_end, 8);
+    assert_eq!(host_start, 8);
+    assert_eq!(host_end, 19);
+    assert_eq!(port, None);
+    assert_eq!(path_start, 19);
+    assert_eq!(query_start, Some(33));
+    assert_eq!(fragment_start, Some(51));
+}
+
 #[test]
 fn test_windows_unc_path() {
     if !cfg!(windows) {
@@ -796,7 +832,7 @@ fn test_syntax_violation_callback_types() {
         ("file:/foo.txt", ExpectedFileDoubleSlash, "expected // after file:"),
         ("file://mozilla.org/c:/file.txt", FileWithHostAndWindowsDrive, "file: with host and Windows drive letter"),
         ("http://mozilla.org/^", NonUrlCodePoint, "non-URL code point"),
-        ("http://mozilla.org/#\00", NullInFragment, "NULL characters are ignored in URL fragment identifiers"),
+        ("http://mozilla.org/#\x000", NullInFragment, "NULL characters are ignored in URL fragment identifiers"),
         ("http://mozilla.org/%1", PercentDecode, "expected 2 hex digits after %"),
         ("http://mozilla.org\t/foo", TabOrNewlineIgnored, "tabs or newlines are ignored in URLs"),
         ("http://user@:pass@mozilla.org", UnencodedAtSign, "unencoded @ sign in username or password")
@@ -1081,6 +1117,16 @@ fn test_make_relative() {
             "http://127.0.0.1:8080/test/video?baz=meh#456",
             "video?baz=meh#456",
         ),
+        (
+            "http://127.0.0.1:8080/file.txt",
+            "http://127.0.0.1:8080/test/file.txt",
+            "test/file.txt",
+        ),
+        (
+            "http://127.0.0.1:8080/not_equal.txt",
+            "http://127.0.0.1:8080/test/file.txt",
+            "test/file.txt",
+        ),
     ];
 
     for (base, uri, relative) in &tests {
@@ -1093,7 +1139,7 @@ fn test_make_relative() {
             base, uri, relative
         );
         assert_eq!(
-            base_uri.join(&relative).unwrap().as_str(),
+            base_uri.join(relative).unwrap().as_str(),
             *uri,
             "base: {}, uri: {}, relative: {}",
             base,

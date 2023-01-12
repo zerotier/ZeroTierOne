@@ -1,4 +1,9 @@
-# strsim-rs [![Crates.io](https://img.shields.io/crates/v/strsim.svg)](https://crates.io/crates/strsim) [![Crates.io](https://img.shields.io/crates/l/strsim.svg?maxAge=2592000)](https://github.com/dguo/strsim-rs/blob/master/LICENSE) [![Linux build status](https://travis-ci.org/dguo/strsim-rs.svg?branch=master)](https://travis-ci.org/dguo/strsim-rs) [![Windows build status](https://ci.appveyor.com/api/projects/status/ggue6i785618a39w?svg=true)](https://ci.appveyor.com/project/dguo/strsim-rs)
+# strsim-rs
+
+[![Crates.io](https://img.shields.io/crates/v/strsim.svg)](https://crates.io/crates/strsim)
+[![Crates.io](https://img.shields.io/crates/l/strsim.svg?maxAge=2592000)](https://github.com/dguo/strsim-rs/blob/master/LICENSE)
+[![CI status](https://github.com/dguo/strsim-rs/workflows/CI/badge.svg)](https://github.com/dguo/strsim-rs/actions?query=branch%3Amaster)
+[![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
 
 [Rust](https://www.rust-lang.org) implementations of [string similarity metrics]:
   - [Hamming]
@@ -6,26 +11,35 @@
   - [Optimal string alignment]
   - [Damerau-Levenshtein] - distance & normalized
   - [Jaro and Jaro-Winkler] - this implementation of Jaro-Winkler does not limit the common prefix length
+  - [Sørensen-Dice]
 
-### Installation
+The normalized versions return values between `0.0` and `1.0`, where `1.0` means
+an exact match.
+
+There are also generic versions of the functions for non-string inputs.
+
+## Installation
+
+`strsim` is available on [crates.io](https://crates.io/crates/strsim). Add it to
+your `Cargo.toml`:
 ```toml
-# Cargo.toml
 [dependencies]
-strsim = "0.8.0"
+strsim = "0.10.0"
 ```
 
-### [Documentation](https://docs.rs/strsim/)
-You can change the version in the url to see the documentation for an older
-version in the
-[changelog](https://github.com/dguo/strsim-rs/blob/master/CHANGELOG.md).
+## Usage
 
-### Usage
+Go to [Docs.rs](https://docs.rs/strsim/) for the full documentation. You can
+also clone the repo, and run `$ cargo doc --open`.
+
+### Examples
+
 ```rust
 extern crate strsim;
 
 use strsim::{hamming, levenshtein, normalized_levenshtein, osa_distance,
              damerau_levenshtein, normalized_damerau_levenshtein, jaro,
-             jaro_winkler};
+             jaro_winkler, sorensen_dice};
 
 fn main() {
     match hamming("hamming", "hammers") {
@@ -33,31 +47,49 @@ fn main() {
         Err(why) => panic!("{:?}", why)
     }
 
-    assert_eq!(3, levenshtein("kitten", "sitting"));
+    assert_eq!(levenshtein("kitten", "sitting"), 3);
 
-    assert!((normalized_levenshtein("kitten", "sitting") - 0.57142).abs() < 0.00001);
+    assert!((normalized_levenshtein("kitten", "sitting") - 0.571).abs() < 0.001);
 
-    assert_eq!(3, osa_distance("ac", "cba"));
+    assert_eq!(osa_distance("ac", "cba"), 3);
 
-    assert_eq!(2, damerau_levenshtein("ac", "cba"));
+    assert_eq!(damerau_levenshtein("ac", "cba"), 2);
 
-    assert!((normalized_damerau_levenshtein("levenshtein", "löwenbräu") - 0.27272).abs() < 0.00001)
-
-    assert!((0.392 - jaro("Friedrich Nietzsche", "Jean-Paul Sartre")).abs() <
+    assert!((normalized_damerau_levenshtein("levenshtein", "löwenbräu") - 0.272).abs() <
             0.001);
 
-    assert!((0.911 - jaro_winkler("cheeseburger", "cheese fries")).abs() <
+    assert!((jaro("Friedrich Nietzsche", "Jean-Paul Sartre") - 0.392).abs() <
             0.001);
+
+    assert!((jaro_winkler("cheeseburger", "cheese fries") - 0.911).abs() <
+            0.001);
+
+    assert_eq!(sorensen_dice("web applications", "applications of the web"),
+        0.7878787878787878);
 }
 ```
 
-### Development
+Using the generic versions of the functions:
+
+```rust
+extern crate strsim;
+
+use strsim::generic_levenshtein;
+
+fn main() {
+    assert_eq!(2, generic_levenshtein(&[1, 2, 3], &[0, 2, 5]));
+}
+```
+
+## Contributing
+
 If you don't want to install Rust itself, you can run `$ ./dev` for a
 development CLI if you have [Docker] installed.
 
-Benchmarks require a Nightly toolchain. They are run by `cargo +nightly bench`.
+Benchmarks require a Nightly toolchain. Run `$ cargo +nightly bench`.
 
-### License
+## License
+
 [MIT](https://github.com/dguo/strsim-rs/blob/master/LICENSE)
 
 [string similarity metrics]:http://en.wikipedia.org/wiki/String_metric
@@ -66,4 +98,5 @@ Benchmarks require a Nightly toolchain. They are run by `cargo +nightly bench`.
 [Levenshtein]:http://en.wikipedia.org/wiki/Levenshtein_distance
 [Hamming]:http://en.wikipedia.org/wiki/Hamming_distance
 [Optimal string alignment]:https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance#Optimal_string_alignment_distance
+[Sørensen-Dice]:http://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient
 [Docker]:https://docs.docker.com/engine/installation/

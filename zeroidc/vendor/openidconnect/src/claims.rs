@@ -9,7 +9,7 @@ use serde::{Serialize, Serializer};
 
 use crate::helpers::FlattenFilter;
 use crate::types::helpers::{split_language_tag_key, timestamp_to_utc, utc_to_seconds};
-use crate::types::{LocalizedClaim, Timestamp};
+use crate::types::{Boolean, LocalizedClaim, Timestamp};
 use crate::{
     AddressCountry, AddressLocality, AddressPostalCode, AddressRegion, EndUserBirthday,
     EndUserEmail, EndUserFamilyName, EndUserGivenName, EndUserMiddleName, EndUserName,
@@ -258,13 +258,13 @@ where
                         [LanguageTag(picture)]
                         [LanguageTag(website)]
                         [Option(email)]
-                        [Option(email_verified)]
+                        [Option(Boolean(email_verified))]
                         [Option(gender)]
                         [Option(birthday)]
                         [Option(zoneinfo)]
                         [Option(locale)]
                         [Option(phone_number)]
-                        [Option(phone_number_verified)]
+                        [Option(Boolean(phone_number_verified))]
                         [Option(address)]
                         [Option(DateTime(Seconds(updated_at)))]
                     }

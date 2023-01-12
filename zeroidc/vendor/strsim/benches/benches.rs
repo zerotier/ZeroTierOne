@@ -5,17 +5,17 @@
 extern crate strsim;
 
 mod benches {
+    use self::test::Bencher;
     use super::*;
 
     extern crate test;
-    use self::test::Bencher;
 
     #[bench]
     fn bench_hamming(bencher: &mut Bencher) {
         let a = "ACAAGATGCCATTGTCCCCCGGCCTCCTGCTGCTGCTGCTCTCCGGGG";
         let b = "CCTGGAGGGTGGCCCCACCGGCCGAGACAGCGAGCATATGCAGGAAGC";
         bencher.iter(|| {
-            strsim::hamming(&a, &b).unwrap();
+            strsim::hamming(a, b).unwrap();
         })
     }
 
@@ -43,6 +43,13 @@ mod benches {
         let b = "Philosopher Jean-Paul Sartre";
         bencher.iter(|| {
             strsim::levenshtein(&a, &b);
+        })
+    }
+
+    #[bench]
+    fn bench_levenshtein_on_u8(bencher: &mut Bencher) {
+        bencher.iter(|| {
+            strsim::generic_levenshtein(&vec![0u8; 30], &vec![7u8; 31]);
         })
     }
 
@@ -79,6 +86,15 @@ mod benches {
         let b = "Philosopher Jean-Paul Sartre";
         bencher.iter(|| {
             strsim::normalized_damerau_levenshtein(&a, &b);
+        })
+    }
+
+    #[bench]
+    fn bench_sorensen_dice(bencher: &mut Bencher) {
+        let a = "Philosopher Friedrich Nietzsche";
+        let b = "Philosopher Jean-Paul Sartre";
+        bencher.iter(|| {
+            strsim::sorensen_dice(&a, &b);
         })
     }
 }

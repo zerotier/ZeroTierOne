@@ -5,12 +5,12 @@
 [![Build Status](https://github.com/ramosbugs/openidconnect-rs/actions/workflows/main.yml/badge.svg)](https://github.com/ramosbugs/openidconnect-rs/actions/workflows/main.yml)
 [![codecov](https://codecov.io/gh/ramosbugs/openidconnect-rs/branch/main/graph/badge.svg)](https://codecov.io/gh/ramosbugs/openidconnect-rs)
 
-
-This library provides extensible, strongly-typed interfaces for the OpenID Connect protocol.
+This library provides extensible, strongly-typed interfaces for the OpenID
+Connect protocol.
 
 API documentation and examples are available on [docs.rs](https://docs.rs/openidconnect).
 
-# Standards
+## Standards
 
 * [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html)
   * This crate passes the
@@ -40,3 +40,8 @@ API documentation and examples are available on [docs.rs](https://docs.rs/openid
     * Client Configuration endpoint
 * [OAuth 2.0 Token Introspection](https://tools.ietf.org/html/rfc7662)
 * [OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009)
+
+## Sponsorship
+
+This project is sponsored by [Unflakable](https://unflakable.com), a service
+for tracking and quarantining flaky tests.

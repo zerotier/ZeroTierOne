@@ -13,9 +13,6 @@
 //! Converts between a string (such as an URL’s query string)
 //! and a sequence of (name, value) pairs.
 
-#[macro_use]
-extern crate matches;
-
 use percent_encoding::{percent_decode, percent_encode_byte};
 use std::borrow::{Borrow, Cow};
 use std::str;
@@ -402,8 +399,7 @@ pub(crate) fn decode_utf8_lossy(input: Cow<'_, [u8]>) -> Cow<'_, str> {
                     // replace invalid bytes with a placeholder.
 
                     // First we do a debug_assert to confirm our description above.
-                    let raw_utf8: *const [u8];
-                    raw_utf8 = utf8.as_bytes();
+                    let raw_utf8: *const [u8] = utf8.as_bytes();
                     debug_assert!(raw_utf8 == &*bytes as *const [u8]);
 
                     // Given we know the original input bytes are valid UTF-8,

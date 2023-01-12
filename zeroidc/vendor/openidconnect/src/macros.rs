@@ -400,11 +400,13 @@ macro_rules! new_url_type {
 macro_rules! deserialize_fields {
     (@field_str Option(Seconds($field:ident))) => { stringify![$field] };
     (@field_str Option(DateTime(Seconds($field:ident)))) => { stringify![$field] };
+    (@field_str Option(Boolean($field:ident))) => { stringify![$field] };
     (@field_str Option($field:ident)) => { stringify![$field] };
     (@field_str LanguageTag($field:ident)) => { stringify![$field] };
     (@field_str $field:ident) => { stringify![$field] };
     (@let_none Option(Seconds($field:ident))) => { let mut $field = None; };
     (@let_none Option(DateTime(Seconds($field:ident)))) => { let mut $field = None; };
+    (@let_none Option(Boolean($field:ident))) => { let mut $field = None; };
     (@let_none Option($field:ident)) => { let mut $field = None; };
     (@let_none LanguageTag($field:ident)) => { let mut $field = None; };
     (@let_none $field:ident) => { let mut $field = None; };
@@ -450,6 +452,23 @@ macro_rules! deserialize_fields {
                     sec,
                 )
             ))).transpose()?;
+    };
+    (@case $map:ident $key:ident $language_tag_opt:ident
+     Option(Boolean($field:ident))) => {
+        if $field.is_some() {
+            return Err(serde::de::Error::duplicate_field(stringify!($field)));
+        } else if let Some(language_tag) = $language_tag_opt {
+            return Err(
+                serde::de::Error::custom(
+                    format!(
+                        concat!("unexpected language tag `{}` for key `", stringify!($field), "`"),
+                        language_tag.as_ref()
+                    )
+                )
+            );
+        }
+        let boolean = $map.next_value::<Option<Boolean>>()?;
+        $field = boolean.map(|b| b.0);
     };
     (@case $map:ident $key:ident $language_tag_opt:ident Option($field:ident)) => {
         if $field.is_some() {
@@ -507,6 +526,15 @@ macro_rules! deserialize_fields {
     };
     (@struct_recurs [$($struct_type:tt)+] {
         $($name:ident: $e:expr),* => [Option(DateTime(Seconds($field_new:ident)))] $([$($entry:tt)+])*
+    }) => {
+        deserialize_fields![
+            @struct_recurs [$($struct_type)+] {
+                $($name: $e,)* $field_new: $field_new => $([$($entry)+])*
+            }
+        ]
+    };
+    (@struct_recurs [$($struct_type:tt)+] {
+        $($name:ident: $e:expr),* => [Option(Boolean($field_new:ident))] $([$($entry:tt)+])*
     }) => {
         deserialize_fields![
             @struct_recurs [$($struct_type)+] {

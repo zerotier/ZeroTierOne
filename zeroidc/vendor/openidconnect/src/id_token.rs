@@ -3,7 +3,6 @@ use std::marker::PhantomData;
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
-use oauth2::helpers::variant_name;
 use oauth2::ClientId;
 use serde::Serialize;
 use serde_json::Value;
@@ -145,13 +144,19 @@ where
     ///
     /// Returns the [`JwsSigningAlgorithm`] used to sign this ID token.
     ///
-    /// This function returns an error if the signing algorithm is unsupported.
+    /// This function returns an error if the token is unsigned or utilizes JSON Web Encryption
+    /// (JWE).
     ///
     pub fn signing_alg(&self) -> Result<JS, SigningError> {
         match self.0.unverified_header().alg {
             JsonWebTokenAlgorithm::Signature(ref signing_alg, _) => Ok(signing_alg.clone()),
             JsonWebTokenAlgorithm::Encryption(ref other) => Err(SigningError::UnsupportedAlg(
-                variant_name(other).to_string(),
+                serde_plain::to_string(other).unwrap_or_else(|err| {
+                    panic!(format!(
+                        "encryption alg {:?} failed to serialize to a string: {}",
+                        other, err
+                    ))
+                }),
             )),
             JsonWebTokenAlgorithm::None => Err(SigningError::UnsupportedAlg("none".to_string())),
         }
@@ -485,10 +490,10 @@ mod tests {
             SubjectIdentifier::new("24400320".to_string())
         );
 
-        // test `ToString` implemenation
+        // test `ToString` implementation
         assert_eq!(&id_token.to_string(), ID_TOKEN);
 
-        // test `serde::Serialize` implemenation too
+        // test `serde::Serialize` implementation too
         let de = serde_json::to_string(&id_token).expect("failed to deserializee id token");
         assert_eq!(de, format!("\"{}\"", ID_TOKEN));
     }
@@ -813,6 +818,7 @@ mod tests {
         let claims: CoreIdTokenClaims =
             serde_json::from_str(claims_json).expect("failed to deserialize");
         assert_eq!(claims, new_claims);
+        assert_eq!(claims.issuer(), new_claims.issuer());
         assert_eq!(claims.issuer().url(), new_claims.issuer().url());
         assert_eq!(claims.audiences(), new_claims.audiences());
         assert_eq!(claims.expiration(), new_claims.expiration());

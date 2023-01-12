@@ -84,7 +84,7 @@ macro_rules! new_type {
             $($item)*
 
             #[doc = $new_doc]
-            pub fn new(s: $type) -> Self {
+            pub const fn new(s: $type) -> Self {
                 $name(s)
             }
         }
@@ -403,7 +403,7 @@ impl AsRef<str> for Scope {
 
 new_type![
     ///
-    /// Code Challenge Method used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection
+    /// Code Challenge Method used for [PKCE](https://tools.ietf.org/html/rfc7636) protection
     /// via the `code_challenge_method` parameter.
     ///
     #[derive(Deserialize, Serialize, Eq, Hash)]
@@ -413,7 +413,7 @@ new_type![
 // challenges across multiple requests.
 new_secret_type![
     ///
-    /// Code Verifier used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection via the
+    /// Code Verifier used for [PKCE](https://tools.ietf.org/html/rfc7636) protection via the
     /// `code_verifier` parameter. The value must have a minimum length of 43 characters and a
     /// maximum length of 128 characters.  Each character must be ASCII alphanumeric or one of
     /// the characters "-" / "." / "_" / "~".
@@ -423,7 +423,7 @@ new_secret_type![
 ];
 
 ///
-/// Code Challenge used for [PKCE]((https://tools.ietf.org/html/rfc7636)) protection via the
+/// Code Challenge used for [PKCE](https://tools.ietf.org/html/rfc7636) protection via the
 /// `code_challenge` parameter.
 ///
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

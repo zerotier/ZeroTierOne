@@ -5,9 +5,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
-use oauth2::helpers::variant_name;
 use oauth2::{ClientId, ClientSecret};
-use ring::constant_time::verify_slices_are_equal;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use thiserror::Error;
@@ -267,7 +265,10 @@ where
             if let JsonWebTokenAlgorithm::Encryption(ref encryption_alg) = jose_header.alg {
                 return Err(ClaimsVerificationError::Unsupported(format!(
                     "JWE encryption is not currently supported (found algorithm `{}`)",
-                    variant_name(encryption_alg),
+                    serde_plain::to_string(encryption_alg).unwrap_or_else(|err| panic!(format!(
+                        "encryption alg {:?} failed to serialize to a string: {}",
+                        encryption_alg, err
+                    ))),
                 )));
             }
         }
@@ -368,10 +369,22 @@ where
                 return Err(ClaimsVerificationError::SignatureVerification(
                     SignatureVerificationError::DisallowedAlg(format!(
                         "algorithm `{}` is not one of: {}",
-                        variant_name(&signature_alg),
+                        serde_plain::to_string(&signature_alg).unwrap_or_else(|err| panic!(
+                            format!(
+                                "signature alg {:?} failed to serialize to a string: {}",
+                                signature_alg, err
+                            )
+                        )),
                         allowed_algs
                             .iter()
-                            .map(variant_name)
+                            .map(
+                                |alg| serde_plain::to_string(alg).unwrap_or_else(|err| panic!(
+                                    format!(
+                                        "signature alg {:?} failed to serialize to a string: {}",
+                                        alg, err
+                                    )
+                                ))
+                            )
                             .collect::<Vec<_>>()
                             .join(", "),
                     )),
@@ -447,7 +460,13 @@ where
                             key.key_id()
                                 .map(|kid| format!("`{}`", **kid))
                                 .unwrap_or_else(|| "null ID".to_string()),
-                            variant_name(key.key_type())
+                            serde_plain::to_string(key.key_type()).unwrap_or_else(|err| panic!(
+                                format!(
+                                    "key type {:?} failed to serialize to a string: {}",
+                                    key.key_type(),
+                                    err
+                                )
+                            ))
                         ))
                         .collect::<Vec<_>>()
                         .join(", ")
@@ -480,9 +499,8 @@ pub trait NonceVerifier {
 impl NonceVerifier for &Nonce {
     fn verify(self, nonce: Option<&Nonce>) -> Result<(), String> {
         if let Some(claims_nonce) = nonce {
-            if verify_slices_are_equal(claims_nonce.secret().as_bytes(), self.secret().as_bytes())
-                .is_err()
-            {
+            // Nonce::eq is already implemented with a constant time comparison
+            if claims_nonce != self {
                 return Err("nonce mismatch".to_string());
             }
         } else {

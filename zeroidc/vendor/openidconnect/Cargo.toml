@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "openidconnect"
-version = "2.3.1"
+version = "2.5.0"
 authors = ["David A. Ramos <ramos@cs.stanford.edu>"]
 description = "OpenID Connect library"
 readme = "README.md"
@@ -46,7 +46,7 @@ version = "0.4"
 version = "0.4.3"
 
 [dependencies.oauth2]
-version = "4.2"
+version = "4.2.2"
 default-features = false
 
 [dependencies.rand]
@@ -69,6 +69,15 @@ version = "1.0"
 
 [dependencies.serde_path_to_error]
 version = "0.1"
+
+[dependencies.serde_plain]
+version = "1.0"
+
+[dependencies.serde_with]
+version = "1.13"
+
+[dependencies.subtle]
+version = "2.4"
 
 [dependencies.thiserror]
 version = "1.0"
@@ -103,6 +112,7 @@ version = "1.0"
 
 [features]
 accept-rfc3339-timestamps = []
+accept-string-booleans = []
 curl = ["oauth2/curl"]
 default = [
     "reqwest",
