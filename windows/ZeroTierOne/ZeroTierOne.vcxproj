@@ -124,6 +124,7 @@
     <ClCompile Include="..\..\osdep\PortMapper.cpp" />
     <ClCompile Include="..\..\osdep\WinDNSHelper.cpp" />
     <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp" />
+    <ClCompile Include="..\..\osdep\WinFWHelper.cpp" />
     <ClCompile Include="..\..\selftest.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -241,6 +242,7 @@
     <ClInclude Include="..\..\osdep\Thread.hpp" />
     <ClInclude Include="..\..\osdep\WinDNSHelper.hpp" />
     <ClInclude Include="..\..\osdep\WindowsEthernetTap.hpp" />
+    <ClInclude Include="..\..\osdep\WinFWHelper.hpp" />
     <ClInclude Include="..\..\service\OneService.hpp" />
     <ClInclude Include="..\..\service\SoftwareUpdater.hpp" />
     <ClInclude Include="..\..\version.h" />

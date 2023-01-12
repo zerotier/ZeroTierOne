@@ -78,6 +78,7 @@
 #include "../osdep/MacDNSHelper.hpp"
 #elif defined(__WINDOWS__)
 #include "../osdep/WinDNSHelper.hpp"
+#include "../osdep/WinFWHelper.hpp"
 #endif
 
 #ifdef ZT_USE_SYSTEM_HTTP_PARSER
@@ -850,6 +851,9 @@ public:
 
 	virtual ~OneServiceImpl()
 	{
+#ifdef __WINDOWS__ 
+		WinFWHelper::removeICMPRules();
+#endif
 		_binder.closeAll(_phy);
 		_phy.close(_localControlSocket4);
 		_phy.close(_localControlSocket6);
@@ -857,6 +861,8 @@ public:
 #if ZT_VAULT_SUPPORT
 		curl_global_cleanup();
 #endif
+
+
 
 #ifdef ZT_USE_MINIUPNPC
 		delete _portMapper;
@@ -901,6 +907,7 @@ public:
 				cb.pathLookupFunction = SnodePathLookupFunction;
 				_node = new Node(this,(void *)0,&cb,OSUtils::now());
 			}
+
 
 			// local.conf
 			readLocalSettings();
@@ -2068,6 +2075,7 @@ public:
 					bool enabled = OSUtils::jsonInt(link["enabled"],true);
 					uint32_t capacity = OSUtils::jsonInt(link["capacity"],0);
 					uint8_t ipvPref = OSUtils::jsonInt(link["ipvPref"],0);
+					uint16_t mtu = OSUtils::jsonInt(link["mtu"],0);
 					std::string failoverToStr(OSUtils::jsonString(link["failoverTo"],""));
 					// Mode
 					std::string linkModeStr(OSUtils::jsonString(link["mode"],"spare"));
@@ -2084,7 +2092,7 @@ public:
 						failoverToStr = "";
 						enabled = false;
 					}
-					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,capacity,enabled,linkMode,failoverToStr));
+					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,mtu,capacity,enabled,linkMode,failoverToStr));
 				}
 				std::string linkSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"optimize"));
 				if (linkSelectMethodStr == "always") {
@@ -2132,6 +2140,7 @@ public:
 			fprintf(stderr,"WARNING: using manually-specified secondary and/or tertiary ports. This can cause NAT issues." ZT_EOL_S);
 		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
+		_node->setLowBandwidthMode(OSUtils::jsonBool(settings["lowBandwidthMode"],false));
 
 #ifndef ZT_SDK
 		const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
@@ -2272,6 +2281,10 @@ public:
 				if (std::find(newManagedIps.begin(),newManagedIps.end(),*ip) == newManagedIps.end()) {
 					if (!n.tap()->removeIp(*ip))
 						fprintf(stderr,"ERROR: unable to remove ip address %s" ZT_EOL_S, ip->toString(ipbuf));
+
+					#ifdef __WINDOWS__
+					WinFWHelper::removeICMPRule(*ip, n.config().nwid);
+					#endif
 				}
 			}
 
@@ -2279,6 +2292,10 @@ public:
 				if (std::find(n.managedIps().begin(),n.managedIps().end(),*ip) == n.managedIps().end()) {
 					if (!n.tap()->addIp(*ip))
 						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString(ipbuf));
+
+					#ifdef __WINDOWS__
+					WinFWHelper::newICMPRule(*ip, n.config().nwid);
+					#endif
 				}
 			}
 
@@ -2762,8 +2779,10 @@ public:
 					n.tap().reset();
 					_nets.erase(nwid);
 #if defined(__WINDOWS__) && !defined(ZT_SDK)
-					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))
+					if ((op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY) && (winInstanceId.length() > 0)) {
 						WindowsEthernetTap::deletePersistentTapDevice(winInstanceId.c_str());
+						WinFWHelper::removeICMPRules(nwid);
+					}
 #endif
 					if (op == ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY) {
 						char nlcpath[256];

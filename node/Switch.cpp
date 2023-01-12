@@ -1009,7 +1009,8 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt,int32_t flowId)
 			Mutex::Lock _l(peer->_paths_m);
 			for(int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 				if (peer->_paths[i].p && peer->_paths[i].p->alive(now)) {
-					_sendViaSpecificPath(tPtr,peer,peer->_paths[i].p,now,packet,encrypt,flowId);
+					uint16_t userSpecifiedMtu = peer->_paths[i].p->mtu();
+					_sendViaSpecificPath(tPtr,peer,peer->_paths[i].p, userSpecifiedMtu,now,packet,encrypt,flowId);
 				}
 			}
 			return true;
@@ -1025,7 +1026,8 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt,int32_t flowId)
 				}
 			}
 			if (viaPath) {
-				_sendViaSpecificPath(tPtr,peer,viaPath,now,packet,encrypt,flowId);
+				uint16_t userSpecifiedMtu = viaPath->mtu();
+				_sendViaSpecificPath(tPtr,peer,viaPath,userSpecifiedMtu,now,packet,encrypt,flowId);
 				return true;
 			}
 		}
@@ -1033,12 +1035,15 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt,int32_t flowId)
 	return false;
 }
 
-void Switch::_sendViaSpecificPath(void *tPtr,SharedPtr<Peer> peer,SharedPtr<Path> viaPath,int64_t now,Packet &packet,bool encrypt,int32_t flowId)
+void Switch::_sendViaSpecificPath(void *tPtr,SharedPtr<Peer> peer,SharedPtr<Path> viaPath,uint16_t userSpecifiedMtu, int64_t now,Packet &packet,bool encrypt,int32_t flowId)
 {
 	unsigned int mtu = ZT_DEFAULT_PHYSMTU;
 	uint64_t trustedPathId = 0;
 	RR->topology->getOutboundPathInfo(viaPath->address(),mtu,trustedPathId);
 
+	if (userSpecifiedMtu > 0) {
+		mtu = userSpecifiedMtu;
+	}
 	unsigned int chunkSize = std::min(packet.size(),mtu);
 	packet.setFragmented(chunkSize < packet.size());
 

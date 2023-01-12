@@ -269,6 +269,16 @@ public:
 		_stats.inVerbBytes[v] += (uint64_t)bytes;
 	}
 
+	inline void setLowBandwidthMode(bool isEnabled)
+	{
+		_lowBandwidthMode = isEnabled;
+	}
+
+	inline bool lowBandwidthModeEnabled()
+	{
+		return _lowBandwidthMode;
+	}
+
 private:
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
@@ -316,6 +326,7 @@ private:
 	int64_t _lastMemoizedTraceSettings;
 	volatile int64_t _prngState[2];
 	bool _online;
+	bool _lowBandwidthMode;
 };
 
 } // namespace ZeroTier

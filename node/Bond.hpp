@@ -122,9 +122,10 @@ class Link {
 	 * @param mode
 	 * @param failoverToLinkStr
 	 */
-	Link(std::string ifnameStr, uint8_t ipvPref, uint32_t capacity, bool enabled, uint8_t mode, std::string failoverToLinkStr)
+	Link(std::string ifnameStr, uint8_t ipvPref, uint16_t mtu, uint32_t capacity, bool enabled, uint8_t mode, std::string failoverToLinkStr)
 		: _ifnameStr(ifnameStr)
 		, _ipvPref(ipvPref)
+		, _mtu(mtu)
 		, _capacity(capacity)
 		, _relativeCapacity(0.0)
 		, _enabled(enabled)
@@ -227,6 +228,14 @@ class Link {
 	}
 
 	/**
+	 * @return The MTU for this link (as specified by the user.)
+	 */
+	inline uint16_t mtu()
+	{
+		return _mtu;
+	}
+
+	/**
 	 * @return The mode (e.g. primary/spare) for this link (as specified by the user.)
 	 */
 	inline uint8_t mode()
@@ -259,6 +268,11 @@ class Link {
 	 * 64: IPv6 over IPv4
 	 */
 	uint8_t _ipvPref;
+
+	/**
+	 * The physical-layer MTU for this link
+	 */
+	uint16_t _mtu;
 
 	/**
 	 * User-specified capacity of this link
