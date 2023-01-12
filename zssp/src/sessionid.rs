@@ -12,7 +12,7 @@ use crate::constants::SESSION_ID_SIZE;
 pub struct SessionId(NonZeroU64); // stored little endian internally
 
 impl SessionId {
-    pub const MAX: u64 = 0x7fffffffffff;
+    pub const MAX: u64 = 0xffffffffffff;
 
     /// Create a new session ID, panicing if 'i' is zero or exceeds MAX.
     pub fn new(i: u64) -> SessionId {
