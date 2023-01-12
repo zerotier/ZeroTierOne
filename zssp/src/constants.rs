@@ -2,7 +2,7 @@
 pub const MIN_PACKET_SIZE: usize = HEADER_SIZE + AES_GCM_TAG_SIZE;
 
 /// Minimum physical MTU for ZSSP to function.
-pub const MIN_TRANSPORT_MTU: usize = 1280;
+pub const MIN_TRANSPORT_MTU: usize = 64;
 
 /// Minimum recommended interval between calls to service() on each session, in milliseconds.
 pub const SERVICE_INTERVAL: u64 = 10000;
@@ -54,6 +54,12 @@ pub(crate) const HYBRID_KEY_TYPE_KYBER1024: u8 = 1;
 
 /// Size of packet header
 pub(crate) const HEADER_SIZE: usize = 16;
+
+/// Start of single block AES encryption of a portion of the header (and some data).
+pub(crate) const HEADER_CHECK_ENCRYPT_START: usize = 6;
+
+/// End of single block AES encryption of a portion of the header (and some data).
+pub(crate) const HEADER_CHECK_ENCRYPT_END: usize = 22;
 
 /// Size of AES-GCM keys (256 bits)
 pub(crate) const AES_KEY_SIZE: usize = 32;

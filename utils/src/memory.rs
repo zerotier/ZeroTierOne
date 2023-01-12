@@ -66,6 +66,14 @@ pub fn as_byte_array<T: Copy, const S: usize>(o: &T) -> &[u8; S] {
     unsafe { &*(o as *const T).cast() }
 }
 
+/// Get a reference to a raw object as a byte array.
+/// The template parameter S must equal the size of the object in bytes or this will panic.
+#[inline(always)]
+pub fn as_byte_array_mut<T: Copy, const S: usize>(o: &mut T) -> &mut [u8; S] {
+    assert_eq!(S, size_of::<T>());
+    unsafe { &mut *(o as *mut T).cast() }
+}
+
 /// Transmute an object to a byte array.
 /// The template parameter S must equal the size of the object in bytes or this will panic.
 #[inline(always)]

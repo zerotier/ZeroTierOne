@@ -25,7 +25,7 @@ pub trait ApplicationLayer: Sized {
     ///
     /// This can be e.g. a pooled buffer that automatically returns itself to the pool when dropped.
     /// It can also just be a Vec<u8> or Box<[u8]> or something like that.
-    type IncomingPacketBuffer: AsRef<[u8]>;
+    type IncomingPacketBuffer: AsRef<[u8]> + AsMut<[u8]>;
 
     /// Remote physical address on whatever transport this session is using.
     type RemoteAddress;

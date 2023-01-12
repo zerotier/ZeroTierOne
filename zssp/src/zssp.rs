@@ -3,7 +3,7 @@
 // ZSSP: ZeroTier Secure Session Protocol
 // FIPS compliant Noise_IK with Jedi powers and built-in attack-resistant large payload (fragmentation) support.
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, RwLock};
 
 use zerotier_crypto::aes::{Aes, AesGcm};
@@ -207,68 +207,41 @@ impl<Application: ApplicationLayer> Session<Application> {
         let state = self.state.read().unwrap();
         if let Some(remote_session_id) = state.remote_session_id {
             if let Some(session_key) = state.session_keys[state.cur_session_key_idx].as_ref() {
-                // Total size of the armored packet we are going to send (may end up being fragmented)
-                let packet_len = data.len() + HEADER_SIZE + AES_GCM_TAG_SIZE;
-
-                // This outgoing packet's nonce counter value.
                 let counter = self.send_counter.fetch_add(1, Ordering::SeqCst);
 
-                ////////////////////////////////////////////////////////////////
-                // packet encoding for post-noise transport
-                ////////////////////////////////////////////////////////////////
-
-                // Create initial header for first fragment of packet and place in first HEADER_SIZE bytes of buffer.
-                create_packet_header(
-                    mtu_sized_buffer,
-                    packet_len,
-                    mtu_sized_buffer.len(),
-                    PACKET_TYPE_DATA,
-                    remote_session_id.into(),
-                    session_key.ratchet_count,
-                    counter,
-                )?;
-
-                // Get an initialized AES-GCM cipher and re-initialize with a 96-bit IV built from remote session ID,
-                // packet type, and counter.
                 let mut c = session_key.get_send_cipher(counter)?;
                 c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_DATA, counter));
 
-                // Send first N-1 fragments of N total fragments.
-                let last_fragment_size;
-                if packet_len > mtu_sized_buffer.len() {
-                    let mut header: [u8; 16] = mtu_sized_buffer[..HEADER_SIZE].try_into().unwrap();
-                    let fragment_data_mtu = mtu_sized_buffer.len() - HEADER_SIZE;
-                    let last_fragment_data_mtu = mtu_sized_buffer.len() - (HEADER_SIZE + AES_GCM_TAG_SIZE);
-                    loop {
-                        let fragment_data_size = fragment_data_mtu.min(data.len());
-                        let fragment_size = fragment_data_size + HEADER_SIZE;
-                        c.crypt(&data[..fragment_data_size], &mut mtu_sized_buffer[HEADER_SIZE..fragment_size]);
-                        data = &data[fragment_data_size..];
-                        //set_header_check_code(mtu_sized_buffer, &self.header_check_cipher);
-                        send(&mut mtu_sized_buffer[..fragment_size]);
-
-                        debug_assert!(header[15].wrapping_shr(2) < 63);
-                        header[15] += 0x04; // increment fragment number
-                        mtu_sized_buffer[..HEADER_SIZE].copy_from_slice(&header);
-
-                        if data.len() <= last_fragment_data_mtu {
-                            break;
-                        }
+                let fragment_count =
+                    (((data.len() + AES_GCM_TAG_SIZE) as f32) / (mtu_sized_buffer.len() - HEADER_SIZE) as f32).ceil() as usize;
+                let fragment_max_chunk_size = mtu_sized_buffer.len() - HEADER_SIZE;
+                let last_fragment_no = fragment_count - 1;
+                for fragment_no in 0..fragment_count {
+                    let chunk_size = fragment_max_chunk_size.min(data.len());
+                    let mut fragment_size = chunk_size + HEADER_SIZE;
+                    set_packet_header(
+                        mtu_sized_buffer,
+                        fragment_count,
+                        fragment_no,
+                        PACKET_TYPE_DATA,
+                        u64::from(remote_session_id),
+                        session_key.ratchet_count,
+                        counter,
+                    )?;
+                    c.crypt(&data[..chunk_size], &mut mtu_sized_buffer[HEADER_SIZE..fragment_size]);
+                    data = &data[chunk_size..];
+                    if fragment_no == last_fragment_no {
+                        debug_assert!(data.is_empty());
+                        let tagged_fragment_size = fragment_size + AES_GCM_TAG_SIZE;
+                        mtu_sized_buffer[fragment_size..tagged_fragment_size].copy_from_slice(&c.finish_encrypt());
+                        fragment_size = tagged_fragment_size;
                     }
-                    last_fragment_size = data.len() + HEADER_SIZE + AES_GCM_TAG_SIZE;
-                } else {
-                    last_fragment_size = packet_len;
+                    self.header_check_cipher
+                        .encrypt_block_in_place(&mut mtu_sized_buffer[HEADER_CHECK_ENCRYPT_START..HEADER_CHECK_ENCRYPT_END]);
+                    send(&mut mtu_sized_buffer[..fragment_size]);
                 }
+                debug_assert!(data.is_empty());
 
-                // Send final fragment (or only fragment if no fragmentation was needed)
-                let payload_end = data.len() + HEADER_SIZE;
-                c.crypt(data, &mut mtu_sized_buffer[HEADER_SIZE..payload_end]);
-                let gcm_tag = c.finish_encrypt();
-                mtu_sized_buffer[payload_end..last_fragment_size].copy_from_slice(&gcm_tag);
-                //set_header_check_code(mtu_sized_buffer, &self.header_check_cipher);
-                send(&mut mtu_sized_buffer[..last_fragment_size]);
-
-                // Check reusable AES-GCM instance back into pool.
                 session_key.return_send_cipher(c);
 
                 return Ok(());
@@ -391,27 +364,30 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
         remote_address: &Application::RemoteAddress,
         mut send: SendFunction,
         data_buf: &'a mut [u8],
-        incoming_packet_buf: Application::IncomingPacketBuffer,
+        mut incoming_packet_buf: Application::IncomingPacketBuffer,
         mtu: usize,
         current_time: i64,
     ) -> Result<ReceiveResult<'a, Application>, Error> {
-        let incoming_packet = incoming_packet_buf.as_ref();
+        let incoming_packet: &mut [u8] = incoming_packet_buf.as_mut();
         if incoming_packet.len() < MIN_PACKET_SIZE {
             unlikely_branch();
             return Err(Error::InvalidPacket);
         }
 
-        let raw_counter_and_key_index = u64::from_le(memory::load_raw(&incoming_packet[0..8]));
-        let counter = raw_counter_and_key_index.wrapping_shr(1);
-        let key_index = (raw_counter_and_key_index & 1) as usize;
-        let raw_session_id_type_and_fragment_info = u64::from_le(memory::load_raw(&incoming_packet[8..16]));
-        let local_session_id = SessionId::new_from_u64(raw_session_id_type_and_fragment_info & 0xffffffffffffu64);
-        let packet_type = (raw_session_id_type_and_fragment_info.wrapping_shr(48) & 0x0f) as u8;
-        let fragment_count = ((raw_session_id_type_and_fragment_info.wrapping_shr(48 + 4) & 63) + 1) as u8;
-        let fragment_no = raw_session_id_type_and_fragment_info.wrapping_shr(48 + 10) as u8; // & 63 not needed
+        let raw_local_session_id_key_index = memory::load_raw(incoming_packet);
+        let key_index = (u64::from_le(raw_local_session_id_key_index).wrapping_shr(47) & 1) as usize;
 
-        if let Some(local_session_id) = local_session_id {
+        if let Some(local_session_id) = SessionId::new_from_u64_le(raw_local_session_id_key_index) {
             if let Some(session) = app.lookup_session(local_session_id) {
+                session
+                    .header_check_cipher
+                    .decrypt_block_in_place(&mut incoming_packet[HEADER_CHECK_ENCRYPT_START..HEADER_CHECK_ENCRYPT_END]);
+                let raw_header_a = u16::from_le(memory::load_raw(&incoming_packet[6..]));
+                let packet_type = (raw_header_a & 0xf) as u8;
+                let fragment_count = ((raw_header_a.wrapping_shr(4) & 63) + 1) as u8;
+                let fragment_no = raw_header_a.wrapping_shr(10) as u8;
+                let counter = u64::from_le(memory::load_raw(&incoming_packet[8..]));
+
                 if session.check_receive_window(counter) {
                     if fragment_count > 1 {
                         if fragment_count <= (MAX_FRAGMENTS as u8) && fragment_no < fragment_count {
@@ -462,6 +438,15 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
             }
         } else {
             unlikely_branch(); // we want data receive to be the priority branch, this is only occasionally used
+
+            self.incoming_init_header_check_cipher
+                .decrypt_block_in_place(&mut incoming_packet[HEADER_CHECK_ENCRYPT_START..HEADER_CHECK_ENCRYPT_END]);
+            let raw_header_a = u16::from_le(memory::load_raw(&incoming_packet[6..]));
+            let packet_type = (raw_header_a & 0xf) as u8;
+            let fragment_count = ((raw_header_a.wrapping_shr(4) & 63) + 1) as u8;
+            let fragment_no = raw_header_a.wrapping_shr(10) as u8;
+            let counter = u64::from_le(memory::load_raw(&incoming_packet[8..]));
+
             if fragment_count > 1 {
                 let mut defrag = self.initial_offer_defrag.lock().unwrap();
                 let fragment_gather_array = defrag.get_or_create_mut(&counter, || GatherArray::new(fragment_count));
@@ -531,10 +516,6 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
             if let Some(session) = session {
                 let state = session.state.read().unwrap();
                 if let Some(session_key) = state.session_keys[key_index].as_ref() {
-                    ////////////////////////////////////////////////////////////////
-                    // packet decoding for post-noise transport
-                    ////////////////////////////////////////////////////////////////
-
                     let mut c = session_key.get_receive_cipher();
                     c.reset_init_gcm(&message_nonce);
 
@@ -622,7 +603,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
             // To greatly simplify logic handling key exchange packets, assemble these first.
             // Handling KEX packets isn't the fast path so the extra copying isn't significant.
-            const KEX_BUF_LEN: usize = MIN_TRANSPORT_MTU * KEY_EXCHANGE_MAX_FRAGMENTS;
+            const KEX_BUF_LEN: usize = 4096;
             let mut kex_packet = [0_u8; KEX_BUF_LEN];
             let mut kex_packet_len = 0;
             for i in 0..fragments.len() {
@@ -651,6 +632,7 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
             match packet_type {
                 PACKET_TYPE_INITIAL_KEY_OFFER => {
                     // alice (remote) -> bob (local)
+
                     ////////////////////////////////////////////////////////////////
                     // packet decoding for noise initial key offer
                     // -> e, es, s, ss
@@ -905,16 +887,6 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                     }
                     let payload_end = idx;
 
-                    create_packet_header(
-                        &mut reply_buf,
-                        payload_end,
-                        mtu,
-                        PACKET_TYPE_KEY_COUNTER_OFFER,
-                        alice_session_id.into(),
-                        next_ratchet_count,
-                        reply_counter,
-                    )?;
-
                     let reply_message_nonce = create_message_nonce(PACKET_TYPE_KEY_COUNTER_OFFER, reply_counter);
 
                     // Encrypt reply packet using final Noise_IK key BEFORE mixing hybrid or ratcheting, since the other side
@@ -971,7 +943,16 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
 
                     // Bob now has final key state for this exchange. Yay! Now reply to Alice so she can construct it.
 
-                    send_with_fragmentation(send, &mut reply_buf[..packet_end], mtu, &session.header_check_cipher);
+                    send_with_fragmentation(
+                        send,
+                        &mut reply_buf[..packet_end],
+                        mtu,
+                        PACKET_TYPE_KEY_COUNTER_OFFER,
+                        u64::from(alice_session_id),
+                        next_ratchet_count,
+                        reply_counter,
+                        &session.header_check_cipher,
+                    )?;
 
                     if new_session.is_some() {
                         return Ok(ReceiveResult::OkNewSession(new_session.unwrap()));
@@ -1089,31 +1070,6 @@ impl<Application: ApplicationLayer> ReceiveContext<Application> {
                                 hybrid_kk.is_some(),
                             );
 
-                            ////////////////////////////////////////////////////////////////
-                            // packet encoding for post-noise session start ack
-                            ////////////////////////////////////////////////////////////////
-
-                            let mut reply_buf = [0_u8; HEADER_SIZE + AES_GCM_TAG_SIZE];
-
-                            create_packet_header(
-                                &mut reply_buf,
-                                HEADER_SIZE + AES_GCM_TAG_SIZE,
-                                mtu,
-                                PACKET_TYPE_NOP,
-                                bob_session_id.into(),
-                                next_ratchet_count,
-                                reply_counter,
-                            )?;
-
-                            let mut c = session_key.get_send_cipher(reply_counter)?;
-                            c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_NOP, reply_counter));
-                            let gcm_tag = c.finish_encrypt();
-                            safe_write_all(&mut reply_buf, HEADER_SIZE, &gcm_tag)?;
-                            session_key.return_send_cipher(c);
-
-                            //set_header_check_code(&mut reply_buf, &session.header_check_cipher);
-                            send(&mut reply_buf);
-
                             drop(state);
                             let mut state = session.state.write().unwrap();
 
@@ -1184,8 +1140,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     ////////////////////////////////////////////////////////////////
 
     // Create ephemeral offer packet (not fragmented yet).
-    const PACKET_BUF_SIZE: usize = MIN_TRANSPORT_MTU * KEY_EXCHANGE_MAX_FRAGMENTS;
-    let mut packet_buf = [0_u8; PACKET_BUF_SIZE];
+    let mut packet_buf = [0_u8; 4096];
     let mut idx = HEADER_SIZE;
 
     idx = safe_write_all(&mut packet_buf, idx, &[SESSION_PROTOCOL_VERSION])?;
@@ -1219,16 +1174,7 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
         noise_es.as_bytes(),
     ));
 
-    let bob_session_id = bob_session_id.unwrap_or(SessionId::NIL);
-    create_packet_header(
-        &mut packet_buf,
-        payload_end,
-        mtu,
-        PACKET_TYPE_INITIAL_KEY_OFFER,
-        bob_session_id,
-        ratchet_count,
-        counter,
-    )?;
+    let bob_session_id = bob_session_id.map_or(0u64, |i| u64::from(i));
 
     let message_nonce = create_message_nonce(PACKET_TYPE_INITIAL_KEY_OFFER, counter);
 
@@ -1264,16 +1210,22 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     idx = safe_write_all(&mut packet_buf, idx, &hmac2)?;
     let packet_end = idx;
 
-    if let Some(header_check_cipher) = header_check_cipher {
-        send_with_fragmentation(send, &mut packet_buf[..packet_end], mtu, header_check_cipher);
-    } else {
-        send_with_fragmentation(
-            send,
-            &mut packet_buf[..packet_end],
-            mtu,
-            &Aes::new(kbkdf512(&bob_s_public_blob_hash, KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>()),
-        );
-    }
+    let mut init_header_check_cipher_tmp = None;
+    send_with_fragmentation(
+        send,
+        &mut packet_buf[..packet_end],
+        mtu,
+        PACKET_TYPE_INITIAL_KEY_OFFER,
+        bob_session_id,
+        ratchet_count,
+        counter,
+        header_check_cipher.unwrap_or_else(|| {
+            init_header_check_cipher_tmp = Some(Aes::new(
+                kbkdf512(&bob_s_public_blob_hash, KBKDF_KEY_USAGE_LABEL_HEADER_CHECK).first_n::<HEADER_CHECK_AES_KEY_SIZE>(),
+            ));
+            init_header_check_cipher_tmp.as_ref().unwrap()
+        }),
+    )?;
 
     *ret_ephemeral_offer = Some(EphemeralOffer {
         id,
@@ -1288,42 +1240,37 @@ fn send_ephemeral_offer<SendFunction: FnMut(&mut [u8])>(
     Ok(())
 }
 
-/// Populate all but the header check code in the first 16 bytes of a packet or fragment.
-fn create_packet_header(
-    header_destination_buffer: &mut [u8],
-    packet_len: usize,
-    mtu: usize,
+fn set_packet_header(
+    packet: &mut [u8],
+    fragment_count: usize,
+    fragment_no: usize,
     packet_type: u8,
-    recipient_session_id: SessionId,
+    recipient_session_id: u64,
     ratchet_count: u64,
     counter: u64,
 ) -> Result<(), Error> {
-    let fragment_count = ((packet_len as f32) / (mtu - HEADER_SIZE) as f32).ceil() as usize;
-
-    debug_assert!(header_destination_buffer.len() >= HEADER_SIZE);
-    debug_assert!(mtu >= MIN_TRANSPORT_MTU);
-    debug_assert!(packet_len >= MIN_PACKET_SIZE);
+    debug_assert!(packet.len() >= MIN_PACKET_SIZE);
     debug_assert!(fragment_count > 0);
-    debug_assert!(fragment_count <= MAX_FRAGMENTS);
+    debug_assert!(fragment_no < MAX_FRAGMENTS);
     debug_assert!(packet_type <= 0x0f); // packet type is 4 bits
-
     if fragment_count <= MAX_FRAGMENTS {
-        // Header indexed by bit/byte:
-        //   [0-0]           ratchet count least significant bit
-        //   [1-63]          counter
-        //   [64-111]        recipient's session ID (unique on their side)
-        //   [112-115]       packet type (0-15)
-        //   [116-121]       number of fragments (0..63 for 1..64 fragments total)
-        //   [122-127]       fragment number (0, 1, 2, ...)
+        // [0-46]            recipient session ID
+        // [47-47]           ratchet count least significant bit (key index)
+        // -- start of header check cipher single block encrypt --
+        // [48-51]           packet type (0-15)
+        // [52-57]           fragment count (1..64 - 1, so 0 means 1 fragment)
+        // [58-63]           fragment number (0..63)
+        // [64-127]          64-bit counter
         memory::store_raw(
-            (counter.wrapping_shl(1) | (ratchet_count & 1)).to_le(),
-            &mut header_destination_buffer[0..],
+            (u64::from(recipient_session_id)
+                | (ratchet_count & 1).wrapping_shl(47)
+                | (packet_type as u64).wrapping_shl(48)
+                | ((fragment_count - 1) as u64).wrapping_shl(52)
+                | (fragment_no as u64).wrapping_shl(58))
+            .to_le(),
+            packet,
         );
-        memory::store_raw(
-            (u64::from(recipient_session_id) | (packet_type as u64).wrapping_shl(48) | ((fragment_count - 1) as u64).wrapping_shl(52))
-                .to_le(),
-            &mut header_destination_buffer[8..],
-        );
+        memory::store_raw(counter.to_le(), &mut packet[8..]);
         Ok(())
     } else {
         unlikely_branch();
@@ -1350,31 +1297,38 @@ fn create_message_nonce(packet_type: u8, counter: u64) -> [u8; 12] {
 }
 
 /// Break a packet into fragments and send them all.
+/// The contents of packet[] are mangled during this operation, so it should be discarded after.
 fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
     send: &mut SendFunction,
     packet: &mut [u8],
     mtu: usize,
+    packet_type: u8,
+    recipient_session_id: u64,
+    ratchet_count: u64,
+    counter: u64,
     header_check_cipher: &Aes,
-) {
+) -> Result<(), Error> {
     let packet_len = packet.len();
+    let fragment_count = ((packet_len as f32) / (mtu as f32)).ceil() as usize;
     let mut fragment_start = 0;
     let mut fragment_end = packet_len.min(mtu);
-    let mut header: [u8; 16] = packet[..HEADER_SIZE].try_into().unwrap();
-    loop {
+    for fragment_no in 0..fragment_count {
         let fragment = &mut packet[fragment_start..fragment_end];
-        //set_header_check_code(fragment, header_check_cipher);
+        set_packet_header(
+            fragment,
+            fragment_count,
+            fragment_no,
+            packet_type,
+            recipient_session_id,
+            ratchet_count,
+            counter,
+        )?;
+        header_check_cipher.encrypt_block_in_place(&mut fragment[6..22]);
         send(fragment);
-        if fragment_end < packet_len {
-            debug_assert!(header[15].wrapping_shr(2) < 63);
-            header[15] += 0x04; // increment fragment number
-            fragment_start = fragment_end - HEADER_SIZE;
-            fragment_end = (fragment_start + mtu).min(packet_len);
-            packet[fragment_start..(fragment_start + HEADER_SIZE)].copy_from_slice(&header);
-        } else {
-            debug_assert_eq!(fragment_end, packet_len);
-            break;
-        }
+        fragment_start = fragment_end - HEADER_SIZE;
+        fragment_end = (fragment_start + mtu).min(packet_len);
     }
+    Ok(())
 }
 
 /// Parse KEY_OFFER and KEY_COUNTER_OFFER starting after the unencrypted public key part.
@@ -1387,7 +1341,7 @@ fn parse_dec_key_offer_after_header(
 
     let mut session_id_buf = 0_u64.to_ne_bytes();
     session_id_buf[..SESSION_ID_SIZE].copy_from_slice(safe_read_exact(&mut p, SESSION_ID_SIZE)?);
-    let alice_session_id = SessionId::new_from_u64(u64::from_le_bytes(session_id_buf)).ok_or(Error::InvalidPacket)?;
+    let alice_session_id = SessionId::new_from_u64_le(u64::from_ne_bytes(session_id_buf)).ok_or(Error::InvalidPacket)?;
 
     let alice_s_public_blob_len = varint_safe_read(&mut p)?;
     let alice_s_public_blob = safe_read_exact(&mut p, alice_s_public_blob_len as usize)?;

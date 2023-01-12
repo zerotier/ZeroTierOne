@@ -84,7 +84,7 @@ mod tests {
             loop {
                 let mut new_id = self.session_id_counter.lock().unwrap();
                 *new_id += 1;
-                return Some((SessionId::new_from_u64(*new_id).unwrap(), self.psk.clone(), 0));
+                return Some((SessionId::new_from_u64_le((*new_id).to_le()).unwrap(), self.psk.clone(), 0));
             }
         }
     }
@@ -108,7 +108,7 @@ mod tests {
             Session::start_new(
                 &alice_host,
                 |data| bob_host.queue.lock().unwrap().push_front(data.to_vec()),
-                SessionId::new_random(),
+                SessionId::random(),
                 bob_host.local_s.public_key_bytes(),
                 &[],
                 &psk,
