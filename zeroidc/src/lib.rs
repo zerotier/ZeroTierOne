@@ -694,8 +694,7 @@ impl ZeroIDC {
                             }
                             Err(res) => {
                                 println!("error result: {}", res);
-                                println!("hit url: {}", res.url().unwrap().as_str());
-                                println!("Status: {}", res.status().unwrap());
+                                println!("hit url: {}", i.auth_endpoint.clone());
                                 println!("Post error: {}", res);
                                 i.exp_time = 0;
                                 i.running = false;
