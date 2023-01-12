@@ -328,16 +328,16 @@ impl<Application: ApplicationLayer> Session<Application> {
     /// Check the receive window without mutating state.
     #[inline(always)]
     fn check_receive_window(&self, counter: u64) -> bool {
-        counter.wrapping_sub(self.receive_window[(counter as usize) % COUNTER_WINDOW_MAX_OUT_OF_ORDER].load(Ordering::Acquire))
-            < COUNTER_WINDOW_MAX_SKIP_AHEAD
+        let c = self.receive_window[(counter as usize) % COUNTER_WINDOW_MAX_OUT_OF_ORDER].load(Ordering::Acquire);
+        c < counter && counter.wrapping_sub(c) < COUNTER_WINDOW_MAX_SKIP_AHEAD
     }
 
     /// Update the receive window, returning true if the packet is still valid.
     /// This should only be called after the packet is authenticated.
     #[inline(always)]
     fn update_receive_window(&self, counter: u64) -> bool {
-        counter.wrapping_sub(self.receive_window[(counter as usize) % COUNTER_WINDOW_MAX_OUT_OF_ORDER].fetch_max(counter, Ordering::AcqRel))
-            < COUNTER_WINDOW_MAX_SKIP_AHEAD
+        let c = self.receive_window[(counter as usize) % COUNTER_WINDOW_MAX_OUT_OF_ORDER].fetch_max(counter, Ordering::AcqRel);
+        c < counter && counter.wrapping_sub(c) < COUNTER_WINDOW_MAX_SKIP_AHEAD
     }
 }
 
