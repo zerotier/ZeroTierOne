@@ -187,6 +187,28 @@ use std::{fmt, io};
 /// operations to go through Mio otherwise it is not able to update it's
 /// internal state properly and won't generate events.
 ///
+/// ### Polling without registering event sources
+///
+///
+/// *The following is **not** guaranteed, just a description of the current
+/// situation!* Mio is allowed to change the following without it being
+/// considered a breaking change, don't depend on this, it's just here to inform
+/// the user. On platforms that use epoll, kqueue or IOCP (see implementation
+/// notes below) polling without previously registering [event sources] will
+/// result in sleeping forever, only a process signal will be able to wake up
+/// the thread.
+///
+/// On WASM/WASI this is different as it doesn't support process signals,
+/// furthermore the WASI specification doesn't specify a behaviour in this
+/// situation, thus it's up to the implementation what to do here. As an
+/// example, the wasmtime runtime will return `EINVAL` in this situation, but
+/// different runtimes may return different results. If you have further
+/// insights or thoughts about this situation (and/or how Mio should handle it)
+/// please add you comment to [pull request#1580].
+///
+/// [event sources]: crate::event::Source
+/// [pull request#1580]: https://github.com/tokio-rs/mio/pull/1580
+///
 /// # Implementation notes
 ///
 /// `Poll` is backed by the selector provided by the operating system.
@@ -240,6 +262,13 @@ impl Poll {
         /// This function will make a syscall to the operating system to create
         /// the system selector. If this syscall fails, `Poll::new` will return
         /// with the error.
+        ///
+        /// close-on-exec flag is set on the file descriptors used by the selector to prevent
+        /// leaking it to executed processes. However, on some systems such as
+        /// old Linux systems that don't support `epoll_create1` syscall it is done
+        /// non-atomically, so a separate thread executing in parallel to this
+        /// function may accidentally leak the file descriptor if it executes a
+        /// new process before this function returns.
         ///
         /// See [struct] level docs for more details.
         ///
@@ -319,6 +348,10 @@ impl Poll {
     /// This returns any errors without attempting to retry, previous versions
     /// of Mio would automatically retry the poll call if it was interrupted
     /// (if `EINTR` was returned).
+    ///
+    /// Currently if the `timeout` elapses without any readiness events
+    /// triggering this will return `Ok(())`. However we're not guaranteeing
+    /// this behaviour as this depends on the OS.
     ///
     /// # Examples
     ///
@@ -635,7 +668,6 @@ impl Registry {
     ///
     /// Event sources registered with this `Registry` will be registered with
     /// the original `Registry` and `Poll` instance.
-    #[cfg(not(target_os = "wasi"))]
     pub fn try_clone(&self) -> io::Result<Registry> {
         self.selector
             .try_clone()

@@ -1,20 +1,9 @@
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
-pub struct ACT_AUTHORIZATION_STATE {
-    pub ulState: u32,
-}
-impl ::core::marker::Copy for ACT_AUTHORIZATION_STATE {}
-impl ::core::clone::Clone for ACT_AUTHORIZATION_STATE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
-pub type ACT_AUTHORIZATION_STATE_VALUE = i32;
-#[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
-pub const ACT_UNAUTHORIZED: ACT_AUTHORIZATION_STATE_VALUE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
-pub const ACT_AUTHORIZED: ACT_AUTHORIZATION_STATE_VALUE = 1i32;
+pub type IEnhancedStorageACT = *mut ::core::ffi::c_void;
+pub type IEnhancedStorageACT2 = *mut ::core::ffi::c_void;
+pub type IEnhancedStorageACT3 = *mut ::core::ffi::c_void;
+pub type IEnhancedStorageSilo = *mut ::core::ffi::c_void;
+pub type IEnhancedStorageSiloAction = *mut ::core::ffi::c_void;
+pub type IEnumEnhancedStorageACT = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
 pub const ACT_AUTHORIZE_ON_RESUME: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
@@ -208,45 +197,6 @@ pub const ENHANCED_STORAGE_COMMAND_SILO_GET_AUTHENTICATION_STATE: super::super::
 #[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 #[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
 pub const ENHANCED_STORAGE_COMMAND_SILO_IS_AUTHENTICATION_SILO: super::super::UI::Shell::PropertiesSystem::PROPERTYKEY = super::super::UI::Shell::PropertiesSystem::PROPERTYKEY { fmtid: ::windows_sys::core::GUID { data1: 2435088742, data2: 47154, data3: 19156, data4: [186, 164, 124, 160, 182, 178, 121, 140] }, pid: 6u32 };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ENHANCED_STORAGE_PASSWORD_SILO_INFORMATION {
-    pub CurrentAdminFailures: u8,
-    pub CurrentUserFailures: u8,
-    pub TotalUserAuthenticationCount: u32,
-    pub TotalAdminAuthenticationCount: u32,
-    pub FipsCompliant: super::super::Foundation::BOOL,
-    pub SecurityIDAvailable: super::super::Foundation::BOOL,
-    pub InitializeInProgress: super::super::Foundation::BOOL,
-    pub ITMSArmed: super::super::Foundation::BOOL,
-    pub ITMSArmable: super::super::Foundation::BOOL,
-    pub UserCreated: super::super::Foundation::BOOL,
-    pub ResetOnPORDefault: super::super::Foundation::BOOL,
-    pub ResetOnPORCurrent: super::super::Foundation::BOOL,
-    pub MaxAdminFailures: u8,
-    pub MaxUserFailures: u8,
-    pub TimeToCompleteInitialization: u32,
-    pub TimeRemainingToCompleteInitialization: u32,
-    pub MinTimeToAuthenticate: u32,
-    pub MaxAdminPasswordSize: u8,
-    pub MinAdminPasswordSize: u8,
-    pub MaxAdminHintSize: u8,
-    pub MaxUserPasswordSize: u8,
-    pub MinUserPasswordSize: u8,
-    pub MaxUserHintSize: u8,
-    pub MaxUserNameSize: u8,
-    pub MaxSiloNameSize: u8,
-    pub MaxChallengeSize: u16,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ENHANCED_STORAGE_PASSWORD_SILO_INFORMATION {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ENHANCED_STORAGE_PASSWORD_SILO_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 #[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
 pub const ENHANCED_STORAGE_PROPERTY_ADMIN_HINT: super::super::UI::Shell::PropertiesSystem::PROPERTYKEY = super::super::UI::Shell::PropertiesSystem::PROPERTYKEY {
@@ -504,12 +454,6 @@ pub const FLAGSTATUS_FOLLOWUP: i32 = 2i32;
 #[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
 pub const FLAGSTATUS_NOTFLAGGED: i32 = 0i32;
 pub const GUID_DEVINTERFACE_ENHANCED_STORAGE_SILO: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 949483172, data2: 64821, data3: 19400, data4: [160, 183, 93, 187, 163, 106, 218, 250] };
-pub type IEnhancedStorageACT = *mut ::core::ffi::c_void;
-pub type IEnhancedStorageACT2 = *mut ::core::ffi::c_void;
-pub type IEnhancedStorageACT3 = *mut ::core::ffi::c_void;
-pub type IEnhancedStorageSilo = *mut ::core::ffi::c_void;
-pub type IEnhancedStorageSiloAction = *mut ::core::ffi::c_void;
-pub type IEnumEnhancedStorageACT = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
 pub const IMPORTANCE_HIGH_MAX: i32 = 5i32;
 #[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
@@ -3944,23 +3888,6 @@ pub const SHARINGSTATUS_NOTSHARED: u32 = 0u32;
 pub const SHARINGSTATUS_PRIVATE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
 pub const SHARINGSTATUS_SHARED: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
-pub struct SILO_INFO {
-    pub ulSTID: u32,
-    pub SpecificationMajor: u8,
-    pub SpecificationMinor: u8,
-    pub ImplementationMajor: u8,
-    pub ImplementationMinor: u8,
-    pub r#type: u8,
-    pub capabilities: u8,
-}
-impl ::core::marker::Copy for SILO_INFO {}
-impl ::core::clone::Clone for SILO_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
 pub const STORAGE_PROVIDER_SHARE_STATUS_GROUP: &str = "Group";
 #[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
@@ -4012,3 +3939,76 @@ pub const SYNC_STATE_SYNCING: u32 = 5u32;
 #[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
 pub const SYNC_STATE_SYNCNOTRUN: u32 = 1u32;
 pub const WPD_CATEGORY_ENHANCED_STORAGE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2435088742, data2: 47154, data3: 19156, data4: [186, 164, 124, 160, 182, 178, 121, 140] };
+#[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
+pub type ACT_AUTHORIZATION_STATE_VALUE = i32;
+#[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
+pub const ACT_UNAUTHORIZED: ACT_AUTHORIZATION_STATE_VALUE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
+pub const ACT_AUTHORIZED: ACT_AUTHORIZATION_STATE_VALUE = 1i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
+pub struct ACT_AUTHORIZATION_STATE {
+    pub ulState: u32,
+}
+impl ::core::marker::Copy for ACT_AUTHORIZATION_STATE {}
+impl ::core::clone::Clone for ACT_AUTHORIZATION_STATE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ENHANCED_STORAGE_PASSWORD_SILO_INFORMATION {
+    pub CurrentAdminFailures: u8,
+    pub CurrentUserFailures: u8,
+    pub TotalUserAuthenticationCount: u32,
+    pub TotalAdminAuthenticationCount: u32,
+    pub FipsCompliant: super::super::Foundation::BOOL,
+    pub SecurityIDAvailable: super::super::Foundation::BOOL,
+    pub InitializeInProgress: super::super::Foundation::BOOL,
+    pub ITMSArmed: super::super::Foundation::BOOL,
+    pub ITMSArmable: super::super::Foundation::BOOL,
+    pub UserCreated: super::super::Foundation::BOOL,
+    pub ResetOnPORDefault: super::super::Foundation::BOOL,
+    pub ResetOnPORCurrent: super::super::Foundation::BOOL,
+    pub MaxAdminFailures: u8,
+    pub MaxUserFailures: u8,
+    pub TimeToCompleteInitialization: u32,
+    pub TimeRemainingToCompleteInitialization: u32,
+    pub MinTimeToAuthenticate: u32,
+    pub MaxAdminPasswordSize: u8,
+    pub MinAdminPasswordSize: u8,
+    pub MaxAdminHintSize: u8,
+    pub MaxUserPasswordSize: u8,
+    pub MinUserPasswordSize: u8,
+    pub MaxUserHintSize: u8,
+    pub MaxUserNameSize: u8,
+    pub MaxSiloNameSize: u8,
+    pub MaxChallengeSize: u16,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ENHANCED_STORAGE_PASSWORD_SILO_INFORMATION {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ENHANCED_STORAGE_PASSWORD_SILO_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_EnhancedStorage\"`*"]
+pub struct SILO_INFO {
+    pub ulSTID: u32,
+    pub SpecificationMajor: u8,
+    pub SpecificationMinor: u8,
+    pub ImplementationMajor: u8,
+    pub ImplementationMinor: u8,
+    pub r#type: u8,
+    pub capabilities: u8,
+}
+impl ::core::marker::Copy for SILO_INFO {}
+impl ::core::clone::Clone for SILO_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}

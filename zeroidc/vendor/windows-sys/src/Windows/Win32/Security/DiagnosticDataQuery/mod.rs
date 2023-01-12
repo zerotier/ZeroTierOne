@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Security_DiagnosticDataQuery\"`*"]
     pub fn DdqCancelDiagnosticRecordOperation(hsession: super::HDIAGNOSTIC_DATA_QUERY_SESSION) -> ::windows_sys::core::HRESULT;
@@ -76,6 +76,14 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Security_DiagnosticDataQuery\"`*"]
     pub fn DdqSetTranscriptConfiguration(hsession: super::HDIAGNOSTIC_DATA_QUERY_SESSION, desiredconfig: *const DIAGNOSTIC_DATA_EVENT_TRANSCRIPT_CONFIGURATION) -> ::windows_sys::core::HRESULT;
 }
+#[doc = "*Required features: `\"Win32_Security_DiagnosticDataQuery\"`*"]
+pub type DdqAccessLevel = i32;
+#[doc = "*Required features: `\"Win32_Security_DiagnosticDataQuery\"`*"]
+pub const NoData: DdqAccessLevel = 0i32;
+#[doc = "*Required features: `\"Win32_Security_DiagnosticDataQuery\"`*"]
+pub const CurrentUserData: DdqAccessLevel = 1i32;
+#[doc = "*Required features: `\"Win32_Security_DiagnosticDataQuery\"`*"]
+pub const AllUserData: DdqAccessLevel = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Security_DiagnosticDataQuery\"`*"]
 pub struct DIAGNOSTIC_DATA_EVENT_BINARY_STATS {
@@ -268,11 +276,3 @@ impl ::core::clone::Clone for DIAGNOSTIC_REPORT_SIGNATURE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Security_DiagnosticDataQuery\"`*"]
-pub type DdqAccessLevel = i32;
-#[doc = "*Required features: `\"Win32_Security_DiagnosticDataQuery\"`*"]
-pub const NoData: DdqAccessLevel = 0i32;
-#[doc = "*Required features: `\"Win32_Security_DiagnosticDataQuery\"`*"]
-pub const CurrentUserData: DdqAccessLevel = 1i32;
-#[doc = "*Required features: `\"Win32_Security_DiagnosticDataQuery\"`*"]
-pub const AllUserData: DdqAccessLevel = 2i32;

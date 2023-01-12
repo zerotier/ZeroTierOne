@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_UI_Magnification\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -17,7 +17,7 @@ extern "system" {
     pub fn MagGetInputTransform(pfenabled: *mut super::super::Foundation::BOOL, prectsource: *mut super::super::Foundation::RECT, prectdest: *mut super::super::Foundation::RECT) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Magnification\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn MagGetWindowFilterList(hwnd: super::super::Foundation::HWND, pdwfiltermode: *mut u32, count: i32, phwnd: *mut super::super::Foundation::HWND) -> i32;
+    pub fn MagGetWindowFilterList(hwnd: super::super::Foundation::HWND, pdwfiltermode: *mut MW_FILTERMODE, count: i32, phwnd: *mut super::super::Foundation::HWND) -> i32;
     #[doc = "*Required features: `\"Win32_UI_Magnification\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn MagGetWindowSource(hwnd: super::super::Foundation::HWND, prect: *mut super::super::Foundation::RECT) -> super::super::Foundation::BOOL;
@@ -44,7 +44,7 @@ extern "system" {
     pub fn MagSetInputTransform(fenabled: super::super::Foundation::BOOL, prectsource: *const super::super::Foundation::RECT, prectdest: *const super::super::Foundation::RECT) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Magnification\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn MagSetWindowFilterList(hwnd: super::super::Foundation::HWND, dwfiltermode: u32, count: i32, phwnd: *mut super::super::Foundation::HWND) -> super::super::Foundation::BOOL;
+    pub fn MagSetWindowFilterList(hwnd: super::super::Foundation::HWND, dwfiltermode: MW_FILTERMODE, count: i32, phwnd: *mut super::super::Foundation::HWND) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_UI_Magnification\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn MagSetWindowSource(hwnd: super::super::Foundation::HWND, rect: super::super::Foundation::RECT) -> super::super::Foundation::BOOL;
@@ -58,6 +58,24 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn MagUninitialize() -> super::super::Foundation::BOOL;
 }
+#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
+pub const MS_CLIPAROUNDCURSOR: i32 = 2i32;
+#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
+pub const MS_INVERTCOLORS: i32 = 4i32;
+#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
+pub const MS_SHOWMAGNIFIEDCURSOR: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
+pub const WC_MAGNIFIER: &str = "Magnifier";
+#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
+pub const WC_MAGNIFIERA: &str = "Magnifier";
+#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
+pub const WC_MAGNIFIERW: &str = "Magnifier";
+#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
+pub type MW_FILTERMODE = u32;
+#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
+pub const MW_FILTERMODE_EXCLUDE: MW_FILTERMODE = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
+pub const MW_FILTERMODE_INCLUDE: MW_FILTERMODE = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
 pub struct MAGCOLOREFFECT {
@@ -96,22 +114,6 @@ impl ::core::clone::Clone for MAGTRANSFORM {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
-pub const MS_CLIPAROUNDCURSOR: i32 = 2i32;
-#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
-pub const MS_INVERTCOLORS: i32 = 4i32;
-#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
-pub const MS_SHOWMAGNIFIEDCURSOR: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
-pub const MW_FILTERMODE_EXCLUDE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
-pub const MW_FILTERMODE_INCLUDE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_UI_Magnification\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
 pub type MagImageScalingCallback = ::core::option::Option<unsafe extern "system" fn(hwnd: super::super::Foundation::HWND, srcdata: *mut ::core::ffi::c_void, srcheader: MAGIMAGEHEADER, destdata: *mut ::core::ffi::c_void, destheader: MAGIMAGEHEADER, unclipped: super::super::Foundation::RECT, clipped: super::super::Foundation::RECT, dirty: super::super::Graphics::Gdi::HRGN) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
-pub const WC_MAGNIFIER: &str = "Magnifier";
-#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
-pub const WC_MAGNIFIERA: &str = "Magnifier";
-#[doc = "*Required features: `\"Win32_UI_Magnification\"`*"]
-pub const WC_MAGNIFIERW: &str = "Magnifier";

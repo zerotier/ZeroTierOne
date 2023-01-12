@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
@@ -151,6 +151,472 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
     pub fn WrapStoreEntryID(ulflags: u32, lpszdllname: *const i8, cborigentry: u32, lporigentry: *const ENTRYID, lpcbwrappedentry: *mut u32, lppwrappedentry: *mut *mut ENTRYID) -> ::windows_sys::core::HRESULT;
 }
+pub type IABContainer = *mut ::core::ffi::c_void;
+pub type IAddrBook = *mut ::core::ffi::c_void;
+pub type IAttach = *mut ::core::ffi::c_void;
+pub type IDistList = *mut ::core::ffi::c_void;
+pub type IMAPIAdviseSink = *mut ::core::ffi::c_void;
+pub type IMAPIContainer = *mut ::core::ffi::c_void;
+pub type IMAPIControl = *mut ::core::ffi::c_void;
+pub type IMAPIFolder = *mut ::core::ffi::c_void;
+pub type IMAPIProgress = *mut ::core::ffi::c_void;
+pub type IMAPIProp = *mut ::core::ffi::c_void;
+pub type IMAPIStatus = *mut ::core::ffi::c_void;
+pub type IMAPITable = *mut ::core::ffi::c_void;
+pub type IMailUser = *mut ::core::ffi::c_void;
+pub type IMessage = *mut ::core::ffi::c_void;
+pub type IMsgStore = *mut ::core::ffi::c_void;
+pub type IProfSect = *mut ::core::ffi::c_void;
+pub type IPropData = *mut ::core::ffi::c_void;
+pub type IProviderAdmin = *mut ::core::ffi::c_void;
+pub type ITableData = *mut ::core::ffi::c_void;
+pub type IWABExtInit = *mut ::core::ffi::c_void;
+pub type IWABOBJECT_ = *mut ::core::ffi::c_void;
+pub type IWABObject = *mut ::core::ffi::c_void;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_BURN_VERIFICATION_FAILED: ::windows_sys::core::HRESULT = -1062600697i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2DATA_CLIENT_NAME_IS_NOT_VALID: ::windows_sys::core::HRESULT = -1062599672i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2DATA_INVALID_MEDIA_STATE: ::windows_sys::core::HRESULT = -1062599678i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2DATA_MEDIA_IS_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599674i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2DATA_MEDIA_NOT_BLANK: ::windows_sys::core::HRESULT = -1062599675i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2DATA_RECORDER_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599673i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2DATA_STREAM_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599677i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2DATA_STREAM_TOO_LARGE_FOR_CURRENT_MEDIA: ::windows_sys::core::HRESULT = -1062599676i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2DATA_WRITE_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062599680i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2DATA_WRITE_NOT_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062599679i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_CLIENT_NAME_IS_NOT_VALID: ::windows_sys::core::HRESULT = -1062599164i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_DATA_BLOCK_TYPE_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599154i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_MEDIA_IS_NOT_BLANK: ::windows_sys::core::HRESULT = -1062599162i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_MEDIA_IS_NOT_PREPARED: ::windows_sys::core::HRESULT = -1062599166i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_MEDIA_IS_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599161i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_MEDIA_IS_PREPARED: ::windows_sys::core::HRESULT = -1062599165i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_NOT_ENOUGH_SPACE: ::windows_sys::core::HRESULT = -1062599159i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_NO_RECORDER_SPECIFIED: ::windows_sys::core::HRESULT = -1062599158i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_RECORDER_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599152i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_STREAM_LEADIN_TOO_SHORT: ::windows_sys::core::HRESULT = -1062599153i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_STREAM_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599155i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_WRITE_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062599168i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2RAW_WRITE_NOT_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062599167i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_CLIENT_NAME_IS_NOT_VALID: ::windows_sys::core::HRESULT = -1062599409i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_INVALID_ISRC: ::windows_sys::core::HRESULT = -1062599413i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_INVALID_MCN: ::windows_sys::core::HRESULT = -1062599412i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_MEDIA_IS_NOT_BLANK: ::windows_sys::core::HRESULT = -1062599418i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_MEDIA_IS_NOT_PREPARED: ::windows_sys::core::HRESULT = -1062599422i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_MEDIA_IS_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599417i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_MEDIA_IS_PREPARED: ::windows_sys::core::HRESULT = -1062599421i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_NOT_ENOUGH_SPACE: ::windows_sys::core::HRESULT = -1062599415i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_NO_RECORDER_SPECIFIED: ::windows_sys::core::HRESULT = -1062599414i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_PROPERTY_FOR_BLANK_MEDIA_ONLY: ::windows_sys::core::HRESULT = -1062599420i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_RECORDER_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599410i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_STREAM_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599411i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_TABLE_OF_CONTENTS_EMPTY_DISC: ::windows_sys::core::HRESULT = -1062599419i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_TRACK_LIMIT_REACHED: ::windows_sys::core::HRESULT = -1062599416i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_WRITE_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062599424i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_DF2TAO_WRITE_NOT_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062599423i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_ERASE_CLIENT_NAME_IS_NOT_VALID: ::windows_sys::core::HRESULT = -1062598389i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_ERASE_DISC_INFORMATION_TOO_SMALL: ::windows_sys::core::HRESULT = -2136340222i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_ERASE_DRIVE_FAILED_ERASE_COMMAND: ::windows_sys::core::HRESULT = -2136340219i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_ERASE_DRIVE_FAILED_SPINUP_COMMAND: ::windows_sys::core::HRESULT = -2136340216i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_ERASE_MEDIA_IS_NOT_ERASABLE: ::windows_sys::core::HRESULT = -2136340220i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_ERASE_MEDIA_IS_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062598391i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_ERASE_MODE_PAGE_2A_TOO_SMALL: ::windows_sys::core::HRESULT = -2136340221i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_ERASE_ONLY_ONE_RECORDER_SUPPORTED: ::windows_sys::core::HRESULT = -2136340223i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_ERASE_RECORDER_IN_USE: ::windows_sys::core::HRESULT = -2136340224i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_ERASE_RECORDER_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062598390i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_ERASE_TOOK_LONGER_THAN_ONE_HOUR: ::windows_sys::core::HRESULT = -2136340218i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_ERASE_UNEXPECTED_DRIVE_RESPONSE_DURING_ERASE: ::windows_sys::core::HRESULT = -2136340217i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_LOSS_OF_STREAMING: ::windows_sys::core::HRESULT = -1062599936i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RAW_IMAGE_INSUFFICIENT_SPACE: ::windows_sys::core::HRESULT = -2136339963i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RAW_IMAGE_IS_READ_ONLY: ::windows_sys::core::HRESULT = -2136339968i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RAW_IMAGE_NO_TRACKS: ::windows_sys::core::HRESULT = -2136339965i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RAW_IMAGE_SECTOR_TYPE_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -2136339966i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RAW_IMAGE_TOO_MANY_TRACKS: ::windows_sys::core::HRESULT = -2136339967i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RAW_IMAGE_TOO_MANY_TRACK_INDEXES: ::windows_sys::core::HRESULT = -2136339962i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RAW_IMAGE_TRACKS_ALREADY_ADDED: ::windows_sys::core::HRESULT = -2136339964i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RAW_IMAGE_TRACK_INDEX_NOT_FOUND: ::windows_sys::core::HRESULT = -2136339961i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RAW_IMAGE_TRACK_INDEX_OFFSET_ZERO_CANNOT_BE_CLEARED: ::windows_sys::core::HRESULT = -2136339959i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RAW_IMAGE_TRACK_INDEX_TOO_CLOSE_TO_OTHER_INDEX: ::windows_sys::core::HRESULT = -2136339958i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_CLIENT_NAME_IS_NOT_VALID: ::windows_sys::core::HRESULT = -1062600175i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_COMMAND_TIMEOUT: ::windows_sys::core::HRESULT = -1062600179i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_DVD_STRUCTURE_NOT_PRESENT: ::windows_sys::core::HRESULT = -1062600178i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_FEATURE_IS_NOT_CURRENT: ::windows_sys::core::HRESULT = -1062600181i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_GET_CONFIGURATION_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062600180i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_INVALID_MODE_PARAMETERS: ::windows_sys::core::HRESULT = -1062600184i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_INVALID_RESPONSE_FROM_DEVICE: ::windows_sys::core::HRESULT = -1062599937i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_LOCKED: ::windows_sys::core::HRESULT = -1062600176i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_MEDIA_BECOMING_READY: ::windows_sys::core::HRESULT = -1062600187i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_MEDIA_BUSY: ::windows_sys::core::HRESULT = -1062600185i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_MEDIA_FORMAT_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062600186i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_MEDIA_INCOMPATIBLE: ::windows_sys::core::HRESULT = -1062600189i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_MEDIA_NOT_FORMATTED: ::windows_sys::core::HRESULT = -1062600174i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_MEDIA_NO_MEDIA: ::windows_sys::core::HRESULT = -1062600190i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_MEDIA_SPEED_MISMATCH: ::windows_sys::core::HRESULT = -1062600177i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_MEDIA_UPSIDE_DOWN: ::windows_sys::core::HRESULT = -1062600188i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_MEDIA_WRITE_PROTECTED: ::windows_sys::core::HRESULT = -1062600183i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_NO_SUCH_FEATURE: ::windows_sys::core::HRESULT = -1062600182i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_NO_SUCH_MODE_PAGE: ::windows_sys::core::HRESULT = -1062600191i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_RECORDER_REQUIRED: ::windows_sys::core::HRESULT = -1062600701i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_REQUEST_CANCELLED: ::windows_sys::core::HRESULT = -1062600702i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const E_IMAPI_UNEXPECTED_RESPONSE_FROM_DEVICE: ::windows_sys::core::HRESULT = -1062599935i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const FACILITY_IMAPI2: u32 = 170u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_BAD_MULTISESSION_PARAMETER: ::windows_sys::core::HRESULT = -1062555294i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_BOOT_EMULATION_IMAGE_SIZE_MISMATCH: ::windows_sys::core::HRESULT = -1062555318i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_BOOT_IMAGE_DATA: ::windows_sys::core::HRESULT = -1062555320i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_BOOT_OBJECT_CONFLICT: ::windows_sys::core::HRESULT = -1062555319i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_DATA_STREAM_CREATE_FAILURE: ::windows_sys::core::HRESULT = -1062555350i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_DATA_STREAM_INCONSISTENCY: ::windows_sys::core::HRESULT = -1062555352i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_DATA_STREAM_READ_FAILURE: ::windows_sys::core::HRESULT = -1062555351i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_DATA_TOO_BIG: ::windows_sys::core::HRESULT = -1062555342i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_DIRECTORY_READ_FAILURE: ::windows_sys::core::HRESULT = -1062555349i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_DIR_NOT_EMPTY: ::windows_sys::core::HRESULT = -1062555382i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_DIR_NOT_FOUND: ::windows_sys::core::HRESULT = -1062555366i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_DISC_MISMATCH: ::windows_sys::core::HRESULT = -1062555304i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_DUP_NAME: ::windows_sys::core::HRESULT = -1062555374i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_EMPTY_DISC: ::windows_sys::core::HRESULT = -1062555312i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_FILE_NOT_FOUND: ::windows_sys::core::HRESULT = -1062555367i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_FILE_SYSTEM_CHANGE_NOT_ALLOWED: ::windows_sys::core::HRESULT = -1062555293i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_FILE_SYSTEM_FEATURE_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062555308i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_FILE_SYSTEM_NOT_EMPTY: ::windows_sys::core::HRESULT = -1062555386i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_FILE_SYSTEM_NOT_FOUND: ::windows_sys::core::HRESULT = -1062555310i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_FILE_SYSTEM_READ_CONSISTENCY_ERROR: ::windows_sys::core::HRESULT = -1062555309i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_FSI_INTERNAL_ERROR: ::windows_sys::core::HRESULT = -1062555392i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_IMAGEMANAGER_IMAGE_NOT_ALIGNED: ::windows_sys::core::HRESULT = -1062555136i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_IMAGEMANAGER_IMAGE_TOO_BIG: ::windows_sys::core::HRESULT = -1062555133i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_IMAGEMANAGER_NO_IMAGE: ::windows_sys::core::HRESULT = -1062555134i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_IMAGEMANAGER_NO_VALID_VD_FOUND: ::windows_sys::core::HRESULT = -1062555135i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_IMAGE_SIZE_LIMIT: ::windows_sys::core::HRESULT = -1062555360i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_IMAGE_TOO_BIG: ::windows_sys::core::HRESULT = -1062555359i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_IMPORT_MEDIA_NOT_ALLOWED: ::windows_sys::core::HRESULT = -1062555303i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_IMPORT_READ_FAILURE: ::windows_sys::core::HRESULT = -1062555305i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_IMPORT_SEEK_FAILURE: ::windows_sys::core::HRESULT = -1062555306i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_IMPORT_TYPE_COLLISION_DIRECTORY_EXISTS_AS_FILE: ::windows_sys::core::HRESULT = -1062555298i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_IMPORT_TYPE_COLLISION_FILE_EXISTS_AS_DIRECTORY: ::windows_sys::core::HRESULT = -1062555307i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_INCOMPATIBLE_MULTISESSION_TYPE: ::windows_sys::core::HRESULT = -1062555301i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_INCOMPATIBLE_PREVIOUS_SESSION: ::windows_sys::core::HRESULT = -1062555341i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_INVALID_DATE: ::windows_sys::core::HRESULT = -1062555387i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_INVALID_PARAM: ::windows_sys::core::HRESULT = -1062555391i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_INVALID_PATH: ::windows_sys::core::HRESULT = -1062555376i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_INVALID_VOLUME_NAME: ::windows_sys::core::HRESULT = -1062555388i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_INVALID_WORKING_DIRECTORY: ::windows_sys::core::HRESULT = -1062555328i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_ISO9660_LEVELS: ::windows_sys::core::HRESULT = -1062555343i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_ITEM_NOT_FOUND: ::windows_sys::core::HRESULT = -1062555368i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_MULTISESSION_NOT_SET: ::windows_sys::core::HRESULT = -1062555299i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_NOT_DIR: ::windows_sys::core::HRESULT = -1062555383i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_NOT_FILE: ::windows_sys::core::HRESULT = -1062555384i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_NOT_IN_FILE_SYSTEM: ::windows_sys::core::HRESULT = -1062555381i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_NO_COMPATIBLE_MULTISESSION_TYPE: ::windows_sys::core::HRESULT = -1062555300i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_NO_OUTPUT: ::windows_sys::core::HRESULT = -1062555389i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_NO_SUPPORTED_FILE_SYSTEM: ::windows_sys::core::HRESULT = -1062555311i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_NO_UNIQUE_NAME: ::windows_sys::core::HRESULT = -1062555373i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_PROPERTY_NOT_ACCESSIBLE: ::windows_sys::core::HRESULT = -1062555296i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_READONLY: ::windows_sys::core::HRESULT = -1062555390i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_RESTRICTED_NAME_VIOLATION: ::windows_sys::core::HRESULT = -1062555375i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_STASHFILE_MOVE: ::windows_sys::core::HRESULT = -1062555326i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_STASHFILE_OPEN_FAILURE: ::windows_sys::core::HRESULT = -1062555336i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_STASHFILE_READ_FAILURE: ::windows_sys::core::HRESULT = -1062555333i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_STASHFILE_SEEK_FAILURE: ::windows_sys::core::HRESULT = -1062555335i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_STASHFILE_WRITE_FAILURE: ::windows_sys::core::HRESULT = -1062555334i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_TOO_MANY_DIRS: ::windows_sys::core::HRESULT = -1062555344i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_UDF_NOT_WRITE_COMPATIBLE: ::windows_sys::core::HRESULT = -1062555302i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_UDF_REVISION_CHANGE_NOT_ALLOWED: ::windows_sys::core::HRESULT = -1062555295i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_E_WORKING_DIRECTORY_SPACE: ::windows_sys::core::HRESULT = -1062555327i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const IMAPI_S_IMAGE_FEATURE_NOT_SUPPORTED: ::windows_sys::core::HRESULT = 11186527i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_COMPOUND: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_DIM: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_ERROR_VERSION: i32 = 0i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_E_CALL_FAILED: i32 = -2147467259i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_E_INTERFACE_NOT_SUPPORTED: i32 = -2147467262i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_E_INVALID_PARAMETER: i32 = -2147024809i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_E_NOT_ENOUGH_MEMORY: i32 = -2147024882i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_E_NO_ACCESS: i32 = -2147024891i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_NOTRECIP: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_NOTRESERVED: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_NOW: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_ONE_OFF_NO_RICH_INFO: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_P1: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_SHORTTERM: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_SUBMITTED: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_THISSESSION: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MAPI_USE_DEFAULT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MNID_ID: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MNID_STRING: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MV_FLAG: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const MV_INSTANCE: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const OPENSTREAMONFILE: &str = "OpenStreamOnFile";
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const PRIHIGHEST: u32 = 32767u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const PRILOWEST: i32 = -32768i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const PRIUSER: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const PROP_ID_INVALID: u32 = 65535u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const PROP_ID_NULL: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const PROP_ID_SECURE_MAX: u32 = 26623u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const PROP_ID_SECURE_MIN: u32 = 26608u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const SERVICE_UI_ALLOWED: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const SERVICE_UI_ALWAYS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const S_IMAPI_BOTHADJUSTED: ::windows_sys::core::HRESULT = 11141126i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const S_IMAPI_COMMAND_HAS_SENSE_DATA: ::windows_sys::core::HRESULT = 11141632i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const S_IMAPI_RAW_IMAGE_TRACK_INDEX_ALREADY_EXISTS: ::windows_sys::core::HRESULT = 11143688i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const S_IMAPI_ROTATIONADJUSTED: ::windows_sys::core::HRESULT = 11141125i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const S_IMAPI_SPEEDADJUSTED: ::windows_sys::core::HRESULT = 11141124i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const S_IMAPI_WRITE_NOT_IN_PROGRESS: ::windows_sys::core::HRESULT = 11141890i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const TABLE_CHANGED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const TABLE_ERROR: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const TABLE_RELOAD: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const TABLE_RESTRICT_DONE: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const TABLE_ROW_ADDED: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const TABLE_ROW_DELETED: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const TABLE_ROW_MODIFIED: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const TABLE_SETCOL_DONE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const TABLE_SORT_DONE: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const TAD_ALL_ROWS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const UI_CURRENT_PROVIDER_FIRST: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const UI_SERVICE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WABOBJECT_LDAPURL_RETURN_MAILUSER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WABOBJECT_ME_NEW: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WABOBJECT_ME_NOCREATE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WAB_CONTEXT_ADRLIST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WAB_DISPLAY_ISNTDS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WAB_DISPLAY_LDAPURL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WAB_DLL_NAME: &str = "WAB32.DLL";
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WAB_DLL_PATH_KEY: &str = "Software\\Microsoft\\WAB\\DLLPath";
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WAB_ENABLE_PROFILES: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WAB_IGNORE_PROFILES: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WAB_LOCAL_CONTAINERS: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WAB_PROFILE_CONTENTS: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WAB_USE_OE_SENDMAIL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WAB_VCARD_FILE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const WAB_VCARD_STREAM: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const cchProfileNameMax: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const cchProfilePassMax: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const fMapiUnicode: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const hrSuccess: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const szHrDispatchNotifications: &str = "HrDispatchNotifications";
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const szMAPINotificationMsg: &str = "MAPI Notify window message";
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const szScCreateConversationIndex: &str = "ScCreateConversationIndex";
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type Gender = i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const genderUnspecified: Gender = 0i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const genderFemale: Gender = 1i32;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub const genderMale: Gender = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
@@ -213,8 +679,6 @@ impl ::core::clone::Clone for ADRPARM {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type CALLERRELEASE = ::core::option::Option<unsafe extern "system" fn(ulcallerdata: u32, lptbldata: ITableData, lpvue: IMAPITable)>;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
 pub struct DTBLBUTTON {
@@ -480,176 +944,6 @@ impl ::core::clone::Clone for EXTENDED_NOTIFICATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_BURN_VERIFICATION_FAILED: ::windows_sys::core::HRESULT = -1062600697i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2DATA_CLIENT_NAME_IS_NOT_VALID: ::windows_sys::core::HRESULT = -1062599672i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2DATA_INVALID_MEDIA_STATE: ::windows_sys::core::HRESULT = -1062599678i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2DATA_MEDIA_IS_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599674i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2DATA_MEDIA_NOT_BLANK: ::windows_sys::core::HRESULT = -1062599675i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2DATA_RECORDER_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599673i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2DATA_STREAM_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599677i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2DATA_STREAM_TOO_LARGE_FOR_CURRENT_MEDIA: ::windows_sys::core::HRESULT = -1062599676i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2DATA_WRITE_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062599680i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2DATA_WRITE_NOT_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062599679i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_CLIENT_NAME_IS_NOT_VALID: ::windows_sys::core::HRESULT = -1062599164i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_DATA_BLOCK_TYPE_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599154i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_MEDIA_IS_NOT_BLANK: ::windows_sys::core::HRESULT = -1062599162i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_MEDIA_IS_NOT_PREPARED: ::windows_sys::core::HRESULT = -1062599166i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_MEDIA_IS_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599161i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_MEDIA_IS_PREPARED: ::windows_sys::core::HRESULT = -1062599165i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_NOT_ENOUGH_SPACE: ::windows_sys::core::HRESULT = -1062599159i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_NO_RECORDER_SPECIFIED: ::windows_sys::core::HRESULT = -1062599158i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_RECORDER_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599152i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_STREAM_LEADIN_TOO_SHORT: ::windows_sys::core::HRESULT = -1062599153i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_STREAM_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599155i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_WRITE_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062599168i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2RAW_WRITE_NOT_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062599167i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_CLIENT_NAME_IS_NOT_VALID: ::windows_sys::core::HRESULT = -1062599409i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_INVALID_ISRC: ::windows_sys::core::HRESULT = -1062599413i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_INVALID_MCN: ::windows_sys::core::HRESULT = -1062599412i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_MEDIA_IS_NOT_BLANK: ::windows_sys::core::HRESULT = -1062599418i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_MEDIA_IS_NOT_PREPARED: ::windows_sys::core::HRESULT = -1062599422i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_MEDIA_IS_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599417i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_MEDIA_IS_PREPARED: ::windows_sys::core::HRESULT = -1062599421i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_NOT_ENOUGH_SPACE: ::windows_sys::core::HRESULT = -1062599415i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_NO_RECORDER_SPECIFIED: ::windows_sys::core::HRESULT = -1062599414i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_PROPERTY_FOR_BLANK_MEDIA_ONLY: ::windows_sys::core::HRESULT = -1062599420i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_RECORDER_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599410i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_STREAM_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062599411i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_TABLE_OF_CONTENTS_EMPTY_DISC: ::windows_sys::core::HRESULT = -1062599419i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_TRACK_LIMIT_REACHED: ::windows_sys::core::HRESULT = -1062599416i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_WRITE_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062599424i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_DF2TAO_WRITE_NOT_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062599423i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_ERASE_CLIENT_NAME_IS_NOT_VALID: ::windows_sys::core::HRESULT = -1062598389i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_ERASE_DISC_INFORMATION_TOO_SMALL: ::windows_sys::core::HRESULT = -2136340222i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_ERASE_DRIVE_FAILED_ERASE_COMMAND: ::windows_sys::core::HRESULT = -2136340219i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_ERASE_DRIVE_FAILED_SPINUP_COMMAND: ::windows_sys::core::HRESULT = -2136340216i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_ERASE_MEDIA_IS_NOT_ERASABLE: ::windows_sys::core::HRESULT = -2136340220i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_ERASE_MEDIA_IS_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062598391i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_ERASE_MODE_PAGE_2A_TOO_SMALL: ::windows_sys::core::HRESULT = -2136340221i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_ERASE_ONLY_ONE_RECORDER_SUPPORTED: ::windows_sys::core::HRESULT = -2136340223i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_ERASE_RECORDER_IN_USE: ::windows_sys::core::HRESULT = -2136340224i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_ERASE_RECORDER_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062598390i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_ERASE_TOOK_LONGER_THAN_ONE_HOUR: ::windows_sys::core::HRESULT = -2136340218i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_ERASE_UNEXPECTED_DRIVE_RESPONSE_DURING_ERASE: ::windows_sys::core::HRESULT = -2136340217i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_LOSS_OF_STREAMING: ::windows_sys::core::HRESULT = -1062599936i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RAW_IMAGE_INSUFFICIENT_SPACE: ::windows_sys::core::HRESULT = -2136339963i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RAW_IMAGE_IS_READ_ONLY: ::windows_sys::core::HRESULT = -2136339968i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RAW_IMAGE_NO_TRACKS: ::windows_sys::core::HRESULT = -2136339965i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RAW_IMAGE_SECTOR_TYPE_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -2136339966i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RAW_IMAGE_TOO_MANY_TRACKS: ::windows_sys::core::HRESULT = -2136339967i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RAW_IMAGE_TOO_MANY_TRACK_INDEXES: ::windows_sys::core::HRESULT = -2136339962i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RAW_IMAGE_TRACKS_ALREADY_ADDED: ::windows_sys::core::HRESULT = -2136339964i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RAW_IMAGE_TRACK_INDEX_NOT_FOUND: ::windows_sys::core::HRESULT = -2136339961i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RAW_IMAGE_TRACK_INDEX_OFFSET_ZERO_CANNOT_BE_CLEARED: ::windows_sys::core::HRESULT = -2136339959i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RAW_IMAGE_TRACK_INDEX_TOO_CLOSE_TO_OTHER_INDEX: ::windows_sys::core::HRESULT = -2136339958i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_CLIENT_NAME_IS_NOT_VALID: ::windows_sys::core::HRESULT = -1062600175i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_COMMAND_TIMEOUT: ::windows_sys::core::HRESULT = -1062600179i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_DVD_STRUCTURE_NOT_PRESENT: ::windows_sys::core::HRESULT = -1062600178i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_FEATURE_IS_NOT_CURRENT: ::windows_sys::core::HRESULT = -1062600181i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_GET_CONFIGURATION_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062600180i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_INVALID_MODE_PARAMETERS: ::windows_sys::core::HRESULT = -1062600184i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_INVALID_RESPONSE_FROM_DEVICE: ::windows_sys::core::HRESULT = -1062599937i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_LOCKED: ::windows_sys::core::HRESULT = -1062600176i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_MEDIA_BECOMING_READY: ::windows_sys::core::HRESULT = -1062600187i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_MEDIA_BUSY: ::windows_sys::core::HRESULT = -1062600185i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_MEDIA_FORMAT_IN_PROGRESS: ::windows_sys::core::HRESULT = -1062600186i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_MEDIA_INCOMPATIBLE: ::windows_sys::core::HRESULT = -1062600189i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_MEDIA_NOT_FORMATTED: ::windows_sys::core::HRESULT = -1062600174i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_MEDIA_NO_MEDIA: ::windows_sys::core::HRESULT = -1062600190i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_MEDIA_SPEED_MISMATCH: ::windows_sys::core::HRESULT = -1062600177i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_MEDIA_UPSIDE_DOWN: ::windows_sys::core::HRESULT = -1062600188i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_MEDIA_WRITE_PROTECTED: ::windows_sys::core::HRESULT = -1062600183i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_NO_SUCH_FEATURE: ::windows_sys::core::HRESULT = -1062600182i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_NO_SUCH_MODE_PAGE: ::windows_sys::core::HRESULT = -1062600191i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_RECORDER_REQUIRED: ::windows_sys::core::HRESULT = -1062600701i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_REQUEST_CANCELLED: ::windows_sys::core::HRESULT = -1062600702i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const E_IMAPI_UNEXPECTED_RESPONSE_FROM_DEVICE: ::windows_sys::core::HRESULT = -1062599935i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const FACILITY_IMAPI2: u32 = 170u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
 pub struct FLATENTRY {
@@ -688,232 +982,18 @@ impl ::core::clone::Clone for FLATMTSIDLIST {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type Gender = i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const genderUnspecified: Gender = 0i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const genderFemale: Gender = 1i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const genderMale: Gender = 2i32;
-pub type IABContainer = *mut ::core::ffi::c_void;
-pub type IAddrBook = *mut ::core::ffi::c_void;
-pub type IAttach = *mut ::core::ffi::c_void;
-pub type IDistList = *mut ::core::ffi::c_void;
-pub type IMAPIAdviseSink = *mut ::core::ffi::c_void;
-pub type IMAPIContainer = *mut ::core::ffi::c_void;
-pub type IMAPIControl = *mut ::core::ffi::c_void;
-pub type IMAPIFolder = *mut ::core::ffi::c_void;
-pub type IMAPIProgress = *mut ::core::ffi::c_void;
-pub type IMAPIProp = *mut ::core::ffi::c_void;
-pub type IMAPIStatus = *mut ::core::ffi::c_void;
-pub type IMAPITable = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_BAD_MULTISESSION_PARAMETER: ::windows_sys::core::HRESULT = -1062555294i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_BOOT_EMULATION_IMAGE_SIZE_MISMATCH: ::windows_sys::core::HRESULT = -1062555318i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_BOOT_IMAGE_DATA: ::windows_sys::core::HRESULT = -1062555320i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_BOOT_OBJECT_CONFLICT: ::windows_sys::core::HRESULT = -1062555319i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_DATA_STREAM_CREATE_FAILURE: ::windows_sys::core::HRESULT = -1062555350i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_DATA_STREAM_INCONSISTENCY: ::windows_sys::core::HRESULT = -1062555352i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_DATA_STREAM_READ_FAILURE: ::windows_sys::core::HRESULT = -1062555351i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_DATA_TOO_BIG: ::windows_sys::core::HRESULT = -1062555342i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_DIRECTORY_READ_FAILURE: ::windows_sys::core::HRESULT = -1062555349i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_DIR_NOT_EMPTY: ::windows_sys::core::HRESULT = -1062555382i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_DIR_NOT_FOUND: ::windows_sys::core::HRESULT = -1062555366i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_DISC_MISMATCH: ::windows_sys::core::HRESULT = -1062555304i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_DUP_NAME: ::windows_sys::core::HRESULT = -1062555374i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_EMPTY_DISC: ::windows_sys::core::HRESULT = -1062555312i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_FILE_NOT_FOUND: ::windows_sys::core::HRESULT = -1062555367i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_FILE_SYSTEM_CHANGE_NOT_ALLOWED: ::windows_sys::core::HRESULT = -1062555293i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_FILE_SYSTEM_FEATURE_NOT_SUPPORTED: ::windows_sys::core::HRESULT = -1062555308i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_FILE_SYSTEM_NOT_EMPTY: ::windows_sys::core::HRESULT = -1062555386i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_FILE_SYSTEM_NOT_FOUND: ::windows_sys::core::HRESULT = -1062555310i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_FILE_SYSTEM_READ_CONSISTENCY_ERROR: ::windows_sys::core::HRESULT = -1062555309i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_FSI_INTERNAL_ERROR: ::windows_sys::core::HRESULT = -1062555392i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_IMAGEMANAGER_IMAGE_NOT_ALIGNED: ::windows_sys::core::HRESULT = -1062555136i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_IMAGEMANAGER_IMAGE_TOO_BIG: ::windows_sys::core::HRESULT = -1062555133i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_IMAGEMANAGER_NO_IMAGE: ::windows_sys::core::HRESULT = -1062555134i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_IMAGEMANAGER_NO_VALID_VD_FOUND: ::windows_sys::core::HRESULT = -1062555135i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_IMAGE_SIZE_LIMIT: ::windows_sys::core::HRESULT = -1062555360i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_IMAGE_TOO_BIG: ::windows_sys::core::HRESULT = -1062555359i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_IMPORT_MEDIA_NOT_ALLOWED: ::windows_sys::core::HRESULT = -1062555303i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_IMPORT_READ_FAILURE: ::windows_sys::core::HRESULT = -1062555305i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_IMPORT_SEEK_FAILURE: ::windows_sys::core::HRESULT = -1062555306i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_IMPORT_TYPE_COLLISION_DIRECTORY_EXISTS_AS_FILE: ::windows_sys::core::HRESULT = -1062555298i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_IMPORT_TYPE_COLLISION_FILE_EXISTS_AS_DIRECTORY: ::windows_sys::core::HRESULT = -1062555307i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_INCOMPATIBLE_MULTISESSION_TYPE: ::windows_sys::core::HRESULT = -1062555301i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_INCOMPATIBLE_PREVIOUS_SESSION: ::windows_sys::core::HRESULT = -1062555341i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_INVALID_DATE: ::windows_sys::core::HRESULT = -1062555387i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_INVALID_PARAM: ::windows_sys::core::HRESULT = -1062555391i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_INVALID_PATH: ::windows_sys::core::HRESULT = -1062555376i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_INVALID_VOLUME_NAME: ::windows_sys::core::HRESULT = -1062555388i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_INVALID_WORKING_DIRECTORY: ::windows_sys::core::HRESULT = -1062555328i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_ISO9660_LEVELS: ::windows_sys::core::HRESULT = -1062555343i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_ITEM_NOT_FOUND: ::windows_sys::core::HRESULT = -1062555368i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_MULTISESSION_NOT_SET: ::windows_sys::core::HRESULT = -1062555299i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_NOT_DIR: ::windows_sys::core::HRESULT = -1062555383i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_NOT_FILE: ::windows_sys::core::HRESULT = -1062555384i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_NOT_IN_FILE_SYSTEM: ::windows_sys::core::HRESULT = -1062555381i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_NO_COMPATIBLE_MULTISESSION_TYPE: ::windows_sys::core::HRESULT = -1062555300i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_NO_OUTPUT: ::windows_sys::core::HRESULT = -1062555389i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_NO_SUPPORTED_FILE_SYSTEM: ::windows_sys::core::HRESULT = -1062555311i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_NO_UNIQUE_NAME: ::windows_sys::core::HRESULT = -1062555373i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_PROPERTY_NOT_ACCESSIBLE: ::windows_sys::core::HRESULT = -1062555296i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_READONLY: ::windows_sys::core::HRESULT = -1062555390i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_RESTRICTED_NAME_VIOLATION: ::windows_sys::core::HRESULT = -1062555375i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_STASHFILE_MOVE: ::windows_sys::core::HRESULT = -1062555326i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_STASHFILE_OPEN_FAILURE: ::windows_sys::core::HRESULT = -1062555336i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_STASHFILE_READ_FAILURE: ::windows_sys::core::HRESULT = -1062555333i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_STASHFILE_SEEK_FAILURE: ::windows_sys::core::HRESULT = -1062555335i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_STASHFILE_WRITE_FAILURE: ::windows_sys::core::HRESULT = -1062555334i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_TOO_MANY_DIRS: ::windows_sys::core::HRESULT = -1062555344i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_UDF_NOT_WRITE_COMPATIBLE: ::windows_sys::core::HRESULT = -1062555302i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_UDF_REVISION_CHANGE_NOT_ALLOWED: ::windows_sys::core::HRESULT = -1062555295i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_E_WORKING_DIRECTORY_SPACE: ::windows_sys::core::HRESULT = -1062555327i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const IMAPI_S_IMAGE_FEATURE_NOT_SUPPORTED: ::windows_sys::core::HRESULT = 11186527i32;
-pub type IMailUser = *mut ::core::ffi::c_void;
-pub type IMessage = *mut ::core::ffi::c_void;
-pub type IMsgStore = *mut ::core::ffi::c_void;
-pub type IProfSect = *mut ::core::ffi::c_void;
-pub type IPropData = *mut ::core::ffi::c_void;
-pub type IProviderAdmin = *mut ::core::ffi::c_void;
-pub type ITableData = *mut ::core::ffi::c_void;
-pub type IWABExtInit = *mut ::core::ffi::c_void;
-pub type IWABOBJECT_ = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type IWABOBJECT_AddRef_METHOD = ::core::option::Option<unsafe extern "system" fn() -> u32>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type IWABOBJECT_AllocateBuffer_METHOD = ::core::option::Option<unsafe extern "system" fn(cbsize: u32, lppbuffer: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type IWABOBJECT_AllocateMore_METHOD = ::core::option::Option<unsafe extern "system" fn(cbsize: u32, lpobject: *const ::core::ffi::c_void, lppbuffer: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type IWABOBJECT_Backup_METHOD = ::core::option::Option<unsafe extern "system" fn(lpfilename: ::windows_sys::core::PCSTR) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type IWABOBJECT_Find_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, hwnd: super::super::Foundation::HWND) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type IWABOBJECT_FreeBuffer_METHOD = ::core::option::Option<unsafe extern "system" fn(lpbuffer: *const ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type IWABOBJECT_GetLastError_METHOD = ::core::option::Option<unsafe extern "system" fn(hresult: ::windows_sys::core::HRESULT, ulflags: u32, lppmapierror: *mut *mut MAPIERROR) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type IWABOBJECT_GetMe_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, ulflags: u32, lpdwaction: *mut u32, lpsbeid: *mut SBinary, hwnd: super::super::Foundation::HWND) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type IWABOBJECT_Import_METHOD = ::core::option::Option<unsafe extern "system" fn(lpwip: ::windows_sys::core::PCSTR) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type IWABOBJECT_LDAPUrl_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, hwnd: super::super::Foundation::HWND, ulflags: u32, lpszurl: ::windows_sys::core::PCSTR, lppmailuser: *mut IMailUser) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type IWABOBJECT_QueryInterface_METHOD = ::core::option::Option<unsafe extern "system" fn(riid: *const ::windows_sys::core::GUID, ppvobj: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type IWABOBJECT_Release_METHOD = ::core::option::Option<unsafe extern "system" fn() -> u32>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type IWABOBJECT_SetMe_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, ulflags: u32, sbeid: SBinary, hwnd: super::super::Foundation::HWND) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type IWABOBJECT_VCardCreate_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, ulflags: u32, lpszvcard: ::windows_sys::core::PCSTR, lpmailuser: IMailUser) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type IWABOBJECT_VCardDisplay_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, hwnd: super::super::Foundation::HWND, lpszfilename: ::windows_sys::core::PCSTR) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type IWABOBJECT_VCardRetrieve_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, ulflags: u32, lpszvcard: ::windows_sys::core::PCSTR, lppmailuser: *mut IMailUser) -> ::windows_sys::core::HRESULT>;
-pub type IWABObject = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type LPALLOCATEBUFFER = ::core::option::Option<unsafe extern "system" fn(cbsize: u32, lppbuffer: *mut *mut ::core::ffi::c_void) -> i32>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type LPALLOCATEMORE = ::core::option::Option<unsafe extern "system" fn(cbsize: u32, lpobject: *mut ::core::ffi::c_void, lppbuffer: *mut *mut ::core::ffi::c_void) -> i32>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type LPCREATECONVERSATIONINDEX = ::core::option::Option<unsafe extern "system" fn(cbparent: u32, lpbparent: *mut u8, lpcbconvindex: *mut u32, lppbconvindex: *mut *mut u8) -> i32>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type LPDISPATCHNOTIFICATIONS = ::core::option::Option<unsafe extern "system" fn(ulflags: u32) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LPFNABSDI = ::core::option::Option<unsafe extern "system" fn(uluiparam: usize, lpvmsg: *mut ::core::ffi::c_void) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type LPFNBUTTON = ::core::option::Option<unsafe extern "system" fn(uluiparam: usize, lpvcontext: *mut ::core::ffi::c_void, cbentryid: u32, lpselection: *mut ENTRYID, ulflags: u32) -> i32>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type LPFNDISMISS = ::core::option::Option<unsafe extern "system" fn(uluiparam: usize, lpvcontext: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type LPFREEBUFFER = ::core::option::Option<unsafe extern "system" fn(lpbuffer: *mut ::core::ffi::c_void) -> u32>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
-pub type LPNOTIFCALLBACK = ::core::option::Option<unsafe extern "system" fn(lpvcontext: *mut ::core::ffi::c_void, cnotification: u32, lpnotifications: *mut NOTIFICATION) -> i32>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_System_Com\"`*"]
-#[cfg(feature = "Win32_System_Com")]
-pub type LPOPENSTREAMONFILE = ::core::option::Option<unsafe extern "system" fn(lpallocatebuffer: LPALLOCATEBUFFER, lpfreebuffer: LPFREEBUFFER, ulflags: u32, lpszfilename: *const i8, lpszprefix: *const i8, lppstream: *mut super::Com::IStream) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type LPWABALLOCATEBUFFER = ::core::option::Option<unsafe extern "system" fn(lpwabobject: IWABObject, cbsize: u32, lppbuffer: *mut *mut ::core::ffi::c_void) -> i32>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type LPWABALLOCATEMORE = ::core::option::Option<unsafe extern "system" fn(lpwabobject: IWABObject, cbsize: u32, lpobject: *mut ::core::ffi::c_void, lppbuffer: *mut *mut ::core::ffi::c_void) -> i32>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub type LPWABFREEBUFFER = ::core::option::Option<unsafe extern "system" fn(lpwabobject: IWABObject, lpbuffer: *mut ::core::ffi::c_void) -> u32>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LPWABOPEN = ::core::option::Option<unsafe extern "system" fn(lppadrbook: *mut IAddrBook, lppwabobject: *mut IWABObject, lpwp: *mut WAB_PARAM, reserved2: u32) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LPWABOPENEX = ::core::option::Option<unsafe extern "system" fn(lppadrbook: *mut IAddrBook, lppwabobject: *mut IWABObject, lpwp: *mut WAB_PARAM, reserved: u32, fnallocatebuffer: LPALLOCATEBUFFER, fnallocatemore: LPALLOCATEMORE, fnfreebuffer: LPFREEBUFFER) -> ::windows_sys::core::HRESULT>;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub struct FlagList {
+    pub cFlags: u32,
+    pub ulFlag: [u32; 1],
+}
+impl ::core::marker::Copy for FlagList {}
+impl ::core::clone::Clone for FlagList {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
 pub struct MAPIERROR {
@@ -965,44 +1045,6 @@ impl ::core::clone::Clone for MAPIUID {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_COMPOUND: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_DIM: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_ERROR_VERSION: i32 = 0i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_E_CALL_FAILED: i32 = -2147467259i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_E_INTERFACE_NOT_SUPPORTED: i32 = -2147467262i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_E_INVALID_PARAMETER: i32 = -2147024809i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_E_NOT_ENOUGH_MEMORY: i32 = -2147024882i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_E_NO_ACCESS: i32 = -2147024891i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_NOTRECIP: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_NOTRESERVED: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_NOW: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_ONE_OFF_NO_RICH_INFO: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_P1: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_SHORTTERM: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_SUBMITTED: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_THISSESSION: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MAPI_USE_DEFAULT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MNID_ID: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MNID_STRING: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
 pub struct MTSID {
@@ -1015,10 +1057,6 @@ impl ::core::clone::Clone for MTSID {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MV_FLAG: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const MV_INSTANCE: u32 = 8192u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
 pub struct NEWMAIL_NOTIFICATION {
@@ -1103,25 +1141,6 @@ impl ::core::clone::Clone for OBJECT_NOTIFICATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const OPENSTREAMONFILE: &str = "OpenStreamOnFile";
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFNIDLE = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const PRIHIGHEST: u32 = 32767u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const PRILOWEST: i32 = -32768i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const PRIUSER: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const PROP_ID_INVALID: u32 = 65535u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const PROP_ID_NULL: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const PROP_ID_SECURE_MAX: u32 = 26623u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const PROP_ID_SECURE_MIN: u32 = 26608u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
@@ -1273,10 +1292,6 @@ impl ::core::clone::Clone for SDoubleArray {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const SERVICE_UI_ALLOWED: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const SERVICE_UI_ALWAYS: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
 pub struct SExistRestriction {
@@ -1411,7 +1426,7 @@ impl ::core::clone::Clone for SPropTagArray {
 pub struct SPropValue {
     pub ulPropTag: u32,
     pub dwAlignPad: u32,
-    pub Value: _PV,
+    pub Value: __UPV,
 }
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
 impl ::core::marker::Copy for SPropValue {}
@@ -1614,22 +1629,6 @@ impl ::core::clone::Clone for SWStringArray {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const S_IMAPI_BOTHADJUSTED: ::windows_sys::core::HRESULT = 11141126i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const S_IMAPI_COMMAND_HAS_SENSE_DATA: ::windows_sys::core::HRESULT = 11141632i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const S_IMAPI_RAW_IMAGE_TRACK_INDEX_ALREADY_EXISTS: ::windows_sys::core::HRESULT = 11143688i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const S_IMAPI_ROTATIONADJUSTED: ::windows_sys::core::HRESULT = 11141125i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const S_IMAPI_SPEEDADJUSTED: ::windows_sys::core::HRESULT = 11141124i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const S_IMAPI_WRITE_NOT_IN_PROGRESS: ::windows_sys::core::HRESULT = 11141890i32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const TABLE_CHANGED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const TABLE_ERROR: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
@@ -1649,26 +1648,6 @@ impl ::core::clone::Clone for TABLE_NOTIFICATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const TABLE_RELOAD: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const TABLE_RESTRICT_DONE: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const TABLE_ROW_ADDED: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const TABLE_ROW_DELETED: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const TABLE_ROW_MODIFIED: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const TABLE_SETCOL_DONE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const TABLE_SORT_DONE: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const TAD_ALL_ROWS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const UI_CURRENT_PROVIDER_FIRST: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const UI_SERVICE: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1709,28 +1688,6 @@ impl ::core::clone::Clone for WABIMPORTPARAM {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WABOBJECT_LDAPURL_RETURN_MAILUSER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WABOBJECT_ME_NEW: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WABOBJECT_ME_NOCREATE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WAB_CONTEXT_ADRLIST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WAB_DISPLAY_ISNTDS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WAB_DISPLAY_LDAPURL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WAB_DLL_NAME: &str = "WAB32.DLL";
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WAB_DLL_PATH_KEY: &str = "Software\\Microsoft\\WAB\\DLLPath";
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WAB_ENABLE_PROFILES: u32 = 4194304u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WAB_IGNORE_PROFILES: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WAB_LOCAL_CONTAINERS: u32 = 1048576u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1749,18 +1706,12 @@ impl ::core::clone::Clone for WAB_PARAM {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WAB_PROFILE_CONTENTS: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WAB_USE_OE_SENDMAIL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WAB_VCARD_FILE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const WAB_VCARD_STREAM: u32 = 1u32;
+#[repr(C)]
+pub struct _WABACTIONITEM(pub u8);
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
-pub union _PV {
+pub union __UPV {
     pub i: i16,
     pub l: i32,
     pub ul: u32,
@@ -1791,38 +1742,87 @@ pub union _PV {
     pub x: i32,
 }
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
-impl ::core::marker::Copy for _PV {}
+impl ::core::marker::Copy for __UPV {}
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
-impl ::core::clone::Clone for _PV {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-pub struct _WABACTIONITEM(pub u8);
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub struct _flaglist {
-    pub cFlags: u32,
-    pub ulFlag: [u32; 1],
-}
-impl ::core::marker::Copy for _flaglist {}
-impl ::core::clone::Clone for _flaglist {
+impl ::core::clone::Clone for __UPV {
     fn clone(&self) -> Self {
         *self
     }
 }
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const cchProfileNameMax: u32 = 64u32;
+pub type CALLERRELEASE = ::core::option::Option<unsafe extern "system" fn(ulcallerdata: u32, lptbldata: ITableData, lpvue: IMAPITable)>;
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const cchProfilePassMax: u32 = 64u32;
+pub type IWABOBJECT_AddRef_METHOD = ::core::option::Option<unsafe extern "system" fn() -> u32>;
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const fMapiUnicode: u32 = 0u32;
+pub type IWABOBJECT_AllocateBuffer_METHOD = ::core::option::Option<unsafe extern "system" fn(cbsize: u32, lppbuffer: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const hrSuccess: u32 = 0u32;
+pub type IWABOBJECT_AllocateMore_METHOD = ::core::option::Option<unsafe extern "system" fn(cbsize: u32, lpobject: *const ::core::ffi::c_void, lppbuffer: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const szHrDispatchNotifications: &str = "HrDispatchNotifications";
+pub type IWABOBJECT_Backup_METHOD = ::core::option::Option<unsafe extern "system" fn(lpfilename: ::windows_sys::core::PCSTR) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type IWABOBJECT_Find_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, hwnd: super::super::Foundation::HWND) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const szMAPINotificationMsg: &str = "MAPI Notify window message";
+pub type IWABOBJECT_FreeBuffer_METHOD = ::core::option::Option<unsafe extern "system" fn(lpbuffer: *const ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
-pub const szScCreateConversationIndex: &str = "ScCreateConversationIndex";
+pub type IWABOBJECT_GetLastError_METHOD = ::core::option::Option<unsafe extern "system" fn(hresult: ::windows_sys::core::HRESULT, ulflags: u32, lppmapierror: *mut *mut MAPIERROR) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type IWABOBJECT_GetMe_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, ulflags: u32, lpdwaction: *mut u32, lpsbeid: *mut SBinary, hwnd: super::super::Foundation::HWND) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type IWABOBJECT_Import_METHOD = ::core::option::Option<unsafe extern "system" fn(lpwip: ::windows_sys::core::PCSTR) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type IWABOBJECT_LDAPUrl_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, hwnd: super::super::Foundation::HWND, ulflags: u32, lpszurl: ::windows_sys::core::PCSTR, lppmailuser: *mut IMailUser) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type IWABOBJECT_QueryInterface_METHOD = ::core::option::Option<unsafe extern "system" fn(riid: *const ::windows_sys::core::GUID, ppvobj: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type IWABOBJECT_Release_METHOD = ::core::option::Option<unsafe extern "system" fn() -> u32>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type IWABOBJECT_SetMe_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, ulflags: u32, sbeid: SBinary, hwnd: super::super::Foundation::HWND) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type IWABOBJECT_VCardCreate_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, ulflags: u32, lpszvcard: ::windows_sys::core::PCSTR, lpmailuser: IMailUser) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type IWABOBJECT_VCardDisplay_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, hwnd: super::super::Foundation::HWND, lpszfilename: ::windows_sys::core::PCSTR) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type IWABOBJECT_VCardRetrieve_METHOD = ::core::option::Option<unsafe extern "system" fn(lpiab: IAddrBook, ulflags: u32, lpszvcard: ::windows_sys::core::PCSTR, lppmailuser: *mut IMailUser) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type LPALLOCATEBUFFER = ::core::option::Option<unsafe extern "system" fn(cbsize: u32, lppbuffer: *mut *mut ::core::ffi::c_void) -> i32>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type LPALLOCATEMORE = ::core::option::Option<unsafe extern "system" fn(cbsize: u32, lpobject: *mut ::core::ffi::c_void, lppbuffer: *mut *mut ::core::ffi::c_void) -> i32>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type LPCREATECONVERSATIONINDEX = ::core::option::Option<unsafe extern "system" fn(cbparent: u32, lpbparent: *mut u8, lpcbconvindex: *mut u32, lppbconvindex: *mut *mut u8) -> i32>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type LPDISPATCHNOTIFICATIONS = ::core::option::Option<unsafe extern "system" fn(ulflags: u32) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LPFNABSDI = ::core::option::Option<unsafe extern "system" fn(uluiparam: usize, lpvmsg: *mut ::core::ffi::c_void) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type LPFNBUTTON = ::core::option::Option<unsafe extern "system" fn(uluiparam: usize, lpvcontext: *mut ::core::ffi::c_void, cbentryid: u32, lpselection: *mut ENTRYID, ulflags: u32) -> i32>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type LPFNDISMISS = ::core::option::Option<unsafe extern "system" fn(uluiparam: usize, lpvcontext: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type LPFREEBUFFER = ::core::option::Option<unsafe extern "system" fn(lpbuffer: *mut ::core::ffi::c_void) -> u32>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
+pub type LPNOTIFCALLBACK = ::core::option::Option<unsafe extern "system" fn(lpvcontext: *mut ::core::ffi::c_void, cnotification: u32, lpnotifications: *mut NOTIFICATION) -> i32>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub type LPOPENSTREAMONFILE = ::core::option::Option<unsafe extern "system" fn(lpallocatebuffer: LPALLOCATEBUFFER, lpfreebuffer: LPFREEBUFFER, ulflags: u32, lpszfilename: *const i8, lpszprefix: *const i8, lppstream: *mut super::Com::IStream) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type LPWABALLOCATEBUFFER = ::core::option::Option<unsafe extern "system" fn(lpwabobject: IWABObject, cbsize: u32, lppbuffer: *mut *mut ::core::ffi::c_void) -> i32>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type LPWABALLOCATEMORE = ::core::option::Option<unsafe extern "system" fn(lpwabobject: IWABObject, cbsize: u32, lpobject: *mut ::core::ffi::c_void, lppbuffer: *mut *mut ::core::ffi::c_void) -> i32>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`*"]
+pub type LPWABFREEBUFFER = ::core::option::Option<unsafe extern "system" fn(lpwabobject: IWABObject, lpbuffer: *mut ::core::ffi::c_void) -> u32>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LPWABOPEN = ::core::option::Option<unsafe extern "system" fn(lppadrbook: *mut IAddrBook, lppwabobject: *mut IWABObject, lpwp: *mut WAB_PARAM, reserved2: u32) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LPWABOPENEX = ::core::option::Option<unsafe extern "system" fn(lppadrbook: *mut IAddrBook, lppwabobject: *mut IWABObject, lpwp: *mut WAB_PARAM, reserved: u32, fnallocatebuffer: LPALLOCATEBUFFER, fnallocatemore: LPALLOCATEMORE, fnfreebuffer: LPFREEBUFFER) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_AddressBook\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFNIDLE = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void) -> super::super::Foundation::BOOL>;

@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_EventLog\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -148,59 +148,18 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn ReportEventW(heventlog: EventSourceHandle, wtype: REPORT_EVENT_TYPE, wcategory: u16, dweventid: u32, lpusersid: super::super::Foundation::PSID, wnumstrings: u16, dwdatasize: u32, lpstrings: *const ::windows_sys::core::PWSTR, lprawdata: *const ::core::ffi::c_void) -> super::super::Foundation::BOOL;
 }
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub struct EVENTLOGRECORD {
-    pub Length: u32,
-    pub Reserved: u32,
-    pub RecordNumber: u32,
-    pub TimeGenerated: u32,
-    pub TimeWritten: u32,
-    pub EventID: u32,
-    pub EventType: REPORT_EVENT_TYPE,
-    pub NumStrings: u16,
-    pub EventCategory: u16,
-    pub ReservedFlags: u16,
-    pub ClosingRecordNumber: u32,
-    pub StringOffset: u32,
-    pub UserSidLength: u32,
-    pub UserSidOffset: u32,
-    pub DataLength: u32,
-    pub DataOffset: u32,
-}
-impl ::core::marker::Copy for EVENTLOGRECORD {}
-impl ::core::clone::Clone for EVENTLOGRECORD {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub struct EVENTLOG_FULL_INFORMATION {
-    pub dwFull: u32,
-}
-impl ::core::marker::Copy for EVENTLOG_FULL_INFORMATION {}
-impl ::core::clone::Clone for EVENTLOG_FULL_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub struct EVENTSFORLOGFILE {
-    pub ulSize: u32,
-    pub szLogicalLogFile: [u16; 256],
-    pub ulNumRecords: u32,
-    pub pEventLogRecords: [EVENTLOGRECORD; 1],
-}
-impl ::core::marker::Copy for EVENTSFORLOGFILE {}
-impl ::core::clone::Clone for EVENTSFORLOGFILE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
 pub const EVT_ALL_ACCESS: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVT_CLEAR_ACCESS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVT_READ_ACCESS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVT_VARIANT_TYPE_ARRAY: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVT_VARIANT_TYPE_MASK: u32 = 127u32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVT_WRITE_ACCESS: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
 pub type EVT_CHANNEL_CLOCK_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
@@ -281,8 +240,6 @@ pub const EvtChannelTypeOperational: EVT_CHANNEL_TYPE = 1i32;
 pub const EvtChannelTypeAnalytic: EVT_CHANNEL_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
 pub const EvtChannelTypeDebug: EVT_CHANNEL_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVT_CLEAR_ACCESS: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
 pub type EVT_EVENT_METADATA_PROPERTY_ID = i32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
@@ -454,8 +411,6 @@ pub const EvtQueryStatuses: EVT_QUERY_PROPERTY_ID = 1i32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
 pub const EvtQueryPropertyIdEND: EVT_QUERY_PROPERTY_ID = 2i32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVT_READ_ACCESS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
 pub type EVT_RENDER_CONTEXT_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
 pub const EvtRenderContextValues: EVT_RENDER_CONTEXT_FLAGS = 0i32;
@@ -471,21 +426,6 @@ pub const EvtRenderEventValues: EVT_RENDER_FLAGS = 0i32;
 pub const EvtRenderEventXml: EVT_RENDER_FLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
 pub const EvtRenderBookmark: EVT_RENDER_FLAGS = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub struct EVT_RPC_LOGIN {
-    pub Server: ::windows_sys::core::PWSTR,
-    pub User: ::windows_sys::core::PWSTR,
-    pub Domain: ::windows_sys::core::PWSTR,
-    pub Password: ::windows_sys::core::PWSTR,
-    pub Flags: u32,
-}
-impl ::core::marker::Copy for EVT_RPC_LOGIN {}
-impl ::core::clone::Clone for EVT_RPC_LOGIN {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
 pub type EVT_RPC_LOGIN_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
@@ -510,8 +450,6 @@ pub const EvtSeekRelativeToBookmark: EVT_SEEK_FLAGS = 4i32;
 pub const EvtSeekOriginMask: EVT_SEEK_FLAGS = 7i32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
 pub const EvtSeekStrict: EVT_SEEK_FLAGS = 65536i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub type EVT_SUBSCRIBE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(action: EVT_SUBSCRIBE_NOTIFY_ACTION, usercontext: *const ::core::ffi::c_void, event: isize) -> u32>;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
 pub type EVT_SUBSCRIBE_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
@@ -572,6 +510,142 @@ pub const EvtSystemUserID: EVT_SYSTEM_PROPERTY_ID = 16i32;
 pub const EvtSystemVersion: EVT_SYSTEM_PROPERTY_ID = 17i32;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
 pub const EvtSystemPropertyIdEND: EVT_SYSTEM_PROPERTY_ID = 18i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub type EVT_VARIANT_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeNull: EVT_VARIANT_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeString: EVT_VARIANT_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeAnsiString: EVT_VARIANT_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeSByte: EVT_VARIANT_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeByte: EVT_VARIANT_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeInt16: EVT_VARIANT_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeUInt16: EVT_VARIANT_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeInt32: EVT_VARIANT_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeUInt32: EVT_VARIANT_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeInt64: EVT_VARIANT_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeUInt64: EVT_VARIANT_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeSingle: EVT_VARIANT_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeDouble: EVT_VARIANT_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeBoolean: EVT_VARIANT_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeBinary: EVT_VARIANT_TYPE = 14i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeGuid: EVT_VARIANT_TYPE = 15i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeSizeT: EVT_VARIANT_TYPE = 16i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeFileTime: EVT_VARIANT_TYPE = 17i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeSysTime: EVT_VARIANT_TYPE = 18i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeSid: EVT_VARIANT_TYPE = 19i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeHexInt32: EVT_VARIANT_TYPE = 20i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeHexInt64: EVT_VARIANT_TYPE = 21i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeEvtHandle: EVT_VARIANT_TYPE = 32i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EvtVarTypeEvtXml: EVT_VARIANT_TYPE = 35i32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub type READ_EVENT_LOG_READ_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVENTLOG_SEEK_READ: READ_EVENT_LOG_READ_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVENTLOG_SEQUENTIAL_READ: READ_EVENT_LOG_READ_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub type REPORT_EVENT_TYPE = u16;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVENTLOG_SUCCESS: REPORT_EVENT_TYPE = 0u16;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVENTLOG_AUDIT_FAILURE: REPORT_EVENT_TYPE = 16u16;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVENTLOG_AUDIT_SUCCESS: REPORT_EVENT_TYPE = 8u16;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVENTLOG_ERROR_TYPE: REPORT_EVENT_TYPE = 1u16;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVENTLOG_INFORMATION_TYPE: REPORT_EVENT_TYPE = 4u16;
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub const EVENTLOG_WARNING_TYPE: REPORT_EVENT_TYPE = 2u16;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub struct EVENTLOGRECORD {
+    pub Length: u32,
+    pub Reserved: u32,
+    pub RecordNumber: u32,
+    pub TimeGenerated: u32,
+    pub TimeWritten: u32,
+    pub EventID: u32,
+    pub EventType: REPORT_EVENT_TYPE,
+    pub NumStrings: u16,
+    pub EventCategory: u16,
+    pub ReservedFlags: u16,
+    pub ClosingRecordNumber: u32,
+    pub StringOffset: u32,
+    pub UserSidLength: u32,
+    pub UserSidOffset: u32,
+    pub DataLength: u32,
+    pub DataOffset: u32,
+}
+impl ::core::marker::Copy for EVENTLOGRECORD {}
+impl ::core::clone::Clone for EVENTLOGRECORD {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub struct EVENTLOG_FULL_INFORMATION {
+    pub dwFull: u32,
+}
+impl ::core::marker::Copy for EVENTLOG_FULL_INFORMATION {}
+impl ::core::clone::Clone for EVENTLOG_FULL_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub struct EVENTSFORLOGFILE {
+    pub ulSize: u32,
+    pub szLogicalLogFile: [u16; 256],
+    pub ulNumRecords: u32,
+    pub pEventLogRecords: [EVENTLOGRECORD; 1],
+}
+impl ::core::marker::Copy for EVENTSFORLOGFILE {}
+impl ::core::clone::Clone for EVENTSFORLOGFILE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
+pub struct EVT_RPC_LOGIN {
+    pub Server: ::windows_sys::core::PWSTR,
+    pub User: ::windows_sys::core::PWSTR,
+    pub Domain: ::windows_sys::core::PWSTR,
+    pub Password: ::windows_sys::core::PWSTR,
+    pub Flags: u32,
+}
+impl ::core::marker::Copy for EVT_RPC_LOGIN {}
+impl ::core::clone::Clone for EVT_RPC_LOGIN {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_EventLog\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -641,81 +715,7 @@ impl ::core::clone::Clone for EVT_VARIANT_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub type EVT_VARIANT_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeNull: EVT_VARIANT_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeString: EVT_VARIANT_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeAnsiString: EVT_VARIANT_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeSByte: EVT_VARIANT_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeByte: EVT_VARIANT_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeInt16: EVT_VARIANT_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeUInt16: EVT_VARIANT_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeInt32: EVT_VARIANT_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeUInt32: EVT_VARIANT_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeInt64: EVT_VARIANT_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeUInt64: EVT_VARIANT_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeSingle: EVT_VARIANT_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeDouble: EVT_VARIANT_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeBoolean: EVT_VARIANT_TYPE = 13i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeBinary: EVT_VARIANT_TYPE = 14i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeGuid: EVT_VARIANT_TYPE = 15i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeSizeT: EVT_VARIANT_TYPE = 16i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeFileTime: EVT_VARIANT_TYPE = 17i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeSysTime: EVT_VARIANT_TYPE = 18i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeSid: EVT_VARIANT_TYPE = 19i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeHexInt32: EVT_VARIANT_TYPE = 20i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeHexInt64: EVT_VARIANT_TYPE = 21i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeEvtHandle: EVT_VARIANT_TYPE = 32i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EvtVarTypeEvtXml: EVT_VARIANT_TYPE = 35i32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVT_VARIANT_TYPE_ARRAY: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVT_VARIANT_TYPE_MASK: u32 = 127u32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVT_WRITE_ACCESS: u32 = 2u32;
 pub type EventLogHandle = isize;
 pub type EventSourceHandle = isize;
 #[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub type READ_EVENT_LOG_READ_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVENTLOG_SEEK_READ: READ_EVENT_LOG_READ_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVENTLOG_SEQUENTIAL_READ: READ_EVENT_LOG_READ_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub type REPORT_EVENT_TYPE = u16;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVENTLOG_SUCCESS: REPORT_EVENT_TYPE = 0u16;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVENTLOG_AUDIT_FAILURE: REPORT_EVENT_TYPE = 16u16;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVENTLOG_AUDIT_SUCCESS: REPORT_EVENT_TYPE = 8u16;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVENTLOG_ERROR_TYPE: REPORT_EVENT_TYPE = 1u16;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVENTLOG_INFORMATION_TYPE: REPORT_EVENT_TYPE = 4u16;
-#[doc = "*Required features: `\"Win32_System_EventLog\"`*"]
-pub const EVENTLOG_WARNING_TYPE: REPORT_EVENT_TYPE = 2u16;
+pub type EVT_SUBSCRIBE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(action: EVT_SUBSCRIBE_NOTIFY_ACTION, usercontext: *const ::core::ffi::c_void, event: isize) -> u32>;

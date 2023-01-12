@@ -1,3 +1,90 @@
+pub type IMXAttributes = *mut ::core::ffi::c_void;
+pub type IMXNamespaceManager = *mut ::core::ffi::c_void;
+pub type IMXNamespacePrefixes = *mut ::core::ffi::c_void;
+pub type IMXReaderControl = *mut ::core::ffi::c_void;
+pub type IMXSchemaDeclHandler = *mut ::core::ffi::c_void;
+pub type IMXWriter = *mut ::core::ffi::c_void;
+pub type IMXXMLFilter = *mut ::core::ffi::c_void;
+pub type ISAXAttributes = *mut ::core::ffi::c_void;
+pub type ISAXContentHandler = *mut ::core::ffi::c_void;
+pub type ISAXDTDHandler = *mut ::core::ffi::c_void;
+pub type ISAXDeclHandler = *mut ::core::ffi::c_void;
+pub type ISAXEntityResolver = *mut ::core::ffi::c_void;
+pub type ISAXErrorHandler = *mut ::core::ffi::c_void;
+pub type ISAXLexicalHandler = *mut ::core::ffi::c_void;
+pub type ISAXLocator = *mut ::core::ffi::c_void;
+pub type ISAXXMLFilter = *mut ::core::ffi::c_void;
+pub type ISAXXMLReader = *mut ::core::ffi::c_void;
+pub type ISchema = *mut ::core::ffi::c_void;
+pub type ISchemaAny = *mut ::core::ffi::c_void;
+pub type ISchemaAttribute = *mut ::core::ffi::c_void;
+pub type ISchemaAttributeGroup = *mut ::core::ffi::c_void;
+pub type ISchemaComplexType = *mut ::core::ffi::c_void;
+pub type ISchemaElement = *mut ::core::ffi::c_void;
+pub type ISchemaIdentityConstraint = *mut ::core::ffi::c_void;
+pub type ISchemaItem = *mut ::core::ffi::c_void;
+pub type ISchemaItemCollection = *mut ::core::ffi::c_void;
+pub type ISchemaModelGroup = *mut ::core::ffi::c_void;
+pub type ISchemaNotation = *mut ::core::ffi::c_void;
+pub type ISchemaParticle = *mut ::core::ffi::c_void;
+pub type ISchemaStringCollection = *mut ::core::ffi::c_void;
+pub type ISchemaType = *mut ::core::ffi::c_void;
+pub type IServerXMLHTTPRequest = *mut ::core::ffi::c_void;
+pub type IServerXMLHTTPRequest2 = *mut ::core::ffi::c_void;
+pub type IVBMXNamespaceManager = *mut ::core::ffi::c_void;
+pub type IVBSAXAttributes = *mut ::core::ffi::c_void;
+pub type IVBSAXContentHandler = *mut ::core::ffi::c_void;
+pub type IVBSAXDTDHandler = *mut ::core::ffi::c_void;
+pub type IVBSAXDeclHandler = *mut ::core::ffi::c_void;
+pub type IVBSAXEntityResolver = *mut ::core::ffi::c_void;
+pub type IVBSAXErrorHandler = *mut ::core::ffi::c_void;
+pub type IVBSAXLexicalHandler = *mut ::core::ffi::c_void;
+pub type IVBSAXLocator = *mut ::core::ffi::c_void;
+pub type IVBSAXXMLFilter = *mut ::core::ffi::c_void;
+pub type IVBSAXXMLReader = *mut ::core::ffi::c_void;
+pub type IXMLAttribute = *mut ::core::ffi::c_void;
+pub type IXMLDOMAttribute = *mut ::core::ffi::c_void;
+pub type IXMLDOMCDATASection = *mut ::core::ffi::c_void;
+pub type IXMLDOMCharacterData = *mut ::core::ffi::c_void;
+pub type IXMLDOMComment = *mut ::core::ffi::c_void;
+pub type IXMLDOMDocument = *mut ::core::ffi::c_void;
+pub type IXMLDOMDocument2 = *mut ::core::ffi::c_void;
+pub type IXMLDOMDocument3 = *mut ::core::ffi::c_void;
+pub type IXMLDOMDocumentFragment = *mut ::core::ffi::c_void;
+pub type IXMLDOMDocumentType = *mut ::core::ffi::c_void;
+pub type IXMLDOMElement = *mut ::core::ffi::c_void;
+pub type IXMLDOMEntity = *mut ::core::ffi::c_void;
+pub type IXMLDOMEntityReference = *mut ::core::ffi::c_void;
+pub type IXMLDOMImplementation = *mut ::core::ffi::c_void;
+pub type IXMLDOMNamedNodeMap = *mut ::core::ffi::c_void;
+pub type IXMLDOMNode = *mut ::core::ffi::c_void;
+pub type IXMLDOMNodeList = *mut ::core::ffi::c_void;
+pub type IXMLDOMNotation = *mut ::core::ffi::c_void;
+pub type IXMLDOMParseError = *mut ::core::ffi::c_void;
+pub type IXMLDOMParseError2 = *mut ::core::ffi::c_void;
+pub type IXMLDOMParseErrorCollection = *mut ::core::ffi::c_void;
+pub type IXMLDOMProcessingInstruction = *mut ::core::ffi::c_void;
+pub type IXMLDOMSchemaCollection = *mut ::core::ffi::c_void;
+pub type IXMLDOMSchemaCollection2 = *mut ::core::ffi::c_void;
+pub type IXMLDOMSelection = *mut ::core::ffi::c_void;
+pub type IXMLDOMText = *mut ::core::ffi::c_void;
+pub type IXMLDSOControl = *mut ::core::ffi::c_void;
+pub type IXMLDocument = *mut ::core::ffi::c_void;
+pub type IXMLDocument2 = *mut ::core::ffi::c_void;
+pub type IXMLElement = *mut ::core::ffi::c_void;
+pub type IXMLElement2 = *mut ::core::ffi::c_void;
+pub type IXMLElementCollection = *mut ::core::ffi::c_void;
+pub type IXMLError = *mut ::core::ffi::c_void;
+pub type IXMLHTTPRequest = *mut ::core::ffi::c_void;
+pub type IXMLHTTPRequest2 = *mut ::core::ffi::c_void;
+pub type IXMLHTTPRequest2Callback = *mut ::core::ffi::c_void;
+pub type IXMLHTTPRequest3 = *mut ::core::ffi::c_void;
+pub type IXMLHTTPRequest3Callback = *mut ::core::ffi::c_void;
+pub type IXMLHttpRequest = *mut ::core::ffi::c_void;
+pub type IXSLProcessor = *mut ::core::ffi::c_void;
+pub type IXSLTemplate = *mut ::core::ffi::c_void;
+pub type IXTLRuntime = *mut ::core::ffi::c_void;
+pub type XMLDOMDocumentEvents = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub const DISPID_DOM_ATTRIBUTE: u32 = 117u32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
@@ -1094,6 +1181,32 @@ pub const DOMDocument: ::windows_sys::core::GUID = ::windows_sys::core::GUID { d
 pub const DOMDocument60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949829, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
 pub const DOMFreeThreadedDocument: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 691257233, data2: 31542, data3: 4562, data4: [178, 14, 0, 192, 79, 152, 62, 96] };
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
+pub const E_XML_BUFFERTOOSMALL: i32 = -1072897498i32;
+#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
+pub const E_XML_INVALID: i32 = -1072897499i32;
+#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
+pub const E_XML_NODTD: i32 = -1072897500i32;
+#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
+pub const E_XML_NOTWF: i32 = -1072897501i32;
+pub const FreeThreadedDOMDocument60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949830, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
+pub const FreeThreadedXMLHTTP60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949833, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
+pub const MXHTMLWriter60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949840, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
+pub const MXNamespaceManager60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949841, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
+pub const MXXMLWriter60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949839, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
+pub const SAXAttributes60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949838, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
+pub const SAXXMLReader60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949836, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
+pub const ServerXMLHTTP60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949835, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
+#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
+pub const XHR_PROP_ONDATA_ALWAYS: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
+pub const XHR_PROP_ONDATA_NEVER: u64 = 18446744073709551615u64;
+pub const XMLDSOControl: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1426971184, data2: 1345, data3: 4562, data4: [156, 169, 0, 96, 176, 236, 61, 57] };
+pub const XMLDocument: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3485702575, data2: 55414, data3: 4560, data4: [156, 16, 0, 192, 79, 201, 156, 142] };
+pub const XMLHTTP60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949834, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
+pub const XMLHTTPRequest: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3985379470, data2: 17225, data3: 4562, data4: [145, 164, 0, 192, 79, 121, 105, 232] };
+pub const XMLSchemaCache60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949831, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
+pub const XSLTemplate60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949832, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
+#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub type DOMNodeType = i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub const NODE_INVALID: DOMNodeType = 0i32;
@@ -1121,107 +1234,6 @@ pub const NODE_DOCUMENT_TYPE: DOMNodeType = 10i32;
 pub const NODE_DOCUMENT_FRAGMENT: DOMNodeType = 11i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub const NODE_NOTATION: DOMNodeType = 12i32;
-#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const E_XML_BUFFERTOOSMALL: i32 = -1072897498i32;
-#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const E_XML_INVALID: i32 = -1072897499i32;
-#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const E_XML_NODTD: i32 = -1072897500i32;
-#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const E_XML_NOTWF: i32 = -1072897501i32;
-pub const FreeThreadedDOMDocument60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949830, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
-pub const FreeThreadedXMLHTTP60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949833, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
-pub type IMXAttributes = *mut ::core::ffi::c_void;
-pub type IMXNamespaceManager = *mut ::core::ffi::c_void;
-pub type IMXNamespacePrefixes = *mut ::core::ffi::c_void;
-pub type IMXReaderControl = *mut ::core::ffi::c_void;
-pub type IMXSchemaDeclHandler = *mut ::core::ffi::c_void;
-pub type IMXWriter = *mut ::core::ffi::c_void;
-pub type IMXXMLFilter = *mut ::core::ffi::c_void;
-pub type ISAXAttributes = *mut ::core::ffi::c_void;
-pub type ISAXContentHandler = *mut ::core::ffi::c_void;
-pub type ISAXDTDHandler = *mut ::core::ffi::c_void;
-pub type ISAXDeclHandler = *mut ::core::ffi::c_void;
-pub type ISAXEntityResolver = *mut ::core::ffi::c_void;
-pub type ISAXErrorHandler = *mut ::core::ffi::c_void;
-pub type ISAXLexicalHandler = *mut ::core::ffi::c_void;
-pub type ISAXLocator = *mut ::core::ffi::c_void;
-pub type ISAXXMLFilter = *mut ::core::ffi::c_void;
-pub type ISAXXMLReader = *mut ::core::ffi::c_void;
-pub type ISchema = *mut ::core::ffi::c_void;
-pub type ISchemaAny = *mut ::core::ffi::c_void;
-pub type ISchemaAttribute = *mut ::core::ffi::c_void;
-pub type ISchemaAttributeGroup = *mut ::core::ffi::c_void;
-pub type ISchemaComplexType = *mut ::core::ffi::c_void;
-pub type ISchemaElement = *mut ::core::ffi::c_void;
-pub type ISchemaIdentityConstraint = *mut ::core::ffi::c_void;
-pub type ISchemaItem = *mut ::core::ffi::c_void;
-pub type ISchemaItemCollection = *mut ::core::ffi::c_void;
-pub type ISchemaModelGroup = *mut ::core::ffi::c_void;
-pub type ISchemaNotation = *mut ::core::ffi::c_void;
-pub type ISchemaParticle = *mut ::core::ffi::c_void;
-pub type ISchemaStringCollection = *mut ::core::ffi::c_void;
-pub type ISchemaType = *mut ::core::ffi::c_void;
-pub type IServerXMLHTTPRequest = *mut ::core::ffi::c_void;
-pub type IServerXMLHTTPRequest2 = *mut ::core::ffi::c_void;
-pub type IVBMXNamespaceManager = *mut ::core::ffi::c_void;
-pub type IVBSAXAttributes = *mut ::core::ffi::c_void;
-pub type IVBSAXContentHandler = *mut ::core::ffi::c_void;
-pub type IVBSAXDTDHandler = *mut ::core::ffi::c_void;
-pub type IVBSAXDeclHandler = *mut ::core::ffi::c_void;
-pub type IVBSAXEntityResolver = *mut ::core::ffi::c_void;
-pub type IVBSAXErrorHandler = *mut ::core::ffi::c_void;
-pub type IVBSAXLexicalHandler = *mut ::core::ffi::c_void;
-pub type IVBSAXLocator = *mut ::core::ffi::c_void;
-pub type IVBSAXXMLFilter = *mut ::core::ffi::c_void;
-pub type IVBSAXXMLReader = *mut ::core::ffi::c_void;
-pub type IXMLAttribute = *mut ::core::ffi::c_void;
-pub type IXMLDOMAttribute = *mut ::core::ffi::c_void;
-pub type IXMLDOMCDATASection = *mut ::core::ffi::c_void;
-pub type IXMLDOMCharacterData = *mut ::core::ffi::c_void;
-pub type IXMLDOMComment = *mut ::core::ffi::c_void;
-pub type IXMLDOMDocument = *mut ::core::ffi::c_void;
-pub type IXMLDOMDocument2 = *mut ::core::ffi::c_void;
-pub type IXMLDOMDocument3 = *mut ::core::ffi::c_void;
-pub type IXMLDOMDocumentFragment = *mut ::core::ffi::c_void;
-pub type IXMLDOMDocumentType = *mut ::core::ffi::c_void;
-pub type IXMLDOMElement = *mut ::core::ffi::c_void;
-pub type IXMLDOMEntity = *mut ::core::ffi::c_void;
-pub type IXMLDOMEntityReference = *mut ::core::ffi::c_void;
-pub type IXMLDOMImplementation = *mut ::core::ffi::c_void;
-pub type IXMLDOMNamedNodeMap = *mut ::core::ffi::c_void;
-pub type IXMLDOMNode = *mut ::core::ffi::c_void;
-pub type IXMLDOMNodeList = *mut ::core::ffi::c_void;
-pub type IXMLDOMNotation = *mut ::core::ffi::c_void;
-pub type IXMLDOMParseError = *mut ::core::ffi::c_void;
-pub type IXMLDOMParseError2 = *mut ::core::ffi::c_void;
-pub type IXMLDOMParseErrorCollection = *mut ::core::ffi::c_void;
-pub type IXMLDOMProcessingInstruction = *mut ::core::ffi::c_void;
-pub type IXMLDOMSchemaCollection = *mut ::core::ffi::c_void;
-pub type IXMLDOMSchemaCollection2 = *mut ::core::ffi::c_void;
-pub type IXMLDOMSelection = *mut ::core::ffi::c_void;
-pub type IXMLDOMText = *mut ::core::ffi::c_void;
-pub type IXMLDSOControl = *mut ::core::ffi::c_void;
-pub type IXMLDocument = *mut ::core::ffi::c_void;
-pub type IXMLDocument2 = *mut ::core::ffi::c_void;
-pub type IXMLElement = *mut ::core::ffi::c_void;
-pub type IXMLElement2 = *mut ::core::ffi::c_void;
-pub type IXMLElementCollection = *mut ::core::ffi::c_void;
-pub type IXMLError = *mut ::core::ffi::c_void;
-pub type IXMLHTTPRequest = *mut ::core::ffi::c_void;
-pub type IXMLHTTPRequest2 = *mut ::core::ffi::c_void;
-pub type IXMLHTTPRequest2Callback = *mut ::core::ffi::c_void;
-pub type IXMLHTTPRequest3 = *mut ::core::ffi::c_void;
-pub type IXMLHTTPRequest3Callback = *mut ::core::ffi::c_void;
-pub type IXMLHttpRequest = *mut ::core::ffi::c_void;
-pub type IXSLProcessor = *mut ::core::ffi::c_void;
-pub type IXSLTemplate = *mut ::core::ffi::c_void;
-pub type IXTLRuntime = *mut ::core::ffi::c_void;
-pub const MXHTMLWriter60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949840, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
-pub const MXNamespaceManager60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949841, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
-pub const MXXMLWriter60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949839, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
-pub const SAXAttributes60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949838, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
-pub const SAXXMLReader60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949836, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub type SCHEMACONTENTTYPE = i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
@@ -1470,7 +1482,6 @@ pub const SXH_SERVER_CERT_IGNORE_CERT_CN_INVALID: SXH_SERVER_CERT_OPTION = 4096i
 pub const SXH_SERVER_CERT_IGNORE_CERT_DATE_INVALID: SXH_SERVER_CERT_OPTION = 8192i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub const SXH_SERVER_CERT_IGNORE_ALL_SERVER_ERRORS: SXH_SERVER_CERT_OPTION = 13056i32;
-pub const ServerXMLHTTP60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949835, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub type XHR_AUTH = i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
@@ -1479,18 +1490,6 @@ pub const XHR_AUTH_ALL: XHR_AUTH = 0i32;
 pub const XHR_AUTH_NONE: XHR_AUTH = 1i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub const XHR_AUTH_PROXY: XHR_AUTH = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub struct XHR_CERT {
-    pub cbCert: u32,
-    pub pbCert: *mut u8,
-}
-impl ::core::marker::Copy for XHR_CERT {}
-impl ::core::clone::Clone for XHR_CERT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub type XHR_CERT_ERROR_FLAG = u32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
@@ -1515,25 +1514,6 @@ pub const XHR_CERT_IGNORE_CERT_CN_INVALID: XHR_CERT_IGNORE_FLAG = 4096u32;
 pub const XHR_CERT_IGNORE_CERT_DATE_INVALID: XHR_CERT_IGNORE_FLAG = 8192u32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub const XHR_CERT_IGNORE_ALL_SERVER_ERRORS: XHR_CERT_IGNORE_FLAG = 12672u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct XHR_COOKIE {
-    pub pwszUrl: ::windows_sys::core::PWSTR,
-    pub pwszName: ::windows_sys::core::PWSTR,
-    pub pwszValue: ::windows_sys::core::PWSTR,
-    pub pwszP3PPolicy: ::windows_sys::core::PWSTR,
-    pub ftExpires: super::super::super::Foundation::FILETIME,
-    pub dwFlags: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for XHR_COOKIE {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for XHR_COOKIE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub type XHR_COOKIE_FLAG = i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
@@ -1609,53 +1589,70 @@ pub const XHR_PROP_SET_ENTERPRISEID: XHR_PROPERTY = 10i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub const XHR_PROP_MAX_CONNECTIONS: XHR_PROPERTY = 11i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const XHR_PROP_ONDATA_ALWAYS: u32 = 0u32;
+pub type XMLELEM_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const XHR_PROP_ONDATA_NEVER: u64 = 18446744073709551615u64;
-pub type XMLDOMDocumentEvents = *mut ::core::ffi::c_void;
-pub const XMLDSOControl: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1426971184, data2: 1345, data3: 4562, data4: [156, 169, 0, 96, 176, 236, 61, 57] };
-pub const XMLDocument: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3485702575, data2: 55414, data3: 4560, data4: [156, 16, 0, 192, 79, 201, 156, 142] };
+pub const XMLELEMTYPE_ELEMENT: XMLELEM_TYPE = 0i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub type XMLEMEM_TYPE = i32;
+pub const XMLELEMTYPE_TEXT: XMLELEM_TYPE = 1i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const XMLELEMTYPE_ELEMENT: XMLEMEM_TYPE = 0i32;
+pub const XMLELEMTYPE_COMMENT: XMLELEM_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const XMLELEMTYPE_TEXT: XMLEMEM_TYPE = 1i32;
+pub const XMLELEMTYPE_DOCUMENT: XMLELEM_TYPE = 3i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const XMLELEMTYPE_COMMENT: XMLEMEM_TYPE = 2i32;
+pub const XMLELEMTYPE_DTD: XMLELEM_TYPE = 4i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const XMLELEMTYPE_DOCUMENT: XMLEMEM_TYPE = 3i32;
+pub const XMLELEMTYPE_PI: XMLELEM_TYPE = 5i32;
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const XMLELEMTYPE_DTD: XMLEMEM_TYPE = 4i32;
+pub const XMLELEMTYPE_OTHER: XMLELEM_TYPE = 6i32;
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const XMLELEMTYPE_PI: XMLEMEM_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
-pub const XMLELEMTYPE_OTHER: XMLEMEM_TYPE = 6i32;
-pub const XMLHTTP60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949834, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
-pub const XMLHTTPRequest: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3985379470, data2: 17225, data3: 4562, data4: [145, 164, 0, 192, 79, 121, 105, 232] };
-pub const XMLSchemaCache60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949831, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
+pub struct XHR_CERT {
+    pub cbCert: u32,
+    pub pbCert: *mut u8,
+}
+impl ::core::marker::Copy for XHR_CERT {}
+impl ::core::clone::Clone for XHR_CERT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
+pub struct XHR_COOKIE {
+    pub pwszUrl: ::windows_sys::core::PWSTR,
+    pub pwszName: ::windows_sys::core::PWSTR,
+    pub pwszValue: ::windows_sys::core::PWSTR,
+    pub pwszP3PPolicy: ::windows_sys::core::PWSTR,
+    pub ftExpires: super::super::super::Foundation::FILETIME,
+    pub dwFlags: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for XHR_COOKIE {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for XHR_COOKIE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub struct XML_ERROR {
     pub _nLine: u32,
-    pub _pchBuf: super::super::super::Foundation::BSTR,
+    pub _pchBuf: ::windows_sys::core::BSTR,
     pub _cchBuf: u32,
     pub _ich: u32,
-    pub _pszFound: super::super::super::Foundation::BSTR,
-    pub _pszExpected: super::super::super::Foundation::BSTR,
+    pub _pszFound: ::windows_sys::core::BSTR,
+    pub _pszExpected: ::windows_sys::core::BSTR,
     pub _reserved1: u32,
     pub _reserved2: u32,
 }
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::marker::Copy for XML_ERROR {}
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::clone::Clone for XML_ERROR {
     fn clone(&self) -> Self {
         *self
     }
 }
-pub const XSLTemplate60: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2295949832, data2: 61842, data3: 4564, data4: [166, 95, 0, 64, 150, 50, 81, 229] };
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Data_Xml_MsXml\"`*"]
 pub struct __msxml6_ReferenceRemainingTypes__ {

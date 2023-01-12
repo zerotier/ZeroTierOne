@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_Registry\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -354,25 +354,6 @@ pub const DRIVERSIGN_BLOCKING: u32 = 2u32;
 pub const DRIVERSIGN_NONE: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const DRIVERSIGN_WARNING: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub struct DSKTLSYSTEMTIME {
-    pub wYear: u16,
-    pub wMonth: u16,
-    pub wDayOfWeek: u16,
-    pub wDay: u16,
-    pub wHour: u16,
-    pub wMinute: u16,
-    pub wSecond: u16,
-    pub wMilliseconds: u16,
-    pub wResult: u16,
-}
-impl ::core::marker::Copy for DSKTLSYSTEMTIME {}
-impl ::core::clone::Clone for DSKTLSYSTEMTIME {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const DTRESULTFIX: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
@@ -387,7 +368,6 @@ pub const EISAFLAG_NO_IO_MERGE: u32 = 1u32;
 pub const EISAFLAG_SLOT_IO_FIRST: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const EISA_NO_MAX_FUNCTION: u32 = 255u32;
-pub type HKEY = isize;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const HKEY_CLASSES_ROOT: HKEY = -2147483648i32 as _;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
@@ -512,8 +492,6 @@ pub const PIR_STATUS_TABLE_REALMODE: u32 = 2u32;
 pub const PIR_STATUS_TABLE_REGISTRY: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const PIR_STATUS_TABLE_SUCCESS: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub type PQUERYHANDLER = ::core::option::Option<unsafe extern "system" fn(keycontext: *mut ::core::ffi::c_void, val_list: *mut val_context, num_vals: u32, outputbuffer: *mut ::core::ffi::c_void, total_outlen: *mut u32, input_blen: u32) -> u32>;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const PROVIDER_KEEPS_VALUE_LENGTH: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
@@ -2047,15 +2025,61 @@ pub const REGSTR_VAL_WRKGRP_FORCEMAPPING: &str = "WrkgrpForceMapping";
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const REGSTR_VAL_WRKGRP_REQUIRED: &str = "WrkgrpRequired";
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const REG_KEY_INSTDEV: &str = "Installed";
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const REG_MUI_STRING_TRUNCATE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const REG_PROCESS_APPKEY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const REG_SECURE_CONNECTION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const REG_USE_CURRENT_SECURITY_CONTEXT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const RRF_NOEXPAND: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const RRF_SUBKEY_WOW6432KEY: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const RRF_SUBKEY_WOW6464KEY: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const RRF_WOW64_MASK: u32 = 196608u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const RRF_ZEROONFAILURE: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const SUF_BATCHINF: i32 = 4i32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const SUF_CLEAN: i32 = 8i32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const SUF_EXPRESS: i32 = 2i32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const SUF_FIRSTTIME: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const SUF_INSETUP: i32 = 16i32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const SUF_NETHDBOOT: i32 = 64i32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const SUF_NETRPLBOOT: i32 = 128i32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const SUF_NETSETUP: i32 = 32i32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const SUF_SBSCOPYOK: i32 = 256i32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const VPDF_DISABLEPWRMGMT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const VPDF_DISABLEPWRSTATUSPOLL: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const VPDF_DISABLERINGRESUME: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const VPDF_FORCEAPM10MODE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const VPDF_SHOWMULTIBATT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub const VPDF_SKIPINTELSLCHECK: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub type REG_CREATE_KEY_DISPOSITION = u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const REG_CREATED_NEW_KEY: REG_CREATE_KEY_DISPOSITION = 1u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const REG_OPENED_EXISTING_KEY: REG_CREATE_KEY_DISPOSITION = 2u32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const REG_KEY_INSTDEV: &str = "Installed";
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const REG_MUI_STRING_TRUNCATE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub type REG_NOTIFY_FILTER = u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
@@ -2084,8 +2108,6 @@ pub const REG_OPTION_BACKUP_RESTORE: REG_OPEN_CREATE_OPTIONS = 4u32;
 pub const REG_OPTION_OPEN_LINK: REG_OPEN_CREATE_OPTIONS = 8u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const REG_OPTION_DONT_VIRTUALIZE: REG_OPEN_CREATE_OPTIONS = 16u32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const REG_PROCESS_APPKEY: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub type REG_RESTORE_KEY_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
@@ -2129,10 +2151,6 @@ pub const REG_LATEST_FORMAT: REG_SAVE_FORMAT = 2u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const REG_NO_COMPRESSION: REG_SAVE_FORMAT = 4u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const REG_SECURE_CONNECTION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const REG_USE_CURRENT_SECURITY_CONTEXT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub type REG_VALUE_TYPE = u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const REG_NONE: REG_VALUE_TYPE = 0u32;
@@ -2163,8 +2181,6 @@ pub const REG_QWORD: REG_VALUE_TYPE = 11u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const REG_QWORD_LITTLE_ENDIAN: REG_VALUE_TYPE = 11u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const RRF_NOEXPAND: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub type RRF_RT = u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const RRF_RT_ANY: RRF_RT = 65535u32;
@@ -2186,32 +2202,70 @@ pub const RRF_RT_REG_NONE: RRF_RT = 1u32;
 pub const RRF_RT_REG_QWORD: RRF_RT = 64u32;
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub const RRF_RT_REG_SZ: RRF_RT = 2u32;
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const RRF_SUBKEY_WOW6432KEY: u32 = 131072u32;
+pub struct DSKTLSYSTEMTIME {
+    pub wYear: u16,
+    pub wMonth: u16,
+    pub wDayOfWeek: u16,
+    pub wDay: u16,
+    pub wHour: u16,
+    pub wMinute: u16,
+    pub wSecond: u16,
+    pub wMilliseconds: u16,
+    pub wResult: u16,
+}
+impl ::core::marker::Copy for DSKTLSYSTEMTIME {}
+impl ::core::clone::Clone for DSKTLSYSTEMTIME {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type HKEY = isize;
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const RRF_SUBKEY_WOW6464KEY: u32 = 65536u32;
+pub struct PVALUEA {
+    pub pv_valuename: ::windows_sys::core::PSTR,
+    pub pv_valuelen: i32,
+    pub pv_value_context: *mut ::core::ffi::c_void,
+    pub pv_type: u32,
+}
+impl ::core::marker::Copy for PVALUEA {}
+impl ::core::clone::Clone for PVALUEA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const RRF_WOW64_MASK: u32 = 196608u32;
+pub struct PVALUEW {
+    pub pv_valuename: ::windows_sys::core::PWSTR,
+    pub pv_valuelen: i32,
+    pub pv_value_context: *mut ::core::ffi::c_void,
+    pub pv_type: u32,
+}
+impl ::core::marker::Copy for PVALUEW {}
+impl ::core::clone::Clone for PVALUEW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const RRF_ZEROONFAILURE: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const SUF_BATCHINF: i32 = 4i32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const SUF_CLEAN: i32 = 8i32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const SUF_EXPRESS: i32 = 2i32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const SUF_FIRSTTIME: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const SUF_INSETUP: i32 = 16i32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const SUF_NETHDBOOT: i32 = 64i32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const SUF_NETRPLBOOT: i32 = 128i32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const SUF_NETSETUP: i32 = 32i32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const SUF_SBSCOPYOK: i32 = 256i32;
+pub struct REG_PROVIDER {
+    pub pi_R0_1val: PQUERYHANDLER,
+    pub pi_R0_allvals: PQUERYHANDLER,
+    pub pi_R3_1val: PQUERYHANDLER,
+    pub pi_R3_allvals: PQUERYHANDLER,
+    pub pi_flags: u32,
+    pub pi_key_context: *mut ::core::ffi::c_void,
+}
+impl ::core::marker::Copy for REG_PROVIDER {}
+impl ::core::clone::Clone for REG_PROVIDER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub struct VALENTA {
@@ -2240,62 +2294,6 @@ impl ::core::clone::Clone for VALENTW {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const VPDF_DISABLEPWRMGMT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const VPDF_DISABLEPWRSTATUSPOLL: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const VPDF_DISABLERINGRESUME: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const VPDF_FORCEAPM10MODE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const VPDF_SHOWMULTIBATT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub const VPDF_SKIPINTELSLCHECK: u32 = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub struct provider_info {
-    pub pi_R0_1val: PQUERYHANDLER,
-    pub pi_R0_allvals: PQUERYHANDLER,
-    pub pi_R3_1val: PQUERYHANDLER,
-    pub pi_R3_allvals: PQUERYHANDLER,
-    pub pi_flags: u32,
-    pub pi_key_context: *mut ::core::ffi::c_void,
-}
-impl ::core::marker::Copy for provider_info {}
-impl ::core::clone::Clone for provider_info {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub struct pvalueA {
-    pub pv_valuename: ::windows_sys::core::PSTR,
-    pub pv_valuelen: i32,
-    pub pv_value_context: *mut ::core::ffi::c_void,
-    pub pv_type: u32,
-}
-impl ::core::marker::Copy for pvalueA {}
-impl ::core::clone::Clone for pvalueA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
-pub struct pvalueW {
-    pub pv_valuename: ::windows_sys::core::PWSTR,
-    pub pv_valuelen: i32,
-    pub pv_value_context: *mut ::core::ffi::c_void,
-    pub pv_type: u32,
-}
-impl ::core::marker::Copy for pvalueW {}
-impl ::core::clone::Clone for pvalueW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Registry\"`*"]
 pub struct val_context {
@@ -2309,3 +2307,5 @@ impl ::core::clone::Clone for val_context {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_System_Registry\"`*"]
+pub type PQUERYHANDLER = ::core::option::Option<unsafe extern "system" fn(keycontext: *mut ::core::ffi::c_void, val_list: *mut val_context, num_vals: u32, outputbuffer: *mut ::core::ffi::c_void, total_outlen: *mut u32, input_blen: u32) -> u32>;

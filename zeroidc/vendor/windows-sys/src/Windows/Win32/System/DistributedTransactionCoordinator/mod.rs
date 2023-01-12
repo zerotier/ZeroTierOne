@@ -1,5 +1,5 @@
-#[link(name = "windows")]
-extern "system" {
+#[cfg_attr(windows, link(name = "windows"))]
+extern "cdecl" {
     #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
     pub fn DtcGetTransactionManager(i_pszhost: ::windows_sys::core::PCSTR, i_psztmname: ::windows_sys::core::PCSTR, i_riid: *const ::windows_sys::core::GUID, i_dwreserved1: u32, i_wcbreserved2: u16, i_pvreserved2: *const ::core::ffi::c_void, o_ppvobject: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
     #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
@@ -9,71 +9,6 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
     pub fn DtcGetTransactionManagerExW(i_pwszhost: ::windows_sys::core::PCWSTR, i_pwsztmname: ::windows_sys::core::PCWSTR, i_riid: *const ::windows_sys::core::GUID, i_grfoptions: u32, i_pvconfigparams: *mut ::core::ffi::c_void, o_ppvobject: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
 }
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type APPLICATIONTYPE = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const LOCAL_APPLICATIONTYPE: APPLICATIONTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const CLUSTERRESOURCE_APPLICATIONTYPE: APPLICATIONTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type AUTHENTICATION_LEVEL = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const NO_AUTHENTICATION_REQUIRED: AUTHENTICATION_LEVEL = 0i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const INCOMING_AUTHENTICATION_REQUIRED: AUTHENTICATION_LEVEL = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const MUTUAL_AUTHENTICATION_REQUIRED: AUTHENTICATION_LEVEL = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub struct BOID {
-    pub rgb: [u8; 16],
-}
-impl ::core::marker::Copy for BOID {}
-impl ::core::clone::Clone for BOID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub const CLSID_MSDtcTransaction: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 972609387, data2: 2344, data3: 4561, data4: [151, 223, 0, 192, 79, 185, 97, 138] };
-pub const CLSID_MSDtcTransactionManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1528343393, data2: 2333, data3: 4561, data4: [151, 223, 0, 192, 79, 185, 97, 138] };
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCINSTALL_E_CLIENT_ALREADY_INSTALLED: i32 = 384i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCINSTALL_E_SERVER_ALREADY_INSTALLED: i32 = 385i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type DTC_GET_TRANSACTION_MANAGER = ::core::option::Option<unsafe extern "system" fn(pszhost: ::windows_sys::core::PCSTR, psztmname: ::windows_sys::core::PCSTR, rid: *const ::windows_sys::core::GUID, dwreserved1: u32, wcbreserved2: u16, pvreserved2: *mut ::core::ffi::c_void, ppvobject: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type DTC_GET_TRANSACTION_MANAGER_EX_A = ::core::option::Option<unsafe extern "system" fn(i_pszhost: ::windows_sys::core::PCSTR, i_psztmname: ::windows_sys::core::PCSTR, i_riid: *const ::windows_sys::core::GUID, i_grfoptions: u32, i_pvconfigparams: *mut ::core::ffi::c_void, o_ppvobject: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type DTC_GET_TRANSACTION_MANAGER_EX_W = ::core::option::Option<unsafe extern "system" fn(i_pwszhost: ::windows_sys::core::PCWSTR, i_pwsztmname: ::windows_sys::core::PCWSTR, i_riid: *const ::windows_sys::core::GUID, i_grfoptions: u32, i_pvconfigparams: *mut ::core::ffi::c_void, o_ppvobject: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type DTC_INSTALL_CLIENT = ::core::option::Option<unsafe extern "system" fn(i_pszremotetmhostname: *mut i8, i_dwprotocol: u32, i_dwoverwrite: u32) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTC_INSTALL_OVERWRITE_CLIENT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTC_INSTALL_OVERWRITE_SERVER: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type DTC_STATUS_ = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTC_STATUS_UNKNOWN: DTC_STATUS_ = 0i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTC_STATUS_STARTING: DTC_STATUS_ = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTC_STATUS_STARTED: DTC_STATUS_ = 2i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTC_STATUS_PAUSING: DTC_STATUS_ = 3i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTC_STATUS_PAUSED: DTC_STATUS_ = 4i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTC_STATUS_CONTINUING: DTC_STATUS_ = 5i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTC_STATUS_STOPPING: DTC_STATUS_ = 6i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTC_STATUS_STOPPED: DTC_STATUS_ = 7i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTC_STATUS_E_CANTCONTROL: DTC_STATUS_ = 8i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTC_STATUS_FAILED: DTC_STATUS_ = 9i32;
 pub type IDtcLuConfigure = *mut ::core::ffi::c_void;
 pub type IDtcLuRecovery = *mut ::core::ffi::c_void;
 pub type IDtcLuRecoveryFactory = *mut ::core::ffi::c_void;
@@ -107,50 +42,6 @@ pub type IResourceManagerFactory = *mut ::core::ffi::c_void;
 pub type IResourceManagerFactory2 = *mut ::core::ffi::c_void;
 pub type IResourceManagerRejoinable = *mut ::core::ffi::c_void;
 pub type IResourceManagerSink = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type ISOFLAG = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOFLAG_RETAIN_COMMIT_DC: ISOFLAG = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOFLAG_RETAIN_COMMIT: ISOFLAG = 2i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOFLAG_RETAIN_COMMIT_NO: ISOFLAG = 3i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOFLAG_RETAIN_ABORT_DC: ISOFLAG = 4i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOFLAG_RETAIN_ABORT: ISOFLAG = 8i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOFLAG_RETAIN_ABORT_NO: ISOFLAG = 12i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOFLAG_RETAIN_DONTCARE: ISOFLAG = 5i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOFLAG_RETAIN_BOTH: ISOFLAG = 10i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOFLAG_RETAIN_NONE: ISOFLAG = 15i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOFLAG_OPTIMISTIC: ISOFLAG = 16i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOFLAG_READONLY: ISOFLAG = 32i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type ISOLATIONLEVEL = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOLATIONLEVEL_UNSPECIFIED: ISOLATIONLEVEL = -1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOLATIONLEVEL_CHAOS: ISOLATIONLEVEL = 16i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOLATIONLEVEL_READUNCOMMITTED: ISOLATIONLEVEL = 256i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOLATIONLEVEL_BROWSE: ISOLATIONLEVEL = 256i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOLATIONLEVEL_CURSORSTABILITY: ISOLATIONLEVEL = 4096i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOLATIONLEVEL_READCOMMITTED: ISOLATIONLEVEL = 4096i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOLATIONLEVEL_REPEATABLEREAD: ISOLATIONLEVEL = 65536i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOLATIONLEVEL_SERIALIZABLE: ISOLATIONLEVEL = 1048576i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const ISOLATIONLEVEL_ISOLATED: ISOLATIONLEVEL = 1048576i32;
 pub type ITipHelper = *mut ::core::ffi::c_void;
 pub type ITipPullSink = *mut ::core::ffi::c_void;
 pub type ITipTransaction = *mut ::core::ffi::c_void;
@@ -184,38 +75,22 @@ pub type IXAConfig = *mut ::core::ffi::c_void;
 pub type IXAObtainRMInfo = *mut ::core::ffi::c_void;
 pub type IXATransLookup = *mut ::core::ffi::c_void;
 pub type IXATransLookup2 = *mut ::core::ffi::c_void;
+pub const CLSID_MSDtcTransaction: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 972609387, data2: 2344, data3: 4561, data4: [151, 223, 0, 192, 79, 185, 97, 138] };
+pub const CLSID_MSDtcTransactionManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1528343393, data2: 2333, data3: 4561, data4: [151, 223, 0, 192, 79, 185, 97, 138] };
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCINSTALL_E_CLIENT_ALREADY_INSTALLED: i32 = 384i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCINSTALL_E_SERVER_ALREADY_INSTALLED: i32 = 385i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTC_INSTALL_OVERWRITE_CLIENT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTC_INSTALL_OVERWRITE_SERVER: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub const MAXBQUALSIZE: u32 = 64u32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub const MAXGTRIDSIZE: u32 = 64u32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub const MAXINFOSIZE: u32 = 256u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub struct OLE_TM_CONFIG_PARAMS_V1 {
-    pub dwVersion: u32,
-    pub dwcConcurrencyHint: u32,
-}
-impl ::core::marker::Copy for OLE_TM_CONFIG_PARAMS_V1 {}
-impl ::core::clone::Clone for OLE_TM_CONFIG_PARAMS_V1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub struct OLE_TM_CONFIG_PARAMS_V2 {
-    pub dwVersion: u32,
-    pub dwcConcurrencyHint: u32,
-    pub applicationType: APPLICATIONTYPE,
-    pub clusterResourceId: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for OLE_TM_CONFIG_PARAMS_V2 {}
-impl ::core::clone::Clone for OLE_TM_CONFIG_PARAMS_V2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub const OLE_TM_CONFIG_VERSION_1: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
@@ -277,6 +152,218 @@ pub const TM_OK: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub const TM_RESUME: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XAER_ASYNC: i32 = -2i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XAER_DUPID: i32 = -8i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XAER_INVAL: i32 = -5i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XAER_NOTA: i32 = -4i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XAER_OUTSIDE: i32 = -9i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XAER_PROTO: i32 = -6i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XAER_RMERR: i32 = -3i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XAER_RMFAIL: i32 = -7i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_FMTID_DTC: u32 = 4478019u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_FMTID_DTC_VER1: u32 = 21255235u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_HEURCOM: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_HEURHAZ: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_HEURMIX: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_HEURRB: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_NOMIGRATE: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_OK: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_RBBASE: u32 = 100u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_RBCOMMFAIL: u32 = 101u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_RBDEADLOCK: u32 = 102u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_RBEND: u32 = 107u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_RBINTEGRITY: u32 = 103u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_RBOTHER: u32 = 104u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_RBPROTO: u32 = 105u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_RBROLLBACK: u32 = 100u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_RBTIMEOUT: u32 = 106u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_RBTRANSIENT: u32 = 107u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_RDONLY: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_RETRY: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XA_SWITCH_F_DTC: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const XIDDATASIZE: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type APPLICATIONTYPE = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const LOCAL_APPLICATIONTYPE: APPLICATIONTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const CLUSTERRESOURCE_APPLICATIONTYPE: APPLICATIONTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type AUTHENTICATION_LEVEL = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const NO_AUTHENTICATION_REQUIRED: AUTHENTICATION_LEVEL = 0i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const INCOMING_AUTHENTICATION_REQUIRED: AUTHENTICATION_LEVEL = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const MUTUAL_AUTHENTICATION_REQUIRED: AUTHENTICATION_LEVEL = 2i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTCINITIATEDRECOVERYWORK = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCINITIATEDRECOVERYWORK_CHECKLUSTATUS: DTCINITIATEDRECOVERYWORK = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCINITIATEDRECOVERYWORK_TRANS: DTCINITIATEDRECOVERYWORK = 2i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCINITIATEDRECOVERYWORK_TMDOWN: DTCINITIATEDRECOVERYWORK = 3i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTCLUCOMPARESTATE = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUCOMPARESTATE_COMMITTED: DTCLUCOMPARESTATE = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUCOMPARESTATE_HEURISTICCOMMITTED: DTCLUCOMPARESTATE = 2i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUCOMPARESTATE_HEURISTICMIXED: DTCLUCOMPARESTATE = 3i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUCOMPARESTATE_HEURISTICRESET: DTCLUCOMPARESTATE = 4i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUCOMPARESTATE_INDOUBT: DTCLUCOMPARESTATE = 5i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUCOMPARESTATE_RESET: DTCLUCOMPARESTATE = 6i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTCLUCOMPARESTATESCONFIRMATION = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUCOMPARESTATESCONFIRMATION_CONFIRM: DTCLUCOMPARESTATESCONFIRMATION = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUCOMPARESTATESCONFIRMATION_PROTOCOL: DTCLUCOMPARESTATESCONFIRMATION = 2i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTCLUCOMPARESTATESERROR = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUCOMPARESTATESERROR_PROTOCOL: DTCLUCOMPARESTATESERROR = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTCLUCOMPARESTATESRESPONSE = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUCOMPARESTATESRESPONSE_OK: DTCLUCOMPARESTATESRESPONSE = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUCOMPARESTATESRESPONSE_PROTOCOL: DTCLUCOMPARESTATESRESPONSE = 2i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTCLUXLN = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLN_COLD: DTCLUXLN = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLN_WARM: DTCLUXLN = 2i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTCLUXLNCONFIRMATION = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLNCONFIRMATION_CONFIRM: DTCLUXLNCONFIRMATION = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLNCONFIRMATION_LOGNAMEMISMATCH: DTCLUXLNCONFIRMATION = 2i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLNCONFIRMATION_COLDWARMMISMATCH: DTCLUXLNCONFIRMATION = 3i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLNCONFIRMATION_OBSOLETE: DTCLUXLNCONFIRMATION = 4i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTCLUXLNERROR = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLNERROR_PROTOCOL: DTCLUXLNERROR = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLNERROR_LOGNAMEMISMATCH: DTCLUXLNERROR = 2i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLNERROR_COLDWARMMISMATCH: DTCLUXLNERROR = 3i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTCLUXLNRESPONSE = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLNRESPONSE_OK_SENDOURXLNBACK: DTCLUXLNRESPONSE = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLNRESPONSE_OK_SENDCONFIRMATION: DTCLUXLNRESPONSE = 2i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLNRESPONSE_LOGNAMEMISMATCH: DTCLUXLNRESPONSE = 3i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTCLUXLNRESPONSE_COLDWARMMISMATCH: DTCLUXLNRESPONSE = 4i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTC_STATUS_ = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTC_STATUS_UNKNOWN: DTC_STATUS_ = 0i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTC_STATUS_STARTING: DTC_STATUS_ = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTC_STATUS_STARTED: DTC_STATUS_ = 2i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTC_STATUS_PAUSING: DTC_STATUS_ = 3i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTC_STATUS_PAUSED: DTC_STATUS_ = 4i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTC_STATUS_CONTINUING: DTC_STATUS_ = 5i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTC_STATUS_STOPPING: DTC_STATUS_ = 6i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTC_STATUS_STOPPED: DTC_STATUS_ = 7i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTC_STATUS_E_CANTCONTROL: DTC_STATUS_ = 8i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const DTC_STATUS_FAILED: DTC_STATUS_ = 9i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type ISOFLAG = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOFLAG_RETAIN_COMMIT_DC: ISOFLAG = 1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOFLAG_RETAIN_COMMIT: ISOFLAG = 2i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOFLAG_RETAIN_COMMIT_NO: ISOFLAG = 3i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOFLAG_RETAIN_ABORT_DC: ISOFLAG = 4i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOFLAG_RETAIN_ABORT: ISOFLAG = 8i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOFLAG_RETAIN_ABORT_NO: ISOFLAG = 12i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOFLAG_RETAIN_DONTCARE: ISOFLAG = 5i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOFLAG_RETAIN_BOTH: ISOFLAG = 10i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOFLAG_RETAIN_NONE: ISOFLAG = 15i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOFLAG_OPTIMISTIC: ISOFLAG = 16i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOFLAG_READONLY: ISOFLAG = 32i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type ISOLATIONLEVEL = i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOLATIONLEVEL_UNSPECIFIED: ISOLATIONLEVEL = -1i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOLATIONLEVEL_CHAOS: ISOLATIONLEVEL = 16i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOLATIONLEVEL_READUNCOMMITTED: ISOLATIONLEVEL = 256i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOLATIONLEVEL_BROWSE: ISOLATIONLEVEL = 256i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOLATIONLEVEL_CURSORSTABILITY: ISOLATIONLEVEL = 4096i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOLATIONLEVEL_READCOMMITTED: ISOLATIONLEVEL = 4096i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOLATIONLEVEL_REPEATABLEREAD: ISOLATIONLEVEL = 65536i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOLATIONLEVEL_SERIALIZABLE: ISOLATIONLEVEL = 1048576i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub const ISOLATIONLEVEL_ISOLATED: ISOLATIONLEVEL = 1048576i32;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub type TX_MISC_CONSTANTS = i32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub const MAX_TRAN_DESC: TX_MISC_CONSTANTS = 40i32;
@@ -294,18 +381,6 @@ pub const XACTHEURISTIC_COMMIT: XACTHEURISTIC = 2i32;
 pub const XACTHEURISTIC_DAMAGE: XACTHEURISTIC = 3i32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub const XACTHEURISTIC_DANGER: XACTHEURISTIC = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub struct XACTOPT {
-    pub ulTimeout: u32,
-    pub szDescription: [u8; 40],
-}
-impl ::core::marker::Copy for XACTOPT {}
-impl ::core::clone::Clone for XACTOPT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub type XACTRM = i32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
@@ -360,27 +435,6 @@ pub const XACTSTAT_OPEN: XACTSTAT = 3i32;
 pub const XACTSTAT_NOTPREPARED: XACTSTAT = 524227i32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub const XACTSTAT_ALL: XACTSTAT = 524287i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct XACTSTATS {
-    pub cOpen: u32,
-    pub cCommitting: u32,
-    pub cCommitted: u32,
-    pub cAborting: u32,
-    pub cAborted: u32,
-    pub cInDoubt: u32,
-    pub cHeuristicDecision: u32,
-    pub timeTransactionsUp: super::super::Foundation::FILETIME,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for XACTSTATS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for XACTSTATS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub type XACTTC = i32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
@@ -395,23 +449,6 @@ pub const XACTTC_SYNC: XACTTC = 2i32;
 pub const XACTTC_ASYNC_PHASEONE: XACTTC = 4i32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub const XACTTC_ASYNC: XACTTC = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub struct XACTTRANSINFO {
-    pub uow: BOID,
-    pub isoLevel: i32,
-    pub isoFlags: u32,
-    pub grfTCSupported: u32,
-    pub grfRMSupported: u32,
-    pub grfTCSupportedRetaining: u32,
-    pub grfRMSupportedRetaining: u32,
-}
-impl ::core::marker::Copy for XACTTRANSINFO {}
-impl ::core::clone::Clone for XACTTRANSINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub type XACT_DTC_CONSTANTS = i32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
@@ -460,172 +497,117 @@ pub const XACT_S_NONOTIFY: XACT_DTC_CONSTANTS = 315648i32;
 pub const XACT_OK_NONOTIFY: XACT_DTC_CONSTANTS = 315649i32;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
 pub const dwUSER_MS_SQLSERVER: XACT_DTC_CONSTANTS = 65535i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XAER_ASYNC: i32 = -2i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XAER_DUPID: i32 = -8i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XAER_INVAL: i32 = -5i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XAER_NOTA: i32 = -4i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XAER_OUTSIDE: i32 = -9i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XAER_PROTO: i32 = -6i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XAER_RMERR: i32 = -3i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XAER_RMFAIL: i32 = -7i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type XA_CLOSE_EPT = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: i32, param2: i32) -> i32>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type XA_COMMIT_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut xid_t, param1: i32, param2: i32) -> i32>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type XA_COMPLETE_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut i32, param1: *mut i32, param2: i32, param3: i32) -> i32>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type XA_END_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut xid_t, param1: i32, param2: i32) -> i32>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_FMTID_DTC: u32 = 4478019u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_FMTID_DTC_VER1: u32 = 21255235u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type XA_FORGET_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut xid_t, param1: i32, param2: i32) -> i32>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_HEURCOM: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_HEURHAZ: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_HEURMIX: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_HEURRB: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_NOMIGRATE: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_OK: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type XA_OPEN_EPT = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: i32, param2: i32) -> i32>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type XA_PREPARE_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut xid_t, param1: i32, param2: i32) -> i32>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_RBBASE: u32 = 100u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_RBCOMMFAIL: u32 = 101u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_RBDEADLOCK: u32 = 102u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_RBEND: u32 = 107u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_RBINTEGRITY: u32 = 103u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_RBOTHER: u32 = 104u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_RBPROTO: u32 = 105u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_RBROLLBACK: u32 = 100u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_RBTIMEOUT: u32 = 106u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_RBTRANSIENT: u32 = 107u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_RDONLY: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type XA_RECOVER_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut xid_t, param1: i32, param2: i32, param3: i32) -> i32>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_RETRY: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type XA_ROLLBACK_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut xid_t, param1: i32, param2: i32) -> i32>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type XA_START_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut xid_t, param1: i32, param2: i32) -> i32>;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XA_SWITCH_F_DTC: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const XIDDATASIZE: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type _DtcLu_CompareState = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUCOMPARESTATE_COMMITTED: _DtcLu_CompareState = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUCOMPARESTATE_HEURISTICCOMMITTED: _DtcLu_CompareState = 2i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUCOMPARESTATE_HEURISTICMIXED: _DtcLu_CompareState = 3i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUCOMPARESTATE_HEURISTICRESET: _DtcLu_CompareState = 4i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUCOMPARESTATE_INDOUBT: _DtcLu_CompareState = 5i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUCOMPARESTATE_RESET: _DtcLu_CompareState = 6i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type _DtcLu_CompareStates_Confirmation = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUCOMPARESTATESCONFIRMATION_CONFIRM: _DtcLu_CompareStates_Confirmation = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUCOMPARESTATESCONFIRMATION_PROTOCOL: _DtcLu_CompareStates_Confirmation = 2i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type _DtcLu_CompareStates_Error = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUCOMPARESTATESERROR_PROTOCOL: _DtcLu_CompareStates_Error = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type _DtcLu_CompareStates_Response = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUCOMPARESTATESRESPONSE_OK: _DtcLu_CompareStates_Response = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUCOMPARESTATESRESPONSE_PROTOCOL: _DtcLu_CompareStates_Response = 2i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type _DtcLu_LocalRecovery_Work = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCINITIATEDRECOVERYWORK_CHECKLUSTATUS: _DtcLu_LocalRecovery_Work = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCINITIATEDRECOVERYWORK_TRANS: _DtcLu_LocalRecovery_Work = 2i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCINITIATEDRECOVERYWORK_TMDOWN: _DtcLu_LocalRecovery_Work = 3i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type _DtcLu_Xln = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLN_COLD: _DtcLu_Xln = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLN_WARM: _DtcLu_Xln = 2i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type _DtcLu_Xln_Confirmation = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLNCONFIRMATION_CONFIRM: _DtcLu_Xln_Confirmation = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLNCONFIRMATION_LOGNAMEMISMATCH: _DtcLu_Xln_Confirmation = 2i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLNCONFIRMATION_COLDWARMMISMATCH: _DtcLu_Xln_Confirmation = 3i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLNCONFIRMATION_OBSOLETE: _DtcLu_Xln_Confirmation = 4i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type _DtcLu_Xln_Error = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLNERROR_PROTOCOL: _DtcLu_Xln_Error = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLNERROR_LOGNAMEMISMATCH: _DtcLu_Xln_Error = 2i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLNERROR_COLDWARMMISMATCH: _DtcLu_Xln_Error = 3i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub type _DtcLu_Xln_Response = i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLNRESPONSE_OK_SENDOURXLNBACK: _DtcLu_Xln_Response = 1i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLNRESPONSE_OK_SENDCONFIRMATION: _DtcLu_Xln_Response = 2i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLNRESPONSE_LOGNAMEMISMATCH: _DtcLu_Xln_Response = 3i32;
-#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub const DTCLUXLNRESPONSE_COLDWARMMISMATCH: _DtcLu_Xln_Response = 4i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
-pub struct _ProxyConfigParams {
+pub struct BOID {
+    pub rgb: [u8; 16],
+}
+impl ::core::marker::Copy for BOID {}
+impl ::core::clone::Clone for BOID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub struct OLE_TM_CONFIG_PARAMS_V1 {
+    pub dwVersion: u32,
+    pub dwcConcurrencyHint: u32,
+}
+impl ::core::marker::Copy for OLE_TM_CONFIG_PARAMS_V1 {}
+impl ::core::clone::Clone for OLE_TM_CONFIG_PARAMS_V1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub struct OLE_TM_CONFIG_PARAMS_V2 {
+    pub dwVersion: u32,
+    pub dwcConcurrencyHint: u32,
+    pub applicationType: APPLICATIONTYPE,
+    pub clusterResourceId: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for OLE_TM_CONFIG_PARAMS_V2 {}
+impl ::core::clone::Clone for OLE_TM_CONFIG_PARAMS_V2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub struct PROXY_CONFIG_PARAMS {
     pub wcThreadsMax: u16,
 }
-impl ::core::marker::Copy for _ProxyConfigParams {}
-impl ::core::clone::Clone for _ProxyConfigParams {
+impl ::core::marker::Copy for PROXY_CONFIG_PARAMS {}
+impl ::core::clone::Clone for PROXY_CONFIG_PARAMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub struct XACTOPT {
+    pub ulTimeout: u32,
+    pub szDescription: [u8; 40],
+}
+impl ::core::marker::Copy for XACTOPT {}
+impl ::core::clone::Clone for XACTOPT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct XACTSTATS {
+    pub cOpen: u32,
+    pub cCommitting: u32,
+    pub cCommitted: u32,
+    pub cAborting: u32,
+    pub cAborted: u32,
+    pub cInDoubt: u32,
+    pub cHeuristicDecision: u32,
+    pub timeTransactionsUp: super::super::Foundation::FILETIME,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for XACTSTATS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for XACTSTATS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub struct XACTTRANSINFO {
+    pub uow: BOID,
+    pub isoLevel: i32,
+    pub isoFlags: u32,
+    pub grfTCSupported: u32,
+    pub grfRMSupported: u32,
+    pub grfTCSupportedRetaining: u32,
+    pub grfRMSupportedRetaining: u32,
+}
+impl ::core::marker::Copy for XACTTRANSINFO {}
+impl ::core::clone::Clone for XACTTRANSINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct XID {
+    pub formatID: i32,
+    pub gtrid_length: i32,
+    pub bqual_length: i32,
+    pub data: [super::super::Foundation::CHAR; 128],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for XID {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for XID {
     fn clone(&self) -> Self {
         *self
     }
@@ -656,20 +638,38 @@ impl ::core::clone::Clone for xa_switch_t {
         *self
     }
 }
-#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTC_GET_TRANSACTION_MANAGER = ::core::option::Option<unsafe extern "system" fn(pszhost: ::windows_sys::core::PCSTR, psztmname: ::windows_sys::core::PCSTR, rid: *const ::windows_sys::core::GUID, dwreserved1: u32, wcbreserved2: u16, pvreserved2: *mut ::core::ffi::c_void, ppvobject: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTC_GET_TRANSACTION_MANAGER_EX_A = ::core::option::Option<unsafe extern "system" fn(i_pszhost: ::windows_sys::core::PCSTR, i_psztmname: ::windows_sys::core::PCSTR, i_riid: *const ::windows_sys::core::GUID, i_grfoptions: u32, i_pvconfigparams: *mut ::core::ffi::c_void, o_ppvobject: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTC_GET_TRANSACTION_MANAGER_EX_W = ::core::option::Option<unsafe extern "system" fn(i_pwszhost: ::windows_sys::core::PCWSTR, i_pwsztmname: ::windows_sys::core::PCWSTR, i_riid: *const ::windows_sys::core::GUID, i_grfoptions: u32, i_pvconfigparams: *mut ::core::ffi::c_void, o_ppvobject: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type DTC_INSTALL_CLIENT = ::core::option::Option<unsafe extern "system" fn(i_pszremotetmhostname: *mut i8, i_dwprotocol: u32, i_dwoverwrite: u32) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type XA_CLOSE_EPT = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: i32, param2: i32) -> i32>;
 #[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
-pub struct xid_t {
-    pub formatID: i32,
-    pub gtrid_length: i32,
-    pub bqual_length: i32,
-    pub data: [super::super::Foundation::CHAR; 128],
-}
+pub type XA_COMMIT_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut XID, param1: i32, param2: i32) -> i32>;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type XA_COMPLETE_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut i32, param1: *mut i32, param2: i32, param3: i32) -> i32>;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for xid_t {}
+pub type XA_END_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut XID, param1: i32, param2: i32) -> i32>;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for xid_t {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub type XA_FORGET_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut XID, param1: i32, param2: i32) -> i32>;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`*"]
+pub type XA_OPEN_EPT = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: i32, param2: i32) -> i32>;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type XA_PREPARE_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut XID, param1: i32, param2: i32) -> i32>;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type XA_RECOVER_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut XID, param1: i32, param2: i32, param3: i32) -> i32>;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type XA_ROLLBACK_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut XID, param1: i32, param2: i32) -> i32>;
+#[doc = "*Required features: `\"Win32_System_DistributedTransactionCoordinator\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type XA_START_EPT = ::core::option::Option<unsafe extern "system" fn(param0: *mut XID, param1: i32, param2: i32) -> i32>;

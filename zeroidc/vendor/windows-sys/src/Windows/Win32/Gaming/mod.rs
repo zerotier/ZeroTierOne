@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Gaming\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -66,6 +66,21 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn TryCancelPendingGameUI() -> super::Foundation::BOOL;
 }
+pub type IGameExplorer = *mut ::core::ffi::c_void;
+pub type IGameExplorer2 = *mut ::core::ffi::c_void;
+pub type IGameStatistics = *mut ::core::ffi::c_void;
+pub type IGameStatisticsMgr = *mut ::core::ffi::c_void;
+pub type IXblIdpAuthManager = *mut ::core::ffi::c_void;
+pub type IXblIdpAuthTokenResult = *mut ::core::ffi::c_void;
+pub type IXblIdpAuthTokenResult2 = *mut ::core::ffi::c_void;
+pub const GameExplorer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2589895056, data2: 12340, data3: 19823, data4: [145, 40, 1, 243, 198, 16, 34, 188] };
+pub const GameStatistics: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3687340588, data2: 49372, data3: 18785, data4: [182, 226, 210, 139, 98, 193, 26, 212] };
+#[doc = "*Required features: `\"Win32_Gaming\"`*"]
+pub const ID_GDF_THUMBNAIL_STR: &str = "__GDF_THUMBNAIL";
+#[doc = "*Required features: `\"Win32_Gaming\"`*"]
+pub const ID_GDF_XML_STR: &str = "__GDF_XML";
+pub const XblIdpAuthManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3458421579, data2: 22232, data3: 18808, data4: [134, 162, 126, 229, 112, 100, 4, 104] };
+pub const XblIdpAuthTokenResult: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2672374849, data2: 29770, data3: 16652, data4: [174, 43, 154, 34, 247, 199, 115, 31] };
 #[doc = "*Required features: `\"Win32_Gaming\"`*"]
 pub type GAMESTATS_OPEN_RESULT = i32;
 #[doc = "*Required features: `\"Win32_Gaming\"`*"]
@@ -98,39 +113,12 @@ pub const GAMING_DEVICE_DEVICE_ID_XBOX_ONE_S: GAMING_DEVICE_DEVICE_ID = 71220476
 pub const GAMING_DEVICE_DEVICE_ID_XBOX_ONE_X: GAMING_DEVICE_DEVICE_ID = 1523980231i32;
 #[doc = "*Required features: `\"Win32_Gaming\"`*"]
 pub const GAMING_DEVICE_DEVICE_ID_XBOX_ONE_X_DEVKIT: GAMING_DEVICE_DEVICE_ID = 284675555i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Gaming\"`*"]
-pub struct GAMING_DEVICE_MODEL_INFORMATION {
-    pub vendorId: GAMING_DEVICE_VENDOR_ID,
-    pub deviceId: GAMING_DEVICE_DEVICE_ID,
-}
-impl ::core::marker::Copy for GAMING_DEVICE_MODEL_INFORMATION {}
-impl ::core::clone::Clone for GAMING_DEVICE_MODEL_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Gaming\"`*"]
 pub type GAMING_DEVICE_VENDOR_ID = i32;
 #[doc = "*Required features: `\"Win32_Gaming\"`*"]
 pub const GAMING_DEVICE_VENDOR_ID_NONE: GAMING_DEVICE_VENDOR_ID = 0i32;
 #[doc = "*Required features: `\"Win32_Gaming\"`*"]
 pub const GAMING_DEVICE_VENDOR_ID_MICROSOFT: GAMING_DEVICE_VENDOR_ID = -1024700366i32;
-pub const GameExplorer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2589895056, data2: 12340, data3: 19823, data4: [145, 40, 1, 243, 198, 16, 34, 188] };
-pub const GameStatistics: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3687340588, data2: 49372, data3: 18785, data4: [182, 226, 210, 139, 98, 193, 26, 212] };
-#[doc = "*Required features: `\"Win32_Gaming\"`*"]
-pub type GameUICompletionRoutine = ::core::option::Option<unsafe extern "system" fn(returncode: ::windows_sys::core::HRESULT, context: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Gaming\"`*"]
-pub const ID_GDF_THUMBNAIL_STR: &str = "__GDF_THUMBNAIL";
-#[doc = "*Required features: `\"Win32_Gaming\"`*"]
-pub const ID_GDF_XML_STR: &str = "__GDF_XML";
-pub type IGameExplorer = *mut ::core::ffi::c_void;
-pub type IGameExplorer2 = *mut ::core::ffi::c_void;
-pub type IGameStatistics = *mut ::core::ffi::c_void;
-pub type IGameStatisticsMgr = *mut ::core::ffi::c_void;
-pub type IXblIdpAuthManager = *mut ::core::ffi::c_void;
-pub type IXblIdpAuthTokenResult = *mut ::core::ffi::c_void;
-pub type IXblIdpAuthTokenResult2 = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Gaming\"`*"]
 pub type KnownGamingPrivileges = i32;
 #[doc = "*Required features: `\"Win32_Gaming\"`*"]
@@ -178,8 +166,6 @@ pub const XPRIVILEGE_MULTIPLAYER_SESSIONS: KnownGamingPrivileges = 254i32;
 #[doc = "*Required features: `\"Win32_Gaming\"`*"]
 pub const XPRIVILEGE_ADD_FRIEND: KnownGamingPrivileges = 255i32;
 #[doc = "*Required features: `\"Win32_Gaming\"`*"]
-pub type PlayerPickerUICompletionRoutine = ::core::option::Option<unsafe extern "system" fn(returncode: ::windows_sys::core::HRESULT, context: *const ::core::ffi::c_void, selectedxuids: *const ::windows_sys::core::HSTRING, selectedxuidscount: usize)>;
-#[doc = "*Required features: `\"Win32_Gaming\"`*"]
 pub type XBL_IDP_AUTH_TOKEN_STATUS = i32;
 #[doc = "*Required features: `\"Win32_Gaming\"`*"]
 pub const XBL_IDP_AUTH_TOKEN_STATUS_SUCCESS: XBL_IDP_AUTH_TOKEN_STATUS = 0i32;
@@ -199,5 +185,19 @@ pub const XBL_IDP_AUTH_TOKEN_STATUS_OFFLINE_NO_CONSENT: XBL_IDP_AUTH_TOKEN_STATU
 pub const XBL_IDP_AUTH_TOKEN_STATUS_VIEW_NOT_SET: XBL_IDP_AUTH_TOKEN_STATUS = 7i32;
 #[doc = "*Required features: `\"Win32_Gaming\"`*"]
 pub const XBL_IDP_AUTH_TOKEN_STATUS_UNKNOWN: XBL_IDP_AUTH_TOKEN_STATUS = -1i32;
-pub const XblIdpAuthManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3458421579, data2: 22232, data3: 18808, data4: [134, 162, 126, 229, 112, 100, 4, 104] };
-pub const XblIdpAuthTokenResult: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2672374849, data2: 29770, data3: 16652, data4: [174, 43, 154, 34, 247, 199, 115, 31] };
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Gaming\"`*"]
+pub struct GAMING_DEVICE_MODEL_INFORMATION {
+    pub vendorId: GAMING_DEVICE_VENDOR_ID,
+    pub deviceId: GAMING_DEVICE_DEVICE_ID,
+}
+impl ::core::marker::Copy for GAMING_DEVICE_MODEL_INFORMATION {}
+impl ::core::clone::Clone for GAMING_DEVICE_MODEL_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[doc = "*Required features: `\"Win32_Gaming\"`*"]
+pub type GameUICompletionRoutine = ::core::option::Option<unsafe extern "system" fn(returncode: ::windows_sys::core::HRESULT, context: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Gaming\"`*"]
+pub type PlayerPickerUICompletionRoutine = ::core::option::Option<unsafe extern "system" fn(returncode: ::windows_sys::core::HRESULT, context: *const ::core::ffi::c_void, selectedxuids: *const ::windows_sys::core::HSTRING, selectedxuidscount: usize)>;

@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -236,9 +236,9 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
     pub fn MsiDoActionW(hinstall: MSIHANDLE, szaction: ::windows_sys::core::PCWSTR) -> u32;
     #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-    pub fn MsiEnableLogA(dwlogmode: INSTALLOGMODE, szlogfile: ::windows_sys::core::PCSTR, dwlogattributes: u32) -> u32;
+    pub fn MsiEnableLogA(dwlogmode: INSTALLLOGMODE, szlogfile: ::windows_sys::core::PCSTR, dwlogattributes: u32) -> u32;
     #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-    pub fn MsiEnableLogW(dwlogmode: INSTALLOGMODE, szlogfile: ::windows_sys::core::PCWSTR, dwlogattributes: u32) -> u32;
+    pub fn MsiEnableLogW(dwlogmode: INSTALLLOGMODE, szlogfile: ::windows_sys::core::PCWSTR, dwlogattributes: u32) -> u32;
     #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
     pub fn MsiEnableUIPreview(hdatabase: MSIHANDLE, phpreview: *mut MSIHANDLE) -> u32;
     #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -722,191 +722,45 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn ZombifyActCtx(hactctx: super::super::Foundation::HANDLE) -> super::super::Foundation::BOOL;
 }
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ACTCTXA {
-    pub cbSize: u32,
-    pub dwFlags: u32,
-    pub lpSource: ::windows_sys::core::PCSTR,
-    pub wProcessorArchitecture: u16,
-    pub wLangId: u16,
-    pub lpAssemblyDirectory: ::windows_sys::core::PCSTR,
-    pub lpResourceName: ::windows_sys::core::PCSTR,
-    pub lpApplicationName: ::windows_sys::core::PCSTR,
-    pub hModule: super::super::Foundation::HINSTANCE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ACTCTXA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ACTCTXA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct ACTCTXW {
-    pub cbSize: u32,
-    pub dwFlags: u32,
-    pub lpSource: ::windows_sys::core::PCWSTR,
-    pub wProcessorArchitecture: u16,
-    pub wLangId: u16,
-    pub lpAssemblyDirectory: ::windows_sys::core::PCWSTR,
-    pub lpResourceName: ::windows_sys::core::PCWSTR,
-    pub lpApplicationName: ::windows_sys::core::PCWSTR,
-    pub hModule: super::super::Foundation::HINSTANCE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for ACTCTXW {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for ACTCTXW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type ACTCTX_COMPATIBILITY_ELEMENT_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ACTCTX_COMPATIBILITY_ELEMENT_TYPE_UNKNOWN: ACTCTX_COMPATIBILITY_ELEMENT_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ACTCTX_COMPATIBILITY_ELEMENT_TYPE_OS: ACTCTX_COMPATIBILITY_ELEMENT_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ACTCTX_COMPATIBILITY_ELEMENT_TYPE_MITIGATION: ACTCTX_COMPATIBILITY_ELEMENT_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ACTCTX_COMPATIBILITY_ELEMENT_TYPE_MAXVERSIONTESTED: ACTCTX_COMPATIBILITY_ELEMENT_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type ACTCTX_REQUESTED_RUN_LEVEL = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ACTCTX_RUN_LEVEL_UNSPECIFIED: ACTCTX_REQUESTED_RUN_LEVEL = 0i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ACTCTX_RUN_LEVEL_AS_INVOKER: ACTCTX_REQUESTED_RUN_LEVEL = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ACTCTX_RUN_LEVEL_HIGHEST_AVAILABLE: ACTCTX_REQUESTED_RUN_LEVEL = 2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ACTCTX_RUN_LEVEL_REQUIRE_ADMIN: ACTCTX_REQUESTED_RUN_LEVEL = 3i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ACTCTX_RUN_LEVEL_NUMBERS: ACTCTX_REQUESTED_RUN_LEVEL = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`, `\"Win32_System_WindowsProgramming\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_WindowsProgramming"))]
-pub struct ACTCTX_SECTION_KEYED_DATA {
-    pub cbSize: u32,
-    pub ulDataFormatVersion: u32,
-    pub lpData: *mut ::core::ffi::c_void,
-    pub ulLength: u32,
-    pub lpSectionGlobalData: *mut ::core::ffi::c_void,
-    pub ulSectionGlobalDataLength: u32,
-    pub lpSectionBase: *mut ::core::ffi::c_void,
-    pub ulSectionTotalLength: u32,
-    pub hActCtx: super::super::Foundation::HANDLE,
-    pub ulAssemblyRosterIndex: u32,
-    pub ulFlags: u32,
-    pub AssemblyMetadata: super::WindowsProgramming::ACTCTX_SECTION_KEYED_DATA_ASSEMBLY_METADATA,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_WindowsProgramming"))]
-impl ::core::marker::Copy for ACTCTX_SECTION_KEYED_DATA {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_WindowsProgramming"))]
-impl ::core::clone::Clone for ACTCTX_SECTION_KEYED_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct ACTIVATION_CONTEXT_ASSEMBLY_DETAILED_INFORMATION {
-    pub ulFlags: u32,
-    pub ulEncodedAssemblyIdentityLength: u32,
-    pub ulManifestPathType: u32,
-    pub ulManifestPathLength: u32,
-    pub liManifestLastWriteTime: i64,
-    pub ulPolicyPathType: u32,
-    pub ulPolicyPathLength: u32,
-    pub liPolicyLastWriteTime: i64,
-    pub ulMetadataSatelliteRosterIndex: u32,
-    pub ulManifestVersionMajor: u32,
-    pub ulManifestVersionMinor: u32,
-    pub ulPolicyVersionMajor: u32,
-    pub ulPolicyVersionMinor: u32,
-    pub ulAssemblyDirectoryNameLength: u32,
-    pub lpAssemblyEncodedAssemblyIdentity: ::windows_sys::core::PCWSTR,
-    pub lpAssemblyManifestPath: ::windows_sys::core::PCWSTR,
-    pub lpAssemblyPolicyPath: ::windows_sys::core::PCWSTR,
-    pub lpAssemblyDirectoryName: ::windows_sys::core::PCWSTR,
-    pub ulFileCount: u32,
-}
-impl ::core::marker::Copy for ACTIVATION_CONTEXT_ASSEMBLY_DETAILED_INFORMATION {}
-impl ::core::clone::Clone for ACTIVATION_CONTEXT_ASSEMBLY_DETAILED_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct ACTIVATION_CONTEXT_COMPATIBILITY_INFORMATION {
-    pub ElementCount: u32,
-    pub Elements: [COMPATIBILITY_CONTEXT_ELEMENT; 1],
-}
-impl ::core::marker::Copy for ACTIVATION_CONTEXT_COMPATIBILITY_INFORMATION {}
-impl ::core::clone::Clone for ACTIVATION_CONTEXT_COMPATIBILITY_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct ACTIVATION_CONTEXT_DETAILED_INFORMATION {
-    pub dwFlags: u32,
-    pub ulFormatVersion: u32,
-    pub ulAssemblyCount: u32,
-    pub ulRootManifestPathType: u32,
-    pub ulRootManifestPathChars: u32,
-    pub ulRootConfigurationPathType: u32,
-    pub ulRootConfigurationPathChars: u32,
-    pub ulAppDirPathType: u32,
-    pub ulAppDirPathChars: u32,
-    pub lpRootManifestPath: ::windows_sys::core::PCWSTR,
-    pub lpRootConfigurationPath: ::windows_sys::core::PCWSTR,
-    pub lpAppDirPath: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for ACTIVATION_CONTEXT_DETAILED_INFORMATION {}
-impl ::core::clone::Clone for ACTIVATION_CONTEXT_DETAILED_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct ACTIVATION_CONTEXT_QUERY_INDEX {
-    pub ulAssemblyIndex: u32,
-    pub ulFileIndexInAssembly: u32,
-}
-impl ::core::marker::Copy for ACTIVATION_CONTEXT_QUERY_INDEX {}
-impl ::core::clone::Clone for ACTIVATION_CONTEXT_QUERY_INDEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION {
-    pub ulFlags: u32,
-    pub RunLevel: ACTCTX_REQUESTED_RUN_LEVEL,
-    pub UiAccess: u32,
-}
-impl ::core::marker::Copy for ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION {}
-impl ::core::clone::Clone for ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type ADVERTISEFLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ADVERTISEFLAGS_MACHINEASSIGN: ADVERTISEFLAGS = 0i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ADVERTISEFLAGS_USERASSIGN: ADVERTISEFLAGS = 1i32;
+pub type IAssemblyCache = *mut ::core::ffi::c_void;
+pub type IAssemblyCacheItem = *mut ::core::ffi::c_void;
+pub type IAssemblyName = *mut ::core::ffi::c_void;
+pub type IEnumMsmDependency = *mut ::core::ffi::c_void;
+pub type IEnumMsmError = *mut ::core::ffi::c_void;
+pub type IEnumMsmString = *mut ::core::ffi::c_void;
+pub type IMsmDependencies = *mut ::core::ffi::c_void;
+pub type IMsmDependency = *mut ::core::ffi::c_void;
+pub type IMsmError = *mut ::core::ffi::c_void;
+pub type IMsmErrors = *mut ::core::ffi::c_void;
+pub type IMsmGetFiles = *mut ::core::ffi::c_void;
+pub type IMsmMerge = *mut ::core::ffi::c_void;
+pub type IMsmStrings = *mut ::core::ffi::c_void;
+pub type IPMApplicationInfo = *mut ::core::ffi::c_void;
+pub type IPMApplicationInfoEnumerator = *mut ::core::ffi::c_void;
+pub type IPMBackgroundServiceAgentInfo = *mut ::core::ffi::c_void;
+pub type IPMBackgroundServiceAgentInfoEnumerator = *mut ::core::ffi::c_void;
+pub type IPMBackgroundWorkerInfo = *mut ::core::ffi::c_void;
+pub type IPMBackgroundWorkerInfoEnumerator = *mut ::core::ffi::c_void;
+pub type IPMDeploymentManager = *mut ::core::ffi::c_void;
+pub type IPMEnumerationManager = *mut ::core::ffi::c_void;
+pub type IPMExtensionCachedFileUpdaterInfo = *mut ::core::ffi::c_void;
+pub type IPMExtensionContractInfo = *mut ::core::ffi::c_void;
+pub type IPMExtensionFileExtensionInfo = *mut ::core::ffi::c_void;
+pub type IPMExtensionFileOpenPickerInfo = *mut ::core::ffi::c_void;
+pub type IPMExtensionFileSavePickerInfo = *mut ::core::ffi::c_void;
+pub type IPMExtensionInfo = *mut ::core::ffi::c_void;
+pub type IPMExtensionInfoEnumerator = *mut ::core::ffi::c_void;
+pub type IPMExtensionProtocolInfo = *mut ::core::ffi::c_void;
+pub type IPMExtensionShareTargetInfo = *mut ::core::ffi::c_void;
+pub type IPMLiveTileJobInfo = *mut ::core::ffi::c_void;
+pub type IPMLiveTileJobInfoEnumerator = *mut ::core::ffi::c_void;
+pub type IPMTaskInfo = *mut ::core::ffi::c_void;
+pub type IPMTaskInfoEnumerator = *mut ::core::ffi::c_void;
+pub type IPMTileInfo = *mut ::core::ffi::c_void;
+pub type IPMTileInfoEnumerator = *mut ::core::ffi::c_void;
+pub type IPMTilePropertyEnumerator = *mut ::core::ffi::c_void;
+pub type IPMTilePropertyInfo = *mut ::core::ffi::c_void;
+pub type IValidate = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const APPLY_OPTION_FAIL_IF_CLOSE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -916,239 +770,19 @@ pub const APPLY_OPTION_TEST_ONLY: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const APPLY_OPTION_VALID_FLAGS: u32 = 7u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type ASM_BIND_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_BINDF_FORCE_CACHE_INSTALL: ASM_BIND_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_BINDF_RFS_INTEGRITY_CHECK: ASM_BIND_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_BINDF_RFS_MODULE_CHECK: ASM_BIND_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_BINDF_BINPATH_PROBE_ONLY: ASM_BIND_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_BINDF_SHARED_BINPATH_HINT: ASM_BIND_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_BINDF_PARENT_ASM_HINT: ASM_BIND_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type ASM_CMP_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_CMPF_NAME: ASM_CMP_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_CMPF_MAJOR_VERSION: ASM_CMP_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_CMPF_MINOR_VERSION: ASM_CMP_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_CMPF_BUILD_NUMBER: ASM_CMP_FLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_CMPF_REVISION_NUMBER: ASM_CMP_FLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_CMPF_PUBLIC_KEY_TOKEN: ASM_CMP_FLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_CMPF_CULTURE: ASM_CMP_FLAGS = 64i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_CMPF_CUSTOM: ASM_CMP_FLAGS = 128i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_CMPF_ALL: ASM_CMP_FLAGS = 255i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_CMPF_DEFAULT: ASM_CMP_FLAGS = 256i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type ASM_DISPLAY_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_DISPLAYF_VERSION: ASM_DISPLAY_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_DISPLAYF_CULTURE: ASM_DISPLAY_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_DISPLAYF_PUBLIC_KEY_TOKEN: ASM_DISPLAY_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_DISPLAYF_PUBLIC_KEY: ASM_DISPLAY_FLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_DISPLAYF_CUSTOM: ASM_DISPLAY_FLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_DISPLAYF_PROCESSORARCHITECTURE: ASM_DISPLAY_FLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_DISPLAYF_LANGUAGEID: ASM_DISPLAY_FLAGS = 64i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type ASM_NAME = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_PUBLIC_KEY: ASM_NAME = 0i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_PUBLIC_KEY_TOKEN: ASM_NAME = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_HASH_VALUE: ASM_NAME = 2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_NAME: ASM_NAME = 3i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_MAJOR_VERSION: ASM_NAME = 4i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_MINOR_VERSION: ASM_NAME = 5i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_BUILD_NUMBER: ASM_NAME = 6i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_REVISION_NUMBER: ASM_NAME = 7i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_CULTURE: ASM_NAME = 8i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_PROCESSOR_ID_ARRAY: ASM_NAME = 9i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_OSINFO_ARRAY: ASM_NAME = 10i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_HASH_ALGID: ASM_NAME = 11i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_ALIAS: ASM_NAME = 12i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_CODEBASE_URL: ASM_NAME = 13i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_CODEBASE_LASTMOD: ASM_NAME = 14i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_NULL_PUBLIC_KEY: ASM_NAME = 15i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_NULL_PUBLIC_KEY_TOKEN: ASM_NAME = 16i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_CUSTOM: ASM_NAME = 17i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_NULL_CUSTOM: ASM_NAME = 18i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_MVID: ASM_NAME = 19i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const ASM_NAME_MAX_PARAMS: ASM_NAME = 20i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const ASSEMBLYINFO_FLAG_INSTALLED: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const ASSEMBLYINFO_FLAG_PAYLOADRESIDENT: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct ASSEMBLY_FILE_DETAILED_INFORMATION {
-    pub ulFlags: u32,
-    pub ulFilenameLength: u32,
-    pub ulPathLength: u32,
-    pub lpFileName: ::windows_sys::core::PCWSTR,
-    pub lpFilePath: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for ASSEMBLY_FILE_DETAILED_INFORMATION {}
-impl ::core::clone::Clone for ASSEMBLY_FILE_DETAILED_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct ASSEMBLY_INFO {
-    pub cbAssemblyInfo: u32,
-    pub dwAssemblyFlags: u32,
-    pub uliAssemblySizeInKB: u64,
-    pub pszCurrentAssemblyPathBuf: ::windows_sys::core::PWSTR,
-    pub cchBuf: u32,
-}
-impl ::core::marker::Copy for ASSEMBLY_INFO {}
-impl ::core::clone::Clone for ASSEMBLY_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub const CLSID_EvalCom2: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1851660560, data2: 32851, data3: 18016, data4: [183, 149, 107, 97, 46, 41, 188, 88] };
 pub const CLSID_MsmMerge2: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4182345173, data2: 10745, data3: 18243, data4: [152, 5, 153, 188, 63, 53, 182, 120] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct COMPATIBILITY_CONTEXT_ELEMENT {
-    pub Id: ::windows_sys::core::GUID,
-    pub Type: ACTCTX_COMPATIBILITY_ELEMENT_TYPE,
-    pub MaxVersionTested: u64,
-}
-impl ::core::marker::Copy for COMPATIBILITY_CONTEXT_ELEMENT {}
-impl ::core::clone::Clone for COMPATIBILITY_CONTEXT_ELEMENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type CREATE_ASM_NAME_OBJ_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const CANOF_PARSE_DISPLAY_NAME: CREATE_ASM_NAME_OBJ_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const CANOF_SET_DEFAULT_VALUES: CREATE_ASM_NAME_OBJ_FLAGS = 2i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const DEFAULT_DISK_ID: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const DEFAULT_FILE_SEQUENCE_START: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const DEFAULT_MINIMUM_REQUIRED_MSI_VERSION: u32 = 100u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct DELTA_HASH {
-    pub HashSize: u32,
-    pub HashValue: [u8; 32],
-}
-impl ::core::marker::Copy for DELTA_HASH {}
-impl ::core::clone::Clone for DELTA_HASH {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DELTA_HEADER_INFO {
-    pub FileTypeSet: i64,
-    pub FileType: i64,
-    pub Flags: i64,
-    pub TargetSize: usize,
-    pub TargetFileTime: super::super::Foundation::FILETIME,
-    pub TargetHashAlgId: u32,
-    pub TargetHash: DELTA_HASH,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DELTA_HEADER_INFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DELTA_HEADER_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DELTA_INPUT {
-    pub Anonymous: DELTA_INPUT_0,
-    pub uSize: usize,
-    pub Editable: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DELTA_INPUT {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DELTA_INPUT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union DELTA_INPUT_0 {
-    pub lpcStart: *const ::core::ffi::c_void,
-    pub lpStart: *mut ::core::ffi::c_void,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DELTA_INPUT_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DELTA_INPUT_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const DELTA_MAX_HASH_SIZE: u32 = 32u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct DELTA_OUTPUT {
-    pub lpStart: *mut ::core::ffi::c_void,
-    pub uSize: usize,
-}
-impl ::core::marker::Copy for DELTA_OUTPUT {}
-impl ::core::clone::Clone for DELTA_OUTPUT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const ERROR_PATCH_BIGGER_THAN_COMPRESSED: u32 = 3222155525u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -1511,21 +1145,6 @@ pub const ERROR_PCW_WRITE_SUMMARY_PROPERTIES: u32 = 3222163787u32;
 pub const ERROR_PCW_WRONG_PATCHMETADATA_STRD_PROP: u32 = 3222163859u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const ERROR_ROLLBACK_DISABLED: u32 = 1653u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct FUSION_INSTALL_REFERENCE {
-    pub cbSize: u32,
-    pub dwFlags: u32,
-    pub guidScheme: ::windows_sys::core::GUID,
-    pub szIdentifier: ::windows_sys::core::PCWSTR,
-    pub szNonCannonicalData: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for FUSION_INSTALL_REFERENCE {}
-impl ::core::clone::Clone for FUSION_INSTALL_REFERENCE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub const FUSION_REFCOUNT_FILEPATH_GUID: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2955910501, data2: 64375, data3: 20346, data4: [175, 165, 179, 145, 48, 159, 17, 201] };
 pub const FUSION_REFCOUNT_OPAQUE_STRING_GUID: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 784938083, data2: 45251, data3: 17889, data4: [131, 100, 50, 126, 150, 174, 168, 86] };
 pub const FUSION_REFCOUNT_UNINSTALL_SUBKEY_GUID: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2364391957, data2: 44107, data3: 18571, data4: [147, 192, 165, 10, 73, 203, 47, 184] };
@@ -1549,29 +1168,6 @@ pub const IASSEMBLYCACHEITEM_COMMIT_DISPOSITION_INSTALLED: u32 = 1u32;
 pub const IASSEMBLYCACHEITEM_COMMIT_DISPOSITION_REFRESHED: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const IASSEMBLYCACHEITEM_COMMIT_FLAG_REFRESH: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type IASSEMBLYCACHE_UNINSTALL_DISPOSITION = u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const IASSEMBLYCACHE_UNINSTALL_DISPOSITION_UNINSTALLED: IASSEMBLYCACHE_UNINSTALL_DISPOSITION = 1u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const IASSEMBLYCACHE_UNINSTALL_DISPOSITION_STILL_IN_USE: IASSEMBLYCACHE_UNINSTALL_DISPOSITION = 2u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const IASSEMBLYCACHE_UNINSTALL_DISPOSITION_ALREADY_UNINSTALLED: IASSEMBLYCACHE_UNINSTALL_DISPOSITION = 3u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const IASSEMBLYCACHE_UNINSTALL_DISPOSITION_DELETE_PENDING: IASSEMBLYCACHE_UNINSTALL_DISPOSITION = 4u32;
-pub type IAssemblyCache = *mut ::core::ffi::c_void;
-pub type IAssemblyCacheItem = *mut ::core::ffi::c_void;
-pub type IAssemblyName = *mut ::core::ffi::c_void;
-pub type IEnumMsmDependency = *mut ::core::ffi::c_void;
-pub type IEnumMsmError = *mut ::core::ffi::c_void;
-pub type IEnumMsmString = *mut ::core::ffi::c_void;
-pub type IMsmDependencies = *mut ::core::ffi::c_void;
-pub type IMsmDependency = *mut ::core::ffi::c_void;
-pub type IMsmError = *mut ::core::ffi::c_void;
-pub type IMsmErrors = *mut ::core::ffi::c_void;
-pub type IMsmGetFiles = *mut ::core::ffi::c_void;
-pub type IMsmMerge = *mut ::core::ffi::c_void;
-pub type IMsmStrings = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const INFO_BASE: u32 = 3222229249u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -1611,135 +1207,7 @@ pub const INFO_TEMP_DIR_CLEANUP: u32 = 3222229266u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const INFO_USING_USER_MSI_FOR_PATCH_TABLES: u32 = 3222229270u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type INSTALLFEATUREATTRIBUTE = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLFEATUREATTRIBUTE_FAVORLOCAL: INSTALLFEATUREATTRIBUTE = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLFEATUREATTRIBUTE_FAVORSOURCE: INSTALLFEATUREATTRIBUTE = 2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLFEATUREATTRIBUTE_FOLLOWPARENT: INSTALLFEATUREATTRIBUTE = 4i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLFEATUREATTRIBUTE_FAVORADVERTISE: INSTALLFEATUREATTRIBUTE = 8i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLFEATUREATTRIBUTE_DISALLOWADVERTISE: INSTALLFEATUREATTRIBUTE = 16i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLFEATUREATTRIBUTE_NOUNSUPPORTEDADVERTISE: INSTALLFEATUREATTRIBUTE = 32i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type INSTALLLEVEL = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLEVEL_DEFAULT: INSTALLLEVEL = 0i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLEVEL_MINIMUM: INSTALLLEVEL = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLEVEL_MAXIMUM: INSTALLLEVEL = 65535i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type INSTALLLOGATTRIBUTES = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGATTRIBUTES_APPEND: INSTALLLOGATTRIBUTES = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGATTRIBUTES_FLUSHEACHLINE: INSTALLLOGATTRIBUTES = 2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type INSTALLMESSAGE = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_FATALEXIT: INSTALLMESSAGE = 0i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_ERROR: INSTALLMESSAGE = 16777216i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_WARNING: INSTALLMESSAGE = 33554432i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_USER: INSTALLMESSAGE = 50331648i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_INFO: INSTALLMESSAGE = 67108864i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_FILESINUSE: INSTALLMESSAGE = 83886080i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_RESOLVESOURCE: INSTALLMESSAGE = 100663296i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_OUTOFDISKSPACE: INSTALLMESSAGE = 117440512i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_ACTIONSTART: INSTALLMESSAGE = 134217728i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_ACTIONDATA: INSTALLMESSAGE = 150994944i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_PROGRESS: INSTALLMESSAGE = 167772160i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_COMMONDATA: INSTALLMESSAGE = 184549376i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_INITIALIZE: INSTALLMESSAGE = 201326592i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_TERMINATE: INSTALLMESSAGE = 218103808i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_SHOWDIALOG: INSTALLMESSAGE = 234881024i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_PERFORMANCE: INSTALLMESSAGE = 251658240i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_RMFILESINUSE: INSTALLMESSAGE = 419430400i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_INSTALLSTART: INSTALLMESSAGE = 436207616i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMESSAGE_INSTALLEND: INSTALLMESSAGE = 452984832i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const INSTALLMESSAGE_TYPEMASK: i32 = -16777216i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type INSTALLMODE = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMODE_NODETECTION_ANY: INSTALLMODE = -4i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMODE_NOSOURCERESOLUTION: INSTALLMODE = -3i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMODE_NODETECTION: INSTALLMODE = -2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMODE_EXISTING: INSTALLMODE = -1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLMODE_DEFAULT: INSTALLMODE = 0i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type INSTALLOGMODE = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_FATALEXIT: INSTALLOGMODE = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_ERROR: INSTALLOGMODE = 2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_WARNING: INSTALLOGMODE = 4i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_USER: INSTALLOGMODE = 8i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_INFO: INSTALLOGMODE = 16i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_RESOLVESOURCE: INSTALLOGMODE = 64i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_OUTOFDISKSPACE: INSTALLOGMODE = 128i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_ACTIONSTART: INSTALLOGMODE = 256i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_ACTIONDATA: INSTALLOGMODE = 512i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_COMMONDATA: INSTALLOGMODE = 2048i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_PROPERTYDUMP: INSTALLOGMODE = 1024i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_VERBOSE: INSTALLOGMODE = 4096i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_EXTRADEBUG: INSTALLOGMODE = 8192i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_LOGONLYONERROR: INSTALLOGMODE = 16384i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_LOGPERFORMANCE: INSTALLOGMODE = 32768i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_PROGRESS: INSTALLOGMODE = 1024i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_INITIALIZE: INSTALLOGMODE = 4096i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_TERMINATE: INSTALLOGMODE = 8192i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_SHOWDIALOG: INSTALLOGMODE = 16384i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_FILESINUSE: INSTALLOGMODE = 32i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_RMFILESINUSE: INSTALLOGMODE = 33554432i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_INSTALLSTART: INSTALLOGMODE = 67108864i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLLOGMODE_INSTALLEND: INSTALLOGMODE = 134217728i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const INSTALLPROPERTY_ASSIGNMENTTYPE: &str = "AssignmentType";
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -1816,97 +1284,6 @@ pub const INSTALLPROPERTY_VERSIONMAJOR: &str = "VersionMajor";
 pub const INSTALLPROPERTY_VERSIONMINOR: &str = "VersionMinor";
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const INSTALLPROPERTY_VERSIONSTRING: &str = "VersionString";
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type INSTALLSTATE = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_NOTUSED: INSTALLSTATE = -7i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_BADCONFIG: INSTALLSTATE = -6i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_INCOMPLETE: INSTALLSTATE = -5i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_SOURCEABSENT: INSTALLSTATE = -4i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_MOREDATA: INSTALLSTATE = -3i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_INVALIDARG: INSTALLSTATE = -2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_UNKNOWN: INSTALLSTATE = -1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_BROKEN: INSTALLSTATE = 0i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_ADVERTISED: INSTALLSTATE = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_REMOVED: INSTALLSTATE = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_ABSENT: INSTALLSTATE = 2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_LOCAL: INSTALLSTATE = 3i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_SOURCE: INSTALLSTATE = 4i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLSTATE_DEFAULT: INSTALLSTATE = 5i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type INSTALLTYPE = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLTYPE_DEFAULT: INSTALLTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLTYPE_NETWORK_IMAGE: INSTALLTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLTYPE_SINGLE_INSTANCE: INSTALLTYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type INSTALLUILEVEL = i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLUILEVEL_NOCHANGE: INSTALLUILEVEL = 0i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLUILEVEL_DEFAULT: INSTALLUILEVEL = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLUILEVEL_NONE: INSTALLUILEVEL = 2i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLUILEVEL_BASIC: INSTALLUILEVEL = 3i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLUILEVEL_REDUCED: INSTALLUILEVEL = 4i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLUILEVEL_FULL: INSTALLUILEVEL = 5i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLUILEVEL_ENDDIALOG: INSTALLUILEVEL = 128i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLUILEVEL_PROGRESSONLY: INSTALLUILEVEL = 64i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLUILEVEL_HIDECANCEL: INSTALLUILEVEL = 32i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLUILEVEL_SOURCERESONLY: INSTALLUILEVEL = 256i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const INSTALLUILEVEL_UACONLY: INSTALLUILEVEL = 512i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type INSTALLUI_HANDLERA = ::core::option::Option<unsafe extern "system" fn(pvcontext: *mut ::core::ffi::c_void, imessagetype: u32, szmessage: ::windows_sys::core::PCSTR) -> i32>;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type INSTALLUI_HANDLERW = ::core::option::Option<unsafe extern "system" fn(pvcontext: *mut ::core::ffi::c_void, imessagetype: u32, szmessage: ::windows_sys::core::PCWSTR) -> i32>;
-pub type IPMApplicationInfo = *mut ::core::ffi::c_void;
-pub type IPMApplicationInfoEnumerator = *mut ::core::ffi::c_void;
-pub type IPMBackgroundServiceAgentInfo = *mut ::core::ffi::c_void;
-pub type IPMBackgroundServiceAgentInfoEnumerator = *mut ::core::ffi::c_void;
-pub type IPMBackgroundWorkerInfo = *mut ::core::ffi::c_void;
-pub type IPMBackgroundWorkerInfoEnumerator = *mut ::core::ffi::c_void;
-pub type IPMDeploymentManager = *mut ::core::ffi::c_void;
-pub type IPMEnumerationManager = *mut ::core::ffi::c_void;
-pub type IPMExtensionCachedFileUpdaterInfo = *mut ::core::ffi::c_void;
-pub type IPMExtensionContractInfo = *mut ::core::ffi::c_void;
-pub type IPMExtensionFileExtensionInfo = *mut ::core::ffi::c_void;
-pub type IPMExtensionFileOpenPickerInfo = *mut ::core::ffi::c_void;
-pub type IPMExtensionFileSavePickerInfo = *mut ::core::ffi::c_void;
-pub type IPMExtensionInfo = *mut ::core::ffi::c_void;
-pub type IPMExtensionInfoEnumerator = *mut ::core::ffi::c_void;
-pub type IPMExtensionProtocolInfo = *mut ::core::ffi::c_void;
-pub type IPMExtensionShareTargetInfo = *mut ::core::ffi::c_void;
-pub type IPMLiveTileJobInfo = *mut ::core::ffi::c_void;
-pub type IPMLiveTileJobInfoEnumerator = *mut ::core::ffi::c_void;
-pub type IPMTaskInfo = *mut ::core::ffi::c_void;
-pub type IPMTaskInfoEnumerator = *mut ::core::ffi::c_void;
-pub type IPMTileInfo = *mut ::core::ffi::c_void;
-pub type IPMTileInfoEnumerator = *mut ::core::ffi::c_void;
-pub type IPMTilePropertyEnumerator = *mut ::core::ffi::c_void;
-pub type IPMTilePropertyInfo = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const IPROPNAME_ACTION: &str = "ACTION";
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -2345,7 +1722,6 @@ pub const IPROPVALUE_RBCOST_SILENT: &str = "D";
 pub const IPROPVALUE__CARRYINGNDP_URTREINSTALL: &str = "URTREINSTALL";
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const IPROPVALUE__CARRYINGNDP_URTUPGRADE: &str = "URTUPGRADE";
-pub type IValidate = *mut ::core::ffi::c_void;
 pub const LIBID_MsmMergeTypeLib: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 182298671, data2: 11302, data3: 4562, data4: [173, 101, 0, 160, 201, 175, 17, 166] };
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const LOGALL: u32 = 15u32;
@@ -2369,16 +1745,574 @@ pub const LOGTOKEN_TYPE_MASK: u32 = 3u32;
 pub const LOGTOKEN_UNSPECIFIED: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const LOGWARN: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LPDISPLAYVAL = ::core::option::Option<unsafe extern "system" fn(pcontext: *mut ::core::ffi::c_void, uitype: RESULTTYPES, szwval: ::windows_sys::core::PCWSTR, szwdescription: ::windows_sys::core::PCWSTR, szwlocation: ::windows_sys::core::PCWSTR) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LPEVALCOMCALLBACK = ::core::option::Option<unsafe extern "system" fn(istatus: STATUSTYPES, szdata: ::windows_sys::core::PCWSTR, pcontext: *mut ::core::ffi::c_void) -> super::super::Foundation::BOOL>;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const MAX_FEATURE_CHARS: u32 = 38u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const MAX_GUID_CHARS: u32 = 38u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const MSI_INVALID_HASH_IS_FATAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const MSI_NULL_INTEGER: u32 = 2147483648u32;
+pub const MsmMerge: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 182298672, data2: 11302, data3: 4562, data4: [173, 101, 0, 160, 201, 175, 17, 166] };
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_FAIL_IF_BIGGER: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_FAIL_IF_SAME_FILE: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_INTERLEAVE_FILES: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_NO_BINDFIX: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_NO_CHECKSUM: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_NO_LOCKFIX: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_NO_REBASE: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_NO_RESTIMEFIX: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_NO_TIMESTAMP: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_RESERVED1: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_SIGNATURE_MD5: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_USE_BEST: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_USE_LZX_A: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_USE_LZX_B: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_USE_LZX_BEST: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_USE_LZX_LARGE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_OPTION_VALID_FLAGS: u32 = 3237937159u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_SYMBOL_NO_FAILURES: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_SYMBOL_NO_IMAGEHLP: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_SYMBOL_RESERVED1: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_SYMBOL_UNDECORATED_TOO: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_TRANSFORM_PE_IRELOC_2: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PATCH_TRANSFORM_PE_RESOURCE_2: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_APPNAME: u32 = 18u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_AUTHOR: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_CHARCOUNT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_COMMENTS: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_CREATE_DTM: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_EDITTIME: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_KEYWORDS: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_LASTAUTHOR: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_LASTPRINTED: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_LASTSAVE_DTM: u32 = 13u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_MSIRESTRICT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_MSISOURCE: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_MSIVERSION: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_PAGECOUNT: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_REVNUMBER: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_SUBJECT: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_TEMPLATE: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_THUMBNAIL: u32 = 17u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_TITLE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const PID_WORDCOUNT: u32 = 15u32;
+pub const PMSvc: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3118797308, data2: 58212, data3: 18810, data4: [161, 33, 183, 179, 97, 44, 237, 206] };
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const SFC_DISABLE_ASK: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const SFC_DISABLE_NOPOPUPS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const SFC_DISABLE_NORMAL: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const SFC_DISABLE_ONCE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const SFC_DISABLE_SETUP: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const SFC_IDLE_TRIGGER: &str = "WFP_IDLE_TRIGGER";
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const SFC_QUOTA_DEFAULT: u32 = 50u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const SFC_SCAN_ALWAYS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const SFC_SCAN_IMMEDIATE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const SFC_SCAN_NORMAL: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const SFC_SCAN_ONCE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const STREAM_FORMAT_COMPLIB_MANIFEST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const STREAM_FORMAT_COMPLIB_MODULE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const STREAM_FORMAT_WIN32_MANIFEST: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const STREAM_FORMAT_WIN32_MODULE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_BACKUP: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_CMI: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_COPYFILES: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_DEPTH_DECR: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_DEPTH_INCR: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_DETAILS: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_DEVINST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_DEVMGR: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_DRIVER_STORE: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_DRVSETUP: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_ERROR: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_FILEQ: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_FLUSH_FILE: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_INF: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_INFDB: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_INSTALLER: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_NEWDEV: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_POLICY: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_RESERVED_FLAGS: u32 = 65520u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_SETUP: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_SETUPAPI_BITS: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_SETUPAPI_CMDLINE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_SETUPAPI_DEVLOG: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_SIGVERIF: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_SUMMARY: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_SYSTEM_STATE_CHANGE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_TAB_1: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_TIMESTAMP: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_UI: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_UMPNPMGR: u32 = 33554432u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_UTIL: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_VENDOR: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_VERBOSE: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_VERY_VERBOSE: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const TXTLOG_WARNING: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const UIALL: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const UILOGBITS: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const UINONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_BAD_MAJOR_VERSION: u32 = 3222294792u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_BASE: u32 = 3222294785u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_EQUAL_FILE_VERSION: u32 = 3222294794u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_FILE_VERSION_DOWNREV: u32 = 3222294793u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_IMPROPER_TRANSFORM_VALIDATION: u32 = 3222294788u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_INVALID_TRANSFORM_VALIDATION: u32 = 3222294791u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_MAJOR_UPGRADE_PATCH: u32 = 3222294785u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_OBSOLETION_WITH_MSI30: u32 = 3222294801u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_OBSOLETION_WITH_PATCHSEQUENCE: u32 = 3222294803u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_OBSOLETION_WITH_SEQUENCE_DATA: u32 = 3222294802u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_PATCHPROPERTYNOTSET: u32 = 3222294795u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_PCW_MISMATCHED_PRODUCT_CODES: u32 = 3222294789u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_PCW_MISMATCHED_PRODUCT_VERSIONS: u32 = 3222294790u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_SEQUENCE_DATA_GENERATION_DISABLED: u32 = 3222294786u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const WARN_SEQUENCE_DATA_SUPERSEDENCE_IGNORED: u32 = 3222294787u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const _WIN32_MSI: u32 = 500u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const _WIN32_MSM: u32 = 100u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const cchMaxInteger: i32 = 12i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type ACTCTX_COMPATIBILITY_ELEMENT_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ACTCTX_COMPATIBILITY_ELEMENT_TYPE_UNKNOWN: ACTCTX_COMPATIBILITY_ELEMENT_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ACTCTX_COMPATIBILITY_ELEMENT_TYPE_OS: ACTCTX_COMPATIBILITY_ELEMENT_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ACTCTX_COMPATIBILITY_ELEMENT_TYPE_MITIGATION: ACTCTX_COMPATIBILITY_ELEMENT_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ACTCTX_COMPATIBILITY_ELEMENT_TYPE_MAXVERSIONTESTED: ACTCTX_COMPATIBILITY_ELEMENT_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type ACTCTX_REQUESTED_RUN_LEVEL = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ACTCTX_RUN_LEVEL_UNSPECIFIED: ACTCTX_REQUESTED_RUN_LEVEL = 0i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ACTCTX_RUN_LEVEL_AS_INVOKER: ACTCTX_REQUESTED_RUN_LEVEL = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ACTCTX_RUN_LEVEL_HIGHEST_AVAILABLE: ACTCTX_REQUESTED_RUN_LEVEL = 2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ACTCTX_RUN_LEVEL_REQUIRE_ADMIN: ACTCTX_REQUESTED_RUN_LEVEL = 3i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ACTCTX_RUN_LEVEL_NUMBERS: ACTCTX_REQUESTED_RUN_LEVEL = 4i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type ADVERTISEFLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ADVERTISEFLAGS_MACHINEASSIGN: ADVERTISEFLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ADVERTISEFLAGS_USERASSIGN: ADVERTISEFLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type ASM_BIND_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_BINDF_FORCE_CACHE_INSTALL: ASM_BIND_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_BINDF_RFS_INTEGRITY_CHECK: ASM_BIND_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_BINDF_RFS_MODULE_CHECK: ASM_BIND_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_BINDF_BINPATH_PROBE_ONLY: ASM_BIND_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_BINDF_SHARED_BINPATH_HINT: ASM_BIND_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_BINDF_PARENT_ASM_HINT: ASM_BIND_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type ASM_CMP_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_CMPF_NAME: ASM_CMP_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_CMPF_MAJOR_VERSION: ASM_CMP_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_CMPF_MINOR_VERSION: ASM_CMP_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_CMPF_BUILD_NUMBER: ASM_CMP_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_CMPF_REVISION_NUMBER: ASM_CMP_FLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_CMPF_PUBLIC_KEY_TOKEN: ASM_CMP_FLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_CMPF_CULTURE: ASM_CMP_FLAGS = 64i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_CMPF_CUSTOM: ASM_CMP_FLAGS = 128i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_CMPF_ALL: ASM_CMP_FLAGS = 255i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_CMPF_DEFAULT: ASM_CMP_FLAGS = 256i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type ASM_DISPLAY_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_DISPLAYF_VERSION: ASM_DISPLAY_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_DISPLAYF_CULTURE: ASM_DISPLAY_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_DISPLAYF_PUBLIC_KEY_TOKEN: ASM_DISPLAY_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_DISPLAYF_PUBLIC_KEY: ASM_DISPLAY_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_DISPLAYF_CUSTOM: ASM_DISPLAY_FLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_DISPLAYF_PROCESSORARCHITECTURE: ASM_DISPLAY_FLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_DISPLAYF_LANGUAGEID: ASM_DISPLAY_FLAGS = 64i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type ASM_NAME = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_PUBLIC_KEY: ASM_NAME = 0i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_PUBLIC_KEY_TOKEN: ASM_NAME = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_HASH_VALUE: ASM_NAME = 2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_NAME: ASM_NAME = 3i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_MAJOR_VERSION: ASM_NAME = 4i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_MINOR_VERSION: ASM_NAME = 5i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_BUILD_NUMBER: ASM_NAME = 6i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_REVISION_NUMBER: ASM_NAME = 7i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_CULTURE: ASM_NAME = 8i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_PROCESSOR_ID_ARRAY: ASM_NAME = 9i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_OSINFO_ARRAY: ASM_NAME = 10i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_HASH_ALGID: ASM_NAME = 11i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_ALIAS: ASM_NAME = 12i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_CODEBASE_URL: ASM_NAME = 13i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_CODEBASE_LASTMOD: ASM_NAME = 14i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_NULL_PUBLIC_KEY: ASM_NAME = 15i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_NULL_PUBLIC_KEY_TOKEN: ASM_NAME = 16i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_CUSTOM: ASM_NAME = 17i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_NULL_CUSTOM: ASM_NAME = 18i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_MVID: ASM_NAME = 19i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const ASM_NAME_MAX_PARAMS: ASM_NAME = 20i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type CREATE_ASM_NAME_OBJ_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const CANOF_PARSE_DISPLAY_NAME: CREATE_ASM_NAME_OBJ_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const CANOF_SET_DEFAULT_VALUES: CREATE_ASM_NAME_OBJ_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type IASSEMBLYCACHE_UNINSTALL_DISPOSITION = u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const IASSEMBLYCACHE_UNINSTALL_DISPOSITION_UNINSTALLED: IASSEMBLYCACHE_UNINSTALL_DISPOSITION = 1u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const IASSEMBLYCACHE_UNINSTALL_DISPOSITION_STILL_IN_USE: IASSEMBLYCACHE_UNINSTALL_DISPOSITION = 2u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const IASSEMBLYCACHE_UNINSTALL_DISPOSITION_ALREADY_UNINSTALLED: IASSEMBLYCACHE_UNINSTALL_DISPOSITION = 3u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const IASSEMBLYCACHE_UNINSTALL_DISPOSITION_DELETE_PENDING: IASSEMBLYCACHE_UNINSTALL_DISPOSITION = 4u32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type INSTALLFEATUREATTRIBUTE = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLFEATUREATTRIBUTE_FAVORLOCAL: INSTALLFEATUREATTRIBUTE = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLFEATUREATTRIBUTE_FAVORSOURCE: INSTALLFEATUREATTRIBUTE = 2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLFEATUREATTRIBUTE_FOLLOWPARENT: INSTALLFEATUREATTRIBUTE = 4i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLFEATUREATTRIBUTE_FAVORADVERTISE: INSTALLFEATUREATTRIBUTE = 8i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLFEATUREATTRIBUTE_DISALLOWADVERTISE: INSTALLFEATUREATTRIBUTE = 16i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLFEATUREATTRIBUTE_NOUNSUPPORTEDADVERTISE: INSTALLFEATUREATTRIBUTE = 32i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type INSTALLLEVEL = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLEVEL_DEFAULT: INSTALLLEVEL = 0i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLEVEL_MINIMUM: INSTALLLEVEL = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLEVEL_MAXIMUM: INSTALLLEVEL = 65535i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type INSTALLLOGATTRIBUTES = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGATTRIBUTES_APPEND: INSTALLLOGATTRIBUTES = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGATTRIBUTES_FLUSHEACHLINE: INSTALLLOGATTRIBUTES = 2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type INSTALLLOGMODE = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_FATALEXIT: INSTALLLOGMODE = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_ERROR: INSTALLLOGMODE = 2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_WARNING: INSTALLLOGMODE = 4i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_USER: INSTALLLOGMODE = 8i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_INFO: INSTALLLOGMODE = 16i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_RESOLVESOURCE: INSTALLLOGMODE = 64i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_OUTOFDISKSPACE: INSTALLLOGMODE = 128i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_ACTIONSTART: INSTALLLOGMODE = 256i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_ACTIONDATA: INSTALLLOGMODE = 512i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_COMMONDATA: INSTALLLOGMODE = 2048i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_PROPERTYDUMP: INSTALLLOGMODE = 1024i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_VERBOSE: INSTALLLOGMODE = 4096i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_EXTRADEBUG: INSTALLLOGMODE = 8192i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_LOGONLYONERROR: INSTALLLOGMODE = 16384i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_LOGPERFORMANCE: INSTALLLOGMODE = 32768i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_PROGRESS: INSTALLLOGMODE = 1024i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_INITIALIZE: INSTALLLOGMODE = 4096i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_TERMINATE: INSTALLLOGMODE = 8192i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_SHOWDIALOG: INSTALLLOGMODE = 16384i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_FILESINUSE: INSTALLLOGMODE = 32i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_RMFILESINUSE: INSTALLLOGMODE = 33554432i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_INSTALLSTART: INSTALLLOGMODE = 67108864i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLLOGMODE_INSTALLEND: INSTALLLOGMODE = 134217728i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type INSTALLMESSAGE = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_FATALEXIT: INSTALLMESSAGE = 0i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_ERROR: INSTALLMESSAGE = 16777216i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_WARNING: INSTALLMESSAGE = 33554432i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_USER: INSTALLMESSAGE = 50331648i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_INFO: INSTALLMESSAGE = 67108864i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_FILESINUSE: INSTALLMESSAGE = 83886080i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_RESOLVESOURCE: INSTALLMESSAGE = 100663296i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_OUTOFDISKSPACE: INSTALLMESSAGE = 117440512i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_ACTIONSTART: INSTALLMESSAGE = 134217728i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_ACTIONDATA: INSTALLMESSAGE = 150994944i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_PROGRESS: INSTALLMESSAGE = 167772160i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_COMMONDATA: INSTALLMESSAGE = 184549376i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_INITIALIZE: INSTALLMESSAGE = 201326592i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_TERMINATE: INSTALLMESSAGE = 218103808i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_SHOWDIALOG: INSTALLMESSAGE = 234881024i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_PERFORMANCE: INSTALLMESSAGE = 251658240i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_RMFILESINUSE: INSTALLMESSAGE = 419430400i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_INSTALLSTART: INSTALLMESSAGE = 436207616i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMESSAGE_INSTALLEND: INSTALLMESSAGE = 452984832i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type INSTALLMODE = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMODE_NODETECTION_ANY: INSTALLMODE = -4i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMODE_NOSOURCERESOLUTION: INSTALLMODE = -3i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMODE_NODETECTION: INSTALLMODE = -2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMODE_EXISTING: INSTALLMODE = -1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLMODE_DEFAULT: INSTALLMODE = 0i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type INSTALLSTATE = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_NOTUSED: INSTALLSTATE = -7i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_BADCONFIG: INSTALLSTATE = -6i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_INCOMPLETE: INSTALLSTATE = -5i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_SOURCEABSENT: INSTALLSTATE = -4i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_MOREDATA: INSTALLSTATE = -3i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_INVALIDARG: INSTALLSTATE = -2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_UNKNOWN: INSTALLSTATE = -1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_BROKEN: INSTALLSTATE = 0i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_ADVERTISED: INSTALLSTATE = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_REMOVED: INSTALLSTATE = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_ABSENT: INSTALLSTATE = 2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_LOCAL: INSTALLSTATE = 3i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_SOURCE: INSTALLSTATE = 4i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLSTATE_DEFAULT: INSTALLSTATE = 5i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type INSTALLTYPE = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLTYPE_DEFAULT: INSTALLTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLTYPE_NETWORK_IMAGE: INSTALLTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLTYPE_SINGLE_INSTANCE: INSTALLTYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type INSTALLUILEVEL = i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLUILEVEL_NOCHANGE: INSTALLUILEVEL = 0i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLUILEVEL_DEFAULT: INSTALLUILEVEL = 1i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLUILEVEL_NONE: INSTALLUILEVEL = 2i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLUILEVEL_BASIC: INSTALLUILEVEL = 3i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLUILEVEL_REDUCED: INSTALLUILEVEL = 4i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLUILEVEL_FULL: INSTALLUILEVEL = 5i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLUILEVEL_ENDDIALOG: INSTALLUILEVEL = 128i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLUILEVEL_PROGRESSONLY: INSTALLUILEVEL = 64i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLUILEVEL_HIDECANCEL: INSTALLUILEVEL = 32i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLUILEVEL_SOURCERESONLY: INSTALLUILEVEL = 256i32;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub const INSTALLUILEVEL_UACONLY: INSTALLUILEVEL = 512i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type MSIADVERTISEOPTIONFLAGS = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -2507,19 +2441,6 @@ pub const MSIDBSTATE_ERROR: MSIDBSTATE = -1i32;
 pub const MSIDBSTATE_READ: MSIDBSTATE = 0i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const MSIDBSTATE_WRITE: MSIDBSTATE = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct MSIFILEHASHINFO {
-    pub dwFileHashInfoSize: u32,
-    pub dwData: [u32; 4],
-}
-impl ::core::marker::Copy for MSIFILEHASHINFO {}
-impl ::core::clone::Clone for MSIFILEHASHINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type MSIHANDLE = u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type MSIINSTALLCONTEXT = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -2576,34 +2497,6 @@ pub const MSIPATCH_DATATYPE_PATCHFILE: MSIPATCHDATATYPE = 0i32;
 pub const MSIPATCH_DATATYPE_XMLPATH: MSIPATCHDATATYPE = 1i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const MSIPATCH_DATATYPE_XMLBLOB: MSIPATCHDATATYPE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct MSIPATCHSEQUENCEINFOA {
-    pub szPatchData: ::windows_sys::core::PCSTR,
-    pub ePatchDataType: MSIPATCHDATATYPE,
-    pub dwOrder: u32,
-    pub uStatus: u32,
-}
-impl ::core::marker::Copy for MSIPATCHSEQUENCEINFOA {}
-impl ::core::clone::Clone for MSIPATCHSEQUENCEINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct MSIPATCHSEQUENCEINFOW {
-    pub szPatchData: ::windows_sys::core::PCWSTR,
-    pub ePatchDataType: MSIPATCHDATATYPE,
-    pub dwOrder: u32,
-    pub uStatus: u32,
-}
-impl ::core::marker::Copy for MSIPATCHSEQUENCEINFOW {}
-impl ::core::clone::Clone for MSIPATCHSEQUENCEINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type MSIPATCHSTATE = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -2725,11 +2618,6 @@ pub const MSITRANSFORM_VALIDATE_NEWGREATERBASEVERSION: MSITRANSFORM_VALIDATE = 1
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const MSITRANSFORM_VALIDATE_UPGRADECODE: MSITRANSFORM_VALIDATE = 2048i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const MSI_INVALID_HASH_IS_FATAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const MSI_NULL_INTEGER: u32 = 2147483648u32;
-pub const MsmMerge: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 182298672, data2: 11302, data3: 4562, data4: [173, 101, 0, 160, 201, 175, 17, 166] };
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type PACKMAN_RUNTIME = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const PACKMAN_RUNTIME_NATIVE: PACKMAN_RUNTIME = 1i32;
@@ -2743,264 +2631,6 @@ pub const PACKMAN_RUNTIME_MODERN_NATIVE: PACKMAN_RUNTIME = 4i32;
 pub const PACKMAN_RUNTIME_JUPITER: PACKMAN_RUNTIME = 5i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const PACKMAN_RUNTIME_INVALID: PACKMAN_RUNTIME = 6i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct PATCH_IGNORE_RANGE {
-    pub OffsetInOldFile: u32,
-    pub LengthInBytes: u32,
-}
-impl ::core::marker::Copy for PATCH_IGNORE_RANGE {}
-impl ::core::clone::Clone for PATCH_IGNORE_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct PATCH_INTERLEAVE_MAP {
-    pub CountRanges: u32,
-    pub Range: [PATCH_INTERLEAVE_MAP_0; 1],
-}
-impl ::core::marker::Copy for PATCH_INTERLEAVE_MAP {}
-impl ::core::clone::Clone for PATCH_INTERLEAVE_MAP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct PATCH_INTERLEAVE_MAP_0 {
-    pub OldOffset: u32,
-    pub OldLength: u32,
-    pub NewLength: u32,
-}
-impl ::core::marker::Copy for PATCH_INTERLEAVE_MAP_0 {}
-impl ::core::clone::Clone for PATCH_INTERLEAVE_MAP_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PATCH_OLD_FILE_INFO {
-    pub SizeOfThisStruct: u32,
-    pub Anonymous: PATCH_OLD_FILE_INFO_0,
-    pub IgnoreRangeCount: u32,
-    pub IgnoreRangeArray: *mut PATCH_IGNORE_RANGE,
-    pub RetainRangeCount: u32,
-    pub RetainRangeArray: *mut PATCH_RETAIN_RANGE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PATCH_OLD_FILE_INFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PATCH_OLD_FILE_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union PATCH_OLD_FILE_INFO_0 {
-    pub OldFileNameA: ::windows_sys::core::PCSTR,
-    pub OldFileNameW: ::windows_sys::core::PCWSTR,
-    pub OldFileHandle: super::super::Foundation::HANDLE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PATCH_OLD_FILE_INFO_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PATCH_OLD_FILE_INFO_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct PATCH_OLD_FILE_INFO_A {
-    pub SizeOfThisStruct: u32,
-    pub OldFileName: ::windows_sys::core::PCSTR,
-    pub IgnoreRangeCount: u32,
-    pub IgnoreRangeArray: *mut PATCH_IGNORE_RANGE,
-    pub RetainRangeCount: u32,
-    pub RetainRangeArray: *mut PATCH_RETAIN_RANGE,
-}
-impl ::core::marker::Copy for PATCH_OLD_FILE_INFO_A {}
-impl ::core::clone::Clone for PATCH_OLD_FILE_INFO_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PATCH_OLD_FILE_INFO_H {
-    pub SizeOfThisStruct: u32,
-    pub OldFileHandle: super::super::Foundation::HANDLE,
-    pub IgnoreRangeCount: u32,
-    pub IgnoreRangeArray: *mut PATCH_IGNORE_RANGE,
-    pub RetainRangeCount: u32,
-    pub RetainRangeArray: *mut PATCH_RETAIN_RANGE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PATCH_OLD_FILE_INFO_H {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PATCH_OLD_FILE_INFO_H {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct PATCH_OLD_FILE_INFO_W {
-    pub SizeOfThisStruct: u32,
-    pub OldFileName: ::windows_sys::core::PCWSTR,
-    pub IgnoreRangeCount: u32,
-    pub IgnoreRangeArray: *mut PATCH_IGNORE_RANGE,
-    pub RetainRangeCount: u32,
-    pub RetainRangeArray: *mut PATCH_RETAIN_RANGE,
-}
-impl ::core::marker::Copy for PATCH_OLD_FILE_INFO_W {}
-impl ::core::clone::Clone for PATCH_OLD_FILE_INFO_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PATCH_OPTION_DATA {
-    pub SizeOfThisStruct: u32,
-    pub SymbolOptionFlags: u32,
-    pub NewFileSymbolPath: ::windows_sys::core::PCSTR,
-    pub OldFileSymbolPathArray: *mut ::windows_sys::core::PSTR,
-    pub ExtendedOptionFlags: u32,
-    pub SymLoadCallback: PPATCH_SYMLOAD_CALLBACK,
-    pub SymLoadContext: *mut ::core::ffi::c_void,
-    pub InterleaveMapArray: *mut *mut PATCH_INTERLEAVE_MAP,
-    pub MaxLzxWindowSize: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PATCH_OPTION_DATA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PATCH_OPTION_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_FAIL_IF_BIGGER: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_FAIL_IF_SAME_FILE: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_INTERLEAVE_FILES: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_NO_BINDFIX: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_NO_CHECKSUM: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_NO_LOCKFIX: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_NO_REBASE: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_NO_RESTIMEFIX: u32 = 4194304u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_NO_TIMESTAMP: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_RESERVED1: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_SIGNATURE_MD5: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_USE_BEST: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_USE_LZX_A: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_USE_LZX_B: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_USE_LZX_BEST: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_USE_LZX_LARGE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_OPTION_VALID_FLAGS: u32 = 3237937159u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct PATCH_RETAIN_RANGE {
-    pub OffsetInOldFile: u32,
-    pub LengthInBytes: u32,
-    pub OffsetInNewFile: u32,
-}
-impl ::core::marker::Copy for PATCH_RETAIN_RANGE {}
-impl ::core::clone::Clone for PATCH_RETAIN_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_SYMBOL_NO_FAILURES: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_SYMBOL_NO_IMAGEHLP: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_SYMBOL_RESERVED1: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_SYMBOL_UNDECORATED_TOO: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_TRANSFORM_PE_IRELOC_2: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PATCH_TRANSFORM_PE_RESOURCE_2: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_APPNAME: u32 = 18u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_AUTHOR: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_CHARCOUNT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_COMMENTS: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_CREATE_DTM: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_EDITTIME: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_KEYWORDS: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_LASTAUTHOR: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_LASTPRINTED: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_LASTSAVE_DTM: u32 = 13u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_MSIRESTRICT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_MSISOURCE: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_MSIVERSION: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_PAGECOUNT: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_REVNUMBER: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_SUBJECT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_TEMPLATE: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_THUMBNAIL: u32 = 17u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_TITLE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const PID_WORDCOUNT: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub type PINSTALLUI_HANDLER_RECORD = ::core::option::Option<unsafe extern "system" fn(pvcontext: *mut ::core::ffi::c_void, imessagetype: u32, hrecord: MSIHANDLE) -> i32>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct PMSIHANDLE {
-    pub m_h: MSIHANDLE,
-}
-impl ::core::marker::Copy for PMSIHANDLE {}
-impl ::core::clone::Clone for PMSIHANDLE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub const PMSvc: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3118797308, data2: 58212, data3: 18810, data4: [161, 33, 183, 179, 97, 44, 237, 206] };
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type PM_ACTIVATION_POLICY = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -3077,36 +2707,6 @@ pub const PM_APP_GENRE_GAMES: PM_APP_GENRE = 0i32;
 pub const PM_APP_GENRE_OTHER: PM_APP_GENRE = 1i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const PM_APP_GENRE_INVALID: PM_APP_GENRE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PM_BSATASKID {
-    pub ProductID: ::windows_sys::core::GUID,
-    pub TaskID: super::super::Foundation::BSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PM_BSATASKID {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PM_BSATASKID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PM_BWTASKID {
-    pub ProductID: ::windows_sys::core::GUID,
-    pub TaskID: super::super::Foundation::BSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PM_BWTASKID {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PM_BWTASKID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type PM_ENUM_APP_FILTER = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -3173,51 +2773,6 @@ pub const PM_ENUM_EXTENSION_FILTER_FILESAVEPICKER_ALL: PM_ENUM_EXTENSION_FILTER 
 pub const PM_ENUM_EXTENSION_FILTER_CACHEDFILEUPDATER_ALL: PM_ENUM_EXTENSION_FILTER = 25i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const PM_ENUM_EXTENSION_FILTER_MAX: PM_ENUM_EXTENSION_FILTER = 26i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PM_ENUM_FILTER {
-    pub FilterType: i32,
-    pub FilterParameter: PM_ENUM_FILTER_0,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PM_ENUM_FILTER {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PM_ENUM_FILTER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union PM_ENUM_FILTER_0 {
-    pub Dummy: i32,
-    pub Genre: PM_APP_GENRE,
-    pub AppHubType: PM_APPLICATION_HUBTYPE,
-    pub HubType: PM_TILE_HUBTYPE,
-    pub Tasktype: PM_TASK_TYPE,
-    pub TaskProductID: ::windows_sys::core::GUID,
-    pub TileProductID: ::windows_sys::core::GUID,
-    pub AppTaskType: _tagAPPTASKTYPE,
-    pub Consumer: PM_EXTENSIONCONSUMER,
-    pub BSATask: PM_BSATASKID,
-    pub BSAProductID: ::windows_sys::core::GUID,
-    pub BWTask: PM_BWTASKID,
-    pub ProtocolName: super::super::Foundation::BSTR,
-    pub FileType: super::super::Foundation::BSTR,
-    pub ContentType: super::super::Foundation::BSTR,
-    pub AppSupportedFileExtPID: ::windows_sys::core::GUID,
-    pub ShareTargetFileType: super::super::Foundation::BSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PM_ENUM_FILTER_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PM_ENUM_FILTER_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type PM_ENUM_TASK_FILTER = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -3244,58 +2799,6 @@ pub const PM_TILE_FILTER_HUBTYPE: PM_ENUM_TILE_FILTER = 10i32;
 pub const PM_TILE_FILTER_APP_ALL: PM_ENUM_TILE_FILTER = 11i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const PM_TILE_FILTER_MAX: PM_ENUM_TILE_FILTER = 12i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PM_EXTENSIONCONSUMER {
-    pub ConsumerPID: ::windows_sys::core::GUID,
-    pub ExtensionID: super::super::Foundation::BSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PM_EXTENSIONCONSUMER {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PM_EXTENSIONCONSUMER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PM_INSTALLINFO {
-    pub ProductID: ::windows_sys::core::GUID,
-    pub PackagePath: super::super::Foundation::BSTR,
-    pub InstanceID: ::windows_sys::core::GUID,
-    pub pbLicense: *mut u8,
-    pub cbLicense: u32,
-    pub IsUninstallDisabled: super::super::Foundation::BOOL,
-    pub DeploymentOptions: u32,
-    pub OfferID: ::windows_sys::core::GUID,
-    pub MarketplaceAppVersion: super::super::Foundation::BSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PM_INSTALLINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PM_INSTALLINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PM_INVOCATIONINFO {
-    pub URIBaseOrAUMID: super::super::Foundation::BSTR,
-    pub URIFragmentOrArgs: super::super::Foundation::BSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PM_INVOCATIONINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PM_INVOCATIONINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type PM_LIVETILE_RECURRENCE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -3316,56 +2819,6 @@ pub const PM_LOGO_SIZE_MEDIUM: PM_LOGO_SIZE = 1i32;
 pub const PM_LOGO_SIZE_LARGE: PM_LOGO_SIZE = 2i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const PM_LOGO_SIZE_INVALID: PM_LOGO_SIZE = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PM_STARTAPPBLOB {
-    pub cbSize: u32,
-    pub ProductID: ::windows_sys::core::GUID,
-    pub AppTitle: super::super::Foundation::BSTR,
-    pub IconPath: super::super::Foundation::BSTR,
-    pub IsUninstallable: super::super::Foundation::BOOL,
-    pub AppInstallType: PM_APPLICATION_INSTALL_TYPE,
-    pub InstanceID: ::windows_sys::core::GUID,
-    pub State: PM_APPLICATION_STATE,
-    pub IsModern: super::super::Foundation::BOOL,
-    pub IsModernLightUp: super::super::Foundation::BOOL,
-    pub LightUpSupportMask: u16,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PM_STARTAPPBLOB {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PM_STARTAPPBLOB {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PM_STARTTILEBLOB {
-    pub cbSize: u32,
-    pub ProductID: ::windows_sys::core::GUID,
-    pub TileID: super::super::Foundation::BSTR,
-    pub TemplateType: TILE_TEMPLATE_TYPE,
-    pub HubPosition: [u32; 32],
-    pub HubVisibilityBitmask: u32,
-    pub IsDefault: super::super::Foundation::BOOL,
-    pub TileType: PM_STARTTILE_TYPE,
-    pub pbPropBlob: *mut u8,
-    pub cbPropBlob: u32,
-    pub IsRestoring: super::super::Foundation::BOOL,
-    pub IsModern: super::super::Foundation::BOOL,
-    pub InvocationInfo: PM_INVOCATIONINFO,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PM_STARTTILEBLOB {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PM_STARTTILEBLOB {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type PM_STARTTILE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -3444,63 +2897,6 @@ pub const PM_TILE_SIZE_SQUARE310X310: PM_TILE_SIZE = 3i32;
 pub const PM_TILE_SIZE_TALL150X310: PM_TILE_SIZE = 4i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const PM_TILE_SIZE_INVALID: PM_TILE_SIZE = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PM_UPDATEINFO {
-    pub ProductID: ::windows_sys::core::GUID,
-    pub PackagePath: super::super::Foundation::BSTR,
-    pub InstanceID: ::windows_sys::core::GUID,
-    pub pbLicense: *mut u8,
-    pub cbLicense: u32,
-    pub MarketplaceAppVersion: super::super::Foundation::BSTR,
-    pub DeploymentOptions: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PM_UPDATEINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PM_UPDATEINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct PM_UPDATEINFO_LEGACY {
-    pub ProductID: ::windows_sys::core::GUID,
-    pub PackagePath: super::super::Foundation::BSTR,
-    pub InstanceID: ::windows_sys::core::GUID,
-    pub pbLicense: *mut u8,
-    pub cbLicense: u32,
-    pub MarketplaceAppVersion: super::super::Foundation::BSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for PM_UPDATEINFO_LEGACY {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for PM_UPDATEINFO_LEGACY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PPATCH_PROGRESS_CALLBACK = ::core::option::Option<unsafe extern "system" fn(callbackcontext: *mut ::core::ffi::c_void, currentposition: u32, maximumposition: u32) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PPATCH_SYMLOAD_CALLBACK = ::core::option::Option<unsafe extern "system" fn(whichfile: u32, symbolfilename: ::windows_sys::core::PCSTR, symtype: u32, symbolfilechecksum: u32, symbolfiletimedate: u32, imagefilechecksum: u32, imagefiletimedate: u32, callbackcontext: *mut ::core::ffi::c_void) -> super::super::Foundation::BOOL>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct PROTECTED_FILE_DATA {
-    pub FileName: [u16; 260],
-    pub FileNumber: u32,
-}
-impl ::core::marker::Copy for PROTECTED_FILE_DATA {}
-impl ::core::clone::Clone for PROTECTED_FILE_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type QUERYASMINFO_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -3560,28 +2956,6 @@ pub const SCRIPTFLAGS_REGDATA_APPINFO: SCRIPTFLAGS = 384i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const SCRIPTFLAGS_REGDATA: SCRIPTFLAGS = 416i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const SFC_DISABLE_ASK: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const SFC_DISABLE_NOPOPUPS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const SFC_DISABLE_NORMAL: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const SFC_DISABLE_ONCE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const SFC_DISABLE_SETUP: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const SFC_IDLE_TRIGGER: &str = "WFP_IDLE_TRIGGER";
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const SFC_QUOTA_DEFAULT: u32 = 50u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const SFC_SCAN_ALWAYS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const SFC_SCAN_IMMEDIATE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const SFC_SCAN_NORMAL: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const SFC_SCAN_ONCE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type STATUSTYPES = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const ieStatusGetCUB: STATUSTYPES = 0i32;
@@ -3605,14 +2979,6 @@ pub const ieStatusSuccess: STATUSTYPES = 8i32;
 pub const ieStatusFail: STATUSTYPES = 9i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const ieStatusCancel: STATUSTYPES = 10i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const STREAM_FORMAT_COMPLIB_MANIFEST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const STREAM_FORMAT_COMPLIB_MODULE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const STREAM_FORMAT_WIN32_MANIFEST: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const STREAM_FORMAT_WIN32_MODULE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type TILE_TEMPLATE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -3732,82 +3098,6 @@ pub const TILE_TEMPLATE_FOLDER: TILE_TEMPLATE_TYPE = 59i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const TILE_TEMPLATE_ALL: TILE_TEMPLATE_TYPE = 100i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_BACKUP: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_CMI: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_COPYFILES: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_DEPTH_DECR: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_DEPTH_INCR: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_DETAILS: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_DEVINST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_DEVMGR: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_DRIVER_STORE: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_DRVSETUP: u32 = 4194304u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_ERROR: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_FILEQ: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_FLUSH_FILE: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_INF: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_INFDB: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_INSTALLER: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_NEWDEV: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_POLICY: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_RESERVED_FLAGS: u32 = 65520u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_SETUP: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_SETUPAPI_BITS: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_SETUPAPI_CMDLINE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_SETUPAPI_DEVLOG: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_SIGVERIF: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_SUMMARY: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_SYSTEM_STATE_CHANGE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_TAB_1: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_TIMESTAMP: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_UI: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_UMPNPMGR: u32 = 33554432u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_UTIL: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_VENDOR: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_VERBOSE: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_VERY_VERBOSE: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const TXTLOG_WARNING: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const UIALL: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const UILOGBITS: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const UINONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type USERINFOSTATE = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const USERINFOSTATE_MOREDATA: USERINFOSTATE = -3i32;
@@ -3819,54 +3109,6 @@ pub const USERINFOSTATE_UNKNOWN: USERINFOSTATE = -1i32;
 pub const USERINFOSTATE_ABSENT: USERINFOSTATE = 0i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const USERINFOSTATE_PRESENT: USERINFOSTATE = 1i32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_BAD_MAJOR_VERSION: u32 = 3222294792u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_BASE: u32 = 3222294785u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_EQUAL_FILE_VERSION: u32 = 3222294794u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_FILE_VERSION_DOWNREV: u32 = 3222294793u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_IMPROPER_TRANSFORM_VALIDATION: u32 = 3222294788u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_INVALID_TRANSFORM_VALIDATION: u32 = 3222294791u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_MAJOR_UPGRADE_PATCH: u32 = 3222294785u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_OBSOLETION_WITH_MSI30: u32 = 3222294801u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_OBSOLETION_WITH_PATCHSEQUENCE: u32 = 3222294803u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_OBSOLETION_WITH_SEQUENCE_DATA: u32 = 3222294802u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_PATCHPROPERTYNOTSET: u32 = 3222294795u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_PCW_MISMATCHED_PRODUCT_CODES: u32 = 3222294789u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_PCW_MISMATCHED_PRODUCT_VERSIONS: u32 = 3222294790u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_SEQUENCE_DATA_GENERATION_DISABLED: u32 = 3222294786u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const WARN_SEQUENCE_DATA_SUPERSEDENCE_IGNORED: u32 = 3222294787u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const _WIN32_MSI: u32 = 500u32;
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const _WIN32_MSM: u32 = 100u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub struct _tagAPPTASKTYPE {
-    pub ProductID: ::windows_sys::core::GUID,
-    pub TaskType: PM_TASK_TYPE,
-}
-impl ::core::marker::Copy for _tagAPPTASKTYPE {}
-impl ::core::clone::Clone for _tagAPPTASKTYPE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
-pub const cchMaxInteger: i32 = 12i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub type msidbAssemblyAttributes = i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
@@ -4263,3 +3505,737 @@ pub const msmErrorFileCreate: msmErrorType = 6i32;
 pub const msmErrorDirCreate: msmErrorType = 7i32;
 #[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
 pub const msmErrorFeatureRequired: msmErrorType = 8i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ACTCTXA {
+    pub cbSize: u32,
+    pub dwFlags: u32,
+    pub lpSource: ::windows_sys::core::PCSTR,
+    pub wProcessorArchitecture: u16,
+    pub wLangId: u16,
+    pub lpAssemblyDirectory: ::windows_sys::core::PCSTR,
+    pub lpResourceName: ::windows_sys::core::PCSTR,
+    pub lpApplicationName: ::windows_sys::core::PCSTR,
+    pub hModule: super::super::Foundation::HINSTANCE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ACTCTXA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ACTCTXA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct ACTCTXW {
+    pub cbSize: u32,
+    pub dwFlags: u32,
+    pub lpSource: ::windows_sys::core::PCWSTR,
+    pub wProcessorArchitecture: u16,
+    pub wLangId: u16,
+    pub lpAssemblyDirectory: ::windows_sys::core::PCWSTR,
+    pub lpResourceName: ::windows_sys::core::PCWSTR,
+    pub lpApplicationName: ::windows_sys::core::PCWSTR,
+    pub hModule: super::super::Foundation::HINSTANCE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for ACTCTXW {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for ACTCTXW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`, `\"Win32_System_WindowsProgramming\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_WindowsProgramming"))]
+pub struct ACTCTX_SECTION_KEYED_DATA {
+    pub cbSize: u32,
+    pub ulDataFormatVersion: u32,
+    pub lpData: *mut ::core::ffi::c_void,
+    pub ulLength: u32,
+    pub lpSectionGlobalData: *mut ::core::ffi::c_void,
+    pub ulSectionGlobalDataLength: u32,
+    pub lpSectionBase: *mut ::core::ffi::c_void,
+    pub ulSectionTotalLength: u32,
+    pub hActCtx: super::super::Foundation::HANDLE,
+    pub ulAssemblyRosterIndex: u32,
+    pub ulFlags: u32,
+    pub AssemblyMetadata: super::WindowsProgramming::ACTCTX_SECTION_KEYED_DATA_ASSEMBLY_METADATA,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_WindowsProgramming"))]
+impl ::core::marker::Copy for ACTCTX_SECTION_KEYED_DATA {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_WindowsProgramming"))]
+impl ::core::clone::Clone for ACTCTX_SECTION_KEYED_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct ACTIVATION_CONTEXT_ASSEMBLY_DETAILED_INFORMATION {
+    pub ulFlags: u32,
+    pub ulEncodedAssemblyIdentityLength: u32,
+    pub ulManifestPathType: u32,
+    pub ulManifestPathLength: u32,
+    pub liManifestLastWriteTime: i64,
+    pub ulPolicyPathType: u32,
+    pub ulPolicyPathLength: u32,
+    pub liPolicyLastWriteTime: i64,
+    pub ulMetadataSatelliteRosterIndex: u32,
+    pub ulManifestVersionMajor: u32,
+    pub ulManifestVersionMinor: u32,
+    pub ulPolicyVersionMajor: u32,
+    pub ulPolicyVersionMinor: u32,
+    pub ulAssemblyDirectoryNameLength: u32,
+    pub lpAssemblyEncodedAssemblyIdentity: ::windows_sys::core::PCWSTR,
+    pub lpAssemblyManifestPath: ::windows_sys::core::PCWSTR,
+    pub lpAssemblyPolicyPath: ::windows_sys::core::PCWSTR,
+    pub lpAssemblyDirectoryName: ::windows_sys::core::PCWSTR,
+    pub ulFileCount: u32,
+}
+impl ::core::marker::Copy for ACTIVATION_CONTEXT_ASSEMBLY_DETAILED_INFORMATION {}
+impl ::core::clone::Clone for ACTIVATION_CONTEXT_ASSEMBLY_DETAILED_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct ACTIVATION_CONTEXT_COMPATIBILITY_INFORMATION {
+    pub ElementCount: u32,
+    pub Elements: *mut COMPATIBILITY_CONTEXT_ELEMENT,
+}
+impl ::core::marker::Copy for ACTIVATION_CONTEXT_COMPATIBILITY_INFORMATION {}
+impl ::core::clone::Clone for ACTIVATION_CONTEXT_COMPATIBILITY_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct ACTIVATION_CONTEXT_DETAILED_INFORMATION {
+    pub dwFlags: u32,
+    pub ulFormatVersion: u32,
+    pub ulAssemblyCount: u32,
+    pub ulRootManifestPathType: u32,
+    pub ulRootManifestPathChars: u32,
+    pub ulRootConfigurationPathType: u32,
+    pub ulRootConfigurationPathChars: u32,
+    pub ulAppDirPathType: u32,
+    pub ulAppDirPathChars: u32,
+    pub lpRootManifestPath: ::windows_sys::core::PCWSTR,
+    pub lpRootConfigurationPath: ::windows_sys::core::PCWSTR,
+    pub lpAppDirPath: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for ACTIVATION_CONTEXT_DETAILED_INFORMATION {}
+impl ::core::clone::Clone for ACTIVATION_CONTEXT_DETAILED_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct ACTIVATION_CONTEXT_QUERY_INDEX {
+    pub ulAssemblyIndex: u32,
+    pub ulFileIndexInAssembly: u32,
+}
+impl ::core::marker::Copy for ACTIVATION_CONTEXT_QUERY_INDEX {}
+impl ::core::clone::Clone for ACTIVATION_CONTEXT_QUERY_INDEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION {
+    pub ulFlags: u32,
+    pub RunLevel: ACTCTX_REQUESTED_RUN_LEVEL,
+    pub UiAccess: u32,
+}
+impl ::core::marker::Copy for ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION {}
+impl ::core::clone::Clone for ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct ASSEMBLY_FILE_DETAILED_INFORMATION {
+    pub ulFlags: u32,
+    pub ulFilenameLength: u32,
+    pub ulPathLength: u32,
+    pub lpFileName: ::windows_sys::core::PCWSTR,
+    pub lpFilePath: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for ASSEMBLY_FILE_DETAILED_INFORMATION {}
+impl ::core::clone::Clone for ASSEMBLY_FILE_DETAILED_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct ASSEMBLY_INFO {
+    pub cbAssemblyInfo: u32,
+    pub dwAssemblyFlags: u32,
+    pub uliAssemblySizeInKB: u64,
+    pub pszCurrentAssemblyPathBuf: ::windows_sys::core::PWSTR,
+    pub cchBuf: u32,
+}
+impl ::core::marker::Copy for ASSEMBLY_INFO {}
+impl ::core::clone::Clone for ASSEMBLY_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct COMPATIBILITY_CONTEXT_ELEMENT {
+    pub Id: ::windows_sys::core::GUID,
+    pub Type: ACTCTX_COMPATIBILITY_ELEMENT_TYPE,
+    pub MaxVersionTested: u64,
+}
+impl ::core::marker::Copy for COMPATIBILITY_CONTEXT_ELEMENT {}
+impl ::core::clone::Clone for COMPATIBILITY_CONTEXT_ELEMENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct DELTA_HASH {
+    pub HashSize: u32,
+    pub HashValue: [u8; 32],
+}
+impl ::core::marker::Copy for DELTA_HASH {}
+impl ::core::clone::Clone for DELTA_HASH {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DELTA_HEADER_INFO {
+    pub FileTypeSet: i64,
+    pub FileType: i64,
+    pub Flags: i64,
+    pub TargetSize: usize,
+    pub TargetFileTime: super::super::Foundation::FILETIME,
+    pub TargetHashAlgId: u32,
+    pub TargetHash: DELTA_HASH,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DELTA_HEADER_INFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DELTA_HEADER_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DELTA_INPUT {
+    pub Anonymous: DELTA_INPUT_0,
+    pub uSize: usize,
+    pub Editable: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DELTA_INPUT {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DELTA_INPUT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub union DELTA_INPUT_0 {
+    pub lpcStart: *const ::core::ffi::c_void,
+    pub lpStart: *mut ::core::ffi::c_void,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DELTA_INPUT_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DELTA_INPUT_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct DELTA_OUTPUT {
+    pub lpStart: *mut ::core::ffi::c_void,
+    pub uSize: usize,
+}
+impl ::core::marker::Copy for DELTA_OUTPUT {}
+impl ::core::clone::Clone for DELTA_OUTPUT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct FUSION_INSTALL_REFERENCE {
+    pub cbSize: u32,
+    pub dwFlags: u32,
+    pub guidScheme: ::windows_sys::core::GUID,
+    pub szIdentifier: ::windows_sys::core::PCWSTR,
+    pub szNonCannonicalData: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for FUSION_INSTALL_REFERENCE {}
+impl ::core::clone::Clone for FUSION_INSTALL_REFERENCE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct MSIFILEHASHINFO {
+    pub dwFileHashInfoSize: u32,
+    pub dwData: [u32; 4],
+}
+impl ::core::marker::Copy for MSIFILEHASHINFO {}
+impl ::core::clone::Clone for MSIFILEHASHINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type MSIHANDLE = u32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct MSIPATCHSEQUENCEINFOA {
+    pub szPatchData: ::windows_sys::core::PCSTR,
+    pub ePatchDataType: MSIPATCHDATATYPE,
+    pub dwOrder: u32,
+    pub uStatus: u32,
+}
+impl ::core::marker::Copy for MSIPATCHSEQUENCEINFOA {}
+impl ::core::clone::Clone for MSIPATCHSEQUENCEINFOA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct MSIPATCHSEQUENCEINFOW {
+    pub szPatchData: ::windows_sys::core::PCWSTR,
+    pub ePatchDataType: MSIPATCHDATATYPE,
+    pub dwOrder: u32,
+    pub uStatus: u32,
+}
+impl ::core::marker::Copy for MSIPATCHSEQUENCEINFOW {}
+impl ::core::clone::Clone for MSIPATCHSEQUENCEINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PATCH_IGNORE_RANGE {
+    pub OffsetInOldFile: u32,
+    pub LengthInBytes: u32,
+}
+impl ::core::marker::Copy for PATCH_IGNORE_RANGE {}
+impl ::core::clone::Clone for PATCH_IGNORE_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PATCH_INTERLEAVE_MAP {
+    pub CountRanges: u32,
+    pub Range: [PATCH_INTERLEAVE_MAP_0; 1],
+}
+impl ::core::marker::Copy for PATCH_INTERLEAVE_MAP {}
+impl ::core::clone::Clone for PATCH_INTERLEAVE_MAP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PATCH_INTERLEAVE_MAP_0 {
+    pub OldOffset: u32,
+    pub OldLength: u32,
+    pub NewLength: u32,
+}
+impl ::core::marker::Copy for PATCH_INTERLEAVE_MAP_0 {}
+impl ::core::clone::Clone for PATCH_INTERLEAVE_MAP_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct PATCH_OLD_FILE_INFO {
+    pub SizeOfThisStruct: u32,
+    pub Anonymous: PATCH_OLD_FILE_INFO_0,
+    pub IgnoreRangeCount: u32,
+    pub IgnoreRangeArray: *mut PATCH_IGNORE_RANGE,
+    pub RetainRangeCount: u32,
+    pub RetainRangeArray: *mut PATCH_RETAIN_RANGE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for PATCH_OLD_FILE_INFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for PATCH_OLD_FILE_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub union PATCH_OLD_FILE_INFO_0 {
+    pub OldFileNameA: ::windows_sys::core::PCSTR,
+    pub OldFileNameW: ::windows_sys::core::PCWSTR,
+    pub OldFileHandle: super::super::Foundation::HANDLE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for PATCH_OLD_FILE_INFO_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for PATCH_OLD_FILE_INFO_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PATCH_OLD_FILE_INFO_A {
+    pub SizeOfThisStruct: u32,
+    pub OldFileName: ::windows_sys::core::PCSTR,
+    pub IgnoreRangeCount: u32,
+    pub IgnoreRangeArray: *mut PATCH_IGNORE_RANGE,
+    pub RetainRangeCount: u32,
+    pub RetainRangeArray: *mut PATCH_RETAIN_RANGE,
+}
+impl ::core::marker::Copy for PATCH_OLD_FILE_INFO_A {}
+impl ::core::clone::Clone for PATCH_OLD_FILE_INFO_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct PATCH_OLD_FILE_INFO_H {
+    pub SizeOfThisStruct: u32,
+    pub OldFileHandle: super::super::Foundation::HANDLE,
+    pub IgnoreRangeCount: u32,
+    pub IgnoreRangeArray: *mut PATCH_IGNORE_RANGE,
+    pub RetainRangeCount: u32,
+    pub RetainRangeArray: *mut PATCH_RETAIN_RANGE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for PATCH_OLD_FILE_INFO_H {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for PATCH_OLD_FILE_INFO_H {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PATCH_OLD_FILE_INFO_W {
+    pub SizeOfThisStruct: u32,
+    pub OldFileName: ::windows_sys::core::PCWSTR,
+    pub IgnoreRangeCount: u32,
+    pub IgnoreRangeArray: *mut PATCH_IGNORE_RANGE,
+    pub RetainRangeCount: u32,
+    pub RetainRangeArray: *mut PATCH_RETAIN_RANGE,
+}
+impl ::core::marker::Copy for PATCH_OLD_FILE_INFO_W {}
+impl ::core::clone::Clone for PATCH_OLD_FILE_INFO_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct PATCH_OPTION_DATA {
+    pub SizeOfThisStruct: u32,
+    pub SymbolOptionFlags: u32,
+    pub NewFileSymbolPath: ::windows_sys::core::PCSTR,
+    pub OldFileSymbolPathArray: *mut ::windows_sys::core::PSTR,
+    pub ExtendedOptionFlags: u32,
+    pub SymLoadCallback: PPATCH_SYMLOAD_CALLBACK,
+    pub SymLoadContext: *mut ::core::ffi::c_void,
+    pub InterleaveMapArray: *mut *mut PATCH_INTERLEAVE_MAP,
+    pub MaxLzxWindowSize: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for PATCH_OPTION_DATA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for PATCH_OPTION_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PATCH_RETAIN_RANGE {
+    pub OffsetInOldFile: u32,
+    pub LengthInBytes: u32,
+    pub OffsetInNewFile: u32,
+}
+impl ::core::marker::Copy for PATCH_RETAIN_RANGE {}
+impl ::core::clone::Clone for PATCH_RETAIN_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PMSIHANDLE {
+    pub m_h: MSIHANDLE,
+}
+impl ::core::marker::Copy for PMSIHANDLE {}
+impl ::core::clone::Clone for PMSIHANDLE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PM_APPTASKTYPE {
+    pub ProductID: ::windows_sys::core::GUID,
+    pub TaskType: PM_TASK_TYPE,
+}
+impl ::core::marker::Copy for PM_APPTASKTYPE {}
+impl ::core::clone::Clone for PM_APPTASKTYPE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PM_BSATASKID {
+    pub ProductID: ::windows_sys::core::GUID,
+    pub TaskID: ::windows_sys::core::BSTR,
+}
+impl ::core::marker::Copy for PM_BSATASKID {}
+impl ::core::clone::Clone for PM_BSATASKID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PM_BWTASKID {
+    pub ProductID: ::windows_sys::core::GUID,
+    pub TaskID: ::windows_sys::core::BSTR,
+}
+impl ::core::marker::Copy for PM_BWTASKID {}
+impl ::core::clone::Clone for PM_BWTASKID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PM_ENUM_FILTER {
+    pub FilterType: i32,
+    pub FilterParameter: PM_ENUM_FILTER_0,
+}
+impl ::core::marker::Copy for PM_ENUM_FILTER {}
+impl ::core::clone::Clone for PM_ENUM_FILTER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub union PM_ENUM_FILTER_0 {
+    pub Dummy: i32,
+    pub Genre: PM_APP_GENRE,
+    pub AppHubType: PM_APPLICATION_HUBTYPE,
+    pub HubType: PM_TILE_HUBTYPE,
+    pub Tasktype: PM_TASK_TYPE,
+    pub TaskProductID: ::windows_sys::core::GUID,
+    pub TileProductID: ::windows_sys::core::GUID,
+    pub AppTaskType: PM_APPTASKTYPE,
+    pub Consumer: PM_EXTENSIONCONSUMER,
+    pub BSATask: PM_BSATASKID,
+    pub BSAProductID: ::windows_sys::core::GUID,
+    pub BWTask: PM_BWTASKID,
+    pub ProtocolName: ::windows_sys::core::BSTR,
+    pub FileType: ::windows_sys::core::BSTR,
+    pub ContentType: ::windows_sys::core::BSTR,
+    pub AppSupportedFileExtPID: ::windows_sys::core::GUID,
+    pub ShareTargetFileType: ::windows_sys::core::BSTR,
+}
+impl ::core::marker::Copy for PM_ENUM_FILTER_0 {}
+impl ::core::clone::Clone for PM_ENUM_FILTER_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PM_EXTENSIONCONSUMER {
+    pub ConsumerPID: ::windows_sys::core::GUID,
+    pub ExtensionID: ::windows_sys::core::BSTR,
+}
+impl ::core::marker::Copy for PM_EXTENSIONCONSUMER {}
+impl ::core::clone::Clone for PM_EXTENSIONCONSUMER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct PM_INSTALLINFO {
+    pub ProductID: ::windows_sys::core::GUID,
+    pub PackagePath: ::windows_sys::core::BSTR,
+    pub InstanceID: ::windows_sys::core::GUID,
+    pub pbLicense: *mut u8,
+    pub cbLicense: u32,
+    pub IsUninstallDisabled: super::super::Foundation::BOOL,
+    pub DeploymentOptions: u32,
+    pub OfferID: ::windows_sys::core::GUID,
+    pub MarketplaceAppVersion: ::windows_sys::core::BSTR,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for PM_INSTALLINFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for PM_INSTALLINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PM_INVOCATIONINFO {
+    pub URIBaseOrAUMID: ::windows_sys::core::BSTR,
+    pub URIFragmentOrArgs: ::windows_sys::core::BSTR,
+}
+impl ::core::marker::Copy for PM_INVOCATIONINFO {}
+impl ::core::clone::Clone for PM_INVOCATIONINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct PM_STARTAPPBLOB {
+    pub cbSize: u32,
+    pub ProductID: ::windows_sys::core::GUID,
+    pub AppTitle: ::windows_sys::core::BSTR,
+    pub IconPath: ::windows_sys::core::BSTR,
+    pub IsUninstallable: super::super::Foundation::BOOL,
+    pub AppInstallType: PM_APPLICATION_INSTALL_TYPE,
+    pub InstanceID: ::windows_sys::core::GUID,
+    pub State: PM_APPLICATION_STATE,
+    pub IsModern: super::super::Foundation::BOOL,
+    pub IsModernLightUp: super::super::Foundation::BOOL,
+    pub LightUpSupportMask: u16,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for PM_STARTAPPBLOB {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for PM_STARTAPPBLOB {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct PM_STARTTILEBLOB {
+    pub cbSize: u32,
+    pub ProductID: ::windows_sys::core::GUID,
+    pub TileID: ::windows_sys::core::BSTR,
+    pub TemplateType: TILE_TEMPLATE_TYPE,
+    pub HubPosition: [u32; 32],
+    pub HubVisibilityBitmask: u32,
+    pub IsDefault: super::super::Foundation::BOOL,
+    pub TileType: PM_STARTTILE_TYPE,
+    pub pbPropBlob: *mut u8,
+    pub cbPropBlob: u32,
+    pub IsRestoring: super::super::Foundation::BOOL,
+    pub IsModern: super::super::Foundation::BOOL,
+    pub InvocationInfo: PM_INVOCATIONINFO,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for PM_STARTTILEBLOB {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for PM_STARTTILEBLOB {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PM_UPDATEINFO {
+    pub ProductID: ::windows_sys::core::GUID,
+    pub PackagePath: ::windows_sys::core::BSTR,
+    pub InstanceID: ::windows_sys::core::GUID,
+    pub pbLicense: *mut u8,
+    pub cbLicense: u32,
+    pub MarketplaceAppVersion: ::windows_sys::core::BSTR,
+    pub DeploymentOptions: u32,
+}
+impl ::core::marker::Copy for PM_UPDATEINFO {}
+impl ::core::clone::Clone for PM_UPDATEINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PM_UPDATEINFO_LEGACY {
+    pub ProductID: ::windows_sys::core::GUID,
+    pub PackagePath: ::windows_sys::core::BSTR,
+    pub InstanceID: ::windows_sys::core::GUID,
+    pub pbLicense: *mut u8,
+    pub cbLicense: u32,
+    pub MarketplaceAppVersion: ::windows_sys::core::BSTR,
+}
+impl ::core::marker::Copy for PM_UPDATEINFO_LEGACY {}
+impl ::core::clone::Clone for PM_UPDATEINFO_LEGACY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub struct PROTECTED_FILE_DATA {
+    pub FileName: [u16; 260],
+    pub FileNumber: u32,
+}
+impl ::core::marker::Copy for PROTECTED_FILE_DATA {}
+impl ::core::clone::Clone for PROTECTED_FILE_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type INSTALLUI_HANDLERA = ::core::option::Option<unsafe extern "system" fn(pvcontext: *mut ::core::ffi::c_void, imessagetype: u32, szmessage: ::windows_sys::core::PCSTR) -> i32>;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type INSTALLUI_HANDLERW = ::core::option::Option<unsafe extern "system" fn(pvcontext: *mut ::core::ffi::c_void, imessagetype: u32, szmessage: ::windows_sys::core::PCWSTR) -> i32>;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LPDISPLAYVAL = ::core::option::Option<unsafe extern "system" fn(pcontext: *mut ::core::ffi::c_void, uitype: RESULTTYPES, szwval: ::windows_sys::core::PCWSTR, szwdescription: ::windows_sys::core::PCWSTR, szwlocation: ::windows_sys::core::PCWSTR) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LPEVALCOMCALLBACK = ::core::option::Option<unsafe extern "system" fn(istatus: STATUSTYPES, szdata: ::windows_sys::core::PCWSTR, pcontext: *mut ::core::ffi::c_void) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`*"]
+pub type PINSTALLUI_HANDLER_RECORD = ::core::option::Option<unsafe extern "system" fn(pvcontext: *mut ::core::ffi::c_void, imessagetype: u32, hrecord: MSIHANDLE) -> i32>;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PPATCH_PROGRESS_CALLBACK = ::core::option::Option<unsafe extern "system" fn(callbackcontext: *mut ::core::ffi::c_void, currentposition: u32, maximumposition: u32) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_ApplicationInstallationAndServicing\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PPATCH_SYMLOAD_CALLBACK = ::core::option::Option<unsafe extern "system" fn(whichfile: u32, symbolfilename: ::windows_sys::core::PCSTR, symtype: u32, symbolfilechecksum: u32, symbolfiletimedate: u32, imagefilechecksum: u32, imagefiletimedate: u32, callbackcontext: *mut ::core::ffi::c_void) -> super::super::Foundation::BOOL>;

@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
     pub fn CreateVssExpressWriterInternal(ppwriter: *mut IVssExpressWriter) -> ::windows_sys::core::HRESULT;
@@ -16,8 +16,6 @@ pub type IVssDifferentialSoftwareSnapshotMgmt2 = *mut ::core::ffi::c_void;
 pub type IVssDifferentialSoftwareSnapshotMgmt3 = *mut ::core::ffi::c_void;
 pub type IVssEnumMgmtObject = *mut ::core::ffi::c_void;
 pub type IVssEnumObject = *mut ::core::ffi::c_void;
-#[repr(C)]
-pub struct IVssExamineWriterMetadata(pub u8);
 pub type IVssExpressWriter = *mut ::core::ffi::c_void;
 pub type IVssFileShareSnapshotProvider = *mut ::core::ffi::c_void;
 pub type IVssHardwareSnapshotProvider = *mut ::core::ffi::c_void;
@@ -33,128 +31,9 @@ pub type IVssWriterComponents = *mut ::core::ffi::c_void;
 pub type IVssWriterImpl = *mut ::core::ffi::c_void;
 pub const VSSCoordinator: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3849956191, data2: 7364, data3: 17588, data4: [190, 217, 222, 9, 145, 255, 6, 35] };
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub type VSS_ALTERNATE_WRITER_STATE = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_AWS_UNDEFINED: VSS_ALTERNATE_WRITER_STATE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_AWS_NO_ALTERNATE_WRITER: VSS_ALTERNATE_WRITER_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_AWS_ALTERNATE_WRITER_EXISTS: VSS_ALTERNATE_WRITER_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_AWS_THIS_IS_ALTERNATE_WRITER: VSS_ALTERNATE_WRITER_STATE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub type VSS_APPLICATION_LEVEL = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_APP_UNKNOWN: VSS_APPLICATION_LEVEL = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_APP_SYSTEM: VSS_APPLICATION_LEVEL = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_APP_BACK_END: VSS_APPLICATION_LEVEL = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_APP_FRONT_END: VSS_APPLICATION_LEVEL = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_APP_SYSTEM_RM: VSS_APPLICATION_LEVEL = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_APP_AUTO: VSS_APPLICATION_LEVEL = -1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_ASSOC_NO_MAX_SPACE: i32 = -1i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_ASSOC_REMOVE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub type VSS_BACKUP_SCHEMA = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_UNDEFINED: VSS_BACKUP_SCHEMA = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_DIFFERENTIAL: VSS_BACKUP_SCHEMA = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_INCREMENTAL: VSS_BACKUP_SCHEMA = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_EXCLUSIVE_INCREMENTAL_DIFFERENTIAL: VSS_BACKUP_SCHEMA = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_LOG: VSS_BACKUP_SCHEMA = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_COPY: VSS_BACKUP_SCHEMA = 16i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_TIMESTAMPED: VSS_BACKUP_SCHEMA = 32i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_LAST_MODIFY: VSS_BACKUP_SCHEMA = 64i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_LSN: VSS_BACKUP_SCHEMA = 128i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_WRITER_SUPPORTS_NEW_TARGET: VSS_BACKUP_SCHEMA = 256i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_WRITER_SUPPORTS_RESTORE_WITH_MOVE: VSS_BACKUP_SCHEMA = 512i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_INDEPENDENT_SYSTEM_STATE: VSS_BACKUP_SCHEMA = 1024i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_ROLLFORWARD_RESTORE: VSS_BACKUP_SCHEMA = 4096i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_RESTORE_RENAME: VSS_BACKUP_SCHEMA = 8192i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_AUTHORITATIVE_RESTORE: VSS_BACKUP_SCHEMA = 16384i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BS_WRITER_SUPPORTS_PARALLEL_RESTORES: VSS_BACKUP_SCHEMA = 32768i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub type VSS_BACKUP_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BT_UNDEFINED: VSS_BACKUP_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BT_FULL: VSS_BACKUP_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BT_INCREMENTAL: VSS_BACKUP_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BT_DIFFERENTIAL: VSS_BACKUP_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BT_LOG: VSS_BACKUP_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BT_COPY: VSS_BACKUP_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_BT_OTHER: VSS_BACKUP_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub type VSS_COMPONENT_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_CF_BACKUP_RECOVERY: VSS_COMPONENT_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_CF_APP_ROLLBACK_RECOVERY: VSS_COMPONENT_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_CF_NOT_SYSTEM_STATE: VSS_COMPONENT_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub type VSS_COMPONENT_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_CT_UNDEFINED: VSS_COMPONENT_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_CT_DATABASE: VSS_COMPONENT_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_CT_FILEGROUP: VSS_COMPONENT_TYPE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub struct VSS_DIFF_AREA_PROP {
-    pub m_pwszVolumeName: *mut u16,
-    pub m_pwszDiffAreaVolumeName: *mut u16,
-    pub m_llMaximumDiffSpace: i64,
-    pub m_llAllocatedDiffSpace: i64,
-    pub m_llUsedDiffSpace: i64,
-}
-impl ::core::marker::Copy for VSS_DIFF_AREA_PROP {}
-impl ::core::clone::Clone for VSS_DIFF_AREA_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub struct VSS_DIFF_VOLUME_PROP {
-    pub m_pwszVolumeName: *mut u16,
-    pub m_pwszVolumeDisplayName: *mut u16,
-    pub m_llVolumeFreeSpace: i64,
-    pub m_llVolumeTotalSpace: i64,
-}
-impl ::core::marker::Copy for VSS_DIFF_VOLUME_PROP {}
-impl ::core::clone::Clone for VSS_DIFF_VOLUME_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_E_ASRERROR_CRITICAL_DISKS_TOO_SMALL: ::windows_sys::core::HRESULT = -2147212280i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
@@ -310,6 +189,105 @@ pub const VSS_E_WRITER_NOT_RESPONDING: ::windows_sys::core::HRESULT = -214721251
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_E_WRITER_STATUS_NOT_AVAILABLE: ::windows_sys::core::HRESULT = -2147212279i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_S_ASYNC_CANCELLED: ::windows_sys::core::HRESULT = 271115i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_S_ASYNC_FINISHED: ::windows_sys::core::HRESULT = 271114i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_S_ASYNC_PENDING: ::windows_sys::core::HRESULT = 271113i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_S_SOME_SNAPSHOTS_NOT_IMPORTED: ::windows_sys::core::HRESULT = 271137i32;
+pub const VssSnapshotMgmt: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 190458962, data2: 16057, data3: 18186, data4: [150, 226, 108, 109, 69, 112, 228, 15] };
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub type VSS_ALTERNATE_WRITER_STATE = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_AWS_UNDEFINED: VSS_ALTERNATE_WRITER_STATE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_AWS_NO_ALTERNATE_WRITER: VSS_ALTERNATE_WRITER_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_AWS_ALTERNATE_WRITER_EXISTS: VSS_ALTERNATE_WRITER_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_AWS_THIS_IS_ALTERNATE_WRITER: VSS_ALTERNATE_WRITER_STATE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub type VSS_APPLICATION_LEVEL = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_APP_UNKNOWN: VSS_APPLICATION_LEVEL = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_APP_SYSTEM: VSS_APPLICATION_LEVEL = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_APP_BACK_END: VSS_APPLICATION_LEVEL = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_APP_FRONT_END: VSS_APPLICATION_LEVEL = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_APP_SYSTEM_RM: VSS_APPLICATION_LEVEL = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_APP_AUTO: VSS_APPLICATION_LEVEL = -1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub type VSS_BACKUP_SCHEMA = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_UNDEFINED: VSS_BACKUP_SCHEMA = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_DIFFERENTIAL: VSS_BACKUP_SCHEMA = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_INCREMENTAL: VSS_BACKUP_SCHEMA = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_EXCLUSIVE_INCREMENTAL_DIFFERENTIAL: VSS_BACKUP_SCHEMA = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_LOG: VSS_BACKUP_SCHEMA = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_COPY: VSS_BACKUP_SCHEMA = 16i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_TIMESTAMPED: VSS_BACKUP_SCHEMA = 32i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_LAST_MODIFY: VSS_BACKUP_SCHEMA = 64i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_LSN: VSS_BACKUP_SCHEMA = 128i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_WRITER_SUPPORTS_NEW_TARGET: VSS_BACKUP_SCHEMA = 256i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_WRITER_SUPPORTS_RESTORE_WITH_MOVE: VSS_BACKUP_SCHEMA = 512i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_INDEPENDENT_SYSTEM_STATE: VSS_BACKUP_SCHEMA = 1024i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_ROLLFORWARD_RESTORE: VSS_BACKUP_SCHEMA = 4096i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_RESTORE_RENAME: VSS_BACKUP_SCHEMA = 8192i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_AUTHORITATIVE_RESTORE: VSS_BACKUP_SCHEMA = 16384i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BS_WRITER_SUPPORTS_PARALLEL_RESTORES: VSS_BACKUP_SCHEMA = 32768i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub type VSS_BACKUP_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BT_UNDEFINED: VSS_BACKUP_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BT_FULL: VSS_BACKUP_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BT_INCREMENTAL: VSS_BACKUP_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BT_DIFFERENTIAL: VSS_BACKUP_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BT_LOG: VSS_BACKUP_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BT_COPY: VSS_BACKUP_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_BT_OTHER: VSS_BACKUP_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub type VSS_COMPONENT_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_CF_BACKUP_RECOVERY: VSS_COMPONENT_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_CF_APP_ROLLBACK_RECOVERY: VSS_COMPONENT_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_CF_NOT_SYSTEM_STATE: VSS_COMPONENT_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub type VSS_COMPONENT_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_CT_UNDEFINED: VSS_COMPONENT_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_CT_DATABASE: VSS_COMPONENT_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub const VSS_CT_FILEGROUP: VSS_COMPONENT_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub type VSS_FILE_RESTORE_STATUS = i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_RS_UNDEFINED: VSS_FILE_RESTORE_STATUS = 0i32;
@@ -361,18 +339,6 @@ pub const VSS_ONLUNSTATECHANGE_NOTIFY_LUN_PRE_RECOVERY: VSS_HARDWARE_OPTIONS = 5
 pub const VSS_ONLUNSTATECHANGE_NOTIFY_LUN_POST_RECOVERY: VSS_HARDWARE_OPTIONS = 1024i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_ONLUNSTATECHANGE_DO_MASK_LUNS: VSS_HARDWARE_OPTIONS = 2048i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub struct VSS_MGMT_OBJECT_PROP {
-    pub Type: VSS_MGMT_OBJECT_TYPE,
-    pub Obj: VSS_MGMT_OBJECT_UNION,
-}
-impl ::core::marker::Copy for VSS_MGMT_OBJECT_PROP {}
-impl ::core::clone::Clone for VSS_MGMT_OBJECT_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub type VSS_MGMT_OBJECT_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
@@ -383,31 +349,6 @@ pub const VSS_MGMT_OBJECT_VOLUME: VSS_MGMT_OBJECT_TYPE = 1i32;
 pub const VSS_MGMT_OBJECT_DIFF_VOLUME: VSS_MGMT_OBJECT_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_MGMT_OBJECT_DIFF_AREA: VSS_MGMT_OBJECT_TYPE = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub union VSS_MGMT_OBJECT_UNION {
-    pub Vol: VSS_VOLUME_PROP,
-    pub DiffVol: VSS_DIFF_VOLUME_PROP,
-    pub DiffArea: VSS_DIFF_AREA_PROP,
-}
-impl ::core::marker::Copy for VSS_MGMT_OBJECT_UNION {}
-impl ::core::clone::Clone for VSS_MGMT_OBJECT_UNION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub struct VSS_OBJECT_PROP {
-    pub Type: VSS_OBJECT_TYPE,
-    pub Obj: VSS_OBJECT_UNION,
-}
-impl ::core::marker::Copy for VSS_OBJECT_PROP {}
-impl ::core::clone::Clone for VSS_OBJECT_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub type VSS_OBJECT_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
@@ -422,18 +363,6 @@ pub const VSS_OBJECT_SNAPSHOT: VSS_OBJECT_TYPE = 3i32;
 pub const VSS_OBJECT_PROVIDER: VSS_OBJECT_TYPE = 4i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_OBJECT_TYPE_COUNT: VSS_OBJECT_TYPE = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub union VSS_OBJECT_UNION {
-    pub Snap: VSS_SNAPSHOT_PROP,
-    pub Prov: VSS_PROVIDER_PROP,
-}
-impl ::core::marker::Copy for VSS_OBJECT_UNION {}
-impl ::core::clone::Clone for VSS_OBJECT_UNION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub type VSS_PROTECTION_FAULT = i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
@@ -498,22 +427,6 @@ pub const VSS_PRV_CAPABILITY_PLEX: VSS_PROVIDER_CAPABILITIES = 128i32;
 pub const VSS_PRV_CAPABILITY_DIFFERENTIAL: VSS_PROVIDER_CAPABILITIES = 256i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_PRV_CAPABILITY_CLUSTERED: VSS_PROVIDER_CAPABILITIES = 512i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub struct VSS_PROVIDER_PROP {
-    pub m_ProviderId: ::windows_sys::core::GUID,
-    pub m_pwszProviderName: *mut u16,
-    pub m_eProviderType: VSS_PROVIDER_TYPE,
-    pub m_pwszProviderVersion: *mut u16,
-    pub m_ProviderVersionId: ::windows_sys::core::GUID,
-    pub m_ClassId: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for VSS_PROVIDER_PROP {}
-impl ::core::clone::Clone for VSS_PROVIDER_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub type VSS_PROVIDER_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
@@ -606,29 +519,6 @@ pub const VSS_CTX_CLIENT_ACCESSIBLE: VSS_SNAPSHOT_CONTEXT = 29i32;
 pub const VSS_CTX_CLIENT_ACCESSIBLE_WRITERS: VSS_SNAPSHOT_CONTEXT = 13i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_CTX_ALL: VSS_SNAPSHOT_CONTEXT = -1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub struct VSS_SNAPSHOT_PROP {
-    pub m_SnapshotId: ::windows_sys::core::GUID,
-    pub m_SnapshotSetId: ::windows_sys::core::GUID,
-    pub m_lSnapshotsCount: i32,
-    pub m_pwszSnapshotDeviceObject: *mut u16,
-    pub m_pwszOriginalVolumeName: *mut u16,
-    pub m_pwszOriginatingMachine: *mut u16,
-    pub m_pwszServiceMachine: *mut u16,
-    pub m_pwszExposedName: *mut u16,
-    pub m_pwszExposedPath: *mut u16,
-    pub m_ProviderId: ::windows_sys::core::GUID,
-    pub m_lSnapshotAttributes: i32,
-    pub m_tsCreationTimestamp: i64,
-    pub m_eStatus: VSS_SNAPSHOT_STATE,
-}
-impl ::core::marker::Copy for VSS_SNAPSHOT_PROP {}
-impl ::core::clone::Clone for VSS_SNAPSHOT_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub type VSS_SNAPSHOT_PROPERTY_ID = i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
@@ -718,14 +608,6 @@ pub const VSS_SM_IO_THROTTLING_FLAG: VSS_SUBSCRIBE_MASK = 8i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_SM_ALL_FLAGS: VSS_SUBSCRIBE_MASK = -1i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_S_ASYNC_CANCELLED: ::windows_sys::core::HRESULT = 271115i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_S_ASYNC_FINISHED: ::windows_sys::core::HRESULT = 271114i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_S_ASYNC_PENDING: ::windows_sys::core::HRESULT = 271113i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub const VSS_S_SOME_SNAPSHOTS_NOT_IMPORTED: ::windows_sys::core::HRESULT = 271137i32;
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub type VSS_USAGE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_UT_UNDEFINED: VSS_USAGE_TYPE = 0i32;
@@ -737,37 +619,6 @@ pub const VSS_UT_SYSTEMSERVICE: VSS_USAGE_TYPE = 2i32;
 pub const VSS_UT_USERDATA: VSS_USAGE_TYPE = 3i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_UT_OTHER: VSS_USAGE_TYPE = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
-pub struct VSS_VOLUME_PROP {
-    pub m_pwszVolumeName: *mut u16,
-    pub m_pwszVolumeDisplayName: *mut u16,
-}
-impl ::core::marker::Copy for VSS_VOLUME_PROP {}
-impl ::core::clone::Clone for VSS_VOLUME_PROP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Vss\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct VSS_VOLUME_PROTECTION_INFO {
-    pub m_protectionLevel: VSS_PROTECTION_LEVEL,
-    pub m_volumeIsOfflineForProtection: super::super::Foundation::BOOL,
-    pub m_protectionFault: VSS_PROTECTION_FAULT,
-    pub m_failureStatus: i32,
-    pub m_volumeHasUnusedDiffArea: super::super::Foundation::BOOL,
-    pub m_reserved: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for VSS_VOLUME_PROTECTION_INFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for VSS_VOLUME_PROTECTION_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub type VSS_VOLUME_SNAPSHOT_ATTRIBUTES = i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
@@ -854,4 +705,153 @@ pub const VSS_WS_FAILED_AT_POST_RESTORE: VSS_WRITER_STATE = 14i32;
 pub const VSS_WS_FAILED_AT_BACKUPSHUTDOWN: VSS_WRITER_STATE = 15i32;
 #[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
 pub const VSS_WS_COUNT: VSS_WRITER_STATE = 16i32;
-pub const VssSnapshotMgmt: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 190458962, data2: 16057, data3: 18186, data4: [150, 226, 108, 109, 69, 112, 228, 15] };
+#[repr(C)]
+pub struct IVssExamineWriterMetadata(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub struct VSS_DIFF_AREA_PROP {
+    pub m_pwszVolumeName: *mut u16,
+    pub m_pwszDiffAreaVolumeName: *mut u16,
+    pub m_llMaximumDiffSpace: i64,
+    pub m_llAllocatedDiffSpace: i64,
+    pub m_llUsedDiffSpace: i64,
+}
+impl ::core::marker::Copy for VSS_DIFF_AREA_PROP {}
+impl ::core::clone::Clone for VSS_DIFF_AREA_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub struct VSS_DIFF_VOLUME_PROP {
+    pub m_pwszVolumeName: *mut u16,
+    pub m_pwszVolumeDisplayName: *mut u16,
+    pub m_llVolumeFreeSpace: i64,
+    pub m_llVolumeTotalSpace: i64,
+}
+impl ::core::marker::Copy for VSS_DIFF_VOLUME_PROP {}
+impl ::core::clone::Clone for VSS_DIFF_VOLUME_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub struct VSS_MGMT_OBJECT_PROP {
+    pub Type: VSS_MGMT_OBJECT_TYPE,
+    pub Obj: VSS_MGMT_OBJECT_UNION,
+}
+impl ::core::marker::Copy for VSS_MGMT_OBJECT_PROP {}
+impl ::core::clone::Clone for VSS_MGMT_OBJECT_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub union VSS_MGMT_OBJECT_UNION {
+    pub Vol: VSS_VOLUME_PROP,
+    pub DiffVol: VSS_DIFF_VOLUME_PROP,
+    pub DiffArea: VSS_DIFF_AREA_PROP,
+}
+impl ::core::marker::Copy for VSS_MGMT_OBJECT_UNION {}
+impl ::core::clone::Clone for VSS_MGMT_OBJECT_UNION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub struct VSS_OBJECT_PROP {
+    pub Type: VSS_OBJECT_TYPE,
+    pub Obj: VSS_OBJECT_UNION,
+}
+impl ::core::marker::Copy for VSS_OBJECT_PROP {}
+impl ::core::clone::Clone for VSS_OBJECT_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub union VSS_OBJECT_UNION {
+    pub Snap: VSS_SNAPSHOT_PROP,
+    pub Prov: VSS_PROVIDER_PROP,
+}
+impl ::core::marker::Copy for VSS_OBJECT_UNION {}
+impl ::core::clone::Clone for VSS_OBJECT_UNION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub struct VSS_PROVIDER_PROP {
+    pub m_ProviderId: ::windows_sys::core::GUID,
+    pub m_pwszProviderName: *mut u16,
+    pub m_eProviderType: VSS_PROVIDER_TYPE,
+    pub m_pwszProviderVersion: *mut u16,
+    pub m_ProviderVersionId: ::windows_sys::core::GUID,
+    pub m_ClassId: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for VSS_PROVIDER_PROP {}
+impl ::core::clone::Clone for VSS_PROVIDER_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub struct VSS_SNAPSHOT_PROP {
+    pub m_SnapshotId: ::windows_sys::core::GUID,
+    pub m_SnapshotSetId: ::windows_sys::core::GUID,
+    pub m_lSnapshotsCount: i32,
+    pub m_pwszSnapshotDeviceObject: *mut u16,
+    pub m_pwszOriginalVolumeName: *mut u16,
+    pub m_pwszOriginatingMachine: *mut u16,
+    pub m_pwszServiceMachine: *mut u16,
+    pub m_pwszExposedName: *mut u16,
+    pub m_pwszExposedPath: *mut u16,
+    pub m_ProviderId: ::windows_sys::core::GUID,
+    pub m_lSnapshotAttributes: i32,
+    pub m_tsCreationTimestamp: i64,
+    pub m_eStatus: VSS_SNAPSHOT_STATE,
+}
+impl ::core::marker::Copy for VSS_SNAPSHOT_PROP {}
+impl ::core::clone::Clone for VSS_SNAPSHOT_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`*"]
+pub struct VSS_VOLUME_PROP {
+    pub m_pwszVolumeName: *mut u16,
+    pub m_pwszVolumeDisplayName: *mut u16,
+}
+impl ::core::marker::Copy for VSS_VOLUME_PROP {}
+impl ::core::clone::Clone for VSS_VOLUME_PROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Vss\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct VSS_VOLUME_PROTECTION_INFO {
+    pub m_protectionLevel: VSS_PROTECTION_LEVEL,
+    pub m_volumeIsOfflineForProtection: super::super::Foundation::BOOL,
+    pub m_protectionFault: VSS_PROTECTION_FAULT,
+    pub m_failureStatus: i32,
+    pub m_volumeHasUnusedDiffArea: super::super::Foundation::BOOL,
+    pub m_reserved: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for VSS_VOLUME_PROTECTION_INFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for VSS_VOLUME_PROTECTION_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}

@@ -2,7 +2,7 @@
 // cargo run --example tcp_listenfd_server --features="os-poll net"
 // or with wasi:
 // cargo +nightly build --target wasm32-wasi  --example tcp_listenfd_server --features="os-poll net"
-// wasmtime run --tcplisten 127.0.0.1:9000 --env 'LISTEN_FDS=1' target/wasm32-wasi/debug/examples/tcp_server.wasm
+// wasmtime run --tcplisten 127.0.0.1:9000 --env 'LISTEN_FDS=1' target/wasm32-wasi/debug/examples/tcp_listenfd_server.wasm
 
 use mio::event::Event;
 use mio::net::{TcpListener, TcpStream};
@@ -48,7 +48,6 @@ fn main() -> io::Result<()> {
     // Setup the TCP server socket.
     let mut server = {
         let stdlistener = get_first_listen_fd_listener().unwrap();
-        stdlistener.set_nonblocking(true)?;
         println!("Using preopened socket FD 3");
         println!("You can connect to the server using `nc`:");
         match stdlistener.local_addr() {
@@ -78,7 +77,7 @@ fn main() -> io::Result<()> {
                     // indicates we can accept an connection.
                     let (mut connection, address) = match server.accept() {
                         Ok((connection, address)) => (connection, address),
-                        Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                        Err(ref e) if would_block(e) => {
                             // If we get a `WouldBlock` error we know our
                             // listener has no more incoming connections queued,
                             // so we can return to polling and wait for some

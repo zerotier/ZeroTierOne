@@ -1,58 +1,8 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn Netbios(pncb: *mut NCB) -> u8;
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
-pub struct ACTION_HEADER {
-    pub transport_id: u32,
-    pub action_code: u16,
-    pub reserved: u16,
-}
-impl ::core::marker::Copy for ACTION_HEADER {}
-impl ::core::clone::Clone for ACTION_HEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
-pub struct ADAPTER_STATUS {
-    pub adapter_address: [u8; 6],
-    pub rev_major: u8,
-    pub reserved0: u8,
-    pub adapter_type: u8,
-    pub rev_minor: u8,
-    pub duration: u16,
-    pub frmr_recv: u16,
-    pub frmr_xmit: u16,
-    pub iframe_recv_err: u16,
-    pub xmit_aborts: u16,
-    pub xmit_success: u32,
-    pub recv_success: u32,
-    pub iframe_xmit_err: u16,
-    pub recv_buff_unavail: u16,
-    pub t1_timeouts: u16,
-    pub ti_timeouts: u16,
-    pub reserved1: u32,
-    pub free_ncbs: u16,
-    pub max_cfg_ncbs: u16,
-    pub max_ncbs: u16,
-    pub xmit_buf_unavail: u16,
-    pub max_dgram_size: u16,
-    pub pending_sess: u16,
-    pub max_cfg_sess: u16,
-    pub max_sess: u16,
-    pub max_sess_pkt_size: u16,
-    pub name_count: u16,
-}
-impl ::core::marker::Copy for ADAPTER_STATUS {}
-impl ::core::clone::Clone for ADAPTER_STATUS {
-    fn clone(&self) -> Self {
-        *self
-    }
 }
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub const ALL_TRANSPORTS: &str = "M\u{0}\u{0}\u{0}";
@@ -66,136 +16,20 @@ pub const DEREGISTERED: u32 = 5u32;
 pub const DUPLICATE: u32 = 6u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub const DUPLICATE_DEREG: u32 = 7u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
-pub struct FIND_NAME_BUFFER {
-    pub length: u8,
-    pub access_control: u8,
-    pub frame_control: u8,
-    pub destination_addr: [u8; 6],
-    pub source_addr: [u8; 6],
-    pub routing_info: [u8; 18],
-}
-impl ::core::marker::Copy for FIND_NAME_BUFFER {}
-impl ::core::clone::Clone for FIND_NAME_BUFFER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
-pub struct FIND_NAME_HEADER {
-    pub node_count: u16,
-    pub reserved: u8,
-    pub unique_group: u8,
-}
-impl ::core::marker::Copy for FIND_NAME_HEADER {}
-impl ::core::clone::Clone for FIND_NAME_HEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub const GROUP_NAME: u32 = 128u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub const HANGUP_COMPLETE: u32 = 5u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub const HANGUP_PENDING: u32 = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
-pub struct LANA_ENUM {
-    pub length: u8,
-    pub lana: [u8; 255],
-}
-impl ::core::marker::Copy for LANA_ENUM {}
-impl ::core::clone::Clone for LANA_ENUM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub const LISTEN_OUTSTANDING: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub const MAX_LANA: u32 = 254u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub const MS_NBF: &str = "MNBF";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
-pub struct NAME_BUFFER {
-    pub name: [u8; 16],
-    pub name_num: u8,
-    pub name_flags: u8,
-}
-impl ::core::marker::Copy for NAME_BUFFER {}
-impl ::core::clone::Clone for NAME_BUFFER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub const NAME_FLAGS_MASK: u32 = 135u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct NCB {
-    pub ncb_command: u8,
-    pub ncb_retcode: u8,
-    pub ncb_lsn: u8,
-    pub ncb_num: u8,
-    pub ncb_buffer: *mut u8,
-    pub ncb_length: u16,
-    pub ncb_callname: [u8; 16],
-    pub ncb_name: [u8; 16],
-    pub ncb_rto: u8,
-    pub ncb_sto: u8,
-    pub ncb_post: isize,
-    pub ncb_lana_num: u8,
-    pub ncb_cmd_cplt: u8,
-    pub ncb_reserve: [u8; 18],
-    pub ncb_event: super::super::Foundation::HANDLE,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for NCB {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for NCB {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct NCB {
-    pub ncb_command: u8,
-    pub ncb_retcode: u8,
-    pub ncb_lsn: u8,
-    pub ncb_num: u8,
-    pub ncb_buffer: *mut u8,
-    pub ncb_length: u16,
-    pub ncb_callname: [u8; 16],
-    pub ncb_name: [u8; 16],
-    pub ncb_rto: u8,
-    pub ncb_sto: u8,
-    pub ncb_post: isize,
-    pub ncb_lana_num: u8,
-    pub ncb_cmd_cplt: u8,
-    pub ncb_reserve: [u8; 10],
-    pub ncb_event: super::super::Foundation::HANDLE,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for NCB {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for NCB {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub const NCBACTION: u32 = 119u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
@@ -334,6 +168,176 @@ pub const REGISTERED: u32 = 4u32;
 pub const REGISTERING: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub const SESSION_ABORTED: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
+pub const SESSION_ESTABLISHED: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
+pub const UNIQUE_NAME: u32 = 0u32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
+pub struct ACTION_HEADER {
+    pub transport_id: u32,
+    pub action_code: u16,
+    pub reserved: u16,
+}
+impl ::core::marker::Copy for ACTION_HEADER {}
+impl ::core::clone::Clone for ACTION_HEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
+pub struct ADAPTER_STATUS {
+    pub adapter_address: [u8; 6],
+    pub rev_major: u8,
+    pub reserved0: u8,
+    pub adapter_type: u8,
+    pub rev_minor: u8,
+    pub duration: u16,
+    pub frmr_recv: u16,
+    pub frmr_xmit: u16,
+    pub iframe_recv_err: u16,
+    pub xmit_aborts: u16,
+    pub xmit_success: u32,
+    pub recv_success: u32,
+    pub iframe_xmit_err: u16,
+    pub recv_buff_unavail: u16,
+    pub t1_timeouts: u16,
+    pub ti_timeouts: u16,
+    pub reserved1: u32,
+    pub free_ncbs: u16,
+    pub max_cfg_ncbs: u16,
+    pub max_ncbs: u16,
+    pub xmit_buf_unavail: u16,
+    pub max_dgram_size: u16,
+    pub pending_sess: u16,
+    pub max_cfg_sess: u16,
+    pub max_sess: u16,
+    pub max_sess_pkt_size: u16,
+    pub name_count: u16,
+}
+impl ::core::marker::Copy for ADAPTER_STATUS {}
+impl ::core::clone::Clone for ADAPTER_STATUS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
+pub struct FIND_NAME_BUFFER {
+    pub length: u8,
+    pub access_control: u8,
+    pub frame_control: u8,
+    pub destination_addr: [u8; 6],
+    pub source_addr: [u8; 6],
+    pub routing_info: [u8; 18],
+}
+impl ::core::marker::Copy for FIND_NAME_BUFFER {}
+impl ::core::clone::Clone for FIND_NAME_BUFFER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
+pub struct FIND_NAME_HEADER {
+    pub node_count: u16,
+    pub reserved: u8,
+    pub unique_group: u8,
+}
+impl ::core::marker::Copy for FIND_NAME_HEADER {}
+impl ::core::clone::Clone for FIND_NAME_HEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
+pub struct LANA_ENUM {
+    pub length: u8,
+    pub lana: [u8; 255],
+}
+impl ::core::marker::Copy for LANA_ENUM {}
+impl ::core::clone::Clone for LANA_ENUM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
+pub struct NAME_BUFFER {
+    pub name: [u8; 16],
+    pub name_num: u8,
+    pub name_flags: u8,
+}
+impl ::core::marker::Copy for NAME_BUFFER {}
+impl ::core::clone::Clone for NAME_BUFFER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct NCB {
+    pub ncb_command: u8,
+    pub ncb_retcode: u8,
+    pub ncb_lsn: u8,
+    pub ncb_num: u8,
+    pub ncb_buffer: *mut u8,
+    pub ncb_length: u16,
+    pub ncb_callname: [u8; 16],
+    pub ncb_name: [u8; 16],
+    pub ncb_rto: u8,
+    pub ncb_sto: u8,
+    pub ncb_post: isize,
+    pub ncb_lana_num: u8,
+    pub ncb_cmd_cplt: u8,
+    pub ncb_reserve: [u8; 18],
+    pub ncb_event: super::super::Foundation::HANDLE,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for NCB {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for NCB {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct NCB {
+    pub ncb_command: u8,
+    pub ncb_retcode: u8,
+    pub ncb_lsn: u8,
+    pub ncb_num: u8,
+    pub ncb_buffer: *mut u8,
+    pub ncb_length: u16,
+    pub ncb_callname: [u8; 16],
+    pub ncb_name: [u8; 16],
+    pub ncb_rto: u8,
+    pub ncb_sto: u8,
+    pub ncb_post: isize,
+    pub ncb_lana_num: u8,
+    pub ncb_cmd_cplt: u8,
+    pub ncb_reserve: [u8; 10],
+    pub ncb_event: super::super::Foundation::HANDLE,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for NCB {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for NCB {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub struct SESSION_BUFFER {
@@ -350,8 +354,6 @@ impl ::core::clone::Clone for SESSION_BUFFER {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
-pub const SESSION_ESTABLISHED: u32 = 3u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
 pub struct SESSION_HEADER {
@@ -366,5 +368,3 @@ impl ::core::clone::Clone for SESSION_HEADER {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetBios\"`*"]
-pub const UNIQUE_NAME: u32 = 0u32;

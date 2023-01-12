@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Storage_Vhd\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -89,11 +89,409 @@ extern "system" {
     pub fn TakeSnapshotVhdSet(virtualdiskhandle: super::super::Foundation::HANDLE, parameters: *const TAKE_SNAPSHOT_VHDSET_PARAMETERS, flags: TAKE_SNAPSHOT_VHDSET_FLAG) -> super::super::Foundation::WIN32_ERROR;
 }
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_PARAMETERS_DEFAULT_BLOCK_SIZE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_PARAMETERS_DEFAULT_SECTOR_SIZE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MERGE_VIRTUAL_DISK_DEFAULT_MERGE_DEPTH: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_RW_DEPTH_DEFAULT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_DISK_MAXIMUM_CHANGE_TRACKING_ID_LENGTH: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_STORAGE_TYPE_DEVICE_ISO: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_STORAGE_TYPE_DEVICE_UNKNOWN: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_STORAGE_TYPE_DEVICE_VHD: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_STORAGE_TYPE_DEVICE_VHDSET: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_STORAGE_TYPE_DEVICE_VHDX: u32 = 3u32;
+pub const VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3969403628, data2: 41209, data3: 18409, data4: [144, 31, 113, 65, 90, 102, 52, 91] };
+pub const VIRTUAL_STORAGE_TYPE_VENDOR_UNKNOWN: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 0, data2: 0, data3: 0, data4: [0, 0, 0, 0, 0, 0, 0, 0] };
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub type APPLY_SNAPSHOT_VHDSET_FLAG = u32;
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub const APPLY_SNAPSHOT_VHDSET_FLAG_NONE: APPLY_SNAPSHOT_VHDSET_FLAG = 0u32;
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub const APPLY_SNAPSHOT_VHDSET_FLAG_WRITEABLE: APPLY_SNAPSHOT_VHDSET_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type APPLY_SNAPSHOT_VHDSET_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const APPLY_SNAPSHOT_VHDSET_VERSION_UNSPECIFIED: APPLY_SNAPSHOT_VHDSET_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const APPLY_SNAPSHOT_VHDSET_VERSION_1: APPLY_SNAPSHOT_VHDSET_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type ATTACH_VIRTUAL_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_FLAG_NONE: ATTACH_VIRTUAL_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_FLAG_READ_ONLY: ATTACH_VIRTUAL_DISK_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_FLAG_NO_DRIVE_LETTER: ATTACH_VIRTUAL_DISK_FLAG = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_FLAG_PERMANENT_LIFETIME: ATTACH_VIRTUAL_DISK_FLAG = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_FLAG_NO_LOCAL_HOST: ATTACH_VIRTUAL_DISK_FLAG = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_FLAG_NO_SECURITY_DESCRIPTOR: ATTACH_VIRTUAL_DISK_FLAG = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_FLAG_BYPASS_DEFAULT_ENCRYPTION_POLICY: ATTACH_VIRTUAL_DISK_FLAG = 32u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_FLAG_NON_PNP: ATTACH_VIRTUAL_DISK_FLAG = 64u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_FLAG_RESTRICTED_RANGE: ATTACH_VIRTUAL_DISK_FLAG = 128u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_FLAG_SINGLE_PARTITION: ATTACH_VIRTUAL_DISK_FLAG = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_FLAG_REGISTER_VOLUME: ATTACH_VIRTUAL_DISK_FLAG = 512u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type ATTACH_VIRTUAL_DISK_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_VERSION_UNSPECIFIED: ATTACH_VIRTUAL_DISK_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_VERSION_1: ATTACH_VIRTUAL_DISK_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const ATTACH_VIRTUAL_DISK_VERSION_2: ATTACH_VIRTUAL_DISK_VERSION = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type COMPACT_VIRTUAL_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const COMPACT_VIRTUAL_DISK_FLAG_NONE: COMPACT_VIRTUAL_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const COMPACT_VIRTUAL_DISK_FLAG_NO_ZERO_SCAN: COMPACT_VIRTUAL_DISK_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const COMPACT_VIRTUAL_DISK_FLAG_NO_BLOCK_MOVES: COMPACT_VIRTUAL_DISK_FLAG = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type COMPACT_VIRTUAL_DISK_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const COMPACT_VIRTUAL_DISK_VERSION_UNSPECIFIED: COMPACT_VIRTUAL_DISK_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const COMPACT_VIRTUAL_DISK_VERSION_1: COMPACT_VIRTUAL_DISK_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type CREATE_VIRTUAL_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_FLAG_NONE: CREATE_VIRTUAL_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_FLAG_FULL_PHYSICAL_ALLOCATION: CREATE_VIRTUAL_DISK_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_FLAG_PREVENT_WRITES_TO_SOURCE_DISK: CREATE_VIRTUAL_DISK_FLAG = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_FLAG_DO_NOT_COPY_METADATA_FROM_PARENT: CREATE_VIRTUAL_DISK_FLAG = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_FLAG_CREATE_BACKING_STORAGE: CREATE_VIRTUAL_DISK_FLAG = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_FLAG_USE_CHANGE_TRACKING_SOURCE_LIMIT: CREATE_VIRTUAL_DISK_FLAG = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_FLAG_PRESERVE_PARENT_CHANGE_TRACKING_STATE: CREATE_VIRTUAL_DISK_FLAG = 32u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_FLAG_VHD_SET_USE_ORIGINAL_BACKING_STORAGE: CREATE_VIRTUAL_DISK_FLAG = 64u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_FLAG_SPARSE_FILE: CREATE_VIRTUAL_DISK_FLAG = 128u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_FLAG_PMEM_COMPATIBLE: CREATE_VIRTUAL_DISK_FLAG = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_FLAG_SUPPORT_COMPRESSED_VOLUMES: CREATE_VIRTUAL_DISK_FLAG = 512u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_FLAG_SUPPORT_SPARSE_FILES_ANY_FS: CREATE_VIRTUAL_DISK_FLAG = 1024u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type CREATE_VIRTUAL_DISK_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_VERSION_UNSPECIFIED: CREATE_VIRTUAL_DISK_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_VERSION_1: CREATE_VIRTUAL_DISK_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_VERSION_2: CREATE_VIRTUAL_DISK_VERSION = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_VERSION_3: CREATE_VIRTUAL_DISK_VERSION = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const CREATE_VIRTUAL_DISK_VERSION_4: CREATE_VIRTUAL_DISK_VERSION = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type DELETE_SNAPSHOT_VHDSET_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DELETE_SNAPSHOT_VHDSET_FLAG_NONE: DELETE_SNAPSHOT_VHDSET_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DELETE_SNAPSHOT_VHDSET_FLAG_PERSIST_RCT: DELETE_SNAPSHOT_VHDSET_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type DELETE_SNAPSHOT_VHDSET_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DELETE_SNAPSHOT_VHDSET_VERSION_UNSPECIFIED: DELETE_SNAPSHOT_VHDSET_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DELETE_SNAPSHOT_VHDSET_VERSION_1: DELETE_SNAPSHOT_VHDSET_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type DEPENDENT_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_NONE: DEPENDENT_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_MULT_BACKING_FILES: DEPENDENT_DISK_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_FULLY_ALLOCATED: DEPENDENT_DISK_FLAG = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_READ_ONLY: DEPENDENT_DISK_FLAG = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_REMOTE: DEPENDENT_DISK_FLAG = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_SYSTEM_VOLUME: DEPENDENT_DISK_FLAG = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_SYSTEM_VOLUME_PARENT: DEPENDENT_DISK_FLAG = 32u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_REMOVABLE: DEPENDENT_DISK_FLAG = 64u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_NO_DRIVE_LETTER: DEPENDENT_DISK_FLAG = 128u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_PARENT: DEPENDENT_DISK_FLAG = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_NO_HOST_DISK: DEPENDENT_DISK_FLAG = 512u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_PERMANENT_LIFETIME: DEPENDENT_DISK_FLAG = 1024u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_SUPPORT_COMPRESSED_VOLUMES: DEPENDENT_DISK_FLAG = 2048u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_ALWAYS_ALLOW_SPARSE: DEPENDENT_DISK_FLAG = 4096u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DEPENDENT_DISK_FLAG_SUPPORT_ENCRYPTED_FILES: DEPENDENT_DISK_FLAG = 8192u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type DETACH_VIRTUAL_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const DETACH_VIRTUAL_DISK_FLAG_NONE: DETACH_VIRTUAL_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type EXPAND_VIRTUAL_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const EXPAND_VIRTUAL_DISK_FLAG_NONE: EXPAND_VIRTUAL_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const EXPAND_VIRTUAL_DISK_FLAG_NOTIFY_CHANGE: EXPAND_VIRTUAL_DISK_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type EXPAND_VIRTUAL_DISK_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const EXPAND_VIRTUAL_DISK_VERSION_UNSPECIFIED: EXPAND_VIRTUAL_DISK_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const EXPAND_VIRTUAL_DISK_VERSION_1: EXPAND_VIRTUAL_DISK_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type FORK_VIRTUAL_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const FORK_VIRTUAL_DISK_FLAG_NONE: FORK_VIRTUAL_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const FORK_VIRTUAL_DISK_FLAG_EXISTING_FILE: FORK_VIRTUAL_DISK_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type FORK_VIRTUAL_DISK_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const FORK_VIRTUAL_DISK_VERSION_UNSPECIFIED: FORK_VIRTUAL_DISK_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const FORK_VIRTUAL_DISK_VERSION_1: FORK_VIRTUAL_DISK_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type GET_STORAGE_DEPENDENCY_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_STORAGE_DEPENDENCY_FLAG_NONE: GET_STORAGE_DEPENDENCY_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_STORAGE_DEPENDENCY_FLAG_HOST_VOLUMES: GET_STORAGE_DEPENDENCY_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_STORAGE_DEPENDENCY_FLAG_DISK_HANDLE: GET_STORAGE_DEPENDENCY_FLAG = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type GET_VIRTUAL_DISK_INFO_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_UNSPECIFIED: GET_VIRTUAL_DISK_INFO_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_SIZE: GET_VIRTUAL_DISK_INFO_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_IDENTIFIER: GET_VIRTUAL_DISK_INFO_VERSION = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_PARENT_LOCATION: GET_VIRTUAL_DISK_INFO_VERSION = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_PARENT_IDENTIFIER: GET_VIRTUAL_DISK_INFO_VERSION = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_PARENT_TIMESTAMP: GET_VIRTUAL_DISK_INFO_VERSION = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_VIRTUAL_STORAGE_TYPE: GET_VIRTUAL_DISK_INFO_VERSION = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_PROVIDER_SUBTYPE: GET_VIRTUAL_DISK_INFO_VERSION = 7i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_IS_4K_ALIGNED: GET_VIRTUAL_DISK_INFO_VERSION = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_PHYSICAL_DISK: GET_VIRTUAL_DISK_INFO_VERSION = 9i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_VHD_PHYSICAL_SECTOR_SIZE: GET_VIRTUAL_DISK_INFO_VERSION = 10i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_SMALLEST_SAFE_VIRTUAL_SIZE: GET_VIRTUAL_DISK_INFO_VERSION = 11i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_FRAGMENTATION: GET_VIRTUAL_DISK_INFO_VERSION = 12i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_IS_LOADED: GET_VIRTUAL_DISK_INFO_VERSION = 13i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_VIRTUAL_DISK_ID: GET_VIRTUAL_DISK_INFO_VERSION = 14i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const GET_VIRTUAL_DISK_INFO_CHANGE_TRACKING_STATE: GET_VIRTUAL_DISK_INFO_VERSION = 15i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type MERGE_VIRTUAL_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MERGE_VIRTUAL_DISK_FLAG_NONE: MERGE_VIRTUAL_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type MERGE_VIRTUAL_DISK_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MERGE_VIRTUAL_DISK_VERSION_UNSPECIFIED: MERGE_VIRTUAL_DISK_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MERGE_VIRTUAL_DISK_VERSION_1: MERGE_VIRTUAL_DISK_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MERGE_VIRTUAL_DISK_VERSION_2: MERGE_VIRTUAL_DISK_VERSION = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type MIRROR_VIRTUAL_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MIRROR_VIRTUAL_DISK_FLAG_NONE: MIRROR_VIRTUAL_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MIRROR_VIRTUAL_DISK_FLAG_EXISTING_FILE: MIRROR_VIRTUAL_DISK_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MIRROR_VIRTUAL_DISK_FLAG_SKIP_MIRROR_ACTIVATION: MIRROR_VIRTUAL_DISK_FLAG = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MIRROR_VIRTUAL_DISK_FLAG_ENABLE_SMB_COMPRESSION: MIRROR_VIRTUAL_DISK_FLAG = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MIRROR_VIRTUAL_DISK_FLAG_IS_LIVE_MIGRATION: MIRROR_VIRTUAL_DISK_FLAG = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type MIRROR_VIRTUAL_DISK_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MIRROR_VIRTUAL_DISK_VERSION_UNSPECIFIED: MIRROR_VIRTUAL_DISK_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MIRROR_VIRTUAL_DISK_VERSION_1: MIRROR_VIRTUAL_DISK_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type MODIFY_VHDSET_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MODIFY_VHDSET_FLAG_NONE: MODIFY_VHDSET_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MODIFY_VHDSET_FLAG_WRITEABLE_SNAPSHOT: MODIFY_VHDSET_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type MODIFY_VHDSET_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MODIFY_VHDSET_UNSPECIFIED: MODIFY_VHDSET_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MODIFY_VHDSET_SNAPSHOT_PATH: MODIFY_VHDSET_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MODIFY_VHDSET_REMOVE_SNAPSHOT: MODIFY_VHDSET_VERSION = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const MODIFY_VHDSET_DEFAULT_SNAPSHOT_PATH: MODIFY_VHDSET_VERSION = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type OPEN_VIRTUAL_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_NONE: OPEN_VIRTUAL_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_NO_PARENTS: OPEN_VIRTUAL_DISK_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_BLANK_FILE: OPEN_VIRTUAL_DISK_FLAG = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_BOOT_DRIVE: OPEN_VIRTUAL_DISK_FLAG = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_CACHED_IO: OPEN_VIRTUAL_DISK_FLAG = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_CUSTOM_DIFF_CHAIN: OPEN_VIRTUAL_DISK_FLAG = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_PARENT_CACHED_IO: OPEN_VIRTUAL_DISK_FLAG = 32u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_VHDSET_FILE_ONLY: OPEN_VIRTUAL_DISK_FLAG = 64u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_IGNORE_RELATIVE_PARENT_LOCATOR: OPEN_VIRTUAL_DISK_FLAG = 128u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_NO_WRITE_HARDENING: OPEN_VIRTUAL_DISK_FLAG = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_SUPPORT_COMPRESSED_VOLUMES: OPEN_VIRTUAL_DISK_FLAG = 512u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_SUPPORT_SPARSE_FILES_ANY_FS: OPEN_VIRTUAL_DISK_FLAG = 1024u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_FLAG_SUPPORT_ENCRYPTED_FILES: OPEN_VIRTUAL_DISK_FLAG = 2048u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type OPEN_VIRTUAL_DISK_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_VERSION_UNSPECIFIED: OPEN_VIRTUAL_DISK_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_VERSION_1: OPEN_VIRTUAL_DISK_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_VERSION_2: OPEN_VIRTUAL_DISK_VERSION = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const OPEN_VIRTUAL_DISK_VERSION_3: OPEN_VIRTUAL_DISK_VERSION = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type QUERY_CHANGES_VIRTUAL_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const QUERY_CHANGES_VIRTUAL_DISK_FLAG_NONE: QUERY_CHANGES_VIRTUAL_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type RAW_SCSI_VIRTUAL_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const RAW_SCSI_VIRTUAL_DISK_FLAG_NONE: RAW_SCSI_VIRTUAL_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type RAW_SCSI_VIRTUAL_DISK_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const RAW_SCSI_VIRTUAL_DISK_VERSION_UNSPECIFIED: RAW_SCSI_VIRTUAL_DISK_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const RAW_SCSI_VIRTUAL_DISK_VERSION_1: RAW_SCSI_VIRTUAL_DISK_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type RESIZE_VIRTUAL_DISK_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const RESIZE_VIRTUAL_DISK_FLAG_NONE: RESIZE_VIRTUAL_DISK_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const RESIZE_VIRTUAL_DISK_FLAG_ALLOW_UNSAFE_VIRTUAL_SIZE: RESIZE_VIRTUAL_DISK_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const RESIZE_VIRTUAL_DISK_FLAG_RESIZE_TO_SMALLEST_SAFE_VIRTUAL_SIZE: RESIZE_VIRTUAL_DISK_FLAG = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type RESIZE_VIRTUAL_DISK_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const RESIZE_VIRTUAL_DISK_VERSION_UNSPECIFIED: RESIZE_VIRTUAL_DISK_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const RESIZE_VIRTUAL_DISK_VERSION_1: RESIZE_VIRTUAL_DISK_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type SET_VIRTUAL_DISK_INFO_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const SET_VIRTUAL_DISK_INFO_UNSPECIFIED: SET_VIRTUAL_DISK_INFO_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const SET_VIRTUAL_DISK_INFO_PARENT_PATH: SET_VIRTUAL_DISK_INFO_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const SET_VIRTUAL_DISK_INFO_IDENTIFIER: SET_VIRTUAL_DISK_INFO_VERSION = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const SET_VIRTUAL_DISK_INFO_PARENT_PATH_WITH_DEPTH: SET_VIRTUAL_DISK_INFO_VERSION = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const SET_VIRTUAL_DISK_INFO_PHYSICAL_SECTOR_SIZE: SET_VIRTUAL_DISK_INFO_VERSION = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const SET_VIRTUAL_DISK_INFO_VIRTUAL_DISK_ID: SET_VIRTUAL_DISK_INFO_VERSION = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const SET_VIRTUAL_DISK_INFO_CHANGE_TRACKING_STATE: SET_VIRTUAL_DISK_INFO_VERSION = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const SET_VIRTUAL_DISK_INFO_PARENT_LOCATOR: SET_VIRTUAL_DISK_INFO_VERSION = 7i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type STORAGE_DEPENDENCY_INFO_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const STORAGE_DEPENDENCY_INFO_VERSION_UNSPECIFIED: STORAGE_DEPENDENCY_INFO_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const STORAGE_DEPENDENCY_INFO_VERSION_1: STORAGE_DEPENDENCY_INFO_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const STORAGE_DEPENDENCY_INFO_VERSION_2: STORAGE_DEPENDENCY_INFO_VERSION = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type TAKE_SNAPSHOT_VHDSET_FLAG = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const TAKE_SNAPSHOT_VHDSET_FLAG_NONE: TAKE_SNAPSHOT_VHDSET_FLAG = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const TAKE_SNAPSHOT_VHDSET_FLAG_WRITEABLE: TAKE_SNAPSHOT_VHDSET_FLAG = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type TAKE_SNAPSHOT_VHDSET_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const TAKE_SNAPSHOT_VHDSET_VERSION_UNSPECIFIED: TAKE_SNAPSHOT_VHDSET_VERSION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const TAKE_SNAPSHOT_VHDSET_VERSION_1: TAKE_SNAPSHOT_VHDSET_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub type VIRTUAL_DISK_ACCESS_MASK = u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_DISK_ACCESS_NONE: VIRTUAL_DISK_ACCESS_MASK = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_DISK_ACCESS_ATTACH_RO: VIRTUAL_DISK_ACCESS_MASK = 65536u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_DISK_ACCESS_ATTACH_RW: VIRTUAL_DISK_ACCESS_MASK = 131072u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_DISK_ACCESS_DETACH: VIRTUAL_DISK_ACCESS_MASK = 262144u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_DISK_ACCESS_GET_INFO: VIRTUAL_DISK_ACCESS_MASK = 524288u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_DISK_ACCESS_CREATE: VIRTUAL_DISK_ACCESS_MASK = 1048576u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_DISK_ACCESS_METAOPS: VIRTUAL_DISK_ACCESS_MASK = 2097152u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_DISK_ACCESS_READ: VIRTUAL_DISK_ACCESS_MASK = 851968u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_DISK_ACCESS_ALL: VIRTUAL_DISK_ACCESS_MASK = 4128768u32;
+#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
+pub const VIRTUAL_DISK_ACCESS_WRITABLE: VIRTUAL_DISK_ACCESS_MASK = 3276800u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct APPLY_SNAPSHOT_VHDSET_PARAMETERS {
@@ -129,36 +527,6 @@ impl ::core::clone::Clone for APPLY_SNAPSHOT_VHDSET_PARAMETERS_0_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type APPLY_SNAPSHOT_VHDSET_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const APPLY_SNAPSHOT_VHDSET_VERSION_UNSPECIFIED: APPLY_SNAPSHOT_VHDSET_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const APPLY_SNAPSHOT_VHDSET_VERSION_1: APPLY_SNAPSHOT_VHDSET_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type ATTACH_VIRTUAL_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_FLAG_NONE: ATTACH_VIRTUAL_DISK_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_FLAG_READ_ONLY: ATTACH_VIRTUAL_DISK_FLAG = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_FLAG_NO_DRIVE_LETTER: ATTACH_VIRTUAL_DISK_FLAG = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_FLAG_PERMANENT_LIFETIME: ATTACH_VIRTUAL_DISK_FLAG = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_FLAG_NO_LOCAL_HOST: ATTACH_VIRTUAL_DISK_FLAG = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_FLAG_NO_SECURITY_DESCRIPTOR: ATTACH_VIRTUAL_DISK_FLAG = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_FLAG_BYPASS_DEFAULT_ENCRYPTION_POLICY: ATTACH_VIRTUAL_DISK_FLAG = 32u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_FLAG_NON_PNP: ATTACH_VIRTUAL_DISK_FLAG = 64u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_FLAG_RESTRICTED_RANGE: ATTACH_VIRTUAL_DISK_FLAG = 128u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_FLAG_SINGLE_PARTITION: ATTACH_VIRTUAL_DISK_FLAG = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_FLAG_REGISTER_VOLUME: ATTACH_VIRTUAL_DISK_FLAG = 512u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct ATTACH_VIRTUAL_DISK_PARAMETERS {
@@ -206,22 +574,6 @@ impl ::core::clone::Clone for ATTACH_VIRTUAL_DISK_PARAMETERS_0_1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type ATTACH_VIRTUAL_DISK_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_VERSION_UNSPECIFIED: ATTACH_VIRTUAL_DISK_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_VERSION_1: ATTACH_VIRTUAL_DISK_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const ATTACH_VIRTUAL_DISK_VERSION_2: ATTACH_VIRTUAL_DISK_VERSION = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type COMPACT_VIRTUAL_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const COMPACT_VIRTUAL_DISK_FLAG_NONE: COMPACT_VIRTUAL_DISK_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const COMPACT_VIRTUAL_DISK_FLAG_NO_ZERO_SCAN: COMPACT_VIRTUAL_DISK_FLAG = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const COMPACT_VIRTUAL_DISK_FLAG_NO_BLOCK_MOVES: COMPACT_VIRTUAL_DISK_FLAG = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct COMPACT_VIRTUAL_DISK_PARAMETERS {
@@ -256,38 +608,6 @@ impl ::core::clone::Clone for COMPACT_VIRTUAL_DISK_PARAMETERS_0_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type COMPACT_VIRTUAL_DISK_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const COMPACT_VIRTUAL_DISK_VERSION_UNSPECIFIED: COMPACT_VIRTUAL_DISK_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const COMPACT_VIRTUAL_DISK_VERSION_1: COMPACT_VIRTUAL_DISK_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type CREATE_VIRTUAL_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_FLAG_NONE: CREATE_VIRTUAL_DISK_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_FLAG_FULL_PHYSICAL_ALLOCATION: CREATE_VIRTUAL_DISK_FLAG = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_FLAG_PREVENT_WRITES_TO_SOURCE_DISK: CREATE_VIRTUAL_DISK_FLAG = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_FLAG_DO_NOT_COPY_METADATA_FROM_PARENT: CREATE_VIRTUAL_DISK_FLAG = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_FLAG_CREATE_BACKING_STORAGE: CREATE_VIRTUAL_DISK_FLAG = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_FLAG_USE_CHANGE_TRACKING_SOURCE_LIMIT: CREATE_VIRTUAL_DISK_FLAG = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_FLAG_PRESERVE_PARENT_CHANGE_TRACKING_STATE: CREATE_VIRTUAL_DISK_FLAG = 32u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_FLAG_VHD_SET_USE_ORIGINAL_BACKING_STORAGE: CREATE_VIRTUAL_DISK_FLAG = 64u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_FLAG_SPARSE_FILE: CREATE_VIRTUAL_DISK_FLAG = 128u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_FLAG_PMEM_COMPATIBLE: CREATE_VIRTUAL_DISK_FLAG = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_FLAG_SUPPORT_COMPRESSED_VOLUMES: CREATE_VIRTUAL_DISK_FLAG = 512u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_FLAG_SUPPORT_SPARSE_FILES_ANY_FS: CREATE_VIRTUAL_DISK_FLAG = 1024u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct CREATE_VIRTUAL_DISK_PARAMETERS {
@@ -399,28 +719,6 @@ impl ::core::clone::Clone for CREATE_VIRTUAL_DISK_PARAMETERS_0_3 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_PARAMETERS_DEFAULT_BLOCK_SIZE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_PARAMETERS_DEFAULT_SECTOR_SIZE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type CREATE_VIRTUAL_DISK_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_VERSION_UNSPECIFIED: CREATE_VIRTUAL_DISK_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_VERSION_1: CREATE_VIRTUAL_DISK_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_VERSION_2: CREATE_VIRTUAL_DISK_VERSION = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_VERSION_3: CREATE_VIRTUAL_DISK_VERSION = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const CREATE_VIRTUAL_DISK_VERSION_4: CREATE_VIRTUAL_DISK_VERSION = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type DELETE_SNAPSHOT_VHDSET_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DELETE_SNAPSHOT_VHDSET_FLAG_NONE: DELETE_SNAPSHOT_VHDSET_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DELETE_SNAPSHOT_VHDSET_FLAG_PERSIST_RCT: DELETE_SNAPSHOT_VHDSET_FLAG = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct DELETE_SNAPSHOT_VHDSET_PARAMETERS {
@@ -455,54 +753,6 @@ impl ::core::clone::Clone for DELETE_SNAPSHOT_VHDSET_PARAMETERS_0_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type DELETE_SNAPSHOT_VHDSET_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DELETE_SNAPSHOT_VHDSET_VERSION_UNSPECIFIED: DELETE_SNAPSHOT_VHDSET_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DELETE_SNAPSHOT_VHDSET_VERSION_1: DELETE_SNAPSHOT_VHDSET_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type DEPENDENT_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_NONE: DEPENDENT_DISK_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_MULT_BACKING_FILES: DEPENDENT_DISK_FLAG = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_FULLY_ALLOCATED: DEPENDENT_DISK_FLAG = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_READ_ONLY: DEPENDENT_DISK_FLAG = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_REMOTE: DEPENDENT_DISK_FLAG = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_SYSTEM_VOLUME: DEPENDENT_DISK_FLAG = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_SYSTEM_VOLUME_PARENT: DEPENDENT_DISK_FLAG = 32u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_REMOVABLE: DEPENDENT_DISK_FLAG = 64u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_NO_DRIVE_LETTER: DEPENDENT_DISK_FLAG = 128u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_PARENT: DEPENDENT_DISK_FLAG = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_NO_HOST_DISK: DEPENDENT_DISK_FLAG = 512u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_PERMANENT_LIFETIME: DEPENDENT_DISK_FLAG = 1024u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_SUPPORT_COMPRESSED_VOLUMES: DEPENDENT_DISK_FLAG = 2048u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_ALWAYS_ALLOW_SPARSE: DEPENDENT_DISK_FLAG = 4096u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DEPENDENT_DISK_FLAG_SUPPORT_ENCRYPTED_FILES: DEPENDENT_DISK_FLAG = 8192u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type DETACH_VIRTUAL_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const DETACH_VIRTUAL_DISK_FLAG_NONE: DETACH_VIRTUAL_DISK_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type EXPAND_VIRTUAL_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const EXPAND_VIRTUAL_DISK_FLAG_NONE: EXPAND_VIRTUAL_DISK_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const EXPAND_VIRTUAL_DISK_FLAG_NOTIFY_CHANGE: EXPAND_VIRTUAL_DISK_FLAG = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct EXPAND_VIRTUAL_DISK_PARAMETERS {
@@ -537,18 +787,6 @@ impl ::core::clone::Clone for EXPAND_VIRTUAL_DISK_PARAMETERS_0_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type EXPAND_VIRTUAL_DISK_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const EXPAND_VIRTUAL_DISK_VERSION_UNSPECIFIED: EXPAND_VIRTUAL_DISK_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const EXPAND_VIRTUAL_DISK_VERSION_1: EXPAND_VIRTUAL_DISK_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type FORK_VIRTUAL_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const FORK_VIRTUAL_DISK_FLAG_NONE: FORK_VIRTUAL_DISK_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const FORK_VIRTUAL_DISK_FLAG_EXISTING_FILE: FORK_VIRTUAL_DISK_FLAG = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct FORK_VIRTUAL_DISK_PARAMETERS {
@@ -583,20 +821,6 @@ impl ::core::clone::Clone for FORK_VIRTUAL_DISK_PARAMETERS_0_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type FORK_VIRTUAL_DISK_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const FORK_VIRTUAL_DISK_VERSION_UNSPECIFIED: FORK_VIRTUAL_DISK_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const FORK_VIRTUAL_DISK_VERSION_1: FORK_VIRTUAL_DISK_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type GET_STORAGE_DEPENDENCY_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_STORAGE_DEPENDENCY_FLAG_NONE: GET_STORAGE_DEPENDENCY_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_STORAGE_DEPENDENCY_FLAG_HOST_VOLUMES: GET_STORAGE_DEPENDENCY_FLAG = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_STORAGE_DEPENDENCY_FLAG_DISK_HANDLE: GET_STORAGE_DEPENDENCY_FLAG = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -704,46 +928,6 @@ impl ::core::clone::Clone for GET_VIRTUAL_DISK_INFO_0_3 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type GET_VIRTUAL_DISK_INFO_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_UNSPECIFIED: GET_VIRTUAL_DISK_INFO_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_SIZE: GET_VIRTUAL_DISK_INFO_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_IDENTIFIER: GET_VIRTUAL_DISK_INFO_VERSION = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_PARENT_LOCATION: GET_VIRTUAL_DISK_INFO_VERSION = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_PARENT_IDENTIFIER: GET_VIRTUAL_DISK_INFO_VERSION = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_PARENT_TIMESTAMP: GET_VIRTUAL_DISK_INFO_VERSION = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_VIRTUAL_STORAGE_TYPE: GET_VIRTUAL_DISK_INFO_VERSION = 6i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_PROVIDER_SUBTYPE: GET_VIRTUAL_DISK_INFO_VERSION = 7i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_IS_4K_ALIGNED: GET_VIRTUAL_DISK_INFO_VERSION = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_PHYSICAL_DISK: GET_VIRTUAL_DISK_INFO_VERSION = 9i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_VHD_PHYSICAL_SECTOR_SIZE: GET_VIRTUAL_DISK_INFO_VERSION = 10i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_SMALLEST_SAFE_VIRTUAL_SIZE: GET_VIRTUAL_DISK_INFO_VERSION = 11i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_FRAGMENTATION: GET_VIRTUAL_DISK_INFO_VERSION = 12i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_IS_LOADED: GET_VIRTUAL_DISK_INFO_VERSION = 13i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_VIRTUAL_DISK_ID: GET_VIRTUAL_DISK_INFO_VERSION = 14i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const GET_VIRTUAL_DISK_INFO_CHANGE_TRACKING_STATE: GET_VIRTUAL_DISK_INFO_VERSION = 15i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MERGE_VIRTUAL_DISK_DEFAULT_MERGE_DEPTH: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type MERGE_VIRTUAL_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MERGE_VIRTUAL_DISK_FLAG_NONE: MERGE_VIRTUAL_DISK_FLAG = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct MERGE_VIRTUAL_DISK_PARAMETERS {
@@ -791,26 +975,6 @@ impl ::core::clone::Clone for MERGE_VIRTUAL_DISK_PARAMETERS_0_1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type MERGE_VIRTUAL_DISK_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MERGE_VIRTUAL_DISK_VERSION_UNSPECIFIED: MERGE_VIRTUAL_DISK_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MERGE_VIRTUAL_DISK_VERSION_1: MERGE_VIRTUAL_DISK_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MERGE_VIRTUAL_DISK_VERSION_2: MERGE_VIRTUAL_DISK_VERSION = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type MIRROR_VIRTUAL_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MIRROR_VIRTUAL_DISK_FLAG_NONE: MIRROR_VIRTUAL_DISK_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MIRROR_VIRTUAL_DISK_FLAG_EXISTING_FILE: MIRROR_VIRTUAL_DISK_FLAG = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MIRROR_VIRTUAL_DISK_FLAG_SKIP_MIRROR_ACTIVATION: MIRROR_VIRTUAL_DISK_FLAG = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MIRROR_VIRTUAL_DISK_FLAG_ENABLE_SMB_COMPRESSION: MIRROR_VIRTUAL_DISK_FLAG = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MIRROR_VIRTUAL_DISK_FLAG_IS_LIVE_MIGRATION: MIRROR_VIRTUAL_DISK_FLAG = 8u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct MIRROR_VIRTUAL_DISK_PARAMETERS {
@@ -845,18 +1009,6 @@ impl ::core::clone::Clone for MIRROR_VIRTUAL_DISK_PARAMETERS_0_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type MIRROR_VIRTUAL_DISK_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MIRROR_VIRTUAL_DISK_VERSION_UNSPECIFIED: MIRROR_VIRTUAL_DISK_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MIRROR_VIRTUAL_DISK_VERSION_1: MIRROR_VIRTUAL_DISK_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type MODIFY_VHDSET_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MODIFY_VHDSET_FLAG_NONE: MODIFY_VHDSET_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MODIFY_VHDSET_FLAG_WRITEABLE_SNAPSHOT: MODIFY_VHDSET_FLAG = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct MODIFY_VHDSET_PARAMETERS {
@@ -894,44 +1046,6 @@ impl ::core::clone::Clone for MODIFY_VHDSET_PARAMETERS_0_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type MODIFY_VHDSET_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MODIFY_VHDSET_UNSPECIFIED: MODIFY_VHDSET_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MODIFY_VHDSET_SNAPSHOT_PATH: MODIFY_VHDSET_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MODIFY_VHDSET_REMOVE_SNAPSHOT: MODIFY_VHDSET_VERSION = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const MODIFY_VHDSET_DEFAULT_SNAPSHOT_PATH: MODIFY_VHDSET_VERSION = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type OPEN_VIRTUAL_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_NONE: OPEN_VIRTUAL_DISK_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_NO_PARENTS: OPEN_VIRTUAL_DISK_FLAG = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_BLANK_FILE: OPEN_VIRTUAL_DISK_FLAG = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_BOOT_DRIVE: OPEN_VIRTUAL_DISK_FLAG = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_CACHED_IO: OPEN_VIRTUAL_DISK_FLAG = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_CUSTOM_DIFF_CHAIN: OPEN_VIRTUAL_DISK_FLAG = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_PARENT_CACHED_IO: OPEN_VIRTUAL_DISK_FLAG = 32u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_VHDSET_FILE_ONLY: OPEN_VIRTUAL_DISK_FLAG = 64u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_IGNORE_RELATIVE_PARENT_LOCATOR: OPEN_VIRTUAL_DISK_FLAG = 128u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_NO_WRITE_HARDENING: OPEN_VIRTUAL_DISK_FLAG = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_SUPPORT_COMPRESSED_VOLUMES: OPEN_VIRTUAL_DISK_FLAG = 512u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_SUPPORT_SPARSE_FILES_ANY_FS: OPEN_VIRTUAL_DISK_FLAG = 1024u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_FLAG_SUPPORT_ENCRYPTED_FILES: OPEN_VIRTUAL_DISK_FLAG = 2048u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1010,22 +1124,6 @@ impl ::core::clone::Clone for OPEN_VIRTUAL_DISK_PARAMETERS_0_2 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_RW_DEPTH_DEFAULT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type OPEN_VIRTUAL_DISK_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_VERSION_UNSPECIFIED: OPEN_VIRTUAL_DISK_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_VERSION_1: OPEN_VIRTUAL_DISK_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_VERSION_2: OPEN_VIRTUAL_DISK_VERSION = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const OPEN_VIRTUAL_DISK_VERSION_3: OPEN_VIRTUAL_DISK_VERSION = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type QUERY_CHANGES_VIRTUAL_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const QUERY_CHANGES_VIRTUAL_DISK_FLAG_NONE: QUERY_CHANGES_VIRTUAL_DISK_FLAG = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct QUERY_CHANGES_VIRTUAL_DISK_RANGE {
@@ -1039,10 +1137,6 @@ impl ::core::clone::Clone for QUERY_CHANGES_VIRTUAL_DISK_RANGE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type RAW_SCSI_VIRTUAL_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const RAW_SCSI_VIRTUAL_DISK_FLAG_NONE: RAW_SCSI_VIRTUAL_DISK_FLAG = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1130,20 +1224,6 @@ impl ::core::clone::Clone for RAW_SCSI_VIRTUAL_DISK_RESPONSE_0_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type RAW_SCSI_VIRTUAL_DISK_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const RAW_SCSI_VIRTUAL_DISK_VERSION_UNSPECIFIED: RAW_SCSI_VIRTUAL_DISK_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const RAW_SCSI_VIRTUAL_DISK_VERSION_1: RAW_SCSI_VIRTUAL_DISK_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type RESIZE_VIRTUAL_DISK_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const RESIZE_VIRTUAL_DISK_FLAG_NONE: RESIZE_VIRTUAL_DISK_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const RESIZE_VIRTUAL_DISK_FLAG_ALLOW_UNSAFE_VIRTUAL_SIZE: RESIZE_VIRTUAL_DISK_FLAG = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const RESIZE_VIRTUAL_DISK_FLAG_RESIZE_TO_SMALLEST_SAFE_VIRTUAL_SIZE: RESIZE_VIRTUAL_DISK_FLAG = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct RESIZE_VIRTUAL_DISK_PARAMETERS {
@@ -1178,12 +1258,6 @@ impl ::core::clone::Clone for RESIZE_VIRTUAL_DISK_PARAMETERS_0_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type RESIZE_VIRTUAL_DISK_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const RESIZE_VIRTUAL_DISK_VERSION_UNSPECIFIED: RESIZE_VIRTUAL_DISK_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const RESIZE_VIRTUAL_DISK_VERSION_1: RESIZE_VIRTUAL_DISK_VERSION = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1249,24 +1323,6 @@ impl ::core::clone::Clone for SET_VIRTUAL_DISK_INFO_0_1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type SET_VIRTUAL_DISK_INFO_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const SET_VIRTUAL_DISK_INFO_UNSPECIFIED: SET_VIRTUAL_DISK_INFO_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const SET_VIRTUAL_DISK_INFO_PARENT_PATH: SET_VIRTUAL_DISK_INFO_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const SET_VIRTUAL_DISK_INFO_IDENTIFIER: SET_VIRTUAL_DISK_INFO_VERSION = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const SET_VIRTUAL_DISK_INFO_PARENT_PATH_WITH_DEPTH: SET_VIRTUAL_DISK_INFO_VERSION = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const SET_VIRTUAL_DISK_INFO_PHYSICAL_SECTOR_SIZE: SET_VIRTUAL_DISK_INFO_VERSION = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const SET_VIRTUAL_DISK_INFO_VIRTUAL_DISK_ID: SET_VIRTUAL_DISK_INFO_VERSION = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const SET_VIRTUAL_DISK_INFO_CHANGE_TRACKING_STATE: SET_VIRTUAL_DISK_INFO_VERSION = 6i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const SET_VIRTUAL_DISK_INFO_PARENT_LOCATOR: SET_VIRTUAL_DISK_INFO_VERSION = 7i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct STORAGE_DEPENDENCY_INFO {
@@ -1323,20 +1379,6 @@ impl ::core::clone::Clone for STORAGE_DEPENDENCY_INFO_TYPE_2 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type STORAGE_DEPENDENCY_INFO_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const STORAGE_DEPENDENCY_INFO_VERSION_UNSPECIFIED: STORAGE_DEPENDENCY_INFO_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const STORAGE_DEPENDENCY_INFO_VERSION_1: STORAGE_DEPENDENCY_INFO_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const STORAGE_DEPENDENCY_INFO_VERSION_2: STORAGE_DEPENDENCY_INFO_VERSION = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type TAKE_SNAPSHOT_VHDSET_FLAG = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const TAKE_SNAPSHOT_VHDSET_FLAG_NONE: TAKE_SNAPSHOT_VHDSET_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const TAKE_SNAPSHOT_VHDSET_FLAG_WRITEABLE: TAKE_SNAPSHOT_VHDSET_FLAG = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct TAKE_SNAPSHOT_VHDSET_PARAMETERS {
@@ -1371,36 +1413,6 @@ impl ::core::clone::Clone for TAKE_SNAPSHOT_VHDSET_PARAMETERS_0_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type TAKE_SNAPSHOT_VHDSET_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const TAKE_SNAPSHOT_VHDSET_VERSION_UNSPECIFIED: TAKE_SNAPSHOT_VHDSET_VERSION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const TAKE_SNAPSHOT_VHDSET_VERSION_1: TAKE_SNAPSHOT_VHDSET_VERSION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub type VIRTUAL_DISK_ACCESS_MASK = u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_DISK_ACCESS_NONE: VIRTUAL_DISK_ACCESS_MASK = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_DISK_ACCESS_ATTACH_RO: VIRTUAL_DISK_ACCESS_MASK = 65536u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_DISK_ACCESS_ATTACH_RW: VIRTUAL_DISK_ACCESS_MASK = 131072u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_DISK_ACCESS_DETACH: VIRTUAL_DISK_ACCESS_MASK = 262144u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_DISK_ACCESS_GET_INFO: VIRTUAL_DISK_ACCESS_MASK = 524288u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_DISK_ACCESS_CREATE: VIRTUAL_DISK_ACCESS_MASK = 1048576u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_DISK_ACCESS_METAOPS: VIRTUAL_DISK_ACCESS_MASK = 2097152u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_DISK_ACCESS_READ: VIRTUAL_DISK_ACCESS_MASK = 851968u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_DISK_ACCESS_ALL: VIRTUAL_DISK_ACCESS_MASK = 4128768u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_DISK_ACCESS_WRITABLE: VIRTUAL_DISK_ACCESS_MASK = 3276800u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_DISK_MAXIMUM_CHANGE_TRACKING_ID_LENGTH: u32 = 256u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
 pub struct VIRTUAL_DISK_PROGRESS {
@@ -1426,15 +1438,3 @@ impl ::core::clone::Clone for VIRTUAL_STORAGE_TYPE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_STORAGE_TYPE_DEVICE_ISO: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_STORAGE_TYPE_DEVICE_UNKNOWN: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_STORAGE_TYPE_DEVICE_VHD: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_STORAGE_TYPE_DEVICE_VHDSET: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_Vhd\"`*"]
-pub const VIRTUAL_STORAGE_TYPE_DEVICE_VHDX: u32 = 3u32;
-pub const VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3969403628, data2: 41209, data3: 18409, data4: [144, 31, 113, 65, 90, 102, 52, 91] };
-pub const VIRTUAL_STORAGE_TYPE_VENDOR_UNKNOWN: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 0, data2: 0, data3: 0, data4: [0, 0, 0, 0, 0, 0, 0, 0] };

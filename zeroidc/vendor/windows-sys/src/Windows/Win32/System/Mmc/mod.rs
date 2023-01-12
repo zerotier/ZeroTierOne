@@ -1,8 +1,252 @@
+pub type AppEvents = *mut ::core::ffi::c_void;
+pub type Column = *mut ::core::ffi::c_void;
+pub type Columns = *mut ::core::ffi::c_void;
+pub type ContextMenu = *mut ::core::ffi::c_void;
+pub type Document = *mut ::core::ffi::c_void;
+pub type Extension = *mut ::core::ffi::c_void;
+pub type Extensions = *mut ::core::ffi::c_void;
+pub type Frame = *mut ::core::ffi::c_void;
+pub type IColumnData = *mut ::core::ffi::c_void;
+pub type IComponent = *mut ::core::ffi::c_void;
+pub type IComponent2 = *mut ::core::ffi::c_void;
+pub type IComponentData = *mut ::core::ffi::c_void;
+pub type IComponentData2 = *mut ::core::ffi::c_void;
+pub type IConsole = *mut ::core::ffi::c_void;
+pub type IConsole2 = *mut ::core::ffi::c_void;
+pub type IConsole3 = *mut ::core::ffi::c_void;
+pub type IConsoleNameSpace = *mut ::core::ffi::c_void;
+pub type IConsoleNameSpace2 = *mut ::core::ffi::c_void;
+pub type IConsolePower = *mut ::core::ffi::c_void;
+pub type IConsolePowerSink = *mut ::core::ffi::c_void;
+pub type IConsoleVerb = *mut ::core::ffi::c_void;
+pub type IContextMenuCallback = *mut ::core::ffi::c_void;
+pub type IContextMenuCallback2 = *mut ::core::ffi::c_void;
+pub type IContextMenuProvider = *mut ::core::ffi::c_void;
+pub type IControlbar = *mut ::core::ffi::c_void;
+pub type IDisplayHelp = *mut ::core::ffi::c_void;
+pub type IEnumTASK = *mut ::core::ffi::c_void;
+pub type IExtendContextMenu = *mut ::core::ffi::c_void;
+pub type IExtendControlbar = *mut ::core::ffi::c_void;
+pub type IExtendPropertySheet = *mut ::core::ffi::c_void;
+pub type IExtendPropertySheet2 = *mut ::core::ffi::c_void;
+pub type IExtendTaskPad = *mut ::core::ffi::c_void;
+pub type IExtendView = *mut ::core::ffi::c_void;
+pub type IHeaderCtrl = *mut ::core::ffi::c_void;
+pub type IHeaderCtrl2 = *mut ::core::ffi::c_void;
+pub type IImageList = *mut ::core::ffi::c_void;
+pub type IMMCVersionInfo = *mut ::core::ffi::c_void;
+pub type IMenuButton = *mut ::core::ffi::c_void;
+pub type IMessageView = *mut ::core::ffi::c_void;
+pub type INodeProperties = *mut ::core::ffi::c_void;
+pub type IPropertySheetCallback = *mut ::core::ffi::c_void;
+pub type IPropertySheetProvider = *mut ::core::ffi::c_void;
+pub type IRequiredExtensions = *mut ::core::ffi::c_void;
+pub type IResultData = *mut ::core::ffi::c_void;
+pub type IResultData2 = *mut ::core::ffi::c_void;
+pub type IResultDataCompare = *mut ::core::ffi::c_void;
+pub type IResultDataCompareEx = *mut ::core::ffi::c_void;
+pub type IResultOwnerData = *mut ::core::ffi::c_void;
+pub type ISnapinAbout = *mut ::core::ffi::c_void;
+pub type ISnapinHelp = *mut ::core::ffi::c_void;
+pub type ISnapinHelp2 = *mut ::core::ffi::c_void;
+pub type ISnapinProperties = *mut ::core::ffi::c_void;
+pub type ISnapinPropertiesCallback = *mut ::core::ffi::c_void;
+pub type IStringTable = *mut ::core::ffi::c_void;
+pub type IToolbar = *mut ::core::ffi::c_void;
+pub type IViewExtensionCallback = *mut ::core::ffi::c_void;
+pub type MenuItem = *mut ::core::ffi::c_void;
+pub type Node = *mut ::core::ffi::c_void;
+pub type Nodes = *mut ::core::ffi::c_void;
+pub type Properties = *mut ::core::ffi::c_void;
+pub type Property = *mut ::core::ffi::c_void;
+pub type ScopeNamespace = *mut ::core::ffi::c_void;
+pub type SnapIn = *mut ::core::ffi::c_void;
+pub type SnapIns = *mut ::core::ffi::c_void;
+pub type View = *mut ::core::ffi::c_void;
+pub type Views = *mut ::core::ffi::c_void;
+pub type _AppEvents = *mut ::core::ffi::c_void;
+pub type _Application = *mut ::core::ffi::c_void;
+pub type _EventConnector = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const AUTO_WIDTH: i32 = -1i32;
-pub type AppEvents = *mut ::core::ffi::c_void;
 pub const AppEventsDHTMLConnector: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2917549131, data2: 51487, data3: 20023, data4: [146, 164, 91, 180, 48, 163, 51, 64] };
 pub const Application: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1236433178, data2: 45486, data3: 19600, data4: [155, 142, 232, 96, 186, 7, 248, 137] };
+pub const ConsolePower: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4029174644, data2: 57329, data3: 4563, data4: [180, 51, 0, 192, 79, 142, 205, 120] };
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const HDI_HIDDEN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const HIDE_COLUMN: i32 = -4i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ILSIF_LEAVE_LARGE_ICON: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ILSIF_LEAVE_SMALL_ICON: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMCLV_AUTO: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMCLV_NOICON: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMCLV_NOPARAM: i32 = -2i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMCLV_NOPTR: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMCLV_UPDATE_NOINVALIDATEALL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMCLV_UPDATE_NOSCROLL: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMCLV_VIEWSTYLE_FILTERED: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMCLV_VIEWSTYLE_ICON: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMCLV_VIEWSTYLE_LIST: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMCLV_VIEWSTYLE_REPORT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMCLV_VIEWSTYLE_SMALLICON: u32 = 2u32;
+pub const MMCVersionInfo: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3607026461, data2: 53025, data3: 19417, data4: [175, 59, 197, 70, 142, 156, 102, 132] };
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_DEFAULT_OPERATION_COPY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_IMAGECALLBACK: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_ITEM_OVERLAY_STATE_MASK: u32 = 3840u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_ITEM_OVERLAY_STATE_SHIFT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_ITEM_STATE_MASK: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_MULTI_SELECT_COOKIE: i32 = -2i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_NODEID_SLOW_RETRIEVAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_NW_OPTION_CUSTOMTITLE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_NW_OPTION_NOACTIONPANE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_NW_OPTION_NONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_NW_OPTION_NOPERSIST: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_NW_OPTION_NOSCOPEPANE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_NW_OPTION_NOTOOLBARS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_NW_OPTION_SHORTTITLE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_PROP_CHANGEAFFECTSUI: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_PROP_MODIFIABLE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_PROP_PERSIST: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_PROP_REMOVABLE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_PSO_HASHELP: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_PSO_NEWWIZARDTYPE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_PSO_NOAPPLYNOW: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_PSO_NO_PROPTITLE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VER: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VIEW_OPTIONS_CREATENEW: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VIEW_OPTIONS_EXCLUDE_SCOPE_ITEMS_FROM_LIST: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VIEW_OPTIONS_FILTERED: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VIEW_OPTIONS_LEXICAL_SORT: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VIEW_OPTIONS_MULTISELECT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VIEW_OPTIONS_NOLISTVIEWS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VIEW_OPTIONS_NONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VIEW_OPTIONS_OWNERDATALIST: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VIEW_OPTIONS_USEFONTLINKING: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_WINDOW_COOKIE: i32 = -3i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RDCI_ScopeItem: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RDI_IMAGE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RDI_INDENT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RDI_INDEX: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RDI_PARAM: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RDI_STATE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RDI_STR: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RFI_PARTIAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RFI_WRAP: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RSI_DESCENDING: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RSI_NOSORTICON: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_HTML_OPTIONS_NOLISTVIEW: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_HTML_OPTIONS_NONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_LIST_OPTIONS_ALLOWPASTE: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_LIST_OPTIONS_EXCLUDE_SCOPE_ITEMS_FROM_LIST: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_LIST_OPTIONS_FILTERED: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_LIST_OPTIONS_LEXICAL_SORT: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_LIST_OPTIONS_MULTISELECT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_LIST_OPTIONS_NONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_LIST_OPTIONS_OWNERDATALIST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_LIST_OPTIONS_USEFONTLINKING: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_MISC_OPTIONS_NOLISTVIEWS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_OCX_OPTIONS_CACHE_OCX: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_OCX_OPTIONS_NOLISTVIEW: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const RVTI_OCX_OPTIONS_NONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SDI_CHILDREN: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SDI_FIRST: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SDI_IMAGE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SDI_NEXT: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SDI_OPENIMAGE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SDI_PARAM: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SDI_PARENT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SDI_PREVIOUS: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SDI_STATE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SDI_STR: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SPECIAL_COOKIE_MAX: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SPECIAL_COOKIE_MIN: i32 = -10i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SPECIAL_DOBJ_MAX: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SPECIAL_DOBJ_MIN: i32 = -10i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub type CCM_COMMANDID_MASK_CONSTANTS = u32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
@@ -61,43 +305,6 @@ pub const CCM_SPECIAL_DEFAULT_ITEM: CCM_SPECIAL = 4i32;
 pub const CCM_SPECIAL_INSERTION_POINT: CCM_SPECIAL = 8i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const CCM_SPECIAL_TESTONLY: CCM_SPECIAL = 16i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub struct CONTEXTMENUITEM {
-    pub strName: ::windows_sys::core::PWSTR,
-    pub strStatusBarText: ::windows_sys::core::PWSTR,
-    pub lCommandID: i32,
-    pub lInsertionPointID: i32,
-    pub fFlags: i32,
-    pub fSpecialFlags: i32,
-}
-impl ::core::marker::Copy for CONTEXTMENUITEM {}
-impl ::core::clone::Clone for CONTEXTMENUITEM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub struct CONTEXTMENUITEM2 {
-    pub strName: ::windows_sys::core::PWSTR,
-    pub strStatusBarText: ::windows_sys::core::PWSTR,
-    pub lCommandID: i32,
-    pub lInsertionPointID: i32,
-    pub fFlags: i32,
-    pub fSpecialFlags: i32,
-    pub strLanguageIndependentName: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for CONTEXTMENUITEM2 {}
-impl ::core::clone::Clone for CONTEXTMENUITEM2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type Column = *mut ::core::ffi::c_void;
-pub type Columns = *mut ::core::ffi::c_void;
-pub const ConsolePower: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4029174644, data2: 57329, data3: 4563, data4: [180, 51, 0, 192, 79, 142, 205, 120] };
-pub type ContextMenu = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub type DATA_OBJECT_TYPES = i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
@@ -108,66 +315,6 @@ pub const CCT_RESULT: DATA_OBJECT_TYPES = 32769i32;
 pub const CCT_SNAPIN_MANAGER: DATA_OBJECT_TYPES = 32770i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const CCT_UNINITIALIZED: DATA_OBJECT_TYPES = 65535i32;
-pub type Document = *mut ::core::ffi::c_void;
-pub type Extension = *mut ::core::ffi::c_void;
-pub type Extensions = *mut ::core::ffi::c_void;
-pub type Frame = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const HDI_HIDDEN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const HIDE_COLUMN: i32 = -4i32;
-pub type IColumnData = *mut ::core::ffi::c_void;
-pub type IComponent = *mut ::core::ffi::c_void;
-pub type IComponent2 = *mut ::core::ffi::c_void;
-pub type IComponentData = *mut ::core::ffi::c_void;
-pub type IComponentData2 = *mut ::core::ffi::c_void;
-pub type IConsole = *mut ::core::ffi::c_void;
-pub type IConsole2 = *mut ::core::ffi::c_void;
-pub type IConsole3 = *mut ::core::ffi::c_void;
-pub type IConsoleNameSpace = *mut ::core::ffi::c_void;
-pub type IConsoleNameSpace2 = *mut ::core::ffi::c_void;
-pub type IConsolePower = *mut ::core::ffi::c_void;
-pub type IConsolePowerSink = *mut ::core::ffi::c_void;
-pub type IConsoleVerb = *mut ::core::ffi::c_void;
-pub type IContextMenuCallback = *mut ::core::ffi::c_void;
-pub type IContextMenuCallback2 = *mut ::core::ffi::c_void;
-pub type IContextMenuProvider = *mut ::core::ffi::c_void;
-pub type IControlbar = *mut ::core::ffi::c_void;
-pub type IDisplayHelp = *mut ::core::ffi::c_void;
-pub type IEnumTASK = *mut ::core::ffi::c_void;
-pub type IExtendContextMenu = *mut ::core::ffi::c_void;
-pub type IExtendControlbar = *mut ::core::ffi::c_void;
-pub type IExtendPropertySheet = *mut ::core::ffi::c_void;
-pub type IExtendPropertySheet2 = *mut ::core::ffi::c_void;
-pub type IExtendTaskPad = *mut ::core::ffi::c_void;
-pub type IExtendView = *mut ::core::ffi::c_void;
-pub type IHeaderCtrl = *mut ::core::ffi::c_void;
-pub type IHeaderCtrl2 = *mut ::core::ffi::c_void;
-pub type IImageList = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ILSIF_LEAVE_LARGE_ICON: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ILSIF_LEAVE_SMALL_ICON: u32 = 536870912u32;
-pub type IMMCVersionInfo = *mut ::core::ffi::c_void;
-pub type IMenuButton = *mut ::core::ffi::c_void;
-pub type IMessageView = *mut ::core::ffi::c_void;
-pub type INodeProperties = *mut ::core::ffi::c_void;
-pub type IPropertySheetCallback = *mut ::core::ffi::c_void;
-pub type IPropertySheetProvider = *mut ::core::ffi::c_void;
-pub type IRequiredExtensions = *mut ::core::ffi::c_void;
-pub type IResultData = *mut ::core::ffi::c_void;
-pub type IResultData2 = *mut ::core::ffi::c_void;
-pub type IResultDataCompare = *mut ::core::ffi::c_void;
-pub type IResultDataCompareEx = *mut ::core::ffi::c_void;
-pub type IResultOwnerData = *mut ::core::ffi::c_void;
-pub type ISnapinAbout = *mut ::core::ffi::c_void;
-pub type ISnapinHelp = *mut ::core::ffi::c_void;
-pub type ISnapinHelp2 = *mut ::core::ffi::c_void;
-pub type ISnapinProperties = *mut ::core::ffi::c_void;
-pub type ISnapinPropertiesCallback = *mut ::core::ffi::c_void;
-pub type IStringTable = *mut ::core::ffi::c_void;
-pub type IToolbar = *mut ::core::ffi::c_void;
-pub type IViewExtensionCallback = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub type IconIdentifier = i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
@@ -184,58 +331,6 @@ pub const Icon_Information: IconIdentifier = 32516i32;
 pub const Icon_First: IconIdentifier = 32513i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const Icon_Last: IconIdentifier = 32516i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub struct MENUBUTTONDATA {
-    pub idCommand: i32,
-    pub x: i32,
-    pub y: i32,
-}
-impl ::core::marker::Copy for MENUBUTTONDATA {}
-impl ::core::clone::Clone for MENUBUTTONDATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub struct MMCBUTTON {
-    pub nBitmap: i32,
-    pub idCommand: i32,
-    pub fsState: u8,
-    pub fsType: u8,
-    pub lpButtonText: ::windows_sys::core::PWSTR,
-    pub lpTooltipText: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for MMCBUTTON {}
-impl ::core::clone::Clone for MMCBUTTON {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMCLV_AUTO: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMCLV_NOICON: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMCLV_NOPARAM: i32 = -2i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMCLV_NOPTR: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMCLV_UPDATE_NOINVALIDATEALL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMCLV_UPDATE_NOSCROLL: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMCLV_VIEWSTYLE_FILTERED: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMCLV_VIEWSTYLE_ICON: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMCLV_VIEWSTYLE_LIST: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMCLV_VIEWSTYLE_REPORT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMCLV_VIEWSTYLE_SMALLICON: u32 = 2u32;
-pub const MMCVersionInfo: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3607026461, data2: 53025, data3: 19417, data4: [175, 59, 197, 70, 142, 156, 102, 132] };
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub type MMC_ACTION_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
@@ -258,33 +353,6 @@ pub const HIDDEN: MMC_BUTTON_STATE = 4i32;
 pub const INDETERMINATE: MMC_BUTTON_STATE = 8i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const BUTTONPRESSED: MMC_BUTTON_STATE = 16i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub struct MMC_COLUMN_DATA {
-    pub nColIndex: i32,
-    pub dwFlags: u32,
-    pub nWidth: i32,
-    pub ulReserved: usize,
-}
-impl ::core::marker::Copy for MMC_COLUMN_DATA {}
-impl ::core::clone::Clone for MMC_COLUMN_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub struct MMC_COLUMN_SET_DATA {
-    pub cbSize: i32,
-    pub nNumCols: i32,
-    pub pColData: *mut MMC_COLUMN_DATA,
-}
-impl ::core::marker::Copy for MMC_COLUMN_SET_DATA {}
-impl ::core::clone::Clone for MMC_COLUMN_SET_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub type MMC_CONSOLE_VERB = i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
@@ -322,55 +390,6 @@ pub const MENUBUTTON: MMC_CONTROL_TYPE = 1i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const COMBOBOXBAR: MMC_CONTROL_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_DEFAULT_OPERATION_COPY: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Mmc\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MMC_EXPANDSYNC_STRUCT {
-    pub bHandled: super::super::Foundation::BOOL,
-    pub bExpanding: super::super::Foundation::BOOL,
-    pub hItem: isize,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MMC_EXPANDSYNC_STRUCT {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MMC_EXPANDSYNC_STRUCT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Mmc\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MMC_EXT_VIEW_DATA {
-    pub viewID: ::windows_sys::core::GUID,
-    pub pszURL: ::windows_sys::core::PCWSTR,
-    pub pszViewTitle: ::windows_sys::core::PCWSTR,
-    pub pszTooltipText: ::windows_sys::core::PCWSTR,
-    pub bReplacesDefaultView: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MMC_EXT_VIEW_DATA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MMC_EXT_VIEW_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub struct MMC_FILTERDATA {
-    pub pszText: ::windows_sys::core::PWSTR,
-    pub cchTextMax: i32,
-    pub lValue: i32,
-}
-impl ::core::marker::Copy for MMC_FILTERDATA {}
-impl ::core::clone::Clone for MMC_FILTERDATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub type MMC_FILTER_CHANGE_CODE = i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const MFCC_DISABLE: MMC_FILTER_CHANGE_CODE = 0i32;
@@ -387,34 +406,9 @@ pub const MMC_INT_FILTER: MMC_FILTER_TYPE = 1i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const MMC_FILTER_NOVALUE: MMC_FILTER_TYPE = 32768i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_IMAGECALLBACK: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_ITEM_OVERLAY_STATE_MASK: u32 = 3840u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_ITEM_OVERLAY_STATE_SHIFT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_ITEM_STATE_MASK: u32 = 255u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub struct MMC_LISTPAD_INFO {
-    pub szTitle: ::windows_sys::core::PWSTR,
-    pub szButtonText: ::windows_sys::core::PWSTR,
-    pub nCommandID: isize,
-}
-impl ::core::marker::Copy for MMC_LISTPAD_INFO {}
-impl ::core::clone::Clone for MMC_LISTPAD_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub type MMC_MENU_COMMAND_IDS = i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const MMCC_STANDARD_VIEW_SELECT: MMC_MENU_COMMAND_IDS = -1i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_MULTI_SELECT_COOKIE: i32 = -2i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_NODEID_SLOW_RETRIEVAL: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub type MMC_NOTIFY_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
@@ -488,20 +482,6 @@ pub const MMCN_COLUMNS_CHANGED: MMC_NOTIFY_TYPE = 32802i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const MMCN_CANPASTE_OUTOFPROC: MMC_NOTIFY_TYPE = 32803i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_NW_OPTION_CUSTOMTITLE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_NW_OPTION_NOACTIONPANE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_NW_OPTION_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_NW_OPTION_NOPERSIST: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_NW_OPTION_NOSCOPEPANE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_NW_OPTION_NOTOOLBARS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_NW_OPTION_SHORTTITLE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub type MMC_PROPERTY_ACTION = i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const MMC_PROPACT_DELETING: MMC_PROPERTY_ACTION = 1i32;
@@ -509,36 +489,6 @@ pub const MMC_PROPACT_DELETING: MMC_PROPERTY_ACTION = 1i32;
 pub const MMC_PROPACT_CHANGING: MMC_PROPERTY_ACTION = 2i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const MMC_PROPACT_INITIALIZED: MMC_PROPERTY_ACTION = 3i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_PROP_CHANGEAFFECTSUI: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_PROP_MODIFIABLE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_PROP_PERSIST: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_PROP_REMOVABLE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_PSO_HASHELP: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_PSO_NEWWIZARDTYPE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_PSO_NOAPPLYNOW: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_PSO_NO_PROPTITLE: u32 = 8u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub struct MMC_RESTORE_VIEW {
-    pub dwSize: u32,
-    pub cookie: isize,
-    pub pViewType: ::windows_sys::core::PWSTR,
-    pub lViewOptions: i32,
-}
-impl ::core::marker::Copy for MMC_RESTORE_VIEW {}
-impl ::core::clone::Clone for MMC_RESTORE_VIEW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub type MMC_RESULT_VIEW_STYLE = i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
@@ -557,6 +507,239 @@ pub const MMC_SCOPE_ITEM_STATE_NORMAL: MMC_SCOPE_ITEM_STATE = 1i32;
 pub const MMC_SCOPE_ITEM_STATE_BOLD: MMC_SCOPE_ITEM_STATE = 2i32;
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub const MMC_SCOPE_ITEM_STATE_EXPANDEDONCE: MMC_SCOPE_ITEM_STATE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub type MMC_TASK_DISPLAY_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_TASK_DISPLAY_UNINITIALIZED: MMC_TASK_DISPLAY_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_TASK_DISPLAY_TYPE_SYMBOL: MMC_TASK_DISPLAY_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_TASK_DISPLAY_TYPE_VANILLA_GIF: MMC_TASK_DISPLAY_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_TASK_DISPLAY_TYPE_CHOCOLATE_GIF: MMC_TASK_DISPLAY_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_TASK_DISPLAY_TYPE_BITMAP: MMC_TASK_DISPLAY_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub type MMC_VIEW_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VIEW_TYPE_LIST: MMC_VIEW_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VIEW_TYPE_HTML: MMC_VIEW_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const MMC_VIEW_TYPE_OCX: MMC_VIEW_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub type _ColumnSortOrder = i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SortOrder_Ascending: _ColumnSortOrder = 0i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const SortOrder_Descending: _ColumnSortOrder = 1i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub type _DocumentMode = i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const DocumentMode_Author: _DocumentMode = 0i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const DocumentMode_User: _DocumentMode = 1i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const DocumentMode_User_MDI: _DocumentMode = 2i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const DocumentMode_User_SDI: _DocumentMode = 3i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub type _ExportListOptions = i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ExportListOptions_Default: _ExportListOptions = 0i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ExportListOptions_Unicode: _ExportListOptions = 1i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ExportListOptions_TabDelimited: _ExportListOptions = 2i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ExportListOptions_SelectedItemsOnly: _ExportListOptions = 4i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub type _ListViewMode = i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ListMode_Small_Icons: _ListViewMode = 0i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ListMode_Large_Icons: _ListViewMode = 1i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ListMode_List: _ListViewMode = 2i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ListMode_Detail: _ListViewMode = 3i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ListMode_Filtered: _ListViewMode = 4i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub type _ViewOptions = i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ViewOption_Default: _ViewOptions = 0i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ViewOption_ScopeTreeHidden: _ViewOptions = 1i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ViewOption_NoToolBars: _ViewOptions = 2i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ViewOption_NotPersistable: _ViewOptions = 4i32;
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub const ViewOption_ActionPaneHidden: _ViewOptions = 8i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub struct CONTEXTMENUITEM {
+    pub strName: ::windows_sys::core::PWSTR,
+    pub strStatusBarText: ::windows_sys::core::PWSTR,
+    pub lCommandID: i32,
+    pub lInsertionPointID: i32,
+    pub fFlags: i32,
+    pub fSpecialFlags: i32,
+}
+impl ::core::marker::Copy for CONTEXTMENUITEM {}
+impl ::core::clone::Clone for CONTEXTMENUITEM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub struct CONTEXTMENUITEM2 {
+    pub strName: ::windows_sys::core::PWSTR,
+    pub strStatusBarText: ::windows_sys::core::PWSTR,
+    pub lCommandID: i32,
+    pub lInsertionPointID: i32,
+    pub fFlags: i32,
+    pub fSpecialFlags: i32,
+    pub strLanguageIndependentName: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for CONTEXTMENUITEM2 {}
+impl ::core::clone::Clone for CONTEXTMENUITEM2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub struct MENUBUTTONDATA {
+    pub idCommand: i32,
+    pub x: i32,
+    pub y: i32,
+}
+impl ::core::marker::Copy for MENUBUTTONDATA {}
+impl ::core::clone::Clone for MENUBUTTONDATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub struct MMCBUTTON {
+    pub nBitmap: i32,
+    pub idCommand: i32,
+    pub fsState: u8,
+    pub fsType: u8,
+    pub lpButtonText: ::windows_sys::core::PWSTR,
+    pub lpTooltipText: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for MMCBUTTON {}
+impl ::core::clone::Clone for MMCBUTTON {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub struct MMC_COLUMN_DATA {
+    pub nColIndex: i32,
+    pub dwFlags: u32,
+    pub nWidth: i32,
+    pub ulReserved: usize,
+}
+impl ::core::marker::Copy for MMC_COLUMN_DATA {}
+impl ::core::clone::Clone for MMC_COLUMN_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub struct MMC_COLUMN_SET_DATA {
+    pub cbSize: i32,
+    pub nNumCols: i32,
+    pub pColData: *mut MMC_COLUMN_DATA,
+}
+impl ::core::marker::Copy for MMC_COLUMN_SET_DATA {}
+impl ::core::clone::Clone for MMC_COLUMN_SET_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Mmc\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MMC_EXPANDSYNC_STRUCT {
+    pub bHandled: super::super::Foundation::BOOL,
+    pub bExpanding: super::super::Foundation::BOOL,
+    pub hItem: isize,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MMC_EXPANDSYNC_STRUCT {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MMC_EXPANDSYNC_STRUCT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Mmc\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MMC_EXT_VIEW_DATA {
+    pub viewID: ::windows_sys::core::GUID,
+    pub pszURL: ::windows_sys::core::PCWSTR,
+    pub pszViewTitle: ::windows_sys::core::PCWSTR,
+    pub pszTooltipText: ::windows_sys::core::PCWSTR,
+    pub bReplacesDefaultView: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MMC_EXT_VIEW_DATA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MMC_EXT_VIEW_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub struct MMC_FILTERDATA {
+    pub pszText: ::windows_sys::core::PWSTR,
+    pub cchTextMax: i32,
+    pub lValue: i32,
+}
+impl ::core::marker::Copy for MMC_FILTERDATA {}
+impl ::core::clone::Clone for MMC_FILTERDATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub struct MMC_LISTPAD_INFO {
+    pub szTitle: ::windows_sys::core::PWSTR,
+    pub szButtonText: ::windows_sys::core::PWSTR,
+    pub nCommandID: isize,
+}
+impl ::core::marker::Copy for MMC_LISTPAD_INFO {}
+impl ::core::clone::Clone for MMC_LISTPAD_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
+pub struct MMC_RESTORE_VIEW {
+    pub dwSize: u32,
+    pub cookie: isize,
+    pub pViewType: ::windows_sys::core::PWSTR,
+    pub lViewOptions: i32,
+}
+impl ::core::marker::Copy for MMC_RESTORE_VIEW {}
+impl ::core::clone::Clone for MMC_RESTORE_VIEW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Mmc\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
@@ -676,46 +859,6 @@ impl ::core::clone::Clone for MMC_TASK_DISPLAY_SYMBOL {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub type MMC_TASK_DISPLAY_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_TASK_DISPLAY_UNINITIALIZED: MMC_TASK_DISPLAY_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_TASK_DISPLAY_TYPE_SYMBOL: MMC_TASK_DISPLAY_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_TASK_DISPLAY_TYPE_VANILLA_GIF: MMC_TASK_DISPLAY_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_TASK_DISPLAY_TYPE_CHOCOLATE_GIF: MMC_TASK_DISPLAY_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_TASK_DISPLAY_TYPE_BITMAP: MMC_TASK_DISPLAY_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VER: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VIEW_OPTIONS_CREATENEW: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VIEW_OPTIONS_EXCLUDE_SCOPE_ITEMS_FROM_LIST: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VIEW_OPTIONS_FILTERED: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VIEW_OPTIONS_LEXICAL_SORT: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VIEW_OPTIONS_MULTISELECT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VIEW_OPTIONS_NOLISTVIEWS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VIEW_OPTIONS_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VIEW_OPTIONS_OWNERDATALIST: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VIEW_OPTIONS_USEFONTLINKING: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub type MMC_VIEW_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VIEW_TYPE_LIST: MMC_VIEW_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VIEW_TYPE_HTML: MMC_VIEW_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_VIEW_TYPE_OCX: MMC_VIEW_TYPE = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
 pub struct MMC_VISIBLE_COLUMNS {
@@ -728,15 +871,6 @@ impl ::core::clone::Clone for MMC_VISIBLE_COLUMNS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const MMC_WINDOW_COOKIE: i32 = -3i32;
-pub type MenuItem = *mut ::core::ffi::c_void;
-pub type Node = *mut ::core::ffi::c_void;
-pub type Nodes = *mut ::core::ffi::c_void;
-pub type Properties = *mut ::core::ffi::c_void;
-pub type Property = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RDCI_ScopeItem: u32 = 2147483648u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Mmc\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -772,18 +906,6 @@ impl ::core::clone::Clone for RDITEMHDR {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RDI_IMAGE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RDI_INDENT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RDI_INDEX: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RDI_PARAM: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RDI_STATE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RDI_STR: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Mmc\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -871,42 +993,6 @@ impl ::core::clone::Clone for RESULT_VIEW_TYPE_INFO_0_1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RFI_PARTIAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RFI_WRAP: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RSI_DESCENDING: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RSI_NOSORTICON: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_HTML_OPTIONS_NOLISTVIEW: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_HTML_OPTIONS_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_LIST_OPTIONS_ALLOWPASTE: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_LIST_OPTIONS_EXCLUDE_SCOPE_ITEMS_FROM_LIST: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_LIST_OPTIONS_FILTERED: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_LIST_OPTIONS_LEXICAL_SORT: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_LIST_OPTIONS_MULTISELECT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_LIST_OPTIONS_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_LIST_OPTIONS_OWNERDATALIST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_LIST_OPTIONS_USEFONTLINKING: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_MISC_OPTIONS_NOLISTVIEWS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_OCX_OPTIONS_CACHE_OCX: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_OCX_OPTIONS_NOLISTVIEW: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const RVTI_OCX_OPTIONS_NONE: u32 = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Mmc\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -942,26 +1028,6 @@ impl ::core::clone::Clone for SColumnSetID {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SDI_CHILDREN: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SDI_FIRST: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SDI_IMAGE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SDI_NEXT: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SDI_OPENIMAGE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SDI_PARAM: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SDI_PARENT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SDI_PREVIOUS: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SDI_STATE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SDI_STR: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Mmc\"`, `\"Win32_System_Com\"`*"]
 #[cfg(feature = "Win32_System_Com")]
@@ -1014,69 +1080,3 @@ impl ::core::clone::Clone for SNodeID2 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SPECIAL_COOKIE_MAX: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SPECIAL_COOKIE_MIN: i32 = -10i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SPECIAL_DOBJ_MAX: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SPECIAL_DOBJ_MIN: i32 = -10i32;
-pub type ScopeNamespace = *mut ::core::ffi::c_void;
-pub type SnapIn = *mut ::core::ffi::c_void;
-pub type SnapIns = *mut ::core::ffi::c_void;
-pub type View = *mut ::core::ffi::c_void;
-pub type Views = *mut ::core::ffi::c_void;
-pub type _AppEvents = *mut ::core::ffi::c_void;
-pub type _Application = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub type _ColumnSortOrder = i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SortOrder_Ascending: _ColumnSortOrder = 0i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const SortOrder_Descending: _ColumnSortOrder = 1i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub type _DocumentMode = i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const DocumentMode_Author: _DocumentMode = 0i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const DocumentMode_User: _DocumentMode = 1i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const DocumentMode_User_MDI: _DocumentMode = 2i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const DocumentMode_User_SDI: _DocumentMode = 3i32;
-pub type _EventConnector = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub type _ExportListOptions = i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ExportListOptions_Default: _ExportListOptions = 0i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ExportListOptions_Unicode: _ExportListOptions = 1i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ExportListOptions_TabDelimited: _ExportListOptions = 2i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ExportListOptions_SelectedItemsOnly: _ExportListOptions = 4i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub type _ListViewMode = i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ListMode_Small_Icons: _ListViewMode = 0i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ListMode_Large_Icons: _ListViewMode = 1i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ListMode_List: _ListViewMode = 2i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ListMode_Detail: _ListViewMode = 3i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ListMode_Filtered: _ListViewMode = 4i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub type _ViewOptions = i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ViewOption_Default: _ViewOptions = 0i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ViewOption_ScopeTreeHidden: _ViewOptions = 1i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ViewOption_NoToolBars: _ViewOptions = 2i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ViewOption_NotPersistable: _ViewOptions = 4i32;
-#[doc = "*Required features: `\"Win32_System_Mmc\"`*"]
-pub const ViewOption_ActionPaneHidden: _ViewOptions = 8i32;

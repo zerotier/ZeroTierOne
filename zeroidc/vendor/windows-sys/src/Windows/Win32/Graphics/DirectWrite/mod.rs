@@ -1,10 +1,111 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-    pub fn DWriteCreateFactory(factorytype: DWRITE_FACTORY_TYPE, iid: *const ::windows_sys::core::GUID, factory: *mut ::windows_sys::core::IUnknown) -> ::windows_sys::core::HRESULT;
+    pub fn DWriteCreateFactory(factorytype: DWRITE_FACTORY_TYPE, iid: *const ::windows_sys::core::GUID, factory: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
 }
+pub type IDWriteAsyncResult = *mut ::core::ffi::c_void;
+pub type IDWriteBitmapRenderTarget = *mut ::core::ffi::c_void;
+pub type IDWriteBitmapRenderTarget1 = *mut ::core::ffi::c_void;
+pub type IDWriteColorGlyphRunEnumerator = *mut ::core::ffi::c_void;
+pub type IDWriteColorGlyphRunEnumerator1 = *mut ::core::ffi::c_void;
+pub type IDWriteFactory = *mut ::core::ffi::c_void;
+pub type IDWriteFactory1 = *mut ::core::ffi::c_void;
+pub type IDWriteFactory2 = *mut ::core::ffi::c_void;
+pub type IDWriteFactory3 = *mut ::core::ffi::c_void;
+pub type IDWriteFactory4 = *mut ::core::ffi::c_void;
+pub type IDWriteFactory5 = *mut ::core::ffi::c_void;
+pub type IDWriteFactory6 = *mut ::core::ffi::c_void;
+pub type IDWriteFactory7 = *mut ::core::ffi::c_void;
+pub type IDWriteFont = *mut ::core::ffi::c_void;
+pub type IDWriteFont1 = *mut ::core::ffi::c_void;
+pub type IDWriteFont2 = *mut ::core::ffi::c_void;
+pub type IDWriteFont3 = *mut ::core::ffi::c_void;
+pub type IDWriteFontCollection = *mut ::core::ffi::c_void;
+pub type IDWriteFontCollection1 = *mut ::core::ffi::c_void;
+pub type IDWriteFontCollection2 = *mut ::core::ffi::c_void;
+pub type IDWriteFontCollection3 = *mut ::core::ffi::c_void;
+pub type IDWriteFontCollectionLoader = *mut ::core::ffi::c_void;
+pub type IDWriteFontDownloadListener = *mut ::core::ffi::c_void;
+pub type IDWriteFontDownloadQueue = *mut ::core::ffi::c_void;
+pub type IDWriteFontFace = *mut ::core::ffi::c_void;
+pub type IDWriteFontFace1 = *mut ::core::ffi::c_void;
+pub type IDWriteFontFace2 = *mut ::core::ffi::c_void;
+pub type IDWriteFontFace3 = *mut ::core::ffi::c_void;
+pub type IDWriteFontFace4 = *mut ::core::ffi::c_void;
+pub type IDWriteFontFace5 = *mut ::core::ffi::c_void;
+pub type IDWriteFontFace6 = *mut ::core::ffi::c_void;
+pub type IDWriteFontFaceReference = *mut ::core::ffi::c_void;
+pub type IDWriteFontFaceReference1 = *mut ::core::ffi::c_void;
+pub type IDWriteFontFallback = *mut ::core::ffi::c_void;
+pub type IDWriteFontFallback1 = *mut ::core::ffi::c_void;
+pub type IDWriteFontFallbackBuilder = *mut ::core::ffi::c_void;
+pub type IDWriteFontFamily = *mut ::core::ffi::c_void;
+pub type IDWriteFontFamily1 = *mut ::core::ffi::c_void;
+pub type IDWriteFontFamily2 = *mut ::core::ffi::c_void;
+pub type IDWriteFontFile = *mut ::core::ffi::c_void;
+pub type IDWriteFontFileEnumerator = *mut ::core::ffi::c_void;
+pub type IDWriteFontFileLoader = *mut ::core::ffi::c_void;
+pub type IDWriteFontFileStream = *mut ::core::ffi::c_void;
+pub type IDWriteFontList = *mut ::core::ffi::c_void;
+pub type IDWriteFontList1 = *mut ::core::ffi::c_void;
+pub type IDWriteFontList2 = *mut ::core::ffi::c_void;
+pub type IDWriteFontResource = *mut ::core::ffi::c_void;
+pub type IDWriteFontSet = *mut ::core::ffi::c_void;
+pub type IDWriteFontSet1 = *mut ::core::ffi::c_void;
+pub type IDWriteFontSet2 = *mut ::core::ffi::c_void;
+pub type IDWriteFontSet3 = *mut ::core::ffi::c_void;
+pub type IDWriteFontSetBuilder = *mut ::core::ffi::c_void;
+pub type IDWriteFontSetBuilder1 = *mut ::core::ffi::c_void;
+pub type IDWriteFontSetBuilder2 = *mut ::core::ffi::c_void;
+pub type IDWriteGdiInterop = *mut ::core::ffi::c_void;
+pub type IDWriteGdiInterop1 = *mut ::core::ffi::c_void;
+pub type IDWriteGlyphRunAnalysis = *mut ::core::ffi::c_void;
+pub type IDWriteInMemoryFontFileLoader = *mut ::core::ffi::c_void;
+pub type IDWriteInlineObject = *mut ::core::ffi::c_void;
+pub type IDWriteLocalFontFileLoader = *mut ::core::ffi::c_void;
+pub type IDWriteLocalizedStrings = *mut ::core::ffi::c_void;
+pub type IDWriteNumberSubstitution = *mut ::core::ffi::c_void;
+pub type IDWritePixelSnapping = *mut ::core::ffi::c_void;
+pub type IDWriteRemoteFontFileLoader = *mut ::core::ffi::c_void;
+pub type IDWriteRemoteFontFileStream = *mut ::core::ffi::c_void;
+pub type IDWriteRenderingParams = *mut ::core::ffi::c_void;
+pub type IDWriteRenderingParams1 = *mut ::core::ffi::c_void;
+pub type IDWriteRenderingParams2 = *mut ::core::ffi::c_void;
+pub type IDWriteRenderingParams3 = *mut ::core::ffi::c_void;
+pub type IDWriteStringList = *mut ::core::ffi::c_void;
+pub type IDWriteTextAnalysisSink = *mut ::core::ffi::c_void;
+pub type IDWriteTextAnalysisSink1 = *mut ::core::ffi::c_void;
+pub type IDWriteTextAnalysisSource = *mut ::core::ffi::c_void;
+pub type IDWriteTextAnalysisSource1 = *mut ::core::ffi::c_void;
+pub type IDWriteTextAnalyzer = *mut ::core::ffi::c_void;
+pub type IDWriteTextAnalyzer1 = *mut ::core::ffi::c_void;
+pub type IDWriteTextAnalyzer2 = *mut ::core::ffi::c_void;
+pub type IDWriteTextFormat = *mut ::core::ffi::c_void;
+pub type IDWriteTextFormat1 = *mut ::core::ffi::c_void;
+pub type IDWriteTextFormat2 = *mut ::core::ffi::c_void;
+pub type IDWriteTextFormat3 = *mut ::core::ffi::c_void;
+pub type IDWriteTextLayout = *mut ::core::ffi::c_void;
+pub type IDWriteTextLayout1 = *mut ::core::ffi::c_void;
+pub type IDWriteTextLayout2 = *mut ::core::ffi::c_void;
+pub type IDWriteTextLayout3 = *mut ::core::ffi::c_void;
+pub type IDWriteTextLayout4 = *mut ::core::ffi::c_void;
+pub type IDWriteTextRenderer = *mut ::core::ffi::c_void;
+pub type IDWriteTextRenderer1 = *mut ::core::ffi::c_void;
+pub type IDWriteTypography = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_ALPHA_MAX: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_ERR_BASE: u32 = 20480u32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_E_DOWNLOADCANCELLED: ::windows_sys::core::HRESULT = -2003283954i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_E_DOWNLOADFAILED: ::windows_sys::core::HRESULT = -2003283953i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_E_REMOTEFONT: ::windows_sys::core::HRESULT = -2003283955i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_E_TOOMANYDOWNLOADS: ::windows_sys::core::HRESULT = -2003283952i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const FACILITY_DWRITE: u32 = 2200u32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_AUTOMATIC_FONT_AXES = u32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -41,81 +142,6 @@ pub const DWRITE_BREAK_CONDITION_CAN_BREAK: DWRITE_BREAK_CONDITION = 1i32;
 pub const DWRITE_BREAK_CONDITION_MAY_NOT_BREAK: DWRITE_BREAK_CONDITION = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_BREAK_CONDITION_MUST_BREAK: DWRITE_BREAK_CONDITION = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_CARET_METRICS {
-    pub slopeRise: i16,
-    pub slopeRun: i16,
-    pub offset: i16,
-}
-impl ::core::marker::Copy for DWRITE_CARET_METRICS {}
-impl ::core::clone::Clone for DWRITE_CARET_METRICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_CLUSTER_METRICS {
-    pub width: f32,
-    pub length: u16,
-    pub _bitfield: u16,
-}
-impl ::core::marker::Copy for DWRITE_CLUSTER_METRICS {}
-impl ::core::clone::Clone for DWRITE_CLUSTER_METRICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_COLOR_F {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-    pub a: f32,
-}
-impl ::core::marker::Copy for DWRITE_COLOR_F {}
-impl ::core::clone::Clone for DWRITE_COLOR_F {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DWRITE_COLOR_GLYPH_RUN {
-    pub glyphRun: DWRITE_GLYPH_RUN,
-    pub glyphRunDescription: *mut DWRITE_GLYPH_RUN_DESCRIPTION,
-    pub baselineOriginX: f32,
-    pub baselineOriginY: f32,
-    pub runColor: DWRITE_COLOR_F,
-    pub paletteIndex: u16,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DWRITE_COLOR_GLYPH_RUN {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DWRITE_COLOR_GLYPH_RUN {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DWRITE_COLOR_GLYPH_RUN1 {
-    pub Base: DWRITE_COLOR_GLYPH_RUN,
-    pub glyphImageFormat: DWRITE_GLYPH_IMAGE_FORMATS,
-    pub measuringMode: DWRITE_MEASURING_MODE,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DWRITE_COLOR_GLYPH_RUN1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DWRITE_COLOR_GLYPH_RUN1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_CONTAINER_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -125,33 +151,11 @@ pub const DWRITE_CONTAINER_TYPE_WOFF: DWRITE_CONTAINER_TYPE = 1i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_CONTAINER_TYPE_WOFF2: DWRITE_CONTAINER_TYPE = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_ERR_BASE: u32 = 20480u32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_E_DOWNLOADCANCELLED: ::windows_sys::core::HRESULT = -2003283954i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_E_DOWNLOADFAILED: ::windows_sys::core::HRESULT = -2003283953i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_E_REMOTEFONT: ::windows_sys::core::HRESULT = -2003283955i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_E_TOOMANYDOWNLOADS: ::windows_sys::core::HRESULT = -2003283952i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_FACTORY_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_FACTORY_TYPE_SHARED: DWRITE_FACTORY_TYPE = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_FACTORY_TYPE_ISOLATED: DWRITE_FACTORY_TYPE = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_FILE_FRAGMENT {
-    pub fileOffset: u64,
-    pub fragmentSize: u64,
-}
-impl ::core::marker::Copy for DWRITE_FILE_FRAGMENT {}
-impl ::core::clone::Clone for DWRITE_FILE_FRAGMENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_FLOW_DIRECTION = i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -170,19 +174,6 @@ pub const DWRITE_FONT_AXIS_ATTRIBUTES_NONE: DWRITE_FONT_AXIS_ATTRIBUTES = 0u32;
 pub const DWRITE_FONT_AXIS_ATTRIBUTES_VARIABLE: DWRITE_FONT_AXIS_ATTRIBUTES = 1u32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_FONT_AXIS_ATTRIBUTES_HIDDEN: DWRITE_FONT_AXIS_ATTRIBUTES = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_FONT_AXIS_RANGE {
-    pub axisTag: DWRITE_FONT_AXIS_TAG,
-    pub minValue: f32,
-    pub maxValue: f32,
-}
-impl ::core::marker::Copy for DWRITE_FONT_AXIS_RANGE {}
-impl ::core::clone::Clone for DWRITE_FONT_AXIS_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_FONT_AXIS_TAG = u32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -195,18 +186,6 @@ pub const DWRITE_FONT_AXIS_TAG_SLANT: DWRITE_FONT_AXIS_TAG = 1953393779u32;
 pub const DWRITE_FONT_AXIS_TAG_OPTICAL_SIZE: DWRITE_FONT_AXIS_TAG = 2054385775u32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_FONT_AXIS_TAG_ITALIC: DWRITE_FONT_AXIS_TAG = 1818326121u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_FONT_AXIS_VALUE {
-    pub axisTag: DWRITE_FONT_AXIS_TAG,
-    pub value: f32,
-}
-impl ::core::marker::Copy for DWRITE_FONT_AXIS_VALUE {}
-impl ::core::clone::Clone for DWRITE_FONT_AXIS_VALUE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_FONT_FACE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -233,18 +212,6 @@ pub type DWRITE_FONT_FAMILY_MODEL = i32;
 pub const DWRITE_FONT_FAMILY_MODEL_TYPOGRAPHIC: DWRITE_FONT_FAMILY_MODEL = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_FONT_FAMILY_MODEL_WEIGHT_STRETCH_STYLE: DWRITE_FONT_FAMILY_MODEL = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_FONT_FEATURE {
-    pub nameTag: DWRITE_FONT_FEATURE_TAG,
-    pub parameter: u32,
-}
-impl ::core::marker::Copy for DWRITE_FONT_FEATURE {}
-impl ::core::clone::Clone for DWRITE_FONT_FEATURE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_FONT_FEATURE_TAG = u32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -437,66 +404,6 @@ pub const DWRITE_FONT_LINE_GAP_USAGE_DEFAULT: DWRITE_FONT_LINE_GAP_USAGE = 0i32;
 pub const DWRITE_FONT_LINE_GAP_USAGE_DISABLED: DWRITE_FONT_LINE_GAP_USAGE = 1i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_FONT_LINE_GAP_USAGE_ENABLED: DWRITE_FONT_LINE_GAP_USAGE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_FONT_METRICS {
-    pub designUnitsPerEm: u16,
-    pub ascent: u16,
-    pub descent: u16,
-    pub lineGap: i16,
-    pub capHeight: u16,
-    pub xHeight: u16,
-    pub underlinePosition: i16,
-    pub underlineThickness: u16,
-    pub strikethroughPosition: i16,
-    pub strikethroughThickness: u16,
-}
-impl ::core::marker::Copy for DWRITE_FONT_METRICS {}
-impl ::core::clone::Clone for DWRITE_FONT_METRICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DWRITE_FONT_METRICS1 {
-    pub __AnonymousBase_DWrite_1_L627_C38: DWRITE_FONT_METRICS,
-    pub glyphBoxLeft: i16,
-    pub glyphBoxTop: i16,
-    pub glyphBoxRight: i16,
-    pub glyphBoxBottom: i16,
-    pub subscriptPositionX: i16,
-    pub subscriptPositionY: i16,
-    pub subscriptSizeX: i16,
-    pub subscriptSizeY: i16,
-    pub superscriptPositionX: i16,
-    pub superscriptPositionY: i16,
-    pub superscriptSizeX: i16,
-    pub superscriptSizeY: i16,
-    pub hasTypographicMetrics: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DWRITE_FONT_METRICS1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DWRITE_FONT_METRICS1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_FONT_PROPERTY {
-    pub propertyId: DWRITE_FONT_PROPERTY_ID,
-    pub propertyValue: ::windows_sys::core::PCWSTR,
-    pub localeName: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for DWRITE_FONT_PROPERTY {}
-impl ::core::clone::Clone for DWRITE_FONT_PROPERTY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_FONT_PROPERTY_ID = i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -625,28 +532,6 @@ pub const DWRITE_FONT_WEIGHT_HEAVY: DWRITE_FONT_WEIGHT = 900i32;
 pub const DWRITE_FONT_WEIGHT_EXTRA_BLACK: DWRITE_FONT_WEIGHT = 950i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_FONT_WEIGHT_ULTRA_BLACK: DWRITE_FONT_WEIGHT = 950i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Direct2D_Common\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Direct2D_Common"))]
-pub struct DWRITE_GLYPH_IMAGE_DATA {
-    pub imageData: *const ::core::ffi::c_void,
-    pub imageDataSize: u32,
-    pub uniqueDataId: u32,
-    pub pixelsPerEm: u32,
-    pub pixelSize: super::Direct2D::Common::D2D_SIZE_U,
-    pub horizontalLeftOrigin: super::super::Foundation::POINT,
-    pub horizontalRightOrigin: super::super::Foundation::POINT,
-    pub verticalTopOrigin: super::super::Foundation::POINT,
-    pub verticalBottomOrigin: super::super::Foundation::POINT,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Direct2D_Common"))]
-impl ::core::marker::Copy for DWRITE_GLYPH_IMAGE_DATA {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Direct2D_Common"))]
-impl ::core::clone::Clone for DWRITE_GLYPH_IMAGE_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_GLYPH_IMAGE_FORMATS = u32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -667,35 +552,6 @@ pub const DWRITE_GLYPH_IMAGE_FORMATS_JPEG: DWRITE_GLYPH_IMAGE_FORMATS = 32u32;
 pub const DWRITE_GLYPH_IMAGE_FORMATS_TIFF: DWRITE_GLYPH_IMAGE_FORMATS = 64u32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_GLYPH_IMAGE_FORMATS_PREMULTIPLIED_B8G8R8A8: DWRITE_GLYPH_IMAGE_FORMATS = 128u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_GLYPH_METRICS {
-    pub leftSideBearing: i32,
-    pub advanceWidth: u32,
-    pub rightSideBearing: i32,
-    pub topSideBearing: i32,
-    pub advanceHeight: u32,
-    pub bottomSideBearing: i32,
-    pub verticalOriginY: i32,
-}
-impl ::core::marker::Copy for DWRITE_GLYPH_METRICS {}
-impl ::core::clone::Clone for DWRITE_GLYPH_METRICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_GLYPH_OFFSET {
-    pub advanceOffset: f32,
-    pub ascenderOffset: f32,
-}
-impl ::core::marker::Copy for DWRITE_GLYPH_OFFSET {}
-impl ::core::clone::Clone for DWRITE_GLYPH_OFFSET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_GLYPH_ORIENTATION_ANGLE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -706,42 +562,6 @@ pub const DWRITE_GLYPH_ORIENTATION_ANGLE_90_DEGREES: DWRITE_GLYPH_ORIENTATION_AN
 pub const DWRITE_GLYPH_ORIENTATION_ANGLE_180_DEGREES: DWRITE_GLYPH_ORIENTATION_ANGLE = 2i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_GLYPH_ORIENTATION_ANGLE_270_DEGREES: DWRITE_GLYPH_ORIENTATION_ANGLE = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DWRITE_GLYPH_RUN {
-    pub fontFace: IDWriteFontFace,
-    pub fontEmSize: f32,
-    pub glyphCount: u32,
-    pub glyphIndices: *const u16,
-    pub glyphAdvances: *const f32,
-    pub glyphOffsets: *const DWRITE_GLYPH_OFFSET,
-    pub isSideways: super::super::Foundation::BOOL,
-    pub bidiLevel: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DWRITE_GLYPH_RUN {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DWRITE_GLYPH_RUN {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_GLYPH_RUN_DESCRIPTION {
-    pub localeName: ::windows_sys::core::PCWSTR,
-    pub string: ::windows_sys::core::PCWSTR,
-    pub stringLength: u32,
-    pub clusterMap: *const u16,
-    pub textPosition: u32,
-}
-impl ::core::marker::Copy for DWRITE_GLYPH_RUN_DESCRIPTION {}
-impl ::core::clone::Clone for DWRITE_GLYPH_RUN_DESCRIPTION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_GRID_FIT_MODE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -750,28 +570,6 @@ pub const DWRITE_GRID_FIT_MODE_DEFAULT: DWRITE_GRID_FIT_MODE = 0i32;
 pub const DWRITE_GRID_FIT_MODE_DISABLED: DWRITE_GRID_FIT_MODE = 1i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_GRID_FIT_MODE_ENABLED: DWRITE_GRID_FIT_MODE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DWRITE_HIT_TEST_METRICS {
-    pub textPosition: u32,
-    pub length: u32,
-    pub left: f32,
-    pub top: f32,
-    pub width: f32,
-    pub height: f32,
-    pub bidiLevel: u32,
-    pub isText: super::super::Foundation::BOOL,
-    pub isTrimmed: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DWRITE_HIT_TEST_METRICS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DWRITE_HIT_TEST_METRICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_INFORMATIONAL_STRING_ID = i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -824,98 +622,6 @@ pub const DWRITE_INFORMATIONAL_STRING_PREFERRED_FAMILY_NAMES: DWRITE_INFORMATION
 pub const DWRITE_INFORMATIONAL_STRING_PREFERRED_SUBFAMILY_NAMES: DWRITE_INFORMATIONAL_STRING_ID = 14i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_INFORMATIONAL_STRING_WWS_FAMILY_NAME: DWRITE_INFORMATIONAL_STRING_ID = 19i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DWRITE_INLINE_OBJECT_METRICS {
-    pub width: f32,
-    pub height: f32,
-    pub baseline: f32,
-    pub supportsSideways: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DWRITE_INLINE_OBJECT_METRICS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DWRITE_INLINE_OBJECT_METRICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_JUSTIFICATION_OPPORTUNITY {
-    pub expansionMinimum: f32,
-    pub expansionMaximum: f32,
-    pub compressionMaximum: f32,
-    pub _bitfield: u32,
-}
-impl ::core::marker::Copy for DWRITE_JUSTIFICATION_OPPORTUNITY {}
-impl ::core::clone::Clone for DWRITE_JUSTIFICATION_OPPORTUNITY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_LINE_BREAKPOINT {
-    pub _bitfield: u8,
-}
-impl ::core::marker::Copy for DWRITE_LINE_BREAKPOINT {}
-impl ::core::clone::Clone for DWRITE_LINE_BREAKPOINT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DWRITE_LINE_METRICS {
-    pub length: u32,
-    pub trailingWhitespaceLength: u32,
-    pub newlineLength: u32,
-    pub height: f32,
-    pub baseline: f32,
-    pub isTrimmed: super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DWRITE_LINE_METRICS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DWRITE_LINE_METRICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DWRITE_LINE_METRICS1 {
-    pub Base: DWRITE_LINE_METRICS,
-    pub leadingBefore: f32,
-    pub leadingAfter: f32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DWRITE_LINE_METRICS1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DWRITE_LINE_METRICS1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_LINE_SPACING {
-    pub method: DWRITE_LINE_SPACING_METHOD,
-    pub height: f32,
-    pub baseline: f32,
-    pub leadingBefore: f32,
-    pub fontLineGapUsage: DWRITE_FONT_LINE_GAP_USAGE,
-}
-impl ::core::marker::Copy for DWRITE_LINE_SPACING {}
-impl ::core::clone::Clone for DWRITE_LINE_SPACING {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_LINE_SPACING_METHOD = i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -932,22 +638,6 @@ pub const DWRITE_LOCALITY_REMOTE: DWRITE_LOCALITY = 0i32;
 pub const DWRITE_LOCALITY_PARTIAL: DWRITE_LOCALITY = 1i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_LOCALITY_LOCAL: DWRITE_LOCALITY = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_MATRIX {
-    pub m11: f32,
-    pub m12: f32,
-    pub m21: f32,
-    pub m22: f32,
-    pub dx: f32,
-    pub dy: f32,
-}
-impl ::core::marker::Copy for DWRITE_MATRIX {}
-impl ::core::clone::Clone for DWRITE_MATRIX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_MEASURING_MODE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -980,116 +670,6 @@ pub type DWRITE_OUTLINE_THRESHOLD = i32;
 pub const DWRITE_OUTLINE_THRESHOLD_ANTIALIASED: DWRITE_OUTLINE_THRESHOLD = 0i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_OUTLINE_THRESHOLD_ALIASED: DWRITE_OUTLINE_THRESHOLD = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_OVERHANG_METRICS {
-    pub left: f32,
-    pub top: f32,
-    pub right: f32,
-    pub bottom: f32,
-}
-impl ::core::marker::Copy for DWRITE_OVERHANG_METRICS {}
-impl ::core::clone::Clone for DWRITE_OVERHANG_METRICS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub union DWRITE_PANOSE {
-    pub values: [u8; 10],
-    pub familyKind: u8,
-    pub text: DWRITE_PANOSE_3,
-    pub script: DWRITE_PANOSE_1,
-    pub decorative: DWRITE_PANOSE_0,
-    pub symbol: DWRITE_PANOSE_2,
-}
-impl ::core::marker::Copy for DWRITE_PANOSE {}
-impl ::core::clone::Clone for DWRITE_PANOSE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_PANOSE_0 {
-    pub familyKind: u8,
-    pub decorativeClass: u8,
-    pub weight: u8,
-    pub aspect: u8,
-    pub contrast: u8,
-    pub serifVariant: u8,
-    pub fill: u8,
-    pub lining: u8,
-    pub decorativeTopology: u8,
-    pub characterRange: u8,
-}
-impl ::core::marker::Copy for DWRITE_PANOSE_0 {}
-impl ::core::clone::Clone for DWRITE_PANOSE_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_PANOSE_1 {
-    pub familyKind: u8,
-    pub toolKind: u8,
-    pub weight: u8,
-    pub spacing: u8,
-    pub aspectRatio: u8,
-    pub contrast: u8,
-    pub scriptTopology: u8,
-    pub scriptForm: u8,
-    pub finials: u8,
-    pub xAscent: u8,
-}
-impl ::core::marker::Copy for DWRITE_PANOSE_1 {}
-impl ::core::clone::Clone for DWRITE_PANOSE_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_PANOSE_2 {
-    pub familyKind: u8,
-    pub symbolKind: u8,
-    pub weight: u8,
-    pub spacing: u8,
-    pub aspectRatioAndContrast: u8,
-    pub aspectRatio94: u8,
-    pub aspectRatio119: u8,
-    pub aspectRatio157: u8,
-    pub aspectRatio163: u8,
-    pub aspectRatio211: u8,
-}
-impl ::core::marker::Copy for DWRITE_PANOSE_2 {}
-impl ::core::clone::Clone for DWRITE_PANOSE_2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub struct DWRITE_PANOSE_3 {
-    pub familyKind: u8,
-    pub serifStyle: u8,
-    pub weight: u8,
-    pub proportion: u8,
-    pub contrast: u8,
-    pub strokeVariation: u8,
-    pub armStyle: u8,
-    pub letterform: u8,
-    pub midline: u8,
-    pub xHeight: u8,
-}
-impl ::core::marker::Copy for DWRITE_PANOSE_3 {}
-impl ::core::clone::Clone for DWRITE_PANOSE_3 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub type DWRITE_PANOSE_ARM_STYLE = i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
@@ -1778,6 +1358,571 @@ pub const DWRITE_RENDERING_MODE1_NATURAL_SYMMETRIC: DWRITE_RENDERING_MODE1 = 5i3
 pub const DWRITE_RENDERING_MODE1_OUTLINE: DWRITE_RENDERING_MODE1 = 6i32;
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub const DWRITE_RENDERING_MODE1_NATURAL_SYMMETRIC_DOWNSAMPLED: DWRITE_RENDERING_MODE1 = 7i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub type DWRITE_SCRIPT_SHAPES = u32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_SCRIPT_SHAPES_DEFAULT: DWRITE_SCRIPT_SHAPES = 0u32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_SCRIPT_SHAPES_NO_VISUAL: DWRITE_SCRIPT_SHAPES = 1u32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub type DWRITE_TEXTURE_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_TEXTURE_ALIASED_1x1: DWRITE_TEXTURE_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_TEXTURE_CLEARTYPE_3x1: DWRITE_TEXTURE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub type DWRITE_TEXT_ALIGNMENT = i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_TEXT_ALIGNMENT_LEADING: DWRITE_TEXT_ALIGNMENT = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_TEXT_ALIGNMENT_TRAILING: DWRITE_TEXT_ALIGNMENT = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_TEXT_ALIGNMENT_CENTER: DWRITE_TEXT_ALIGNMENT = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_TEXT_ALIGNMENT_JUSTIFIED: DWRITE_TEXT_ALIGNMENT = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub type DWRITE_TEXT_ANTIALIAS_MODE = i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_TEXT_ANTIALIAS_MODE_CLEARTYPE: DWRITE_TEXT_ANTIALIAS_MODE = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_TEXT_ANTIALIAS_MODE_GRAYSCALE: DWRITE_TEXT_ANTIALIAS_MODE = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub type DWRITE_TRIMMING_GRANULARITY = i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_TRIMMING_GRANULARITY_NONE: DWRITE_TRIMMING_GRANULARITY = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_TRIMMING_GRANULARITY_CHARACTER: DWRITE_TRIMMING_GRANULARITY = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_TRIMMING_GRANULARITY_WORD: DWRITE_TRIMMING_GRANULARITY = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub type DWRITE_VERTICAL_GLYPH_ORIENTATION = i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_VERTICAL_GLYPH_ORIENTATION_DEFAULT: DWRITE_VERTICAL_GLYPH_ORIENTATION = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_VERTICAL_GLYPH_ORIENTATION_STACKED: DWRITE_VERTICAL_GLYPH_ORIENTATION = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub type DWRITE_WORD_WRAPPING = i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_WORD_WRAPPING_WRAP: DWRITE_WORD_WRAPPING = 0i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_WORD_WRAPPING_NO_WRAP: DWRITE_WORD_WRAPPING = 1i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_WORD_WRAPPING_EMERGENCY_BREAK: DWRITE_WORD_WRAPPING = 2i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_WORD_WRAPPING_WHOLE_WORD: DWRITE_WORD_WRAPPING = 3i32;
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub const DWRITE_WORD_WRAPPING_CHARACTER: DWRITE_WORD_WRAPPING = 4i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_CARET_METRICS {
+    pub slopeRise: i16,
+    pub slopeRun: i16,
+    pub offset: i16,
+}
+impl ::core::marker::Copy for DWRITE_CARET_METRICS {}
+impl ::core::clone::Clone for DWRITE_CARET_METRICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_CLUSTER_METRICS {
+    pub width: f32,
+    pub length: u16,
+    pub _bitfield: u16,
+}
+impl ::core::marker::Copy for DWRITE_CLUSTER_METRICS {}
+impl ::core::clone::Clone for DWRITE_CLUSTER_METRICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_COLOR_F {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
+}
+impl ::core::marker::Copy for DWRITE_COLOR_F {}
+impl ::core::clone::Clone for DWRITE_COLOR_F {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DWRITE_COLOR_GLYPH_RUN {
+    pub glyphRun: DWRITE_GLYPH_RUN,
+    pub glyphRunDescription: *mut DWRITE_GLYPH_RUN_DESCRIPTION,
+    pub baselineOriginX: f32,
+    pub baselineOriginY: f32,
+    pub runColor: DWRITE_COLOR_F,
+    pub paletteIndex: u16,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DWRITE_COLOR_GLYPH_RUN {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DWRITE_COLOR_GLYPH_RUN {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DWRITE_COLOR_GLYPH_RUN1 {
+    pub Base: DWRITE_COLOR_GLYPH_RUN,
+    pub glyphImageFormat: DWRITE_GLYPH_IMAGE_FORMATS,
+    pub measuringMode: DWRITE_MEASURING_MODE,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DWRITE_COLOR_GLYPH_RUN1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DWRITE_COLOR_GLYPH_RUN1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_FILE_FRAGMENT {
+    pub fileOffset: u64,
+    pub fragmentSize: u64,
+}
+impl ::core::marker::Copy for DWRITE_FILE_FRAGMENT {}
+impl ::core::clone::Clone for DWRITE_FILE_FRAGMENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_FONT_AXIS_RANGE {
+    pub axisTag: DWRITE_FONT_AXIS_TAG,
+    pub minValue: f32,
+    pub maxValue: f32,
+}
+impl ::core::marker::Copy for DWRITE_FONT_AXIS_RANGE {}
+impl ::core::clone::Clone for DWRITE_FONT_AXIS_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_FONT_AXIS_VALUE {
+    pub axisTag: DWRITE_FONT_AXIS_TAG,
+    pub value: f32,
+}
+impl ::core::marker::Copy for DWRITE_FONT_AXIS_VALUE {}
+impl ::core::clone::Clone for DWRITE_FONT_AXIS_VALUE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_FONT_FEATURE {
+    pub nameTag: DWRITE_FONT_FEATURE_TAG,
+    pub parameter: u32,
+}
+impl ::core::marker::Copy for DWRITE_FONT_FEATURE {}
+impl ::core::clone::Clone for DWRITE_FONT_FEATURE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_FONT_METRICS {
+    pub designUnitsPerEm: u16,
+    pub ascent: u16,
+    pub descent: u16,
+    pub lineGap: i16,
+    pub capHeight: u16,
+    pub xHeight: u16,
+    pub underlinePosition: i16,
+    pub underlineThickness: u16,
+    pub strikethroughPosition: i16,
+    pub strikethroughThickness: u16,
+}
+impl ::core::marker::Copy for DWRITE_FONT_METRICS {}
+impl ::core::clone::Clone for DWRITE_FONT_METRICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DWRITE_FONT_METRICS1 {
+    pub Base: DWRITE_FONT_METRICS,
+    pub glyphBoxLeft: i16,
+    pub glyphBoxTop: i16,
+    pub glyphBoxRight: i16,
+    pub glyphBoxBottom: i16,
+    pub subscriptPositionX: i16,
+    pub subscriptPositionY: i16,
+    pub subscriptSizeX: i16,
+    pub subscriptSizeY: i16,
+    pub superscriptPositionX: i16,
+    pub superscriptPositionY: i16,
+    pub superscriptSizeX: i16,
+    pub superscriptSizeY: i16,
+    pub hasTypographicMetrics: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DWRITE_FONT_METRICS1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DWRITE_FONT_METRICS1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_FONT_PROPERTY {
+    pub propertyId: DWRITE_FONT_PROPERTY_ID,
+    pub propertyValue: ::windows_sys::core::PCWSTR,
+    pub localeName: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for DWRITE_FONT_PROPERTY {}
+impl ::core::clone::Clone for DWRITE_FONT_PROPERTY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Direct2D_Common\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Direct2D_Common"))]
+pub struct DWRITE_GLYPH_IMAGE_DATA {
+    pub imageData: *const ::core::ffi::c_void,
+    pub imageDataSize: u32,
+    pub uniqueDataId: u32,
+    pub pixelsPerEm: u32,
+    pub pixelSize: super::Direct2D::Common::D2D_SIZE_U,
+    pub horizontalLeftOrigin: super::super::Foundation::POINT,
+    pub horizontalRightOrigin: super::super::Foundation::POINT,
+    pub verticalTopOrigin: super::super::Foundation::POINT,
+    pub verticalBottomOrigin: super::super::Foundation::POINT,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Direct2D_Common"))]
+impl ::core::marker::Copy for DWRITE_GLYPH_IMAGE_DATA {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Direct2D_Common"))]
+impl ::core::clone::Clone for DWRITE_GLYPH_IMAGE_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_GLYPH_METRICS {
+    pub leftSideBearing: i32,
+    pub advanceWidth: u32,
+    pub rightSideBearing: i32,
+    pub topSideBearing: i32,
+    pub advanceHeight: u32,
+    pub bottomSideBearing: i32,
+    pub verticalOriginY: i32,
+}
+impl ::core::marker::Copy for DWRITE_GLYPH_METRICS {}
+impl ::core::clone::Clone for DWRITE_GLYPH_METRICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_GLYPH_OFFSET {
+    pub advanceOffset: f32,
+    pub ascenderOffset: f32,
+}
+impl ::core::marker::Copy for DWRITE_GLYPH_OFFSET {}
+impl ::core::clone::Clone for DWRITE_GLYPH_OFFSET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DWRITE_GLYPH_RUN {
+    pub fontFace: IDWriteFontFace,
+    pub fontEmSize: f32,
+    pub glyphCount: u32,
+    pub glyphIndices: *const u16,
+    pub glyphAdvances: *const f32,
+    pub glyphOffsets: *const DWRITE_GLYPH_OFFSET,
+    pub isSideways: super::super::Foundation::BOOL,
+    pub bidiLevel: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DWRITE_GLYPH_RUN {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DWRITE_GLYPH_RUN {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_GLYPH_RUN_DESCRIPTION {
+    pub localeName: ::windows_sys::core::PCWSTR,
+    pub string: ::windows_sys::core::PCWSTR,
+    pub stringLength: u32,
+    pub clusterMap: *const u16,
+    pub textPosition: u32,
+}
+impl ::core::marker::Copy for DWRITE_GLYPH_RUN_DESCRIPTION {}
+impl ::core::clone::Clone for DWRITE_GLYPH_RUN_DESCRIPTION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DWRITE_HIT_TEST_METRICS {
+    pub textPosition: u32,
+    pub length: u32,
+    pub left: f32,
+    pub top: f32,
+    pub width: f32,
+    pub height: f32,
+    pub bidiLevel: u32,
+    pub isText: super::super::Foundation::BOOL,
+    pub isTrimmed: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DWRITE_HIT_TEST_METRICS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DWRITE_HIT_TEST_METRICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DWRITE_INLINE_OBJECT_METRICS {
+    pub width: f32,
+    pub height: f32,
+    pub baseline: f32,
+    pub supportsSideways: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DWRITE_INLINE_OBJECT_METRICS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DWRITE_INLINE_OBJECT_METRICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_JUSTIFICATION_OPPORTUNITY {
+    pub expansionMinimum: f32,
+    pub expansionMaximum: f32,
+    pub compressionMaximum: f32,
+    pub _bitfield: u32,
+}
+impl ::core::marker::Copy for DWRITE_JUSTIFICATION_OPPORTUNITY {}
+impl ::core::clone::Clone for DWRITE_JUSTIFICATION_OPPORTUNITY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_LINE_BREAKPOINT {
+    pub _bitfield: u8,
+}
+impl ::core::marker::Copy for DWRITE_LINE_BREAKPOINT {}
+impl ::core::clone::Clone for DWRITE_LINE_BREAKPOINT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DWRITE_LINE_METRICS {
+    pub length: u32,
+    pub trailingWhitespaceLength: u32,
+    pub newlineLength: u32,
+    pub height: f32,
+    pub baseline: f32,
+    pub isTrimmed: super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DWRITE_LINE_METRICS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DWRITE_LINE_METRICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DWRITE_LINE_METRICS1 {
+    pub Base: DWRITE_LINE_METRICS,
+    pub leadingBefore: f32,
+    pub leadingAfter: f32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DWRITE_LINE_METRICS1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DWRITE_LINE_METRICS1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_LINE_SPACING {
+    pub method: DWRITE_LINE_SPACING_METHOD,
+    pub height: f32,
+    pub baseline: f32,
+    pub leadingBefore: f32,
+    pub fontLineGapUsage: DWRITE_FONT_LINE_GAP_USAGE,
+}
+impl ::core::marker::Copy for DWRITE_LINE_SPACING {}
+impl ::core::clone::Clone for DWRITE_LINE_SPACING {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_MATRIX {
+    pub m11: f32,
+    pub m12: f32,
+    pub m21: f32,
+    pub m22: f32,
+    pub dx: f32,
+    pub dy: f32,
+}
+impl ::core::marker::Copy for DWRITE_MATRIX {}
+impl ::core::clone::Clone for DWRITE_MATRIX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_OVERHANG_METRICS {
+    pub left: f32,
+    pub top: f32,
+    pub right: f32,
+    pub bottom: f32,
+}
+impl ::core::marker::Copy for DWRITE_OVERHANG_METRICS {}
+impl ::core::clone::Clone for DWRITE_OVERHANG_METRICS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub union DWRITE_PANOSE {
+    pub values: [u8; 10],
+    pub familyKind: u8,
+    pub text: DWRITE_PANOSE_3,
+    pub script: DWRITE_PANOSE_1,
+    pub decorative: DWRITE_PANOSE_0,
+    pub symbol: DWRITE_PANOSE_2,
+}
+impl ::core::marker::Copy for DWRITE_PANOSE {}
+impl ::core::clone::Clone for DWRITE_PANOSE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_PANOSE_0 {
+    pub familyKind: u8,
+    pub decorativeClass: u8,
+    pub weight: u8,
+    pub aspect: u8,
+    pub contrast: u8,
+    pub serifVariant: u8,
+    pub fill: u8,
+    pub lining: u8,
+    pub decorativeTopology: u8,
+    pub characterRange: u8,
+}
+impl ::core::marker::Copy for DWRITE_PANOSE_0 {}
+impl ::core::clone::Clone for DWRITE_PANOSE_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_PANOSE_1 {
+    pub familyKind: u8,
+    pub toolKind: u8,
+    pub weight: u8,
+    pub spacing: u8,
+    pub aspectRatio: u8,
+    pub contrast: u8,
+    pub scriptTopology: u8,
+    pub scriptForm: u8,
+    pub finials: u8,
+    pub xAscent: u8,
+}
+impl ::core::marker::Copy for DWRITE_PANOSE_1 {}
+impl ::core::clone::Clone for DWRITE_PANOSE_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_PANOSE_2 {
+    pub familyKind: u8,
+    pub symbolKind: u8,
+    pub weight: u8,
+    pub spacing: u8,
+    pub aspectRatioAndContrast: u8,
+    pub aspectRatio94: u8,
+    pub aspectRatio119: u8,
+    pub aspectRatio157: u8,
+    pub aspectRatio163: u8,
+    pub aspectRatio211: u8,
+}
+impl ::core::marker::Copy for DWRITE_PANOSE_2 {}
+impl ::core::clone::Clone for DWRITE_PANOSE_2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
+pub struct DWRITE_PANOSE_3 {
+    pub familyKind: u8,
+    pub serifStyle: u8,
+    pub weight: u8,
+    pub proportion: u8,
+    pub contrast: u8,
+    pub strokeVariation: u8,
+    pub armStyle: u8,
+    pub letterform: u8,
+    pub midline: u8,
+    pub xHeight: u8,
+}
+impl ::core::marker::Copy for DWRITE_PANOSE_3 {}
+impl ::core::clone::Clone for DWRITE_PANOSE_3 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub struct DWRITE_SCRIPT_ANALYSIS {
@@ -1805,12 +1950,6 @@ impl ::core::clone::Clone for DWRITE_SCRIPT_PROPERTIES {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub type DWRITE_SCRIPT_SHAPES = u32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_SCRIPT_SHAPES_DEFAULT: DWRITE_SCRIPT_SHAPES = 0u32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_SCRIPT_SHAPES_NO_VISUAL: DWRITE_SCRIPT_SHAPES = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub struct DWRITE_SHAPING_GLYPH_PROPERTIES {
@@ -1850,28 +1989,6 @@ impl ::core::clone::Clone for DWRITE_STRIKETHROUGH {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub type DWRITE_TEXTURE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_TEXTURE_ALIASED_1x1: DWRITE_TEXTURE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_TEXTURE_CLEARTYPE_3x1: DWRITE_TEXTURE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub type DWRITE_TEXT_ALIGNMENT = i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_TEXT_ALIGNMENT_LEADING: DWRITE_TEXT_ALIGNMENT = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_TEXT_ALIGNMENT_TRAILING: DWRITE_TEXT_ALIGNMENT = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_TEXT_ALIGNMENT_CENTER: DWRITE_TEXT_ALIGNMENT = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_TEXT_ALIGNMENT_JUSTIFIED: DWRITE_TEXT_ALIGNMENT = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub type DWRITE_TEXT_ANTIALIAS_MODE = i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_TEXT_ANTIALIAS_MODE_CLEARTYPE: DWRITE_TEXT_ANTIALIAS_MODE = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_TEXT_ANTIALIAS_MODE_GRAYSCALE: DWRITE_TEXT_ANTIALIAS_MODE = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub struct DWRITE_TEXT_METRICS {
@@ -1928,14 +2045,6 @@ impl ::core::clone::Clone for DWRITE_TRIMMING {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub type DWRITE_TRIMMING_GRANULARITY = i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_TRIMMING_GRANULARITY_NONE: DWRITE_TRIMMING_GRANULARITY = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_TRIMMING_GRANULARITY_CHARACTER: DWRITE_TRIMMING_GRANULARITY = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_TRIMMING_GRANULARITY_WORD: DWRITE_TRIMMING_GRANULARITY = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
 pub struct DWRITE_TYPOGRAPHIC_FEATURES {
@@ -1978,112 +2087,3 @@ impl ::core::clone::Clone for DWRITE_UNICODE_RANGE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub type DWRITE_VERTICAL_GLYPH_ORIENTATION = i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_VERTICAL_GLYPH_ORIENTATION_DEFAULT: DWRITE_VERTICAL_GLYPH_ORIENTATION = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_VERTICAL_GLYPH_ORIENTATION_STACKED: DWRITE_VERTICAL_GLYPH_ORIENTATION = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub type DWRITE_WORD_WRAPPING = i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_WORD_WRAPPING_WRAP: DWRITE_WORD_WRAPPING = 0i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_WORD_WRAPPING_NO_WRAP: DWRITE_WORD_WRAPPING = 1i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_WORD_WRAPPING_EMERGENCY_BREAK: DWRITE_WORD_WRAPPING = 2i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_WORD_WRAPPING_WHOLE_WORD: DWRITE_WORD_WRAPPING = 3i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const DWRITE_WORD_WRAPPING_CHARACTER: DWRITE_WORD_WRAPPING = 4i32;
-#[doc = "*Required features: `\"Win32_Graphics_DirectWrite\"`*"]
-pub const FACILITY_DWRITE: u32 = 2200u32;
-pub type IDWriteAsyncResult = *mut ::core::ffi::c_void;
-pub type IDWriteBitmapRenderTarget = *mut ::core::ffi::c_void;
-pub type IDWriteBitmapRenderTarget1 = *mut ::core::ffi::c_void;
-pub type IDWriteColorGlyphRunEnumerator = *mut ::core::ffi::c_void;
-pub type IDWriteColorGlyphRunEnumerator1 = *mut ::core::ffi::c_void;
-pub type IDWriteFactory = *mut ::core::ffi::c_void;
-pub type IDWriteFactory1 = *mut ::core::ffi::c_void;
-pub type IDWriteFactory2 = *mut ::core::ffi::c_void;
-pub type IDWriteFactory3 = *mut ::core::ffi::c_void;
-pub type IDWriteFactory4 = *mut ::core::ffi::c_void;
-pub type IDWriteFactory5 = *mut ::core::ffi::c_void;
-pub type IDWriteFactory6 = *mut ::core::ffi::c_void;
-pub type IDWriteFactory7 = *mut ::core::ffi::c_void;
-pub type IDWriteFont = *mut ::core::ffi::c_void;
-pub type IDWriteFont1 = *mut ::core::ffi::c_void;
-pub type IDWriteFont2 = *mut ::core::ffi::c_void;
-pub type IDWriteFont3 = *mut ::core::ffi::c_void;
-pub type IDWriteFontCollection = *mut ::core::ffi::c_void;
-pub type IDWriteFontCollection1 = *mut ::core::ffi::c_void;
-pub type IDWriteFontCollection2 = *mut ::core::ffi::c_void;
-pub type IDWriteFontCollection3 = *mut ::core::ffi::c_void;
-pub type IDWriteFontCollectionLoader = *mut ::core::ffi::c_void;
-pub type IDWriteFontDownloadListener = *mut ::core::ffi::c_void;
-pub type IDWriteFontDownloadQueue = *mut ::core::ffi::c_void;
-pub type IDWriteFontFace = *mut ::core::ffi::c_void;
-pub type IDWriteFontFace1 = *mut ::core::ffi::c_void;
-pub type IDWriteFontFace2 = *mut ::core::ffi::c_void;
-pub type IDWriteFontFace3 = *mut ::core::ffi::c_void;
-pub type IDWriteFontFace4 = *mut ::core::ffi::c_void;
-pub type IDWriteFontFace5 = *mut ::core::ffi::c_void;
-pub type IDWriteFontFace6 = *mut ::core::ffi::c_void;
-pub type IDWriteFontFaceReference = *mut ::core::ffi::c_void;
-pub type IDWriteFontFaceReference1 = *mut ::core::ffi::c_void;
-pub type IDWriteFontFallback = *mut ::core::ffi::c_void;
-pub type IDWriteFontFallback1 = *mut ::core::ffi::c_void;
-pub type IDWriteFontFallbackBuilder = *mut ::core::ffi::c_void;
-pub type IDWriteFontFamily = *mut ::core::ffi::c_void;
-pub type IDWriteFontFamily1 = *mut ::core::ffi::c_void;
-pub type IDWriteFontFamily2 = *mut ::core::ffi::c_void;
-pub type IDWriteFontFile = *mut ::core::ffi::c_void;
-pub type IDWriteFontFileEnumerator = *mut ::core::ffi::c_void;
-pub type IDWriteFontFileLoader = *mut ::core::ffi::c_void;
-pub type IDWriteFontFileStream = *mut ::core::ffi::c_void;
-pub type IDWriteFontList = *mut ::core::ffi::c_void;
-pub type IDWriteFontList1 = *mut ::core::ffi::c_void;
-pub type IDWriteFontList2 = *mut ::core::ffi::c_void;
-pub type IDWriteFontResource = *mut ::core::ffi::c_void;
-pub type IDWriteFontSet = *mut ::core::ffi::c_void;
-pub type IDWriteFontSet1 = *mut ::core::ffi::c_void;
-pub type IDWriteFontSet2 = *mut ::core::ffi::c_void;
-pub type IDWriteFontSet3 = *mut ::core::ffi::c_void;
-pub type IDWriteFontSetBuilder = *mut ::core::ffi::c_void;
-pub type IDWriteFontSetBuilder1 = *mut ::core::ffi::c_void;
-pub type IDWriteFontSetBuilder2 = *mut ::core::ffi::c_void;
-pub type IDWriteGdiInterop = *mut ::core::ffi::c_void;
-pub type IDWriteGdiInterop1 = *mut ::core::ffi::c_void;
-pub type IDWriteGlyphRunAnalysis = *mut ::core::ffi::c_void;
-pub type IDWriteInMemoryFontFileLoader = *mut ::core::ffi::c_void;
-pub type IDWriteInlineObject = *mut ::core::ffi::c_void;
-pub type IDWriteLocalFontFileLoader = *mut ::core::ffi::c_void;
-pub type IDWriteLocalizedStrings = *mut ::core::ffi::c_void;
-pub type IDWriteNumberSubstitution = *mut ::core::ffi::c_void;
-pub type IDWritePixelSnapping = *mut ::core::ffi::c_void;
-pub type IDWriteRemoteFontFileLoader = *mut ::core::ffi::c_void;
-pub type IDWriteRemoteFontFileStream = *mut ::core::ffi::c_void;
-pub type IDWriteRenderingParams = *mut ::core::ffi::c_void;
-pub type IDWriteRenderingParams1 = *mut ::core::ffi::c_void;
-pub type IDWriteRenderingParams2 = *mut ::core::ffi::c_void;
-pub type IDWriteRenderingParams3 = *mut ::core::ffi::c_void;
-pub type IDWriteStringList = *mut ::core::ffi::c_void;
-pub type IDWriteTextAnalysisSink = *mut ::core::ffi::c_void;
-pub type IDWriteTextAnalysisSink1 = *mut ::core::ffi::c_void;
-pub type IDWriteTextAnalysisSource = *mut ::core::ffi::c_void;
-pub type IDWriteTextAnalysisSource1 = *mut ::core::ffi::c_void;
-pub type IDWriteTextAnalyzer = *mut ::core::ffi::c_void;
-pub type IDWriteTextAnalyzer1 = *mut ::core::ffi::c_void;
-pub type IDWriteTextAnalyzer2 = *mut ::core::ffi::c_void;
-pub type IDWriteTextFormat = *mut ::core::ffi::c_void;
-pub type IDWriteTextFormat1 = *mut ::core::ffi::c_void;
-pub type IDWriteTextFormat2 = *mut ::core::ffi::c_void;
-pub type IDWriteTextFormat3 = *mut ::core::ffi::c_void;
-pub type IDWriteTextLayout = *mut ::core::ffi::c_void;
-pub type IDWriteTextLayout1 = *mut ::core::ffi::c_void;
-pub type IDWriteTextLayout2 = *mut ::core::ffi::c_void;
-pub type IDWriteTextLayout3 = *mut ::core::ffi::c_void;
-pub type IDWriteTextLayout4 = *mut ::core::ffi::c_void;
-pub type IDWriteTextRenderer = *mut ::core::ffi::c_void;
-pub type IDWriteTextRenderer1 = *mut ::core::ffi::c_void;
-pub type IDWriteTypography = *mut ::core::ffi::c_void;

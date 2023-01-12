@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
     pub fn AcquireSRWLockExclusive(srwlock: *mut RTL_SRWLOCK);
@@ -496,9 +496,9 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn IsWow64Process(hprocess: super::super::Foundation::HANDLE, wow64process: *mut super::super::Foundation::BOOL) -> super::super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn IsWow64Process2(hprocess: super::super::Foundation::HANDLE, pprocessmachine: *mut u16, pnativemachine: *mut u16) -> super::super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`, `\"Win32_System_SystemInformation\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_SystemInformation"))]
+    pub fn IsWow64Process2(hprocess: super::super::Foundation::HANDLE, pprocessmachine: *mut super::SystemInformation::IMAGE_FILE_MACHINE, pnativemachine: *mut super::SystemInformation::IMAGE_FILE_MACHINE) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
     pub fn LeaveCriticalSection(lpcriticalsection: *mut RTL_CRITICAL_SECTION);
@@ -516,13 +516,13 @@ extern "system" {
     pub fn NtSetInformationThread(threadhandle: super::super::Foundation::HANDLE, threadinformationclass: THREADINFOCLASS, threadinformation: *const ::core::ffi::c_void, threadinformationlength: u32) -> super::super::Foundation::NTSTATUS;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn OpenEventA(dwdesiredaccess: u32, binherithandle: super::super::Foundation::BOOL, lpname: ::windows_sys::core::PCSTR) -> super::super::Foundation::HANDLE;
+    pub fn OpenEventA(dwdesiredaccess: SYNCHRONIZATION_ACCESS_RIGHTS, binherithandle: super::super::Foundation::BOOL, lpname: ::windows_sys::core::PCSTR) -> super::super::Foundation::HANDLE;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn OpenEventW(dwdesiredaccess: u32, binherithandle: super::super::Foundation::BOOL, lpname: ::windows_sys::core::PCWSTR) -> super::super::Foundation::HANDLE;
+    pub fn OpenEventW(dwdesiredaccess: SYNCHRONIZATION_ACCESS_RIGHTS, binherithandle: super::super::Foundation::BOOL, lpname: ::windows_sys::core::PCWSTR) -> super::super::Foundation::HANDLE;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn OpenMutexW(dwdesiredaccess: u32, binherithandle: super::super::Foundation::BOOL, lpname: ::windows_sys::core::PCWSTR) -> super::super::Foundation::HANDLE;
+    pub fn OpenMutexW(dwdesiredaccess: SYNCHRONIZATION_ACCESS_RIGHTS, binherithandle: super::super::Foundation::BOOL, lpname: ::windows_sys::core::PCWSTR) -> super::super::Foundation::HANDLE;
     #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
     pub fn OpenPrivateNamespaceA(lpboundarydescriptor: *const ::core::ffi::c_void, lpaliasprefix: ::windows_sys::core::PCSTR) -> NamespaceHandle;
     #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
@@ -535,7 +535,7 @@ extern "system" {
     pub fn OpenProcessToken(processhandle: super::super::Foundation::HANDLE, desiredaccess: super::super::Security::TOKEN_ACCESS_MASK, tokenhandle: *mut super::super::Foundation::HANDLE) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn OpenSemaphoreW(dwdesiredaccess: u32, binherithandle: super::super::Foundation::BOOL, lpname: ::windows_sys::core::PCWSTR) -> super::super::Foundation::HANDLE;
+    pub fn OpenSemaphoreW(dwdesiredaccess: SYNCHRONIZATION_ACCESS_RIGHTS, binherithandle: super::super::Foundation::BOOL, lpname: ::windows_sys::core::PCWSTR) -> super::super::Foundation::HANDLE;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn OpenThread(dwdesiredaccess: THREAD_ACCESS_RIGHTS, binherithandle: super::super::Foundation::BOOL, dwthreadid: u32) -> super::super::Foundation::HANDLE;
@@ -544,7 +544,7 @@ extern "system" {
     pub fn OpenThreadToken(threadhandle: super::super::Foundation::HANDLE, desiredaccess: super::super::Security::TOKEN_ACCESS_MASK, openasself: super::super::Foundation::BOOL, tokenhandle: *mut super::super::Foundation::HANDLE) -> super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn OpenWaitableTimerW(dwdesiredaccess: u32, binherithandle: super::super::Foundation::BOOL, lptimername: ::windows_sys::core::PCWSTR) -> super::super::Foundation::HANDLE;
+    pub fn OpenWaitableTimerW(dwdesiredaccess: SYNCHRONIZATION_ACCESS_RIGHTS, binherithandle: super::super::Foundation::BOOL, lptimername: ::windows_sys::core::PCWSTR) -> super::super::Foundation::HANDLE;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn PulseEvent(hevent: super::super::Foundation::HANDLE) -> super::super::Foundation::BOOL;
@@ -793,16 +793,16 @@ extern "system" {
     pub fn WaitForInputIdle(hprocess: super::super::Foundation::HANDLE, dwmilliseconds: u32) -> u32;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn WaitForMultipleObjects(ncount: u32, lphandles: *const super::super::Foundation::HANDLE, bwaitall: super::super::Foundation::BOOL, dwmilliseconds: u32) -> u32;
+    pub fn WaitForMultipleObjects(ncount: u32, lphandles: *const super::super::Foundation::HANDLE, bwaitall: super::super::Foundation::BOOL, dwmilliseconds: u32) -> super::super::Foundation::WIN32_ERROR;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn WaitForMultipleObjectsEx(ncount: u32, lphandles: *const super::super::Foundation::HANDLE, bwaitall: super::super::Foundation::BOOL, dwmilliseconds: u32, balertable: super::super::Foundation::BOOL) -> u32;
+    pub fn WaitForMultipleObjectsEx(ncount: u32, lphandles: *const super::super::Foundation::HANDLE, bwaitall: super::super::Foundation::BOOL, dwmilliseconds: u32, balertable: super::super::Foundation::BOOL) -> super::super::Foundation::WIN32_ERROR;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn WaitForSingleObject(hhandle: super::super::Foundation::HANDLE, dwmilliseconds: u32) -> u32;
+    pub fn WaitForSingleObject(hhandle: super::super::Foundation::HANDLE, dwmilliseconds: u32) -> super::super::Foundation::WIN32_ERROR;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
-    pub fn WaitForSingleObjectEx(hhandle: super::super::Foundation::HANDLE, dwmilliseconds: u32, balertable: super::super::Foundation::BOOL) -> u32;
+    pub fn WaitForSingleObjectEx(hhandle: super::super::Foundation::HANDLE, dwmilliseconds: u32, balertable: super::super::Foundation::BOOL) -> super::super::Foundation::WIN32_ERROR;
     #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn WaitForThreadpoolIoCallbacks(pio: *mut TP_IO, fcancelpendingcallbacks: super::super::Foundation::BOOL);
@@ -834,20 +834,92 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn Wow64SuspendThread(hthread: super::super::Foundation::HANDLE) -> u32;
 }
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub struct APP_MEMORY_INFORMATION {
-    pub AvailableCommit: u64,
-    pub PrivateCommitUsage: u64,
-    pub PeakPrivateCommitUsage: u64,
-    pub TotalCommitUsage: u64,
-}
-impl ::core::marker::Copy for APP_MEMORY_INFORMATION {}
-impl ::core::clone::Clone for APP_MEMORY_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const CONDITION_VARIABLE_LOCKMODE_SHARED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const CREATE_MUTEX_INITIAL_OWNER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const CREATE_WAITABLE_TIMER_HIGH_RESOLUTION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const CREATE_WAITABLE_TIMER_MANUAL_RESET: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const INIT_ONCE_ASYNC: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const INIT_ONCE_CHECK_ONLY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const INIT_ONCE_CTX_RESERVED_BITS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const INIT_ONCE_INIT_FAILED: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PME_CURRENT_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PME_FAILFAST_ON_COMMIT_FAIL_DISABLE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PME_FAILFAST_ON_COMMIT_FAIL_ENABLE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PRIVATE_NAMESPACE_FLAG_DESTROY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROCESS_LEAP_SECOND_INFO_FLAG_ENABLE_SIXTY_SECOND: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROCESS_LEAP_SECOND_INFO_VALID_FLAGS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROCESS_POWER_THROTTLING_CURRENT_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROCESS_POWER_THROTTLING_EXECUTION_SPEED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_ALL_APPLICATION_PACKAGES_POLICY: u32 = 131087u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_CHILD_PROCESS_POLICY: u32 = 131086u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_COMPONENT_FILTER: u32 = 131098u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_DESKTOP_APP_POLICY: u32 = 131090u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_ENABLE_OPTIONAL_XSTATE_FEATURES: u32 = 196635u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_GROUP_AFFINITY: u32 = 196611u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_HANDLE_LIST: u32 = 131074u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_IDEAL_PROCESSOR: u32 = 196613u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_JOB_LIST: u32 = 131085u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_MACHINE_TYPE: u32 = 131097u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_MITIGATION_AUDIT_POLICY: u32 = 131096u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_MITIGATION_POLICY: u32 = 131079u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_PARENT_PROCESS: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_PREFERRED_NODE: u32 = 131076u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_PROTECTION_LEVEL: u32 = 131083u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE: u32 = 131094u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_REPLACE_VALUE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES: u32 = 131081u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_UMS_THREAD: u32 = 196614u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROC_THREAD_ATTRIBUTE_WIN32K_FILTER: u32 = 131088u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const SYNCHRONIZATION_BARRIER_FLAGS_NO_DELETE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const SYNCHRONIZATION_BARRIER_FLAGS_SPIN_ONLY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_POWER_THROTTLING_CURRENT_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_POWER_THROTTLING_EXECUTION_SPEED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_POWER_THROTTLING_VALID_FLAGS: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub type AVRT_PRIORITY = i32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
@@ -860,9 +932,6 @@ pub const AVRT_PRIORITY_NORMAL: AVRT_PRIORITY = 0i32;
 pub const AVRT_PRIORITY_HIGH: AVRT_PRIORITY = 1i32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub const AVRT_PRIORITY_CRITICAL: AVRT_PRIORITY = 2i32;
-pub type BoundaryDescriptorHandle = isize;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const CONDITION_VARIABLE_LOCKMODE_SHARED: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub type CREATE_EVENT = u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
@@ -870,17 +939,11 @@ pub const CREATE_EVENT_INITIAL_SET: CREATE_EVENT = 2u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub const CREATE_EVENT_MANUAL_RESET: CREATE_EVENT = 1u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const CREATE_MUTEX_INITIAL_OWNER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub type CREATE_PROCESS_LOGON_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub const LOGON_WITH_PROFILE: CREATE_PROCESS_LOGON_FLAGS = 1u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub const LOGON_NETCREDENTIALS_ONLY: CREATE_PROCESS_LOGON_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const CREATE_WAITABLE_TIMER_HIGH_RESOLUTION: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const CREATE_WAITABLE_TIMER_MANUAL_RESET: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub type GET_GUI_RESOURCES_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
@@ -891,35 +954,6 @@ pub const GR_GDIOBJECTS_PEAK: GET_GUI_RESOURCES_FLAGS = 2u32;
 pub const GR_USEROBJECTS: GET_GUI_RESOURCES_FLAGS = 1u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub const GR_USEROBJECTS_PEAK: GET_GUI_RESOURCES_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const INIT_ONCE_ASYNC: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const INIT_ONCE_CHECK_ONLY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const INIT_ONCE_CTX_RESERVED_BITS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const INIT_ONCE_INIT_FAILED: u32 = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub struct IO_COUNTERS {
-    pub ReadOperationCount: u64,
-    pub WriteOperationCount: u64,
-    pub OtherOperationCount: u64,
-    pub ReadTransferCount: u64,
-    pub WriteTransferCount: u64,
-    pub OtherTransferCount: u64,
-}
-impl ::core::marker::Copy for IO_COUNTERS {}
-impl ::core::clone::Clone for IO_COUNTERS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type LPFIBER_START_ROUTINE = ::core::option::Option<unsafe extern "system" fn(lpfiberparameter: *mut ::core::ffi::c_void)>;
-pub type LPPROC_THREAD_ATTRIBUTE_LIST = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type LPTHREAD_START_ROUTINE = ::core::option::Option<unsafe extern "system" fn(lpthreadparameter: *mut ::core::ffi::c_void) -> u32>;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub type MACHINE_ATTRIBUTES = u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
@@ -940,89 +974,12 @@ pub const MEMORY_PRIORITY_MEDIUM: MEMORY_PRIORITY = 3u32;
 pub const MEMORY_PRIORITY_BELOW_NORMAL: MEMORY_PRIORITY = 4u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub const MEMORY_PRIORITY_NORMAL: MEMORY_PRIORITY = 5u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub struct MEMORY_PRIORITY_INFORMATION {
-    pub MemoryPriority: MEMORY_PRIORITY,
-}
-impl ::core::marker::Copy for MEMORY_PRIORITY_INFORMATION {}
-impl ::core::clone::Clone for MEMORY_PRIORITY_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const MUTEX_MODIFY_STATE: u32 = 1u32;
-pub type NamespaceHandle = isize;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-pub struct PEB {
-    pub Reserved1: [u8; 2],
-    pub BeingDebugged: u8,
-    pub Reserved2: [u8; 1],
-    pub Reserved3: [*mut ::core::ffi::c_void; 2],
-    pub Ldr: *mut PEB_LDR_DATA,
-    pub ProcessParameters: *mut RTL_USER_PROCESS_PARAMETERS,
-    pub Reserved4: [*mut ::core::ffi::c_void; 3],
-    pub AtlThunkSListPtr: *mut ::core::ffi::c_void,
-    pub Reserved5: *mut ::core::ffi::c_void,
-    pub Reserved6: u32,
-    pub Reserved7: *mut ::core::ffi::c_void,
-    pub Reserved8: u32,
-    pub AtlThunkSListPtr32: u32,
-    pub Reserved9: [*mut ::core::ffi::c_void; 45],
-    pub Reserved10: [u8; 96],
-    pub PostProcessInitRoutine: PPS_POST_PROCESS_INIT_ROUTINE,
-    pub Reserved11: [u8; 128],
-    pub Reserved12: [*mut ::core::ffi::c_void; 1],
-    pub SessionId: u32,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-impl ::core::marker::Copy for PEB {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-impl ::core::clone::Clone for PEB {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(feature = "Win32_System_Kernel")]
-pub struct PEB_LDR_DATA {
-    pub Reserved1: [u8; 8],
-    pub Reserved2: [*mut ::core::ffi::c_void; 3],
-    pub InMemoryOrderModuleList: super::Kernel::LIST_ENTRY,
-}
-#[cfg(feature = "Win32_System_Kernel")]
-impl ::core::marker::Copy for PEB_LDR_DATA {}
-#[cfg(feature = "Win32_System_Kernel")]
-impl ::core::clone::Clone for PEB_LDR_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PFLS_CALLBACK_FUNCTION = ::core::option::Option<unsafe extern "system" fn(lpflsdata: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PINIT_ONCE_FN = ::core::option::Option<unsafe extern "system" fn(initonce: *mut RTL_RUN_ONCE, parameter: *mut ::core::ffi::c_void, context: *mut *mut ::core::ffi::c_void) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PME_CURRENT_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PME_FAILFAST_ON_COMMIT_FAIL_DISABLE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PME_FAILFAST_ON_COMMIT_FAIL_ENABLE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub type POWER_REQUEST_CONTEXT_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub const POWER_REQUEST_CONTEXT_DETAILED_STRING: POWER_REQUEST_CONTEXT_FLAGS = 2u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub const POWER_REQUEST_CONTEXT_SIMPLE_STRING: POWER_REQUEST_CONTEXT_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PPS_POST_PROCESS_INIT_ROUTINE = ::core::option::Option<unsafe extern "system" fn()>;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PRIVATE_NAMESPACE_FLAG_DESTROY: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub type PROCESSINFOCLASS = i32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
@@ -1143,24 +1100,6 @@ pub type PROCESS_AFFINITY_AUTO_UPDATE_FLAGS = u32;
 pub const PROCESS_AFFINITY_DISABLE_AUTO_UPDATE: PROCESS_AFFINITY_AUTO_UPDATE_FLAGS = 0u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub const PROCESS_AFFINITY_ENABLE_AUTO_UPDATE: PROCESS_AFFINITY_AUTO_UPDATE_FLAGS = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-pub struct PROCESS_BASIC_INFORMATION {
-    pub Reserved1: *mut ::core::ffi::c_void,
-    pub PebBaseAddress: *mut PEB,
-    pub Reserved2: [*mut ::core::ffi::c_void; 2],
-    pub UniqueProcessId: usize,
-    pub Reserved3: *mut ::core::ffi::c_void,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-impl ::core::marker::Copy for PROCESS_BASIC_INFORMATION {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-impl ::core::clone::Clone for PROCESS_BASIC_INFORMATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub type PROCESS_CREATION_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
@@ -1233,6 +1172,456 @@ pub const PROCESS_DEP_ENABLE: PROCESS_DEP_FLAGS = 1u32;
 pub const PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION: PROCESS_DEP_FLAGS = 2u32;
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub const PROCESS_DEP_NONE: PROCESS_DEP_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PROCESS_INFORMATION_CLASS = i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessMemoryPriority: PROCESS_INFORMATION_CLASS = 0i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessMemoryExhaustionInfo: PROCESS_INFORMATION_CLASS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessAppMemoryInfo: PROCESS_INFORMATION_CLASS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessInPrivateInfo: PROCESS_INFORMATION_CLASS = 3i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessPowerThrottling: PROCESS_INFORMATION_CLASS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessReservedValue1: PROCESS_INFORMATION_CLASS = 5i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessTelemetryCoverageInfo: PROCESS_INFORMATION_CLASS = 6i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessProtectionLevelInfo: PROCESS_INFORMATION_CLASS = 7i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessLeapSecondInfo: PROCESS_INFORMATION_CLASS = 8i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessMachineTypeInfo: PROCESS_INFORMATION_CLASS = 9i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessInformationClassMax: PROCESS_INFORMATION_CLASS = 10i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PROCESS_MEMORY_EXHAUSTION_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PMETypeFailFastOnCommitFailure: PROCESS_MEMORY_EXHAUSTION_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PMETypeMax: PROCESS_MEMORY_EXHAUSTION_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PROCESS_MITIGATION_POLICY = i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessDEPPolicy: PROCESS_MITIGATION_POLICY = 0i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessASLRPolicy: PROCESS_MITIGATION_POLICY = 1i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessDynamicCodePolicy: PROCESS_MITIGATION_POLICY = 2i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessStrictHandleCheckPolicy: PROCESS_MITIGATION_POLICY = 3i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessSystemCallDisablePolicy: PROCESS_MITIGATION_POLICY = 4i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessMitigationOptionsMask: PROCESS_MITIGATION_POLICY = 5i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessExtensionPointDisablePolicy: PROCESS_MITIGATION_POLICY = 6i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessControlFlowGuardPolicy: PROCESS_MITIGATION_POLICY = 7i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessSignaturePolicy: PROCESS_MITIGATION_POLICY = 8i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessFontDisablePolicy: PROCESS_MITIGATION_POLICY = 9i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessImageLoadPolicy: PROCESS_MITIGATION_POLICY = 10i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessSystemCallFilterPolicy: PROCESS_MITIGATION_POLICY = 11i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessPayloadRestrictionPolicy: PROCESS_MITIGATION_POLICY = 12i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessChildProcessPolicy: PROCESS_MITIGATION_POLICY = 13i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessSideChannelIsolationPolicy: PROCESS_MITIGATION_POLICY = 14i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessUserShadowStackPolicy: PROCESS_MITIGATION_POLICY = 15i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcessRedirectionTrustPolicy: PROCESS_MITIGATION_POLICY = 16i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const MaxProcessMitigationPolicy: PROCESS_MITIGATION_POLICY = 17i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PROCESS_NAME_FORMAT = u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROCESS_NAME_WIN32: PROCESS_NAME_FORMAT = 0u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROCESS_NAME_NATIVE: PROCESS_NAME_FORMAT = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PROCESS_PROTECTION_LEVEL = u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROTECTION_LEVEL_WINTCB_LIGHT: PROCESS_PROTECTION_LEVEL = 0u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROTECTION_LEVEL_WINDOWS: PROCESS_PROTECTION_LEVEL = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROTECTION_LEVEL_WINDOWS_LIGHT: PROCESS_PROTECTION_LEVEL = 2u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROTECTION_LEVEL_ANTIMALWARE_LIGHT: PROCESS_PROTECTION_LEVEL = 3u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROTECTION_LEVEL_LSA_LIGHT: PROCESS_PROTECTION_LEVEL = 4u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROTECTION_LEVEL_WINTCB: PROCESS_PROTECTION_LEVEL = 5u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROTECTION_LEVEL_CODEGEN_LIGHT: PROCESS_PROTECTION_LEVEL = 6u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROTECTION_LEVEL_AUTHENTICODE: PROCESS_PROTECTION_LEVEL = 7u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROTECTION_LEVEL_PPL_APP: PROCESS_PROTECTION_LEVEL = 8u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const PROTECTION_LEVEL_NONE: PROCESS_PROTECTION_LEVEL = 4294967294u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PROC_THREAD_ATTRIBUTE_NUM = u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeParentProcess: PROC_THREAD_ATTRIBUTE_NUM = 0u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeHandleList: PROC_THREAD_ATTRIBUTE_NUM = 2u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeGroupAffinity: PROC_THREAD_ATTRIBUTE_NUM = 3u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributePreferredNode: PROC_THREAD_ATTRIBUTE_NUM = 4u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeIdealProcessor: PROC_THREAD_ATTRIBUTE_NUM = 5u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeUmsThread: PROC_THREAD_ATTRIBUTE_NUM = 6u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeMitigationPolicy: PROC_THREAD_ATTRIBUTE_NUM = 7u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeSecurityCapabilities: PROC_THREAD_ATTRIBUTE_NUM = 9u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeProtectionLevel: PROC_THREAD_ATTRIBUTE_NUM = 11u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeJobList: PROC_THREAD_ATTRIBUTE_NUM = 13u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeChildProcessPolicy: PROC_THREAD_ATTRIBUTE_NUM = 14u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeAllApplicationPackagesPolicy: PROC_THREAD_ATTRIBUTE_NUM = 15u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeWin32kFilter: PROC_THREAD_ATTRIBUTE_NUM = 16u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeSafeOpenPromptOriginClaim: PROC_THREAD_ATTRIBUTE_NUM = 17u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeDesktopAppPolicy: PROC_THREAD_ATTRIBUTE_NUM = 18u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributePseudoConsole: PROC_THREAD_ATTRIBUTE_NUM = 22u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeMitigationAuditPolicy: PROC_THREAD_ATTRIBUTE_NUM = 24u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeMachineType: PROC_THREAD_ATTRIBUTE_NUM = 25u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeComponentFilter: PROC_THREAD_ATTRIBUTE_NUM = 26u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ProcThreadAttributeEnableOptionalXStateFeatures: PROC_THREAD_ATTRIBUTE_NUM = 27u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type QUEUE_USER_APC_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const QUEUE_USER_APC_FLAGS_NONE: QUEUE_USER_APC_FLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC: QUEUE_USER_APC_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type RTL_UMS_THREAD_INFO_CLASS = i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const UmsThreadInvalidInfoClass: RTL_UMS_THREAD_INFO_CLASS = 0i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const UmsThreadUserContext: RTL_UMS_THREAD_INFO_CLASS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const UmsThreadPriority: RTL_UMS_THREAD_INFO_CLASS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const UmsThreadAffinity: RTL_UMS_THREAD_INFO_CLASS = 3i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const UmsThreadTeb: RTL_UMS_THREAD_INFO_CLASS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const UmsThreadIsSuspended: RTL_UMS_THREAD_INFO_CLASS = 5i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const UmsThreadIsTerminated: RTL_UMS_THREAD_INFO_CLASS = 6i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const UmsThreadMaxInfoClass: RTL_UMS_THREAD_INFO_CLASS = 7i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type STARTUPINFOW_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_FORCEONFEEDBACK: STARTUPINFOW_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_FORCEOFFFEEDBACK: STARTUPINFOW_FLAGS = 128u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_PREVENTPINNING: STARTUPINFOW_FLAGS = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_RUNFULLSCREEN: STARTUPINFOW_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_TITLEISAPPID: STARTUPINFOW_FLAGS = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_TITLEISLINKNAME: STARTUPINFOW_FLAGS = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_UNTRUSTEDSOURCE: STARTUPINFOW_FLAGS = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_USECOUNTCHARS: STARTUPINFOW_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_USEFILLATTRIBUTE: STARTUPINFOW_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_USEHOTKEY: STARTUPINFOW_FLAGS = 512u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_USEPOSITION: STARTUPINFOW_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_USESHOWWINDOW: STARTUPINFOW_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_USESIZE: STARTUPINFOW_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STARTF_USESTDHANDLES: STARTUPINFOW_FLAGS = 256u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type SYNCHRONIZATION_ACCESS_RIGHTS = u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const EVENT_ALL_ACCESS: SYNCHRONIZATION_ACCESS_RIGHTS = 2031619u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const EVENT_MODIFY_STATE: SYNCHRONIZATION_ACCESS_RIGHTS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const MUTEX_ALL_ACCESS: SYNCHRONIZATION_ACCESS_RIGHTS = 2031617u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const MUTEX_MODIFY_STATE: SYNCHRONIZATION_ACCESS_RIGHTS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const SEMAPHORE_ALL_ACCESS: SYNCHRONIZATION_ACCESS_RIGHTS = 2031619u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const SEMAPHORE_MODIFY_STATE: SYNCHRONIZATION_ACCESS_RIGHTS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const TIMER_ALL_ACCESS: SYNCHRONIZATION_ACCESS_RIGHTS = 2031619u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const TIMER_MODIFY_STATE: SYNCHRONIZATION_ACCESS_RIGHTS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const TIMER_QUERY_STATE: SYNCHRONIZATION_ACCESS_RIGHTS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const SYNCHRONIZATION_DELETE: SYNCHRONIZATION_ACCESS_RIGHTS = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const SYNCHRONIZATION_READ_CONTROL: SYNCHRONIZATION_ACCESS_RIGHTS = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const SYNCHRONIZATION_WRITE_DAC: SYNCHRONIZATION_ACCESS_RIGHTS = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const SYNCHRONIZATION_WRITE_OWNER: SYNCHRONIZATION_ACCESS_RIGHTS = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const SYNCHRONIZATION_SYNCHRONIZE: SYNCHRONIZATION_ACCESS_RIGHTS = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type THREADINFOCLASS = i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ThreadIsIoPending: THREADINFOCLASS = 16i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ThreadNameInformation: THREADINFOCLASS = 38i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type THREAD_ACCESS_RIGHTS = u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_TERMINATE: THREAD_ACCESS_RIGHTS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_SUSPEND_RESUME: THREAD_ACCESS_RIGHTS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_GET_CONTEXT: THREAD_ACCESS_RIGHTS = 8u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_SET_CONTEXT: THREAD_ACCESS_RIGHTS = 16u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_SET_INFORMATION: THREAD_ACCESS_RIGHTS = 32u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_QUERY_INFORMATION: THREAD_ACCESS_RIGHTS = 64u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_SET_THREAD_TOKEN: THREAD_ACCESS_RIGHTS = 128u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_IMPERSONATE: THREAD_ACCESS_RIGHTS = 256u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_DIRECT_IMPERSONATION: THREAD_ACCESS_RIGHTS = 512u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_SET_LIMITED_INFORMATION: THREAD_ACCESS_RIGHTS = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_QUERY_LIMITED_INFORMATION: THREAD_ACCESS_RIGHTS = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_RESUME: THREAD_ACCESS_RIGHTS = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_ALL_ACCESS: THREAD_ACCESS_RIGHTS = 2097151u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_DELETE: THREAD_ACCESS_RIGHTS = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_READ_CONTROL: THREAD_ACCESS_RIGHTS = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_WRITE_DAC: THREAD_ACCESS_RIGHTS = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_WRITE_OWNER: THREAD_ACCESS_RIGHTS = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_SYNCHRONIZE: THREAD_ACCESS_RIGHTS = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_STANDARD_RIGHTS_REQUIRED: THREAD_ACCESS_RIGHTS = 983040u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type THREAD_CREATION_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_CREATE_RUN_IMMEDIATELY: THREAD_CREATION_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_CREATE_SUSPENDED: THREAD_CREATION_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const STACK_SIZE_PARAM_IS_A_RESERVATION: THREAD_CREATION_FLAGS = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type THREAD_INFORMATION_CLASS = i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ThreadMemoryPriority: THREAD_INFORMATION_CLASS = 0i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ThreadAbsoluteCpuPriority: THREAD_INFORMATION_CLASS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ThreadDynamicCodePolicy: THREAD_INFORMATION_CLASS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ThreadPowerThrottling: THREAD_INFORMATION_CLASS = 3i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const ThreadInformationClassMax: THREAD_INFORMATION_CLASS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type THREAD_PRIORITY = i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_MODE_BACKGROUND_BEGIN: THREAD_PRIORITY = 65536i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_MODE_BACKGROUND_END: THREAD_PRIORITY = 131072i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_PRIORITY_ABOVE_NORMAL: THREAD_PRIORITY = 1i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_PRIORITY_BELOW_NORMAL: THREAD_PRIORITY = -1i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_PRIORITY_HIGHEST: THREAD_PRIORITY = 2i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_PRIORITY_IDLE: THREAD_PRIORITY = -15i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_PRIORITY_MIN: THREAD_PRIORITY = -2i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_PRIORITY_LOWEST: THREAD_PRIORITY = -2i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_PRIORITY_NORMAL: THREAD_PRIORITY = 0i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const THREAD_PRIORITY_TIME_CRITICAL: THREAD_PRIORITY = 15i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type TP_CALLBACK_PRIORITY = i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const TP_CALLBACK_PRIORITY_HIGH: TP_CALLBACK_PRIORITY = 0i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const TP_CALLBACK_PRIORITY_NORMAL: TP_CALLBACK_PRIORITY = 1i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const TP_CALLBACK_PRIORITY_LOW: TP_CALLBACK_PRIORITY = 2i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const TP_CALLBACK_PRIORITY_INVALID: TP_CALLBACK_PRIORITY = 3i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const TP_CALLBACK_PRIORITY_COUNT: TP_CALLBACK_PRIORITY = 3i32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type WORKER_THREAD_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const WT_EXECUTEDEFAULT: WORKER_THREAD_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const WT_EXECUTEINIOTHREAD: WORKER_THREAD_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const WT_EXECUTEINPERSISTENTTHREAD: WORKER_THREAD_FLAGS = 128u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const WT_EXECUTEINWAITTHREAD: WORKER_THREAD_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const WT_EXECUTELONGFUNCTION: WORKER_THREAD_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const WT_EXECUTEONLYONCE: WORKER_THREAD_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const WT_TRANSFER_IMPERSONATION: WORKER_THREAD_FLAGS = 256u32;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub const WT_EXECUTEINTIMERTHREAD: WORKER_THREAD_FLAGS = 32u32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub struct APP_MEMORY_INFORMATION {
+    pub AvailableCommit: u64,
+    pub PrivateCommitUsage: u64,
+    pub PeakPrivateCommitUsage: u64,
+    pub TotalCommitUsage: u64,
+}
+impl ::core::marker::Copy for APP_MEMORY_INFORMATION {}
+impl ::core::clone::Clone for APP_MEMORY_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type BoundaryDescriptorHandle = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub struct IO_COUNTERS {
+    pub ReadOperationCount: u64,
+    pub WriteOperationCount: u64,
+    pub OtherOperationCount: u64,
+    pub ReadTransferCount: u64,
+    pub WriteTransferCount: u64,
+    pub OtherTransferCount: u64,
+}
+impl ::core::marker::Copy for IO_COUNTERS {}
+impl ::core::clone::Clone for IO_COUNTERS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type LPPROC_THREAD_ATTRIBUTE_LIST = *mut ::core::ffi::c_void;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub struct MEMORY_PRIORITY_INFORMATION {
+    pub MemoryPriority: MEMORY_PRIORITY,
+}
+impl ::core::marker::Copy for MEMORY_PRIORITY_INFORMATION {}
+impl ::core::clone::Clone for MEMORY_PRIORITY_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type NamespaceHandle = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+pub struct PEB {
+    pub Reserved1: [u8; 2],
+    pub BeingDebugged: u8,
+    pub Reserved2: [u8; 1],
+    pub Reserved3: [*mut ::core::ffi::c_void; 2],
+    pub Ldr: *mut PEB_LDR_DATA,
+    pub ProcessParameters: *mut RTL_USER_PROCESS_PARAMETERS,
+    pub Reserved4: [*mut ::core::ffi::c_void; 3],
+    pub AtlThunkSListPtr: *mut ::core::ffi::c_void,
+    pub Reserved5: *mut ::core::ffi::c_void,
+    pub Reserved6: u32,
+    pub Reserved7: *mut ::core::ffi::c_void,
+    pub Reserved8: u32,
+    pub AtlThunkSListPtr32: u32,
+    pub Reserved9: [*mut ::core::ffi::c_void; 45],
+    pub Reserved10: [u8; 96],
+    pub PostProcessInitRoutine: PPS_POST_PROCESS_INIT_ROUTINE,
+    pub Reserved11: [u8; 128],
+    pub Reserved12: [*mut ::core::ffi::c_void; 1],
+    pub SessionId: u32,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+impl ::core::marker::Copy for PEB {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+impl ::core::clone::Clone for PEB {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_System_Kernel\"`*"]
+#[cfg(feature = "Win32_System_Kernel")]
+pub struct PEB_LDR_DATA {
+    pub Reserved1: [u8; 8],
+    pub Reserved2: [*mut ::core::ffi::c_void; 3],
+    pub InMemoryOrderModuleList: super::Kernel::LIST_ENTRY,
+}
+#[cfg(feature = "Win32_System_Kernel")]
+impl ::core::marker::Copy for PEB_LDR_DATA {}
+#[cfg(feature = "Win32_System_Kernel")]
+impl ::core::clone::Clone for PEB_LDR_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+pub struct PROCESS_BASIC_INFORMATION {
+    pub Reserved1: *mut ::core::ffi::c_void,
+    pub PebBaseAddress: *mut PEB,
+    pub Reserved2: [*mut ::core::ffi::c_void; 2],
+    pub UniqueProcessId: usize,
+    pub Reserved3: *mut ::core::ffi::c_void,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+impl ::core::marker::Copy for PROCESS_BASIC_INFORMATION {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+impl ::core::clone::Clone for PROCESS_BASIC_INFORMATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub struct PROCESS_DYNAMIC_EH_CONTINUATION_TARGET {
@@ -1303,30 +1692,6 @@ impl ::core::clone::Clone for PROCESS_INFORMATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PROCESS_INFORMATION_CLASS = i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessMemoryPriority: PROCESS_INFORMATION_CLASS = 0i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessMemoryExhaustionInfo: PROCESS_INFORMATION_CLASS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessAppMemoryInfo: PROCESS_INFORMATION_CLASS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessInPrivateInfo: PROCESS_INFORMATION_CLASS = 3i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessPowerThrottling: PROCESS_INFORMATION_CLASS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessReservedValue1: PROCESS_INFORMATION_CLASS = 5i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessTelemetryCoverageInfo: PROCESS_INFORMATION_CLASS = 6i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessProtectionLevelInfo: PROCESS_INFORMATION_CLASS = 7i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessLeapSecondInfo: PROCESS_INFORMATION_CLASS = 8i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessMachineTypeInfo: PROCESS_INFORMATION_CLASS = 9i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessInformationClassMax: PROCESS_INFORMATION_CLASS = 10i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub struct PROCESS_LEAP_SECOND_INFO {
@@ -1339,18 +1704,17 @@ impl ::core::clone::Clone for PROCESS_LEAP_SECOND_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROCESS_LEAP_SECOND_INFO_FLAG_ENABLE_SIXTY_SECOND: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROCESS_LEAP_SECOND_INFO_VALID_FLAGS: u32 = 1u32;
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+#[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_System_SystemInformation\"`*"]
+#[cfg(feature = "Win32_System_SystemInformation")]
 pub struct PROCESS_MACHINE_INFORMATION {
-    pub ProcessMachine: u16,
+    pub ProcessMachine: super::SystemInformation::IMAGE_FILE_MACHINE,
     pub Res0: u16,
     pub MachineAttributes: MACHINE_ATTRIBUTES,
 }
+#[cfg(feature = "Win32_System_SystemInformation")]
 impl ::core::marker::Copy for PROCESS_MACHINE_INFORMATION {}
+#[cfg(feature = "Win32_System_SystemInformation")]
 impl ::core::clone::Clone for PROCESS_MACHINE_INFORMATION {
     fn clone(&self) -> Self {
         *self
@@ -1370,62 +1734,6 @@ impl ::core::clone::Clone for PROCESS_MEMORY_EXHAUSTION_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PROCESS_MEMORY_EXHAUSTION_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PMETypeFailFastOnCommitFailure: PROCESS_MEMORY_EXHAUSTION_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PMETypeMax: PROCESS_MEMORY_EXHAUSTION_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PROCESS_MITIGATION_POLICY = i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessDEPPolicy: PROCESS_MITIGATION_POLICY = 0i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessASLRPolicy: PROCESS_MITIGATION_POLICY = 1i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessDynamicCodePolicy: PROCESS_MITIGATION_POLICY = 2i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessStrictHandleCheckPolicy: PROCESS_MITIGATION_POLICY = 3i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessSystemCallDisablePolicy: PROCESS_MITIGATION_POLICY = 4i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessMitigationOptionsMask: PROCESS_MITIGATION_POLICY = 5i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessExtensionPointDisablePolicy: PROCESS_MITIGATION_POLICY = 6i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessControlFlowGuardPolicy: PROCESS_MITIGATION_POLICY = 7i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessSignaturePolicy: PROCESS_MITIGATION_POLICY = 8i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessFontDisablePolicy: PROCESS_MITIGATION_POLICY = 9i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessImageLoadPolicy: PROCESS_MITIGATION_POLICY = 10i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessSystemCallFilterPolicy: PROCESS_MITIGATION_POLICY = 11i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessPayloadRestrictionPolicy: PROCESS_MITIGATION_POLICY = 12i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessChildProcessPolicy: PROCESS_MITIGATION_POLICY = 13i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessSideChannelIsolationPolicy: PROCESS_MITIGATION_POLICY = 14i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessUserShadowStackPolicy: PROCESS_MITIGATION_POLICY = 15i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcessRedirectionTrustPolicy: PROCESS_MITIGATION_POLICY = 16i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const MaxProcessMitigationPolicy: PROCESS_MITIGATION_POLICY = 17i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PROCESS_NAME_FORMAT = u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROCESS_NAME_WIN32: PROCESS_NAME_FORMAT = 0u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROCESS_NAME_NATIVE: PROCESS_NAME_FORMAT = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROCESS_POWER_THROTTLING_CURRENT_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROCESS_POWER_THROTTLING_EXECUTION_SPEED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION: u32 = 4u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub struct PROCESS_POWER_THROTTLING_STATE {
@@ -1439,28 +1747,6 @@ impl ::core::clone::Clone for PROCESS_POWER_THROTTLING_STATE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PROCESS_PROTECTION_LEVEL = u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROTECTION_LEVEL_WINTCB_LIGHT: PROCESS_PROTECTION_LEVEL = 0u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROTECTION_LEVEL_WINDOWS: PROCESS_PROTECTION_LEVEL = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROTECTION_LEVEL_WINDOWS_LIGHT: PROCESS_PROTECTION_LEVEL = 2u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROTECTION_LEVEL_ANTIMALWARE_LIGHT: PROCESS_PROTECTION_LEVEL = 3u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROTECTION_LEVEL_LSA_LIGHT: PROCESS_PROTECTION_LEVEL = 4u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROTECTION_LEVEL_WINTCB: PROCESS_PROTECTION_LEVEL = 5u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROTECTION_LEVEL_CODEGEN_LIGHT: PROCESS_PROTECTION_LEVEL = 6u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROTECTION_LEVEL_AUTHENTICODE: PROCESS_PROTECTION_LEVEL = 7u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROTECTION_LEVEL_PPL_APP: PROCESS_PROTECTION_LEVEL = 8u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROTECTION_LEVEL_NONE: PROCESS_PROTECTION_LEVEL = 4294967294u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub struct PROCESS_PROTECTION_LEVEL_INFORMATION {
@@ -1472,112 +1758,7 @@ impl ::core::clone::Clone for PROCESS_PROTECTION_LEVEL_INFORMATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_ALL_APPLICATION_PACKAGES_POLICY: u32 = 131087u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_CHILD_PROCESS_POLICY: u32 = 131086u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_COMPONENT_FILTER: u32 = 131098u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_DESKTOP_APP_POLICY: u32 = 131090u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_ENABLE_OPTIONAL_XSTATE_FEATURES: u32 = 196635u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_GROUP_AFFINITY: u32 = 196611u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_HANDLE_LIST: u32 = 131074u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_IDEAL_PROCESSOR: u32 = 196613u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_JOB_LIST: u32 = 131085u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_MACHINE_TYPE: u32 = 131097u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_MITIGATION_AUDIT_POLICY: u32 = 131096u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_MITIGATION_POLICY: u32 = 131079u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PROC_THREAD_ATTRIBUTE_NUM = u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeParentProcess: PROC_THREAD_ATTRIBUTE_NUM = 0u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeHandleList: PROC_THREAD_ATTRIBUTE_NUM = 2u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeGroupAffinity: PROC_THREAD_ATTRIBUTE_NUM = 3u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributePreferredNode: PROC_THREAD_ATTRIBUTE_NUM = 4u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeIdealProcessor: PROC_THREAD_ATTRIBUTE_NUM = 5u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeUmsThread: PROC_THREAD_ATTRIBUTE_NUM = 6u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeMitigationPolicy: PROC_THREAD_ATTRIBUTE_NUM = 7u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeSecurityCapabilities: PROC_THREAD_ATTRIBUTE_NUM = 9u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeProtectionLevel: PROC_THREAD_ATTRIBUTE_NUM = 11u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeJobList: PROC_THREAD_ATTRIBUTE_NUM = 13u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeChildProcessPolicy: PROC_THREAD_ATTRIBUTE_NUM = 14u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeAllApplicationPackagesPolicy: PROC_THREAD_ATTRIBUTE_NUM = 15u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeWin32kFilter: PROC_THREAD_ATTRIBUTE_NUM = 16u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeSafeOpenPromptOriginClaim: PROC_THREAD_ATTRIBUTE_NUM = 17u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeDesktopAppPolicy: PROC_THREAD_ATTRIBUTE_NUM = 18u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributePseudoConsole: PROC_THREAD_ATTRIBUTE_NUM = 22u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeMitigationAuditPolicy: PROC_THREAD_ATTRIBUTE_NUM = 24u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeMachineType: PROC_THREAD_ATTRIBUTE_NUM = 25u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeComponentFilter: PROC_THREAD_ATTRIBUTE_NUM = 26u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ProcThreadAttributeEnableOptionalXStateFeatures: PROC_THREAD_ATTRIBUTE_NUM = 27u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_PARENT_PROCESS: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_PREFERRED_NODE: u32 = 131076u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_PROTECTION_LEVEL: u32 = 131083u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE: u32 = 131094u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_REPLACE_VALUE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES: u32 = 131081u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_UMS_THREAD: u32 = 196614u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const PROC_THREAD_ATTRIBUTE_WIN32K_FILTER: u32 = 131088u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_System_SystemServices\"`*"]
-#[cfg(feature = "Win32_System_SystemServices")]
-pub type PRTL_UMS_SCHEDULER_ENTRY_POINT = ::core::option::Option<unsafe extern "system" fn(reason: super::SystemServices::RTL_UMS_SCHEDULER_REASON, activationpayload: usize, schedulerparam: *const ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PTIMERAPCROUTINE = ::core::option::Option<unsafe extern "system" fn(lpargtocompletionroutine: *const ::core::ffi::c_void, dwtimerlowvalue: u32, dwtimerhighvalue: u32)>;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PTP_CLEANUP_GROUP_CANCEL_CALLBACK = ::core::option::Option<unsafe extern "system" fn(objectcontext: *mut ::core::ffi::c_void, cleanupcontext: *mut ::core::ffi::c_void)>;
 pub type PTP_POOL = isize;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PTP_SIMPLE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(instance: *mut TP_CALLBACK_INSTANCE, context: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PTP_TIMER_CALLBACK = ::core::option::Option<unsafe extern "system" fn(instance: *mut TP_CALLBACK_INSTANCE, context: *mut ::core::ffi::c_void, timer: *mut TP_TIMER)>;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PTP_WAIT_CALLBACK = ::core::option::Option<unsafe extern "system" fn(instance: *mut TP_CALLBACK_INSTANCE, context: *mut ::core::ffi::c_void, wait: *mut TP_WAIT, waitresult: u32)>;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PTP_WIN32_IO_CALLBACK = ::core::option::Option<unsafe extern "system" fn(instance: *mut TP_CALLBACK_INSTANCE, context: *mut ::core::ffi::c_void, overlapped: *mut ::core::ffi::c_void, ioresult: u32, numberofbytestransferred: usize, io: *mut TP_IO)>;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type PTP_WORK_CALLBACK = ::core::option::Option<unsafe extern "system" fn(instance: *mut TP_CALLBACK_INSTANCE, context: *mut ::core::ffi::c_void, work: *mut TP_WORK)>;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type QUEUE_USER_APC_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const QUEUE_USER_APC_FLAGS_NONE: QUEUE_USER_APC_FLAGS = 0i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC: QUEUE_USER_APC_FLAGS = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1715,24 +1896,6 @@ impl ::core::clone::Clone for RTL_SRWLOCK {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type RTL_UMS_THREAD_INFO_CLASS = i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const UmsThreadInvalidInfoClass: RTL_UMS_THREAD_INFO_CLASS = 0i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const UmsThreadUserContext: RTL_UMS_THREAD_INFO_CLASS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const UmsThreadPriority: RTL_UMS_THREAD_INFO_CLASS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const UmsThreadAffinity: RTL_UMS_THREAD_INFO_CLASS = 3i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const UmsThreadTeb: RTL_UMS_THREAD_INFO_CLASS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const UmsThreadIsSuspended: RTL_UMS_THREAD_INFO_CLASS = 5i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const UmsThreadIsTerminated: RTL_UMS_THREAD_INFO_CLASS = 6i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const UmsThreadMaxInfoClass: RTL_UMS_THREAD_INFO_CLASS = 7i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1842,112 +2005,6 @@ impl ::core::clone::Clone for STARTUPINFOW {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type STARTUPINFOW_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_FORCEONFEEDBACK: STARTUPINFOW_FLAGS = 64u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_FORCEOFFFEEDBACK: STARTUPINFOW_FLAGS = 128u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_PREVENTPINNING: STARTUPINFOW_FLAGS = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_RUNFULLSCREEN: STARTUPINFOW_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_TITLEISAPPID: STARTUPINFOW_FLAGS = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_TITLEISLINKNAME: STARTUPINFOW_FLAGS = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_UNTRUSTEDSOURCE: STARTUPINFOW_FLAGS = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_USECOUNTCHARS: STARTUPINFOW_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_USEFILLATTRIBUTE: STARTUPINFOW_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_USEHOTKEY: STARTUPINFOW_FLAGS = 512u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_USEPOSITION: STARTUPINFOW_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_USESHOWWINDOW: STARTUPINFOW_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_USESIZE: STARTUPINFOW_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STARTF_USESTDHANDLES: STARTUPINFOW_FLAGS = 256u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const SYNCHRONIZATION_BARRIER_FLAGS_NO_DELETE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const SYNCHRONIZATION_BARRIER_FLAGS_SPIN_ONLY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type THREADINFOCLASS = i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ThreadIsIoPending: THREADINFOCLASS = 16i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ThreadNameInformation: THREADINFOCLASS = 38i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type THREAD_ACCESS_RIGHTS = u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_TERMINATE: THREAD_ACCESS_RIGHTS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_SUSPEND_RESUME: THREAD_ACCESS_RIGHTS = 2u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_GET_CONTEXT: THREAD_ACCESS_RIGHTS = 8u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_SET_CONTEXT: THREAD_ACCESS_RIGHTS = 16u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_SET_INFORMATION: THREAD_ACCESS_RIGHTS = 32u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_QUERY_INFORMATION: THREAD_ACCESS_RIGHTS = 64u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_SET_THREAD_TOKEN: THREAD_ACCESS_RIGHTS = 128u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_IMPERSONATE: THREAD_ACCESS_RIGHTS = 256u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_DIRECT_IMPERSONATION: THREAD_ACCESS_RIGHTS = 512u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_SET_LIMITED_INFORMATION: THREAD_ACCESS_RIGHTS = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_QUERY_LIMITED_INFORMATION: THREAD_ACCESS_RIGHTS = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_RESUME: THREAD_ACCESS_RIGHTS = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_ALL_ACCESS: THREAD_ACCESS_RIGHTS = 2097151u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_DELETE: THREAD_ACCESS_RIGHTS = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_READ_CONTROL: THREAD_ACCESS_RIGHTS = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_WRITE_DAC: THREAD_ACCESS_RIGHTS = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_WRITE_OWNER: THREAD_ACCESS_RIGHTS = 524288u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_SYNCHRONIZE: THREAD_ACCESS_RIGHTS = 1048576u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_STANDARD_RIGHTS_REQUIRED: THREAD_ACCESS_RIGHTS = 983040u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type THREAD_CREATION_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_CREATE_RUN_IMMEDIATELY: THREAD_CREATION_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_CREATE_SUSPENDED: THREAD_CREATION_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const STACK_SIZE_PARAM_IS_A_RESERVATION: THREAD_CREATION_FLAGS = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type THREAD_INFORMATION_CLASS = i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ThreadMemoryPriority: THREAD_INFORMATION_CLASS = 0i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ThreadAbsoluteCpuPriority: THREAD_INFORMATION_CLASS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ThreadDynamicCodePolicy: THREAD_INFORMATION_CLASS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ThreadPowerThrottling: THREAD_INFORMATION_CLASS = 3i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const ThreadInformationClassMax: THREAD_INFORMATION_CLASS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_POWER_THROTTLING_CURRENT_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_POWER_THROTTLING_EXECUTION_SPEED: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub struct THREAD_POWER_THROTTLING_STATE {
@@ -1961,30 +2018,6 @@ impl ::core::clone::Clone for THREAD_POWER_THROTTLING_STATE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_POWER_THROTTLING_VALID_FLAGS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type THREAD_PRIORITY = i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_MODE_BACKGROUND_BEGIN: THREAD_PRIORITY = 65536i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_MODE_BACKGROUND_END: THREAD_PRIORITY = 131072i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_PRIORITY_ABOVE_NORMAL: THREAD_PRIORITY = 1i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_PRIORITY_BELOW_NORMAL: THREAD_PRIORITY = -1i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_PRIORITY_HIGHEST: THREAD_PRIORITY = 2i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_PRIORITY_IDLE: THREAD_PRIORITY = -15i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_PRIORITY_MIN: THREAD_PRIORITY = -2i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_PRIORITY_LOWEST: THREAD_PRIORITY = -2i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_PRIORITY_NORMAL: THREAD_PRIORITY = 0i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const THREAD_PRIORITY_TIME_CRITICAL: THREAD_PRIORITY = 15i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Threading\"`*"]
 pub struct TP_CALLBACK_ENVIRON_V3 {
@@ -2032,18 +2065,6 @@ impl ::core::clone::Clone for TP_CALLBACK_ENVIRON_V3_1_0 {
 }
 #[repr(C)]
 pub struct TP_CALLBACK_INSTANCE(pub u8);
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type TP_CALLBACK_PRIORITY = i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const TP_CALLBACK_PRIORITY_HIGH: TP_CALLBACK_PRIORITY = 0i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const TP_CALLBACK_PRIORITY_NORMAL: TP_CALLBACK_PRIORITY = 1i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const TP_CALLBACK_PRIORITY_LOW: TP_CALLBACK_PRIORITY = 2i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const TP_CALLBACK_PRIORITY_INVALID: TP_CALLBACK_PRIORITY = 3i32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const TP_CALLBACK_PRIORITY_COUNT: TP_CALLBACK_PRIORITY = 3i32;
 #[repr(C)]
 pub struct TP_IO(pub u8);
 #[repr(C)]
@@ -2117,32 +2138,34 @@ impl ::core::clone::Clone for UMS_SYSTEM_THREAD_INFORMATION_0_0 {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type LPFIBER_START_ROUTINE = ::core::option::Option<unsafe extern "system" fn(lpfiberparameter: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type LPTHREAD_START_ROUTINE = ::core::option::Option<unsafe extern "system" fn(lpthreadparameter: *mut ::core::ffi::c_void) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PFLS_CALLBACK_FUNCTION = ::core::option::Option<unsafe extern "system" fn(lpflsdata: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PINIT_ONCE_FN = ::core::option::Option<unsafe extern "system" fn(initonce: *mut RTL_RUN_ONCE, parameter: *mut ::core::ffi::c_void, context: *mut *mut ::core::ffi::c_void) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PPS_POST_PROCESS_INIT_ROUTINE = ::core::option::Option<unsafe extern "system" fn()>;
+#[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_System_SystemServices\"`*"]
+#[cfg(feature = "Win32_System_SystemServices")]
+pub type PRTL_UMS_SCHEDULER_ENTRY_POINT = ::core::option::Option<unsafe extern "system" fn(reason: super::SystemServices::RTL_UMS_SCHEDULER_REASON, activationpayload: usize, schedulerparam: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PTIMERAPCROUTINE = ::core::option::Option<unsafe extern "system" fn(lpargtocompletionroutine: *const ::core::ffi::c_void, dwtimerlowvalue: u32, dwtimerhighvalue: u32)>;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PTP_CLEANUP_GROUP_CANCEL_CALLBACK = ::core::option::Option<unsafe extern "system" fn(objectcontext: *mut ::core::ffi::c_void, cleanupcontext: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PTP_SIMPLE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(instance: *mut TP_CALLBACK_INSTANCE, context: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PTP_TIMER_CALLBACK = ::core::option::Option<unsafe extern "system" fn(instance: *mut TP_CALLBACK_INSTANCE, context: *mut ::core::ffi::c_void, timer: *mut TP_TIMER)>;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PTP_WAIT_CALLBACK = ::core::option::Option<unsafe extern "system" fn(instance: *mut TP_CALLBACK_INSTANCE, context: *mut ::core::ffi::c_void, wait: *mut TP_WAIT, waitresult: u32)>;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PTP_WIN32_IO_CALLBACK = ::core::option::Option<unsafe extern "system" fn(instance: *mut TP_CALLBACK_INSTANCE, context: *mut ::core::ffi::c_void, overlapped: *mut ::core::ffi::c_void, ioresult: u32, numberofbytestransferred: usize, io: *mut TP_IO)>;
+#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
+pub type PTP_WORK_CALLBACK = ::core::option::Option<unsafe extern "system" fn(instance: *mut TP_CALLBACK_INSTANCE, context: *mut ::core::ffi::c_void, work: *mut TP_WORK)>;
 #[doc = "*Required features: `\"Win32_System_Threading\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
 pub type WAITORTIMERCALLBACK = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void, param1: super::super::Foundation::BOOLEAN)>;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const WAIT_ABANDONED: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const WAIT_ABANDONED_0: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const WAIT_IO_COMPLETION: u32 = 192u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const WAIT_OBJECT_0: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub type WORKER_THREAD_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const WT_EXECUTEDEFAULT: WORKER_THREAD_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const WT_EXECUTEINIOTHREAD: WORKER_THREAD_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const WT_EXECUTEINPERSISTENTTHREAD: WORKER_THREAD_FLAGS = 128u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const WT_EXECUTEINWAITTHREAD: WORKER_THREAD_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const WT_EXECUTELONGFUNCTION: WORKER_THREAD_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const WT_EXECUTEONLYONCE: WORKER_THREAD_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const WT_TRANSFER_IMPERSONATION: WORKER_THREAD_FLAGS = 256u32;
-#[doc = "*Required features: `\"Win32_System_Threading\"`*"]
-pub const WT_EXECUTEINTIMERTHREAD: WORKER_THREAD_FLAGS = 32u32;

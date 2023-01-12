@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
     pub fn WSDAllocateLinkedMemory(pparent: *mut ::core::ffi::c_void, cbsize: usize) -> *mut ::core::ffi::c_void;
@@ -65,14 +65,6 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
     pub fn WSDXMLGetValueFromAny(psznamespace: ::windows_sys::core::PCWSTR, pszname: ::windows_sys::core::PCWSTR, pany: *mut WSDXML_ELEMENT, ppszvalue: *mut ::windows_sys::core::PWSTR) -> ::windows_sys::core::HRESULT;
 }
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub type DeviceDiscoveryMechanism = i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const MulticastDiscovery: DeviceDiscoveryMechanism = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const DirectedDiscovery: DeviceDiscoveryMechanism = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const SecureDirectedDiscovery: DeviceDiscoveryMechanism = 2i32;
 pub type IWSDAddress = *mut ::core::ffi::c_void;
 pub type IWSDAsyncCallback = *mut ::core::ffi::c_void;
 pub type IWSDAsyncResult = *mut ::core::ffi::c_void;
@@ -105,7 +97,201 @@ pub type IWSDiscoveryProviderNotify = *mut ::core::ffi::c_void;
 pub type IWSDiscoveryPublisher = *mut ::core::ffi::c_void;
 pub type IWSDiscoveryPublisherNotify = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub type PWSD_SOAP_MESSAGE_HANDLER = ::core::option::Option<unsafe extern "system" fn(thisunknown: ::windows_sys::core::IUnknown, event: *mut WSD_EVENT) -> ::windows_sys::core::HRESULT>;
+pub const WSDAPI_ADDRESSFAMILY_IPV4: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDAPI_ADDRESSFAMILY_IPV6: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDAPI_COMPACTSIG_ACCEPT_ALL_MESSAGES: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDAPI_OPTION_MAX_INBOUND_MESSAGE_SIZE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDAPI_OPTION_TRACE_XML_TO_DEBUGGER: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDAPI_OPTION_TRACE_XML_TO_FILE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDAPI_SSL_CERT_APPLY_DEFAULT_CHECKS: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDAPI_SSL_CERT_IGNORE_EXPIRY: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDAPI_SSL_CERT_IGNORE_INVALID_CN: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDAPI_SSL_CERT_IGNORE_REVOCATION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDAPI_SSL_CERT_IGNORE_UNKNOWN_CA: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDAPI_SSL_CERT_IGNORE_WRONG_USAGE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_DEFAULT_EVENTING_ADDRESS: &str = "http://*:5357/";
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_DEFAULT_HOSTING_ADDRESS: &str = "http://*:5357/";
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_DEFAULT_SECURE_HOSTING_ADDRESS: &str = "https://*:5358/";
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_SECURITY_HTTP_AUTH_SCHEME_NEGOTIATE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_SECURITY_HTTP_AUTH_SCHEME_NTLM: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub type DeviceDiscoveryMechanism = i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const MulticastDiscovery: DeviceDiscoveryMechanism = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const DirectedDiscovery: DeviceDiscoveryMechanism = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const SecureDirectedDiscovery: DeviceDiscoveryMechanism = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub type WSDEventType = i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDET_NONE: WSDEventType = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDET_INCOMING_MESSAGE: WSDEventType = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDET_INCOMING_FAULT: WSDEventType = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDET_TRANSMISSION_FAILURE: WSDEventType = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSDET_RESPONSE_TIMEOUT: WSDEventType = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub type WSDUdpMessageType = i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const ONE_WAY: WSDUdpMessageType = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const TWO_WAY: WSDUdpMessageType = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub type WSDXML_OP = i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpNone: WSDXML_OP = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpEndOfTable: WSDXML_OP = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpBeginElement_: WSDXML_OP = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpBeginAnyElement: WSDXML_OP = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpEndElement: WSDXML_OP = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpElement_: WSDXML_OP = 5i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpAnyElement: WSDXML_OP = 6i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpAnyElements: WSDXML_OP = 7i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpAnyText: WSDXML_OP = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpAttribute_: WSDXML_OP = 9i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpBeginChoice: WSDXML_OP = 10i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpEndChoice: WSDXML_OP = 11i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpBeginSequence: WSDXML_OP = 12i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpEndSequence: WSDXML_OP = 13i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpBeginAll: WSDXML_OP = 14i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpEndAll: WSDXML_OP = 15i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpAnything: WSDXML_OP = 16i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpAnyNumber: WSDXML_OP = 17i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpOneOrMore: WSDXML_OP = 18i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpOptional: WSDXML_OP = 19i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatBool_: WSDXML_OP = 20i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatInt8_: WSDXML_OP = 21i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatInt16_: WSDXML_OP = 22i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatInt32_: WSDXML_OP = 23i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatInt64_: WSDXML_OP = 24i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatUInt8_: WSDXML_OP = 25i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatUInt16_: WSDXML_OP = 26i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatUInt32_: WSDXML_OP = 27i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatUInt64_: WSDXML_OP = 28i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatUnicodeString_: WSDXML_OP = 29i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatDom_: WSDXML_OP = 30i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatStruct_: WSDXML_OP = 31i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatUri_: WSDXML_OP = 32i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatUuidUri_: WSDXML_OP = 33i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatName_: WSDXML_OP = 34i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatListInsertTail_: WSDXML_OP = 35i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatType_: WSDXML_OP = 36i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatDynamicType_: WSDXML_OP = 37i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatLookupType_: WSDXML_OP = 38i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatDuration_: WSDXML_OP = 39i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatDateTime_: WSDXML_OP = 40i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatFloat_: WSDXML_OP = 41i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatDouble_: WSDXML_OP = 42i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpProcess_: WSDXML_OP = 43i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpQualifiedAttribute_: WSDXML_OP = 44i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatXMLDeclaration_: WSDXML_OP = 45i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const OpFormatMax: WSDXML_OP = 46i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub type WSD_CONFIG_PARAM_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_CONFIG_MAX_INBOUND_MESSAGE_SIZE: WSD_CONFIG_PARAM_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_CONFIG_MAX_OUTBOUND_MESSAGE_SIZE: WSD_CONFIG_PARAM_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_SECURITY_SSL_CERT_FOR_CLIENT_AUTH: WSD_CONFIG_PARAM_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_SECURITY_SSL_SERVER_CERT_VALIDATION: WSD_CONFIG_PARAM_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_SECURITY_SSL_CLIENT_CERT_VALIDATION: WSD_CONFIG_PARAM_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_SECURITY_SSL_NEGOTIATE_CLIENT_CERT: WSD_CONFIG_PARAM_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_SECURITY_COMPACTSIG_SIGNING_CERT: WSD_CONFIG_PARAM_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_SECURITY_COMPACTSIG_VALIDATION: WSD_CONFIG_PARAM_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_CONFIG_HOSTING_ADDRESSES: WSD_CONFIG_PARAM_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_CONFIG_DEVICE_ADDRESSES: WSD_CONFIG_PARAM_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_SECURITY_REQUIRE_HTTP_CLIENT_AUTH: WSD_CONFIG_PARAM_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_SECURITY_REQUIRE_CLIENT_CERT_OR_HTTP_CLIENT_AUTH: WSD_CONFIG_PARAM_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_SECURITY_USE_HTTP_CLIENT_AUTH: WSD_CONFIG_PARAM_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub type WSD_PROTOCOL_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_PT_NONE: WSD_PROTOCOL_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_PT_UDP: WSD_PROTOCOL_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_PT_HTTP: WSD_PROTOCOL_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_PT_HTTPS: WSD_PROTOCOL_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub const WSD_PT_ALL: WSD_PROTOCOL_TYPE = 255i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
 pub struct REQUESTBODY_GetStatus {
@@ -232,48 +418,6 @@ impl ::core::clone::Clone for RESPONSEBODY_SubscriptionEnd {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDAPI_ADDRESSFAMILY_IPV4: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDAPI_ADDRESSFAMILY_IPV6: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDAPI_COMPACTSIG_ACCEPT_ALL_MESSAGES: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDAPI_OPTION_MAX_INBOUND_MESSAGE_SIZE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDAPI_OPTION_TRACE_XML_TO_DEBUGGER: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDAPI_OPTION_TRACE_XML_TO_FILE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDAPI_SSL_CERT_APPLY_DEFAULT_CHECKS: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDAPI_SSL_CERT_IGNORE_EXPIRY: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDAPI_SSL_CERT_IGNORE_INVALID_CN: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDAPI_SSL_CERT_IGNORE_REVOCATION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDAPI_SSL_CERT_IGNORE_UNKNOWN_CA: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDAPI_SSL_CERT_IGNORE_WRONG_USAGE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub type WSDEventType = i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDET_NONE: WSDEventType = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDET_INCOMING_MESSAGE: WSDEventType = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDET_INCOMING_FAULT: WSDEventType = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDET_TRANSMISSION_FAILURE: WSDEventType = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSDET_RESPONSE_TIMEOUT: WSDEventType = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub type WSDUdpMessageType = i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const ONE_WAY: WSDUdpMessageType = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const TWO_WAY: WSDUdpMessageType = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
 pub struct WSDUdpRetransmitParams {
@@ -374,102 +518,6 @@ impl ::core::clone::Clone for WSDXML_NODE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub type WSDXML_OP = i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpNone: WSDXML_OP = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpEndOfTable: WSDXML_OP = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpBeginElement_: WSDXML_OP = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpBeginAnyElement: WSDXML_OP = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpEndElement: WSDXML_OP = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpElement_: WSDXML_OP = 5i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpAnyElement: WSDXML_OP = 6i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpAnyElements: WSDXML_OP = 7i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpAnyText: WSDXML_OP = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpAttribute_: WSDXML_OP = 9i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpBeginChoice: WSDXML_OP = 10i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpEndChoice: WSDXML_OP = 11i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpBeginSequence: WSDXML_OP = 12i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpEndSequence: WSDXML_OP = 13i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpBeginAll: WSDXML_OP = 14i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpEndAll: WSDXML_OP = 15i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpAnything: WSDXML_OP = 16i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpAnyNumber: WSDXML_OP = 17i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpOneOrMore: WSDXML_OP = 18i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpOptional: WSDXML_OP = 19i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatBool_: WSDXML_OP = 20i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatInt8_: WSDXML_OP = 21i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatInt16_: WSDXML_OP = 22i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatInt32_: WSDXML_OP = 23i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatInt64_: WSDXML_OP = 24i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatUInt8_: WSDXML_OP = 25i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatUInt16_: WSDXML_OP = 26i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatUInt32_: WSDXML_OP = 27i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatUInt64_: WSDXML_OP = 28i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatUnicodeString_: WSDXML_OP = 29i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatDom_: WSDXML_OP = 30i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatStruct_: WSDXML_OP = 31i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatUri_: WSDXML_OP = 32i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatUuidUri_: WSDXML_OP = 33i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatName_: WSDXML_OP = 34i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatListInsertTail_: WSDXML_OP = 35i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatType_: WSDXML_OP = 36i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatDynamicType_: WSDXML_OP = 37i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatLookupType_: WSDXML_OP = 38i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatDuration_: WSDXML_OP = 39i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatDateTime_: WSDXML_OP = 40i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatFloat_: WSDXML_OP = 41i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatDouble_: WSDXML_OP = 42i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpProcess_: WSDXML_OP = 43i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpQualifiedAttribute_: WSDXML_OP = 44i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatXMLDeclaration_: WSDXML_OP = 45i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const OpFormatMax: WSDXML_OP = 46i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
 pub struct WSDXML_PREFIX_MAPPING {
@@ -558,34 +606,6 @@ impl ::core::clone::Clone for WSD_CONFIG_PARAM {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub type WSD_CONFIG_PARAM_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_CONFIG_MAX_INBOUND_MESSAGE_SIZE: WSD_CONFIG_PARAM_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_CONFIG_MAX_OUTBOUND_MESSAGE_SIZE: WSD_CONFIG_PARAM_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_SECURITY_SSL_CERT_FOR_CLIENT_AUTH: WSD_CONFIG_PARAM_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_SECURITY_SSL_SERVER_CERT_VALIDATION: WSD_CONFIG_PARAM_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_SECURITY_SSL_CLIENT_CERT_VALIDATION: WSD_CONFIG_PARAM_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_SECURITY_SSL_NEGOTIATE_CLIENT_CERT: WSD_CONFIG_PARAM_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_SECURITY_COMPACTSIG_SIGNING_CERT: WSD_CONFIG_PARAM_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_SECURITY_COMPACTSIG_VALIDATION: WSD_CONFIG_PARAM_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_CONFIG_HOSTING_ADDRESSES: WSD_CONFIG_PARAM_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_CONFIG_DEVICE_ADDRESSES: WSD_CONFIG_PARAM_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_SECURITY_REQUIRE_HTTP_CLIENT_AUTH: WSD_CONFIG_PARAM_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_SECURITY_REQUIRE_CLIENT_CERT_OR_HTTP_CLIENT_AUTH: WSD_CONFIG_PARAM_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_SECURITY_USE_HTTP_CLIENT_AUTH: WSD_CONFIG_PARAM_TYPE = 13i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -611,12 +631,6 @@ impl ::core::clone::Clone for WSD_DATETIME {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_DEFAULT_EVENTING_ADDRESS: &str = "http://*:5357/";
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_DEFAULT_HOSTING_ADDRESS: &str = "http://*:5357/";
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_DEFAULT_SECURE_HOSTING_ADDRESS: &str = "https://*:5358/";
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -943,18 +957,6 @@ impl ::core::clone::Clone for WSD_PROBE_MATCH_LIST {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub type WSD_PROTOCOL_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_PT_NONE: WSD_PROTOCOL_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_PT_UDP: WSD_PROTOCOL_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_PT_HTTP: WSD_PROTOCOL_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_PT_HTTPS: WSD_PROTOCOL_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_PT_ALL: WSD_PROTOCOL_TYPE = 255i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
 pub struct WSD_REFERENCE_PARAMETERS {
@@ -1081,10 +1083,6 @@ impl ::core::clone::Clone for WSD_SECURITY_CERT_VALIDATION_V1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_SECURITY_HTTP_AUTH_SCHEME_NEGOTIATE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub const WSD_SECURITY_HTTP_AUTH_SCHEME_NTLM: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`, `\"Win32_Foundation\"`, `\"Win32_Security_Cryptography\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security_Cryptography"))]
@@ -1210,8 +1208,6 @@ impl ::core::clone::Clone for WSD_SOAP_MESSAGE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
-pub type WSD_STUB_FUNCTION = ::core::option::Option<unsafe extern "system" fn(server: ::windows_sys::core::IUnknown, session: IWSDServiceMessaging, event: *mut WSD_EVENT) -> ::windows_sys::core::HRESULT>;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -1283,3 +1279,7 @@ impl ::core::clone::Clone for WSD_URI_LIST {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub type PWSD_SOAP_MESSAGE_HANDLER = ::core::option::Option<unsafe extern "system" fn(thisunknown: ::windows_sys::core::IUnknown, event: *mut WSD_EVENT) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_Devices_WebServicesOnDevices\"`*"]
+pub type WSD_STUB_FUNCTION = ::core::option::Option<unsafe extern "system" fn(server: ::windows_sys::core::IUnknown, session: IWSDServiceMessaging, event: *mut WSD_EVENT) -> ::windows_sys::core::HRESULT>;

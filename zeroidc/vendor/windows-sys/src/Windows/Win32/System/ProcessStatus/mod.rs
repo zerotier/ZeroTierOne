@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_ProcessStatus\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -78,6 +78,18 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn K32QueryWorkingSetEx(hprocess: super::super::Foundation::HANDLE, pv: *mut ::core::ffi::c_void, cb: u32) -> super::super::Foundation::BOOL;
 }
+#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
+pub const PSAPI_VERSION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
+pub type ENUM_PROCESS_MODULES_EX_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
+pub const LIST_MODULES_ALL: ENUM_PROCESS_MODULES_EX_FLAGS = 3u32;
+#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
+pub const LIST_MODULES_DEFAULT: ENUM_PROCESS_MODULES_EX_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
+pub const LIST_MODULES_32BIT: ENUM_PROCESS_MODULES_EX_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
+pub const LIST_MODULES_64BIT: ENUM_PROCESS_MODULES_EX_FLAGS = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
 pub struct ENUM_PAGE_FILE_INFORMATION {
@@ -93,16 +105,6 @@ impl ::core::clone::Clone for ENUM_PAGE_FILE_INFORMATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
-pub type ENUM_PROCESS_MODULES_EX_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
-pub const LIST_MODULES_ALL: ENUM_PROCESS_MODULES_EX_FLAGS = 3u32;
-#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
-pub const LIST_MODULES_DEFAULT: ENUM_PROCESS_MODULES_EX_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
-pub const LIST_MODULES_32BIT: ENUM_PROCESS_MODULES_EX_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
-pub const LIST_MODULES_64BIT: ENUM_PROCESS_MODULES_EX_FLAGS = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
 pub struct MODULEINFO {
@@ -116,12 +118,6 @@ impl ::core::clone::Clone for MODULEINFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PENUM_PAGE_FILE_CALLBACKA = ::core::option::Option<unsafe extern "system" fn(pcontext: *mut ::core::ffi::c_void, ppagefileinfo: *mut ENUM_PAGE_FILE_INFORMATION, lpfilename: ::windows_sys::core::PCSTR) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PENUM_PAGE_FILE_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(pcontext: *mut ::core::ffi::c_void, ppagefileinfo: *mut ENUM_PAGE_FILE_INFORMATION, lpfilename: ::windows_sys::core::PCWSTR) -> super::super::Foundation::BOOL>;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
 pub struct PERFORMANCE_INFORMATION {
@@ -187,8 +183,6 @@ impl ::core::clone::Clone for PROCESS_MEMORY_COUNTERS_EX {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
-pub const PSAPI_VERSION: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_ProcessStatus\"`*"]
 pub union PSAPI_WORKING_SET_BLOCK {
@@ -307,3 +301,9 @@ impl ::core::clone::Clone for PSAPI_WS_WATCH_INFORMATION_EX {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PENUM_PAGE_FILE_CALLBACKA = ::core::option::Option<unsafe extern "system" fn(pcontext: *mut ::core::ffi::c_void, ppagefileinfo: *mut ENUM_PAGE_FILE_INFORMATION, lpfilename: ::windows_sys::core::PCSTR) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_ProcessStatus\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PENUM_PAGE_FILE_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(pcontext: *mut ::core::ffi::c_void, ppagefileinfo: *mut ENUM_PAGE_FILE_INFORMATION, lpfilename: ::windows_sys::core::PCWSTR) -> super::super::Foundation::BOOL>;

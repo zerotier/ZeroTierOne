@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_Pipes\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -68,6 +68,14 @@ extern "system" {
     pub fn WaitNamedPipeW(lpnamedpipename: ::windows_sys::core::PCWSTR, ntimeout: u32) -> super::super::Foundation::BOOL;
 }
 #[doc = "*Required features: `\"Win32_System_Pipes\"`*"]
+pub const NMPWAIT_NOWAIT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Pipes\"`*"]
+pub const NMPWAIT_USE_DEFAULT_WAIT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Pipes\"`*"]
+pub const NMPWAIT_WAIT_FOREVER: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_Pipes\"`*"]
+pub const PIPE_UNLIMITED_INSTANCES: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_System_Pipes\"`*"]
 pub type NAMED_PIPE_MODE = u32;
 #[doc = "*Required features: `\"Win32_System_Pipes\"`*"]
 pub const PIPE_WAIT: NAMED_PIPE_MODE = 0u32;
@@ -89,11 +97,3 @@ pub const PIPE_TYPE_MESSAGE: NAMED_PIPE_MODE = 4u32;
 pub const PIPE_ACCEPT_REMOTE_CLIENTS: NAMED_PIPE_MODE = 0u32;
 #[doc = "*Required features: `\"Win32_System_Pipes\"`*"]
 pub const PIPE_REJECT_REMOTE_CLIENTS: NAMED_PIPE_MODE = 8u32;
-#[doc = "*Required features: `\"Win32_System_Pipes\"`*"]
-pub const NMPWAIT_NOWAIT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Pipes\"`*"]
-pub const NMPWAIT_USE_DEFAULT_WAIT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Pipes\"`*"]
-pub const NMPWAIT_WAIT_FOREVER: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_Pipes\"`*"]
-pub const PIPE_UNLIMITED_INSTANCES: u32 = 255u32;

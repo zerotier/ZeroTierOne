@@ -24,7 +24,7 @@ pub mod Speech;
 pub mod Streaming;
 #[cfg(feature = "Win32_Media_WindowsMediaFormat")]
 pub mod WindowsMediaFormat;
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Media\"`*"]
     pub fn timeBeginPeriod(uperiod: u32) -> u32;
@@ -41,17 +41,11 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Media\"`*"]
     pub fn timeSetEvent(udelay: u32, uresolution: u32, fptc: LPTIMECALLBACK, dwuser: usize, fuevent: u32) -> u32;
 }
-pub type HTASK = isize;
 pub type IReferenceClock = *mut ::core::ffi::c_void;
 pub type IReferenceClock2 = *mut ::core::ffi::c_void;
 pub type IReferenceClockTimerControl = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Media\"`*"]
 pub const JOYERR_BASE: u32 = 160u32;
-#[doc = "*Required features: `\"Win32_Media\"`, `\"Win32_Media_Multimedia\"`*"]
-#[cfg(feature = "Win32_Media_Multimedia")]
-pub type LPDRVCALLBACK = ::core::option::Option<unsafe extern "system" fn(hdrvr: Multimedia::HDRVR, umsg: u32, dwuser: usize, dw1: usize, dw2: usize)>;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub type LPTIMECALLBACK = ::core::option::Option<unsafe extern "system" fn(utimerid: u32, umsg: u32, dwuser: usize, dw1: usize, dw2: usize)>;
 #[doc = "*Required features: `\"Win32_Media\"`*"]
 pub const MAXERRORLENGTH: u32 = 256u32;
 #[doc = "*Required features: `\"Win32_Media\"`*"]
@@ -120,62 +114,6 @@ pub const MMSYSERR_READERROR: u32 = 16u32;
 pub const MMSYSERR_VALNOTFOUND: u32 = 19u32;
 #[doc = "*Required features: `\"Win32_Media\"`*"]
 pub const MMSYSERR_WRITEERROR: u32 = 17u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub struct MMTIME {
-    pub wType: u32,
-    pub u: MMTIME_0,
-}
-impl ::core::marker::Copy for MMTIME {}
-impl ::core::clone::Clone for MMTIME {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub union MMTIME_0 {
-    pub ms: u32,
-    pub sample: u32,
-    pub cb: u32,
-    pub ticks: u32,
-    pub smpte: MMTIME_0_1,
-    pub midi: MMTIME_0_0,
-}
-impl ::core::marker::Copy for MMTIME_0 {}
-impl ::core::clone::Clone for MMTIME_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub struct MMTIME_0_0 {
-    pub songptrpos: u32,
-}
-impl ::core::marker::Copy for MMTIME_0_0 {}
-impl ::core::clone::Clone for MMTIME_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub struct MMTIME_0_1 {
-    pub hour: u8,
-    pub min: u8,
-    pub sec: u8,
-    pub frame: u8,
-    pub fps: u8,
-    pub dummy: u8,
-    pub pad: [u8; 2],
-}
-impl ::core::marker::Copy for MMTIME_0_1 {}
-impl ::core::clone::Clone for MMTIME_0_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media\"`*"]
 pub const MM_ADLIB: u32 = 9u32;
 #[doc = "*Required features: `\"Win32_Media\"`*"]
@@ -274,6 +212,105 @@ pub const MM_WOM_CLOSE: u32 = 956u32;
 pub const MM_WOM_DONE: u32 = 957u32;
 #[doc = "*Required features: `\"Win32_Media\"`*"]
 pub const MM_WOM_OPEN: u32 = 955u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIMERR_BASE: u32 = 96u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIMERR_NOCANDO: u32 = 97u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIMERR_NOERROR: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIMERR_STRUCT: u32 = 129u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIME_BYTES: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIME_CALLBACK_EVENT_PULSE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIME_CALLBACK_EVENT_SET: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIME_CALLBACK_FUNCTION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIME_KILL_SYNCHRONOUS: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIME_MIDI: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIME_MS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIME_ONESHOT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIME_PERIODIC: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIME_SAMPLES: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIME_SMPTE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const TIME_TICKS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const WAVERR_BASE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub type TIMECODE_SAMPLE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const ED_DEVCAP_TIMECODE_READ: TIMECODE_SAMPLE_FLAGS = 4121u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const ED_DEVCAP_ATN_READ: TIMECODE_SAMPLE_FLAGS = 5047u32;
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub const ED_DEVCAP_RTC_READ: TIMECODE_SAMPLE_FLAGS = 5050u32;
+pub type HTASK = isize;
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub struct MMTIME {
+    pub wType: u32,
+    pub u: MMTIME_0,
+}
+impl ::core::marker::Copy for MMTIME {}
+impl ::core::clone::Clone for MMTIME {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub union MMTIME_0 {
+    pub ms: u32,
+    pub sample: u32,
+    pub cb: u32,
+    pub ticks: u32,
+    pub smpte: MMTIME_0_1,
+    pub midi: MMTIME_0_0,
+}
+impl ::core::marker::Copy for MMTIME_0 {}
+impl ::core::clone::Clone for MMTIME_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub struct MMTIME_0_0 {
+    pub songptrpos: u32,
+}
+impl ::core::marker::Copy for MMTIME_0_0 {}
+impl ::core::clone::Clone for MMTIME_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media\"`*"]
+pub struct MMTIME_0_1 {
+    pub hour: u8,
+    pub min: u8,
+    pub sec: u8,
+    pub frame: u8,
+    pub fps: u8,
+    pub dummy: u8,
+    pub pad: [u8; 2],
+}
+impl ::core::marker::Copy for MMTIME_0_1 {}
+impl ::core::clone::Clone for MMTIME_0_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Media\"`*"]
 pub struct TIMECAPS {
@@ -325,45 +362,8 @@ impl ::core::clone::Clone for TIMECODE_SAMPLE {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_Media\"`, `\"Win32_Media_Multimedia\"`*"]
+#[cfg(feature = "Win32_Media_Multimedia")]
+pub type LPDRVCALLBACK = ::core::option::Option<unsafe extern "system" fn(hdrvr: Multimedia::HDRVR, umsg: u32, dwuser: usize, dw1: usize, dw2: usize)>;
 #[doc = "*Required features: `\"Win32_Media\"`*"]
-pub type TIMECODE_SAMPLE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const ED_DEVCAP_TIMECODE_READ: TIMECODE_SAMPLE_FLAGS = 4121u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const ED_DEVCAP_ATN_READ: TIMECODE_SAMPLE_FLAGS = 5047u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const ED_DEVCAP_RTC_READ: TIMECODE_SAMPLE_FLAGS = 5050u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIMERR_BASE: u32 = 96u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIMERR_NOCANDO: u32 = 97u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIMERR_NOERROR: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIMERR_STRUCT: u32 = 129u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIME_BYTES: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIME_CALLBACK_EVENT_PULSE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIME_CALLBACK_EVENT_SET: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIME_CALLBACK_FUNCTION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIME_KILL_SYNCHRONOUS: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIME_MIDI: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIME_MS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIME_ONESHOT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIME_PERIODIC: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIME_SAMPLES: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIME_SMPTE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const TIME_TICKS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Media\"`*"]
-pub const WAVERR_BASE: u32 = 32u32;
+pub type LPTIMECALLBACK = ::core::option::Option<unsafe extern "system" fn(utimerid: u32, umsg: u32, dwuser: usize, dw1: usize, dw2: usize)>;

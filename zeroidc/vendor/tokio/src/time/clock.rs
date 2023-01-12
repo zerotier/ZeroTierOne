@@ -33,7 +33,13 @@ cfg_test_util! {
 
     cfg_rt! {
         fn clock() -> Option<Clock> {
-            crate::runtime::context::clock()
+            use crate::runtime::Handle;
+
+            match Handle::try_current() {
+                Ok(handle) => Some(handle.inner.driver().clock().clone()),
+                Err(ref e) if e.is_missing_context() => None,
+                Err(_) => panic!("{}", crate::util::error::THREAD_LOCAL_DESTROYED_ERROR),
+            }
         }
     }
 
@@ -59,6 +65,9 @@ cfg_test_util! {
 
         /// Instant at which the clock was last unfrozen.
         unfrozen: Option<std::time::Instant>,
+
+        /// Number of `inhibit_auto_advance` calls still in effect.
+        auto_advance_inhibit_count: usize,
     }
 
     /// Pauses time.
@@ -96,6 +105,7 @@ cfg_test_util! {
     ///
     /// [`Sleep`]: crate::time::Sleep
     /// [`advance`]: crate::time::advance
+    #[track_caller]
     pub fn pause() {
         let clock = clock().expect("time cannot be frozen from outside the Tokio runtime");
         clock.pause();
@@ -110,6 +120,7 @@ cfg_test_util! {
     ///
     /// Panics if time is not frozen or if called from outside of the Tokio
     /// runtime.
+    #[track_caller]
     pub fn resume() {
         let clock = clock().expect("time cannot be frozen from outside the Tokio runtime");
         let mut inner = clock.inner.lock();
@@ -179,6 +190,7 @@ cfg_test_util! {
                     enable_pausing,
                     base: now,
                     unfrozen: Some(now),
+                    auto_advance_inhibit_count: 0,
                 })),
             };
 
@@ -189,6 +201,7 @@ cfg_test_util! {
             clock
         }
 
+        #[track_caller]
         pub(crate) fn pause(&self) {
             let mut inner = self.inner.lock();
 
@@ -203,11 +216,23 @@ cfg_test_util! {
             inner.unfrozen = None;
         }
 
-        pub(crate) fn is_paused(&self) -> bool {
-            let inner = self.inner.lock();
-            inner.unfrozen.is_none()
+        /// Temporarily stop auto-advancing the clock (see `tokio::time::pause`).
+        pub(crate) fn inhibit_auto_advance(&self) {
+            let mut inner = self.inner.lock();
+            inner.auto_advance_inhibit_count += 1;
         }
 
+        pub(crate) fn allow_auto_advance(&self) {
+            let mut inner = self.inner.lock();
+            inner.auto_advance_inhibit_count -= 1;
+        }
+
+        pub(crate) fn can_auto_advance(&self) -> bool {
+            let inner = self.inner.lock();
+            inner.unfrozen.is_none() && inner.auto_advance_inhibit_count == 0
+        }
+
+        #[track_caller]
         pub(crate) fn advance(&self, duration: Duration) {
             let mut inner = self.inner.lock();
 
