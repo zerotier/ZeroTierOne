@@ -184,7 +184,7 @@ SharedPtr<Link> Bond::getLinkBySocket(const std::string& policyAlias, uint64_t l
 	auto search = _interfaceToLinkMap[policyAlias].find(ifnameStr);
 	if (search == _interfaceToLinkMap[policyAlias].end()) {
 		if (createIfNeeded) {
-			SharedPtr<Link> s = new Link(ifnameStr, 0, 0, true, ZT_BOND_SLAVE_MODE_PRIMARY, "");
+			SharedPtr<Link> s = new Link(ifnameStr, 0, 0, 0, true, ZT_BOND_SLAVE_MODE_PRIMARY, "");
 			_interfaceToLinkMap[policyAlias].insert(std::pair<std::string, SharedPtr<Link> >(ifnameStr, s));
 			return s;
 		}
@@ -1253,6 +1253,7 @@ void Bond::estimatePathQuality(int64_t now)
 			if (link) {
 				int linkSpeed = link->capacity();
 				_paths[i].p->_givenLinkSpeed = linkSpeed;
+				_paths[i].p->_mtu = link->mtu();
 				maxObservedLinkCap = linkSpeed > maxObservedLinkCap ? linkSpeed : maxObservedLinkCap;
 			}
 		}

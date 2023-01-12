@@ -92,6 +92,7 @@ public:
 		_valid(true),
 		_eligible(false),
 		_bonded(false),
+		_mtu(0),
 		_givenLinkSpeed(0),
 		_relativeQuality(0),
 		_latency(0xffff),
@@ -112,6 +113,7 @@ public:
 		_valid(true),
 		_eligible(false),
 		_bonded(false),
+		_mtu(0),
 		_givenLinkSpeed(0),
 		_relativeQuality(0),
 		_latency(0xffff),
@@ -335,6 +337,11 @@ public:
 	inline unsigned int bonded() const { return _bonded; }
 
 	/**
+	 * @return Whether the user-specified MTU for this path (determined by MTU for parent link)
+	 */
+	inline unsigned int mtu() const { return _mtu; }
+
+	/**
 	 * @return Given link capacity as reported by the bonding layer
 	 */
 	inline unsigned int givenLinkSpeed() const { return _givenLinkSpeed; }
@@ -370,6 +377,7 @@ private:
 	volatile bool _valid;
 	volatile bool _eligible;
 	volatile bool _bonded;
+	volatile uint16_t _mtu;
 	volatile uint32_t _givenLinkSpeed;
 	volatile float _relativeQuality;
 

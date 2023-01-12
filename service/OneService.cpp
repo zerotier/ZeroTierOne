@@ -2068,6 +2068,7 @@ public:
 					bool enabled = OSUtils::jsonInt(link["enabled"],true);
 					uint32_t capacity = OSUtils::jsonInt(link["capacity"],0);
 					uint8_t ipvPref = OSUtils::jsonInt(link["ipvPref"],0);
+					uint16_t mtu = OSUtils::jsonInt(link["mtu"],0);
 					std::string failoverToStr(OSUtils::jsonString(link["failoverTo"],""));
 					// Mode
 					std::string linkModeStr(OSUtils::jsonString(link["mode"],"spare"));
@@ -2084,7 +2085,7 @@ public:
 						failoverToStr = "";
 						enabled = false;
 					}
-					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,capacity,enabled,linkMode,failoverToStr));
+					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,mtu,capacity,enabled,linkMode,failoverToStr));
 				}
 				std::string linkSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"optimize"));
 				if (linkSelectMethodStr == "always") {
